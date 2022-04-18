@@ -1,0 +1,53 @@
+# Docs: <https://docs.github.com/en/free-pro-team@latest/github/administering-a-repository/customizing-dependency-updates>
+
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    assignees: [JosephKav]
+    reviewers: [JosephKav]
+    commit-message:
+      prefix: "chore(deps-actions): "
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    assignees: [JosephKav]
+    reviewers: [JosephKav]
+    commit-message:
+      prefix: "chore(deps-docker): "
+
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    assignees: [JosephKav]
+    reviewers: [JosephKav]
+    commit-message:
+      prefix: "chore(deps-go): "
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    assignees: [JosephKav]
+    reviewers: [JosephKav]
+    commit-message:
+      prefix: "chore(deps-npm): "
+  - package-ecosystem: "npm"
+    directory: "/web/ui/react-app/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    assignees: [JosephKav]
+    reviewers: [JosephKav]
+    commit-message:
+      prefix: "chore(deps-npm): "

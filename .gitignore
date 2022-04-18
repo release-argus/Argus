@@ -1,0 +1,23 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Output of `go build ./cmd/hymenaios`
+/hymenaios
+# Output of `make build-all`
+/.build/
+
+# Ignore personal config.yml's
+config.yml
+
+# React
+node_modules

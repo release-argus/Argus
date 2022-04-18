@@ -1,0 +1,114 @@
+defaults:
+  service:
+    interval: 123
+    access_token: ghp_default
+    semantic_versioning: n
+  gotify:
+    title: 'defaultTitle'
+  slack:
+    message: '{{ service_id }}>_default'
+    username: 'defaultUsername'
+    icon_emoji: 'defaultIconEmoji'
+    max_tries: 3
+    delay: 1
+  webhook:
+    desired_status_code: 0
+    max_tries: 3
+    delay: 2
+    silent_fails: false
+
+gotify:
+  default:
+    url: https://gotify.main.com/hooks/ZZZZ
+    token: YYYY
+    message: mainMessage
+    priority: 1
+    slack:
+
+slack:
+  default:
+    url: https://mattermost.main.com/hooks/ZZZZ
+    message: mainMessage
+    icon_emoji: mainIconEmoji
+    max_tries: 10
+    delay: 4s
+
+webhook:
+  default:
+    type: github
+    url: https://awx.main.com/api/v2/job_templates/XX/github/
+    secret: YYYYmain
+    desired_status_code: 202
+    max_tries: 1
+    delay: 3s
+
+service:
+  NoDefaults:
+    type: github
+    url: hymenaios-io/Hymenaios
+    url_commands: # Remove the v for semantic versioning
+      - type:  regex_submatch
+        regex: 'v(.*)'
+        index: 1
+    interval: 10m
+    regex_version: '^[0-9.]+[0-9]$'
+    regex_content: Hymenaios-{{ version }}-linux-amd64
+    gotify:
+      personal:
+        url: https://gotify.example.com/hooks/ZZZZ
+        token: Go
+        priority: 5
+        message: "overriddenMessage"
+        title: "overriddenTitle"
+    slack:
+      personal:
+        url: https://mattermost.example.com/hooks/ZZZZ
+        message: overriddenMessage
+        username: overriddenUsername
+        icon_emoji: overriddenIconEmoji
+        max_tries: 10
+        delay: 4s
+    webhook:
+      personal:
+        type: github
+        url: https://awx.example.com/api/v2/job_templates/XX/github/
+        secret: YYYY
+        desired_status_code: 202
+        max_tries: 1
+        delay: 3s
+  WantDefaults:
+    type: github
+    url: hymenaios-io/Hymenaios
+    url_commands: # Remove the v for semantic versioning
+      - type:  regex_submatch
+        regex: 'v(.*)'
+        index: 1
+    regex_version: '^[0-9.]+[0-9]$'
+    regex_content: Hymenaios-{{ version }}-linux-amd64
+    gotify:
+      default:
+    slack:
+      default:
+    webhook:
+      default:
+  Gitea:
+    id: go-gitea/gitea
+    type: github
+    url: go-gitea/gitea
+    url_commands: # Remove the v for semantic versioning
+      - type:  regex_submatch
+        regex: 'v(.*)'
+        index: 1
+    regex_version: '^[0-9.]+[0-9]$'
+    regex_content: gitea-{{ version }}-linux-amd64
+    slack:
+      personal:
+        url: https://mattermost.example.com/hooks/ZZZZ
+        icon_url: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
+        delay: 0s
+    webhook:
+      personal:
+        type: github
+        url: https://awx.example.com/api/v2/job_templates/XX/github/
+        secret: YYYY
+        delay: 0s

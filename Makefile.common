@@ -1,0 +1,201 @@
+GO           ?= go
+FIRST_GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
+GOOPTS       ?=
+
+GO_ARCHITECTURES_DARWIN ?= amd64 arm64
+GO_ARCHITECTURES_FREEBSD ?= amd64 arm arm64
+GO_ARCHITECTURES_LINUX ?= amd64 arm arm64
+GO_ARCHITECTURES_OPENBSD ?= amd64 arm arm64
+GO_ARCHITECTURES_WINDOWS ?= amd64 arm arm64
+
+GO_VERSION        ?= $(shell $(GO) version)
+GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
+
+PREFIX                  ?= $(shell pwd)
+BIN_DIR                 ?= $(shell pwd)
+DOCKER_IMAGE_TAG        ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
+DOCKERFILE_PATH         ?= ./Dockerfile
+DOCKERBUILD_CONTEXT     ?= ./
+DOCKER_REPO             ?= hymenaios-io/Hymenaios
+
+DOCKER_ARCHS            ?= amd64
+
+BUILD_DOCKER_ARCHS = $(addprefix common-docker-,$(DOCKER_ARCHS))
+PUBLISH_DOCKER_ARCHS = $(addprefix common-docker-publish-,$(DOCKER_ARCHS))
+TAG_DOCKER_ARCHS = $(addprefix common-docker-tag-latest-,$(DOCKER_ARCHS))
+
+define GetFromPkg
+$(shell node -p "require('./web/ui/react-app/package.json').$(1)")
+endef
+BUILD_DATE              ?= ${shell date -u +"%FT%TZ"}
+BUILD_VERSION           := $(call GetFromPkg,version)
+
+# This rule is used to forward a target like "build" to "common-build". This
+# allows a new "build" target to be defined in a Makefile which includes this
+# one and override "common-build" without override warnings.
+%: common-% ;
+
+.PHONY: common-deps
+common-deps:
+	@echo ">> getting dependencies"
+	$(GO) get $(GOOPTS) -t ./...
+
+.PHONY: update-go-deps
+update-go-deps:
+	@echo ">> updating Go dependencies"
+	@for m in $$($(GO) list -mod=readonly -m -f '{{ if and (not .Indirect) (not .Main)}}{{.Path}}{{end}}' all); do \
+		$(GO) get -d $$m; \
+	done
+	$(GO) mod tidy
+ifneq (,$(wildcard vendor))
+	$(GO) mod vendor
+endif
+
+.PHONY: common-unused
+common-unused: $(GOVENDOR)
+ifdef GOVENDOR
+	@echo ">> running check for unused packages"
+	@$(GOVENDOR) list +unused | grep . && exit 1 || echo 'No unused packages'
+else
+	@echo ">> running check for unused/missing packages in go.mod"
+	$(GO) mod tidy
+ifeq (,$(wildcard vendor))
+	@git diff --exit-code -- go.sum go.mod
+else
+	@echo ">> running check for unused packages in vendor/"
+	$(GO) mod vendor
+	@git diff --exit-code -- go.sum go.mod vendor/
+endif
+endif
+
+.PHONY: common-build
+common-build:
+	@bash -c "trap 'echo \">> restoring assets\"; scripts/compress_web.sh -d;' EXIT; \
+			echo '>> compressing assets'; \
+			scripts/compress_web.sh; \
+			echo '>> building binaries'; \
+			go build \
+				-ldflags=\"\
+				-X 'github.com/hymenaios-io/Hymenaios/utils.Version=${BUILD_VERSION}' \
+				-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=${BUILD_DATE}'\" \
+			./cmd/hymenaios/"
+
+.PHONY: build-darwin
+build-darwin:
+	@echo "Building for darwin\n" \
+	$(foreach GOARCH, $(GO_ARCHITECTURES_DARWIN), \
+		" ${GOARCH}" \
+		$(shell \
+			GOOS=darwin \
+			GOARCH=$(GOARCH) \
+			go build \
+				-ldflags="\
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/darwin/${GOARCH}/hymenaios \
+			./cmd/hymenaios \
+		) \
+		"- DONE\n" \
+	)
+
+.PHONY: build-freebsd
+build-freebsd:
+	@echo "Building for freebsd\n" \
+	$(foreach GOARCH, $(GO_ARCHITECTURES_FREEBSD), \
+		" ${GOARCH}" \
+		$(shell \
+			GOOS=freebsd \
+			GOARCH=$(GOARCH) \
+			go build \
+				-ldflags="\
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/freebsd/${GOARCH}/hymenaios \
+			./cmd/hymenaios  \
+		) \
+		"- DONE\n" \
+	)
+
+.PHONY: build-linux
+build-linux:
+	@echo "Building for linux\n" \
+	$(foreach GOARCH, $(GO_ARCHITECTURES_LINUX), \
+		" ${GOARCH}" \
+		$(shell \
+			GOOS=linux \
+			GOARCH=$(GOARCH) \
+			go build \
+				-ldflags="\
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/linux/${GOARCH}/hymenaios \
+			./cmd/hymenaios  \
+		) \
+		"- DONE\n" \
+	)
+
+.PHONY: build-openbsd
+build-openbsd:
+	@echo "Building for openbsd\n" \
+	$(foreach GOARCH, $(GO_ARCHITECTURES_OPENBSD), \
+		" ${GOARCH}" \
+		$(shell \
+			GOOS=openbsd \
+			GOARCH=$(GOARCH) \
+			go build \
+				-ldflags="\
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/openbsd/${GOARCH}/hymenaios \
+			./cmd/hymenaios  \
+		) \
+		"- DONE\n" \
+	)
+
+.PHONY: build-windows
+build-windows:
+	@echo "Building for windows\n" \
+	$(foreach GOARCH, $(GO_ARCHITECTURES_WINDOWS), \
+		" ${GOARCH}" \
+		$(shell \
+			GOOS=windows \
+			GOARCH=$(GOARCH) \
+			go build \
+				-ldflags="\
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/windows/${GOARCH}/hymenaios \
+			./cmd/hymenaios  \
+		) \
+		"- DONE\n" \
+	)
+
+.PHONY: compress-web
+compress-web:
+	@bash "scripts/compress_web.sh"
+
+.PHONY: common-docker $(BUILD_DOCKER_ARCHS)
+common-docker: $(BUILD_DOCKER_ARCHS)
+$(BUILD_DOCKER_ARCHS): common-docker-%:
+	docker build -t "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:$(DOCKER_IMAGE_TAG)" \
+		-f $(DOCKERFILE_PATH) \
+		--build-arg ARCH="$*" \
+		--build-arg OS="linux" \
+		$(DOCKERBUILD_CONTEXT)
+
+.PHONY: common-docker-publish $(PUBLISH_DOCKER_ARCHS)
+common-docker-publish: $(PUBLISH_DOCKER_ARCHS)
+$(PUBLISH_DOCKER_ARCHS): common-docker-publish-%:
+	docker push "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:$(DOCKER_IMAGE_TAG)"
+
+DOCKER_MAJOR_VERSION_TAG = $(firstword $(subst ., ,$(shell cat VERSION)))
+.PHONY: common-docker-tag-latest $(TAG_DOCKER_ARCHS)
+common-docker-tag-latest: $(TAG_DOCKER_ARCHS)
+$(TAG_DOCKER_ARCHS): common-docker-tag-latest-%:
+	docker tag "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:$(DOCKER_IMAGE_TAG)" "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:latest"
+	docker tag "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:$(DOCKER_IMAGE_TAG)" "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$*:v$(DOCKER_MAJOR_VERSION_TAG)"
+
+.PHONY: common-docker-manifest
+common-docker-manifest:
+	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest create -a "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" $(foreach ARCH,$(DOCKER_ARCHS),$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME)-linux-$(ARCH):$(DOCKER_IMAGE_TAG))
+	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest push "$(DOCKER_REPO)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"

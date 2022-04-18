@@ -1,0 +1,5 @@
+service:
+  hymenaios-io/hymenaios:
+    type: github
+    url: hymenaios-io/hymenaios
+    regex_version: '^[0-9.]+[0-9]$'

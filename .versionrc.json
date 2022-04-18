@@ -1,0 +1,20 @@
+{
+  "types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "chore", "hidden": true },
+    { "type": "docs", "hidden": true },
+    { "type": "style", "hidden": true },
+    { "type": "refactor", "hidden": true },
+    { "type": "perf", "hidden": true },
+    { "type": "test", "hidden": true }
+  ],
+  "commitUrlFormat": "https://github.com/hymenaios-io/Hymenaios/commits/{{hash}}",
+  "compareUrlFormat": "https://github.com/hymenaios-io/Hymenaios/compare/{{previousTag}}...{{currentTag}}",
+  "bumpFiles": [
+    {
+      "filename": "web/ui/react-app/package.json",
+      "type": "json"
+    }
+  ]
+}

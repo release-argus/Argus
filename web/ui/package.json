@@ -1,0 +1,18 @@
+{
+  "name": "hymenaios",
+  "private": true,
+  "homepage": ".",
+  "scripts": {
+    "build": "bash build_ui.sh --all",
+    "start": "npm run start -w react-app",
+    "test": "npm run test --workspaces",
+    "test:coverage": "npm run test:coverage --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "workspaces": [
+    "react-app"
+  ],
+  "engines": {
+    "npm": ">=7.0.0"
+  }
+}
