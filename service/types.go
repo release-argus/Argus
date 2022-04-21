@@ -26,29 +26,30 @@ type Slice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	ID                 *string          `yaml:"-"`                             // service_name.
-	Type               *string          `yaml:"type,omitempty"`                // "github"/"URL"
-	URL                *string          `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	AllowInvalidCerts  *bool            `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	AccessToken        *string          `yaml:"access_token,omitempty"`        // GitHub access token to use.
-	SemanticVersioning *bool            `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
-	Interval           *string          `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	URLCommands        *URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
-	RegexContent       *string          `yaml:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion       *string          `yaml:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	UsePreRelease      *bool            `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default).
-	WebURL             *string          `yaml:"web_url,omitempty"`             // URL to provide on the Web UI.
-	AutoApprove        *bool            `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
-	IgnoreMisses       *bool            `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
-	Icon               *string          `yaml:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI.
-	Gotify             *gotify.Slice    `yaml:"gotify,omitempty"`              // Service-specific Gotify vars.
-	Slack              *slack.Slice     `yaml:"slack,omitempty"`               // Service-specific Slack vars.
-	WebHook            *webhook.Slice   `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
-	Status             *Status          `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
-	HardDefaults       *Service         `yaml:"-"`                             // Hardcoded default values.
-	Defaults           *Service         `yaml:"-"`                             // Default values.
-	Announce           *chan []byte     `yaml:"-"`                             // Announce to the WebSocket.
-	SaveChannel        *chan bool       `yaml:"-"`                             // Channel for triggering a save of the config.
+	ID                    *string                `yaml:"-"`                             // service_name.
+	Type                  *string                `yaml:"type,omitempty"`                // "github"/"URL"
+	URL                   *string                `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
+	AllowInvalidCerts     *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	AccessToken           *string                `yaml:"access_token,omitempty"`        // GitHub access token to use.
+	SemanticVersioning    *bool                  `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
+	Interval              *string                `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	URLCommands           *URLCommandSlice       `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
+	RegexContent          *string                `yaml:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion          *string                `yaml:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
+	UsePreRelease         *bool                  `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default).
+	WebURL                *string                `yaml:"web_url,omitempty"`             // URL to provide on the Web UI.
+	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
+	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
+	Icon                  *string                `yaml:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI.
+	Gotify                *gotify.Slice          `yaml:"gotify,omitempty"`              // Service-specific Gotify vars.
+	Slack                 *slack.Slice           `yaml:"slack,omitempty"`               // Service-specific Slack vars.
+	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
+	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
+	Status                *Status                `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
+	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.
+	Defaults              *Service               `yaml:"-"`                             // Default values.
+	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
+	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
 }
 
 // GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
@@ -107,4 +108,28 @@ type GitHubAsset struct {
 	CreatedAt          string       `yaml:"created_at"`
 	UpdatedAt          string       `yaml:"updated_at"`
 	BrowserDownloadURL string       `yaml:"browser_download_url"`
+}
+
+// DeployedVersionLookup of the service.
+type DeployedVersionLookup struct {
+	URL               string                 `yaml:"url,omitempty"`                 // URL to query.
+	AllowInvalidCerts *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
+	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
+	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
+	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the CurrentVersion
+	HardDefaults      *DeployedVersionLookup `yaml:"-"`                             // Hardcoded default values.
+	Defaults          *DeployedVersionLookup `yaml:"-"`                             // Default values.
+}
+
+// BasicAuth to use on the HTTP(s) request.
+type BasicAuth struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+// Header to use in the HTTP request.
+type Header struct {
+	Key   string `yaml:"key"`   // Header key, e.g. X-Sig
+	Value string `yaml:"value"` // Value to give the key
 }

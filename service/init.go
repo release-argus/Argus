@@ -27,15 +27,6 @@ var (
 	jLog *utils.JLog
 )
 
-// setDefaults will hand out the appropriate Defaults.X pointer(s).
-func (s *Service) setDefaults(
-	defaults *Service,
-	hardDefaults *Service,
-) {
-	s.Defaults = defaults
-	s.HardDefaults = hardDefaults
-}
-
 // Init will initialise the Service metrics.
 func (s *Service) Init(
 	log *utils.JLog,
@@ -53,6 +44,10 @@ func (s *Service) Init(
 
 	s.Defaults = defaults
 	s.HardDefaults = hardDefaults
+	if s.DeployedVersionLookup != nil {
+		s.DeployedVersionLookup.Defaults = defaults.DeployedVersionLookup
+		s.DeployedVersionLookup.HardDefaults = hardDefaults.DeployedVersionLookup
+	}
 
 	ignoreMisses := s.GetIgnoreMisses()
 	if ignoreMisses != nil {

@@ -178,25 +178,49 @@ type ServiceSlice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	Type               *string          `json:"type,omitempty"`                // "github"/"URL"
-	URL                *string          `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	WebURL             *string          `json:"web_url,omitempty"`             // URL to provide on the Web UI
-	URLCommands        *URLCommandSlice `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
-	Interval           *string          `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning *bool            `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger Slack(s)/WebHook(s).
-	RegexContent       *string          `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion       *string          `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	UsePreRelease      *bool            `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
-	AutoApprove        *bool            `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
-	IgnoreMisses       *bool            `json:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist)
-	AccessToken        *string          `json:"access_token,omitempty"`        // GitHub access token to use.
-	AllowInvalidCerts  *bool            `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	Icon               *string          `json:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI
-	Gotify             *GotifySlice     `json:"gotify,omitempty"`              // Service-specific Gotify vars.
-	Slack              *SlackSlice      `json:"slack,omitempty"`               // Service-specific Slack vars.
-	WebHook            *WebHookSlice    `json:"webhook,omitempty"`             // Service-specific WebHook vars.
-	Status             *Status          `json:"status,omitempty"`              // Track the Status of this source (version and regex misses).
+	Type                  *string                `json:"type,omitempty"`                // "github"/"URL"
+	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
+	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI
+	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
+	Interval              *string                `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger Slack(s)/WebHook(s).
+	RegexContent          *string                `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion          *string                `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
+	UsePreRelease         *bool                  `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
+	AutoApprove           *bool                  `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
+	IgnoreMisses          *bool                  `json:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist)
+	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use.
+	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	Icon                  *string                `json:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI
+	Gotify                *GotifySlice           `json:"gotify,omitempty"`              // Service-specific Gotify vars.
+	Slack                 *SlackSlice            `json:"slack,omitempty"`               // Service-specific Slack vars.
+	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars.
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
+	Status                *Status                `json:"status,omitempty"`              // Track the Status of this source (version and regex misses).
+}
 
+// DeployedVersionLookup of the service.
+type DeployedVersionLookup struct {
+	URL               string                 `json:"url,omitempty"`                 // URL to query.
+	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
+	Headers           []Header               `json:"headers,omitempty"`             // Headers for the HTTP(S) request.
+	JSON              string                 `json:"json,omitempty"`                // JSON key to use e.g. version_current.
+	Regex             string                 `json:"regex,omitempty"`               // Regex to get the CurrentVersion
+	HardDefaults      *DeployedVersionLookup `json:"-"`                             // Hardcoded default values.
+	Defaults          *DeployedVersionLookup `json:"-"`                             // Default values.
+}
+
+// BasicAuth to use on the HTTP(s) request.
+type BasicAuth struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// Header to use in the HTTP request.
+type Header struct {
+	Key   string `json:"key"`   // Header key, e.g. X-Sig
+	Value string `json:"value"` // Value to give the key
 }
 
 // URLCommandSlice is a slice of URLCommand to be used to filter version from the URL Content.

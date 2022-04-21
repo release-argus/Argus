@@ -64,6 +64,25 @@ export interface ServiceType {
   status?: StatusType;
 }
 
+export interface DeployedVersionLookupType {
+  url?: string;
+  allow_invalid_certs?: boolean;
+  basic_auth?: BasicAuthType;
+  headers?: HeaderType[];
+  json?: string;
+  regex?: string;
+}
+
+export interface BasicAuthType {
+  username: string;
+  password: string;
+}
+
+export interface HeaderType {
+  key: string;
+  value: string;
+}
+
 export interface StatusType {
   auto_approve?: string;
   current_version?: string;

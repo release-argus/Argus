@@ -25,6 +25,10 @@ import (
 // UpdatedVersion will register the version change, setting `s.Status.CurrentVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
+	// Don't update to LatestVersion if we have a lookup check
+	if s.DeployedVersionLookup != nil {
+		return
+	}
 	// Only update if all webhooks have been sent
 	// and none failed
 	if s.WebHook != nil {
