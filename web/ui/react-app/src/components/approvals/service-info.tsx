@@ -47,6 +47,10 @@ export const ServiceInfo = ({
     service?.status?.current_version === "" ||
     (updateAvailable && !updateSkipped);
 
+  const updateApproved =
+    service?.status?.latest_version !== undefined &&
+    service.status.latest_version === service?.status?.approved_version;
+
   return (
     <Container
       style={{
@@ -62,7 +66,7 @@ export const ServiceInfo = ({
               className={"service-item update-options alert-warning"}
               variant="secondary"
             >
-              Update available:
+              {updateApproved ? "WebHooks already sent:" : "Update available:"}
             </ListGroup.Item>
             <ListGroup.Item
               key="update-buttons"
@@ -81,7 +85,9 @@ export const ServiceInfo = ({
                 key="approve"
                 className="btn-flex"
                 variant="success"
-                onClick={() => showModal("SEND", service)}
+                onClick={() =>
+                  showModal(updateApproved ? "RESEND" : "SEND", service)
+                }
               >
                 <FontAwesomeIcon icon={faCheck} />
               </Button>

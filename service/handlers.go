@@ -27,6 +27,7 @@ import (
 func (s *Service) UpdatedVersion() {
 	// Don't update to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
+		s.UpdateLatestApproved()
 		return
 	}
 	// Only update if all webhooks have been sent
@@ -44,6 +45,21 @@ func (s *Service) UpdatedVersion() {
 	s.AnnounceUpdate()
 	if s.SaveChannel != nil {
 		*s.SaveChannel <- true
+	}
+}
+
+// UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
+// set the LatestVersion as approved in the Status, and announce the approval (if not previously).
+func (s *Service) UpdateLatestApproved() {
+	for index := range *s.WebHook {
+		if (*s.WebHook)[index].Failed == nil || *(*s.WebHook)[index].Failed == false {
+			return
+		}
+	}
+	if utils.DefaultIfNil(s.Status.ApprovedVersion) != utils.DefaultIfNil(s.Status.LatestVersion) {
+		latestVersion := utils.DefaultIfNil(s.Status.LatestVersion)
+		s.Status.ApprovedVersion = &latestVersion
+		s.AnnounceApproved()
 	}
 }
 
@@ -132,7 +148,7 @@ func (s *Service) HandleSkip(version *string) {
 
 	approvedVersion := "SKIP_" + *version
 	s.Status.ApprovedVersion = &approvedVersion
-	s.AnnounceSkip()
+	s.AnnounceApproved()
 
 	if s.SaveChannel != nil {
 		*s.SaveChannel <- true

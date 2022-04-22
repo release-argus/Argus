@@ -72,17 +72,24 @@ export const handleNotifications = (params: notificationsParams) => {
                 delay: 5000,
               });
               break;
-            case "SKIPPED":
+            case "ACTION":
+              // Notify on SKIP, ignore latest version being approved
               if (params.event.service_data?.status?.approved_version) {
-                params.addNotification({
-                  type: "info",
-                  title: params.event.service_data?.id || "Unknown",
-                  body: `Skipped version: ${params.event.service_data.status.approved_version.slice(
-                    "SKIP_".length
-                  )}`,
-                  small: new Date().toString(),
-                  delay: 30000,
-                });
+                if (
+                  params.event.service_data.status.approved_version.startsWith(
+                    "SKIP_"
+                  )
+                ) {
+                  params.addNotification({
+                    type: "info",
+                    title: params.event.service_data?.id || "Unknown",
+                    body: `Skipped version: ${params.event.service_data.status.approved_version.slice(
+                      "SKIP_".length
+                    )}`,
+                    small: new Date().toString(),
+                    delay: 30000,
+                  });
+                }
               }
               break;
             default:
