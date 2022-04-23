@@ -114,7 +114,9 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
 		var queriedJSON map[string]interface{}
 		err := json.Unmarshal(rawBody, &queriedJSON)
 		if err != nil {
-			err := fmt.Errorf("Failed to unmarshal data from %q into JSON", c.URL)
+			err := fmt.Errorf("Failed to unmarshal the following from %q into JSON:%s",
+				c.URL,
+				string(rawBody))
 			jLog.Error(err, logFrom, true)
 			return "", err
 		}
@@ -122,8 +124,10 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
 		// birds := result["birds"].(map[string]interface{})
 		for k := range jsonKeys {
 			if queriedJSON[jsonKeys[k]] == nil {
-				err := fmt.Errorf("%q could not be found in the queried JSON. Failed at %q:\n%s",
-					c.JSON, jsonKeys[k], string(rawBody))
+				err := fmt.Errorf("%q could not be found in the following JSON. Failed at %q:\n%s",
+					c.JSON,
+					jsonKeys[k],
+					string(rawBody))
 				jLog.Warn(err, logFrom, true)
 				return "", err
 			}
@@ -144,12 +148,10 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
 		texts := re.FindStringSubmatch(version)
 
 		if len(texts) < 2 {
-			err := fmt.Errorf("%q didn't return any matches", c.Regex)
+			err := fmt.Errorf("%q RegEx didn't return any matches in %q",
+				c.Regex,
+				version)
 			jLog.Warn(err, logFrom, true)
-			jLog.Debug(
-				fmt.Sprintf("Fetched JSON was:\n%s", version),
-				logFrom,
-				true)
 			return "", err
 		}
 
