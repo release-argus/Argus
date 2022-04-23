@@ -15,6 +15,10 @@
     {
       "filename": "web/ui/react-app/package.json",
       "type": "json"
+    },
+    {
+      "filename": "package.json",
+      "type": "json"
     }
   ]
 }

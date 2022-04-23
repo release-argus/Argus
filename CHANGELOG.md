@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### 0.0.1 (2022-04-23)
+## [0.1.0](https://github.com/hymenaios-io/Hymenaios/compare/0.0.1...0.1.0) (2022-04-23)
+
+
+### Features
+
+* **query:** support for retrieving `current_version` from a deployed service ([#12](https://github.com/hymenaios-io/Hymenaios/issues/12)) ([3ebf785](https://github.com/hymenaios-io/Hymenaios/commits/3ebf785f28595d6a57c4f297155cc4c26d9fe94b))
+
+## [0.0.1](https://github.com/hymenaios-io/Hymenaios/compare/0.0.0...0.0.1) (2022-04-23)
 
 
 ### Bug Fixes
