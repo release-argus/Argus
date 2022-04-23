@@ -158,13 +158,13 @@ func (c *DeployedVersionLookup) Print(prefix string) {
 	if c.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
 		fmt.Printf("%s  username: %s\n", prefix, c.BasicAuth.Username)
-		fmt.Printf("%s  password: %s\n", prefix, c.BasicAuth.Password)
+		fmt.Printf("%s  password: <secret>\n", prefix)
 	}
 	if c.Headers != nil {
 		fmt.Printf("%sheaders:\n", prefix)
 		for _, header := range c.Headers {
 			fmt.Printf("%s  - key: %s\n", prefix, header.Key)
-			fmt.Printf("%s    value: %q\n", prefix, header.Value)
+			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
 	utils.PrintlnIfNotDefault(c.JSON, fmt.Sprintf("%sjson: %s", prefix, c.URL))
