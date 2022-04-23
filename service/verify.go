@@ -23,7 +23,7 @@ import (
 	"github.com/hymenaios-io/Hymenaios/utils"
 )
 
-// CheckValues will check the variables for the Service's in the Slice.
+// CheckValues of the Service(s) in the Slice.
 func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
@@ -39,23 +39,28 @@ func (s *Slice) CheckValues(prefix string) error {
 			serviceIDs[*service.ID] = true
 		}
 
-		// Check Service(s)
-		if err := service.CheckValues("  "); err != nil {
+		// Check Service
+		if err := service.CheckValues(prefix); err != nil {
+			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
+		}
+
+		// Check DeployedVersionLookup
+		if err := service.DeployedVersionLookup.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
 		// Check Gotify(s)
-		if err := service.Gotify.CheckValues("    "); err != nil {
+		if err := service.Gotify.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
 		// Check Slack(s)
-		if err := service.Slack.CheckValues("    "); err != nil {
+		if err := service.Slack.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
 		// Check WebHook(s)
-		if err := service.WebHook.CheckValues("    "); err != nil {
+		if err := service.WebHook.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
@@ -66,7 +71,7 @@ func (s *Slice) CheckValues(prefix string) error {
 	return errs
 }
 
-// CheckValues will check the variables for the Service.
+// CheckValues of the Service.
 func (s *Service) CheckValues(prefix string) (errs error) {
 	// Interval
 	if s.Interval != nil {
@@ -163,6 +168,9 @@ func (s *Service) Print(prefix string) {
 	utils.PrintlnIfNotNil(s.AutoApprove, fmt.Sprintf("%sauto_approve: %t", prefix, utils.DefaultIfNil(s.AutoApprove)))
 	utils.PrintlnIfNotNil(s.IgnoreMisses, fmt.Sprintf("%signore_misses: %t", prefix, utils.DefaultIfNil(s.IgnoreMisses)))
 	utils.PrintlnIfNotNil(s.Icon, fmt.Sprintf("%sicon: %s", prefix, utils.DefaultIfNil(s.Icon)))
+
+	s.DeployedVersionLookup.Print(prefix)
+
 	if s.Status != nil && *s.Status != (Status{}) {
 		fmt.Printf("%sstatus:\n", prefix)
 		s.Status.Print(prefix + "  ")

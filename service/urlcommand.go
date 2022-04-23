@@ -211,7 +211,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	return texts[index], nil
 }
 
-// CheckValues will check the variables for the URLCommand's in the URLCommandSlice.
+// CheckValues of the URLCommand(s) in the URLCommandSlice.
 func (c *URLCommandSlice) CheckValues(prefix string) error {
 	if c == nil {
 		return nil
@@ -230,7 +230,7 @@ func (c *URLCommandSlice) CheckValues(prefix string) error {
 	return errs
 }
 
-// CheckValues will check the variables for the URLCommand.
+// CheckValues of the URLCommand.
 func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	validType := true
 

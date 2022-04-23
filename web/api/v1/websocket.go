@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/hymenaios-io/Hymenaios/utils"
+	"github.com/hymenaios-io/Hymenaios/web/api/types"
 	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
 )
 
@@ -332,6 +333,9 @@ func (api *API) wsConfigDefaults(client *Client) {
 						api.Config.Defaults.Service.AccessToken,
 						"<secret>"),
 					AllowInvalidCerts: api.Config.Defaults.Service.AllowInvalidCerts,
+					DeployedVersionLookup: &types.DeployedVersionLookup{
+						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
+					},
 				},
 				Gotify: api_types.Gotify{
 					Delay:    api.Config.Defaults.Gotify.Delay,
@@ -528,6 +532,40 @@ func (api *API) wsConfigService(client *Client) {
 					LatestVersion:           service.Status.LatestVersion,
 					LatestVersionTimestamp:  service.Status.LatestVersionTimestamp,
 				},
+			}
+
+			// DeployedVersionLookup
+			if service.DeployedVersionLookup != nil {
+				deployedVersionLookup := types.DeployedVersionLookup{}
+				// URL
+				if service.DeployedVersionLookup.URL != "" {
+					deployedVersionLookup.URL = service.DeployedVersionLookup.URL
+				}
+				deployedVersionLookup.AllowInvalidCerts = service.DeployedVersionLookup.AllowInvalidCerts
+				if service.DeployedVersionLookup.BasicAuth != nil {
+					deployedVersionLookup.BasicAuth = &api_types.BasicAuth{
+						Username: service.DeployedVersionLookup.BasicAuth.Username,
+						Password: "<secret>",
+					}
+				}
+				var headers []api_types.Header
+				for _, header := range service.DeployedVersionLookup.Headers {
+					headers = append(
+						headers,
+						api_types.Header{
+							Key:   header.Key,
+							Value: "<secret>",
+						},
+					)
+				}
+				deployedVersionLookup.Headers = headers
+				if service.DeployedVersionLookup.JSON != "" {
+					deployedVersionLookup.JSON = service.DeployedVersionLookup.JSON
+				}
+				if service.DeployedVersionLookup.Regex != "" {
+					deployedVersionLookup.Regex = service.DeployedVersionLookup.Regex
+				}
+				serviceConfig[key].DeployedVersionLookup = &deployedVersionLookup
 			}
 
 			// URL Commands

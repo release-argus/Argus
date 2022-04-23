@@ -165,7 +165,7 @@ func (s *Service) Query() (bool, error) {
 			}
 
 			s.Status.SetLatestVersion(version)
-			if s.Status.CurrentVersion == nil {
+			if s.Status.CurrentVersion == nil && s.DeployedVersionLookup == nil {
 				s.Status.SetCurrentVersion(version)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)

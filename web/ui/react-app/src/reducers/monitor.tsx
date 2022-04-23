@@ -87,21 +87,12 @@ export default function reducerMonitor(
           // current_version
           state.service[id].status!.current_version =
             action.service_data?.status?.current_version;
-          state.service[id].status!.latest_version =
+          state.service[id].status!.approved_version =
             action.service_data?.status?.current_version;
 
           // current_version_timestamp
           state.service[id].status!.current_version_timestamp =
             action.service_data?.status?.current_version_timestamp;
-          state.service[id].status!.latest_version_timestamp =
-            action.service_data?.status?.current_version_timestamp;
-          state.service[id].status!.last_queried =
-            action.service_data?.status?.current_version_timestamp;
-
-          // ?url
-          if (action.service_data?.url) {
-            state.service[id]!.url = action.service_data.url;
-          }
           break;
 
         case "INIT":
@@ -125,7 +116,7 @@ export default function reducerMonitor(
           }
           break;
 
-        case "SKIPPED":
+        case "ACTION":
           // approved_version
           state.service[id].status!.approved_version =
             action.service_data?.status?.approved_version;

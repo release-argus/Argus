@@ -47,6 +47,10 @@ func (d *Defaults) SetDefaults() {
 	d.Service.UsePreRelease = &usePreRelease
 	serviceSemanticVersioning := true
 	d.Service.SemanticVersioning = &serviceSemanticVersioning
+	// Service DeployedVersionLookup defaults.
+	serviceDeployedVersionLookupAllowInvalidCerts := false
+	d.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
+	d.Service.DeployedVersionLookup.AllowInvalidCerts = &serviceDeployedVersionLookupAllowInvalidCerts
 
 	// Gotify defaults.
 	gotifyDelay := "0s"
@@ -88,23 +92,32 @@ func (d *Defaults) CheckValues() (errs error) {
 	prefix := "  "
 
 	// Service
+	serviceErrs := false
 	if err := d.Service.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s  service:\\%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%sservice:\\%w", utils.ErrorToString(errs), prefix, err)
+		serviceErrs = true
+	}
+	if err := d.Service.DeployedVersionLookup.CheckValues(prefix); err != nil {
+		customPrefix := ""
+		if !serviceErrs {
+			customPrefix = fmt.Sprintf("%s%sservice:\\", utils.ErrorToString(errs), prefix)
+		}
+		errs = fmt.Errorf("%s%s%s  deployed_version:\\%w", utils.ErrorToString(errs), customPrefix, prefix, err)
 	}
 
 	// Gotify
 	if err := d.Gotify.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s  gotify:\\%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%sgotify:\\%w", utils.ErrorToString(errs), prefix, err)
 	}
 
 	// Slack
 	if err := d.Slack.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s  slack:\\%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%sslack:\\%w", utils.ErrorToString(errs), prefix, err)
 	}
 
 	// WebHook
 	if err := d.WebHook.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s  webhook:%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%swebhook:%w", utils.ErrorToString(errs), prefix, err)
 	}
 
 	return errs

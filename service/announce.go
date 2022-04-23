@@ -129,15 +129,15 @@ func (s *Service) AnnounceUpdate() {
 	}
 }
 
-// AnnounceSkip of an update `s.Announce` channel
+// AnnounceAction on an update (skip/approve) to the `s.Announce` channel
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceSkip() {
+func (s *Service) AnnounceApproved() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
 	wsPage := "APPROVALS"
 	wsType := "VERSION"
-	wsSubType := "SKIPPED"
+	wsSubType := "ACTION"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
 		Page:    &wsPage,
 		Type:    &wsType,
