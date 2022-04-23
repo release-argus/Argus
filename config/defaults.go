@@ -39,7 +39,7 @@ func (d *Defaults) SetDefaults() {
 	d.Service.AutoApprove = &serviceAutoApprove
 	serviceAllowInvalidCerts := false
 	d.Service.AllowInvalidCerts = &serviceAllowInvalidCerts
-	serviceIgnoreMisses := false
+	serviceIgnoreMisses := true
 	d.Service.IgnoreMisses = &serviceIgnoreMisses
 	serviceInterval := "10m"
 	d.Service.Interval = &serviceInterval
