@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.0.1 (2022-04-23)
+
+
+### Bug Fixes
+
+* **query:** sort github tag_names when semver ([#11](https://github.com/hymenaios-io/hymenaios/issues/11)) ([c350c90](https://github.com/hymenaios-io/Hymenaios/commits/c350c90ad67d4a69912671a59200ed610e8b7ab2))
+
 ## 0.0.0 (2022-04-21)
 
 
