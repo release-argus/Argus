@@ -16,6 +16,7 @@ package service
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -106,23 +107,36 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
 		jLog.Error(err, logFrom, true)
 		return "", err
 	}
-	// Convert the body to string.
-	version := string(rawBody)
 
-	// RegEx the JSON as the key could be anything, so we can't unmarshal.
+	var version string
 	if c.JSON != "" {
-		re := regexp.MustCompile(
-			fmt.Sprintf(`%s"[^"]+"([^"]+)`, c.JSON),
-		)
-		texts := re.FindStringSubmatch(version)
-
-		if len(texts) < 2 {
-			err := fmt.Errorf("%q key could not be found in the fetched JSON:\n%s", c.JSON, version)
-			jLog.Warn(err, logFrom, true)
+		jsonKeys := strings.Split(c.JSON, ".")
+		var queriedJSON map[string]interface{}
+		err := json.Unmarshal(rawBody, &queriedJSON)
+		if err != nil {
+			err := fmt.Errorf("Failed to unmarshal data from %q into JSON", c.URL)
+			jLog.Error(err, logFrom, true)
 			return "", err
 		}
 
-		version = texts[1]
+		// birds := result["birds"].(map[string]interface{})
+		for k := range jsonKeys {
+			if queriedJSON[jsonKeys[k]] == nil {
+				err := fmt.Errorf("%q could not be found in the queried JSON. Failed at %q:\n%s",
+					c.JSON, jsonKeys[k], string(rawBody))
+				jLog.Warn(err, logFrom, true)
+				return "", err
+			}
+			switch queriedJSON[jsonKeys[k]].(type) {
+			case string, int, float32, float64:
+				version = fmt.Sprintf("%v", queriedJSON[jsonKeys[k]])
+			case map[string]interface{}:
+				queriedJSON = queriedJSON[jsonKeys[k]].(map[string]interface{})
+			}
+		}
+	} else {
+		// Use the whole body if not parsing as JSON.
+		version = string(rawBody)
 	}
 
 	if c.Regex != "" {
