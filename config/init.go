@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hymenaios-io/Hymenaios/service"
 	"github.com/hymenaios-io/Hymenaios/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -27,11 +28,19 @@ func (c *Config) Init() {
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
 
+	if c.Defaults.Service.DeployedVersionLookup == nil {
+		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
+	}
+
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
 	for serviceID := range c.Service {
-		c.Service[serviceID].Init(jLog, &c.Defaults.Service, &c.HardDefaults.Service)
+		c.Service[serviceID].Init(
+			jLog,
+			&c.Defaults.Service,
+			&c.HardDefaults.Service,
+		)
 
 		c.Service[serviceID].Gotify.Init(
 			jLog,

@@ -76,5 +76,26 @@ func TestService(flag *string, cfg *config.Config) {
 			true,
 		)
 	}
+
+	// DeployedVersionLookup
+	if service.DeployedVersionLookup != nil {
+		version, err := service.DeployedVersionLookup.Query(utils.LogFrom{})
+		if err != nil {
+			jLog.Error(
+				err,
+				logFrom,
+				true,
+			)
+		} else {
+			jLog.Info(
+				fmt.Sprintf(
+					"Deployed version - %q",
+					version,
+				),
+				logFrom,
+				true,
+			)
+		}
+	}
 	os.Exit(0)
 }

@@ -77,6 +77,14 @@ func GetFirstNonNilPtr[T comparable](pointers ...*T) *T {
 	return nil
 }
 
+// PrintlnIfNotDefault will print `msg` is `x` is not the default for that type.
+func PrintlnIfNotDefault[T comparable](x T, msg string) {
+	var fresh T
+	if x != fresh {
+		fmt.Println(msg)
+	}
+}
+
 // PrintlnIfNotNil will print `msg` is `ptr` is not nil.
 func PrintlnIfNotNil[T comparable](ptr *T, msg string) {
 	if ptr != nil {

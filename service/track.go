@@ -26,8 +26,10 @@ import (
 // Track will call Track on all Services in this Slice.
 func (s *Slice) Track(ordering *[]string) {
 	for _, key := range *ordering {
-		msg := fmt.Sprintf("Tracking %s at %s every %s", *(*s)[key].ID, (*s)[key].GetServiceURL(true), (*s)[key].GetInterval())
-		jLog.Verbose(msg, utils.LogFrom{Primary: *(*s)[key].ID}, true)
+		jLog.Verbose(
+			fmt.Sprintf("Tracking %s at %s every %s", *(*s)[key].ID, (*s)[key].GetServiceURL(true), (*s)[key].GetInterval()),
+			utils.LogFrom{Primary: *(*s)[key].ID},
+			true)
 
 		// Track this Service in a infinite loop goroutine.
 		go (*s)[key].Track()
@@ -43,6 +45,10 @@ func (s *Slice) Track(ordering *[]string) {
 // between each check.
 func (s *Service) Track() {
 	serviceInfo := s.GetServiceInfo()
+
+	// Track the deployed version in a infinite loop goroutine.
+	go s.DeployedVersionLookup.Track(s)
+
 	// Track forever.
 	for {
 		// If new release found by this query.
