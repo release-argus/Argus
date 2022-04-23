@@ -16,6 +16,7 @@ package service
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -24,7 +25,6 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/hymenaios-io/Hymenaios/utils"
-	"gopkg.in/yaml.v3"
 )
 
 // Query queries the Service source, updating Service.LatestVersion
@@ -69,64 +69,18 @@ func (s *Service) Query() (bool, error) {
 		jLog.Error(err, logFrom, true)
 		return false, err
 	}
-	// Convert the body to string.
-	body := string(rawBody)
-	version := body
 
-	var versions []string
-	var releases []GitHubRelease
-	var filteredReleases []GitHubRelease
-	// GitHub service.
-	if *s.Type == "github" {
-		// Check for rate limit.
-		if len(body) < 500 {
-			if strings.Contains(body, "rate limit") {
-				err = errors.New("rate limit reached for GitHub")
-				jLog.Warn(err, logFrom, true)
-				return false, err
-			}
-			if !strings.Contains(body, `"tag_name"`) {
-				err = errors.New("github access token is invalid")
-				jLog.Fatal(err, logFrom, strings.Contains(body, "Bad credentials"))
-
-				err = fmt.Errorf("tag_name not found at %s\n%s", *s.URL, body)
-				jLog.Error(err, logFrom, true)
-				return false, err
-			}
-		}
-
-		err = yaml.Unmarshal(rawBody, &releases)
-		if err != nil {
-			jLog.Error(err, logFrom, true)
-			msg := fmt.Sprintf("Unmarshal of GitHub API data failed\n%s", err)
-			jLog.Error(msg, logFrom, true)
-		}
-
-		for i := range releases {
-			// If it isn't a prerelease, or it is and they're wanted
-			if !releases[i].PreRelease || (releases[i].PreRelease && s.GetUsePreRelease()) {
-				versions = append(versions, releases[i].TagName)
-				filteredReleases = append(filteredReleases, releases[i])
-			}
-		}
-
-		// Web service
-	} else {
-		versions = append(versions, version)
+	filteredReleases, err := s.GetVersions(rawBody, logFrom)
+	if err != nil {
+		return false, err
 	}
 
-	for i := range versions {
-		// Iterate through the URLCommands to filter out the version.
-		version, err = s.URLCommands.run(versions[i], logFrom)
-		// If URLCommands failed
-		if err != nil {
-			// If this is the last version, return
-			if i == len(versions)-1 {
-				// Don't log here as the `run` will already have logged
-				return false, err
-			}
-			// Try another version
-			continue
+	var version string
+	wantSemanticVersioning := s.GetSemanticVersioning()
+	for i := range filteredReleases {
+		version = filteredReleases[i].TagName
+		if wantSemanticVersioning && *s.Type != "url" {
+			version = filteredReleases[i].SemanticVersion.String()
 		}
 
 		// Break if version passed the regex check
@@ -143,7 +97,7 @@ func (s *Service) Query() (bool, error) {
 						filteredReleases[i].Assets,
 						logFrom,
 					); err != nil {
-						if i == len(versions)-1 {
+						if i == len(filteredReleases)-1 {
 							return false, err
 						}
 						continue
@@ -153,7 +107,7 @@ func (s *Service) Query() (bool, error) {
 				} else {
 					if err := s.regexCheckContent(
 						version,
-						body,
+						string(rawBody),
 						logFrom,
 					); err != nil {
 						return false, err
@@ -170,7 +124,6 @@ func (s *Service) Query() (bool, error) {
 	s.Status.SetLastQueried()
 	// If this version is different (new).
 	if version != utils.DefaultIfNil(s.Status.LatestVersion) {
-		wantSemanticVersioning := s.GetSemanticVersioning()
 		// Check for a progressive change in version.
 		if wantSemanticVersioning && s.Status.LatestVersion != nil {
 			oldVersion, err := semver.NewVersion(*s.Status.LatestVersion)
@@ -192,7 +145,7 @@ func (s *Service) Query() (bool, error) {
 			// return false (don't notify anything. Stay on oldVersion)
 			if newVersion.LessThan(*oldVersion) {
 				err := fmt.Errorf("queried version %q is less than the current version %q", version, *s.Status.LatestVersion)
-				jLog.Error(err, logFrom, true)
+				jLog.Warn(err, logFrom, true)
 				return false, err
 			}
 		}
@@ -240,4 +193,95 @@ func (s *Service) Query() (bool, error) {
 	s.AnnounceQuery()
 	// No version change.
 	return false, nil
+}
+
+func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredReleases []GitHubRelease, err error) {
+	var releases []GitHubRelease
+	body := string(rawBody)
+	// GitHub service.
+	if *s.Type == "github" {
+		// Check for rate limit.
+		if len(body) < 500 {
+			if strings.Contains(body, "rate limit") {
+				err = errors.New("rate limit reached for GitHub")
+				jLog.Warn(err, logFrom, true)
+				return
+			}
+			if !strings.Contains(body, `"tag_name"`) {
+				err = errors.New("github access token is invalid")
+				jLog.Fatal(err, logFrom, strings.Contains(body, "Bad credentials"))
+
+				err = fmt.Errorf("tag_name not found at %s\n%s", *s.URL, body)
+				jLog.Error(err, logFrom, true)
+				return
+			}
+		}
+
+		if err = json.Unmarshal(rawBody, &releases); err != nil {
+			jLog.Error(err, logFrom, true)
+			msg := fmt.Errorf("unmarshal of GitHub API data failed\n%s", err)
+			jLog.Error(msg, logFrom, true)
+		}
+
+		semanticVerioning := s.GetSemanticVersioning()
+		for i := range releases {
+			// If it isn't a prerelease, or it is and they're wanted
+			if !releases[i].PreRelease || (releases[i].PreRelease && s.GetUsePreRelease()) {
+				// Check that TagName matches URLCommands
+				if releases[i].TagName, err = s.URLCommands.run(releases[i].TagName, logFrom); err != nil {
+					continue
+				}
+
+				// If SemVer isn't wanted, add all
+				if !semanticVerioning {
+					filteredReleases = append(filteredReleases, releases[i])
+					continue
+				}
+
+				// Else, sort the versions
+				semVer, err := semver.NewVersion(releases[i].TagName)
+				if err != nil {
+					continue
+				}
+				releases[i].SemanticVersion = semVer
+				if len(filteredReleases) == 0 {
+					filteredReleases = append(filteredReleases, releases[i])
+					continue
+				}
+				// Insertion Sort
+				index := len(filteredReleases)
+				for index != 0 {
+					index--
+					// semVer @ current is less than @ index
+					if releases[i].SemanticVersion.LessThan(*filteredReleases[index].SemanticVersion) {
+						if index == len(filteredReleases)-1 {
+							filteredReleases = append(filteredReleases, releases[i])
+							break
+						}
+						filteredReleases = append(filteredReleases[:index+1], filteredReleases[index:]...)
+						filteredReleases[index+1] = releases[i]
+						break
+					} else if index == 0 {
+						// releases[i] is newer than all filteredReleases. Prepend
+						filteredReleases = append([]GitHubRelease{releases[i]}, filteredReleases...)
+					}
+				}
+			}
+		}
+
+		// url service
+	} else {
+		version, err := s.URLCommands.run(body, logFrom)
+		if err != nil {
+			return filteredReleases, err
+		}
+		filteredReleases = append(filteredReleases, GitHubRelease{TagName: version})
+	}
+
+	if len(filteredReleases) == 0 {
+		err = fmt.Errorf("no releases were found matching the url_commands")
+		jLog.Warn(err, logFrom, true)
+		return
+	}
+	return filteredReleases, nil
 }

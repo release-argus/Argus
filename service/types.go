@@ -15,6 +15,8 @@
 package service
 
 import (
+	"github.com/coreos/go-semver/semver"
+
 	"github.com/hymenaios-io/Hymenaios/notifiers/gotify"
 	"github.com/hymenaios-io/Hymenaios/notifiers/slack"
 	"github.com/hymenaios-io/Hymenaios/webhook"
@@ -54,60 +56,61 @@ type Service struct {
 
 // GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
 type GitHubRelease struct {
-	URL             string        `yaml:"url"`
-	AssetsURL       string        `yaml:"assets_url"`
-	UploadURL       string        `yaml:"upload_url"`
-	HTMLURL         string        `yaml:"html_url"`
-	ID              uint          `yaml:"id"`
-	Author          GitHubAuthor  `yaml:"author"`
-	NodeID          string        `yaml:"node_id"`
-	TagName         string        `yaml:"tag_name"`
-	TargetCommitish string        `yaml:"target_commitish"`
-	Name            string        `yaml:"name"`
-	Draft           bool          `yaml:"draft"`
-	PreRelease      bool          `yaml:"prerelease"`
-	CreatedAt       string        `yaml:"created_at"`
-	PublishedAt     string        `yaml:"published_at"`
-	Assets          []GitHubAsset `yaml:"assets"`
+	URL             string          `json:"url"`
+	AssetsURL       string          `json:"assets_url"`
+	UploadURL       string          `json:"upload_url"`
+	HTMLURL         string          `json:"html_url"`
+	ID              uint            `json:"id"`
+	Author          GitHubAuthor    `json:"author"`
+	NodeID          string          `json:"node_id"`
+	SemanticVersion *semver.Version `json:"-"`
+	TagName         string          `json:"tag_name"`
+	TargetCommitish string          `json:"target_commitish"`
+	Name            string          `json:"name"`
+	Draft           bool            `json:"draft"`
+	PreRelease      bool            `json:"prerelease"`
+	CreatedAt       string          `json:"created_at"`
+	PublishedAt     string          `json:"published_at"`
+	Assets          []GitHubAsset   `json:"assets"`
 }
 
 // GitHubAuthor is the format of an Author on api.github.com/repos/OWNER/REPO/releases.
 type GitHubAuthor struct {
-	Login             string `yaml:"login"`
-	ID                uint   `yaml:"id"`
-	NodeID            string `yaml:"node_id"`
-	AvatarURL         string `yaml:"avatar_url"`
-	GravatarID        string `yaml:"gravatar_id"`
-	URL               string `yaml:"url"`
-	HTMLURL           string `yaml:"html_url"`
-	FollowersURL      string `yaml:"followers_url"`
-	FollowingURL      string `yaml:"following_url"`
-	GistsURL          string `yaml:"gists_url"`
-	StarredURL        string `yaml:"starred_url"`
-	SubscriptionsURL  string `yaml:"subscriptions_url"`
-	OrganizationsURL  string `yaml:"organizations_url"`
-	ReposURL          string `yaml:"repos_url"`
-	EventsURL         string `yaml:"events_url"`
-	ReceivedEventsURL string `yaml:"received__events_url"`
-	Type              string `yaml:"type"`
-	SiteAdmin         bool   `yaml:"site_admin"`
+	Login             string `json:"login"`
+	ID                uint   `json:"id"`
+	NodeID            string `json:"node_id"`
+	AvatarURL         string `json:"avatar_url"`
+	GravatarID        string `json:"gravatar_id"`
+	URL               string `json:"url"`
+	HTMLURL           string `json:"html_url"`
+	FollowersURL      string `json:"followers_url"`
+	FollowingURL      string `json:"following_url"`
+	GistsURL          string `json:"gists_url"`
+	StarredURL        string `json:"starred_url"`
+	SubscriptionsURL  string `json:"subscriptions_url"`
+	OrganizationsURL  string `json:"organizations_url"`
+	ReposURL          string `json:"repos_url"`
+	EventsURL         string `json:"events_url"`
+	ReceivedEventsURL string `json:"received__events_url"`
+	Type              string `json:"type"`
+	SiteAdmin         bool   `json:"site_admin"`
 }
 
 // GitHubAsset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
 type GitHubAsset struct {
-	URL                string       `yaml:"url"`
-	ID                 uint         `yaml:"id"`
-	NodeID             string       `yaml:"node_id"`
-	Name               string       `yaml:"name"`
-	Label              string       `yaml:"label"`
-	Uploader           GitHubAuthor `yaml:"uploader"`
-	ContentType        string       `yaml:"content_type"`
-	State              string       `yaml:"state"`
-	Size               uint         `yaml:"size"`
-	DownloadCount      uint         `yaml:"download_count"`
-	CreatedAt          string       `yaml:"created_at"`
-	UpdatedAt          string       `yaml:"updated_at"`
-	BrowserDownloadURL string       `yaml:"browser_download_url"`
+	URL                string       `json:"url"`
+	ID                 uint         `json:"id"`
+	NodeID             string       `json:"node_id"`
+	Name               string       `json:"name"`
+	Label              string       `json:"label"`
+	Uploader           GitHubAuthor `json:"uploader"`
+	ContentType        string       `json:"content_type"`
+	State              string       `json:"state"`
+	Size               uint         `json:"size"`
+	DownloadCount      uint         `json:"download_count"`
+	CreatedAt          string       `json:"created_at"`
+	UpdatedAt          string       `json:"updated_at"`
+	BrowserDownloadURL string       `json:"browser_download_url"`
 }
 
 // DeployedVersionLookup of the service.
