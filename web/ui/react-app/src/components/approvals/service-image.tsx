@@ -20,41 +20,45 @@ export const ServiceImage = ({
   visible,
 }: ServiceImageData): ReactElement => {
   const delayedRender = useDelayedRender(500);
-  return service?.icon ? (
-    <Card.Img
-      variant="top"
-      src={service.icon}
-      alt={`${service.id} Image`}
-      className="service-image"
-      style={{ display: visible ? "inline" : "none" }}
-    />
-  ) : service?.loading === false ? (
-    <FontAwesomeIcon
-      icon={service.type === "github" ? faGithub : faWindowMaximize}
-      style={{
-        minWidth: "fit-content",
-        display: visible ? "inline" : "none",
-        height: "6rem",
-      }}
-      className={"service-image"}
-    />
-  ) : (
+  return (
     <div
-      className="service-image"
-      style={{ display: visible ? "inline" : "none" }}
+      className="empty"
+      style={{ height: "7rem", display: visible ? "flex" : "none" }}
     >
-      {delayedRender(() => (
+      {service?.icon ? (
+        <Card.Img
+          variant="top"
+          src={service.icon}
+          alt={`${service.id} Image`}
+          className="service-image"
+        />
+      ) : service?.loading === false ? (
         <FontAwesomeIcon
-          icon={faCircleNotch}
+          icon={service.type === "github" ? faGithub : faWindowMaximize}
           style={{
             minWidth: "fit-content",
-            display: visible ? "inline" : "none",
             height: "6rem",
-            padding: "0",
           }}
-          className={"service-image fa-spin"}
+          className={"service-image"}
         />
-      ))}
+      ) : (
+        <div
+          className="service-image"
+          style={{ display: visible ? "inline" : "none" }}
+        >
+          {delayedRender(() => (
+            <FontAwesomeIcon
+              icon={faCircleNotch}
+              style={{
+                minWidth: "fit-content",
+                height: "6rem",
+                padding: "0",
+              }}
+              className={"service-image fa-spin"}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
