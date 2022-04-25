@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.1](https://github.com/hymenaios-io/Hymenaios/compare/0.1.0...0.1.1) (2022-04-25)
+
+
+### Bug Fixes
+
+* **ui:** icons could overflow ([#17](https://github.com/hymenaios-io/Hymenaios/issues/17)) ([e3897f4](https://github.com/hymenaios-io/Hymenaios/commits/e3897f419a59395d5c292d0c4e34dfa83e641f11))
+
 ## [0.1.0](https://github.com/hymenaios-io/Hymenaios/compare/0.0.1...0.1.0) (2022-04-23)
 
 
