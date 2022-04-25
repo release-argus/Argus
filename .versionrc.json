@@ -17,7 +17,15 @@
       "type": "json"
     },
     {
+      "filename": "web/ui/react-app/package-lock.json",
+      "type": "json"
+    },
+    {
       "filename": "package.json",
+      "type": "json"
+    },
+    {
+      "filename": "package-lock.json",
       "type": "json"
     }
   ]
