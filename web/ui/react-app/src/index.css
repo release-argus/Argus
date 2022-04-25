@@ -138,10 +138,16 @@ body {
 }
 .service-item {
   display: flex;
+  padding: 0px;
   justify-content: space-between;
-  padding: 0.5rem;
   border: none;
   overflow: hidden;
+}
+.list-group-flush {
+  padding: 0.5rem;
+}
+.btn-update-action {
+  height: 1.25rem;
 }
 
 .alert-primary {
@@ -183,7 +189,6 @@ body {
 .update-options {
   overflow: hidden;
   text-align: center;
-  height: 28px;
 }
 
 .btn-flex {
@@ -319,7 +324,9 @@ body {
 }
 .service-image {
   padding: 0.5rem 0;
-  height: 7rem;
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
   width: auto;
   margin: auto;
 }
@@ -366,6 +373,10 @@ body {
 
 .no-margin {
   margin: 0px;
+}
+.empty {
+  margin: 0px;
+  padding: 0px;
 }
 
 .webhook-title {

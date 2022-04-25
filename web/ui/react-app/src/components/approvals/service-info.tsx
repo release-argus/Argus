@@ -59,7 +59,7 @@ export const ServiceInfo = ({
       className={serviceWarning ? "alert-warning" : "default"}
     >
       <ListGroup className="list-group-flush">
-        {service.webhook && updateAvailable && !updateSkipped ? (
+        {updateAvailable && !updateSkipped ? (
           <>
             <ListGroup.Item
               key="update-available"
@@ -72,10 +72,11 @@ export const ServiceInfo = ({
               key="update-buttons"
               className={"service-item update-options alert-warning"}
               variant="secondary"
+              style={{ paddingTop: "0.25rem" }}
             >
               <Button
                 key="details"
-                className="btn-flex"
+                className="btn-flex btn-update-action"
                 variant="primary"
                 onClick={() => setShowUpdateInfo()}
               >
@@ -83,19 +84,21 @@ export const ServiceInfo = ({
               </Button>
               <Button
                 key="approve"
-                className="btn-flex"
+                className="btn-flex btn-update-action"
                 variant="success"
                 onClick={() =>
                   showModal(updateApproved ? "RESEND" : "SEND", service)
                 }
+                disabled={updateApproved || service.webhook === undefined}
               >
                 <FontAwesomeIcon icon={faCheck} />
               </Button>
               <Button
                 key="reject"
-                className="btn-flex"
+                className="btn-flex btn-update-action"
                 variant="danger"
                 onClick={() => showModal("SKIP", service)}
+                disabled={updateApproved || service.webhook === undefined}
               >
                 <FontAwesomeIcon icon={faTimes} color="white" />
               </Button>
