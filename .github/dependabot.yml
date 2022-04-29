@@ -11,7 +11,7 @@ updates:
     assignees: [JosephKav]
     reviewers: [JosephKav]
     commit-message:
-      prefix: "chore(deps-actions): "
+      prefix: "build(deps-actions): "
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -21,7 +21,7 @@ updates:
     assignees: [JosephKav]
     reviewers: [JosephKav]
     commit-message:
-      prefix: "chore(deps-docker): "
+      prefix: "build(deps-docker): "
 
   - package-ecosystem: gomod
     directory: "/"
@@ -31,7 +31,7 @@ updates:
     assignees: [JosephKav]
     reviewers: [JosephKav]
     commit-message:
-      prefix: "chore(deps-go): "
+      prefix: "build(deps-go): "
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -41,7 +41,7 @@ updates:
     assignees: [JosephKav]
     reviewers: [JosephKav]
     commit-message:
-      prefix: "chore(deps-npm): "
+      prefix: "build(deps-npm): "
   - package-ecosystem: "npm"
     directory: "/web/ui/react-app/"
     schedule:
@@ -50,4 +50,4 @@ updates:
     assignees: [JosephKav]
     reviewers: [JosephKav]
     commit-message:
-      prefix: "chore(deps-npm): "
+      prefix: "build(deps-npm): "

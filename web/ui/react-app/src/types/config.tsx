@@ -33,7 +33,7 @@ export interface DefaultsType {
   webhook?: WebHookType;
 }
 export interface WebSettingsType {
-  listen_address: string;
+  listen_host: string;
   listen_port: string;
   cert_file: string;
   pkey_file: string;

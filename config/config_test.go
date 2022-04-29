@@ -83,8 +83,8 @@ func TestSetDefaults(t *testing.T) {
 	}
 
 	wantString = "0.0.0.0"
-	gotString := config.Settings.GetWebListenAddress()
+	gotString := config.Settings.GetWebListenHost()
 	if !(wantString == gotString) {
-		t.Fatalf(`post-setDefaults config.Settings.Web.ListenAddress = %v, want match for %s`, gotString, wantString)
+		t.Fatalf(`post-setDefaults config.Settings.Web.ListenHost = %v, want match for %s`, gotString, wantString)
 	}
 }

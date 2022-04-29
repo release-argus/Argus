@@ -99,14 +99,14 @@ type RuntimeInfo struct {
 
 // Flags is the runtime flags.
 type Flags struct {
-	ConfigFile       *string `json:"config.file,omitempty"`
-	LogLevel         string  `json:"log.level,omitempty"`
-	LogTimestamps    *bool   `json:"log.timestamps,omitempty"`
-	WebListenAddress string  `json:"web.listen-address,omitempty"`
-	WebListenPort    string  `json:"web.listen-port,omitempty"`
-	WebCertFile      *string `json:"web.cert-file"`
-	WebPKeyFile      *string `json:"web.pkey-file"`
-	WebRoutePrefix   string  `json:"web.route-prefix,omitempty"`
+	ConfigFile     *string `json:"config.file,omitempty"`
+	LogLevel       string  `json:"log.level,omitempty"`
+	LogTimestamps  *bool   `json:"log.timestamps,omitempty"`
+	WebListenHost  string  `json:"web.listen-host,omitempty"`
+	WebListenPort  string  `json:"web.listen-port,omitempty"`
+	WebCertFile    *string `json:"web.cert-file"`
+	WebPKeyFile    *string `json:"web.pkey-file"`
+	WebRoutePrefix string  `json:"web.route-prefix,omitempty"`
 }
 
 // Defaults is the global default for vars.
@@ -143,11 +143,11 @@ type LogSettings struct {
 
 // WebSettings contains web settings for the program.
 type WebSettings struct {
-	ListenAddress *string `json:"listen_address,omitempty"` // Web listen address
-	ListenPort    *string `json:"listen_port,omitempty"`    // Web listen port
-	CertFile      *string `json:"cert_file,omitempty"`      // HTTPS certificate path
-	KeyFile       *string `json:"pkey_file,omitempty"`      // HTTPS privkey path
-	RoutePrefix   *string `json:"route_prefix,omitempty"`   // Web endpoint prefix
+	ListenHost  *string `json:"listen_host,omitempty"`  // Web listen host
+	ListenPort  *string `json:"listen_port,omitempty"`  // Web listen port
+	CertFile    *string `json:"cert_file,omitempty"`    // HTTPS certificate path
+	KeyFile     *string `json:"pkey_file,omitempty"`    // HTTPS privkey path
+	RoutePrefix *string `json:"route_prefix,omitempty"` // Web endpoint prefix
 }
 
 // GotifySlice is a slice mapping of Gotify.

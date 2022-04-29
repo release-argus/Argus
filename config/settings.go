@@ -23,13 +23,13 @@ import (
 
 // Export the flags.
 var (
-	LogLevel         = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
-	LogTimestamps    = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
-	WebListenAddress = flag.String("web.listen-address", "0.0.0.0", "Address to listen on for UI, API, and telemetry.")
-	WebListenPort    = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
-	WebCertFile      = flag.String("web.cert-file", "", "HTTPS certificate file path.")
-	WebPKeyFile      = flag.String("web.pkey-file", "", "HTTPS private key file path.")
-	WebRoutePrefix   = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
+	LogLevel       = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
+	LogTimestamps  = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
+	WebListenHost  = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
+	WebListenPort  = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
+	WebCertFile    = flag.String("web.cert-file", "", "HTTPS certificate file path.")
+	WebPKeyFile    = flag.String("web.pkey-file", "", "HTTPS private key file path.")
+	WebRoutePrefix = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
 )
 
 // Settings for the binary.
@@ -57,11 +57,11 @@ type LogSettings struct {
 
 // WebSettings for the binary.
 type WebSettings struct {
-	ListenAddress *string `yaml:"listen_address"`      // Web listen address
-	ListenPort    *string `yaml:"listen_port"`         // Web listen port
-	RoutePrefix   *string `yaml:"route_prefix"`        // Web endpoint prefix
-	CertFile      *string `yaml:"cert_file,omitempty"` // HTTPS certificate path
-	KeyFile       *string `yaml:"pkey_file,omitempty"` // HTTPS privkey path
+	ListenHost  *string `yaml:"listen_host"`         // Web listen host
+	ListenPort  *string `yaml:"listen_port"`         // Web listen port
+	RoutePrefix *string `yaml:"route_prefix"`        // Web endpoint prefix
+	CertFile    *string `yaml:"cert_file,omitempty"` // HTTPS certificate path
+	KeyFile     *string `yaml:"pkey_file,omitempty"` // HTTPS privkey path
 }
 
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
@@ -71,8 +71,8 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 	if !(*flagset)["log.timestamps"] {
 		LogTimestamps = nil
 	}
-	if !(*flagset)["web.listen-address"] {
-		WebListenAddress = nil
+	if !(*flagset)["web.listen-host"] {
+		WebListenHost = nil
 	}
 	if !(*flagset)["web.listen-port"] {
 		WebListenPort = nil
@@ -110,10 +110,10 @@ func (s *Settings) SetDefaults() {
 	// #######
 	s.FromFlags.Web = WebSettings{}
 
-	// ListenAddress
-	s.FromFlags.Web.ListenAddress = WebListenAddress
-	webListenAddress := "0.0.0.0"
-	s.HardDefaults.Web.ListenAddress = &webListenAddress
+	// ListenHost
+	s.FromFlags.Web.ListenHost = WebListenHost
+	webListenHost := "0.0.0.0"
+	s.HardDefaults.Web.ListenHost = &webListenHost
 
 	// ListenPort
 	s.FromFlags.Web.ListenPort = WebListenPort
@@ -142,9 +142,9 @@ func (s *Settings) GetLogLevel() string {
 	return strings.ToUpper(*utils.GetFirstNonNilPtr(s.FromFlags.Log.Level, s.Log.Level, s.HardDefaults.Log.Level))
 }
 
-// GetWebListenAddresss.
-func (s *Settings) GetWebListenAddress() string {
-	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.ListenAddress, s.Web.ListenAddress, s.HardDefaults.Web.ListenAddress)
+// GetWebListenHost.
+func (s *Settings) GetWebListenHost() string {
+	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.ListenHost, s.Web.ListenHost, s.HardDefaults.Web.ListenHost)
 }
 
 // GetWebListenPort.

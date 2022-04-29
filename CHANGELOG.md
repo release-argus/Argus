@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/hymenaios-io/Hymenaios/compare/0.1.2...0.1.3) (2022-04-29)
+
+
+### Bug Fixes
+
+* **config:** switch `listen-address` to `listen-host` (`listen_address` -> `listen_host` as well) ([478ff0e](https://github.com/hymenaios-io/Hymenaios/commit/478ff0ead7260b5577df504f38c50fa01acc4d09))
+
 ### [0.1.2](https://github.com/hymenaios-io/Hymenaios/compare/0.1.1...0.1.2) (2022-04-29)
 
 
