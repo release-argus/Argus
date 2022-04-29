@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.2](https://github.com/hymenaios-io/Hymenaios/compare/0.1.1...0.1.2) (2022-04-29)
+
+
+### Bug Fixes
+
+* `UpdateLatestApproved` - handle `nil` webhooks ([1e43e73](https://github.com/hymenaios-io/Hymenaios/commits/1e43e73b4b12aa59c526974a3537d7286e64c17e))
+
 ### [0.1.1](https://github.com/hymenaios-io/Hymenaios/compare/0.1.0...0.1.1) (2022-04-25)
 
 
