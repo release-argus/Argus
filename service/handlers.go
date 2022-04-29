@@ -25,19 +25,20 @@ import (
 // UpdatedVersion will register the version change, setting `s.Status.CurrentVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
-	// Don't update to LatestVersion if we have a lookup check
-	if s.DeployedVersionLookup != nil {
-		s.UpdateLatestApproved()
-		return
-	}
 	// Only update if all webhooks have been sent
 	// and none failed
 	if s.WebHook != nil {
 		for key := range *s.WebHook {
+			// Default nil to true = failed
 			if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
 				return
 			}
 		}
+	}
+	// Don't update CurrentVersion to LatestVersion if we have a lookup check
+	if s.DeployedVersionLookup != nil {
+		s.UpdateLatestApproved()
+		return
 	}
 	s.Status.SetCurrentVersion(*s.Status.LatestVersion)
 
@@ -51,11 +52,7 @@ func (s *Service) UpdatedVersion() {
 // UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
-	for index := range *s.WebHook {
-		if (*s.WebHook)[index].Failed == nil || *(*s.WebHook)[index].Failed == false {
-			return
-		}
-	}
+	// Only announce once
 	if utils.DefaultIfNil(s.Status.ApprovedVersion) != utils.DefaultIfNil(s.Status.LatestVersion) {
 		latestVersion := utils.DefaultIfNil(s.Status.LatestVersion)
 		s.Status.ApprovedVersion = &latestVersion
