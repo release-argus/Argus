@@ -44,8 +44,8 @@ Usage of /usr/local/bin/hymenaios:
         Put the name of the Slack service to send a test message.
   -web.cert-file string
         HTTPS certificate file path.
-  -web.listen-address string
-        Address to listen on for UI, API, and telemetry. (default "0.0.0.0")
+  -web.listen-host string
+        IP address to listen on for UI, API, and telemetry. (default "0.0.0.0")
   -web.listen-port string
         Port to listen on for UI, API, and telemetry. (default "8080")
   -web.pkey-file string

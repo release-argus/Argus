@@ -66,12 +66,12 @@ func Main(cfg *config.Config, log *utils.JLog) {
 		}
 	}
 
-	fullListenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenAddress(), cfg.Settings.GetWebListenPort())
-	jLog.Info("Listening on "+fullListenAddress+cfg.Settings.GetWebRoutePrefix(), utils.LogFrom{}, true)
+	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), utils.LogFrom{}, true)
 
 	if cfg.Settings.GetWebCertFile() != nil && cfg.Settings.GetWebKeyFile() != nil {
-		jLog.Fatal(http.ListenAndServeTLS(fullListenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router), utils.LogFrom{}, true)
+		jLog.Fatal(http.ListenAndServeTLS(listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router), utils.LogFrom{}, true)
 	} else {
-		jLog.Fatal(http.ListenAndServe(fullListenAddress, router), utils.LogFrom{}, true)
+		jLog.Fatal(http.ListenAndServe(listenAddress, router), utils.LogFrom{}, true)
 	}
 }
