@@ -35,12 +35,13 @@ type WebSocketMessage struct {
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
-	ID      *string `json:"id"`
-	Type    *string `json:"type,omitempty"`    // "github"/"URL"
-	URL     *string `json:"url,omitempty"`     // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	Icon    *string `json:"icon,omitempty"`    // Service.Slack.IconURL / Slack.IconURL / Defaults.Slack.IconURL
-	WebHook int     `json:"webhook,omitempty"` // Whether there are WebHook(s) to send on a new release.
-	Status  *Status `json:"status,omitempty"`  // Track the Status of this source (version and regex misses).
+	ID                       *string `json:"id"`
+	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
+	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
+	Icon                     *string `json:"icon,omitempty"`                 // Service.Slack.IconURL / Slack.IconURL / Defaults.Slack.IconURL
+	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
+	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release.
+	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses).
 }
 
 // Status is the Status of a Service.

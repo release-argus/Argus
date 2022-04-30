@@ -12,6 +12,7 @@ export interface ServiceSummaryType {
   type?: string;
   url?: string;
   icon?: string;
+  has_deployed_version?: boolean;
   gotify?: boolean;
   slack?: boolean;
   webhook?: number;

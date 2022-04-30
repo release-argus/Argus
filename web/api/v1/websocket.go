@@ -59,13 +59,15 @@ func (api *API) wsService(client *Client) {
 		if service.WebHook != nil {
 			webhookCount = len(*service.WebHook)
 		}
+		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
 		serviceSummary := api_types.ServiceSummary{
-			ID:      service.ID,
-			Type:    service.Type,
-			URL:     &url,
-			Icon:    (*service).GetIconURL(),
-			WebHook: webhookCount,
+			ID:                       service.ID,
+			Type:                     service.Type,
+			URL:                      &url,
+			Icon:                     (*service).GetIconURL(),
+			HasDeployedVersionLookup: &hasDeployedVersionLookup,
+			WebHook:                  webhookCount,
 			Status: &api_types.Status{
 				ApprovedVersion:         service.Status.ApprovedVersion,
 				CurrentVersion:          service.Status.CurrentVersion,

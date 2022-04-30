@@ -7,17 +7,28 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { ModalType, ServiceSummaryType } from "types/summary";
-import { ReactElement, useCallback, useContext } from "react";
+import { ReactElement, forwardRef, useCallback, useContext } from "react";
 import {
   faAngleDoubleUp,
   faCheck,
   faInfo,
+  faInfoCircle,
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
+
+const FaInfoCircle = forwardRef((props, ref) => (
+  <FontAwesomeIcon
+    forwardedRef={ref}
+    icon={faInfoCircle}
+    {...props}
+    style={{ paddingLeft: "0.5rem" }}
+  />
+));
+FaInfoCircle.displayName = "FaInfoCircle";
 
 interface ServiceInfoData {
   service: ServiceSummaryType;
@@ -112,33 +123,49 @@ export const ServiceInfo = ({
               "service-item" + (service.webhook ? "" : " justify-left")
             }
           >
-            <OverlayTrigger
-              key="current-version"
-              placement="top"
-              delay={{ show: 500, hide: 500 }}
-              overlay={
-                service?.status?.current_version_timestamp ? (
-                  <Tooltip id={`tooltip-current-version`}>
-                    <>
-                      {formatRelative(
-                        new Date(service.status.current_version_timestamp),
-                        new Date()
-                      )}
-                    </>
-                  </Tooltip>
-                ) : (
-                  <>Unknown</>
-                )
-              }
-            >
-              <p style={{ margin: 0 }}>
-                Current version:
-                <br />
-                {service?.status?.current_version
-                  ? service.status.current_version
-                  : "Unknown"}{" "}
-              </p>
-            </OverlayTrigger>
+            <p style={{ margin: 0 }}>
+              Current version:
+              {service.has_deployed_version === true && (
+                <OverlayTrigger
+                  key="deployed-service"
+                  placement="top"
+                  delay={{ show: 500, hide: 500 }}
+                  overlay={
+                    <Tooltip id={`tooltip-deployed-service`}>
+                      of the deployed Service
+                    </Tooltip>
+                  }
+                >
+                  <FaInfoCircle />
+                </OverlayTrigger>
+              )}
+              <br />
+              <OverlayTrigger
+                key="current-version"
+                placement="top"
+                delay={{ show: 500, hide: 500 }}
+                overlay={
+                  service?.status?.current_version_timestamp ? (
+                    <Tooltip id={`tooltip-current-version`}>
+                      <>
+                        {formatRelative(
+                          new Date(service.status.current_version_timestamp),
+                          new Date()
+                        )}
+                      </>
+                    </Tooltip>
+                  ) : (
+                    <>Unknown</>
+                  )
+                }
+              >
+                <p style={{ margin: 0 }}>
+                  {service?.status?.current_version
+                    ? service.status.current_version
+                    : "Unknown"}{" "}
+                </p>
+              </OverlayTrigger>
+            </p>
             {service.webhook && (!updateAvailable || updateSkipped) && (
               <OverlayTrigger
                 key="resend"
