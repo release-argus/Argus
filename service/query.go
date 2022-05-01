@@ -32,96 +32,18 @@ import (
 // otherwise returns false.
 func (s *Service) Query() (bool, error) {
 	logFrom := utils.LogFrom{Primary: *s.ID}
-	customTransport := &http.Transport{}
-	// HTTPS insecure skip verify.
-	if s.GetAllowInvalidCerts() {
-		customTransport = http.DefaultTransport.(*http.Transport).Clone()
-		//#nosec G402 -- explicitly wanted InsecureSkipVerify
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	req, err := http.NewRequest(http.MethodGet, GetURL(*s.URL, *s.Type), nil)
-	if err != nil {
-		jLog.Error(err, logFrom, true)
-		return false, err
-	}
-
-	if s.GetAccessToken() != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", s.GetAccessToken()))
-	}
-
-	client := &http.Client{Transport: customTransport}
-	resp, err := client.Do(req)
-
-	if err != nil {
-		// Don't crash on invalid certs.
-		if strings.Contains(err.Error(), "x509") {
-			err = fmt.Errorf("x509 (Cert invalid)")
-			jLog.Warn(err, logFrom, true)
-			return false, err
-		}
-		jLog.Error(err, logFrom, true)
-		return false, err
-	}
-
-	// Read the response body.
-	rawBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		jLog.Error(err, logFrom, true)
-		return false, err
-	}
-
-	filteredReleases, err := s.GetVersions(rawBody, logFrom)
+	rawBody, err := s.httpRequest(logFrom)
 	if err != nil {
 		return false, err
 	}
 
-	var version string
-	wantSemanticVersioning := s.GetSemanticVersioning()
-	for i := range filteredReleases {
-		version = filteredReleases[i].TagName
-		if wantSemanticVersioning && *s.Type != "url" {
-			version = filteredReleases[i].SemanticVersion.String()
-		}
-
-		// Break if version passed the regex check
-		if err := s.regexCheckVersion(
-			version,
-			logFrom,
-		); err == nil {
-			// regexCheckContent if it's a newer version
-			if version != utils.DefaultIfNil(s.Status.LatestVersion) {
-				if *s.Type == "github" {
-					// GitHub service
-					if err := s.regexCheckContent(
-						version,
-						filteredReleases[i].Assets,
-						logFrom,
-					); err != nil {
-						if i == len(filteredReleases)-1 {
-							return false, err
-						}
-						continue
-					}
-					break
-					// Web service
-				} else {
-					if err := s.regexCheckContent(
-						version,
-						string(rawBody),
-						logFrom,
-					); err != nil {
-						return false, err
-					}
-				}
-
-				// Ignore tags older than the current latest.
-			} else {
-				break
-			}
-		}
+	version, err := s.GetVersion(rawBody, logFrom)
+	if err != nil {
+		return false, err
 	}
 
 	s.Status.SetLastQueried()
+	wantSemanticVersioning := s.GetSemanticVersioning()
 	// If this version is different (new).
 	if version != utils.DefaultIfNil(s.Status.LatestVersion) {
 		// Check for a progressive change in version.
@@ -193,6 +115,44 @@ func (s *Service) Query() (bool, error) {
 	s.AnnounceQuery()
 	// No version change.
 	return false, nil
+}
+
+func (s *Service) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+	customTransport := &http.Transport{}
+	// HTTPS insecure skip verify.
+	if s.GetAllowInvalidCerts() {
+		customTransport = http.DefaultTransport.(*http.Transport).Clone()
+		//#nosec G402 -- explicitly wanted InsecureSkipVerify
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	req, err := http.NewRequest(http.MethodGet, GetURL(*s.URL, *s.Type), nil)
+	if err != nil {
+		jLog.Error(err, logFrom, true)
+		return
+	}
+
+	if s.GetAccessToken() != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", s.GetAccessToken()))
+	}
+
+	client := &http.Client{Transport: customTransport}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		// Don't crash on invalid certs.
+		if strings.Contains(err.Error(), "x509") {
+			err = fmt.Errorf("x509 (Cert invalid)")
+			jLog.Warn(err, logFrom, true)
+			return
+		}
+		jLog.Error(err, logFrom, true)
+		return
+	}
+
+	// Read the response body.
+	rawBody, err = ioutil.ReadAll(resp.Body)
+	jLog.Error(err, logFrom, err != nil)
+	return
 }
 
 func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredReleases []GitHubRelease, err error) {
@@ -284,4 +244,58 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 		return
 	}
 	return filteredReleases, nil
+}
+
+func (s *Service) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version string, err error) {
+	filteredReleases, err := s.GetVersions(rawBody, logFrom)
+	if err != nil {
+		return
+	}
+
+	wantSemanticVersioning := s.GetSemanticVersioning()
+	for i := range filteredReleases {
+		version = filteredReleases[i].TagName
+		if wantSemanticVersioning && *s.Type != "url" {
+			version = filteredReleases[i].SemanticVersion.String()
+		}
+
+		// Break if version passed the regex check
+		if err = s.regexCheckVersion(
+			version,
+			logFrom,
+		); err == nil {
+			// regexCheckContent if it's a newer version
+			if version != utils.DefaultIfNil(s.Status.LatestVersion) {
+				if *s.Type == "github" {
+					// GitHub service
+					if err = s.regexCheckContent(
+						version,
+						filteredReleases[i].Assets,
+						logFrom,
+					); err != nil {
+						if i == len(filteredReleases)-1 {
+							return
+						}
+						continue
+					}
+					break
+					// Web service
+				} else {
+					if err = s.regexCheckContent(
+						version,
+						string(rawBody),
+						logFrom,
+					); err != nil {
+						return
+					}
+				}
+
+				// Ignore tags older than the current latest.
+			} else {
+				// return LatestVersion
+				return
+			}
+		}
+	}
+	return
 }

@@ -27,17 +27,9 @@ import (
 func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
-	serviceIDs := make(map[string]bool)
 	for key := range *s {
 		var serviceErrors error
 		service := (*s)[key]
-
-		// Check Service ID
-		if serviceIDs[*service.ID] {
-			serviceErrors = fmt.Errorf("%s    id: <invalid> %q (Should be unique among Services)\\", utils.ErrorToString(serviceErrors), *service.ID)
-		} else if service.ID != nil {
-			serviceIDs[*service.ID] = true
-		}
 
 		// Check Service
 		if err := service.CheckValues(prefix); err != nil {

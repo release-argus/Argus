@@ -29,13 +29,13 @@ import (
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (c *DeployedVersionLookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(c.AllowInvalidCerts, c.Defaults.AllowInvalidCerts, c.HardDefaults.AllowInvalidCerts)
+func (d *DeployedVersionLookup) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(d.AllowInvalidCerts, d.Defaults.AllowInvalidCerts, d.HardDefaults.AllowInvalidCerts)
 }
 
 // Track the deployed version (CurrentVersion) of the `parent`.
-func (c *DeployedVersionLookup) Track(parent *Service) {
-	if c == nil {
+func (d *DeployedVersionLookup) Track(parent *Service) {
+	if d == nil {
 		return
 	}
 	logFrom := utils.LogFrom{Primary: *parent.ID}
@@ -43,7 +43,7 @@ func (c *DeployedVersionLookup) Track(parent *Service) {
 	// Track forever.
 	for {
 		// If new release found by this query.
-		currentVersion, err := c.Query(logFrom, parent.GetSemanticVersioning())
+		currentVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
 
 		if err == nil && currentVersion != utils.DefaultIfNil(parent.Status.CurrentVersion) {
 			parent.Status.SetCurrentVersion(currentVersion)
@@ -64,59 +64,20 @@ func (c *DeployedVersionLookup) Track(parent *Service) {
 }
 
 // Query the deployed version (CurrentVersion) of the Service.
-func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
-	customTransport := &http.Transport{}
-	// HTTPS insecure skip verify.
-	if c.GetAllowInvalidCerts() {
-		customTransport = http.DefaultTransport.(*http.Transport).Clone()
-		//#nosec G402 -- explicitly wanted InsecureSkipVerify
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-	req, err := http.NewRequest(http.MethodGet, c.URL, nil)
+func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
+	rawBody, err := d.httpRequest(logFrom)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
-		return "", err
-	}
-
-	// Set headers
-	for _, header := range c.Headers {
-		req.Header.Set(header.Key, header.Value)
-	}
-
-	// Basic auth
-	if c.BasicAuth != nil {
-		req.SetBasicAuth((*c.BasicAuth).Username, (*c.BasicAuth).Password)
-	}
-
-	client := &http.Client{Transport: customTransport}
-	resp, err := client.Do(req)
-
-	if err != nil {
-		// Don't crash on invalid certs.
-		if strings.Contains(err.Error(), "x509") {
-			err = fmt.Errorf("x509 (Cert invalid)")
-			jLog.Warn(err, logFrom, true)
-			return "", err
-		}
-		jLog.Error(err, logFrom, true)
-		return "", err
-	}
-
-	// Read the response body.
-	rawBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		jLog.Error(err, logFrom, true)
 		return "", err
 	}
 
 	var version string
-	if c.JSON != "" {
-		jsonKeys := strings.Split(c.JSON, ".")
+	if d.JSON != "" {
+		jsonKeys := strings.Split(d.JSON, ".")
 		var queriedJSON map[string]interface{}
 		err := json.Unmarshal(rawBody, &queriedJSON)
 		if err != nil {
 			err := fmt.Errorf("Failed to unmarshal the following from %q into JSON:%s",
-				c.URL,
+				d.URL,
 				string(rawBody))
 			jLog.Error(err, logFrom, true)
 			return "", err
@@ -126,7 +87,7 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 		for k := range jsonKeys {
 			if queriedJSON[jsonKeys[k]] == nil {
 				err := fmt.Errorf("%q could not be found in the following JSON. Failed at %q:\n%s",
-					c.JSON,
+					d.JSON,
 					jsonKeys[k],
 					string(rawBody))
 				jLog.Warn(err, logFrom, true)
@@ -144,13 +105,13 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 		version = string(rawBody)
 	}
 
-	if c.Regex != "" {
-		re := regexp.MustCompile(c.Regex)
+	if d.Regex != "" {
+		re := regexp.MustCompile(d.Regex)
 		texts := re.FindStringSubmatch(version)
 
 		if len(texts) < 2 {
 			err := fmt.Errorf("%q RegEx didn't return any matches in %q",
-				c.Regex,
+				d.Regex,
 				version)
 			jLog.Warn(err, logFrom, true)
 			return "", err
@@ -171,47 +132,90 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 	return version, nil
 }
 
+func (d *DeployedVersionLookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+	customTransport := &http.Transport{}
+	// HTTPS insecure skip verify.
+	if d.GetAllowInvalidCerts() {
+		customTransport = http.DefaultTransport.(*http.Transport).Clone()
+		//#nosec G402 -- explicitly wanted InsecureSkipVerify
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	req, err := http.NewRequest(http.MethodGet, d.URL, nil)
+	if err != nil {
+		jLog.Error(err, logFrom, true)
+		return
+	}
+
+	// Set headers
+	for _, header := range d.Headers {
+		req.Header.Set(header.Key, header.Value)
+	}
+
+	// Basic auth
+	if d.BasicAuth != nil {
+		req.SetBasicAuth((*d.BasicAuth).Username, (*d.BasicAuth).Password)
+	}
+
+	client := &http.Client{Transport: customTransport}
+	resp, err := client.Do(req)
+	if err != nil {
+		// Don't crash on invalid certs.
+		if strings.Contains(err.Error(), "x509") {
+			err = fmt.Errorf("x509 (Cert invalid)")
+			jLog.Warn(err, logFrom, true)
+			return
+		}
+		jLog.Error(err, logFrom, true)
+		return
+	}
+
+	// Read the response body.
+	rawBody, err = ioutil.ReadAll(resp.Body)
+	jLog.Error(err, logFrom, err != nil)
+	return
+}
+
 // Print will print the DeployedVersionLookup.
-func (c *DeployedVersionLookup) Print(prefix string) {
-	if c == nil {
+func (d *DeployedVersionLookup) Print(prefix string) {
+	if d == nil {
 		return
 	}
 	fmt.Printf("%sdeployed_version:\n", prefix)
 	prefix += "  "
 
-	utils.PrintlnIfNotDefault(c.URL, fmt.Sprintf("%surl: %s", prefix, c.URL))
-	utils.PrintlnIfNotNil(c.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(c.AllowInvalidCerts)))
-	if c.BasicAuth != nil {
+	utils.PrintlnIfNotDefault(d.URL, fmt.Sprintf("%surl: %s", prefix, d.URL))
+	utils.PrintlnIfNotNil(d.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(d.AllowInvalidCerts)))
+	if d.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
-		fmt.Printf("%s  username: %s\n", prefix, c.BasicAuth.Username)
+		fmt.Printf("%s  username: %s\n", prefix, d.BasicAuth.Username)
 		fmt.Printf("%s  password: <secret>\n", prefix)
 	}
-	if c.Headers != nil {
+	if d.Headers != nil {
 		fmt.Printf("%sheaders:\n", prefix)
-		for _, header := range c.Headers {
+		for _, header := range d.Headers {
 			fmt.Printf("%s  - key: %s\n", prefix, header.Key)
 			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
-	utils.PrintlnIfNotDefault(c.JSON, fmt.Sprintf("%sjson: %s", prefix, c.URL))
-	utils.PrintlnIfNotDefault(c.Regex, fmt.Sprintf("%sregex: %s", prefix, c.URL))
+	utils.PrintlnIfNotDefault(d.JSON, fmt.Sprintf("%sjson: %s", prefix, d.URL))
+	utils.PrintlnIfNotDefault(d.Regex, fmt.Sprintf("%sregex: %s", prefix, d.URL))
 }
 
 // CheckValues of the DeployedVersionLookup.
-func (c *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
-	if c == nil {
+func (d *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
+	if d == nil {
 		return
 	}
 
 	// URL
-	if c.URL == "" && c.Defaults != nil {
+	if d.URL == "" && d.Defaults != nil {
 		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the current_version is required)\\", utils.ErrorToString(errs), prefix)
 	}
 
 	// RegEx
-	_, err := regexp.Compile(c.Regex)
+	_, err := regexp.Compile(d.Regex)
 	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: <invalid> %q (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, c.Regex)
+		errs = fmt.Errorf("%s%s  regex: <invalid> %q (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, d.Regex)
 	}
 
 	if errs != nil {
