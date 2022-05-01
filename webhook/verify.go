@@ -29,8 +29,8 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 	}
 
 	for key := range *w {
-		if err := (*w)[key].CheckValues(prefix + "  "); err != nil {
-			errs = fmt.Errorf("%s%s  webhook[%s]:\\%w", utils.ErrorToString(errs), prefix, key, err)
+		if err := (*w)[key].CheckValues(prefix + "    "); err != nil {
+			errs = fmt.Errorf("%s%s  %s:\\%w", utils.ErrorToString(errs), prefix, key, err)
 		}
 	}
 
@@ -49,7 +49,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			*w.Delay += "s"
 		}
 		if _, err := time.ParseDuration(*w.Delay); err != nil {
-			errs = fmt.Errorf("%s%s    delay: <invalid> %q (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
+			errs = fmt.Errorf("%s%sdelay: <invalid> %q (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
 		}
 	}
 

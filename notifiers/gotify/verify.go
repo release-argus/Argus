@@ -29,8 +29,8 @@ func (g *Slice) CheckValues(prefix string) (errs error) {
 	}
 
 	for key := range *g {
-		if err := (*g)[key].CheckValues("  "); err != nil {
-			errs = fmt.Errorf("%s%s  gotify[%s]:\\%w", utils.ErrorToString(errs), prefix, key, err)
+		if err := (*g)[key].CheckValues(prefix + "    "); err != nil {
+			errs = fmt.Errorf("%s%s  %s:\\%w", utils.ErrorToString(errs), prefix, key, err)
 		}
 	}
 
@@ -49,7 +49,7 @@ func (g *Gotify) CheckValues(prefix string) (errs error) {
 			*g.Delay += "s"
 		}
 		if _, err := time.ParseDuration(*g.Delay); err != nil {
-			errs = fmt.Errorf("%s%s    delay: <invalid> %q (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errs), prefix, *g.Delay)
+			errs = fmt.Errorf("%s%sdelay: <invalid> %q (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errs), prefix, *g.Delay)
 		}
 	}
 
