@@ -41,6 +41,10 @@ func (s *Service) Init(
 	if s.Status.Fails == nil {
 		s.Status.Fails = &StatusFails{}
 	}
+	if s.Status.CurrentVersion == nil && s.Status.LatestVersion != nil {
+		lv := *s.Status.LatestVersion
+		s.Status.CurrentVersion = &lv
+	}
 
 	s.Defaults = defaults
 	s.HardDefaults = hardDefaults
