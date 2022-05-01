@@ -35,6 +35,9 @@ func (s *Slice) Init(
 	if s == nil {
 		return
 	}
+	if mains == nil {
+		mains = &Slice{}
+	}
 
 	for key := range *s {
 		id := key

@@ -30,7 +30,7 @@ import (
 func (w *Slice) Init(
 	log *utils.JLog,
 	serviceID *string,
-	main *Slice,
+	mains *Slice,
 	defaults *WebHook,
 	hardDefaults *WebHook,
 	gotifyNotifiers *gotify.Slice,
@@ -39,6 +39,9 @@ func (w *Slice) Init(
 	jLog = log
 	if w == nil {
 		return
+	}
+	if mains == nil {
+		mains = &Slice{}
 	}
 
 	for key := range *w {
@@ -49,7 +52,7 @@ func (w *Slice) Init(
 		(*w)[key].ID = &id
 		(*w)[key].Init(
 			serviceID,
-			(*main)[key],
+			(*mains)[key],
 			defaults,
 			hardDefaults,
 			gotifyNotifiers,
