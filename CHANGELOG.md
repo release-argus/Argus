@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/hymenaios-io/Hymenaios/compare/0.1.3...0.2.0) (2022-05-01)
+
+
+### Features
+
+* **query:** semver check `deployed_version` ([594442d](https://github.com/hymenaios-io/Hymenaios/commits/594442d7e2a19ce1c8d6d791b68ced61c0dad7ed))
+* **ui:** add icon to show if monitoring deployed service ([07eb53a](https://github.com/hymenaios-io/Hymenaios/commits/07eb53afe404d4cf2280bbe6fa108007b2bb7fb8))
+
+
+### Bug Fixes
+
+* **config:** don't require global defaults for notifiers/webhook ([4b9751f](https://github.com/hymenaios-io/Hymenaios/commits/4b9751f6c1d09d1dae5d7600c56f4a9b0df964bf))
+* correct gotify/webhook invalid config prints ([105c342](https://github.com/hymenaios-io/Hymenaios/commits/105c3423bd7692fe55a28d35eebd30a933f26989))
+* default `current_version` to `latest_version` if undefined ([50b0408](https://github.com/hymenaios-io/Hymenaios/commits/50b04088f93ba53ed04bdda5d0e6c2e7bdbfe468))
+
 ### [0.1.3](https://github.com/hymenaios-io/Hymenaios/compare/0.1.2...0.1.3) (2022-04-29)
 
 
