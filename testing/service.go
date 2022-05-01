@@ -79,7 +79,9 @@ func TestService(flag *string, cfg *config.Config) {
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(utils.LogFrom{})
+		version, err := service.DeployedVersionLookup.Query(
+			logFrom,
+			service.GetSemanticVersioning())
 		if err != nil {
 			jLog.Error(
 				err,

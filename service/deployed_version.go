@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/hymenaios-io/Hymenaios/utils"
 )
 
@@ -42,7 +43,7 @@ func (c *DeployedVersionLookup) Track(parent *Service) {
 	// Track forever.
 	for {
 		// If new release found by this query.
-		currentVersion, err := c.Query(logFrom)
+		currentVersion, err := c.Query(logFrom, parent.GetSemanticVersioning())
 
 		if err == nil && currentVersion != utils.DefaultIfNil(parent.Status.CurrentVersion) {
 			parent.Status.SetCurrentVersion(currentVersion)
@@ -63,7 +64,7 @@ func (c *DeployedVersionLookup) Track(parent *Service) {
 }
 
 // Query the deployed version (CurrentVersion) of the Service.
-func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
+func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
 	if c.GetAllowInvalidCerts() {
@@ -156,6 +157,15 @@ func (c *DeployedVersionLookup) Query(logFrom utils.LogFrom) (string, error) {
 		}
 
 		version = texts[1]
+	}
+
+	if semanticVersioning {
+		_, err = semver.NewVersion(version)
+		if err != nil {
+			err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding json/regex to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)", version)
+			jLog.Error(err, logFrom, true)
+			return "", err
+		}
 	}
 
 	return version, nil
