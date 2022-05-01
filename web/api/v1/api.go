@@ -15,16 +15,12 @@
 package v1
 
 import (
-	"io/fs"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/hymenaios-io/Hymenaios/config"
 	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/web/ui"
-	"github.com/vearutop/statigz"
-	"github.com/vearutop/statigz/brotli"
 )
 
 // API is the API to use for the webserver.
@@ -49,21 +45,4 @@ func NewAPI(cfg *config.Config, log *utils.JLog) *API {
 	}
 	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", 302))
 	return api
-}
-
-// SetupRoutesNodeJS will setup the HTTP routes to the NodeJS files.
-func (api *API) SetupRoutesNodeJS() {
-	nodeRoutes := []string{
-		"/approvals",
-		"/config",
-		"/flags",
-		"/status",
-	}
-	for _, route := range nodeRoutes {
-		prefix := strings.TrimRight(api.RoutePrefix, "/") + route
-		api.Router.Handle(route, http.StripPrefix(prefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
-	}
-
-	// Catch-all for JS, CSS, etc...
-	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 }

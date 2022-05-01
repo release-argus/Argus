@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/web/api/types"
 	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
 )
 
@@ -101,13 +100,13 @@ func (api *API) wsDefaults(client *Client) {
 	}
 }
 
-// wsVersion handles approvals/rejections of the latest version of a service.
+// wsServiceAction handles approvals/rejections of the latest version of a service.
 //
 // Required params:
 //
 // service_data.id - Service ID to approve/deny release.
-func (api *API) wsVersion(client *Client, payload api_types.WebSocketMessage) {
-	logFrom := utils.LogFrom{Primary: "wsVersion", Secondary: client.ip}
+func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessage) {
+	logFrom := utils.LogFrom{Primary: "wsServiceAction", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	if payload.ServiceData.ID == nil {
@@ -335,7 +334,7 @@ func (api *API) wsConfigDefaults(client *Client) {
 						api.Config.Defaults.Service.AccessToken,
 						"<secret>"),
 					AllowInvalidCerts: api.Config.Defaults.Service.AllowInvalidCerts,
-					DeployedVersionLookup: &types.DeployedVersionLookup{
+					DeployedVersionLookup: &api_types.DeployedVersionLookup{
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
 				},
@@ -538,7 +537,7 @@ func (api *API) wsConfigService(client *Client) {
 
 			// DeployedVersionLookup
 			if service.DeployedVersionLookup != nil {
-				deployedVersionLookup := types.DeployedVersionLookup{}
+				deployedVersionLookup := api_types.DeployedVersionLookup{}
 				// URL
 				if service.DeployedVersionLookup.URL != "" {
 					deployedVersionLookup.URL = service.DeployedVersionLookup.URL

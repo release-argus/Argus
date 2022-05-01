@@ -18,21 +18,6 @@ import (
 	"time"
 )
 
-// WebSocketMessage is the message format to send/receive/forward.
-type WebSocketMessage struct {
-	Version     *int                       `json:"version,omitempty"`
-	Page        *string                    `json:"page"`
-	Type        *string                    `json:"type"`
-	SubType     *string                    `json:"sub_type,omitempty"`
-	Target      *string                    `json:"target,omitempty"`
-	Order       *[]string                  `json:"order,omitempty"`
-	ServiceData *ServiceSummary            `json:"service_data,omitempty"`
-	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
-	InfoData    *Info                      `json:"info_data,omitempty"`
-	FlagsData   *Flags                     `json:"flags_data,omitempty"`
-	ConfigData  *Config                    `json:"config_data,omitempty"`
-}
-
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
 	ID                       *string `json:"id"`

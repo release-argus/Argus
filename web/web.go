@@ -42,6 +42,8 @@ func NewRouter(cfg *config.Config, jLog *utils.JLog, hub *api_v1.Hub) *mux.Route
 		api_v1.ServeWs(api, hub, w, r)
 	})
 
+	// HTTP API
+	api.SetupRoutesAPI()
 	// NodeJS
 	api.SetupRoutesNodeJS()
 

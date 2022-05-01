@@ -232,7 +232,7 @@ func (c *Client) writePump() {
 					switch *msg.Type {
 					case "VERSION":
 						// Approval/Skip
-						c.api.wsVersion(c, msg)
+						c.api.wsServiceAction(c, msg)
 					case "WEBHOOK":
 						// Get WebHook data for a service
 						c.api.wsWebHook(c, msg)
