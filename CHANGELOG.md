@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/hymenaios-io/Hymenaios/compare/0.2.0...0.2.1) (2022-05-01)
+
+
+### Bug Fixes
+
+* **ui:** `manifest.json` icon srcs ([563d062](https://github.com/hymenaios-io/Hymenaios/commits/563d062f4196391bab37900f5b1ced420052c487))
+
 ## [0.2.0](https://github.com/hymenaios-io/Hymenaios/compare/0.1.3...0.2.0) (2022-05-01)
 
 
