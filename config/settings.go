@@ -51,17 +51,17 @@ type SettingsBase struct {
 
 // LogSettings for the binary.
 type LogSettings struct {
-	Timestamps *bool   `yaml:"timestamps"` // Timestamps in CLI output
-	Level      *string `yaml:"level"`      // Log level
+	Timestamps *bool   `yaml:"timestamps,omitempty"` // Timestamps in CLI output
+	Level      *string `yaml:"level,omitempty"`      // Log level
 }
 
 // WebSettings for the binary.
 type WebSettings struct {
-	ListenHost  *string `yaml:"listen_host"`         // Web listen host
-	ListenPort  *string `yaml:"listen_port"`         // Web listen port
-	RoutePrefix *string `yaml:"route_prefix"`        // Web endpoint prefix
-	CertFile    *string `yaml:"cert_file,omitempty"` // HTTPS certificate path
-	KeyFile     *string `yaml:"pkey_file,omitempty"` // HTTPS privkey path
+	ListenHost  *string `yaml:"listen_host,omitempty"`  // Web listen host
+	ListenPort  *string `yaml:"listen_port,omitempty"`  // Web listen port
+	RoutePrefix *string `yaml:"route_prefix,omitempty"` // Web endpoint prefix
+	CertFile    *string `yaml:"cert_file,omitempty"`    // HTTPS certificate path
+	KeyFile     *string `yaml:"pkey_file,omitempty"`    // HTTPS privkey path
 }
 
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {

@@ -26,10 +26,10 @@ import (
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.Service `yaml:"service"`
-	Gotify  gotify.Gotify   `yaml:"gotify"`
-	Slack   slack.Slack     `yaml:"slack"`
-	WebHook webhook.WebHook `yaml:"webhook"`
+	Service service.Service `yaml:"service,omitempty"`
+	Gotify  gotify.Gotify   `yaml:"gotify,omitempty"`
+	Slack   slack.Slack     `yaml:"slack,omitempty"`
+	WebHook webhook.WebHook `yaml:"webhook,omitempty"`
 }
 
 // SetDefaults (last resort vars).

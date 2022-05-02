@@ -28,14 +28,14 @@ var (
 
 // Config for Hymenaios.
 type Config struct {
-	File         string         `yaml:"-"`        // Path to the config file (--config.file='').
-	Settings     Settings       `yaml:"settings"` // Settings for the program.
-	HardDefaults Defaults       `yaml:"-"`        // Hardcoded default values for the various parameters.
-	Defaults     Defaults       `yaml:"defaults"` // Default values for the various parameters.
-	Gotify       *gotify.Slice  `yaml:"gotify"`   // Gotify message(s) to send on a new release.
-	Slack        *slack.Slice   `yaml:"slack"`    // Slack message(s) to send on a new release.
-	WebHook      *webhook.Slice `yaml:"webhook"`  // WebHook(s) to send on a new release.
-	Service      service.Slice  `yaml:"service"`  // The service(s) to monitor.
-	Order        []string       `yaml:"order"`    // Ordering for the Service(s) in the WebUI.
-	SaveChannel  *chan bool     `yaml:"-"`        // Channel for triggering a save of the config.
+	File         string         `yaml:"-"`                  // Path to the config file (--config.file='').
+	Settings     Settings       `yaml:"settings,omitempty"` // Settings for the program.
+	HardDefaults Defaults       `yaml:"-"`                  // Hardcoded default values for the various parameters.
+	Defaults     Defaults       `yaml:"defaults,omitempty"` // Default values for the various parameters.
+	Gotify       *gotify.Slice  `yaml:"gotify,omitempty"`   // Gotify message(s) to send on a new release.
+	Slack        *slack.Slice   `yaml:"slack,omitempty"`    // Slack message(s) to send on a new release.
+	WebHook      *webhook.Slice `yaml:"webhook,omitempty"`  // WebHook(s) to send on a new release.
+	Service      service.Slice  `yaml:"service,omitempty"`  // The service(s) to monitor.
+	Order        []string       `yaml:"order,omitempty"`    // Ordering for the Service(s) in the WebUI.
+	SaveChannel  *chan bool     `yaml:"-"`                  // Channel for triggering a save of the config.
 }
