@@ -2,4 +2,5 @@ service:
   hymenaios-io/hymenaios:
     type: github
     url: hymenaios-io/hymenaios
-    regex_version: '^[0-9.]+[0-9]$'
+    web_url: https://github.com/hymenaios-io/Hymenaios/blob/master/CHANGELOG.md
+    icon: https://github.com/hymenaios-io/Hymenaios/raw/master/web/ui/static/favicon.svg

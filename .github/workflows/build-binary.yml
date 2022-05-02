@@ -1,12 +1,12 @@
-name: Build
+name: Binary Build
 
 on:
   release:
     types: [ published ]
 
 jobs:
-  build:
-    name: Build
+  build-binary:
+    name: Binary Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
