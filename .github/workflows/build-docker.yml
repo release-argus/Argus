@@ -78,7 +78,6 @@ jobs:
 
       - name: Build and push (master)
         id: docker_build_master
-        if: github.event_name == 'push'
         uses: docker/build-push-action@v2
         with:
           context: .
