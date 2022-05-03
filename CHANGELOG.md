@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.3.1 (2022-05-03)
+
+
+### Bug Fixes
+
+* **refactor:** switch `Service.Status.*` away from pointers ([b579759](https://github.com/hymenaios-io/Hymenaios/commits/b57975925ba1df44889b62cad1bd4ce7eaa9a165))
+
 ## 0.3.0 (2022-05-03)
 
 
