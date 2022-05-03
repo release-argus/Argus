@@ -40,7 +40,7 @@ func (s *Service) UpdatedVersion() {
 		s.UpdateLatestApproved()
 		return
 	}
-	s.Status.SetCurrentVersion(*s.Status.LatestVersion)
+	s.Status.SetCurrentVersion(s.Status.LatestVersion)
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()
@@ -53,9 +53,9 @@ func (s *Service) UpdatedVersion() {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
-	if utils.DefaultIfNil(s.Status.ApprovedVersion) != utils.DefaultIfNil(s.Status.LatestVersion) {
-		latestVersion := utils.DefaultIfNil(s.Status.LatestVersion)
-		s.Status.ApprovedVersion = &latestVersion
+	if s.Status.ApprovedVersion != s.Status.LatestVersion {
+		latestVersion := s.Status.LatestVersion
+		s.Status.ApprovedVersion = latestVersion
 		s.AnnounceApproved()
 	}
 }
@@ -66,7 +66,7 @@ func (s *Service) UpdateLatestApproved() {
 func (s *Service) HandleWebHooks(fromUser bool) {
 	if s.WebHook != nil {
 		if s.GetAutoApprove() || fromUser {
-			msg := fmt.Sprintf("Sending WebHooks for %q", *s.Status.LatestVersion)
+			msg := fmt.Sprintf("Sending WebHooks for %q", s.Status.LatestVersion)
 			jLog.Info(msg, utils.LogFrom{Primary: *s.ID}, true)
 
 			// Send the WebHook(s).
@@ -138,13 +138,13 @@ func (s *Service) HandleWebHook(webhookID string) {
 }
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
-func (s *Service) HandleSkip(version *string) {
-	if version == nil {
+func (s *Service) HandleSkip(version string) {
+	if version == "" {
 		return
 	}
 
-	approvedVersion := "SKIP_" + *version
-	s.Status.ApprovedVersion = &approvedVersion
+	approvedVersion := "SKIP_" + version
+	s.Status.ApprovedVersion = approvedVersion
 	s.AnnounceApproved()
 
 	if s.SaveChannel != nil {

@@ -64,7 +64,7 @@ func TestServiceQuery(t *testing.T) {
 	_, _ = service["GitHub_Query_Test"].Query()
 	got := service["GitHub_Query_Test"].Status.LatestVersion
 
-	if !want.MatchString(*got) {
-		t.Fatalf(`%s.status.LatestVersion = %v, want match for %s`, *service["GitHub_Query_Test"].ID, *got, want)
+	if !want.MatchString(got) {
+		t.Fatalf(`%s.status.LatestVersion = %v, want match for %s`, *service["GitHub_Query_Test"].ID, got, want)
 	}
 }

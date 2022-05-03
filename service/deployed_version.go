@@ -42,13 +42,12 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 
 	// Track forever.
 	for {
-		// If new release found by this query.
 		currentVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
-
-		if err == nil && currentVersion != utils.DefaultIfNil(parent.Status.CurrentVersion) {
+		// If new release found by ^ query.
+		if err == nil && currentVersion != parent.Status.CurrentVersion {
 			parent.Status.SetCurrentVersion(currentVersion)
 
-			// Announce version change to WebSocket clients
+			// Announce version change to WebSocket clients.
 			jLog.Info(
 				fmt.Sprintf("Updated to %q", currentVersion),
 				logFrom,
@@ -58,7 +57,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 				*parent.SaveChannel <- true
 			}
 		}
-		// Sleep interval between checks.
+		// Sleep interval between queries.
 		time.Sleep(parent.GetIntervalDuration())
 	}
 }

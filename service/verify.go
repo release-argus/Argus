@@ -102,16 +102,16 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	// Status
 	if s.Status != nil {
 		var statusErrs error
-		if s.Status.CurrentVersionTimestamp != nil {
-			_, err := time.Parse(time.RFC3339, *s.Status.CurrentVersionTimestamp)
+		if s.Status.CurrentVersionTimestamp != "" {
+			_, err := time.Parse(time.RFC3339, s.Status.CurrentVersionTimestamp)
 			if err != nil {
-				statusErrs = fmt.Errorf("%s%s    current_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, *s.Status.CurrentVersionTimestamp)
+				statusErrs = fmt.Errorf("%s%s    current_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.CurrentVersionTimestamp)
 			}
 		}
-		if s.Status.LatestVersionTimestamp != nil {
-			_, err := time.Parse(time.RFC3339, *s.Status.LatestVersionTimestamp)
+		if s.Status.LatestVersionTimestamp != "" {
+			_, err := time.Parse(time.RFC3339, s.Status.LatestVersionTimestamp)
 			if err != nil {
-				statusErrs = fmt.Errorf("%s%s    latest_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, *s.Status.LatestVersionTimestamp)
+				statusErrs = fmt.Errorf("%s%s    latest_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.LatestVersionTimestamp)
 			}
 		}
 		if statusErrs != nil {

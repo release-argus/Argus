@@ -57,8 +57,8 @@ func TestService(flag *string, cfg *config.Config) {
 		os.Exit(1)
 	}
 
-	service.Status.CurrentVersion = nil
-	service.Status.LatestVersion = nil
+	service.Status.CurrentVersion = ""
+	service.Status.LatestVersion = ""
 	_, err := service.Query()
 	if err != nil {
 		helpMsg := ""

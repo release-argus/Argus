@@ -41,9 +41,15 @@ func (s *Service) Init(
 	if s.Status.Fails == nil {
 		s.Status.Fails = &StatusFails{}
 	}
-	if s.Status.CurrentVersion == nil && s.Status.LatestVersion != nil {
-		lv := *s.Status.LatestVersion
-		s.Status.CurrentVersion = &lv
+	// Default LatestVersion to CurrentVersion
+	if s.Status.LatestVersion == "" {
+		s.Status.LatestVersion = s.Status.CurrentVersion
+		s.Status.LatestVersionTimestamp = s.Status.CurrentVersionTimestamp
+	}
+	// Default CurrentVersion to LatestVersion
+	if s.Status.CurrentVersion == "" {
+		s.Status.CurrentVersion = s.Status.LatestVersion
+		s.Status.CurrentVersionTimestamp = s.Status.LatestVersionTimestamp
 	}
 
 	s.Defaults = defaults
@@ -96,7 +102,7 @@ func (s *Service) GetServiceInfo() utils.ServiceInfo {
 		ID:            *s.ID,
 		URL:           s.GetServiceURL(true),
 		WebURL:        s.GetWebURL(),
-		LatestVersion: utils.DefaultIfNil(s.Status.LatestVersion),
+		LatestVersion: s.Status.LatestVersion,
 	}
 }
 
@@ -104,8 +110,8 @@ func (s *Service) GetServiceInfo() utils.ServiceInfo {
 // may be `owner/repo`, adding the github.com prefix in that case).
 func (s *Service) GetServiceURL(ignoreWebURL bool) string {
 	if !ignoreWebURL && utils.GetFirstNonNilPtr(s.WebURL, s.Defaults.WebURL) != nil {
-		// Don't use this template if `latestVersion` hasn't been found and is used.
-		if s.Status.LatestVersion == nil {
+		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
+		if s.Status.LatestVersion == "" {
 			if !strings.Contains(*s.WebURL, "version") {
 				return s.GetWebURL()
 			}
@@ -196,10 +202,7 @@ func (s *Service) GetWebURL() string {
 		return ""
 	}
 
-	if s.Status.LatestVersion == nil {
-		return utils.TemplateString(*template, utils.ServiceInfo{})
-	}
-	return utils.TemplateString(*template, utils.ServiceInfo{LatestVersion: *s.Status.LatestVersion})
+	return utils.TemplateString(*template, utils.ServiceInfo{LatestVersion: s.Status.LatestVersion})
 }
 
 // GetURL will ensure `currentURL` is a valid GitHub API URL if `urlType` is 'github'

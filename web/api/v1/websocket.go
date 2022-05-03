@@ -125,7 +125,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 
 	// SKIP this release
 	if *payload.Target == "HYMENAIOS_SKIP" {
-		msg := fmt.Sprintf("%s release skip - %q", *id, *payload.ServiceData.Status.LatestVersion)
+		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
 		return
