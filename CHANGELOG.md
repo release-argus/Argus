@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.3.0 (2022-05-03)
+
+
+### Features
+
+* `/api/v1/version` ([#19](https://github.com/hymenaios-io/hymenaios/issues/19)) ([acd33ba](https://github.com/hymenaios-io/Hymenaios/commits/acd33ba08a9c8d3c18c390cdf6d48bb57f3628e1))
+* **github-action**: Docker builds - [DockerHub](https://hub.docker.com/repository/docker/hymenaios/hymenaios), [GHCR](https://github.com/hymenaios-io/Hymenaios/pkgs/container/hymenaios), [Quay](https://quay.io/repository/hymenaios/hymenaios) ([#20](https://github.com/hymenaios-io/Hymenaios/pull/20)) ([6cd458c](https://github.com/hymenaios-io/Hymenaios/commit/6cd458c36a44856c82daefff36781032673b6272))
+* **release**: compress web files in github action builds ([3d396c0](https://github.com/hymenaios-io/Hymenaios/commit/3d396c0e75528c45ebf924f83a0fc26c7788d234))
+
+
+### Bug Fixes
+
+* omit some undefined vars from `config.yml` ([70d049d](https://github.com/hymenaios-io/Hymenaios/commits/70d049daa37247e4199f1e85d3c4b7e30b356454))
+
 ### [0.2.1](https://github.com/hymenaios-io/Hymenaios/compare/0.2.0...0.2.1) (2022-05-01)
 
 
