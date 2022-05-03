@@ -1,8 +1,21 @@
 # Hymenaios
 
+[![GitHub](https://img.shields.io/github/license/hymenaios-io/hymenaios)](https://github.com/hymenaios-io/Hymenaios/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hymenaios-io/Hymenaios)](https://goreportcard.com/report/github.com/hymenaios-io/Hymenaios)
-[![Build](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build.yml/badge.svg)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build.yml)
-[![GitHub Release](https://img.shields.io/github/release/hymenaios-io/Hymenaios.svg?logo=github&style=flat-square&color=blue)](https://github.com/hymenaios-io/Hymenaios/releases)
+[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/hymenaios-io/hymenaios?filename=go.mod)](https://go.dev/dl/)
+[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/hymenaios-io/hymenaios/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Test?label=Tests)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/test.yml)
+
+
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Binary%20Build?label=Binary%20Build)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build-binary.yml)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/hymenaios-io/hymenaios)](https://github.com/hymenaios-io/Hymenaios/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/hymenaios-io/hymenaios/total)](https://github.com/hymenaios-io/Hymenaios/releases)
+[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/hymenaios-io/hymenaios/latest/total)](https://github.com/hymenaios-io/Hymenaios/releases/latest)
+
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Docker%20Build?label=Docker%20Build)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build-docker.yml)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/repository/docker/hymenaios/hymenaios/tags)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/repository/docker/hymenaios/hymenaios/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hymenaios/hymenaios)](https://hub.docker.com/repository/docker/hymenaios/hymenaios)
 
 Hymenaios will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
 For example, you could set it to monitor the Hymenaios repo ([hymenaios-io/hymenaios](https://github.com/hymenaios-io/hymenaios)). This will query the [GitHub API](https://api.github.com/repos/hymenaios-io/hymenaios/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Hymenaios on your server.
