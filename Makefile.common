@@ -30,6 +30,8 @@ endef
 BUILD_DATE              ?= ${shell date -u +"%FT%TZ"}
 BUILD_VERSION           := $(call GetFromPkg,version)
 
+OUTPUT_BINARY           ?= hymenaios
+
 # This rule is used to forward a target like "build" to "common-build". This
 # allows a new "build" target to be defined in a Makefile which includes this
 # one and override "common-build" without override warnings.
@@ -76,8 +78,9 @@ common-build:
 			echo '>> building binaries'; \
 			go build \
 				-ldflags=\"\
-				-X 'github.com/hymenaios-io/Hymenaios/utils.Version=${BUILD_VERSION}' \
-				-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=${BUILD_DATE}'\" \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=${BUILD_VERSION}' \
+					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=${BUILD_DATE}'\" \
+				-o ${OUTPUT_BINARY} \
 			./cmd/hymenaios/"
 
 .PHONY: build-darwin

@@ -4,11 +4,6 @@
 ARG GO_VERSION="1.18.1"
 ARG DEBIAN_VERSION="bullseye"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION}
-# Install node for Makefille.common's:
-# $(shell node -p "require('./web/ui/react-app/package.json').$(1)")
-RUN \
-    apt-get update && \
-    apt-get install nodejs -y
 
 COPY . /build/
 WORKDIR /build/

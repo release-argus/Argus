@@ -64,10 +64,9 @@ jobs:
       - name: Build
         run: >-
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
-          go build
-          -ldflags="-X 'github.com/hymenaios-io/Hymenaios/utils.Version=${{ github.event.release.tag_name }}' -X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=${{ steps.date.outputs.date }}'"
-          -o ./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
-          ./cmd/hymenaios
+          make
+          OUTPUT_BINARY=./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
+          go-build
 
       - name: Upload release asset
         id: upload-release-asset
