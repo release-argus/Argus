@@ -15,6 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Set outputs
+        id: vars
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)"  >> ${GITHUB_ENV}
+          echo "repository=${repository,,}" >> ${GITHUB_ENV}
+          echo "repository_owner=${repository_owner,,}" >> ${GITHUB_ENV}
+        env:
+          repository: '${{ github.repository }}'
+          repository_owner: '${{ github.repository_owner }}'
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -34,8 +44,8 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.repository_owner }}
+          password: ${{ secrets.GH_TOKEN }}
 
       - name: Login to Quay.io
         if:   github.event_name != 'pull_request'
@@ -56,8 +66,8 @@ jobs:
           tags: |
             hymenaios/hymenaios:${{ github.event.release.tag_name }}
             hymenaios/hymenaios:latest
-            ghcr.io/josephkav/hymenaios:${{ github.event.release.tag_name }}
-            ghcr.io/josephkav/hymenaios:latest
+            ghcr.io/${{ env.repository }}:${{ github.event.release.tag_name }}
+            ghcr.io/${{ env.repository }}:latest
             quay.io/hymenaios/hymenaios:${{ github.event.release.tag_name }}
             quay.io/hymenaios/hymenaios:latest
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -76,10 +86,10 @@ jobs:
           push: true
           tags: |
             hymenaios/hymenaios:master
-            ghcr.io/josephkav/hymenaios:master
+            ghcr.io/${{ env.repository }}:master
             quay.io/hymenaios/hymenaios:master
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64
           build-args: |
-            BUILD_VERSION=${GITHUB_SHA::6}
+            BUILD_VERSION=${{ env.sha_short }}
