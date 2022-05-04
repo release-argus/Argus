@@ -13,9 +13,9 @@
 [![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/hymenaios-io/hymenaios/latest/total)](https://github.com/hymenaios-io/Hymenaios/releases/latest)
 
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Docker%20Build?label=Docker%20Build)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build-docker.yml)
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/repository/docker/hymenaios/hymenaios/tags)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/repository/docker/hymenaios/hymenaios/tags)
-[![Docker Pulls](https://img.shields.io/docker/pulls/hymenaios/hymenaios)](https://hub.docker.com/repository/docker/hymenaios/hymenaios)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/r/hymenaios/hymenaios/tags)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/r/hymenaios/hymenaios/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hymenaios/hymenaios)](https://hub.docker.com/r/hymenaios/hymenaios)
 
 Hymenaios will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
 For example, you could set it to monitor the Hymenaios repo ([hymenaios-io/hymenaios](https://github.com/hymenaios-io/hymenaios)). This will query the [GitHub API](https://api.github.com/repos/hymenaios-io/hymenaios/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Hymenaios on your server.
