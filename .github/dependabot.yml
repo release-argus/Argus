@@ -6,48 +6,38 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 10
     assignees: [JosephKav]
     reviewers: [JosephKav]
-    commit-message:
-      prefix: "build(deps-actions): "
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 10
     assignees: [JosephKav]
     reviewers: [JosephKav]
-    commit-message:
-      prefix: "build(deps-docker): "
 
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 10
     assignees: [JosephKav]
     reviewers: [JosephKav]
-    commit-message:
-      prefix: "build(deps-go): "
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: daily
     open-pull-requests-limit: 10
     assignees: [JosephKav]
     reviewers: [JosephKav]
-    commit-message:
-      prefix: "build(deps-npm): "
   - package-ecosystem: "npm"
     directory: "/web/ui/react-app/"
     schedule:
-      interval: "weekly"
+      interval: daily
     open-pull-requests-limit: 10
     assignees: [JosephKav]
     reviewers: [JosephKav]
-    commit-message:
-      prefix: "build(deps-npm): "
