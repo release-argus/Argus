@@ -1,6 +1,6 @@
 {
   "name": "hymenaios",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Automated checks for new software releases",
   "homepage": "https://hymenaios.io",
   "private": true,

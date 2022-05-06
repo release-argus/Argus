@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.3.2](https://github.com/hymenaios-io/Hymenaios/compare/0.3.1...0.3.2) (2022-05-06)
+
+
+### Bug Fixes
+
+* text when update available for deployed_service ([#28](https://github.com/hymenaios-io/hymenaios/issues/28)) ([2f7143b](https://github.com/hymenaios-io/Hymenaios/commits/2f7143b5ab7f9047268638ed1b91e24dec1e5dc3))
+
 ### 0.3.1 (2022-05-03)
 
 
