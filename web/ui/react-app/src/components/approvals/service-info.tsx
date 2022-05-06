@@ -77,7 +77,9 @@ export const ServiceInfo = ({
               className={"service-item update-options alert-warning"}
               variant="secondary"
             >
-              {updateApproved ? "WebHooks already sent:" : "Update available:"}
+              {updateApproved && service.webhook
+                ? "WebHooks already sent:"
+                : "Update available:"}
             </ListGroup.Item>
             <ListGroup.Item
               key="update-buttons"

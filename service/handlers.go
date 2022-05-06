@@ -54,8 +54,7 @@ func (s *Service) UpdatedVersion() {
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
 	if s.Status.ApprovedVersion != s.Status.LatestVersion {
-		latestVersion := s.Status.LatestVersion
-		s.Status.ApprovedVersion = latestVersion
+		s.Status.ApprovedVersion = s.Status.LatestVersion
 		s.AnnounceApproved()
 	}
 }
@@ -143,8 +142,7 @@ func (s *Service) HandleSkip(version string) {
 		return
 	}
 
-	approvedVersion := "SKIP_" + version
-	s.Status.ApprovedVersion = approvedVersion
+	s.Status.ApprovedVersion = "SKIP_" + version
 	s.AnnounceApproved()
 
 	if s.SaveChannel != nil {
