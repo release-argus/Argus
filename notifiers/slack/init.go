@@ -57,13 +57,13 @@ func (s *Slack) Init(
 	defaults *Slack,
 	hardDefaults *Slack,
 ) {
-	s.ServiceIcon = serviceIcon
-
-	s.initMetrics(serviceID)
-
 	if s == nil {
 		s = &Slack{}
 	}
+
+	s.ServiceIcon = serviceIcon
+
+	s.initMetrics(serviceID)
 
 	// Give the matching main
 	(*s).Main = main

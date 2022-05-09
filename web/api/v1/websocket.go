@@ -91,15 +91,6 @@ func (api *API) wsService(client *Client) {
 	}
 }
 
-func (api *API) wsDefaults(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsDefaults", Secondary: client.ip}
-	api.Log.Verbose("-", logFrom, true)
-	if err := client.conn.WriteJSON(api.Config.Defaults); err != nil {
-		api.Log.Error(err, logFrom, true)
-		return
-	}
-}
-
 // wsServiceAction handles approvals/rejections of the latest version of a service.
 //
 // Required params:

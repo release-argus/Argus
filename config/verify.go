@@ -58,7 +58,7 @@ func (c *Config) CheckValues() {
 		if errs != nil {
 			gap = "\\"
 		}
-		errs = fmt.Errorf("%s%szervice:\\%w", utils.ErrorToString(errs), gap, err)
+		errs = fmt.Errorf("%s%sservice:\\%w", utils.ErrorToString(errs), gap, err)
 	}
 
 	if errs != nil {

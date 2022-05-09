@@ -29,11 +29,9 @@ import (
 // when it receives a message.
 func (c *Config) SaveHandler(filePath *string) {
 	for {
-		select {
-		case _ = <-*c.SaveChannel:
-			waitChannelTimeout(c.SaveChannel)
-			c.Save()
-		}
+		<-*c.SaveChannel
+		waitChannelTimeout(c.SaveChannel)
+		c.Save()
 	}
 }
 
@@ -44,7 +42,7 @@ func waitChannelTimeout(channel *chan bool) {
 	for {
 		// Clear queue
 		for len(*channel) != 0 {
-			_ = <-*channel
+			<-*channel
 		}
 
 		// Sleep 30s
@@ -152,7 +150,7 @@ func (c *Config) Save() {
 	}
 
 	// Service Bubble Sort
-	for changed == true {
+	for changed {
 		changed = false
 		// nth Pass
 		for i := range c.Order {
