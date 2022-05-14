@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/web/metrics"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
 
 // Track will call Track on all Services in this Slice.

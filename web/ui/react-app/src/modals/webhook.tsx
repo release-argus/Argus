@@ -50,9 +50,9 @@ const WebHookModal = () => {
   const onClickAcknowledge = useCallback(
     (target: string) => {
       const unspecificWebHook = [
-        "HYMENAIOS_ALL",
-        "HYMENAIOS_FAILED",
-        "HYMENAIOS_SKIP",
+        "ARGUS_ALL",
+        "ARGUS_FAILED",
+        "ARGUS_SKIP",
       ].includes(target);
 
       if (!(sendingThisService && unspecificWebHook)) {
@@ -368,13 +368,13 @@ const WebHookModal = () => {
             sendingThisService
               ? hideModal()
               : modal.type === "RESEND"
-              ? onClickAcknowledge("HYMENAIOS_ALL")
+              ? onClickAcknowledge("ARGUS_ALL")
               : modal.type === "SEND"
-              ? onClickAcknowledge("HYMENAIOS_FAILED")
+              ? onClickAcknowledge("ARGUS_FAILED")
               : modal.type === "RETRY"
-              ? onClickAcknowledge("HYMENAIOS_FAILED")
+              ? onClickAcknowledge("ARGUS_FAILED")
               : modal.type === "SKIP"
-              ? onClickAcknowledge("HYMENAIOS_SKIP")
+              ? onClickAcknowledge("ARGUS_SKIP")
               : hideModal()
           }
           disabled={modal.type === "SKIP" && sendingThisService}

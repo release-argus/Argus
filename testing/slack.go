@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hymenaios-io/Hymenaios/config"
-	Slack "github.com/hymenaios-io/Hymenaios/notifiers/slack"
-	"github.com/hymenaios-io/Hymenaios/utils"
+	"github.com/release-argus/Argus/config"
+	Slack "github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/utils"
 )
 
 // TestSlack will send a test Slack message to the Slack with this flag as its ID.

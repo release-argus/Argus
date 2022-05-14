@@ -11,8 +11,8 @@
 # Dependency directories
 vendor/
 
-# Output of `go build ./cmd/hymenaios`
-/hymenaios
+# Output of `go build ./cmd/argus`
+/argus
 # Output of `make build-all`
 /.build/
 

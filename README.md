@@ -1,28 +1,28 @@
-# Hymenaios
+# Argus
 
-[![GitHub](https://img.shields.io/github/license/hymenaios-io/hymenaios)](https://github.com/hymenaios-io/Hymenaios/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/hymenaios-io/Hymenaios)](https://goreportcard.com/report/github.com/hymenaios-io/Hymenaios)
-[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/hymenaios-io/hymenaios?filename=go.mod)](https://go.dev/dl/)
-[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/hymenaios-io/hymenaios/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Test?label=Tests)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/test.yml)
+[![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
+[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
+[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Test?label=Tests)](https://github.com/release-argus/Argus/actions/workflows/test.yml)
 
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Binary%20Build?label=Binary%20Build)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build-binary.yml)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/hymenaios-io/hymenaios)](https://github.com/hymenaios-io/Hymenaios/releases)
-[![GitHub all releases](https://img.shields.io/github/downloads/hymenaios-io/hymenaios/total)](https://github.com/hymenaios-io/Hymenaios/releases)
-[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/hymenaios-io/hymenaios/latest/total)](https://github.com/hymenaios-io/Hymenaios/releases/latest)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Binary%20Build?label=Binary%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
+[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/hymenaios-io/hymenaios/Docker%20Build?label=Docker%20Build)](https://github.com/hymenaios-io/Hymenaios/actions/workflows/build-docker.yml)
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/r/hymenaios/hymenaios/tags)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/hymenaios/hymenaios?sort=semver)](https://hub.docker.com/r/hymenaios/hymenaios/tags)
-[![Docker Pulls](https://img.shields.io/docker/pulls/hymenaios/hymenaios)](https://hub.docker.com/r/hymenaios/hymenaios)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Docker%20Build?label=Docker%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/argus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/argus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/argus/argus)](https://hub.docker.com/r/releaseargus/argus)
 
-Hymenaios (hi-men-ay-ous) will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
-For example, you could set it to monitor the Hymenaios repo ([hymenaios-io/hymenaios](https://github.com/hymenaios-io/hymenaios)). This will query the [GitHub API](https://api.github.com/repos/hymenaios-io/hymenaios/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Hymenaios on your server.
+Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
+For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Argus on your server.
 
 ##### Table of Contents
 
-- [Hymenaios](#hymenaios)
+- [Argus](#argus)
   - [Demo](#demo)
   - [Command-line arguments](#command-line-arguments)
   - [Building from source](#building-from-source)
@@ -34,17 +34,17 @@ For example, you could set it to monitor the Hymenaios repo ([hymenaios-io/hymen
 
 ## Demo
 
-A demo of Hymenaios can be seen on our website [here](https://hymenaios.io/demo).
+A demo of Argus can be seen on our website [here](https://argus.io/demo).
 
 ## Command-line arguments
 
 ```bash
-$ hymenaios -h
-Usage of /usr/local/bin/hymenaios:
+$ argus -h
+Usage of /usr/local/bin/argus:
   -config.check
         Print the fully-parsed config.
   -config.file string
-        Hymenaios configuration file path. (default "config.yml")
+        Argus configuration file path. (default "config.yml")
   -log.level string
         ERROR, WARN, INFO, VERBOSE or DEBUG (default "INFO")
   -log.timestamps
@@ -71,30 +71,30 @@ Usage of /usr/local/bin/hymenaios:
 
 #### Prereqs
 
-The backend of Hymenaios is built with [Go](https://go.dev/) and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
+The backend of Argus is built with [Go](https://go.dev/) and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
 - [Go 1.18+](https://go.dev/dl/)
 - [NodeJS 16](https://nodejs.org/en/download/)
 
 #### Go changes
 
-To see the changes you've made by modifying any of the `.go` files, you must recompile Hymenaios. You could recompile the whole app with a `make build`, but this will also recompile the React components. To save time (and CPU power), you can use the existing React static and recompile just the Go part by running `make go-build`. (Running this in the root dir will produce the `hymenaios` binary)
+To see the changes you've made by modifying any of the `.go` files, you must recompile Argus. You could recompile the whole app with a `make build`, but this will also recompile the React components. To save time (and CPU power), you can use the existing React static and recompile just the Go part by running `make go-build`. (Running this in the root dir will produce the `argus` binary)
 
 #### React changes
 
-To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend as well as the React frontend. This can be done by running `make build`. (Running this in the root dir will produce the `hymenaios` binary)
+To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend as well as the React frontend. This can be done by running `make build`. (Running this in the root dir will produce the `argus` binary)
 
 ## Getting started
 
-To get started with Hymenaios, simply download the binary from the [releases page](https://github.com/hymenaios-io/Hymenaios/releases), and setup the config for that binary.
+To get started with Argus, simply download the binary from the [releases page](https://github.com/release-argus/Argus/releases), and setup the config for that binary.
 
-For further help, check out the [Getting Started](https://hymenaios.io/docs/getting-started/) page on our website.
+For further help, check out the [Getting Started](https://release-argus.io/docs/getting-started/) page on our website.
 
 #### Config formatting
 
-The config can be broken down into 6 key areas. ([Further help](https://hymenaios.io/docs/config/))
-- [defaults](https://hymenaios.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://hymenaios.io/docs/config/defaults/#service-portion), [gotifies](https://hymenaios.io/docs/config/defaults/#gotify-portion), [slacks](https://hymenaios.io/docs/config/defaults/#slack-portion) and [webhooks](https://hymenaios.io/docs/config/defaults/#webhook-portion).
-- [settings](https://hymenaios.io/docs/config/settings/) - Settings for the Hymenaios server.
-- [service](https://hymenaios.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.
-- [gotify](https://hymenaios.io/docs/config/gotify/) - A dictionary mapping of targets for Gotify messages.
-- [slack](https://hymenaios.io/docs/config/slack/) - A dictionary mapping of targets for Slack messages.
-- [webhook](https://hymenaios.io/docs/config/webhook/) - A dictionary mapping of targets for WebHooks.
+The config can be broken down into 6 key areas. ([Further help](https://release-argus.io/docs/config/))
+- [defaults](https://release-argus.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://release-argus.io/docs/config/defaults/#service-portion), [gotifies](https://release-argus.io/docs/config/defaults/#gotify-portion), [slacks](https://release-argus.io/docs/config/defaults/#slack-portion) and [webhooks](https://release-argus.io/docs/config/defaults/#webhook-portion).
+- [settings](https://release-argus.io/docs/config/settings/) - Settings for the Argus server.
+- [service](https://release-argus.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.
+- [gotify](https://release-argus.io/docs/config/gotify/) - A dictionary mapping of targets for Gotify messages.
+- [slack](https://release-argus.io/docs/config/slack/) - A dictionary mapping of targets for Slack messages.
+- [webhook](https://release-argus.io/docs/config/webhook/) - A dictionary mapping of targets for WebHooks.

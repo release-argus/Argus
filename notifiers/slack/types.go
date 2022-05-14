@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 package slack
 
-import "github.com/hymenaios-io/Hymenaios/utils"
+import "github.com/release-argus/Argus/utils"
 
 var (
 	jLog *utils.JLog
@@ -30,7 +30,7 @@ type Slack struct {
 	ServiceIcon  *string `yaml:"-"`                    // Service.Icon
 	IconEmoji    *string `yaml:"icon_emoji,omitempty"` // ":github:"
 	IconURL      *string `yaml:"icon_url,omitempty"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-	Username     *string `yaml:"username,omitempty"`   // "Hymenaios"
+	Username     *string `yaml:"username,omitempty"`   // "Argus"
 	Message      *string `yaml:"message,omitempty"`    // "<{{ service_url }}|{{ service_id }}> - {{ version }} released"
 	Delay        *string `yaml:"delay,omitempty"`      // The delay before sending the Slack message.
 	MaxTries     *uint   `yaml:"max_tries,omitempty"`  // Number of times to attempt sending the Slack message if a 200 is not received.
@@ -42,7 +42,7 @@ type Slack struct {
 
 // Payload to be to be sent as the Slack message.
 type Payload struct {
-	Username  string  `json:"username"`   // "Hymenaios"
+	Username  string  `json:"username"`   // "Argus"
 	IconEmoji *string `json:"icon_emoji"` // ":github:"
 	IconURL   *string `json:"icon_url"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
 	Text      string  `json:"text"`       // "${service} - {{ version }} released"

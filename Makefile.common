@@ -16,7 +16,7 @@ BIN_DIR                 ?= $(shell pwd)
 DOCKER_IMAGE_TAG        ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 DOCKERFILE_PATH         ?= ./Dockerfile
 DOCKERBUILD_CONTEXT     ?= ./
-DOCKER_REPO             ?= hymenaios-io/Hymenaios
+DOCKER_REPO             ?= releaseargus/argus
 
 DOCKER_ARCHS            ?= amd64
 
@@ -30,7 +30,7 @@ endef
 BUILD_DATE              ?= ${shell date -u +"%FT%TZ"}
 BUILD_VERSION           := $(call GetFromPkg,version)
 
-OUTPUT_BINARY           ?= hymenaios
+OUTPUT_BINARY           ?= argus
 
 # This rule is used to forward a target like "build" to "common-build". This
 # allows a new "build" target to be defined in a Makefile which includes this
@@ -78,10 +78,10 @@ common-build:
 			echo '>> building binaries'; \
 			go build \
 				-ldflags=\"\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=${BUILD_VERSION}' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=${BUILD_DATE}'\" \
+					-X 'github.com/release-argus/argus/utils.Version=${BUILD_VERSION}' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=${BUILD_DATE}'\" \
 				-o ${OUTPUT_BINARY} \
-			./cmd/hymenaios/"
+			./cmd/argus/"
 
 .PHONY: build-darwin
 build-darwin:
@@ -93,10 +93,10 @@ build-darwin:
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/darwin/${GOARCH}/hymenaios \
-			./cmd/hymenaios \
+					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/darwin/${GOARCH}/argus \
+			./cmd/argus \
 		) \
 		"- DONE\n" \
 	)
@@ -111,10 +111,10 @@ build-freebsd:
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/freebsd/${GOARCH}/hymenaios \
-			./cmd/hymenaios  \
+					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/freebsd/${GOARCH}/argus \
+			./cmd/argus  \
 		) \
 		"- DONE\n" \
 	)
@@ -129,10 +129,10 @@ build-linux:
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/linux/${GOARCH}/hymenaios \
-			./cmd/hymenaios  \
+					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/linux/${GOARCH}/argus \
+			./cmd/argus  \
 		) \
 		"- DONE\n" \
 	)
@@ -147,10 +147,10 @@ build-openbsd:
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/openbsd/${GOARCH}/hymenaios \
-			./cmd/hymenaios  \
+					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/openbsd/${GOARCH}/argus \
+			./cmd/argus  \
 		) \
 		"- DONE\n" \
 	)
@@ -165,10 +165,10 @@ build-windows:
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
-					-X 'github.com/hymenaios-io/Hymenaios/utils.Version=\"${BUILD_VERSION}\"' \
-					-X 'github.com/hymenaios-io/Hymenaios/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/windows/${GOARCH}/hymenaios \
-			./cmd/hymenaios  \
+					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
+					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
+				-o .build/windows/${GOARCH}/argus \
+			./cmd/argus  \
 		) \
 		"- DONE\n" \
 	)

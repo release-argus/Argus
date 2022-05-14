@@ -1,6 +1,6 @@
 # Code of Conduct
 
-All participants of Hymenaios are expected to abide by our Code of Conduct, both online and during in-person events that are hosted and/or associated with Hymenaios.
+All participants of Argus are expected to abide by our Code of Conduct, both online and during in-person events that are hosted and/or associated with Argus.
 
 ## The Pledge
 
@@ -30,7 +30,7 @@ The Standards
 
 ## Enforcement
 
-Violations of the Code of Conduct may be reported by sending an email to conduct@hymenaios.io. All reports will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances. Further details of specific enforcement policies may be posted separately.
+Violations of the Code of Conduct may be reported by sending an email to conduct@release-argus.io. All reports will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances. Further details of specific enforcement policies may be posted separately.
 
 We hold the right and responsibility to remove comments or other contributions that are not aligned to this Code of Conduct, or to ban temporarily or permanently any members for other behaviours that they deem inappropriate, threatening, offensive, or harmful.
 Attribution

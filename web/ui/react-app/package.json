@@ -1,8 +1,8 @@
 {
-  "name": "hymenaios",
+  "name": "argus",
   "version": "0.3.2",
   "description": "Automated checks for new software releases",
-  "homepage": "https://hymenaios.io",
+  "homepage": "https://release-argus.io",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.1.1",

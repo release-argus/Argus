@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package service
 import (
 	"encoding/json"
 
-	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
 // AnnounceFirstVersion of a Service to the `s.Announce` channel

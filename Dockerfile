@@ -1,7 +1,7 @@
 ########
 # BASE #
 ########
-ARG GO_VERSION="1.18.1"
+ARG GO_VERSION="1.18.2"
 ARG DEBIAN_VERSION="bullseye"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION}
 
@@ -10,30 +10,30 @@ WORKDIR /build/
 
 ARG BUILD_VERSION="development"
 RUN make BUILD_VERSION=${BUILD_VERSION} go-build
-RUN chmod 755 /build/hymenaios
+RUN chmod 755 /build/argus
 
 
 #############
-# HYMENAIOS #
+# ARGUS #
 #############
 ARG DEBIAN_VERSION="bullseye"
 FROM debian:${DEBIAN_VERSION}-slim
-LABEL maintainer="The Hymenaios Authors <developers@hymenaios.io>"
+LABEL maintainer="The Argus Authors <developers@release-argus.io>"
 RUN \
     apt-get update && \
     apt-get install ca-certificates -y && \
     apt-get clean
 
-COPY --from=0 /build/hymenaios           /bin/hymenaios
-COPY --from=0 /build/config.yml.example  /etc/hymenaios/config.yml
+COPY --from=0 /build/argus               /bin/argus
+COPY --from=0 /build/config.yml.example  /etc/argus/config.yml
 COPY --from=0 /build/LICENSE             /LICENSE
 
-WORKDIR /hymenaios
-RUN chown -R nobody:nogroup /etc/hymenaios /hymenaios
+WORKDIR /argus
+RUN chown -R nobody:nogroup /etc/argus /argus
 
 USER       nobody
 EXPOSE     8080
-VOLUME     [ "/hymenaios" ]
-ENTRYPOINT [ "/bin/hymenaios" ]
+VOLUME     [ "/argus" ]
+ENTRYPOINT [ "/bin/argus" ]
 
-CMD [ "-config.file=/etc/hymenaios/config.yml" ]
+CMD [ "-config.file=/etc/argus/config.yml" ]

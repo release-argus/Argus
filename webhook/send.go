@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hymenaios-io/Hymenaios/utils"
-	metrics "github.com/hymenaios-io/Hymenaios/web/metrics"
+	"github.com/release-argus/Argus/utils"
+	metrics "github.com/release-argus/Argus/web/metrics"
 )
 
 // Send every WebHook in this Slice with a delay between each webhook.

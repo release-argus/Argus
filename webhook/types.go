@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 package webhook
 
 import (
-	"github.com/hymenaios-io/Hymenaios/notifiers/gotify"
-	"github.com/hymenaios-io/Hymenaios/notifiers/slack"
-	"github.com/hymenaios-io/Hymenaios/utils"
+	"github.com/release-argus/Argus/notifiers/gotify"
+	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/utils"
 )
 
 var (

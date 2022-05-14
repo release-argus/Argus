@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hymenaios-io/Hymenaios/utils"
-	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
-	"github.com/hymenaios-io/Hymenaios/web/ui"
+	"github.com/release-argus/Argus/utils"
+	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/web/ui"
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
 )
@@ -51,7 +51,7 @@ func (api *API) SetupRoutesNodeJS() {
 	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 }
 
-// httpVersion serves Hymenaios version JSON over HTTP.
+// httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 	logFrom := utils.LogFrom{Primary: "apiVersion"}
 	api.Log.Verbose("-", logFrom, true)

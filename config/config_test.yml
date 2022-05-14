@@ -45,14 +45,14 @@ webhook:
 service:
   NoDefaults:
     type: github
-    url: hymenaios-io/Hymenaios
+    url: release-argus/argus
     url_commands: # Remove the v for semantic versioning
       - type:  regex_submatch
         regex: 'v(.*)'
         index: 1
     interval: 10m
     regex_version: '^[0-9.]+[0-9]$'
-    regex_content: Hymenaios-{{ version }}-linux-amd64
+    regex_content: Argus-{{ version }}-linux-amd64
     gotify:
       personal:
         url: https://gotify.example.com/hooks/ZZZZ
@@ -78,13 +78,13 @@ service:
         delay: 3s
   WantDefaults:
     type: github
-    url: hymenaios-io/Hymenaios
+    url: release-argus/argus
     url_commands: # Remove the v for semantic versioning
       - type:  regex_submatch
         regex: 'v(.*)'
         index: 1
     regex_version: '^[0-9.]+[0-9]$'
-    regex_content: Hymenaios-{{ version }}-linux-amd64
+    regex_content: Argus-{{ version }}-linux-amd64
     gotify:
       default:
     slack:

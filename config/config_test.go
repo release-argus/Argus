@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ func TestLoad(t *testing.T) {
 		wantServiceInterval   string = "123s"
 		wantSlackDelay        string = "1s"
 		wantWebHookDelay      string = "2s"
-		wantServiceServiceURL string = "hymenaios-io/Hymenaios"
+		wantServiceServiceURL string = "release-argus/argus"
 	)
 	flags := make(map[string]bool)
 	config.Load(configFile, &flags)

@@ -9,12 +9,8 @@ const Header = () => {
       <Container fluid>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Brand as={Link} to="/approvals">
-          <img
-            src="favicon.svg"
-            className="d-inline-block"
-            alt="Hymenaios logo"
-          />
-          Hymenaios
+          <img src="favicon.svg" className="d-inline-block" alt="Argus logo" />
+          Argus
         </Navbar.Brand>
         <Navbar.Collapse id="navbar-nav">
           <Nav className="me-auto">
@@ -32,7 +28,7 @@ const Header = () => {
                 Configuration
               </NavDropdown.Item>
             </NavDropdown>
-            <Nav.Link href="https://hymenaios.io/docs">Help</Nav.Link>
+            <Nav.Link href="https://release-argus.io/docs">Help</Nav.Link>
           </Nav>
         </Navbar.Collapse>
         <ThemeToggle />

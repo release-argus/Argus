@@ -1,4 +1,4 @@
-module github.com/hymenaios-io/Hymenaios
+module github.com/release-argus/Argus
 
 go 1.18
 
@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/vearutop/statigz v1.1.8
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99
 )
 
 require (

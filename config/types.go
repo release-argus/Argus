@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,18 +15,18 @@
 package config
 
 import (
-	"github.com/hymenaios-io/Hymenaios/notifiers/gotify"
-	"github.com/hymenaios-io/Hymenaios/notifiers/slack"
-	"github.com/hymenaios-io/Hymenaios/service"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/webhook"
+	"github.com/release-argus/Argus/notifiers/gotify"
+	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/webhook"
 )
 
 var (
 	jLog *utils.JLog
 )
 
-// Config for Hymenaios.
+// Config for Argus.
 type Config struct {
 	File         string         `yaml:"-"`                  // Path to the config file (--config.file='').
 	Settings     Settings       `yaml:"settings,omitempty"` // Settings for the program.

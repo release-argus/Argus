@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/hymenaios-io/Hymenaios/config"
-	"github.com/hymenaios-io/Hymenaios/utils"
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/utils"
 )
 
 // API is the API to use for the webserver.

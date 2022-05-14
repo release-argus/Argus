@@ -1,6 +1,6 @@
 service:
-  hymenaios-io/hymenaios:
+  release-argus/argus:
     type: github
-    url: hymenaios-io/hymenaios
-    web_url: https://github.com/hymenaios-io/Hymenaios/blob/master/CHANGELOG.md
-    icon: https://github.com/hymenaios-io/Hymenaios/raw/master/web/ui/static/favicon.svg
+    url: release-argus/argus
+    web_url: https://github.com/release-argus/Argus/blob/master/CHANGELOG.md
+    icon: https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg

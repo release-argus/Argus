@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package config
 import (
 	"fmt"
 
-	"github.com/hymenaios-io/Hymenaios/notifiers/gotify"
-	"github.com/hymenaios-io/Hymenaios/notifiers/slack"
-	"github.com/hymenaios-io/Hymenaios/service"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/webhook"
+	"github.com/release-argus/Argus/notifiers/gotify"
+	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/webhook"
 )
 
 // Defaults for the other Structs.
@@ -57,7 +57,7 @@ func (d *Defaults) SetDefaults() {
 	d.Gotify.Delay = &gotifyDelay
 	gotifyNaxTries := uint(3)
 	d.Gotify.MaxTries = &gotifyNaxTries
-	gotifyTitle := "Hymenaios"
+	gotifyTitle := "Argus"
 	d.Gotify.Title = &gotifyTitle
 	gotifyNessage := "{{ service_id }} - {{ version }} released"
 	d.Gotify.Message = &gotifyNessage
@@ -71,7 +71,7 @@ func (d *Defaults) SetDefaults() {
 	d.Slack.MaxTries = &slackMaxTries
 	slackIconEmoji := ":github:"
 	d.Slack.IconEmoji = &slackIconEmoji
-	slackUsername := "Hymenaios"
+	slackUsername := "Argus"
 	d.Slack.Username = &slackUsername
 	slackMessage := "<{{ service_url }}|{{ service_id }}> - {{ version }}released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}"
 	d.Slack.Message = &slackMessage

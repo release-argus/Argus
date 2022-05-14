@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package gotify
 
 import (
-	"github.com/hymenaios-io/Hymenaios/utils"
+	"github.com/release-argus/Argus/utils"
 )
 
 var jLog *utils.JLog
@@ -29,7 +29,7 @@ type Gotify struct {
 	URL          *string `yaml:"url,omitempty"`       // "https://example.com
 	Token        *string `yaml:"token,omitempty"`     // apptoken
 	Title        *string `yaml:"title,omitempty"`     // "{{ service_id }} - {{ version }} released"
-	Message      *string `yaml:"message,omitempty"`   // "Hymenaios"
+	Message      *string `yaml:"message,omitempty"`   // "Argus"
 	Extras       *Extras `yaml:"extras,omitempty"`    // Message extras
 	Priority     *int    `yaml:"priority,omitempty"`  // <1 = Min, 1-3 = Low, 4-7 = Med, >7 = High
 	Delay        *string `yaml:"delay,omitempty"`     // The delay before sending the Gotify message.

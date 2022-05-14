@@ -64,12 +64,12 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            hymenaios/hymenaios:${{ github.event.release.tag_name }}
-            hymenaios/hymenaios:latest
+            releaseargus/argus:${{ github.event.release.tag_name }}
+            releaseargus/argus:latest
             ghcr.io/${{ env.repository }}:${{ github.event.release.tag_name }}
             ghcr.io/${{ env.repository }}:latest
-            quay.io/hymenaios/hymenaios:${{ github.event.release.tag_name }}
-            quay.io/hymenaios/hymenaios:latest
+            quay.io/argus-io/argus:${{ github.event.release.tag_name }}
+            quay.io/argus-io/argus:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64
@@ -84,9 +84,9 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            hymenaios/hymenaios:master
+            releaseargus/argus:master
             ghcr.io/${{ env.repository }}:master
-            quay.io/hymenaios/hymenaios:master
+            quay.io/argus-io/argus:master
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64

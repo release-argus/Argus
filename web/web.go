@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hymenaios-io/Hymenaios/config"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	api_v1 "github.com/hymenaios-io/Hymenaios/web/api/v1"
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/utils"
+	api_v1 "github.com/release-argus/Argus/web/api/v1"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -50,7 +50,7 @@ func NewRouter(cfg *config.Config, jLog *utils.JLog, hub *api_v1.Hub) *mux.Route
 	return api.BaseRouter
 }
 
-// Main will set up everything web-related for Hymenaios.
+// Main will set up everything web-related for Argus.
 func Main(cfg *config.Config, log *utils.JLog) {
 	jLog = log
 	hub := api_v1.NewHub()

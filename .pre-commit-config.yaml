@@ -123,7 +123,7 @@ repos:
     # StructSlop
     #
     #-   id: go-structslop-mod
-    # structslop: internal error: package "time" without types was imported from "github.com/hymenaios-io/Hymenaios/web/api/types"
+    # structslop: internal error: package "time" without types was imported from "github.com/release-argus/Argus/web/api/types"
     # ?
 #    -   id: go-structslop-pkg
 #    -   id: go-structslop-repo-mod

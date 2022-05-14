@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ type Defaults struct {
 	WebHook WebHook `json:"webhook,omitempty"`
 }
 
-// Config is the config for Hymenaios.
+// Config is the config for Argus.
 type Config struct {
 	File     string        `json:"-"`                  // Path to the config file (-config.file='')
 	Defaults *Defaults     `json:"defaults,omitempty"` // Default values for the various parameters.
@@ -144,7 +144,7 @@ type Gotify struct {
 	URL      *string `json:"url,omitempty"`       // "https://example.com
 	Token    *string `json:"token,omitempty"`     // apptoken
 	Title    *string `json:"title,omitempty"`     // "{{ service_id }} - {{ version }} released"
-	Message  *string `json:"message,omitempty"`   // "Hymenaios"
+	Message  *string `json:"message,omitempty"`   // "Argus"
 	Extras   *Extras `json:"extras,omitempty"`    // Message extras
 	Priority *int    `json:"priority,omitempty"`  // <1 = Min, 1-3 = Low, 4-7 = Med, >7 = High
 	Delay    *string `json:"delay,omitempty"`     // The delay before sending the Gotify message.
@@ -232,7 +232,7 @@ type Slack struct {
 	ServiceIcon *string `json:"-"`                    // Service.Icon
 	IconEmoji   *string `json:"icon_emoji,omitempty"` // ":github:"
 	IconURL     *string `json:"icon_url,omitempty"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-	Username    *string `json:"username,omitempty"`   // "Hymenaios"
+	Username    *string `json:"username,omitempty"`   // "Argus"
 	Message     *string `json:"message,omitempty"`    // "<{{ service_url }}|{{ service_id }}> - {{ version }} released"
 	Delay       *string `json:"delay,omitempty"`      // The delay before sending the Slack message.
 	MaxTries    *uint   `json:"max_tries,omitempty"`  // Number of times to attempt sending the Slack message if a 200 is not received.

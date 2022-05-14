@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*
-Hymenaios monitors GitHub and/or other URLs for version changes.
+Argus monitors GitHub and/or other URLs for version changes.
 On a version change, send Slack message(s) and/or webhook(s).
 main.go uses track.go for the goroutines that call query.go
 and then, on a version change, will call slack.go and webhook.go.
@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"os"
 
-	hymenaios_testing "github.com/hymenaios-io/Hymenaios/testing"
+	argus_testing "github.com/release-argus/Argus/testing"
 
-	cfg "github.com/hymenaios-io/Hymenaios/config"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	"github.com/hymenaios-io/Hymenaios/web"
+	cfg "github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web"
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 func main() {
 	var (
 		config          cfg.Config
-		configFile      = flag.String("config.file", "config.yml", "Hymenaios configuration file path.")
+		configFile      = flag.String("config.file", "config.yml", "Argus configuration file path.")
 		configCheckFlag = flag.Bool("config.check", false, "Print the fully-parsed config.")
 		testGotifyFlag  = flag.String("test.gotify", "", "Put the name of the Gotify service to send a test message.")
 		testSlackFlag   = flag.String("test.slack", "", "Put the name of the Slack service to send a test message.")
@@ -60,9 +60,9 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	hymenaios_testing.TestGotify(testGotifyFlag, &config)
-	hymenaios_testing.TestSlack(testSlackFlag, &config)
-	hymenaios_testing.TestService(testServiceFlag, &config)
+	argus_testing.TestGotify(testGotifyFlag, &config)
+	argus_testing.TestSlack(testSlackFlag, &config)
+	argus_testing.TestService(testServiceFlag, &config)
 
 	// config.Service.Init()
 	serviceCount := len(config.Service)

@@ -14,7 +14,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
         with:
-          go-version: ^1.18.1
+          go-version: ^1.18.2
 
       - id: go-cache-paths
         run: |

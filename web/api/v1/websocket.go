@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hymenaios-io/Hymenaios/utils"
-	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
+	"github.com/release-argus/Argus/utils"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
 func (api *API) wsService(client *Client) {
@@ -115,7 +115,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	}
 
 	// SKIP this release
-	if *payload.Target == "HYMENAIOS_SKIP" {
+	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
@@ -127,15 +127,15 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,
-					"HYMENAIOS_ALL", "ALL"),
-				"HYMENAIOS_FAILED", "ALL UNSENT/FAILED"),
-			"HYMENAIOS_SKIP", "ALL"),
+					"ARGUS_ALL", "ALL"),
+				"ARGUS_FAILED", "ALL UNSENT/FAILED"),
+			"ARGUS_SKIP", "ALL"),
 	)
 	api.Log.Info(msg, logFrom, true)
 	switch *payload.Target {
-	case "HYMENAIOS_ALL":
+	case "ARGUS_ALL":
 		go api.Config.Service[*id].HandleWebHooks(true)
-	case "HYMENAIOS_FAILED":
+	case "ARGUS_FAILED":
 		go api.Config.Service[*id].HandleFailedWebHooks()
 	default:
 		go api.Config.Service[*id].HandleWebHook(*payload.Target)
@@ -190,7 +190,7 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 }
 
-// wsStatus handles getting the info of the hymenaios binary status.
+// wsStatus handles getting the info of the Argus binary status.
 func (api *API) wsStatus(client *Client) {
 	logFrom := utils.LogFrom{Primary: "wsStatus", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)

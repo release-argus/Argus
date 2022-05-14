@@ -7,7 +7,7 @@ GOLANGCI_LINT_OPTS ?= --timeout 4m
 
 include Makefile.common
 
-DOCKER_IMAGE_NAME ?= hymenaios
+DOCKER_IMAGE_NAME ?= argus
 
 .PHONY: go-build
 go-build: common-build

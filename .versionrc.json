@@ -10,8 +10,8 @@
     { "type": "perf", "hidden": true },
     { "type": "test", "hidden": true }
   ],
-  "commitUrlFormat": "https://github.com/hymenaios-io/Hymenaios/commits/{{hash}}",
-  "compareUrlFormat": "https://github.com/hymenaios-io/Hymenaios/compare/{{previousTag}}...{{currentTag}}",
+  "commitUrlFormat": "https://github.com/release-argus/Argus/commits/{{hash}}",
+  "compareUrlFormat": "https://github.com/release-argus/Argus/compare/{{previousTag}}...{{currentTag}}",
   "bumpFiles": [
     {
       "filename": "web/ui/react-app/package.json",

@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hymenaios-io/Hymenaios/notifiers/gotify"
-	"github.com/hymenaios-io/Hymenaios/notifiers/slack"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	metrics "github.com/hymenaios-io/Hymenaios/web/metrics"
+	"github.com/release-argus/Argus/notifiers/gotify"
+	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/utils"
+	metrics "github.com/release-argus/Argus/web/metrics"
 )
 
 // Init the Slice metrics and hand out the defaults/notifiers.

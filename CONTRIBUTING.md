@@ -1,12 +1,12 @@
 # Contributing
 
-Hymenaios uses GitHub to manage reviews of pull requests.
+Argus uses GitHub to manage reviews of pull requests.
 
 * If you are a new contributor see: [Steps to Contribute](#steps-to-contribute)
 
 * If you have a trivial fix or improvement, go ahead and create a pull request.
 
-* If you plan to do something more involved, investigate open [issues](https://github.com/hymenaios-io/Hymenaios/issues) to see whether others are planning to work on this issue and open one if your search is empty.
+* If you plan to do something more involved, investigate open [issues](https://github.com/release-argus/Argus/issues) to see whether others are planning to work on this issue and open one if your search is empty.
 
 * Relevant coding style guidelines are the [Go Code Review Comments](https://code.google.com/p/go-wiki/wiki/CodeReviewComments) and the _Formatting and style_ section of Peter Bourgon's [Go: Best Practices for Production Environments](https://peter.bourgon.org/go-in-production/#formatting-and-style).
 
@@ -15,13 +15,13 @@ Hymenaios uses GitHub to manage reviews of pull requests.
 
 Should you wish to work on an issue, please claim it first by commenting on the GitHub issue that you want to work on it. This is to prevent duplicated efforts from contributors on the same issue.
 
-For complete instructions on how to compile see: [Building From Source](https://github.com/hymenaios-io/Hymenaios#building-from-source)
+For complete instructions on how to compile see: [Building From Source](https://github.com/release-argus/Argus#building-from-source)
 
 For quickly compiling and testing your changes do:
 ```
 # For building.
 make go-build
-./hymenaios
+./argus
 ```
 
 ```

@@ -1,4 +1,4 @@
-// Copyright [2022] [Hymenaios]
+// Copyright [2022] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/hymenaios-io/Hymenaios/utils"
-	api_types "github.com/hymenaios-io/Hymenaios/web/api/types"
+	"github.com/release-argus/Argus/utils"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
 const (
