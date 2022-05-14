@@ -78,8 +78,8 @@ common-build:
 			echo '>> building binaries'; \
 			go build \
 				-ldflags=\"\
-					-X 'github.com/release-argus/argus/utils.Version=${BUILD_VERSION}' \
-					-X 'github.com/release-argus/argus/utils.BuildDate=${BUILD_DATE}'\" \
+					-X 'github.com/release-argus/Argus/utils.Version=${BUILD_VERSION}' \
+					-X 'github.com/release-argus/Argus/utils.BuildDate=${BUILD_DATE}'\" \
 				-o ${OUTPUT_BINARY} \
 			./cmd/argus/"
 
