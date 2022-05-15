@@ -79,7 +79,7 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	// Type
 	if s.Defaults != nil {
 		if s.Type == nil {
-			errs = fmt.Errorf("%stype: <missing> (Services require a type)\\", utils.ErrorToString(errs))
+			errs = fmt.Errorf("%s%s  type: <missing> (Services require a type)\\", utils.ErrorToString(errs), prefix)
 		} else if *s.Type != "github" && *s.Type != "url" {
 			errs = fmt.Errorf("%s%s  type: <invalid> %q (Should be either 'github' or 'url')\\", utils.ErrorToString(errs), prefix, *s.Type)
 		}

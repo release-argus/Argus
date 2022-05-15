@@ -252,6 +252,11 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\", utils.ErrorToString(errs), prefix)
 		}
 	case "regex":
+		if c.Index == nil {
+			errs = fmt.Errorf("%s%sindex: <required> (element of the regex matches to take)\\", utils.ErrorToString(errs), prefix)
+		} else if *c.Index < 0 {
+			errs = fmt.Errorf("%s%sindex: <invalid> (indices must be non-negative)\\", utils.ErrorToString(errs), prefix)
+		}
 		if c.Regex == nil {
 			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\", utils.ErrorToString(errs), prefix)
 		}
@@ -265,7 +270,7 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	}
 
 	if errs != nil && validType {
-		errs = fmt.Errorf("%stype: %s\\%s\\", prefix, c.Type, errs)
+		errs = fmt.Errorf("%stype: %s\\%s", prefix, c.Type, errs)
 	}
 	return
 }
