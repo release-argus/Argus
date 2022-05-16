@@ -33,7 +33,7 @@ func TestServiceQuery(t *testing.T) {
 		serviceID               string = "GitHub_Query_Test"
 		serviceType             string = "github"
 		serviceURL              string = "go-gitea/gitea"
-		serviceURLcommand0Type  string = "regex_submatch"
+		serviceURLcommand0Type  string = "regex"
 		serviceURLcommand0Regex string = "v([0-9.]+)"
 		serviceRegexVersion     string = "^[0-9.]+[0-9]$"
 

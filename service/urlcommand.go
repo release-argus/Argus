@@ -27,9 +27,9 @@ type URLCommandSlice []URLCommand
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type               string  `yaml:"type"`                    // regex/regex_submatch/replace/split
-	Regex              *string `yaml:"regex,omitempty"`         // regex/regex_submatch: regexp.MustCompile(Regex)
-	Index              *int    `yaml:"index,omitempty"`         // regex_submatch/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Type               string  `yaml:"type"`                    // regex/replace/split
+	Regex              *string `yaml:"regex,omitempty"`         // regex: regexp.MustCompile(Regex)
+	Index              int     `yaml:"index,omitempty"`         // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
 	Text               *string `yaml:"text,omitempty"`          // split:                strings.Split(tgtString, "Text")
 	New                *string `yaml:"new,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
 	Old                *string `yaml:"old,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
@@ -68,28 +68,25 @@ func (c *URLCommandSlice) Print(prefix string) {
 	}
 
 	for _, command := range *c {
-		command.Print(prefix)
+		command.Print(prefix + "  ")
 	}
 }
 
 // Print will print the URLCommand.
 func (c *URLCommand) Print(prefix string) {
-	fmt.Printf("%s  - type: %s\n", prefix, c.Type)
+	fmt.Printf("%s- type: %s\n", prefix, c.Type)
 	switch c.Type {
 	case "regex":
-		fmt.Printf("%s    regex: %q\n", prefix, *c.Regex)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s    ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
-		fmt.Printf("%s    index: %d\n", prefix, *c.Index)
-	case "regex_submatch":
-		fmt.Printf("%s    regex: %q\n", prefix, *c.Regex)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s    ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
+		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
+		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
+		fmt.Printf("%s  index: %d\n", prefix, c.Index)
 	case "replace":
-		fmt.Printf("%s    new: %q\n", prefix, *c.New)
-		fmt.Printf("%s    old: %q\n", prefix, *c.Old)
+		fmt.Printf("%s  new: %q\n", prefix, *c.New)
+		fmt.Printf("%s  old: %q\n", prefix, *c.Old)
 	case "split":
-		fmt.Printf("%s    text: %q\n", prefix, *c.Text)
-		fmt.Printf("%s    index: %d\n", prefix, *c.Index)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s    ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
+		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
+		fmt.Printf("%s  index: %d\n", prefix, c.Index)
+		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
 	}
 }
 
@@ -139,7 +136,7 @@ func (c *URLCommand) run(text string, logFrom utils.LogFrom) (string, error) {
 		text, err = c.split(text, logFrom)
 	case "replace":
 		text = strings.ReplaceAll(text, *c.Old, *c.New)
-	case "regex", "regex_submatch":
+	case "regex":
 		text, err = c.regex(text, logFrom)
 	}
 	if err != nil {
@@ -155,17 +152,10 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	re := regexp.MustCompile(*c.Regex)
 
 	index := c.Index
-	var texts []string
-	switch c.Type {
-	case "regex":
-		texts = re.FindAllString(text, -1)
-		// Handle negative indices.
-		if *c.Index < 0 {
-			*index = len(texts) + *c.Index
-		}
-	case "regex_submatch":
-		texts = re.FindStringSubmatch(text)
-		index = utils.PtrOrValueToPtr(c.Index, 1)
+	texts := re.FindAllStringSubmatch(text, -1)
+	// Handle negative indices.
+	if index < 0 {
+		index = len(texts) + c.Index
 	}
 
 	if len(texts) == 0 {
@@ -175,14 +165,14 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 		return text, err
 	}
 
-	if (len(texts) - *index) < 1 {
-		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Regex, len(texts), (*index + 1))
+	if (len(texts) - index) < 1 {
+		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Regex, len(texts), (index + 1))
 		jLog.Warn(err, logFrom, !utils.EvalBoolPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
 	}
 
-	return texts[*index], nil
+	return texts[index][len(texts[index])-1], nil
 }
 
 func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
@@ -195,7 +185,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 		return text, err
 	}
 
-	index := *c.Index
+	index := c.Index
 	// Handle negative indices.
 	if index < 0 {
 		index = len(texts) + index
@@ -234,11 +224,12 @@ func (c *URLCommandSlice) CheckValues(prefix string) error {
 func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	validType := true
 
+	// TODO: Remove V
+	c.Type = strings.ReplaceAll(c.Type, "regex_submatch", "regex")
+
 	switch c.Type {
 	case "split":
-		if c.Index == nil {
-			errs = fmt.Errorf("%s%sindex: <required> (element of the split to take)\\", utils.ErrorToString(errs), prefix)
-		} else if *c.Index < 0 {
+		if c.Index < 0 {
 			errs = fmt.Errorf("%s%sindex: <invalid> (indices must be non-negative)\\", utils.ErrorToString(errs), prefix)
 		}
 		if c.Text == nil {
@@ -252,21 +243,12 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\", utils.ErrorToString(errs), prefix)
 		}
 	case "regex":
-		if c.Index == nil {
-			errs = fmt.Errorf("%s%sindex: <required> (element of the regex matches to take)\\", utils.ErrorToString(errs), prefix)
-		} else if *c.Index < 0 {
-			errs = fmt.Errorf("%s%sindex: <invalid> (indices must be non-negative)\\", utils.ErrorToString(errs), prefix)
-		}
-		if c.Regex == nil {
-			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\", utils.ErrorToString(errs), prefix)
-		}
-	case "regex_submatch":
 		if c.Regex == nil {
 			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\", utils.ErrorToString(errs), prefix)
 		}
 	default:
 		validType = false
-		errs = fmt.Errorf("%s%stype: <invalid> %q is not a valid url_command (split/replace/regex/regex_submatch)\\", utils.ErrorToString(errs), prefix, c.Type)
+		errs = fmt.Errorf("%s%stype: <invalid> %q is not a valid url_command (regex/replace/split)\\", utils.ErrorToString(errs), prefix, c.Type)
 	}
 
 	if errs != nil && validType {
