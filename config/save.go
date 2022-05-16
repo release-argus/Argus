@@ -139,7 +139,7 @@ func (c *Config) Save() {
 						continue
 					}
 					if (strings.HasPrefix(lines[i], indentation) && !strings.HasPrefix(lines[i], indentation+" ")) ||
-						!strings.HasPrefix(line, " ") {
+						!strings.HasPrefix(lines[i], " ") {
 						currentOrderIndexEnd[currentServiceNumber] = i
 						break
 					}
