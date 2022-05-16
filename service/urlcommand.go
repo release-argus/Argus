@@ -229,9 +229,6 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 
 	switch c.Type {
 	case "split":
-		if c.Index < 0 {
-			errs = fmt.Errorf("%s%sindex: <invalid> (indices must be non-negative)\\", utils.ErrorToString(errs), prefix)
-		}
 		if c.Text == nil {
 			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\", utils.ErrorToString(errs), prefix)
 		}
