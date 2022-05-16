@@ -28,13 +28,13 @@ func (c *Config) GetOrder(data []byte) {
 	afterService := false
 	indentation := ""
 	for index, line := range lines {
-		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "#") {
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "#") && len(lines[index]) != 0 {
 			// Find `service:` start
 			if line == "service:" {
 				afterService = true
 
 				// If a service isn't on the next line
-				if index == len(lines) || len(lines[index+1]) == 0 || lines[index+1][0] != ' ' {
+				if index == len(lines) || (len(lines[index+1]) != 0 && lines[index+1][0] != ' ') {
 					break
 				}
 
