@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.4.1](https://github.com/release-argus/Argus/compare/0.4.0...0.4.1) (2022-05-16)
+
+
+### Bug Fixes
+
+* require `index` var for `regex` url_command ([#35](https://github.com/release-argus/Argus/issues/35)) ([bda54f4](https://github.com/release-argus/Argus/commits/bda54f491c8ffa3c63df346145692b8953e08217))
+
 ## [0.4.0](https://github.com/release-argus/Argus/compare/0.3.2...0.4.0) (2022-05-14)
 
 

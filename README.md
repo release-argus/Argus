@@ -13,9 +13,9 @@
 [![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
 
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Docker%20Build?label=Docker%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/argus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/argus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-[![Docker Pulls](https://img.shields.io/docker/pulls/argus/argus)](https://hub.docker.com/r/releaseargus/argus)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
 
 Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
 For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Argus on your server.
