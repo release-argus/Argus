@@ -82,13 +82,7 @@ func TestService(flag *string, cfg *config.Config) {
 		version, err := service.DeployedVersionLookup.Query(
 			logFrom,
 			service.GetSemanticVersioning())
-		if err != nil {
-			jLog.Error(
-				err,
-				logFrom,
-				true,
-			)
-		} else {
+		if err == nil {
 			jLog.Info(
 				fmt.Sprintf(
 					"Deployed version - %q",

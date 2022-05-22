@@ -18,8 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/release-argus/Argus/notifiers/gotify"
-	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -34,30 +33,24 @@ type Status struct {
 	LastQueried             string       `yaml:"-"`                                   // UTC timestamp that version was last queried/checked.
 	RegexMissesContent      uint         `yaml:"-"`                                   // Counter for the number of regex misses on URL content.
 	RegexMissesVersion      uint         `yaml:"-"`                                   // Counter for the number of regex misses on version.
-	Fails                   *StatusFails `yaml:"-"`                                   // Track the Gotify/Slack/WebHook fails
+	Fails                   *StatusFails `yaml:"-"`                                   // Track the Shoutrrr/WebHook fails
 }
 
 // StatusFails keeps track of whether any of the notifications failed on the last version change.
 type StatusFails struct {
-	Gotify  *[]bool `yaml:"-"` // Track whether any of the Slice failed.
-	Slack   *[]bool `yaml:"-"` // Track whether any of the Slice failed.
-	WebHook *[]bool `yaml:"-"` // Track whether any of the WebHookSlice failed.
+	Shoutrrr *[]bool `yaml:"-"` // Track whether any of the Slice failed.
+	WebHook  *[]bool `yaml:"-"` // Track whether any of the WebHookSlice failed.
 }
 
 // Init initialises the Status vars when more than the default value is needed.
 func (s *Status) Init(
-	gotifies *gotify.Slice,
-	slacks *slack.Slice,
+	shoutrrrs *shoutrrr.Slice,
 	webhooks *webhook.Slice,
 ) {
 	s.Fails = new(StatusFails)
-	if gotifies != nil {
-		gotifyFails := make([]bool, len(*gotifies))
-		s.Fails.Gotify = &gotifyFails
-	}
-	if slacks != nil {
-		slackFails := make([]bool, len(*slacks))
-		s.Fails.Slack = &slackFails
+	if shoutrrrs != nil {
+		shoutrrrFails := make([]bool, len(*shoutrrrs))
+		s.Fails.Shoutrrr = &shoutrrrFails
 	}
 	if webhooks != nil {
 		webhookFails := make([]bool, len(*webhooks))

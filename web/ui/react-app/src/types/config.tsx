@@ -10,8 +10,7 @@ export interface ConfigState {
 export interface ConfigType {
   settings?: SettingsType;
   defaults?: DefaultsType;
-  gotify?: ServiceDict<GotifyType>;
-  slack?: ServiceDict<SlackType>;
+  notify?: ServiceDict<NotifyType>;
   webhook?: ServiceDict<WebHookType>;
   service?: ServiceDict<ServiceType>;
   order?: string[];
@@ -28,8 +27,7 @@ export interface LogSettingsType {
 
 export interface DefaultsType {
   service?: ServiceType;
-  gotify?: GotifyType;
-  slack?: SlackType;
+  notify?: ServiceDict<NotifyType>;
   webhook?: WebHookType;
 }
 export interface WebSettingsType {
@@ -58,9 +56,9 @@ export interface ServiceType {
   auto_approve?: boolean;
   ignore_misses?: string;
   icon?: string;
-  gotify?: ServiceDict<GotifyType>;
-  slack?: ServiceDict<SlackType>;
+  notify?: ServiceDict<NotifyType>;
   webhook?: ServiceDict<WebHookType>;
+  deployed_version?: DeployedVersionLookupType;
   status?: StatusType;
 }
 
@@ -97,8 +95,7 @@ export interface StatusType {
 }
 
 export interface StatusFailsType {
-  gotify?: boolean[];
-  slack?: boolean[];
+  notify?: boolean[];
   webhook?: boolean[];
 }
 
@@ -112,28 +109,14 @@ export interface URLCommandsType {
   ignore_misses?: string;
 }
 
-export interface GotifyType {
-  url: string;
-  token?: string;
-  title?: string;
-  message?: string;
-  extras?: ExtrasType;
-  priority?: string;
-  delay?: string;
-  maxTries?: number;
+export interface NotifyType {
+  type?: string;
+  options?: OptionsType;
+  url_fields?: Map<string, string>;
+  params?: Map<string, string>;
 }
 
-export interface ExtrasType {
-  android_action?: string;
-  client_display?: string;
-  client_notification?: string;
-}
-
-export interface SlackType {
-  url: string;
-  icon_emoji?: string;
-  icon_url?: string;
-  username?: string;
+export interface OptionsType {
   message?: string;
   delay?: string;
   max_tries?: number;

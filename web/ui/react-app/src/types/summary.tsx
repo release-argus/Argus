@@ -13,8 +13,7 @@ export interface ServiceSummaryType {
   url?: string;
   icon?: string;
   has_deployed_version?: boolean;
-  gotify?: boolean;
-  slack?: boolean;
+  notify?: boolean;
   webhook?: number;
   status?: StatusSummaryType;
 }
@@ -43,8 +42,7 @@ export interface StatusSummaryType {
 }
 
 export interface StatusFailsSummaryType {
-  gotify?: boolean;
-  slack?: boolean;
+  notify?: boolean;
   webhook?: boolean;
 }
 

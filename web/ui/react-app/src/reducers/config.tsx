@@ -1,5 +1,43 @@
-import { ConfigState } from "types/config";
+import { ConfigState, NotifyType, ServiceDict } from "types/config";
+
+import { cleanEmpty } from "utils/clean_empty";
 import { websocketResponse } from "types/websocket";
+
+const pruneNotify = (notify: NotifyType) => {
+  if (
+    notify?.options !== undefined &&
+    Object.keys(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      notify!.options!
+    ).length === 0
+  ) {
+    notify.options = undefined;
+  }
+  if (
+    notify?.url_fields !== undefined &&
+    Object.keys(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      notify!.url_fields!
+    ).length === 0
+  ) {
+    notify.url_fields = undefined;
+  }
+  if (
+    notify?.params !== undefined &&
+    Object.keys(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      notify!.params!
+    ).length === 0
+  ) {
+    notify.params = undefined;
+  }
+};
+
+const pruneNotifies = (notifies: ServiceDict<NotifyType>) => {
+  for (const notify_id in notifies) {
+    pruneNotify(notifies[notify_id]);
+  }
+};
 
 export default function reducerConfig(
   state: ConfigState,
@@ -45,24 +83,10 @@ export default function reducerConfig(
       switch (action.sub_type) {
         case "INIT":
           state.data.defaults = action.config_data.defaults;
-          // Gotify
-          if (
-            state.data.defaults?.gotify &&
-            (state.data.defaults?.gotify?.extras === undefined ||
-              Object.keys(state.data.defaults.gotify.extras).length === 0)
-          ) {
-            state.data.defaults.gotify.extras = undefined;
-            // Blank out extras if there aren't any defined
-            if (Object.keys(state.data.defaults.gotify).length === 1) {
-              state.data.defaults.gotify = undefined;
-            }
-          }
-          // Slack
-          if (
-            state.data.defaults?.slack &&
-            Object.keys(state.data.defaults.slack).length === 0
-          ) {
-            state.data.defaults.slack = undefined;
+          console.log(action.config_data.defaults);
+          // Notify
+          if (state.data.defaults?.notify) {
+            pruneNotifies(state.data.defaults.notify);
           }
           // WebHook
           if (
@@ -80,8 +104,7 @@ export default function reducerConfig(
             // Defaults
             if (
               Object.keys(
-                state.data.defaults.gotify === undefined &&
-                  state.data.defaults.slack === undefined &&
+                state.data.defaults.notify === undefined &&
                   state.data.defaults.webhook === undefined
               )
             ) {
@@ -97,23 +120,14 @@ export default function reducerConfig(
       break;
 
     // INIT
-    case "GOTIFY":
+    case "NOTIFY":
       switch (action.sub_type) {
         case "INIT":
-          state.data.gotify = action.config_data.gotify;
-          break;
-
-        default:
-          console.log(action);
-          throw new Error();
-      }
-      break;
-
-    // INIT
-    case "SLACK":
-      switch (action.sub_type) {
-        case "INIT":
-          state.data.slack = action.config_data.slack;
+          if (action.config_data.notify !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            pruneNotifies(state.data.notify!);
+          }
+          state.data.notify = action.config_data.notify;
           break;
 
         default:
@@ -142,6 +156,10 @@ export default function reducerConfig(
           state.data.service = {};
           if (action.config_data?.order && action.config_data.service) {
             for (const service_id of action.config_data.order) {
+              if (action.config_data.service[service_id].notify !== undefined) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                pruneNotifies(action.config_data.service[service_id].notify!);
+              }
               state.data.service[service_id] =
                 action.config_data.service[service_id];
             }
@@ -161,5 +179,7 @@ export default function reducerConfig(
   if (action.sub_type === "INIT" && state.waiting_on.includes(action.type)) {
     state.waiting_on = state.waiting_on.filter((item) => item !== action.type);
   }
+
+  state.data = cleanEmpty(state.data);
   return state;
 }

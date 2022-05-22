@@ -24,7 +24,7 @@ func TestLoad(t *testing.T) {
 		config                Config
 		configFile            string = "config_test.yml"
 		wantServiceInterval   string = "123s"
-		wantSlackDelay        string = "1s"
+		wantNotifyTitle       string = "defaultTitle"
 		wantWebHookDelay      string = "2s"
 		wantServiceServiceURL string = "release-argus/argus"
 	)
@@ -37,10 +37,10 @@ func TestLoad(t *testing.T) {
 		t.Fatalf(`config.Defaults.Service.Interval = %v, want match for %s`, *gotServiceInterval, wantServiceInterval)
 	}
 
-	// Slack
-	gotSlackDelay := config.Defaults.Slack.Delay
-	if !(wantSlackDelay == *gotSlackDelay) {
-		t.Fatalf(`config.Defaults.Slack.Delay = %s, want match for %s`, *gotSlackDelay, wantSlackDelay)
+	// Notify
+	gotNotifyTitle := (*config.Defaults.Notify["slack"].Params)["title"]
+	if !(wantNotifyTitle == gotNotifyTitle) {
+		t.Fatalf(`config.Defaults.Notify.Params.Title = %s, want match for %s`, gotNotifyTitle, wantNotifyTitle)
 	}
 
 	// WebHook

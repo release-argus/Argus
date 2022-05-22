@@ -21,6 +21,16 @@ import (
 	"strings"
 )
 
+var (
+	levelMap = map[string]int{
+		"ERROR":   0,
+		"WARN":    1,
+		"INFO":    2,
+		"VERBOSE": 3,
+		"DEBUG":   4,
+	}
+)
+
 // JLog is a log for various levels of logging.
 //
 // It supports ERROR, WARNING, INFO, VERBOSE and DEBUG.
@@ -51,13 +61,6 @@ func NewJLog(level string, timestamps bool) *JLog {
 // If value is out of the range (<0 or >4), then exit.
 func (l *JLog) SetLevel(level string) {
 	level = strings.ToUpper(level)
-	levelMap := map[string]int{
-		"ERROR":   0,
-		"WARN":    1,
-		"INFO":    2,
-		"VERBOSE": 3,
-		"DEBUG":   4,
-	}
 	value := levelMap[level]
 	l.LevelStr = level
 
@@ -97,6 +100,18 @@ func FormatMessageSource(from LogFrom) string {
 
 	// Neither from.Primary nor from.Secondary defined
 	return ""
+}
+
+// IsLevel will return whether the `level` of the JLog.
+// is value
+func (l *JLog) IsLevel(level string) bool {
+	level = strings.ToUpper(level)
+	value := levelMap[level]
+
+	if value == 0 && level != "ERROR" {
+		return false
+	}
+	return l.Level == uint(value)
 }
 
 // Error log the msg.

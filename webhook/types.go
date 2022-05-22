@@ -15,8 +15,7 @@
 package webhook
 
 import (
-	"github.com/release-argus/Argus/notifiers/gotify"
-	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -48,6 +47,5 @@ type WebHook struct {
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Gotify *gotify.Slice // Service.Gotify
-	Slack  *slack.Slice  // Service.WebHook
+	Shoutrrr *shoutrrr.Slice // Shoutrrr
 }

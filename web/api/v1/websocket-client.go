@@ -273,8 +273,7 @@ func (c *Client) writePump() {
 					case "INIT":
 						c.api.wsConfigSettings(c)
 						c.api.wsConfigDefaults(c)
-						c.api.wsConfigGotify(c)
-						c.api.wsConfigSlack(c)
+						c.api.wsConfigNotify(c)
 						c.api.wsConfigWebHook(c)
 						c.api.wsConfigService(c)
 					default:

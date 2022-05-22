@@ -132,36 +132,23 @@ func (s *Service) GetServiceURL(ignoreWebURL bool) string {
 }
 
 // GetIconURL returns the URL Icon for the Service.
-func (s *Service) GetIconURL() *string {
+func (s *Service) GetIconURL() string {
 	// Service.Icon
-	if s.Icon != nil {
+	if s.Icon != "" {
 		return s.Icon
 	}
 
-	if s.Slack != nil {
-		for key := range *s.Slack {
-			// `Service.Slack.IconURL/IconEmoji`
-			if (*s.Slack)[key].IconURL != nil {
-				return (*s.Slack)[key].IconURL
-			}
-		}
-
-		for key := range *s.Slack {
-			// `Slack.IconURL/IconEmoji`
-			if (*s.Slack)[key].Main.IconURL != nil {
-				return (*s.Slack)[key].Main.IconURL
-			}
-		}
-
-		for key := range *s.Slack {
-			// `Default(*s.Slack)[key].Slack.IconURL/IconEmoji`
-			if (*s.Slack)[key].Defaults.IconURL != nil {
-				return (*s.Slack)[key].Defaults.IconURL
+	if s.Notify != nil {
+		for key := range *s.Notify {
+			// `Params.Icon`
+			icon := (*s.Notify)[key].GetParam("icon")
+			if icon != "" && strings.HasPrefix(icon, "http") {
+				return icon
 			}
 		}
 	}
 
-	return nil
+	return ""
 }
 
 // GetInterval returns the interval between queries on this Service's version.

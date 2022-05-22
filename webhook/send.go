@@ -75,7 +75,7 @@ func (w *WebHook) Send(
 
 		// SUCCESS!
 		if err == nil {
-			metrics.IncreasePrometheusCounterWithIDAndServiceIDAndResult(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "SUCCESS")
+			metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "", "SUCCESS")
 			failed := false
 			w.Failed = &failed
 			w.AnnounceSend()
@@ -84,7 +84,7 @@ func (w *WebHook) Send(
 
 		// FAIL!
 		jLog.Error(err, logFrom, true)
-		metrics.IncreasePrometheusCounterWithIDAndServiceIDAndResult(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "FAIL")
+		metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "", "FAIL")
 		triesLeft--
 		errs = fmt.Errorf("%s\n%w", utils.ErrorToString(errs), err)
 
@@ -98,10 +98,7 @@ func (w *WebHook) Send(
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL
 				//nolint:errcheck // Errors will be logged to CL
-				w.Notifiers.Gotify.Send("WebHook fail", err.Error(), &serviceInfo)
-				//#nosec G104 -- Errors will be logged to CL
-				//nolint:errcheck // Errors will be logged to CL
-				w.Notifiers.Slack.Send(err.Error(), &serviceInfo)
+				w.Notifiers.Shoutrrr.Send("WebHook fail", err.Error(), &serviceInfo)
 			}
 			return
 		}
@@ -155,4 +152,12 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 		resp.Status,
 		body,
 	)
+}
+
+func (n *Notifiers) Send(title string, message string, serviceInfo *utils.ServiceInfo) error {
+	if n == nil {
+		return nil
+	}
+
+	return (*n.Shoutrrr).Send(title, message, serviceInfo)
 }
