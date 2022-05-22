@@ -50,12 +50,12 @@ export const handleNotifications = (params: notificationsParams) => {
                 type: "success",
                 title: params.event.service_data?.id || "Unknown",
                 body: `Updated to version '${
-                  params.event.service_data?.status?.current_version ||
+                  params.event.service_data?.status?.deployed_version ||
                   "Unknown"
                 }'`,
                 small:
                   params.event.service_data?.status
-                    ?.current_version_timestamp || new Date().toString(),
+                    ?.deployed_version_timestamp || new Date().toString(),
                 delay: 30000,
               });
               break;

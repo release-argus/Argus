@@ -26,15 +26,18 @@ import (
 
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
-	ApprovedVersion         string       `yaml:"approved_version,omitempty"`          // The version that's been approved
-	CurrentVersion          string       `yaml:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
-	CurrentVersionTimestamp string       `yaml:"current_version_timestamp,omitempty"` // UTC timestamp of CurrentVersion being changed.
-	LatestVersion           string       `yaml:"latest_version,omitempty"`            // Latest version found from query().
-	LatestVersionTimestamp  string       `yaml:"latest_version_timestamp,omitempty"`  // UTC timestamp of LatestVersion being changed.
-	LastQueried             string       `yaml:"-"`                                   // UTC timestamp that version was last queried/checked.
-	RegexMissesContent      uint         `yaml:"-"`                                   // Counter for the number of regex misses on URL content.
-	RegexMissesVersion      uint         `yaml:"-"`                                   // Counter for the number of regex misses on version.
-	Fails                   *StatusFails `yaml:"-"`                                   // Track the Gotify/Slack/WebHook fails
+	ApprovedVersion          string       `yaml:"approved_version,omitempty"`           // The version that's been approved
+	DeployedVersion          string       `yaml:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
+	DeployedVersionTimestamp string       `yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp of DeployedVersion being changed.
+	LatestVersion            string       `yaml:"latest_version,omitempty"`             // Latest version found from query().
+	LatestVersionTimestamp   string       `yaml:"latest_version_timestamp,omitempty"`   // UTC timestamp of LatestVersion being changed.
+	LastQueried              string       `yaml:"-"`                                    // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint         `yaml:"-"`                                    // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint         `yaml:"-"`                                    // Counter for the number of regex misses on version.
+	Fails                    *StatusFails `yaml:"-"`                                    // Track the Gotify/Slack/WebHook fails
+	// TODO: Remove V
+	CurrentVersion          string `yaml:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
+	CurrentVersionTimestamp string `yaml:"current_version_timestamp,omitempty"` // UTC timestamp that the current version change was noticed.
 }
 
 // StatusFails keeps track of whether any of the notifications failed on the last version change.
@@ -65,10 +68,10 @@ func (s *Status) Init(
 	}
 }
 
-// SetCurrentVersion will set CurrentVersion as well as CurrentVersionTimestamp.
-func (s *Status) SetCurrentVersion(version string) {
-	s.CurrentVersion = version
-	s.CurrentVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
+// SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
+func (s *Status) SetDeployedVersion(version string) {
+	s.DeployedVersion = version
+	s.DeployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
 }
 
 // SetLastQueried will update LastQueried to now.
@@ -85,8 +88,8 @@ func (s *Status) SetLatestVersion(version string) {
 // Print will print the Status.
 func (s *Status) Print(prefix string) {
 	utils.PrintlnIfNotDefault(s.ApprovedVersion, fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
-	utils.PrintlnIfNotDefault(s.CurrentVersion, fmt.Sprintf("%scurrent_version: %s", prefix, s.CurrentVersion))
-	utils.PrintlnIfNotDefault(s.CurrentVersionTimestamp, fmt.Sprintf("%scurrent_version_timestamp: %q", prefix, s.CurrentVersionTimestamp))
+	utils.PrintlnIfNotDefault(s.DeployedVersion, fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
+	utils.PrintlnIfNotDefault(s.DeployedVersionTimestamp, fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
 	utils.PrintlnIfNotDefault(s.LatestVersion, fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
 	utils.PrintlnIfNotDefault(s.LatestVersionTimestamp, fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
 }

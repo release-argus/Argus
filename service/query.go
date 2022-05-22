@@ -66,7 +66,7 @@ func (s *Service) Query() (bool, error) {
 			// oldVersion = 1.2.10
 			// return false (don't notify anything. Stay on oldVersion)
 			if newVersion.LessThan(*oldVersion) {
-				err := fmt.Errorf("queried version %q is less than the current version %q", version, s.Status.LatestVersion)
+				err := fmt.Errorf("queried version %q is less than the deployed version %q", version, s.Status.LatestVersion)
 				jLog.Warn(err, logFrom, true)
 				return false, err
 			}
@@ -87,8 +87,8 @@ func (s *Service) Query() (bool, error) {
 			}
 
 			s.Status.SetLatestVersion(version)
-			if s.Status.CurrentVersion == "" && s.DeployedVersionLookup == nil {
-				s.Status.SetCurrentVersion(version)
+			if s.Status.DeployedVersion == "" && s.DeployedVersionLookup == nil {
+				s.Status.SetDeployedVersion(version)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)
@@ -290,7 +290,7 @@ func (s *Service) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version str
 					}
 				}
 
-				// Ignore tags older than the current latest.
+				// Ignore tags older than the deployed latest.
 			} else {
 				// return LatestVersion
 				return

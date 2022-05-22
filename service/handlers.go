@@ -22,7 +22,7 @@ import (
 	"github.com/release-argus/Argus/web/metrics"
 )
 
-// UpdatedVersion will register the version change, setting `s.Status.CurrentVersion`
+// UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
 	// Only update if all webhooks have been sent
@@ -35,12 +35,12 @@ func (s *Service) UpdatedVersion() {
 			}
 		}
 	}
-	// Don't update CurrentVersion to LatestVersion if we have a lookup check
+	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
 		s.UpdateLatestApproved()
 		return
 	}
-	s.Status.SetCurrentVersion(s.Status.LatestVersion)
+	s.Status.SetDeployedVersion(s.Status.LatestVersion)
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()

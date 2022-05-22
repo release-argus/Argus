@@ -68,12 +68,12 @@ func (api *API) wsService(client *Client) {
 			HasDeployedVersionLookup: &hasDeployedVersionLookup,
 			WebHook:                  webhookCount,
 			Status: &api_types.Status{
-				ApprovedVersion:         service.Status.ApprovedVersion,
-				CurrentVersion:          service.Status.CurrentVersion,
-				CurrentVersionTimestamp: service.Status.CurrentVersionTimestamp,
-				LatestVersion:           service.Status.LatestVersion,
-				LatestVersionTimestamp:  service.Status.LatestVersionTimestamp,
-				LastQueried:             service.Status.LastQueried,
+				ApprovedVersion:          service.Status.ApprovedVersion,
+				DeployedVersion:          service.Status.DeployedVersion,
+				DeployedVersionTimestamp: service.Status.DeployedVersionTimestamp,
+				LatestVersion:            service.Status.LatestVersion,
+				LatestVersionTimestamp:   service.Status.LatestVersionTimestamp,
+				LastQueried:              service.Status.LastQueried,
 			},
 		}
 
@@ -518,11 +518,11 @@ func (api *API) wsConfigService(client *Client) {
 				AllowInvalidCerts:  service.AllowInvalidCerts,
 				Icon:               service.Icon,
 				Status: &api_types.Status{
-					ApprovedVersion:         service.Status.ApprovedVersion,
-					CurrentVersion:          service.Status.CurrentVersion,
-					CurrentVersionTimestamp: service.Status.CurrentVersionTimestamp,
-					LatestVersion:           service.Status.LatestVersion,
-					LatestVersionTimestamp:  service.Status.LatestVersionTimestamp,
+					ApprovedVersion:          service.Status.ApprovedVersion,
+					DeployedVersion:          service.Status.DeployedVersion,
+					DeployedVersionTimestamp: service.Status.DeployedVersionTimestamp,
+					LatestVersion:            service.Status.LatestVersion,
+					LatestVersionTimestamp:   service.Status.LatestVersionTimestamp,
 				},
 			}
 

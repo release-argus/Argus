@@ -102,10 +102,10 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	// Status
 	if s.Status != nil {
 		var statusErrs error
-		if s.Status.CurrentVersionTimestamp != "" {
-			_, err := time.Parse(time.RFC3339, s.Status.CurrentVersionTimestamp)
+		if s.Status.DeployedVersionTimestamp != "" {
+			_, err := time.Parse(time.RFC3339, s.Status.DeployedVersionTimestamp)
 			if err != nil {
-				statusErrs = fmt.Errorf("%s%s    current_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.CurrentVersionTimestamp)
+				statusErrs = fmt.Errorf("%s%s    deployed_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.DeployedVersionTimestamp)
 			}
 		}
 		if s.Status.LatestVersionTimestamp != "" {

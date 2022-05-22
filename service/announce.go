@@ -107,7 +107,7 @@ func (s *Service) AnnounceQueryNewVersion() {
 func (s *Service) AnnounceUpdate() {
 	var payloadData []byte
 
-	// CurrentVersion update
+	// DeployedVersion update
 	wsPage := "APPROVALS"
 	wsType := "VERSION"
 	wsSubType := "UPDATED"
@@ -118,8 +118,8 @@ func (s *Service) AnnounceUpdate() {
 		ServiceData: &api_types.ServiceSummary{
 			ID: s.ID,
 			Status: &api_types.Status{
-				CurrentVersion:          s.Status.CurrentVersion,
-				CurrentVersionTimestamp: s.Status.CurrentVersionTimestamp,
+				DeployedVersion:          s.Status.DeployedVersion,
+				DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp,
 			},
 		},
 	})
