@@ -58,7 +58,7 @@ func (s *Service) Track() {
 		// If a new version was found and we're not already on it
 		if newVersion && s.Status.DeployedVersion != s.Status.LastQueried {
 			isNewerVersion := true
-			// Check whether this LatestVersion is newer smenatically than DeployedVersion
+			// Check whether this LatestVersion is newer semantically than DeployedVersion
 			if s.GetSemanticVersioning() {
 				//#nosec G104 -- Errors would be handled in the Query
 				//nolint:errcheck // Errors would be handled in the Query
