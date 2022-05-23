@@ -37,6 +37,9 @@ type Gotify struct {
 
 // TODO: Remove V
 func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
+	if g == nil {
+		return
+	}
 	converted.InitMaps()
 	convertedID := id
 	converted.ID = &convertedID

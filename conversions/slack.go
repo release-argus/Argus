@@ -43,6 +43,9 @@ func (s *Slack) Convert(
 	id string,
 	url string,
 ) (converted shoutrrr.Shoutrrr) {
+	if s == nil {
+		return
+	}
 	converted.InitMaps()
 	convertedID := id
 	converted.ID = &convertedID
@@ -57,6 +60,7 @@ func (s *Slack) Convert(
 			converted.SetURLField("channel", "webhook")
 		}
 		converted.SetURLField("slack_type", "webhook")
+		// mattermost
 	} else {
 		if s.URL != nil {
 			url := *s.URL

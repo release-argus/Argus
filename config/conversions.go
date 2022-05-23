@@ -43,9 +43,9 @@ func (c *Config) convertCurrentVersionToDeployedVersion() {
 }
 
 // convertDeprecatedSlackAndGotify will handle converting the old 'Gotify' and 'Slack' slices
-// to the new 'Notify' format
+// to the new 'Notify' format(*c.Service[serviceIndex]).Slack)
 func (c *Config) convertDeprecatedSlackAndGotify() {
-	// Check whetherr Defaults.Notify.(Slack|MatterMost) are wanted
+	// Check whether Defaults.Notify.(Slack|MatterMost) are wanted
 	hasSlack := false
 	hasMatterMost := false
 	if c.Defaults.Notify["slack"] != nil {
@@ -62,43 +62,46 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 		c.Defaults.Notify = notifySlice
 	}
 
-	// GOTIFY
-	if c.Gotify != nil {
-		// Convert inside services
-		for serviceIndex := range c.Service {
-			if (*c.Service[serviceIndex]).Gotify == nil {
-				continue
-			}
-			for oldName := range *(*c.Service[serviceIndex]).Gotify {
-				newName := oldName
-				// If oldName isn't unique, make it so
-				// Keep looping just incase of XXX_gotify_gotify... names
-				for {
-					if (*(*c.Service[serviceIndex]).Gotify)[newName] != nil {
-						newName += "_gotify"
-					} else {
-						break
-					}
-				}
-				// Ensure it's not nil
-				if (*c.Service[serviceIndex]).Notify == nil {
-					notifySlice := make(shoutrrr.Slice)
-					(*c.Service[serviceIndex]).Notify = &notifySlice
-				}
-
-				// Convert this Gotify
-				converted := (*(*c.Service[serviceIndex]).Gotify)[oldName].Convert("")
-				// Give it to the Notify
-				(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
-			}
+	// Gotify
+	// Convert inside services
+	for serviceIndex := range c.Service {
+		if (*c.Service[serviceIndex]).Gotify == nil {
+			continue
 		}
-		// Convert mains
+		for oldName := range *(*c.Service[serviceIndex]).Gotify {
+			newName := oldName
+			// If oldName isn't unique, make it so
+			// Keep looping just incase of XXX_gotify_gotify... names
+			for {
+				// If newName doesn't exist currently
+				if (*(*c.Service[serviceIndex]).Gotify)[newName] != nil && (*(*c.Service[serviceIndex]).Notify)[newName] == nil {
+					newName += "_gotify"
+				} else {
+					break
+				}
+			}
+
+			// Ensure the NotifySlice is not nil
+			if (*c.Service[serviceIndex]).Notify == nil {
+				notifySlice := make(shoutrrr.Slice)
+				(*c.Service[serviceIndex]).Notify = &notifySlice
+			}
+
+			// Convert this Gotify
+			converted := (*(*c.Service[serviceIndex]).Gotify)[oldName].Convert("")
+			// Give it to the Notify
+			(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
+		}
+	}
+	// Convert mains
+	if c.Gotify != nil {
 		for oldName := range *c.Gotify {
 			newName := oldName
 			// If oldName isn't unique, make it so
 			// Keep looping just incase of XXX_gotify_gotify... names
 			for {
-				if (*c.Slack)[newName] != nil {
+				// If newName doesn't exist currently
+				if (*c.Slack)[newName] != nil && c.Notify[newName] == nil {
 					newName += "_gotify"
 				} else {
 					break
@@ -107,14 +110,14 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 			converted := (*c.Gotify)[oldName].Convert("gotify")
 			c.Notify[newName] = &converted
 		}
-		// Convert defaults
-		if c.Defaults.Gotify != nil {
-			converted := (*c.Defaults.Gotify).Convert("gotify")
-			c.Defaults.Notify["gotify"] = &converted
-		}
+	}
+	// Convert defaults
+	if c.Defaults.Gotify != nil {
+		converted := (*c.Defaults.Gotify).Convert("gotify")
+		c.Defaults.Notify["gotify"] = &converted
 	}
 
-	// SLACK
+	// Slack
 	if c.Slack != nil {
 		// Convert inside services
 		for serviceIndex := range c.Service {
@@ -135,30 +138,33 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 				if dflt != nil {
 					dfltURL = utils.DefaultIfNil(dflt.URL)
 				}
-				url := utils.DefaultIfNil(utils.GetFirstNonNilPtr(
-					(*(*c.Service[serviceIndex]).Slack)[oldName].URL,
-					&mainURL,
-					&dfltURL))
+				url := utils.GetFirstNonDefault(
+					utils.DefaultIfNil((*(*c.Service[serviceIndex]).Slack)[oldName].URL),
+					mainURL,
+					dfltURL)
 				isSlack := strings.Contains(url, "hooks.slack.com")
+				// add suffix to names that aren't unique between 'gotify' and 'slack'
 				suffix := "_mattermost"
 				if isSlack {
 					suffix = "_slack"
 				}
 				for {
-					if (*(*c.Service[serviceIndex]).Slack)[newName] != nil {
+					// if newName is unique
+					if (*(*c.Service[serviceIndex]).Slack)[newName] != nil && (*(*c.Service[serviceIndex]).Notify)[newName] == nil {
 						newName += suffix
 					} else {
 						break
 					}
 				}
-				// Ensure it's not nil
+
+				// Ensure the NotifySlice is not nil
 				if (*c.Service[serviceIndex]).Notify == nil {
 					notifySlice := make(shoutrrr.Slice)
 					(*c.Service[serviceIndex]).Notify = &notifySlice
 				}
 
 				// Convert this Slack/MatterMost
-				converted := (*(*c.Service[serviceIndex]).Slack)[oldName].Convert(newName, "")
+				converted := (*(*c.Service[serviceIndex]).Slack)[oldName].Convert(newName, url)
 				// Give it to the notify
 				(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
 			}
@@ -167,15 +173,10 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 		for oldName := range *c.Slack {
 			newName := oldName
 			url := utils.DefaultIfNil((*c.Slack)[oldName].URL)
-			isSlack := strings.Contains(url, "hooks.slack.com")
-			suffix := "_mattermost"
-			if isSlack {
-				suffix = "_slack"
-			}
 			// Try and find a service with an oldName slack
 			if url == "" {
 				for serviceIndex := range c.Service {
-					if (*(*c.Service[serviceIndex]).Slack)[oldName] != nil {
+					if (*c.Service[serviceIndex]).Slack != nil && (*(*c.Service[serviceIndex]).Slack)[oldName] != nil {
 						url = utils.DefaultIfNil((*(*c.Service[serviceIndex]).Slack)[oldName].URL)
 						if url != "" {
 							break
@@ -183,10 +184,19 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 					}
 				}
 			}
+			isSlack := strings.Contains(url, "hooks.slack.com")
+			suffix := "_mattermost"
+			if isSlack {
+				suffix = "_slack"
+				hasSlack = true
+			} else {
+				hasMatterMost = true
+			}
 			// If oldName isn't unique, make it so
 			// Keep looping just incase of XXX_slack_slack... names
 			for {
-				if (*c.Slack)[newName] != nil {
+				// if newName is unique
+				if (*c.Slack)[newName] != nil && c.Notify[newName] == nil {
 					newName += suffix
 				} else {
 					break
@@ -212,32 +222,11 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 		c.Service[i].Slack = nil
 	}
 
-	// Check whetehr Defaults.Notify,Slack/MatterMost are wanted
-	for n := range c.Notify {
-		if c.Notify[n].Type == "slack" {
-			hasSlack = true
-		} else if c.Notify[n].Type == "mattermost" {
-			hasMatterMost = true
-		}
-	}
-	for s := range c.Service {
-		if c.Service[s].Notify != nil {
-			for n := range *c.Service[s].Notify {
-				if (*c.Service[s].Notify)[n] == nil {
-					continue
-				}
-				if (*c.Service[s].Notify)[n].Type == "slack" {
-					hasSlack = true
-				} else if (*c.Service[s].Notify)[n].Type == "mattermost" {
-					hasMatterMost = true
-				}
-			}
-		}
-	}
-	if !hasSlack {
+	// Delete defaults if they're most likely not wanted
+	if !hasSlack && hasMatterMost {
 		delete(c.Defaults.Notify, "slack")
 	}
-	if !hasMatterMost {
+	if !hasMatterMost && hasSlack {
 		delete(c.Defaults.Notify, "mattermost")
 	}
 }
