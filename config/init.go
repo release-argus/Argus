@@ -93,6 +93,8 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	msg = fmt.Sprintf("Unmarshal of %q failed\n%s", file, err)
 	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
 
+	// Handle deprecations
+	c.ConvertCurrentVersionToDeployedVersion()
 	c.handleDeprecatedConversion()
 
 	c.GetOrder(data)

@@ -34,14 +34,14 @@ type ServiceSummary struct {
 
 // Status is the Status of a Service.
 type Status struct {
-	ApprovedVersion         string `json:"approved_version,omitempty"`          // The version that's been approved
-	CurrentVersion          string `json:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
-	CurrentVersionTimestamp string `json:"current_version_timestamp,omitempty"` // UTC timestamp that the current version change was noticed.
-	LatestVersion           string `json:"latest_version,omitempty"`            // Latest version found from query().
-	LatestVersionTimestamp  string `json:"latest_version_timestamp,omitempty"`  // UTC timestamp that the latest version change was noticed.
-	LastQueried             string `json:"last_queried,omitempty"`              // UTC timestamp that version was last queried/checked.
-	RegexMissesContent      uint   `json:"regex_misses_content,omitempty"`      // Counter for the number of regex misses on URL content.
-	RegexMissesVersion      uint   `json:"regex_misses_version,omitempty"`      // Counter for the number of regex misses on version.
+	ApprovedVersion          string `json:"approved_version,omitempty"`           // The version that's been approved
+	DeployedVersion          string `json:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
+	DeployedVersionTimestamp string `json:"deployed_version_timestamp,omitempty"` // UTC timestamp that the deployed version change was noticed.
+	LatestVersion            string `json:"latest_version,omitempty"`             // Latest version found from query().
+	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitempty"`   // UTC timestamp that the latest version change was noticed.
+	LastQueried              string `json:"last_queried,omitempty"`               // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint   `json:"regex_misses_content,omitempty"`       // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint   `json:"regex_misses_version,omitempty"`       // Counter for the number of regex misses on version.
 }
 
 // StatusFails keeps track of whether each of the notifications failed on the last version change.
@@ -237,7 +237,7 @@ type DeployedVersionLookup struct {
 	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
 	Headers           []Header               `json:"headers,omitempty"`             // Headers for the HTTP(S) request.
 	JSON              string                 `json:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string                 `json:"regex,omitempty"`               // Regex to get the CurrentVersion
+	Regex             string                 `json:"regex,omitempty"`               // Regex to get the DeployedVersion
 	HardDefaults      *DeployedVersionLookup `json:"-"`                             // Hardcoded default values.
 	Defaults          *DeployedVersionLookup `json:"-"`                             // Default values.
 }

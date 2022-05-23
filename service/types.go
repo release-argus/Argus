@@ -122,7 +122,7 @@ type DeployedVersionLookup struct {
 	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
 	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
 	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the CurrentVersion
+	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
 	HardDefaults      *DeployedVersionLookup `yaml:"-"`                             // Hardcoded default values.
 	Defaults          *DeployedVersionLookup `yaml:"-"`                             // Default values.
 }
