@@ -96,6 +96,7 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	// Handle deprecations
 	c.convertCurrentVersionToDeployedVersion()
 	c.convertDeprecatedSlackAndGotify()
+	c.convertDeprecatedURLCommands()
 
 	c.GetOrder(data)
 
