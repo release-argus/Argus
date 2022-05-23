@@ -156,12 +156,12 @@ const WebHookModal = () => {
                 placement="top"
                 delay={{ show: 500, hide: 500 }}
                 overlay={
-                  <Tooltip id={`tooltip-current-version`}>
-                    {modal.service?.status?.current_version_timestamp ? (
+                  <Tooltip id={`tooltip-deployed-version`}>
+                    {modal.service?.status?.deployed_version_timestamp ? (
                       <>
                         {formatRelative(
                           new Date(
-                            modal.service?.status?.current_version_timestamp
+                            modal.service?.status?.deployed_version_timestamp
                           ),
                           new Date()
                         )}
@@ -174,7 +174,7 @@ const WebHookModal = () => {
               >
                 <p style={{ margin: 0 }}>
                   {`${modal.type === "SKIP" ? "Stay on" : "From"}: ${
-                    modal.service?.status?.current_version
+                    modal.service?.status?.deployed_version
                   }`}
                 </p>
               </OverlayTrigger>

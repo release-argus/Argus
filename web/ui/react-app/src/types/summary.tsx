@@ -34,8 +34,8 @@ export interface WebHookModalData {
 
 export interface StatusSummaryType {
   approved_version?: string;
-  current_version?: string;
-  current_version_timestamp?: string;
+  deployed_version?: string;
+  deployed_version_timestamp?: string;
   latest_version?: string;
   latest_version_timestamp?: string;
   last_queried?: string;

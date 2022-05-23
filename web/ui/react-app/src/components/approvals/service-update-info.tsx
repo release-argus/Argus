@@ -36,11 +36,11 @@ export const UpdateInfo = ({
             placement="top"
             delay={{ show: 500, hide: 500 }}
             overlay={
-              <Tooltip id={`tooltip-current-version`}>
-                {service.status?.current_version_timestamp ? (
+              <Tooltip id={`tooltip-deployed-version`}>
+                {service.status?.deployed_version_timestamp ? (
                   <>
                     {formatRelative(
-                      new Date(service.status.current_version_timestamp),
+                      new Date(service.status.deployed_version_timestamp),
                       new Date()
                     )}
                   </>
@@ -52,8 +52,8 @@ export const UpdateInfo = ({
           >
             <p style={{ marginTop: 5, marginBottom: 5 }}>
               <strong>From:</strong>{" "}
-              {service?.status?.current_version
-                ? service.status.current_version
+              {service?.status?.deployed_version
+                ? service.status.deployed_version
                 : "Unknown"}{" "}
             </p>
           </OverlayTrigger>

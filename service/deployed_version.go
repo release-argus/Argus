@@ -33,7 +33,7 @@ func (d *DeployedVersionLookup) GetAllowInvalidCerts() bool {
 	return *utils.GetFirstNonNilPtr(d.AllowInvalidCerts, d.Defaults.AllowInvalidCerts, d.HardDefaults.AllowInvalidCerts)
 }
 
-// Track the deployed version (CurrentVersion) of the `parent`.
+// Track the deployed version (DeployedVersion) of the `parent`.
 func (d *DeployedVersionLookup) Track(parent *Service) {
 	if d == nil {
 		return
@@ -42,14 +42,14 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 
 	// Track forever.
 	for {
-		currentVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
+		deployedVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
 		// If new release found by ^ query.
-		if err == nil && currentVersion != parent.Status.CurrentVersion {
-			parent.Status.SetCurrentVersion(currentVersion)
+		if err == nil && deployedVersion != parent.Status.DeployedVersion {
+			parent.Status.SetDeployedVersion(deployedVersion)
 
 			// Announce version change to WebSocket clients.
 			jLog.Info(
-				fmt.Sprintf("Updated to %q", currentVersion),
+				fmt.Sprintf("Updated to %q", deployedVersion),
 				logFrom,
 				true)
 			parent.AnnounceUpdate()
@@ -62,7 +62,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 	}
 }
 
-// Query the deployed version (CurrentVersion) of the Service.
+// Query the deployed version (DeployedVersion) of the Service.
 func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
 	rawBody, err := d.httpRequest(logFrom)
 	if err != nil {
@@ -208,7 +208,7 @@ func (d *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
 
 	// URL
 	if d.URL == "" && d.Defaults != nil {
-		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the current_version is required)\\", utils.ErrorToString(errs), prefix)
+		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\", utils.ErrorToString(errs), prefix)
 	}
 
 	// RegEx

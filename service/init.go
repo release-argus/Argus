@@ -41,15 +41,15 @@ func (s *Service) Init(
 	if s.Status.Fails == nil {
 		s.Status.Fails = &StatusFails{}
 	}
-	// Default LatestVersion to CurrentVersion
+	// Default LatestVersion to DeployedVersion
 	if s.Status.LatestVersion == "" {
-		s.Status.LatestVersion = s.Status.CurrentVersion
-		s.Status.LatestVersionTimestamp = s.Status.CurrentVersionTimestamp
+		s.Status.LatestVersion = s.Status.DeployedVersion
+		s.Status.LatestVersionTimestamp = s.Status.DeployedVersionTimestamp
 	}
-	// Default CurrentVersion to LatestVersion
-	if s.Status.CurrentVersion == "" {
-		s.Status.CurrentVersion = s.Status.LatestVersion
-		s.Status.CurrentVersionTimestamp = s.Status.LatestVersionTimestamp
+	// Default DeployedVersion to LatestVersion
+	if s.Status.DeployedVersion == "" {
+		s.Status.DeployedVersion = s.Status.LatestVersion
+		s.Status.DeployedVersionTimestamp = s.Status.LatestVersionTimestamp
 	}
 
 	s.Defaults = defaults
@@ -205,13 +205,13 @@ func (s *Service) GetWebURL() string {
 	return utils.TemplateString(*template, utils.ServiceInfo{LatestVersion: s.Status.LatestVersion})
 }
 
-// GetURL will ensure `currentURL` is a valid GitHub API URL if `urlType` is 'github'
-func GetURL(currentURL string, urlType string) string {
+// GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
+func GetURL(url string, urlType string) string {
 	if urlType == "github" {
 		// Convert "owner/repo" to the API path.
-		if strings.Count(currentURL, "/") == 1 {
-			currentURL = fmt.Sprintf("https://api.github.com/repos/%s/releases", currentURL)
+		if strings.Count(url, "/") == 1 {
+			url = fmt.Sprintf("https://api.github.com/repos/%s/releases", url)
 		}
 	}
-	return currentURL
+	return url
 }

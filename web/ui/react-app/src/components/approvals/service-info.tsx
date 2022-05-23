@@ -54,8 +54,8 @@ export const ServiceInfo = ({
 
   // If version hasn't been found or a new version has been found
   const serviceWarning =
-    service?.status?.current_version === undefined ||
-    service?.status?.current_version === "" ||
+    service?.status?.deployed_version === undefined ||
+    service?.status?.deployed_version === "" ||
     (updateAvailable && !updateSkipped);
 
   const updateApproved =
@@ -119,7 +119,7 @@ export const ServiceInfo = ({
           </>
         ) : (
           <ListGroup.Item
-            key="current_v"
+            key="deployed_v"
             variant={serviceWarning ? "warning" : "secondary"}
             className={
               "service-item" + (service.webhook ? "" : " justify-left")
@@ -143,15 +143,15 @@ export const ServiceInfo = ({
               )}
               <br />
               <OverlayTrigger
-                key="current-version"
+                key="deployed-version"
                 placement="top"
                 delay={{ show: 500, hide: 500 }}
                 overlay={
-                  service?.status?.current_version_timestamp ? (
-                    <Tooltip id={`tooltip-current-version`}>
+                  service?.status?.deployed_version_timestamp ? (
+                    <Tooltip id={`tooltip-deployed-version`}>
                       <>
                         {formatRelative(
-                          new Date(service.status.current_version_timestamp),
+                          new Date(service.status.deployed_version_timestamp),
                           new Date()
                         )}
                       </>
@@ -162,8 +162,8 @@ export const ServiceInfo = ({
                 }
               >
                 <p style={{ margin: 0 }}>
-                  {service?.status?.current_version
-                    ? service.status.current_version
+                  {service?.status?.deployed_version
+                    ? service.status.deployed_version
                     : "Unknown"}{" "}
                 </p>
               </OverlayTrigger>
