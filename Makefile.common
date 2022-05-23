@@ -28,7 +28,7 @@ define GetFromPkg
 $(shell node -p "require('./web/ui/react-app/package.json').$(1)")
 endef
 BUILD_DATE              ?= ${shell date -u +"%FT%TZ"}
-BUILD_VERSION           := $(call GetFromPkg,version)
+BUILD_VERSION           ?= $(call GetFromPkg,version)
 
 OUTPUT_BINARY           ?= argus
 
