@@ -21,8 +21,31 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func (c *Config) handleDeprecatedConversion() {
-	// Check whetehr Defaults.Notify,Slack/MatterMost are wanted
+// convertCurrentVersionToDeployedVersion handles the deprecation of `current_version*`,
+// Renaming it to `deployed_version*`
+func (c *Config) convertCurrentVersionToDeployedVersion() {
+	for service_id := range c.Service {
+		if c.Service[service_id].Status != nil {
+			if c.Service[service_id].Status.CurrentVersion != "" {
+				if c.Service[service_id].Status.DeployedVersion == "" {
+					c.Service[service_id].Status.DeployedVersion = c.Service[service_id].Status.CurrentVersion
+				}
+				c.Service[service_id].Status.CurrentVersion = ""
+			}
+			if c.Service[service_id].Status.CurrentVersionTimestamp != "" {
+				if c.Service[service_id].Status.DeployedVersionTimestamp == "" {
+					c.Service[service_id].Status.DeployedVersionTimestamp = c.Service[service_id].Status.CurrentVersionTimestamp
+				}
+				c.Service[service_id].Status.CurrentVersionTimestamp = ""
+			}
+		}
+	}
+}
+
+// convertDeprecatedSlackAndGotify will handle converting the old 'Gotify' and 'Slack' slices
+// to the new 'Notify' format
+func (c *Config) convertDeprecatedSlackAndGotify() {
+  // Check whetherr Defaults.Notify.(Slack|MatterMost) are wanted
 	hasSlack := false
 	hasMatterMost := false
 	if (c.Defaults.Notify)["slack"] != nil {

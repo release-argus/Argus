@@ -94,8 +94,8 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
 
 	// Handle deprecations
-	c.ConvertCurrentVersionToDeployedVersion()
-	c.handleDeprecatedConversion()
+	c.convertCurrentVersionToDeployedVersion()
+	c.convertDeprecatedSlackAndGotify()
 
 	c.GetOrder(data)
 
