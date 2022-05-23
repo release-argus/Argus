@@ -45,7 +45,7 @@ func (c *Config) convertCurrentVersionToDeployedVersion() {
 // convertDeprecatedSlackAndGotify will handle converting the old 'Gotify' and 'Slack' slices
 // to the new 'Notify' format
 func (c *Config) convertDeprecatedSlackAndGotify() {
-  // Check whetherr Defaults.Notify.(Slack|MatterMost) are wanted
+	// Check whetherr Defaults.Notify.(Slack|MatterMost) are wanted
 	hasSlack := false
 	hasMatterMost := false
 	if (c.Defaults.Notify)["slack"] != nil {
@@ -126,10 +126,20 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 				newName := oldName
 				// If oldName isn't unique, make it so
 				// Keep looping just incase of XXX_slack_slack... names
+				main := (*c.Slack)[oldName]
+				mainURL := ""
+				if main != nil {
+					mainURL = utils.DefaultIfNil(main.URL)
+				}
+				dflt := c.Defaults.Slack
+				dfltURL := ""
+				if dflt != nil {
+					dfltURL = utils.DefaultIfNil(dflt.URL)
+				}
 				url := utils.DefaultIfNil(utils.GetFirstNonNilPtr(
 					(*(*c.Service[serviceIndex]).Slack)[oldName].URL,
-					(*c.Slack)[oldName].URL,
-					c.Defaults.Slack.URL))
+					&mainURL,
+					&dfltURL))
 				isSlack := strings.Contains(url, "hooks.slack.com")
 				suffix := "_mattermost"
 				if isSlack {
