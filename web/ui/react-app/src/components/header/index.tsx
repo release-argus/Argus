@@ -28,7 +28,29 @@ const Header = () => {
                 Configuration
               </NavDropdown.Item>
             </NavDropdown>
-            <Nav.Link href="https://release-argus.io/docs">Help</Nav.Link>
+            <NavDropdown title="Help" id="basic-nav-dropdown">
+              <NavDropdown.Item
+                href="https://github.com/release-argus/Argus"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                GitHub (source)
+              </NavDropdown.Item>
+              <NavDropdown.Item
+                href="https://github.com/release-argus/Argus/issues"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Report an issue/feature request
+              </NavDropdown.Item>
+              <NavDropdown.Item
+                href="https://release-argus.io/docs"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Docs
+              </NavDropdown.Item>
+            </NavDropdown>
           </Nav>
         </Navbar.Collapse>
         <ThemeToggle />

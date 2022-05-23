@@ -37,7 +37,12 @@ export const Service = ({ service }: ServiceData): ReactElement => {
   return (
     <Card key={service.id} bg="secondary" className={"service shadow"}>
       <Card.Title className="service-title" key={service.id + "-title"}>
-        <a className="same-color" href={service.url}>
+        <a
+          className="same-color"
+          href={service.url}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
           <strong>{service.id}</strong>
         </a>
       </Card.Title>
