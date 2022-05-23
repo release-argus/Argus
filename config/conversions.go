@@ -14,9 +14,9 @@
 
 package config
 
-// ConvertCurrentVersionToDeployedVersion handles the deprecation of `current_version*`,
+// convertCurrentVersionToDeployedVersion handles the deprecation of `current_version*`,
 // Renaming it to `deployed_version*`
-func (c *Config) ConvertCurrentVersionToDeployedVersion() {
+func (c *Config) convertCurrentVersionToDeployedVersion() {
 	for service_id := range c.Service {
 		if c.Service[service_id].Status != nil {
 			if c.Service[service_id].Status.CurrentVersion != "" {
@@ -34,3 +34,19 @@ func (c *Config) ConvertCurrentVersionToDeployedVersion() {
 		}
 	}
 }
+
+// convertDeprecatedURLCommands will convert the 'regex_submatch' URLCommand to 'regex'
+func (c *Config) convertDeprecatedURLCommands() {
+	for service_id := range c.Service {
+		if c.Service[service_id].URLCommands != nil {
+			for command_id := range *c.Service[service_id].URLCommands {
+				if (*c.Service[service_id].URLCommands)[command_id].Type == "regex_submatch" {
+					(*c.Service[service_id].URLCommands)[command_id].Type = "regex"
+					// Use 0 now as that references the bracket group
+					(*c.Service[service_id].URLCommands)[command_id].Index = 0
+				}
+			}
+		}
+	}
+}
+

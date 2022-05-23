@@ -108,7 +108,8 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
 
 	// Handle deprecations
-	c.ConvertCurrentVersionToDeployedVersion()
+	c.convertCurrentVersionToDeployedVersion()
+	c.convertDeprecatedURLCommands()
 
 	c.GetOrder(data)
 
