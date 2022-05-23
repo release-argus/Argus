@@ -369,12 +369,12 @@ func (api *API) wsConfigNotify(client *Client) {
 
 	notifyConfig := make(api_types.NotifySlice)
 	if api.Config.Notify != nil {
-		for key := range *api.Config.Notify {
+		for key := range api.Config.Notify {
 			notifyConfig[key] = &api_types.Notify{
-				Type:      (*api.Config.Notify)[key].Type,
-				Options:   (*api.Config.Notify)[key].Options,
-				URLFields: (*api.Config.Notify)[key].URLFields,
-				Params:    (*api.Config.Notify)[key].Params,
+				Type:      api.Config.Notify[key].Type,
+				Options:   api.Config.Notify[key].Options,
+				URLFields: api.Config.Notify[key].URLFields,
+				Params:    api.Config.Notify[key].Params,
 			}
 			notifyConfig[key] = notifyConfig[key].Censor()
 		}
@@ -405,15 +405,16 @@ func (api *API) wsConfigWebHook(client *Client) {
 
 	webhookConfig := make(api_types.WebHookSlice)
 	if api.Config.WebHook != nil {
-		for key := range *api.Config.WebHook {
+		secretVar := "<secret>"
+		for key := range api.Config.WebHook {
 			webhookConfig[key] = &api_types.WebHook{
-				Type:              (*api.Config.WebHook)[key].Type,
-				URL:               (*api.Config.WebHook)[key].URL,
-				Secret:            utils.ValueIfNotNil((*api.Config.WebHook)[key].URL, "<secret>"),
-				DesiredStatusCode: (*api.Config.WebHook)[key].DesiredStatusCode,
-				Delay:             (*api.Config.WebHook)[key].Delay,
-				MaxTries:          (*api.Config.WebHook)[key].MaxTries,
-				SilentFails:       (*api.Config.WebHook)[key].SilentFails,
+				Type:              api.Config.WebHook[key].Type,
+				URL:               api.Config.WebHook[key].URL,
+				Secret:            utils.ValueIfNotDefault(api.Config.WebHook[key].URL, &secretVar),
+				DesiredStatusCode: api.Config.WebHook[key].DesiredStatusCode,
+				Delay:             api.Config.WebHook[key].Delay,
+				MaxTries:          api.Config.WebHook[key].MaxTries,
+				SilentFails:       api.Config.WebHook[key].SilentFails,
 			}
 		}
 	}

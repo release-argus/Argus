@@ -45,7 +45,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].Notify.Init(
 			jLog,
 			&serviceID,
-			c.Notify,
+			&c.Notify,
 			&c.Defaults.Notify,
 			&c.HardDefaults.Notify,
 		)
@@ -53,7 +53,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].WebHook.Init(
 			jLog,
 			&serviceID,
-			c.WebHook,
+			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
 			c.Service[serviceID].Notify,
@@ -62,17 +62,17 @@ func (c *Config) Init() {
 
 	// c.Notify
 	if c.Notify != nil {
-		for key := range *c.Notify {
+		for key := range c.Notify {
 			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
-			(*c.Notify)[key].Defaults = c.Defaults.Notify[(*c.Notify)[key].Type]
-			(*c.Notify)[key].HardDefaults = c.HardDefaults.Notify[(*c.Notify)[key].Type]
+			c.Notify[key].Defaults = c.Defaults.Notify[c.Notify[key].Type]
+			c.Notify[key].HardDefaults = c.HardDefaults.Notify[c.Notify[key].Type]
 		}
 	}
 	// c.WebHook
 	if c.WebHook != nil {
-		for key := range *c.WebHook {
-			(*c.WebHook)[key].Defaults = &c.Defaults.WebHook
-			(*c.WebHook)[key].HardDefaults = &c.HardDefaults.WebHook
+		for key := range c.WebHook {
+			c.WebHook[key].Defaults = &c.Defaults.WebHook
+			c.WebHook[key].HardDefaults = &c.HardDefaults.WebHook
 		}
 	}
 }

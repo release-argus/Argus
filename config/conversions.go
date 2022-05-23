@@ -48,15 +48,14 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 	// Check whetherr Defaults.Notify.(Slack|MatterMost) are wanted
 	hasSlack := false
 	hasMatterMost := false
-	if (c.Defaults.Notify)["slack"] != nil {
+	if c.Defaults.Notify["slack"] != nil {
 		hasSlack = true
 	}
-	if (c.Defaults.Notify)["mattermost"] != nil {
+	if c.Defaults.Notify["mattermost"] != nil {
 		hasMatterMost = true
 	}
 	if c.Notify == nil {
-		notifySlice := make(shoutrrr.Slice)
-		c.Notify = &notifySlice
+		c.Notify = make(shoutrrr.Slice)
 	}
 	if c.Defaults.Notify == nil {
 		notifySlice := make(shoutrrr.Slice)
@@ -106,7 +105,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 				}
 			}
 			converted := (*c.Gotify)[oldName].Convert("gotify")
-			(*c.Notify)[newName] = &converted
+			c.Notify[newName] = &converted
 		}
 		// Convert defaults
 		if c.Defaults.Gotify != nil {
@@ -194,7 +193,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 				}
 			}
 			converted := (*c.Slack)[oldName].Convert(newName, url)
-			(*c.Notify)[newName] = &converted
+			c.Notify[newName] = &converted
 		}
 		// Convert defaults
 		if c.Defaults.Slack != nil {
@@ -214,10 +213,10 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 	}
 
 	// Check whetehr Defaults.Notify,Slack/MatterMost are wanted
-	for n := range *c.Notify {
-		if (*c.Notify)[n].Type == "slack" {
+	for n := range c.Notify {
+		if c.Notify[n].Type == "slack" {
 			hasSlack = true
-		} else if (*c.Notify)[n].Type == "mattermost" {
+		} else if c.Notify[n].Type == "mattermost" {
 			hasMatterMost = true
 		}
 	}

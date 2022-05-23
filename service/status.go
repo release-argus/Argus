@@ -65,6 +65,10 @@ func (s *Status) Init(
 func (s *Status) SetDeployedVersion(version string) {
 	s.DeployedVersion = version
 	s.DeployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
+	// Ignore ApprovedVersion if we're on it
+	if version == s.ApprovedVersion {
+		s.ApprovedVersion = ""
+	}
 }
 
 // SetLastQueried will update LastQueried to now.

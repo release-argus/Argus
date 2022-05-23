@@ -50,6 +50,9 @@ func (s *Service) Init(
 	if s.Status.DeployedVersion == "" {
 		s.Status.DeployedVersion = s.Status.LatestVersion
 		s.Status.DeployedVersionTimestamp = s.Status.LatestVersionTimestamp
+		// Ignore ApprovedVersion if it's deployed
+	} else if s.Status.DeployedVersion == s.Status.ApprovedVersion {
+		s.Status.ApprovedVersion = ""
 	}
 
 	s.Defaults = defaults

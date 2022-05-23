@@ -48,12 +48,12 @@ func TestNotify(flag *string, cfg *config.Config) {
 		}
 	}
 	if (*shoutrrr)["test"] == nil {
-		if cfg.Notify != nil && (*cfg.Notify)[*flag] != nil {
-			(*shoutrrr)["test"] = (*cfg.Notify)[*flag]
+		if cfg.Notify != nil && cfg.Notify[*flag] != nil {
+			(*shoutrrr)["test"] = cfg.Notify[*flag]
 		} else {
 			var allShoutrrr []string
 			if cfg.Notify != nil {
-				for key := range *cfg.Notify {
+				for key := range cfg.Notify {
 					if !utils.Contains(allShoutrrr, key) {
 						allShoutrrr = append(allShoutrrr, key)
 					}
