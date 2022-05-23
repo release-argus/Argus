@@ -67,11 +67,10 @@ func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
 		}
 
 		convertedPath := ""
+		converted.SetURLField("path", convertedPath)
 		if len(parts) > 2 {
-			if convertedPath != "" {
-				convertedPath = strings.Join(parts[2:], "/")
-				converted.SetURLField("path", convertedPath)
-			}
+			convertedPath = strings.Join(parts[1:len(parts)-1], "/")
+			converted.SetURLField("path", convertedPath)
 		}
 
 	}

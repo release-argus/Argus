@@ -15,16 +15,135 @@
 package conversions
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestConversionSlack(t *testing.T) {
-	// lstString := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-	// Swap(&lstString, 0, 0, 9, 9)
-	// wantLstString := []string{"9", "1", "2", "3", "4", "5", "6", "7", "8", "0"}
-	// for i := range lstString {
-	// 	if lstString[i] != wantLstString[i] {
-	// 		t.Fatalf(`config.Defaults.Service.Interval = %v, want match for %s`, lstString, wantLstString)
-	// 	}
-	// }
+	var (
+		url       string = "mock_host:123/test/hooks/fez"
+		host      string = "mock_host"
+		port      string = "123"
+		path      string = "test"
+		token     string = "fez"
+		iconEmoji string = "piranha"
+		iconURL   string = "https://release-argus.io"
+		username  string = "bar"
+		message   string = "foo"
+		delay     string = "1s"
+		maxTries  uint   = 5
+		channel   string = "webhook"
+		slackType string = "hook"
+		cType     string = "mattermost"
+	)
+	test := Slack{
+		URL:       &url,
+		Username:  &username,
+		Message:   &message,
+		IconEmoji: &iconEmoji,
+		Delay:     &delay,
+		MaxTries:  &maxTries,
+	}
+	converted := test.Convert("", url)
+
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedSlack.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedSlack.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedSlack.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+	if !(token == converted.GetSelfURLField("token")) {
+		t.Fatalf(`convertedSlack.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
+	}
+	if !(username == converted.GetSelfParam("botname")) {
+		t.Fatalf(`convertedSlack.Params.botname = %q, want match for %q`, converted.GetSelfURLField("botname"), username)
+	}
+	if !(iconEmoji == converted.GetSelfParam("icon")) {
+		t.Fatalf(`convertedSlack.Params.icon = %q, want match for %q`, converted.GetSelfURLField("icon"), iconEmoji)
+	}
+	if !(message == converted.GetSelfOption("message")) {
+		t.Fatalf(`convertedSlack.Options.message = %q, want match for %q`, converted.GetSelfURLField("message"), message)
+	}
+	if !(delay == converted.GetSelfOption("delay")) {
+		t.Fatalf(`convertedSlack.Options.delay = %q, want match for %q`, converted.GetSelfURLField("delay"), delay)
+	}
+	if !(fmt.Sprint(maxTries) == converted.GetSelfOption("max_tries")) {
+		t.Fatalf(`convertedSlack.Options.max_tries = %q, want match for %q`, converted.GetSelfURLField("max_tries"), maxTries)
+	}
+	if !(cType == converted.Type) {
+		t.Fatalf(`convertedSlack.Type = %q, want match for %q`, converted.Type, cType)
+	}
+
+	url = "mock_host:123/hooks/fez"
+	test = Slack{
+		URL:      &url,
+		Username: &username,
+		Message:  &message,
+		IconURL:  &iconURL,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("", url)
+	path = ""
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedSlack.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedSlack.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedSlack.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+	if !(iconURL == converted.GetSelfParam("icon")) {
+		t.Fatalf(`convertedSlack.Params.icon = %q, want match for %q`, converted.GetSelfURLField("icon"), iconURL)
+	}
+	if !(token == converted.GetSelfURLField("token")) {
+		t.Fatalf(`convertedSlack.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
+	}
+
+	url = "mock_host/hooks/fez"
+	test = Slack{
+		URL:      &url,
+		Username: &username,
+		Message:  &message,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("", url)
+	port = "80"
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedSlack.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedSlack.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedSlack.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+	if !(token == converted.GetSelfURLField("token")) {
+		t.Fatalf(`convertedSlack.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
+	}
+
+	url = "https://hooks.slack.com/foo/xxxx/yyyy/zzzz"
+	test = Slack{
+		URL:      &url,
+		Username: &username,
+		Message:  &message,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("", url)
+	token = "xxxx:yyyy:zzzz"
+	if !(token == converted.GetSelfURLField("token")) {
+		t.Fatalf(`convertedSlack.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
+	}
+	if !(channel == converted.GetSelfURLField("channel")) {
+		t.Fatalf(`convertedSlack.URLFields.channel = %q, want match for %q`, converted.GetSelfURLField("channel"), channel)
+	}
+	if !(slackType == converted.GetSelfURLField("slacktype")) {
+		t.Fatalf(`convertedSlack.URLFields.slacktype = %q, want match for %q`, converted.GetSelfURLField("slacktype"), slackType)
+	}
 }

@@ -15,16 +15,125 @@
 package conversions
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestConversionGotify(t *testing.T) {
-	// lstString := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-	// Swap(&lstString, 0, 0, 9, 9)
-	// wantLstString := []string{"9", "1", "2", "3", "4", "5", "6", "7", "8", "0"}
-	// for i := range lstString {
-	// 	if lstString[i] != wantLstString[i] {
-	// 		t.Fatalf(`config.Defaults.Service.Interval = %v, want match for %s`, lstString, wantLstString)
-	// 	}
-	// }
+	var (
+		url      string = "mock_host:123/test/super_secret"
+		host     string = "mock_host"
+		port     string = "123"
+		path     string = "test"
+		token    string = "super_secret"
+		title    string = "Fancy title"
+		message  string = "foo"
+		priority int    = 3
+		delay    string = "1s"
+		maxTries uint   = 5
+	)
+	test := Gotify{
+		URL:      &url,
+		Token:    &token,
+		Title:    &title,
+		Message:  &message,
+		Priority: &priority,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted := test.Convert("")
+
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedGotify.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedGotify.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+	if !(token == converted.GetSelfURLField("token")) {
+		t.Fatalf(`convertedGotify.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
+	}
+	if !(title == converted.GetSelfParam("title")) {
+		t.Fatalf(`convertedGotify.Params.title = %q, want match for %q`, converted.GetSelfParam("title"), title)
+	}
+	if !(message == converted.GetSelfOption("message")) {
+		t.Fatalf(`convertedGotify.Options.message = %q, want match for %q`, converted.GetSelfOption("message"), message)
+	}
+	if !(fmt.Sprint(priority) == converted.GetSelfParam("priority")) {
+		t.Fatalf(`convertedGotify.Params.priority = %q, want match for %q`, converted.GetSelfParam("priority"), priority)
+	}
+	if !(delay == converted.GetSelfOption("delay")) {
+		t.Fatalf(`convertedGotify.Options.delay = %q, want match for %q`, converted.GetSelfOption("delay"), delay)
+	}
+	if !(fmt.Sprint(maxTries) == converted.GetSelfOption("max_tries")) {
+		t.Fatalf(`convertedGotify.Options.max_tries = %q, want match for %q`, converted.GetSelfOption("max_tries"), maxTries)
+	}
+
+	url = "mock_host:123/super_secret"
+	test = Gotify{
+		URL:      &url,
+		Token:    &token,
+		Title:    &title,
+		Message:  &message,
+		Priority: &priority,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("")
+	path = ""
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedGotify.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedGotify.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+
+	url = "https://mock_host/super_secret"
+	test = Gotify{
+		URL:      &url,
+		Token:    &token,
+		Title:    &title,
+		Message:  &message,
+		Priority: &priority,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("")
+	port = "443"
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedGotify.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), host)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedGotify.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
+
+	url = "mock_host/super_secret"
+	test = Gotify{
+		URL:      &url,
+		Token:    &token,
+		Title:    &title,
+		Message:  &message,
+		Priority: &priority,
+		Delay:    &delay,
+		MaxTries: &maxTries,
+	}
+	converted = test.Convert("")
+	port = "80"
+	if !(host == converted.GetSelfURLField("host")) {
+		t.Fatalf(`convertedGotify.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), url)
+	}
+	if !(port == converted.GetSelfURLField("port")) {
+		t.Fatalf(`convertedGotify.URLFields.port = %q, want match for %q`, converted.GetSelfURLField("port"), port)
+	}
+	if !(path == converted.GetSelfURLField("path")) {
+		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
+	}
 }

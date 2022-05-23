@@ -15,6 +15,7 @@
 package conversions
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -25,17 +26,16 @@ type SlackSlice map[string]*Slack
 
 // Slack is a message w/ destination and from details.
 type Slack struct {
-	ID          *string `yaml:"-"`                    // Unique across the Slice
-	URL         *string `yaml:"url,omitempty"`        // "https://example.com
-	ServiceIcon *string `yaml:"-"`                    // Service.Icon
-	IconEmoji   *string `yaml:"icon_emoji,omitempty"` // ":github:"
-	IconURL     *string `yaml:"icon_url,omitempty"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-	Username    *string `yaml:"username,omitempty"`   // "Argus"
-	Message     *string `yaml:"message,omitempty"`    // "<{{ service_url }}|{{ service_id }}> - {{ version }} released"
-	Delay       *string `yaml:"delay,omitempty"`      // The delay before sending the Slack message.
-	MaxTries    *uint   `yaml:"max_tries,omitempty"`  // Number of times to attempt sending the Slack message if a 200 is not received.
-	Failed      *bool   `yaml:"-"`                    // Whether the last attempt to send failed
-	Type        *string `yaml:"-"`                    // slack/mattermost
+	ID        *string `yaml:"-"`                    // Unique across the Slice
+	URL       *string `yaml:"url,omitempty"`        // "https://example.com
+	IconEmoji *string `yaml:"icon_emoji,omitempty"` // ":github:"
+	IconURL   *string `yaml:"icon_url,omitempty"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+	Username  *string `yaml:"username,omitempty"`   // "Argus"
+	Message   *string `yaml:"message,omitempty"`    // "<{{ service_url }}|{{ service_id }}> - {{ version }} released"
+	Delay     *string `yaml:"delay,omitempty"`      // The delay before sending the Slack message.
+	MaxTries  *uint   `yaml:"max_tries,omitempty"`  // Number of times to attempt sending the Slack message if a 200 is not received.
+	Failed    *bool   `yaml:"-"`                    // Whether the last attempt to send failed
+	Type      *string `yaml:"-"`                    // slack/mattermost
 }
 
 // TODO: Remove V
@@ -54,12 +54,13 @@ func (s *Slack) Convert(
 	var convertedType string
 	if isSlack {
 		convertedType = "slack"
-		if s.URL != nil {
-			converted.SetURLField("token", strings.ReplaceAll(*s.URL, "/", ":"))
-
-			converted.SetURLField("channel", "webhook")
+		*s.URL = strings.TrimSuffix(*s.URL, "/")
+		if s.URL != nil && strings.Count(*s.URL, "/") > 2 {
+			tokenSplit := strings.Split(*s.URL, "/")[strings.Count(*s.URL, "/")-2:]
+			converted.SetURLField("token", strings.Join(tokenSplit, ":"))
 		}
-		converted.SetURLField("slack_type", "webhook")
+		converted.SetURLField("channel", "webhook")
+		converted.SetURLField("slacktype", "hook")
 		// mattermost
 	} else {
 		if s.URL != nil {
@@ -86,16 +87,20 @@ func (s *Slack) Convert(
 			converted.SetURLField("host", convertedHost)
 			converted.SetURLField("port", convertedPort)
 
-			splitURL := strings.Split(url, "/")[2:]
-			convertedPath := ""
-			if len(splitURL) > 1 {
-				convertedPath = strings.Join(splitURL[:len(splitURL)-2], "/")
-			}
-			if convertedPath != "" {
-				converted.SetURLField("path", convertedPath)
+			url = strings.Join(strings.Split(url, "/")[1:], "/")
+			splitURL := strings.Split(url, "/")
+			convertedToken := splitURL[len(splitURL)-1]
+			if strings.Contains(url, "/hooks/") {
+				splitURL = strings.Split(splitURL[0], "/hooks")
+				convertedPath := ""
+				if len(splitURL) > 0 {
+					convertedPath = splitURL[0]
+				}
+				if convertedPath != "" {
+					converted.SetURLField("path", convertedPath)
+				}
 			}
 
-			convertedToken := splitURL[len(splitURL)-1]
 			converted.SetURLField("token", convertedToken)
 		}
 		convertedType = "mattermost"
@@ -111,7 +116,11 @@ func (s *Slack) Convert(
 	}
 
 	if s.Username != nil {
-		converted.SetParam("bot_name", *s.Username)
+		converted.SetParam("botname", *s.Username)
+	}
+
+	if s.MaxTries != nil {
+		converted.SetOption("max_tries", fmt.Sprintf("%d", *s.MaxTries))
 	}
 
 	if s.IconURL != nil {
