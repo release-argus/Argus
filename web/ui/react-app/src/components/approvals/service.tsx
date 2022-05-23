@@ -17,11 +17,11 @@ export const Service = ({ service }: ServiceData): ReactElement => {
     setShowUpdateInfoMain(!showUpdateInfo);
   }, [showUpdateInfo]);
 
-  // Current and latest version are defined and differ
+  // Deployed and latest version are defined and differ
   const updateAvailable =
-    service?.status?.current_version &&
+    service?.status?.deployed_version &&
     service?.status?.latest_version &&
-    service?.status?.current_version !== service?.status?.latest_version
+    service?.status?.deployed_version !== service?.status?.latest_version
       ? true
       : false;
 

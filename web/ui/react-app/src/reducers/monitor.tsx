@@ -84,26 +84,26 @@ export default function reducerMonitor(
           break;
 
         case "UPDATED":
-          // current_version
-          state.service[id].status!.current_version =
-            action.service_data?.status?.current_version;
+          // deployed_version
+          state.service[id].status!.deployed_version =
+            action.service_data?.status?.deployed_version;
           state.service[id].status!.approved_version =
-            action.service_data?.status?.current_version;
+            action.service_data?.status?.deployed_version;
 
-          // current_version_timestamp
-          state.service[id].status!.current_version_timestamp =
-            action.service_data?.status?.current_version_timestamp;
+          // deployed_version_timestamp
+          state.service[id].status!.deployed_version_timestamp =
+            action.service_data?.status?.deployed_version_timestamp;
           break;
 
         case "INIT":
           // latest_version
-          state.service[id].status!.current_version =
+          state.service[id].status!.deployed_version =
             action.service_data?.status?.latest_version;
           state.service[id].status!.latest_version =
             action.service_data?.status?.latest_version;
 
           // latest_version_timestamp
-          state.service[id].status!.current_version_timestamp =
+          state.service[id].status!.deployed_version_timestamp =
             action.service_data?.status?.latest_version_timestamp;
           state.service[id].status!.latest_version_timestamp =
             action.service_data?.status?.latest_version_timestamp;
