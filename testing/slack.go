@@ -76,7 +76,7 @@ func TestSlack(flag *string, cfg *config.Config) {
 	}
 
 	//#nosec G104 -- Errors will be logged to CL
-	//nolint:errcheck // Errors will be logged to CL
+	//nolint:errcheck // ^
 	err := slack.Send("Test message", &utils.ServiceInfo{ID: ""})
 	if err == nil {
 		fmt.Printf("INFO: Message sent successfully with %q config\n", *flag)

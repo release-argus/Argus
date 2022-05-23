@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/web/metrics"
 )
@@ -56,33 +55,20 @@ func (s *Service) Track() {
 		newVersion, err := s.Query()
 
 		// If a new version was found and we're not already on it
-		if newVersion && s.Status.DeployedVersion != s.Status.LastQueried {
-			isNewerVersion := true
-			// Check whether this LatestVersion is newer semantically than DeployedVersion
-			if s.GetSemanticVersioning() {
-				//#nosec G104 -- Errors would be handled in the Query
-				//nolint:errcheck // Errors would be handled in the Query
-				deployedVersion, _ := semver.NewVersion(s.Status.DeployedVersion)
-				//#nosec G104 -- Errors would be handled in the Query
-				//nolint:errcheck // Errors would be handled in the Query
-				latestVersion, _ := semver.NewVersion(s.Status.LatestVersion)
-				isNewerVersion = latestVersion.LessThan(*deployedVersion)
-			}
-			if isNewerVersion {
-				// Get updated serviceInfo
-				serviceInfo = s.GetServiceInfo()
+		if newVersion {
+			// Get updated serviceInfo
+			serviceInfo = s.GetServiceInfo()
 
-				// Send the Gotify Message(s).
-				//nolint:errcheck
-				go s.Gotify.Send("", "", &serviceInfo)
+			// Send the Gotify Message(s).
+			//nolint:errcheck
+			go s.Gotify.Send("", "", &serviceInfo)
 
-				// Send the Slack Message(s).
-				//nolint:errcheck
-				go s.Slack.Send("", &serviceInfo)
+			// Send the Slack Message(s).
+			//nolint:errcheck
+			go s.Slack.Send("", &serviceInfo)
 
-				// WebHook(s)
-				go s.HandleWebHooks(false)
-			}
+			// WebHook(s)
+			go s.HandleWebHooks(false)
 		}
 
 		// If it failed

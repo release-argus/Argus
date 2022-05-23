@@ -96,11 +96,11 @@ func (w *WebHook) Send(
 			w.Failed = &failed
 			w.AnnounceSend()
 			if !w.GetSilentFails() {
-				//#nosec G104 -- Errors will be logged to CL
-				//nolint:errcheck // Errors will be logged to CL
+				//#nosec G104 -- Errors will be logged to console
+				//nolint:errcheck // ^
 				w.Notifiers.Gotify.Send("WebHook fail", err.Error(), &serviceInfo)
-				//#nosec G104 -- Errors will be logged to CL
-				//nolint:errcheck // Errors will be logged to CL
+				//#nosec G104 -- Errors will be logged to console
+				//nolint:errcheck // ^
 				w.Notifiers.Slack.Send(err.Error(), &serviceInfo)
 			}
 			return
