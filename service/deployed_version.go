@@ -45,6 +45,24 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 		deployedVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
 		// If new release found by ^ query.
 		if err == nil && deployedVersion != parent.Status.DeployedVersion {
+			// If this new deployedVersion isn't LatestVersion
+			// Check that it's not a later version than LatestVersion
+			if deployedVersion != parent.Status.LatestVersion && parent.GetSemanticVersioning() {
+				//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
+				//nolint:errcheck // ^
+				deployedVersionSV, _ := semver.NewVersion(deployedVersion)
+				//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
+				//nolint:errcheck // ^
+				latestVersionSV, _ := semver.NewVersion(parent.Status.LatestVersion)
+
+				// Update LatestVersion to DeployedVersion if it's newer
+				if deployedVersionSV.LessThan(*latestVersionSV) {
+					parent.Status.LatestVersion = parent.Status.DeployedVersion
+					parent.Status.LatestVersionTimestamp = parent.Status.DeployedVersionTimestamp
+					parent.AnnounceQueryNewVersion()
+				}
+			}
+			// Announce the updated deployment
 			parent.Status.SetDeployedVersion(deployedVersion)
 
 			// Announce version change to WebSocket clients.

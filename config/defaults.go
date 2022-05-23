@@ -205,9 +205,6 @@ func (d *Defaults) Print() {
 	}
 
 	// WebHook defaults.
-	isDefault := d.WebHook != webhook.WebHook{}
-	if &d.WebHook != nil && isDefault {
-		fmt.Println("  webhook:")
-		d.WebHook.Print("    ")
-	}
+	fmt.Println("  webhook:")
+	d.WebHook.Print("    ")
 }
