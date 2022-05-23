@@ -263,7 +263,6 @@ func (s *Slice) Send(
 
 				// FAIL
 				for new := range err {
-					fmt.Printf("ERR = %v\n", err[new].Error())
 					jLog.Error(err[new].Error(), logFrom, true)
 
 					combinedErrs[err[new].Error()]++

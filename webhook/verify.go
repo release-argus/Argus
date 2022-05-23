@@ -66,7 +66,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 
 // Print the Slice.
 func (w *Slice) Print(prefix string) {
-	if w == nil {
+	if w == nil || len(*w) == 0 {
 		return
 	}
 

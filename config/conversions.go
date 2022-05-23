@@ -79,7 +79,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 			// Keep looping just incase of XXX_gotify_gotify... names
 			for {
 				// add suffix until newName is unique
-				if (*(*c.Service[serviceIndex]).Gotify)[newName] != nil && (*(*c.Service[serviceIndex]).Notify)[newName] == nil {
+				if (*(*c.Service[serviceIndex]).Gotify)[newName] != nil || (*(*c.Service[serviceIndex]).Slack)[newName] != nil || (*(*c.Service[serviceIndex]).Notify)[newName] != nil {
 					newName += "_gotify"
 				} else {
 					break
@@ -101,7 +101,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 			// Keep looping just incase of XXX_gotify_gotify... names
 			for {
 				// add suffix until newName is unique
-				if (c.Gotify != nil && (*c.Gotify)[newName] != nil) || c.Notify[newName] != nil {
+				if (c.Gotify != nil && (*c.Gotify)[newName] != nil) || (c.Slack != nil && (*c.Slack)[newName] != nil) || c.Notify[newName] != nil {
 					newName += "_gotify"
 				} else {
 					break

@@ -26,7 +26,7 @@ import (
 
 // CheckValues of this Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
-	if s == nil {
+	if s == nil || len(*s) == 0 {
 		return
 	}
 
@@ -275,9 +275,9 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 }
 
 // Print the Slice.
-func (n *Slice) Print(prefix string) {
+func (n *Slice) Print(prefix string) bool {
 	if n == nil || len(*n) == 0 {
-		return
+		return false
 	}
 
 	fmt.Printf("%snotify:\n", prefix)
@@ -285,6 +285,7 @@ func (n *Slice) Print(prefix string) {
 		fmt.Printf("%s  %s:\n", prefix, shoutrrrID)
 		shoutrrr.Print(prefix + "    ")
 	}
+	return true
 }
 
 // Print the Shourrr Struct.

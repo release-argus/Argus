@@ -77,7 +77,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 
 	err := shoutrrr.Send(
 		(*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"}),
-		"TEST - "+(*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{LatestVersion: "MAJOR.MINOR.PATCH"}),
+		"TEST - "+(*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"}),
 		&utils.ServiceInfo{})
 	if err == nil {
 		fmt.Printf("INFO: Message sent successfully with %q config\n", *flag)
