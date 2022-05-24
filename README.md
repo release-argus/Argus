@@ -17,7 +17,7 @@
 [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
 [![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
 
-Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack notification(s) and/or WebHook(s) when one has been found.
+Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or WebHook(s) when one has been found.
 For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Argus on your server.
 
 ##### Table of Contents
@@ -49,12 +49,10 @@ Usage of /usr/local/bin/argus:
         ERROR, WARN, INFO, VERBOSE or DEBUG (default "INFO")
   -log.timestamps
         Enable timestamps in CLI output.
-  -test.gotify string
-        Put the name of the Gotify service to send a test message.
+  -test.notify string
+        Put the name of the Notify service to send a test message.
   -test.service string
         Put the name of the Service to test the version query.
-  -test.slack string
-        Put the name of the Slack service to send a test message.
   -web.cert-file string
         HTTPS certificate file path.
   -web.listen-host string
@@ -92,9 +90,8 @@ For further help, check out the [Getting Started](https://release-argus.io/docs/
 #### Config formatting
 
 The config can be broken down into 6 key areas. ([Further help](https://release-argus.io/docs/config/))
-- [defaults](https://release-argus.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://release-argus.io/docs/config/defaults/#service-portion), [gotifies](https://release-argus.io/docs/config/defaults/#gotify-portion), [slacks](https://release-argus.io/docs/config/defaults/#slack-portion) and [webhooks](https://release-argus.io/docs/config/defaults/#webhook-portion).
+- [defaults](https://release-argus.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://release-argus.io/docs/config/defaults/#service-portion), [notify](https://release-argus.io/docs/config/defaults/#notify-portion) and [webhooks](https://release-argus.io/docs/config/defaults/#webhook-portion).
 - [settings](https://release-argus.io/docs/config/settings/) - Settings for the Argus server.
 - [service](https://release-argus.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.
-- [gotify](https://release-argus.io/docs/config/gotify/) - A dictionary mapping of targets for Gotify messages.
-- [slack](https://release-argus.io/docs/config/slack/) - A dictionary mapping of targets for Slack messages.
+- [notify](https://release-argus.io/docs/config/notify/) - A dictionary mapping of targets for Notify messages.
 - [webhook](https://release-argus.io/docs/config/webhook/) - A dictionary mapping of targets for WebHooks.

@@ -33,7 +33,7 @@ type Status struct {
 	LastQueried              string       `yaml:"-"`                                    // UTC timestamp that version was last queried/checked.
 	RegexMissesContent       uint         `yaml:"-"`                                    // Counter for the number of regex misses on URL content.
 	RegexMissesVersion       uint         `yaml:"-"`                                    // Counter for the number of regex misses on version.
-	Fails                    *StatusFails `yaml:"-"`                                    // Track the Gotify/Slack/WebHook fails
+	Fails                    *StatusFails `yaml:"-"`                                    // Track the Notify/WebHook fails
 	// TODO: Remove V
 	CurrentVersion          string `yaml:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
 	CurrentVersionTimestamp string `yaml:"current_version_timestamp,omitempty"` // UTC timestamp that the current version change was noticed.

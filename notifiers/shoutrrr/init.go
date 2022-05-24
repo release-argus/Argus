@@ -69,7 +69,6 @@ func (s *Shoutrrr) Init(
 	defaults *Shoutrrr,
 	hardDefaults *Shoutrrr,
 ) {
-	s.initMetrics(serviceID)
 	s.InitMaps()
 
 	if s == nil {
@@ -90,6 +89,8 @@ func (s *Shoutrrr) Init(
 	// Give Hard Defaults
 	(*s).HardDefaults = hardDefaults
 	s.HardDefaults.InitMaps()
+
+	s.initMetrics(serviceID)
 }
 
 // initOptions mapping, converting all keys to lowercase.
@@ -137,13 +138,14 @@ func (s *Shoutrrr) InitMaps() {
 
 // initMetrics, giving them all a starting value.
 func (s *Shoutrrr) initMetrics(serviceID *string) {
-	if s.Type == "" {
+	// Only record metrics for Shoutrrrs attached to a Service
+	if s.Main == nil {
 		return
 	}
 
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.Type, "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.Type, "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "FAIL")
 }

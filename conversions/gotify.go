@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/utils"
 )
 
 // Slice mapping of Gotify.
@@ -47,15 +48,8 @@ func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
 
 	if g.URL != nil {
 		url := *g.URL
-		convertedPort := ""
-		if strings.HasPrefix(url, "https") {
-			convertedPort = "443"
-			url = strings.TrimPrefix(url, "https://")
-		} else {
-			convertedPort = "80"
-			url = strings.TrimPrefix(url, "http://")
-		}
-		converted.SetURLField("port", convertedPort)
+		url = strings.TrimPrefix(url, "https://")
+		url = strings.TrimPrefix(url, "http://")
 
 		parts := strings.Split(url, "/")
 		convertedHost := parts[0]
@@ -63,13 +57,14 @@ func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
 		if strings.Contains(parts[0], ":") {
 			hostSplit := strings.Split(parts[0], ":")
 			converted.SetURLField("host", hostSplit[0])
-			converted.SetURLField("port", hostSplit[1])
 		}
+		converted.SetURLField("port", utils.GetPortFromURL(*g.URL, "443"))
 
+		// gotify.example.io -> [ "gotify.example.io" ]
+		// gotify.example.io/test/123 -> [ "gotify.example.io", "test", "123" ]
 		convertedPath := ""
-		converted.SetURLField("path", convertedPath)
-		if len(parts) > 2 {
-			convertedPath = strings.Join(parts[1:len(parts)-1], "/")
+		if len(parts) > 1 {
+			convertedPath = strings.Join(parts[1:], "/")
 			converted.SetURLField("path", convertedPath)
 		}
 

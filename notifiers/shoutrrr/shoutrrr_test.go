@@ -115,7 +115,7 @@ func TestShoutrrr(t *testing.T) {
 		URLFields:    &testURLFields,
 		Params:       testParams,
 	}
-	wantedURL = "teams://something@foo/bar/fez"
+	wantedURL = "teams://something@foo/bar/fez?host=mockhost"
 	gotURL = test.GetURL()
 	if gotURL != wantedURL {
 		t.Fatalf(`Shoutrrr, GetURL - Got %v, want match for %q`, gotURL, wantedURL)

@@ -45,14 +45,14 @@ func (c *Config) convertCurrentVersionToDeployedVersion() {
 // convertDeprecatedSlackAndGotify will handle converting the old 'Gotify' and 'Slack' slices
 // to the new 'Notify' format(*c.Service[serviceIndex]).Slack)
 func (c *Config) convertDeprecatedSlackAndGotify() {
-	// Check whether Defaults.Notify.(Slack|MatterMost) are wanted
+	// Check whether Defaults.Notify.(Slack|Mattermost) are wanted
 	hasSlack := false
-	hasMatterMost := false
+	hasMattermost := false
 	if c.Defaults.Notify["slack"] != nil {
 		hasSlack = true
 	}
 	if c.Defaults.Notify["mattermost"] != nil {
-		hasMatterMost = true
+		hasMattermost = true
 	}
 	if c.Notify == nil {
 		c.Notify = make(shoutrrr.Slice)
@@ -162,7 +162,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 					}
 				}
 
-				// Convert this Slack/MatterMost
+				// Convert this Slack/Mattermost
 				converted := (*(*c.Service[serviceIndex]).Slack)[oldName].Convert(newName, url)
 				// Give it to the notify
 				(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
@@ -189,7 +189,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 				suffix = "_slack"
 				hasSlack = true
 			} else {
-				hasMatterMost = true
+				hasMattermost = true
 			}
 			// If oldName isn't unique, make it so
 			// Keep looping just incase of XXX_slack_slack... names
@@ -206,7 +206,7 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 		}
 		// Convert defaults
 		if c.Defaults.Slack != nil {
-			// Set the type to whatever is more common out of conversions, Slack or MatterMost
+			// Set the type to whatever is more common out of conversions, Slack or Mattermost
 			converted := (*c.Defaults.Slack).Convert("", utils.DefaultIfNil((*c.Defaults.Slack).URL))
 			c.Defaults.Notify["slack"] = &converted
 			c.Defaults.Notify["mattermost"] = &converted
@@ -222,10 +222,10 @@ func (c *Config) convertDeprecatedSlackAndGotify() {
 	}
 
 	// Delete defaults if they're most likely not wanted
-	if !hasSlack && hasMatterMost {
+	if !hasSlack && hasMattermost {
 		delete(c.Defaults.Notify, "slack")
 	}
-	if !hasMatterMost && hasSlack {
+	if !hasMattermost && hasSlack {
 		delete(c.Defaults.Notify, "mattermost")
 	}
 }

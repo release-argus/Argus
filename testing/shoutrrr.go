@@ -24,13 +24,16 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+var (
+	jLog utils.JLog
+)
+
 // TestNotify will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
 func TestNotify(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
-	jLog := utils.NewJLog("INFO", false)
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	jLog.Info(
@@ -49,7 +52,32 @@ func TestNotify(flag *string, cfg *config.Config) {
 	}
 	if (*shoutrrr)["test"] == nil {
 		if cfg.Notify != nil && cfg.Notify[*flag] != nil {
-			(*shoutrrr)["test"] = cfg.Notify[*flag]
+			hardDefaults := config.Defaults{}
+			hardDefaults.SetDefaults()
+			emptyShoutrrs := argus_shoutrrr.Shoutrrr{}
+			emptyShoutrrs.InitMaps()
+			(*shoutrrr)["test"] = &argus_shoutrrr.Shoutrrr{
+				ID:           flag,
+				Main:         cfg.Notify[*flag],
+				Defaults:     cfg.Defaults.Notify["telegram"],
+				HardDefaults: hardDefaults.Notify["telegram"],
+			}
+			(*shoutrrr)["test"].InitMaps()
+			(*shoutrrr)["test"].Main.InitMaps()
+			if (*shoutrrr)["test"].Defaults == nil {
+				(*shoutrrr)["test"].Defaults = &emptyShoutrrs
+			} else {
+				(*shoutrrr)["test"].Defaults.InitMaps()
+			}
+			if (*shoutrrr)["test"].HardDefaults == nil {
+				(*shoutrrr)["test"].HardDefaults = &emptyShoutrrs
+			} else {
+				(*shoutrrr)["test"].HardDefaults.InitMaps()
+			}
+			if err := (*shoutrrr)["test"].CheckValues("    "); err != nil {
+				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", *flag, strings.ReplaceAll(err.Error(), "\\", "\n"))
+				jLog.Fatal(msg, logFrom, true)
+			}
 		} else {
 			var allShoutrrr []string
 			if cfg.Notify != nil {
@@ -70,17 +98,15 @@ func TestNotify(flag *string, cfg *config.Config) {
 					}
 				}
 			}
-			fmt.Printf("ERROR: Shoutrrr %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n", *flag, strings.Join(allShoutrrr, "\n  - "))
-			os.Exit(1)
+			msg := fmt.Sprintf("ERROR: Shoutrrr %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n", *flag, strings.Join(allShoutrrr, "\n  - "))
+			jLog.Fatal(msg, logFrom, true)
 		}
 	}
 
-	err := shoutrrr.Send(
-		(*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"}),
-		"TEST - "+(*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"}),
-		&utils.ServiceInfo{})
-	if err == nil {
-		fmt.Printf("INFO: Message sent successfully with %q config\n", *flag)
-	}
+	title := (*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
+	message := "TEST - " + (*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"})
+	err := shoutrrr.Send(title, message, &utils.ServiceInfo{})
+	jLog.Info(fmt.Sprintf("INFO: Message sent successfully with %q config\n", *flag), logFrom, err == nil)
+	jLog.Error(fmt.Sprintf("ERROR: Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
 	os.Exit(0)
 }

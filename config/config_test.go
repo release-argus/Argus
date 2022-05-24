@@ -77,7 +77,7 @@ func TestSetDefaults(t *testing.T) {
 	if !(wantBool == gotBool) {
 		fmt.Printf("service: %v\n", config.Service["WantDefaults"].SemanticVersioning)
 		fmt.Printf("default: %v\n", config.Service["WantDefaults"].Defaults.SemanticVersioning)
-		fmt.Printf("hardDefault: %v\n", config.Service["WantDefaults"].HardDefaults.SemanticVersioning)
+		fmt.Printf("hardDefaults: %v\n", config.Service["WantDefaults"].HardDefaults.SemanticVersioning)
 
 		t.Fatalf(`post-setDefaults config.Defaults.Service.SemanticVersioning = %v, want match for %t`, gotBool, wantBool)
 	}

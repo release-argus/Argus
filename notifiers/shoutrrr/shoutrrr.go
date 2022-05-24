@@ -65,26 +65,26 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 }
 
 func (s *Shoutrrr) GetURL() (url string) {
-	switch s.Type {
+	switch s.GetType() {
 	case "discord":
 		// discord://token@webhookid
 		url = fmt.Sprintf("discord://%s@%s",
 			s.GetURLField("token"),
 			s.GetURLField("webhookid"))
 	case "email":
-		// smtp://username:password@host:port[/path]
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
-		url = fmt.Sprintf("smtp://%s:%s@%s:%s%s",
-			s.GetURLField("username"),
-			s.GetURLField("password"),
+		// smtp://username:password@host:port/?fromaddress=X&toaddress=Y
+		login := s.GetURLField("password")
+		login = s.GetURLField("username") + utils.ValueIfNotDefault(login, ":"+login)
+		url = fmt.Sprintf("smtp://%s%s:%s/?fromaddress=%s&toaddress=%s",
+			utils.ValueIfNotDefault(login, login+"@"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path))
+			s.GetURLField("port"),
+			s.GetParam("fromaddress"),
+			s.GetParam("toaddress"))
 	case "gotify":
 		// gotify://host:port/path/token
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		url = fmt.Sprintf("gotify://%s%s%s/%s",
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
@@ -92,22 +92,24 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"))
 	case "googlechat":
 		url = s.GetURLField("raw")
-		url = strings.TrimPrefix(url, "https://")
-		url = strings.TrimPrefix(url, "googlechat://")
 		// googlechat://url
-		url = fmt.Sprintf("googlechat://%s", url)
+		url = fmt.Sprintf("googlechat://%s",
+			url)
 	case "ifttt":
-		// ifttt://webhookid
-		url = "ifttt://" + s.GetURLField("webhookid")
+		// ifttt://webhookid/?events=event1,event2
+		url = fmt.Sprintf("ifttt://%s/?events=%s",
+			s.GetURLField("webhookid"),
+			s.GetParam("events"))
 	case "join":
-		// join://apiKey@join
-		url = fmt.Sprintf("join://%s",
-			s.GetURLField("apikey"))
+		// join://shoutrrr:apiKey@join/?devices=X
+		url = fmt.Sprintf("join://shoutrrr:%s@join/?devices=%s",
+			s.GetURLField("apikey"),
+			s.GetParam("devices"))
 	case "mattermost":
 		// mattermost://[username@]host[:port][/path]/token[/channel]
 		username := s.GetURLField("username")
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		channel := s.GetURLField("channel")
 		url = fmt.Sprintf("mattermost://%s%s%s%s/%s%s",
 			utils.ValueIfNotDefault(username, username+"@"),
@@ -118,8 +120,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 			utils.ValueIfNotDefault(channel, "/"+channel))
 	case "matrix":
 		// matrix://user:password@host
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		url = fmt.Sprintf("matrix://%s%s@%s%s%s",
 			s.GetURLField("user"),
 			s.GetURLField("password"),
@@ -128,8 +130,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 			utils.ValueIfNotDefault(path, "/"+path))
 	case "opsgenie":
 		// opsgenie://host[:port][/path]/apikey
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		url = fmt.Sprintf("opsgenie://%s%s%s/%s",
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
@@ -148,8 +150,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 	case "rocketchat":
 		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
 		username := s.GetURLField("username")
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		url = fmt.Sprintf("rocketchat://%s%s%s%s/%s/%s/%s",
 			utils.ValueIfNotDefault(username, username+"@"),
 			s.GetURLField("host"),
@@ -164,24 +166,26 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"),
 			s.GetURLField("channel"))
 	case "teams":
-		// teams://[group@][tenant][/altid][/groupowner]
+		// teams://[group@][tenant][/altid][/groupowner]?host=host.example.com
 		group := s.GetURLField("group")
 		altid := strings.TrimPrefix(s.GetURLField("altid"), "/")
 		groupowner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
-		url = fmt.Sprintf("teams://%s%s%s%s",
+		url = fmt.Sprintf("teams://%s%s%s%s?host=%s",
 			utils.ValueIfNotDefault(group, group+"@"),
 			s.GetURLField("tenant"),
 			utils.ValueIfNotDefault(altid, "/"+altid),
-			utils.ValueIfNotDefault(groupowner, "/"+groupowner))
+			utils.ValueIfNotDefault(groupowner, "/"+groupowner),
+			s.GetParam("host"))
 		url = strings.Replace(url, "///", "//", 1)
 	case "telegram":
-		// telegram://token@telegram
-		url = fmt.Sprintf("telegram://%s@telegram",
-			s.GetURLField("token"))
+		// telegram://token@telegram?chats=@chat1,@chat2
+		url = fmt.Sprintf("telegram://%s@telegram?chats=%s",
+			s.GetURLField("token"),
+			s.GetParam("chats"))
 	case "zulipchat":
 		// zulip://botMail:botKey@host:port
-		port := strings.TrimPrefix(s.GetURLField("port"), ":")
-		path := strings.TrimPrefix(s.GetURLField("path"), "/")
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
 		url = fmt.Sprintf("zulip://%s:%s@%s%s%s",
 			s.GetURLField("botmail"),
 			s.GetURLField("botkey"),

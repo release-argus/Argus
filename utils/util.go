@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // Contains returns whether `s` contains `e``
@@ -179,4 +180,28 @@ func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
 		m2[key] = m[key]
 	}
 	return m2
+}
+
+// GetPortFromURL extracts PORT from https://HOST:PORT
+// and uses http/https defaults if there is no port specified
+//
+// If none of the above returns anything, return defaultPort
+func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
+	if strings.HasPrefix(url, "https") {
+		convertedPort = "443"
+		url = strings.TrimPrefix(url, "https://")
+	} else {
+		convertedPort = "80"
+		url = strings.TrimPrefix(url, "http://")
+	}
+
+	url = strings.Split(url, "/")[0]
+	if strings.Contains(url, ":") {
+		convertedPort = strings.Split(url, ":")[1]
+	}
+
+	if convertedPort == "" {
+		return defaultPort
+	}
+	return convertedPort
 }

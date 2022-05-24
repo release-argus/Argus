@@ -70,17 +70,23 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["discord"].InitMaps()
 	d.Notify["email"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"fromname": "Argus"},
+		URLFields: &map[string]string{
+			"port": "25",
+		},
+		Params: &types.Params{},
 	}
 	d.Notify["email"].InitMaps()
-	d.Notify["google_chat"] = &shoutrrr.Shoutrrr{
+	d.Notify["googlechat"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		Params:  &types.Params{},
 	}
-	d.Notify["google_chat"].InitMaps()
+	d.Notify["googlechat"].InitMaps()
 	d.Notify["gotify"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"title": "Argus"},
+		URLFields: &map[string]string{
+			"port": "443",
+		},
+		Params: &types.Params{"title": "Argus"},
 	}
 	d.Notify["gotify"].InitMaps()
 	d.Notify["ifttt"] = &shoutrrr.Shoutrrr{
@@ -99,12 +105,18 @@ func (d *Defaults) SetDefaults() {
 			"max_tries": "3",
 			"delay":     "0s",
 		},
+		URLFields: &map[string]string{
+			"port": "443",
+		},
 		Params: &types.Params{"username": "Argus"},
 	}
 	d.Notify["mattermost"].InitMaps()
 	d.Notify["matrix"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		URLFields: &map[string]string{
+			"port": "443",
+		},
+		Params: &types.Params{},
 	}
 	d.Notify["matrix"].InitMaps()
 	d.Notify["ops_genie"] = &shoutrrr.Shoutrrr{
@@ -114,7 +126,10 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["ops_genie"].InitMaps()
 	d.Notify["pushbullet"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"title": "Argus"},
+		URLFields: &map[string]string{
+			"port": "443",
+		},
+		Params: &types.Params{"title": "Argus"},
 	}
 	d.Notify["pushbullet"].InitMaps()
 	d.Notify["pushover"] = &shoutrrr.Shoutrrr{
@@ -122,11 +137,14 @@ func (d *Defaults) SetDefaults() {
 		Params:  &types.Params{},
 	}
 	d.Notify["pushover"].InitMaps()
-	d.Notify["rocket_chat"] = &shoutrrr.Shoutrrr{
+	d.Notify["rocketchat"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		URLFields: &map[string]string{
+			"port": "443",
+		},
+		Params: &types.Params{},
 	}
-	d.Notify["rocket_chat"].InitMaps()
+	d.Notify["rocketchat"].InitMaps()
 	d.Notify["slack"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		Params:  &types.Params{"botname": "Argus"},
@@ -178,6 +196,10 @@ func (d *Defaults) CheckValues() (errs error) {
 	}
 
 	// Notify
+	for i := range d.Notify {
+		// Remove the types since the key is the type
+		d.Notify[i].Type = ""
+	}
 	if err := d.Notify.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
 	}

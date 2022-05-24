@@ -21,7 +21,7 @@ import (
 
 func TestConversionGotify(t *testing.T) {
 	var (
-		url      string = "mock_host:123/test/super_secret"
+		url      string = "mock_host:123/test"
 		host     string = "mock_host"
 		port     string = "123"
 		path     string = "test"
@@ -56,22 +56,22 @@ func TestConversionGotify(t *testing.T) {
 		t.Fatalf(`convertedGotify.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
 	}
 	if !(title == converted.GetSelfParam("title")) {
-		t.Fatalf(`convertedGotify.Params.title = %q, want match for %q`, converted.GetSelfParam("title"), title)
+		t.Fatalf(`convertedGotify.Params.title = %q, want match for %q`, converted.GetSelfURLField("title"), title)
 	}
 	if !(message == converted.GetSelfOption("message")) {
-		t.Fatalf(`convertedGotify.Options.message = %q, want match for %q`, converted.GetSelfOption("message"), message)
+		t.Fatalf(`convertedGotify.Options.message = %q, want match for %q`, converted.GetSelfURLField("message"), message)
 	}
 	if !(fmt.Sprint(priority) == converted.GetSelfParam("priority")) {
-		t.Fatalf(`convertedGotify.Params.priority = %q, want match for %q`, converted.GetSelfParam("priority"), priority)
+		t.Fatalf(`convertedGotify.Params.priority = %q, want match for %q`, converted.GetSelfURLField("priority"), priority)
 	}
 	if !(delay == converted.GetSelfOption("delay")) {
-		t.Fatalf(`convertedGotify.Options.delay = %q, want match for %q`, converted.GetSelfOption("delay"), delay)
+		t.Fatalf(`convertedGotify.Options.delay = %q, want match for %q`, converted.GetSelfURLField("delay"), delay)
 	}
 	if !(fmt.Sprint(maxTries) == converted.GetSelfOption("max_tries")) {
-		t.Fatalf(`convertedGotify.Options.max_tries = %q, want match for %q`, converted.GetSelfOption("max_tries"), maxTries)
+		t.Fatalf(`convertedGotify.Options.max_tries = %q, want match for %q`, converted.GetSelfURLField("max_tries"), maxTries)
 	}
 
-	url = "mock_host:123/super_secret"
+	url = "mock_host:123"
 	test = Gotify{
 		URL:      &url,
 		Token:    &token,
@@ -93,7 +93,7 @@ func TestConversionGotify(t *testing.T) {
 		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
 	}
 
-	url = "https://mock_host/super_secret"
+	url = "https://mock_host"
 	test = Gotify{
 		URL:      &url,
 		Token:    &token,
@@ -115,7 +115,7 @@ func TestConversionGotify(t *testing.T) {
 		t.Fatalf(`convertedGotify.URLFields.path = %q, want match for %q`, converted.GetSelfURLField("path"), path)
 	}
 
-	url = "mock_host/super_secret"
+	url = "mock_host"
 	test = Gotify{
 		URL:      &url,
 		Token:    &token,
@@ -127,7 +127,7 @@ func TestConversionGotify(t *testing.T) {
 	}
 	converted = test.Convert("")
 	port = "80"
-	if !(host == converted.GetSelfURLField("host")) {
+	if !(url == converted.GetSelfURLField("host")) {
 		t.Fatalf(`convertedGotify.URLFields.host = %q, want match for %q`, converted.GetSelfURLField("host"), url)
 	}
 	if !(port == converted.GetSelfURLField("port")) {

@@ -68,7 +68,11 @@ func (s *Shoutrrr) SetParam(key string, value string) {
 
 // GetDelay before sending.
 func (s *Shoutrrr) GetDelay() string {
-	return s.GetOption("delay")
+	delay := s.GetOption("delay")
+	if delay == "" {
+		return "0s"
+	}
+	return delay
 }
 
 // GetDelayDuration before sending.
@@ -90,7 +94,11 @@ func (s *Shoutrrr) GetMessage(context *utils.ServiceInfo) string {
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
 func (s *Shoutrrr) GetTitle(serviceInfo *utils.ServiceInfo) string {
-	title := utils.GetFirstNonDefault((*s.Params)["title"], (*s.Main.Params)["title"], (*s.Defaults.Params)["title"], (*s.HardDefaults.Params)["title"])
+	s.GetSelfParam("title")
+	s.Main.GetSelfParam("title")
+	s.Defaults.GetSelfParam("title")
+	s.HardDefaults.GetSelfParam("title")
+	title := utils.GetFirstNonDefault(s.GetSelfParam("title"), s.Main.GetSelfParam("title"), s.Defaults.GetSelfParam("title"), s.HardDefaults.GetSelfParam("title"))
 	return utils.TemplateString(title, *serviceInfo)
 }
 

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/utils"
 )
 
 // Slice mapping of Slack.
@@ -54,53 +55,36 @@ func (s *Slack) Convert(
 	var convertedType string
 	if isSlack {
 		convertedType = "slack"
-		*s.URL = strings.TrimSuffix(*s.URL, "/")
-		if s.URL != nil && strings.Count(*s.URL, "/") > 2 {
-			tokenSplit := strings.Split(*s.URL, "/")[strings.Count(*s.URL, "/")-2:]
-			converted.SetURLField("token", strings.Join(tokenSplit, ":"))
-		}
+		url = strings.TrimPrefix(url, "https://")
+		url = strings.TrimPrefix(url, "http://")
+
+		token := "hook:" + strings.Join(strings.Split(url, "/")[1:], "-")
+		converted.SetURLField("token", token)
+
 		converted.SetURLField("channel", "webhook")
-		converted.SetURLField("slacktype", "hook")
 		// mattermost
 	} else {
 		if s.URL != nil {
 			url := *s.URL
 
-			// Port + Host
-			convertedPort := ""
-			convertedHost := ""
-			if strings.HasPrefix(*s.URL, "https:") {
-				convertedPort = "443"
-				url = strings.TrimPrefix(url, "https://")
-			} else {
-				convertedPort = "80"
-				url = strings.TrimPrefix(url, "http://")
-			}
-			if strings.Contains(url, ":") {
-				parts := strings.Split(url, ":")
-				convertedPort = strings.Split(parts[1], "/")[0]
-				converted.SetURLField("host", parts[0])
-				convertedHost = parts[0]
-			} else {
-				convertedHost = strings.Split(url, "/")[0]
-			}
-			converted.SetURLField("host", convertedHost)
-			converted.SetURLField("port", convertedPort)
+			// Host
+			url = strings.TrimPrefix(url, "https://")
+			url = strings.TrimPrefix(url, "http://")
+			parts := strings.Split(url, "/")
+			converted.SetURLField("host", strings.Split(parts[0], ":")[0])
+			converted.SetURLField("port", utils.GetPortFromURL(*s.URL, "443"))
 
-			url = strings.Join(strings.Split(url, "/")[1:], "/")
-			splitURL := strings.Split(url, "/")
-			convertedToken := splitURL[len(splitURL)-1]
-			if strings.Contains(url, "/hooks/") {
-				splitURL = strings.Split(splitURL[0], "/hooks")
-				convertedPath := ""
-				if len(splitURL) > 0 {
-					convertedPath = splitURL[0]
-				}
-				if convertedPath != "" {
-					converted.SetURLField("path", convertedPath)
-				}
+			convertedPath := ""
+			// mattermost.example.io/hooks/TOKEN -> [ "hooks", "TOKEN"]
+			// mattermost.example.io/sub/path/hooks/TOKEN -> [ "sub", "path", "hooks", "TOKEN" ]
+			if len(parts) > 2 {
+				convertedPath = strings.Join(parts[1:len(parts)-2], "/")
+			}
+			if convertedPath != "" {
+				converted.SetURLField("path", convertedPath)
 			}
 
+			convertedToken := parts[len(parts)-1]
 			converted.SetURLField("token", convertedToken)
 		}
 		convertedType = "mattermost"
@@ -115,12 +99,12 @@ func (s *Slack) Convert(
 		converted.SetOption("delay", *s.Delay)
 	}
 
-	if s.Username != nil {
-		converted.SetParam("botname", *s.Username)
+	if s.MaxTries != nil {
+		converted.SetOption("max_tries", fmt.Sprint(*s.MaxTries))
 	}
 
-	if s.MaxTries != nil {
-		converted.SetOption("max_tries", fmt.Sprintf("%d", *s.MaxTries))
+	if s.Username != nil {
+		converted.SetParam("botname", *s.Username)
 	}
 
 	if s.IconURL != nil {
