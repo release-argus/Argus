@@ -46,7 +46,7 @@ func TestService(flag *string, cfg *config.Config) {
 				allService = append(allService, key)
 			}
 		}
-		jLog.Fatal(
+		jLog.Error(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(allService, "\n  - "),
@@ -54,6 +54,7 @@ func TestService(flag *string, cfg *config.Config) {
 			logFrom,
 			true,
 		)
+		os.Exit(1)
 	}
 
 	service.Status.DeployedVersion = ""
