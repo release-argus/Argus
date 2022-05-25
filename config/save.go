@@ -114,6 +114,14 @@ func (c *Config) Save() {
 	linesRemoved := 0
 	for index := range lines {
 		index -= linesRemoved
+		if index < 0 {
+			// Say in the first 5 lines we read, we removed 10, index-linesRemoved would be <0, so can't index
+			// So we reset the linesRemoved number to -index and set index to 0
+			linesRemoved = 0 - index
+			index = 0
+		} else if index == len(lines) {
+			break
+		}
 		if !strings.HasPrefix(lines[index], " ") {
 			configType = strings.TrimRight(lines[index], ":")
 

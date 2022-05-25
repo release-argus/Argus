@@ -139,7 +139,7 @@ func (s *Shoutrrr) InitMaps() {
 // initMetrics, giving them all a starting value.
 func (s *Shoutrrr) initMetrics(serviceID *string) {
 	// Only record metrics for Shoutrrrs attached to a Service
-	if s.Main == nil {
+	if s.Main == nil || s.GetType() == "" {
 		return
 	}
 

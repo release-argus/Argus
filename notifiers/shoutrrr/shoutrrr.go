@@ -245,7 +245,7 @@ func (s *Slice) Send(
 			for {
 				msg := fmt.Sprintf("Sending %q to %q", toSend, url)
 				jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
-				jLog.Debug(msg+fmt.Sprintf(" with params=%q", *params), logFrom, !jLog.IsLevel("debug"))
+				jLog.Debug(msg+fmt.Sprintf(" with params=%q", *params), logFrom, jLog.IsLevel("debug"))
 				err := sender.Send(toSend, params)
 
 				failed := false

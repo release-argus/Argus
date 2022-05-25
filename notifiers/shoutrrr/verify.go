@@ -57,8 +57,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	s.InitMaps()
 
 	// Delay
-	delay := s.GetSelfOption("delay")
-	if delay != "" {
+	if delay := s.GetSelfOption("delay"); delay != "" {
 		// Default to seconds when an integer is provided
 		if _, err := strconv.Atoi(delay); err == nil {
 			(*s.Options)["delay"] += "s"
@@ -73,10 +72,10 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	if s.Main != nil {
 		s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
 
-		sender, _ := shoutrrr_lib.CreateSender()
-		_, err := sender.Locate(s.GetURL())
-		if err != nil && s.Type != "" {
-			errsLocate = fmt.Errorf("%s%s^ %q\\", utils.ErrorToString(errs), prefix, err.Error())
+		if sender, err := shoutrrr_lib.CreateSender(); err != nil {
+			errsLocate = fmt.Errorf("%s%s^ %s\\", utils.ErrorToString(errsLocate), prefix, err.Error())
+		} else if _, err = sender.Locate(s.GetURL()); err != nil {
+			errsLocate = fmt.Errorf("%s%s^ %s\\", utils.ErrorToString(errsLocate), prefix, err.Error())
 		}
 	}
 
@@ -97,22 +96,19 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 
 func (s *Shoutrrr) correctSelf() {
 	// Port, strip leading :
-	port := strings.TrimPrefix(s.GetSelfURLField("port"), ":")
-	if port != "" {
+	if port := strings.TrimPrefix(s.GetSelfURLField("port"), ":"); port != "" {
 		s.SetURLField("port", port)
 	}
 
 	// Path, strip leading /
-	path := strings.TrimPrefix(s.GetSelfURLField("path"), "/")
-	if path != "" {
+	if path := strings.TrimPrefix(s.GetSelfURLField("path"), "/"); path != "" {
 		s.SetURLField("path", path)
 	}
 
 	switch s.Type {
 	case "mattermost":
 		// Channel, strip leading /
-		channel := strings.TrimPrefix(s.GetSelfURLField("channel"), "/")
-		if channel != "" {
+		if channel := strings.TrimPrefix(s.GetSelfURLField("channel"), "/"); channel != "" {
 			s.SetURLField("channel", channel)
 		}
 	case "slack":
@@ -127,19 +123,16 @@ func (s *Shoutrrr) correctSelf() {
 		}
 	case "teams":
 		// AltID, strip leading /
-		altid := strings.TrimPrefix(s.GetSelfURLField("altid"), "/")
-		if altid != "" {
+		if altid := strings.TrimPrefix(s.GetSelfURLField("altid"), "/"); altid != "" {
 			s.SetURLField("altid", altid)
 		}
 		// GroupOwner, strip leading /
-		groupowner := s.GetSelfURLField("groupowner")
-		if groupowner != "" {
+		if groupowner := s.GetSelfURLField("groupowner"); groupowner != "" {
 			s.SetURLField("groupowner", groupowner)
 		}
 	case "zulip_chat":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
-		botmail := s.GetSelfURLField("botmail")
-		if botmail != "" {
+		if botmail := s.GetSelfURLField("botmail"); botmail != "" {
 			s.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
 		}
 	}
@@ -147,9 +140,7 @@ func (s *Shoutrrr) correctSelf() {
 
 func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *error, errsURLFields *error, errsParams *error) {
 	if utils.GetFirstNonDefault(s.Type, s.Main.Type) == "" {
-		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types\\", utils.ErrorToString(*errs), prefix)
-		tmp := ""
-		s.Type = tmp
+		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\", utils.ErrorToString(*errs), prefix)
 	}
 
 	switch s.GetType() {
@@ -304,7 +295,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 	default:
 		// Invalid/Unknown type
 		if s.Type != "" {
-			*errs = fmt.Errorf("%s%stype: <invalid> e.g. 'slack', see the docs for possible types\\", utils.ErrorToString(*errs), prefix)
+			*errs = fmt.Errorf("%s%stype: %q <invalid> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\", utils.ErrorToString(*errs), prefix, s.GetType())
 		}
 	}
 }
@@ -316,9 +307,9 @@ func (s *Slice) Print(prefix string) bool {
 	}
 
 	fmt.Printf("%snotify:\n", prefix)
-	for shoutrrrID, shoutrrr := range *s {
-		fmt.Printf("%s  %s:\n", prefix, shoutrrrID)
-		shoutrrr.Print(prefix + "    ")
+	for key := range *s {
+		fmt.Printf("%s  %s:\n", prefix, key)
+		(*s)[key].Print(prefix + "    ")
 	}
 	return true
 }

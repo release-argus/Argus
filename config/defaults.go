@@ -221,10 +221,7 @@ func (d *Defaults) Print() {
 	d.Service.Print("    ")
 
 	// Notify defaults.
-	if d.Notify != nil && len(d.Notify) != 0 {
-		fmt.Println("  notify:")
-		d.Notify.Print("    ")
-	}
+	d.Notify.Print("  ")
 
 	// WebHook defaults.
 	fmt.Println("  webhook:")

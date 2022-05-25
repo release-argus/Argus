@@ -21,6 +21,7 @@ defaults:
 
 notify:
   default:
+    type: gotify
     options:
       message: mainMessage
     params:
@@ -76,7 +77,6 @@ service:
     regex_content: Argus-{{ version }}-linux-amd64
     notify:
       default:
-        type: gotify
     webhook:
       default:
   Gitea:

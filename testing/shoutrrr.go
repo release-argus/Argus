@@ -24,10 +24,6 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-var (
-	jLog utils.JLog
-)
-
 // TestNotify will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
 func TestNotify(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
@@ -36,6 +32,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 	}
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
+	jLog := utils.NewJLog("DEBUG", false)
 	jLog.Info(
 		"",
 		logFrom,
@@ -98,7 +95,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 					}
 				}
 			}
-			msg := fmt.Sprintf("ERROR: Shoutrrr %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n", *flag, strings.Join(allShoutrrr, "\n  - "))
+			msg := fmt.Sprintf("Shoutrrr %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n", *flag, strings.Join(allShoutrrr, "\n  - "))
 			jLog.Fatal(msg, logFrom, true)
 		}
 	}
@@ -106,7 +103,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 	title := (*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
 	message := "TEST - " + (*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"})
 	err := shoutrrr.Send(title, message, &utils.ServiceInfo{})
-	jLog.Info(fmt.Sprintf("INFO: Message sent successfully with %q config\n", *flag), logFrom, err == nil)
-	jLog.Error(fmt.Sprintf("ERROR: Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
+	jLog.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
+	jLog.Error(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
 	os.Exit(0)
 }
