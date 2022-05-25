@@ -149,3 +149,8 @@ func (s *Shoutrrr) initMetrics(serviceID *string) {
 	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "SUCCESS")
 	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "FAIL")
 }
+
+// SetLog will set the logger for the package
+func SetLog(log *utils.JLog) {
+	jLog = log
+}

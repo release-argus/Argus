@@ -36,7 +36,7 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 
 	// Main Params
 	for key := range *s.Main.Params {
-		_, exist := (*s.Main.Params)[key]
+		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[key] = s.Main.GetSelfParam(key)
@@ -45,7 +45,7 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 
 	// Default Params
 	for key := range *s.Defaults.Params {
-		_, exist := (*s.Defaults.Params)[key]
+		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[key] = s.Defaults.GetSelfParam(key)
@@ -54,7 +54,7 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 
 	// HardDefault Params
 	for key := range *s.HardDefaults.Params {
-		_, exist := (*s.HardDefaults.Params)[key]
+		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[key] = s.HardDefaults.GetSelfParam(key)

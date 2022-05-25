@@ -20,7 +20,9 @@ import (
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 )
 
-var jLog *utils.JLog
+var (
+	jLog *utils.JLog
+)
 
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr

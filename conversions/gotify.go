@@ -49,6 +49,9 @@ func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
 	if g.URL != nil {
 		url := *g.URL
 		url = strings.TrimPrefix(url, "https://")
+		if strings.HasPrefix(url, "http://") {
+			converted.SetParam("disabletls", "yes")
+		}
 		url = strings.TrimPrefix(url, "http://")
 
 		parts := strings.Split(url, "/")

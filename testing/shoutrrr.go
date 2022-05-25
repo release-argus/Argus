@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	argus_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
@@ -33,6 +34,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	jLog := utils.NewJLog("DEBUG", false)
+	shoutrrr.SetLog(jLog)
 	jLog.Info(
 		"",
 		logFrom,
