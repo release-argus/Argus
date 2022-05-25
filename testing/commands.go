@@ -23,8 +23,8 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-// TestService will query the service and return the version it finds.
-func TestService(flag *string, cfg *config.Config) {
+// TestCommands will test the commands given to a Service.
+func TestCommands(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
@@ -56,41 +56,14 @@ func TestService(flag *string, cfg *config.Config) {
 		)
 	}
 
-	service.Status.DeployedVersion = ""
-	service.Status.LatestVersion = ""
-	_, err := service.Query()
-	if err != nil {
-		helpMsg := ""
-		if *service.Type == "url" && strings.Count(*service.URL, "/") == 1 && !strings.HasPrefix(*service.URL, "http") {
-			helpMsg = "\nThis URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type."
-		}
-		jLog.Error(
-			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q%s",
-				*flag,
-				service.GetServiceURL(true),
-				helpMsg,
-			),
-			logFrom,
-			true,
-		)
-	}
+	jLog.Fatal(
+		fmt.Sprintf(
+			"Service %q does not have any `commands` defined",
+			*flag),
+		logFrom,
+		service.Commands == nil)
 
-	// DeployedVersionLookup
-	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(
-			logFrom,
-			service.GetSemanticVersioning())
-		if err == nil {
-			jLog.Info(
-				fmt.Sprintf(
-					"Deployed version - %q",
-					version,
-				),
-				logFrom,
-				true,
-			)
-		}
-	}
+	(*service.Commands).Exec(&logFrom)
+
 	os.Exit(0)
 }

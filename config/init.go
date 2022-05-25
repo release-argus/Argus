@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
 	"gopkg.in/yaml.v3"
@@ -27,6 +28,7 @@ import (
 func (c *Config) Init() {
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
+	command.Init(jLog)
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}

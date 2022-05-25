@@ -17,6 +17,7 @@ package service
 import (
 	"github.com/coreos/go-semver/semver"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/conversions"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/webhook"
@@ -43,6 +44,7 @@ type Service struct {
 	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
 	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
 	Icon                  string                 `yaml:"icon,omitempty"`                // Icon URL to use for messages/Web UI.
+	Commands              *command.Slice         `yaml:"commands,omitempty"`            // OS Commands to run on new release.
 	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
