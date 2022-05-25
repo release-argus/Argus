@@ -17,8 +17,8 @@ package service
 import (
 	"github.com/coreos/go-semver/semver"
 
-	"github.com/release-argus/Argus/notifiers/gotify"
-	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/conversions"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -42,9 +42,8 @@ type Service struct {
 	WebURL                *string                `yaml:"web_url,omitempty"`             // URL to provide on the Web UI.
 	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
 	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
-	Icon                  *string                `yaml:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI.
-	Gotify                *gotify.Slice          `yaml:"gotify,omitempty"`              // Service-specific Gotify vars.
-	Slack                 *slack.Slice           `yaml:"slack,omitempty"`               // Service-specific Slack vars.
+	Icon                  string                 `yaml:"icon,omitempty"`                // Icon URL to use for messages/Web UI.
+	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
 	Status                *Status                `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
@@ -52,6 +51,9 @@ type Service struct {
 	Defaults              *Service               `yaml:"-"`                             // Default values.
 	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
 	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
+	// TODO: Remove deprecated V
+	Gotify *conversions.GotifySlice `yaml:"gotify,omitempty"` // Gotify message(s) to send on a new release.
+	Slack  *conversions.SlackSlice  `yaml:"slack,omitempty"`  // Slack message(s) to send on a new release.
 }
 
 // GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.

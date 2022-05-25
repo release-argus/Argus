@@ -106,12 +106,24 @@ func (c *Config) Save() {
 
 		currentServiceNumber   int
 		currentOrder           []string = make([]string, serviceCount)
-		currentOrderIndexStart []int    = make([]int, serviceCount)
-		currentOrderIndexEnd   []int    = make([]int, serviceCount)
+		currentOrderIndexStart []int    = make([]int, serviceCount+1)
+		currentOrderIndexEnd   []int    = make([]int, serviceCount+1)
 	)
-	for index, line := range lines {
-		if !strings.HasPrefix(line, " ") {
-			configType = strings.TrimRight(line, ":")
+
+	// Keep track of the number of lines we've removed and adjust index by it
+	linesRemoved := 0
+	for index := range lines {
+		index -= linesRemoved
+		if index < 0 {
+			// Say in the first 5 lines we read, we removed 10, index-linesRemoved would be <0, so can't index
+			// So we reset the linesRemoved number to -index and set index to 0
+			linesRemoved = 0 - index
+			index = 0
+		} else if index == len(lines) {
+			break
+		}
+		if !strings.HasPrefix(lines[index], " ") {
+			configType = strings.TrimRight(lines[index], ":")
 
 			// Remove ordering var.
 			if configType == "order" {
@@ -123,28 +135,73 @@ func (c *Config) Save() {
 				// Only remove once.
 				foundOrder = false
 			}
-			continue
 		}
 
 		switch configType {
 		case "service":
-			if strings.HasPrefix(line, indentation) && !strings.HasPrefix(line, indentation+" ") {
-				// Services ID
-				currentOrder[currentServiceNumber] = strings.TrimSpace(strings.TrimRight(line, ":"))
+			if strings.HasSuffix(lines[index], ":") && strings.HasPrefix(lines[index], indentation) && !strings.HasPrefix(lines[index], indentation+" ") {
+				// First service will be on 1 because we remove items and decrement
+				// currentOrderIndexEnd[currentServiceNumber]. So we want to know when the service
+				// has started so that the decrements are direct to the service
+				currentServiceNumber++
+
+				// Service's ID
+				currentOrder[currentServiceNumber-1] = strings.TrimSpace(strings.TrimRight(lines[index], ":"))
 				currentOrderIndexStart[currentServiceNumber] = index
 
+				// Get the index that this service ends on
 				currentOrderIndexEnd[currentServiceNumber] = len(lines)
-				for i := range lines {
-					if i <= index {
-						continue
-					}
-					if (strings.HasPrefix(lines[i], indentation) && !strings.HasPrefix(lines[i], indentation+" ")) ||
+				// notifyStartIndex := 0
+				for i := index + 1; i <= len(lines); i++ {
+					if !strings.HasPrefix(lines[i], indentation+" ") && strings.HasPrefix(lines[i], indentation) ||
 						!strings.HasPrefix(lines[i], " ") {
-						currentOrderIndexEnd[currentServiceNumber] = i
+						currentOrderIndexEnd[currentServiceNumber] = i - 1
 						break
 					}
 				}
-				currentServiceNumber++
+			}
+		}
+		// Remove empty key:values
+		if strings.HasSuffix(lines[index], ": {}") {
+			// Ignore empty notify mappings under a service as they are using defaults
+			if configType == "service" && !strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))+" ") && strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))) {
+				continue
+			}
+
+			utils.RemoveIndex(&lines, index)
+			if currentServiceNumber > 26 {
+				fmt.Println()
+			}
+			currentOrderIndexEnd[currentServiceNumber]--
+			linesRemoved++
+			if len(lines) == index {
+				continue
+			}
+
+			// Remove level by level
+			// Until we don't find an empty map to remove
+			removed := true
+			for removed {
+				if index == len(lines) {
+					continue
+				}
+				removed = false
+
+				// If it's an empty map
+				if strings.HasSuffix(lines[index], ": {}") {
+					utils.RemoveIndex(&lines, index)
+					currentOrderIndexEnd[currentServiceNumber]--
+					removed = true
+					linesRemoved++
+				} else {
+					deepestRemovable := utils.GetIndentation(lines[index], c.Settings.Indentation)
+					if index != 0 && strings.HasSuffix(lines[index-1], ":") && strings.HasPrefix(lines[index-1], deepestRemovable) {
+						utils.RemoveIndex(&lines, index-1)
+						currentOrderIndexEnd[currentServiceNumber]--
+						removed = true
+						linesRemoved++
+					}
+				}
 			}
 		}
 	}
@@ -153,49 +210,39 @@ func (c *Config) Save() {
 	for changed {
 		changed = false
 		// nth Pass
-		for i := range c.Order {
-			if i == 0 {
+		for i := range currentOrderIndexStart {
+			// Ignore the first index as it's before the service start
+			// Ignore the second as we need something to compare it to
+			if i < 2 {
 				continue
 			}
 
-			// Check if `i` should be before `i-1`
+			// Check if `i-1` should be before `i-2`
 			swap := false
 			for j := range c.Order {
-				if c.Order[j] == currentOrder[i] {
+				// Found i-1 (current item)
+				if c.Order[j] == currentOrder[i-1] {
 					swap = true
 					break
 				}
-				if c.Order[j] == currentOrder[i-1] {
+				// Found i-2 (previous item)
+				if c.Order[j] == currentOrder[i-2] {
 					break
 				}
 			}
 
 			if swap {
 				// currentID needs to be moved before previousID
-				// previousIDIndex:currentIDIndexStart:currentIDIndexEnd:
-				// start[i-1]:start[i]:end[i]:
-				// 0(before) 1(previousID) 2(currentID) 3(after)
-				// becomes
-				// 0(before) 2(currentID) 1(previousID) 3(after)
-				tmp := make([]string, len(lines))
-				copy(tmp, lines)
-				// tmp = 1,3
-				tmp = append(tmp[currentOrderIndexStart[i-1]:currentOrderIndexStart[i]], tmp[currentOrderIndexEnd[i]:]...)
-
-				// lines = 0,2
-				lines = append(lines[:currentOrderIndexStart[i-1]], lines[currentOrderIndexStart[i]:currentOrderIndexEnd[i]]...)
-
-				// lines = 0,2,1,3
-				lines = append(lines, tmp...)
+				utils.Swap(&lines, currentOrderIndexStart[i-1], currentOrderIndexEnd[i-1], currentOrderIndexStart[i], currentOrderIndexEnd[i])
 				changed = true
 
 				// Update the current ordering values
-				tmpStr := currentOrder[i-1]
-				currentOrder[i-1] = currentOrder[i]
-				currentOrder[i] = tmpStr
+				tmpStr := currentOrder[i-2]
+				currentOrder[i-2] = currentOrder[i-1]
+				currentOrder[i-1] = tmpStr
 				lengthCurrent := currentOrderIndexEnd[i] - currentOrderIndexStart[i]
 				currentOrderIndexEnd[i-1] = currentOrderIndexStart[i-1] + lengthCurrent
-				currentOrderIndexStart[i] = currentOrderIndexEnd[i-1]
+				currentOrderIndexStart[i] = currentOrderIndexEnd[i-1] + 1
 			}
 		}
 	}

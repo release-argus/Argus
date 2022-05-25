@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 // Contains returns whether `s` contains `e``
@@ -48,16 +49,26 @@ func PtrOrValueToPtr[T comparable](a *T, b T) *T {
 	return a
 }
 
-// ValueIfNotNilPtr will take the `check` pointer and return `value`
+// ValueIfNotNil will take the `check` pointer and return `value`
 // when `check` is not nil.
-func ValueIfNotNilPtr[T comparable](check *T, value T) *T {
+func ValueIfNotNil[T comparable](check *T, value T) *T {
 	if check == nil {
 		return nil
 	}
 	return &value
 }
 
-// ValueIfNotNilPtr will take the `check` pointer and return the default
+// ValueIfNotDefault will take the `check` var and return `value`
+// when `check` is not it's default.
+func ValueIfNotDefault[T comparable](check T, value T) T {
+	var fresh T
+	if check == fresh {
+		return check
+	}
+	return value
+}
+
+// ValueIfNotNil will take the `check` pointer and return the default
 // value of that type if `check` is nil.
 func DefaultIfNil[T comparable](check *T) T {
 	if check == nil {
@@ -75,6 +86,17 @@ func GetFirstNonNilPtr[T comparable](pointers ...*T) *T {
 		}
 	}
 	return nil
+}
+
+// GetFirstNonDefault will return the first var in `vars` that is not the default.
+func GetFirstNonDefault[T comparable](vars ...T) T {
+	var fresh T
+	for _, v := range vars {
+		if v != fresh {
+			return v
+		}
+	}
+	return fresh
 }
 
 // PrintlnIfNotDefault will print `msg` is `x` is not the default for that type.
@@ -99,8 +121,17 @@ func PrintlnIfNil[T comparable](ptr *T, msg string) {
 	}
 }
 
+// DefaultOrValue will return the default of `check` if it's nil, otherwise value
+func DefaultOrValue[T comparable](check *T, value T) T {
+	if check == nil {
+		var fresh T
+		return fresh
+	}
+	return value
+}
+
 // ErrorToString accounts for nil errors, returning an empty string for those
-// and err.Error() for non nil errors.
+// and err.Error() for non-nil errors.
 func ErrorToString(err error) string {
 	if err != nil {
 		return err.Error()
@@ -140,4 +171,37 @@ func NormaliseNewlines(data []byte) []byte {
 	data = bytes.Replace(data, []byte{13}, []byte{10}, -1)
 
 	return data
+}
+
+// CopyMap will return a copy of the map
+func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
+	m2 := make(map[T]Y, len(m))
+	for key := range m {
+		m2[key] = m[key]
+	}
+	return m2
+}
+
+// GetPortFromURL extracts PORT from https://HOST:PORT
+// and uses http/https defaults if there is no port specified
+//
+// If none of the above returns anything, return defaultPort
+func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
+	if strings.HasPrefix(url, "https") {
+		convertedPort = "443"
+		url = strings.TrimPrefix(url, "https://")
+	} else {
+		convertedPort = "80"
+		url = strings.TrimPrefix(url, "http://")
+	}
+
+	url = strings.Split(url, "/")[0]
+	if strings.Contains(url, ":") {
+		convertedPort = strings.Split(url, ":")[1]
+	}
+
+	if convertedPort == "" {
+		return defaultPort
+	}
+	return convertedPort
 }

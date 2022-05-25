@@ -24,7 +24,7 @@ func TestLoad(t *testing.T) {
 		config                Config
 		configFile            string = "config_test.yml"
 		wantServiceInterval   string = "123s"
-		wantSlackDelay        string = "1s"
+		wantNotifyTitle       string = "defaultTitle"
 		wantWebHookDelay      string = "2s"
 		wantServiceServiceURL string = "release-argus/argus"
 	)
@@ -37,10 +37,10 @@ func TestLoad(t *testing.T) {
 		t.Fatalf(`config.Defaults.Service.Interval = %v, want match for %s`, *gotServiceInterval, wantServiceInterval)
 	}
 
-	// Slack
-	gotSlackDelay := config.Defaults.Slack.Delay
-	if !(wantSlackDelay == *gotSlackDelay) {
-		t.Fatalf(`config.Defaults.Slack.Delay = %s, want match for %s`, *gotSlackDelay, wantSlackDelay)
+	// Notify
+	gotNotifyTitle := (*config.Defaults.Notify["slack"].Params)["title"]
+	if !(wantNotifyTitle == gotNotifyTitle) {
+		t.Fatalf(`config.Defaults.Notify.Params.Title = %s, want match for %s`, gotNotifyTitle, wantNotifyTitle)
 	}
 
 	// WebHook
@@ -77,7 +77,7 @@ func TestSetDefaults(t *testing.T) {
 	if !(wantBool == gotBool) {
 		fmt.Printf("service: %v\n", config.Service["WantDefaults"].SemanticVersioning)
 		fmt.Printf("default: %v\n", config.Service["WantDefaults"].Defaults.SemanticVersioning)
-		fmt.Printf("hardDefault: %v\n", config.Service["WantDefaults"].HardDefaults.SemanticVersioning)
+		fmt.Printf("hardDefaults: %v\n", config.Service["WantDefaults"].HardDefaults.SemanticVersioning)
 
 		t.Fatalf(`post-setDefaults config.Defaults.Service.SemanticVersioning = %v, want match for %t`, gotBool, wantBool)
 	}

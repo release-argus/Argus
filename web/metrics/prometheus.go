@@ -29,23 +29,15 @@ var (
 			"id",
 			"result",
 		})
-	GotifyMetric = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "gotify_result_total",
-		Help: "Number of times a Gotify message has passed/failed.",
+	NotifyMetric = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "notify_result_total",
+		Help: "Number of times a Notify message has passed/failed.",
 	},
 		[]string{
 			"id",
-			"service_id",
 			"result",
-		})
-	SlackMetric = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "slack_result_total",
-		Help: "Number of times a Slack message has passed/failed.",
-	},
-		[]string{
-			"id",
 			"service_id",
-			"result",
+			"type",
 		})
 	WebHookMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "webhook_result_total",
@@ -82,9 +74,13 @@ func InitPrometheusCounterWithIDAndResult(metric *prometheus.CounterVec, id stri
 	metric.With(prometheus.Labels{"id": id, "result": result}).Add(float64(0))
 }
 
-// InitPrometheusCounterWithIDAndServiceIDAndResult will set the `metric` counter for this service to 0.
-func InitPrometheusCounterWithIDAndServiceIDAndResult(metric *prometheus.CounterVec, id string, serviceID string, result string) {
-	metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Add(float64(0))
+// InitPrometheusCounterActions will set the `metric` counter for this service to 0.
+func InitPrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, src_type string, result string) {
+	if src_type == "" {
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Add(float64(0))
+	} else {
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": src_type, "result": result}).Add(float64(0))
+	}
 }
 
 // IncreasePrometheusCounterWithIDAndResult will increase the `metric` counter for this id.
@@ -92,9 +88,13 @@ func IncreasePrometheusCounterWithIDAndResult(metric *prometheus.CounterVec, id 
 	metric.With(prometheus.Labels{"id": id, "result": result}).Inc()
 }
 
-// IncreasePrometheusCounterWithIDAndServiceIDAndResult will increase the `metric` counter for this id and serviceID.
-func IncreasePrometheusCounterWithIDAndServiceIDAndResult(metric *prometheus.CounterVec, id string, serviceID string, result string) {
-	metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Inc()
+// IncreasePrometheusCounterActions will increase the `metric` counter for this id and serviceID.
+func IncreasePrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, src_type string, result string) {
+	if src_type == "" {
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Inc()
+	} else {
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": src_type, "result": result}).Inc()
+	}
 }
 
 // SetPrometheusGaugeWithID will set the `metric` gauge for this service to `value`.

@@ -14,9 +14,7 @@
 
 /*
 Argus monitors GitHub and/or other URLs for version changes.
-On a version change, send Slack message(s) and/or webhook(s).
-main.go uses track.go for the goroutines that call query.go
-and then, on a version change, will call slack.go and webhook.go.
+On a version change, send notification(s) and/or webhook(s).
 */
 package main
 
@@ -44,8 +42,7 @@ func main() {
 		config          cfg.Config
 		configFile      = flag.String("config.file", "config.yml", "Argus configuration file path.")
 		configCheckFlag = flag.Bool("config.check", false, "Print the fully-parsed config.")
-		testGotifyFlag  = flag.String("test.gotify", "", "Put the name of the Gotify service to send a test message.")
-		testSlackFlag   = flag.String("test.slack", "", "Put the name of the Slack service to send a test message.")
+		testNotifyFlag  = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
 		testServiceFlag = flag.String("test.service", "", "Put the name of the Service to test the version query.")
 	)
 
@@ -60,8 +57,7 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	argus_testing.TestGotify(testGotifyFlag, &config)
-	argus_testing.TestSlack(testSlackFlag, &config)
+	argus_testing.TestNotify(testNotifyFlag, &config)
 	argus_testing.TestService(testServiceFlag, &config)
 
 	// config.Service.Init()

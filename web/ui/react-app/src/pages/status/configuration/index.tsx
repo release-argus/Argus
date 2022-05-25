@@ -12,14 +12,7 @@ export const Config = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
   const [config, setConfig] = useReducer(reducerConfig, {
     data: {},
-    waiting_on: [
-      "SETTINGS",
-      "DEFAULTS",
-      "GOTIFY",
-      "SLACK",
-      "WEBHOOK",
-      "SERVICE",
-    ],
+    waiting_on: ["SETTINGS", "DEFAULTS", "NOTIFY", "WEBHOOK", "SERVICE"],
   });
 
   useEffect(() => {

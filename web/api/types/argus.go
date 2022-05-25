@@ -16,6 +16,9 @@ package types
 
 import (
 	"time"
+
+	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
+	"github.com/release-argus/Argus/utils"
 )
 
 // ServiceSummary is the Summary of a Service.
@@ -23,7 +26,7 @@ type ServiceSummary struct {
 	ID                       *string `json:"id"`
 	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	Icon                     *string `json:"icon,omitempty"`                 // Service.Slack.IconURL / Slack.IconURL / Defaults.Slack.IconURL
+	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
 	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
 	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release.
 	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses).
@@ -43,15 +46,13 @@ type Status struct {
 
 // StatusFails keeps track of whether each of the notifications failed on the last version change.
 type StatusFails struct {
-	Gotify  *[]bool `json:"gotify,omitempty"`  // Track whether any of the Slice failed.
-	Slack   *[]bool `json:"slack,omitempty"`   // Track whether any of the Slice failed.
+	Notify  *[]bool `json:"notify,omitempty"`  // Track whether any of the Slice failed.
 	WebHook *[]bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
 }
 
 // StatusFailsSummary keeps track of whether any of the notifications failed on the last version change.
 type StatusFailsSummary struct {
-	Gotify  *bool `json:"gotify,omitempty"`  // Track whether any of the Slice failed.
-	Slack   *bool `json:"slack,omitempty"`   // Track whether any of the Slice failed.
+	Notify  *bool `json:"notify,omitempty"`  // Track whether any of the Slice failed.
 	WebHook *bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
 }
 
@@ -97,10 +98,9 @@ type Flags struct {
 
 // Defaults is the global default for vars.
 type Defaults struct {
-	Service Service `json:"service,omitempty"`
-	Gotify  Gotify  `json:"gotify,omitempty"`
-	Slack   Slack   `json:"slack,omitempty"`
-	WebHook WebHook `json:"webhook,omitempty"`
+	Service Service     `json:"service,omitempty"`
+	Notify  NotifySlice `json:"notify,omitempty"`
+	WebHook WebHook     `json:"webhook,omitempty"`
 }
 
 // Config is the config for Argus.
@@ -108,8 +108,7 @@ type Config struct {
 	File     string        `json:"-"`                  // Path to the config file (-config.file='')
 	Defaults *Defaults     `json:"defaults,omitempty"` // Default values for the various parameters.
 	Service  *ServiceSlice `json:"service,omitempty"`  // The service(s) to monitor.
-	Gotify   *GotifySlice  `json:"gotify,omitempty"`   // Gotify message(s) to send on a new release.
-	Slack    *SlackSlice   `json:"slack,omitempty"`    // Slack message(s) to send on a new release.
+	Notify   *NotifySlice  `json:"notify,omitempty"`   // Notify message(s) to send on a new release.
 	WebHook  *WebHookSlice `json:"webhook,omitempty"`  // WebHook(s) to send on a new release.
 	Settings *Settings     `json:"settings,omitempty"` // Settings for the program
 	Order    []string      `json:"order,omitempty"`    // Ordering for the Service(s) in the WebUI
@@ -136,27 +135,105 @@ type WebSettings struct {
 	RoutePrefix *string `json:"route_prefix,omitempty"` // Web endpoint prefix
 }
 
-// GotifySlice is a slice mapping of Gotify.
-type GotifySlice map[string]*Gotify
+// NotifySlice is a slice mapping of Notify.
+type NotifySlice map[string]*Notify
 
-// Gotify is a Gotify message w/ destination and from details.
-type Gotify struct {
-	URL      *string `json:"url,omitempty"`       // "https://example.com
-	Token    *string `json:"token,omitempty"`     // apptoken
-	Title    *string `json:"title,omitempty"`     // "{{ service_id }} - {{ version }} released"
-	Message  *string `json:"message,omitempty"`   // "Argus"
-	Extras   *Extras `json:"extras,omitempty"`    // Message extras
-	Priority *int    `json:"priority,omitempty"`  // <1 = Min, 1-3 = Low, 4-7 = Med, >7 = High
-	Delay    *string `json:"delay,omitempty"`     // The delay before sending the Gotify message.
-	MaxTries *uint   `json:"max_tries,omitempty"` // Number of times to attempt sending the Gotify message if a 200 is not received.
+// Censor this MotifySlice for sending over a WebSocket
+func (n *NotifySlice) Censor() *NotifySlice {
+	if n == nil {
+		return nil
+	}
+
+	slice := make(NotifySlice, len(*n))
+	for i := range *n {
+		slice[i] = (*n)[i].Censor()
+	}
+	return &slice
 }
 
-// Extras are the message extras (https://gotify.net/docs/msgextras) for the Gotify messages.
-type Extras struct {
-	AndroidAction      *string `json:"android_action,omitempty"`      // URL to open on notification delivery
-	ClientDisplay      *string `json:"client_display,omitempty"`      // Render message in 'text/plain' or 'text/markdown'
-	ClientNotification *string `json:"client_notification,omitempty"` // URL to open on notification click
+// Notify is a message w/ destination and from details.
+type Notify struct {
+	ID        *string                `json:"-"`                    // ID for this Notify sender
+	Type      string                 `json:"type,omitempty"`       // Notification type, e.g. slack
+	Options   *map[string]string     `json:"options,omitempty"`    // Options
+	URLFields *map[string]string     `json:"url_fields,omitempty"` // URL Fields
+	Params    *shoutrrr_types.Params `json:"params,omitempty"`     // Param props
 }
+
+// Censor this Notify for sending over a WebSocket
+func (n *Notify) Censor() *Notify {
+	if n == nil {
+		return nil
+	}
+
+	// Check whether the Notify contains a field we should censor
+	// url_fields
+	censorURLFields := false
+	url_fields_to_censor := []string{
+		"apikey",
+		"botkey",
+		"password",
+		"token",
+		"tokena",
+		"tokenb",
+		"webhookid",
+	}
+	if len(*n.URLFields) > 0 {
+		for i := range url_fields_to_censor {
+			if (*n.URLFields)[url_fields_to_censor[i]] != "" {
+				censorURLFields = true
+			}
+		}
+	}
+	// params
+	censorParams := false
+	params_to_censor := []string{
+		"devices",
+		"host",
+	}
+	if len(*n.Params) > 0 {
+		for i := range params_to_censor {
+			if (*n.Params)[params_to_censor[i]] != "" {
+				censorParams = true
+			}
+		}
+	}
+
+	if !(censorURLFields || censorParams) {
+		return n
+	}
+
+	// Censor the fields that should be censored
+	urlFields := n.URLFields
+	if censorURLFields {
+		urlFields = &map[string]string{}
+		*urlFields = utils.CopyMap(*n.URLFields)
+		for i := range url_fields_to_censor {
+			if (*urlFields)[url_fields_to_censor[i]] != "" {
+				(*urlFields)[url_fields_to_censor[i]] = "<secret>"
+			}
+		}
+	}
+	params := n.Params
+	if censorParams {
+		params = &shoutrrr_types.Params{}
+		*params = utils.CopyMap(*n.Params)
+		for i := range params_to_censor {
+			if (*params)[params_to_censor[i]] != "" {
+				(*params)[params_to_censor[i]] = "<secret>"
+			}
+		}
+	}
+
+	return &Notify{
+		Type:      n.Type,
+		Options:   n.Options,
+		URLFields: urlFields,
+		Params:    params,
+	}
+}
+
+type NotifyParams map[string]string
 
 // ServiceSlice is a slice mapping of Service.
 type ServiceSlice map[string]*Service
@@ -169,7 +246,7 @@ type Service struct {
 	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI
 	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
 	Interval              *string                `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger Slack(s)/WebHook(s).
+	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks.
 	RegexContent          *string                `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
 	RegexVersion          *string                `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
 	UsePreRelease         *bool                  `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
@@ -177,9 +254,8 @@ type Service struct {
 	IgnoreMisses          *bool                  `json:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist)
 	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use.
 	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	Icon                  *string                `json:"icon,omitempty"`                // Icon URL to use for Slack messages/Web UI
-	Gotify                *GotifySlice           `json:"gotify,omitempty"`              // Service-specific Gotify vars.
-	Slack                 *SlackSlice            `json:"slack,omitempty"`               // Service-specific Slack vars.
+	Icon                  string                 `json:"icon,omitempty"`                // Icon URL to use for messages/Web UI
+	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars.
 	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
 	Status                *Status                `json:"status,omitempty"`              // Track the Status of this source (version and regex misses).
@@ -223,21 +299,6 @@ type URLCommand struct {
 	IgnoreMisses *bool   `json:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
 }
 
-// SlackSlice is a slice mapping of Slack.
-type SlackSlice map[string]*Slack
-
-// Slack is a Slack message w/ destination and from details.
-type Slack struct {
-	URL         *string `json:"url,omitempty"`        // "https://example.com
-	ServiceIcon *string `json:"-"`                    // Service.Icon
-	IconEmoji   *string `json:"icon_emoji,omitempty"` // ":github:"
-	IconURL     *string `json:"icon_url,omitempty"`   // "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-	Username    *string `json:"username,omitempty"`   // "Argus"
-	Message     *string `json:"message,omitempty"`    // "<{{ service_url }}|{{ service_id }}> - {{ version }} released"
-	Delay       *string `json:"delay,omitempty"`      // The delay before sending the Slack message.
-	MaxTries    *uint   `json:"max_tries,omitempty"`  // Number of times to attempt sending the Slack message if a 200 is not received.
-}
-
 // WebHookSlice is a slice mapping of WebHook.
 type WebHookSlice map[string]*WebHook
 
@@ -255,6 +316,5 @@ type WebHook struct {
 
 // Notifiers are the notifiers to use when a WebHook fails.
 type Notifiers struct {
-	Gotify *GotifySlice // Service.Gotify
-	Slack  *SlackSlice  // Service.WebHook
+	Notify *NotifySlice // Service.Notify
 }

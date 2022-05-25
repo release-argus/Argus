@@ -20,8 +20,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/release-argus/Argus/notifiers/gotify"
-	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -33,8 +32,7 @@ func (w *Slice) Init(
 	mains *Slice,
 	defaults *WebHook,
 	hardDefaults *WebHook,
-	gotifyNotifiers *gotify.Slice,
-	slackNotifiers *slack.Slice,
+	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
 	jLog = log
 	if w == nil {
@@ -55,8 +53,7 @@ func (w *Slice) Init(
 			(*mains)[key],
 			defaults,
 			hardDefaults,
-			gotifyNotifiers,
-			slackNotifiers,
+			shoutrrrNotifiers,
 		)
 	}
 }
@@ -67,8 +64,7 @@ func (w *WebHook) Init(
 	main *WebHook,
 	defaults *WebHook,
 	hardDefaults *WebHook,
-	gotifyNotifiers *gotify.Slice,
-	slackNotifiers *slack.Slice,
+	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
 	if w == nil {
 		return
@@ -92,8 +88,7 @@ func (w *WebHook) Init(
 
 	// WebHook fail notifiers
 	(*w).Notifiers = &Notifiers{
-		Gotify: gotifyNotifiers,
-		Slack:  slackNotifiers,
+		Shoutrrr: shoutrrrNotifiers,
 	}
 }
 
@@ -102,8 +97,8 @@ func (w *WebHook) initMetrics(serviceID string) {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterWithIDAndServiceIDAndResult(metrics.WebHookMetric, *(*w).ID, serviceID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndServiceIDAndResult(metrics.WebHookMetric, *(*w).ID, serviceID, "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "FAIL")
 
 	// ##########
 	// # Gauges #

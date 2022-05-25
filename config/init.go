@@ -42,51 +42,37 @@ func (c *Config) Init() {
 			&c.HardDefaults.Service,
 		)
 
-		c.Service[serviceID].Gotify.Init(
+		c.Service[serviceID].Notify.Init(
 			jLog,
 			&serviceID,
-			c.Gotify,
-			&c.Defaults.Gotify,
-			&c.HardDefaults.Gotify,
+			&c.Notify,
+			&c.Defaults.Notify,
+			&c.HardDefaults.Notify,
 		)
-		c.Service[serviceID].Slack.Init(
-			jLog,
-			&serviceID,
-			c.Service[serviceID].Icon,
-			c.Slack,
-			&c.Defaults.Slack,
-			&c.HardDefaults.Slack,
-		)
+
 		c.Service[serviceID].WebHook.Init(
 			jLog,
 			&serviceID,
-			c.WebHook,
+			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
-			c.Service[serviceID].Gotify,
-			c.Service[serviceID].Slack,
+			c.Service[serviceID].Notify,
 		)
 	}
 
-	// c.Gotify
-	if c.Gotify != nil {
-		for key := range *c.Gotify {
-			(*c.Gotify)[key].Defaults = &c.Defaults.Gotify
-			(*c.Gotify)[key].HardDefaults = &c.HardDefaults.Gotify
-		}
-	}
-	// c.Slack
-	if c.Slack != nil {
-		for key := range *c.Slack {
-			(*c.Slack)[key].Defaults = &c.Defaults.Slack
-			(*c.Slack)[key].HardDefaults = &c.HardDefaults.Slack
+	// c.Notify
+	if c.Notify != nil {
+		for key := range c.Notify {
+			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
+			c.Notify[key].Defaults = c.Defaults.Notify[c.Notify[key].Type]
+			c.Notify[key].HardDefaults = c.HardDefaults.Notify[c.Notify[key].Type]
 		}
 	}
 	// c.WebHook
 	if c.WebHook != nil {
-		for key := range *c.WebHook {
-			(*c.WebHook)[key].Defaults = &c.Defaults.WebHook
-			(*c.WebHook)[key].HardDefaults = &c.HardDefaults.WebHook
+		for key := range c.WebHook {
+			c.WebHook[key].Defaults = &c.Defaults.WebHook
+			c.WebHook[key].HardDefaults = &c.HardDefaults.WebHook
 		}
 	}
 }
@@ -109,6 +95,7 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 
 	// Handle deprecations
 	c.convertCurrentVersionToDeployedVersion()
+	c.convertDeprecatedSlackAndGotify()
 	c.convertDeprecatedURLCommands()
 
 	c.GetOrder(data)

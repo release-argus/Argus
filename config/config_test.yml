@@ -3,35 +3,29 @@ defaults:
     interval: 123
     access_token: ghp_default
     semantic_versioning: n
-  gotify:
-    title: 'defaultTitle'
-  slack:
-    message: '{{ service_id }}>_default'
-    username: 'defaultUsername'
-    icon_emoji: 'defaultIconEmoji'
-    max_tries: 3
-    delay: 1
+  notify:
+    slack:
+      params:
+        title: defaultTitle
+        username: defaultUsername
+        host: defaultHost
+    gotify:
+      url_fields:
+        host: foo.bar
+        token: anonymous
   webhook:
     desired_status_code: 0
     max_tries: 3
     delay: 2
     silent_fails: false
 
-gotify:
+notify:
   default:
-    url: https://gotify.main.com/hooks/ZZZZ
-    token: YYYY
-    message: mainMessage
-    priority: 1
-    slack:
-
-slack:
-  default:
-    url: https://mattermost.main.com/hooks/ZZZZ
-    message: mainMessage
-    icon_emoji: mainIconEmoji
-    max_tries: 10
-    delay: 4s
+    type: gotify
+    options:
+      message: mainMessage
+    params:
+      username: mainUsername
 
 webhook:
   default:
@@ -53,21 +47,17 @@ service:
     interval: 10m
     regex_version: '^[0-9.]+[0-9]$'
     regex_content: Argus-{{ version }}-linux-amd64
-    gotify:
+    notify:
       personal:
-        url: https://gotify.example.com/hooks/ZZZZ
-        token: Go
-        priority: 5
-        message: "overriddenMessage"
-        title: "overriddenTitle"
-    slack:
-      personal:
-        url: https://mattermost.example.com/hooks/ZZZZ
-        message: overriddenMessage
-        username: overriddenUsername
-        icon_emoji: overriddenIconEmoji
-        max_tries: 10
-        delay: 4s
+        type: mattermost
+        url_fields:
+          host: example.io
+          token: 123
+          channel: foo
+        options:
+          message: overriddenMessage
+        params:
+          username: overriddenUsername
     webhook:
       personal:
         type: github
@@ -85,9 +75,7 @@ service:
         index: 1
     regex_version: '^[0-9.]+[0-9]$'
     regex_content: Argus-{{ version }}-linux-amd64
-    gotify:
-      default:
-    slack:
+    notify:
       default:
     webhook:
       default:
@@ -101,11 +89,17 @@ service:
         index: 1
     regex_version: '^[0-9.]+[0-9]$'
     regex_content: gitea-{{ version }}-linux-amd64
-    slack:
+    notify:
       personal:
-        url: https://mattermost.example.com/hooks/ZZZZ
-        icon_url: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
-        delay: 0s
+        type: mattermost
+        options:
+          delay: 0s
+        url_fields:
+          host: mattermost.example.com
+          port: 443
+          token: ZZZZ
+        params:
+          icon: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
     webhook:
       personal:
         type: github

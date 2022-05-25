@@ -41,13 +41,8 @@ func (s *Slice) CheckValues(prefix string) error {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
-		// Check Gotify(s)
-		if err := service.Gotify.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Check Slack(s)
-		if err := service.Slack.CheckValues(prefix + "  "); err != nil {
+		// Check Notify(s)
+		if err := service.Notify.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
@@ -159,7 +154,7 @@ func (s *Service) Print(prefix string) {
 	utils.PrintlnIfNotNil(s.WebURL, fmt.Sprintf("%sweb_url: %s", prefix, utils.DefaultIfNil(s.WebURL)))
 	utils.PrintlnIfNotNil(s.AutoApprove, fmt.Sprintf("%sauto_approve: %t", prefix, utils.DefaultIfNil(s.AutoApprove)))
 	utils.PrintlnIfNotNil(s.IgnoreMisses, fmt.Sprintf("%signore_misses: %t", prefix, utils.DefaultIfNil(s.IgnoreMisses)))
-	utils.PrintlnIfNotNil(s.Icon, fmt.Sprintf("%sicon: %s", prefix, utils.DefaultIfNil(s.Icon)))
+	utils.PrintlnIfNotDefault(s.Icon, fmt.Sprintf("%sicon: %s", prefix, s.Icon))
 
 	s.DeployedVersionLookup.Print(prefix)
 
@@ -168,11 +163,8 @@ func (s *Service) Print(prefix string) {
 		s.Status.Print(prefix + "  ")
 	}
 
-	// Gotify.
-	s.Gotify.Print(prefix + "  ")
-
-	// Slack.
-	s.Slack.Print(prefix + "  ")
+	// Notify.
+	s.Notify.Print(prefix + "  ")
 
 	// WebHook.
 	s.WebHook.Print(prefix + "  ")

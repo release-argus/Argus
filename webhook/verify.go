@@ -49,16 +49,16 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			*w.Delay += "s"
 		}
 		if _, err := time.ParseDuration(*w.Delay); err != nil {
-			errs = fmt.Errorf("%s%sdelay: <invalid> %q (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
+			errs = fmt.Errorf("%s%s  delay: <invalid> %q (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
 		}
 	}
 
 	if w.Main != nil {
 		if w.GetURL() == nil {
-			errs = fmt.Errorf("%s%surl: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%s  url: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
 		}
 		if w.GetSecret() == nil {
-			errs = fmt.Errorf("%s%ssecret: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%s  secret: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
 		}
 	}
 	return
@@ -66,7 +66,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 
 // Print the Slice.
 func (w *Slice) Print(prefix string) {
-	if w == nil {
+	if w == nil || len(*w) == 0 {
 		return
 	}
 

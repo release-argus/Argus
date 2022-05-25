@@ -39,10 +39,9 @@ func (s *Slice) Track(ordering *[]string) {
 	}
 }
 
-// Track will track the Service data and then send Slack
-// messages (Service.Slack) as well as WebHooks (Service.WebHook)
-// when a new release is spottes. It sleeps for Service.Interval
-// between each check.
+// Track the Service and send Notify messages (Service.Notify) as
+// well as WebHooks (Service.WebHook) when a new release is spotted.
+// It sleeps for Service.Interval between each check.
 func (s *Service) Track() {
 	serviceInfo := s.GetServiceInfo()
 
@@ -59,13 +58,9 @@ func (s *Service) Track() {
 			// Get updated serviceInfo
 			serviceInfo = s.GetServiceInfo()
 
-			// Send the Gotify Message(s).
+			// Send the Notify Message(s).
 			//nolint:errcheck
-			go s.Gotify.Send("", "", &serviceInfo)
-
-			// Send the Slack Message(s).
-			//nolint:errcheck
-			go s.Slack.Send("", &serviceInfo)
+			go s.Notify.Send("", "", &serviceInfo)
 
 			// WebHook(s)
 			go s.HandleWebHooks(false)

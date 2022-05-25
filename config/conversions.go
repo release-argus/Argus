@@ -14,6 +14,14 @@
 
 package config
 
+import (
+	"strings"
+
+	"github.com/release-argus/Argus/conversions"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/utils"
+)
+
 // convertCurrentVersionToDeployedVersion handles the deprecation of `current_version*`,
 // Renaming it to `deployed_version*`
 func (c *Config) convertCurrentVersionToDeployedVersion() {
@@ -35,6 +43,154 @@ func (c *Config) convertCurrentVersionToDeployedVersion() {
 	}
 }
 
+// convertDeprecatedSlackAndGotify will handle converting the old 'Gotify' and 'Slack' slices
+// to the new 'Notify' format(*c.Service[serviceIndex]).Slack)
+func (c *Config) convertDeprecatedSlackAndGotify() {
+	// Check whether Defaults.Notify.(Slack|Mattermost) are wanted
+	if c.Notify == nil {
+		c.Notify = make(shoutrrr.Slice)
+	}
+	if c.Defaults.Notify == nil {
+		c.Defaults.Notify = make(shoutrrr.Slice)
+	}
+	if c.Slack == nil {
+		c.Slack = &conversions.SlackSlice{}
+	}
+	hadDefaultsSlack := true
+	if c.Defaults.Slack == nil {
+		c.Defaults.Slack = &conversions.Slack{}
+		hadDefaultsSlack = false
+	}
+	hadDefaultsGotify := true
+	if c.Gotify == nil {
+		c.Gotify = &conversions.GotifySlice{}
+		hadDefaultsGotify = false
+	}
+	if c.Defaults.Gotify == nil {
+		c.Defaults.Gotify = &conversions.Gotify{}
+	}
+
+	// Gotify
+	// Convert inside services
+	for serviceIndex := range c.Service {
+		if (*c.Service[serviceIndex]).Gotify == nil {
+			continue
+		}
+		// Ensure the NotifySlice is not nil
+		if (*c.Service[serviceIndex]).Notify == nil {
+			notifySlice := make(shoutrrr.Slice)
+			(*c.Service[serviceIndex]).Notify = &notifySlice
+		}
+		// Loop through the Gotifies
+		for oldName := range *(*c.Service[serviceIndex]).Gotify {
+			newName := oldName + "_gotify"
+			// Convert this Gotify
+			converted := (*(*c.Service[serviceIndex]).Gotify)[oldName].Convert("")
+			// Give it to the Notify
+			(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
+		}
+	}
+	// Convert mains
+	if c.Gotify != nil {
+		// Loop through the Gotifies
+		for oldName := range *c.Gotify {
+			newName := oldName + "_gotify"
+			// Convert this Gotify
+			converted := (*c.Gotify)[oldName].Convert("gotify")
+			// Give it to the Notify
+			c.Notify[newName] = &converted
+		}
+	}
+	// Convert defaults
+	if c.Defaults.Gotify != nil && hadDefaultsGotify {
+		converted := (*c.Defaults.Gotify).Convert("gotify")
+		c.Defaults.Notify["gotify"] = &converted
+	}
+
+	// Slack
+	// Convert inside services
+	for serviceIndex := range c.Service {
+		if (*c.Service[serviceIndex]).Slack == nil {
+			continue
+		}
+		// Ensure the NotifySlice is not nil
+		if (*c.Service[serviceIndex]).Notify == nil {
+			notifySlice := make(shoutrrr.Slice)
+			(*c.Service[serviceIndex]).Notify = &notifySlice
+		}
+		for oldName := range *(*c.Service[serviceIndex]).Slack {
+			newName := oldName
+			// If oldName isn't unique, make it so
+			// Keep looping just incase of XXX_slack_slack... names
+			main := (*c.Slack)[oldName]
+			mainURL := ""
+			if main != nil {
+				mainURL = utils.DefaultIfNil(main.URL)
+			}
+			dflt := c.Defaults.Slack
+			dfltURL := ""
+			if dflt != nil {
+				dfltURL = utils.DefaultIfNil(dflt.URL)
+			}
+			url := utils.GetFirstNonDefault(
+				utils.DefaultIfNil((*(*c.Service[serviceIndex]).Slack)[oldName].URL),
+				mainURL,
+				dfltURL)
+
+			if isSlack := strings.Contains(url, "hooks.slack.com"); isSlack {
+				newName = "_slack"
+			} else {
+				newName += "_mattermost"
+			}
+
+			// Convert this Slack/Mattermost
+			converted := (*(*c.Service[serviceIndex]).Slack)[oldName].Convert(newName, url)
+			// Give it to the notify
+			(*(*c.Service[serviceIndex]).Notify)[newName] = &converted
+		}
+	}
+	// Convert mains
+	if c.Slack != nil {
+		for oldName := range *c.Slack {
+			newName := oldName
+			url := utils.DefaultIfNil((*c.Slack)[oldName].URL)
+			// Try and find a service with an oldName slack
+			if url == "" {
+				for serviceIndex := range c.Service {
+					if (*c.Service[serviceIndex]).Slack != nil && (*(*c.Service[serviceIndex]).Slack)[oldName] != nil {
+						url = utils.DefaultIfNil((*(*c.Service[serviceIndex]).Slack)[oldName].URL)
+						if url != "" {
+							break
+						}
+					}
+				}
+			}
+			if isSlack := strings.Contains(url, "hooks.slack.com"); isSlack {
+				newName += "_slack"
+			} else {
+				newName += "_mattermost"
+			}
+			converted := (*c.Slack)[oldName].Convert(newName, url)
+			c.Notify[newName] = &converted
+		}
+	}
+	// Convert defaults
+	if c.Defaults.Slack != nil && hadDefaultsSlack {
+		// Set the type to whatever is more common out of conversions, Slack or Mattermost
+		converted := (*c.Defaults.Slack).Convert("", utils.DefaultIfNil((*c.Defaults.Slack).URL))
+		c.Defaults.Notify["slack"] = &converted
+		c.Defaults.Notify["mattermost"] = &converted
+	}
+	c.Defaults.Gotify = nil
+	c.Gotify = nil
+	c.Defaults.Slack = nil
+	c.Slack = nil
+	for i := range c.Service {
+		c.Service[i].Gotify = nil
+		c.Service[i].Slack = nil
+	}
+}
+
 // convertDeprecatedURLCommands will convert the 'regex_submatch' URLCommand to 'regex'
 func (c *Config) convertDeprecatedURLCommands() {
 	for service_id := range c.Service {
@@ -49,4 +205,3 @@ func (c *Config) convertDeprecatedURLCommands() {
 		}
 	}
 }
-

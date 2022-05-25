@@ -113,6 +113,10 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", *id), logFrom, true)
 		return
 	}
+	if api.Config.Service[*id].WebHook == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any webhooks to approve", *id), logFrom, true)
+		return
+	}
 
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
@@ -299,14 +303,19 @@ func (api *API) wsConfigDefaults(client *Client) {
 	responseType := "DEFAULTS"
 	responseSubType := "INIT"
 
-	gotifyExtras := api_types.Extras{}
-	if api.Config.Defaults.Gotify.Extras != nil {
-		gotifyExtras = api_types.Extras{
-			AndroidAction:      api.Config.Defaults.Gotify.Extras.AndroidAction,
-			ClientDisplay:      api.Config.Defaults.Gotify.Extras.ClientDisplay,
-			ClientNotification: api.Config.Defaults.Gotify.Extras.ClientNotification,
+	notifyDefaults := make(api_types.NotifySlice)
+	// key == type for defaults
+	for key := range api.Config.Defaults.Notify {
+		dflt := api_types.Notify{
+			Type:      api.Config.Defaults.Notify[key].Type,
+			Options:   api.Config.Defaults.Notify[key].Options,
+			URLFields: api.Config.Defaults.Notify[key].URLFields,
+			Params:    api.Config.Defaults.Notify[key].Params,
 		}
+		dflt = *dflt.Censor()
+		notifyDefaults[key] = &dflt
 	}
+
 	msg := api_types.WebSocketMessage{
 		Page:    &responsePage,
 		Type:    &responseType,
@@ -321,38 +330,18 @@ func (api *API) wsConfigDefaults(client *Client) {
 					UsePreRelease:      api.Config.Defaults.Service.UsePreRelease,
 					AutoApprove:        api.Config.Defaults.Service.AutoApprove,
 					IgnoreMisses:       api.Config.Defaults.Service.IgnoreMisses,
-					AccessToken: utils.ValueIfNotNilPtr(
-						api.Config.Defaults.Service.AccessToken,
-						"<secret>"),
-					AllowInvalidCerts: api.Config.Defaults.Service.AllowInvalidCerts,
+					AccessToken:        utils.ValueIfNotNil(api.Config.Defaults.Service.AccessToken, "<secret>"),
+					AllowInvalidCerts:  api.Config.Defaults.Service.AllowInvalidCerts,
 					DeployedVersionLookup: &api_types.DeployedVersionLookup{
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
 				},
-				Gotify: api_types.Gotify{
-					Delay:    api.Config.Defaults.Gotify.Delay,
-					Message:  api.Config.Defaults.Gotify.Message,
-					MaxTries: api.Config.Defaults.Gotify.MaxTries,
-					Priority: api.Config.Defaults.Gotify.Priority,
-					Token:    api.Config.Defaults.Gotify.Token,
-					Title:    api.Config.Defaults.Gotify.Title,
-					URL:      api.Config.Defaults.Gotify.URL,
-					Extras:   &gotifyExtras,
-				},
-				Slack: api_types.Slack{
-					Delay:     api.Config.Defaults.Slack.Delay,
-					IconURL:   api.Config.Defaults.Slack.IconURL,
-					IconEmoji: api.Config.Defaults.Slack.IconEmoji,
-					MaxTries:  api.Config.Defaults.Slack.MaxTries,
-					Message:   api.Config.Defaults.Slack.Message,
-					URL:       api.Config.Defaults.Slack.URL,
-					Username:  api.Config.Defaults.Slack.Username,
-				},
+				Notify: notifyDefaults,
 				WebHook: api_types.WebHook{
+					Type:              api.Config.Defaults.WebHook.Type,
 					Delay:             api.Config.Defaults.WebHook.Delay,
 					DesiredStatusCode: api.Config.Defaults.WebHook.DesiredStatusCode,
 					MaxTries:          api.Config.Defaults.WebHook.MaxTries,
-					Type:              api.Config.Defaults.WebHook.Type,
 					Secret:            api.Config.Defaults.WebHook.Secret,
 					SilentFails:       api.Config.Defaults.WebHook.SilentFails,
 					URL:               api.Config.Defaults.WebHook.URL,
@@ -360,80 +349,34 @@ func (api *API) wsConfigDefaults(client *Client) {
 			},
 		},
 	}
+
+	msg.ConfigData.Defaults.Notify = *msg.ConfigData.Defaults.Notify.Censor()
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
 		return
 	}
 }
 
-// wsConfigGotify handles getting the `gotify` config that's in use.
-func (api *API) wsConfigGotify(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigGotify", Secondary: client.ip}
+// wsConfigNotify handles getting the `notify` config that's in use.
+func (api *API) wsConfigNotify(client *Client) {
+	logFrom := utils.LogFrom{Primary: "wsConfigNotify", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
 	responsePage := "CONFIG"
-	responseType := "GOTIFY"
+	responseType := "NOTIFY"
 	responseSubType := "INIT"
 
-	gotifyConfig := make(api_types.GotifySlice)
-	if api.Config.Gotify != nil {
-		for key := range *api.Config.Gotify {
-			gotifyConfig[key] = &api_types.Gotify{
-				URL:      (*api.Config.Gotify)[key].URL,
-				Token:    utils.ValueIfNotNilPtr((*api.Config.Gotify)[key].Token, "<secret>"),
-				Title:    (*api.Config.Gotify)[key].Title,
-				Message:  (*api.Config.Gotify)[key].Message,
-				Priority: (*api.Config.Gotify)[key].Priority,
-				Delay:    (*api.Config.Gotify)[key].Delay,
-				MaxTries: (*api.Config.Gotify)[key].MaxTries,
+	notifyConfig := make(api_types.NotifySlice)
+	if api.Config.Notify != nil {
+		for key := range api.Config.Notify {
+			notifyConfig[key] = &api_types.Notify{
+				Type:      api.Config.Notify[key].Type,
+				Options:   api.Config.Notify[key].Options,
+				URLFields: api.Config.Notify[key].URLFields,
+				Params:    api.Config.Notify[key].Params,
 			}
-			if (*api.Config.Gotify)[key].Extras != nil {
-				gotifyConfig[key].Extras = &api_types.Extras{
-					AndroidAction:      (*api.Config.Gotify)[key].Extras.AndroidAction,
-					ClientDisplay:      (*api.Config.Gotify)[key].Extras.ClientDisplay,
-					ClientNotification: (*api.Config.Gotify)[key].Extras.ClientNotification,
-				}
-			}
-		}
-	}
-
-	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
-		ConfigData: &api_types.Config{
-			Gotify: &gotifyConfig,
-		},
-	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-		return
-	}
-}
-
-// wsConfigSlack handles getting the `slack` config that's in use.
-func (api *API) wsConfigSlack(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigSlack", Secondary: client.ip}
-	api.Log.Verbose("-", logFrom, true)
-
-	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "SLACK"
-	responseSubType := "INIT"
-
-	slackConfig := make(api_types.SlackSlice)
-	if api.Config.Slack != nil {
-		for key := range *api.Config.Slack {
-			slackConfig[key] = &api_types.Slack{
-				URL:       utils.ValueIfNotNilPtr((*api.Config.Slack)[key].URL, "<secret>"),
-				IconEmoji: (*api.Config.Slack)[key].IconEmoji,
-				IconURL:   (*api.Config.Slack)[key].IconURL,
-				Username:  (*api.Config.Slack)[key].Username,
-				Message:   (*api.Config.Slack)[key].Message,
-				Delay:     (*api.Config.Slack)[key].Delay,
-				MaxTries:  (*api.Config.Slack)[key].MaxTries,
-			}
+			notifyConfig[key] = notifyConfig[key].Censor()
 		}
 	}
 	msg := api_types.WebSocketMessage{
@@ -441,7 +384,7 @@ func (api *API) wsConfigSlack(client *Client) {
 		Type:    &responseType,
 		SubType: &responseSubType,
 		ConfigData: &api_types.Config{
-			Slack: &slackConfig,
+			Notify: &notifyConfig,
 		},
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
@@ -462,15 +405,16 @@ func (api *API) wsConfigWebHook(client *Client) {
 
 	webhookConfig := make(api_types.WebHookSlice)
 	if api.Config.WebHook != nil {
-		for key := range *api.Config.WebHook {
+		secretVar := "<secret>"
+		for key := range api.Config.WebHook {
 			webhookConfig[key] = &api_types.WebHook{
-				Type:              (*api.Config.WebHook)[key].Type,
-				URL:               (*api.Config.WebHook)[key].URL,
-				Secret:            utils.ValueIfNotNilPtr((*api.Config.WebHook)[key].URL, "<secret>"),
-				DesiredStatusCode: (*api.Config.WebHook)[key].DesiredStatusCode,
-				Delay:             (*api.Config.WebHook)[key].Delay,
-				MaxTries:          (*api.Config.WebHook)[key].MaxTries,
-				SilentFails:       (*api.Config.WebHook)[key].SilentFails,
+				Type:              api.Config.WebHook[key].Type,
+				URL:               api.Config.WebHook[key].URL,
+				Secret:            utils.ValueIfNotDefault(api.Config.WebHook[key].URL, &secretVar),
+				DesiredStatusCode: api.Config.WebHook[key].DesiredStatusCode,
+				Delay:             api.Config.WebHook[key].Delay,
+				MaxTries:          api.Config.WebHook[key].MaxTries,
+				SilentFails:       api.Config.WebHook[key].SilentFails,
 			}
 		}
 	}
@@ -508,7 +452,7 @@ func (api *API) wsConfigService(client *Client) {
 				Type:               service.Type,
 				URL:                service.URL,
 				WebURL:             service.WebURL,
-				AccessToken:        utils.ValueIfNotNilPtr(service.AccessToken, "<secret>"),
+				AccessToken:        utils.ValueIfNotNil(service.AccessToken, "<secret>"),
 				SemanticVersioning: service.SemanticVersioning,
 				RegexContent:       service.RegexContent,
 				RegexVersion:       service.RegexVersion,
@@ -577,43 +521,22 @@ func (api *API) wsConfigService(client *Client) {
 				}
 			}
 
-			// Gotify
-			if service.Gotify != nil {
-				gotify := make(api_types.GotifySlice, len(*service.Gotify))
-				serviceConfig[key].Gotify = &gotify
-				for index := range *service.Gotify {
-					(*serviceConfig[key].Gotify)[index] = &api_types.Gotify{
-						URL:      (*service.Gotify)[index].URL,
-						Token:    utils.ValueIfNotNilPtr((*service.Gotify)[index].Token, "<secret>"),
-						Title:    (*service.Gotify)[index].Title,
-						Message:  (*service.Gotify)[index].Message,
-						Priority: (*service.Gotify)[index].Priority,
-						Delay:    (*service.Gotify)[index].Delay,
-						MaxTries: (*service.Gotify)[index].MaxTries,
-					}
-					if (*service.Gotify)[index].Delay != nil {
-						(*serviceConfig[key].Gotify)[index].Extras = &api_types.Extras{
-							AndroidAction:      (*service.Gotify)[index].Extras.AndroidAction,
-							ClientDisplay:      (*service.Gotify)[index].Extras.ClientDisplay,
-							ClientNotification: (*service.Gotify)[index].Extras.ClientNotification,
+			// Notify
+			if service.Notify != nil {
+				notify := make(api_types.NotifySlice, len(*service.Notify))
+				serviceConfig[key].Notify = &notify
+				for index := range *service.Notify {
+					if (*service.Notify)[index] == nil {
+						(*serviceConfig[key].Notify)[index] = &api_types.Notify{}
+					} else {
+						(*serviceConfig[key].Notify)[index] = &api_types.Notify{
+							Type:      (*service.Notify)[index].Type,
+							Options:   (*service.Notify)[index].Options,
+							URLFields: (*service.Notify)[index].URLFields,
+							Params:    (*service.Notify)[index].Params,
 						}
-					}
-				}
-			}
-
-			// Slack
-			if service.Slack != nil {
-				slack := make(api_types.SlackSlice, len(*service.Slack))
-				serviceConfig[key].Slack = &slack
-				for index := range *service.Slack {
-					(*serviceConfig[key].Slack)[index] = &api_types.Slack{
-						URL:       utils.ValueIfNotNilPtr((*service.Slack)[index].URL, "<secret>"),
-						IconEmoji: (*service.Slack)[index].IconEmoji,
-						IconURL:   (*service.Slack)[index].IconURL,
-						Username:  (*service.Slack)[index].Username,
-						Message:   (*service.Slack)[index].Message,
-						Delay:     (*service.Slack)[index].Delay,
-						MaxTries:  (*service.Slack)[index].MaxTries,
+						// May be a new pointer as the fields are a map rather than individual pointers/vars
+						(*serviceConfig[key].Notify)[index] = (*serviceConfig[key].Notify)[index].Censor()
 					}
 				}
 			}
@@ -626,7 +549,7 @@ func (api *API) wsConfigService(client *Client) {
 					(*serviceConfig[key].WebHook)[index] = &api_types.WebHook{
 						Type:              (*service.WebHook)[index].Type,
 						URL:               (*service.WebHook)[index].URL,
-						Secret:            utils.ValueIfNotNilPtr((*service.WebHook)[index].Secret, "<secret>"),
+						Secret:            utils.ValueIfNotNil((*service.WebHook)[index].Secret, "<secret>"),
 						DesiredStatusCode: (*service.WebHook)[index].DesiredStatusCode,
 						Delay:             (*service.WebHook)[index].Delay,
 						MaxTries:          (*service.WebHook)[index].MaxTries,

@@ -29,36 +29,16 @@ func (c *Config) CheckValues() {
 		errs = fmt.Errorf("defaults:\\%w", err)
 	}
 
-	if err := c.Gotify.CheckValues("  "); err != nil {
-		gap := ""
-		if errs != nil {
-			gap = "\\"
-		}
-		errs = fmt.Errorf("%s%sgotify:\\%w", utils.ErrorToString(errs), gap, err)
-	}
-
-	if err := c.Slack.CheckValues("  "); err != nil {
-		gap := ""
-		if errs != nil {
-			gap = "\\"
-		}
-		errs = fmt.Errorf("%s%sslack:\\%w", utils.ErrorToString(errs), gap, err)
+	if err := c.Notify.CheckValues("  "); err != nil {
+		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
 	}
 
 	if err := c.WebHook.CheckValues("  "); err != nil {
-		gap := ""
-		if errs != nil {
-			gap = "\\"
-		}
-		errs = fmt.Errorf("%s%swebhook:\\%w", utils.ErrorToString(errs), gap, err)
+		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
 	}
 
 	if err := c.Service.CheckValues("  "); err != nil {
-		gap := ""
-		if errs != nil {
-			gap = "\\"
-		}
-		errs = fmt.Errorf("%s%sservice:\\%w", utils.ErrorToString(errs), gap, err)
+		errs = fmt.Errorf("%sservice:\\%w", utils.ErrorToString(errs), err)
 	}
 
 	if errs != nil {
@@ -76,9 +56,7 @@ func (c *Config) Print(flag *bool) {
 
 	c.Service.Print("", c.Order)
 	fmt.Println()
-	c.Gotify.Print("")
-	fmt.Println()
-	c.Slack.Print("")
+	c.Notify.Print("")
 	fmt.Println()
 	c.WebHook.Print("")
 	fmt.Println()

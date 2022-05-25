@@ -15,8 +15,7 @@
 package webhook
 
 import (
-	"github.com/release-argus/Argus/notifiers/gotify"
-	"github.com/release-argus/Argus/notifiers/slack"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -42,12 +41,11 @@ type WebHook struct {
 	HardDefaults      *WebHook     `yaml:"-"`                             // Hardcoded default values
 	Defaults          *WebHook     `yaml:"-"`                             // Default values
 	Main              *WebHook     `yaml:"-"`                             // The Webhook that this Webhook is calling (and may override parts of)
-	Notifiers         *Notifiers   `yaml:"-"`                             // The Gotify/WebHook(s) to notify on failures
+	Notifiers         *Notifiers   `yaml:"-"`                             // The Notify's to notify on failures
 	Announce          *chan []byte `yaml:"-"`                             // Announce to the WebSocket
 }
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Gotify *gotify.Slice // Service.Gotify
-	Slack  *slack.Slice  // Service.WebHook
+	Shoutrrr *shoutrrr.Slice // Shoutrrr
 }
