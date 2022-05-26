@@ -31,37 +31,48 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 
 	// Service Params
 	for key := range *s.Params {
-		(*params)[key] = s.GetSelfParam(key)
+		cKey := fixParamKey(key)
+		(*params)[cKey] = s.GetSelfParam(key)
 	}
 
 	// Main Params
 	for key := range *s.Main.Params {
+		cKey := fixParamKey(key)
 		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[key] = s.Main.GetSelfParam(key)
+			(*params)[cKey] = s.Main.GetSelfParam(key)
 		}
 	}
 
 	// Default Params
 	for key := range *s.Defaults.Params {
+		cKey := fixParamKey(key)
 		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[key] = s.Defaults.GetSelfParam(key)
+			(*params)[cKey] = s.Defaults.GetSelfParam(key)
 		}
 	}
 
 	// HardDefault Params
 	for key := range *s.HardDefaults.Params {
+		cKey := fixParamKey(key)
 		_, exist := (*s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[key] = s.HardDefaults.GetSelfParam(key)
+			(*params)[cKey] = s.HardDefaults.GetSelfParam(key)
 		}
 	}
 
 	return
+}
+
+func fixParamKey(key string) string {
+	if key == "usestarttls" {
+		return "starttls"
+	}
+	return key
 }
 
 func (s *Shoutrrr) GetURL() (url string) {
@@ -72,15 +83,15 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"),
 			s.GetURLField("webhookid"))
 	case "smtp":
-		// smtp://username:password@host:port/?fromaddress=X&toaddress=Y
+		// smtp://username:password@host:port/?fromaddress=X&toaddresses=Y
 		login := s.GetURLField("password")
 		login = s.GetURLField("username") + utils.ValueIfNotDefault(login, ":"+login)
-		url = fmt.Sprintf("smtp://%s%s:%s/?fromaddress=%s&toaddress=%s",
+		url = fmt.Sprintf("smtp://%s%s:%s/?fromaddress=%s&toaddresses=%s",
 			utils.ValueIfNotDefault(login, login+"@"),
 			s.GetURLField("host"),
 			s.GetURLField("port"),
 			s.GetParam("fromaddress"),
-			s.GetParam("toaddress"))
+			s.GetParam("toaddresses"))
 	case "gotify":
 		// gotify://host:port/path/token
 		port := s.GetURLField("port")
@@ -143,8 +154,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"),
 			s.GetURLField("targets"))
 	case "pushover":
-		// pushover://token@user
-		url = fmt.Sprintf("pushover://%s@%s",
+		// pushover://shoutrrr:token@user
+		url = fmt.Sprintf("pushover://shoutrrr:%s@%s",
 			s.GetURLField("token"),
 			s.GetURLField("user"))
 	case "rocketchat":

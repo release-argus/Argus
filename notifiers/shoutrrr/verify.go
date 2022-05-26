@@ -160,8 +160,8 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 		if s.GetParam("fromaddress") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  fromaddress: <required> e.g. 'service@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
-		if s.GetParam("toaddress") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  toaddress: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
+		if s.GetParam("toaddresses") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  toaddresses: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
 	case "gotify":
 		// gotify://host:port/path/token
