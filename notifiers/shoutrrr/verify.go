@@ -152,7 +152,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 		if s.GetURLField("webhookid") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  webhookid: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- WEBHOOKID ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- token ]'\\", utils.ErrorToString(*errsURLFields), prefix)
 		}
-	case "email":
+	case "smtp":
 		// smtp://username:password@host:port[/path]
 		if s.GetURLField("host") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  host: <required> e.g. 'smtp.example.io'\\", utils.ErrorToString(*errsURLFields), prefix)

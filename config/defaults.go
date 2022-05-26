@@ -68,14 +68,14 @@ func (d *Defaults) SetDefaults() {
 		Params:  &types.Params{"username": "Argus"},
 	}
 	d.Notify["discord"].InitMaps()
-	d.Notify["email"] = &shoutrrr.Shoutrrr{
+	d.Notify["smtp"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		URLFields: &map[string]string{
 			"port": "25",
 		},
 		Params: &types.Params{},
 	}
-	d.Notify["email"].InitMaps()
+	d.Notify["smtp"].InitMaps()
 	d.Notify["googlechat"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		Params:  &types.Params{},

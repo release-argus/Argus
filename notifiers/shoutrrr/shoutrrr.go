@@ -71,7 +71,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("discord://%s@%s",
 			s.GetURLField("token"),
 			s.GetURLField("webhookid"))
-	case "email":
+	case "smtp":
 		// smtp://username:password@host:port/?fromaddress=X&toaddress=Y
 		login := s.GetURLField("password")
 		login = s.GetURLField("username") + utils.ValueIfNotDefault(login, ":"+login)
