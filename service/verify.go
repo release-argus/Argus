@@ -67,7 +67,7 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 			*s.Interval += "s"
 		}
 		if _, err := time.ParseDuration(*s.Interval); err != nil {
-			errs = fmt.Errorf("%s%s  interval: <invalid> %q (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errs), prefix, *s.Interval)
+			errs = fmt.Errorf("%s%s  interval: %q <invalid> (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errs), prefix, *s.Interval)
 		}
 	}
 
@@ -76,7 +76,7 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 		if s.Type == nil {
 			errs = fmt.Errorf("%s%s  type: <missing> (Services require a type)\\", utils.ErrorToString(errs), prefix)
 		} else if *s.Type != "github" && *s.Type != "url" {
-			errs = fmt.Errorf("%s%s  type: <invalid> %q (Should be either 'github' or 'url')\\", utils.ErrorToString(errs), prefix, *s.Type)
+			errs = fmt.Errorf("%s%s  type: %q <invalid> (Should be either 'github' or 'url')\\", utils.ErrorToString(errs), prefix, *s.Type)
 		}
 	}
 
@@ -84,13 +84,13 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	if s.RegexContent != nil {
 		_, err := regexp.Compile(*s.RegexContent)
 		if err != nil {
-			errs = fmt.Errorf("%s%s  regex_content: <invalid> %q (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, *s.RegexContent)
+			errs = fmt.Errorf("%s%s  regex_content: %q <invalid> (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, *s.RegexContent)
 		}
 	}
 	if s.RegexVersion != nil {
 		_, err := regexp.Compile(*s.RegexVersion)
 		if err != nil {
-			errs = fmt.Errorf("%s%s  regex_version: <invalid> %q (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, *s.RegexVersion)
+			errs = fmt.Errorf("%s%s  regex_version: %q <invalid> (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, *s.RegexVersion)
 		}
 	}
 
@@ -100,13 +100,13 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 		if s.Status.DeployedVersionTimestamp != "" {
 			_, err := time.Parse(time.RFC3339, s.Status.DeployedVersionTimestamp)
 			if err != nil {
-				statusErrs = fmt.Errorf("%s%s    deployed_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.DeployedVersionTimestamp)
+				statusErrs = fmt.Errorf("%s%s    deployed_version_timestamp: %q <invalid> (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.DeployedVersionTimestamp)
 			}
 		}
 		if s.Status.LatestVersionTimestamp != "" {
 			_, err := time.Parse(time.RFC3339, s.Status.LatestVersionTimestamp)
 			if err != nil {
-				statusErrs = fmt.Errorf("%s%s    latest_version_timestamp: <invalid> %q (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.LatestVersionTimestamp)
+				statusErrs = fmt.Errorf("%s%s    latest_version_timestamp: %q <invalid> (Failed to convert to RFC3339 format)\\", utils.ErrorToString(errs), prefix, s.Status.LatestVersionTimestamp)
 			}
 		}
 		if statusErrs != nil {

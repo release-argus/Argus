@@ -26,7 +26,7 @@ import (
 
 // CheckValues of this Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
-	if s == nil || len(*s) == 0 {
+	if s == nil {
 		return
 	}
 
@@ -63,7 +63,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 			(*s.Options)["delay"] += "s"
 		}
 		if _, err := time.ParseDuration(delay); err != nil {
-			errsOptions = fmt.Errorf("%s%s  delay: <invalid> %q (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
+			errsOptions = fmt.Errorf("%s%s  delay: %q <invalid> (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
 		}
 	}
 

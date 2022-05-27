@@ -232,7 +232,7 @@ func (d *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
 	// RegEx
 	_, err := regexp.Compile(d.Regex)
 	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: <invalid> %q (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, d.Regex)
+		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, d.Regex)
 	}
 
 	if errs != nil {

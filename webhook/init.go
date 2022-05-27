@@ -131,7 +131,11 @@ func (w *WebHook) GetMaxTries() uint {
 func (w *WebHook) GetRequest() (req *http.Request) {
 	// GitHub style payload.
 	if w.GetType() == "github" {
-		payload, err := json.Marshal(GitHub{Ref: "refs/heads/master", Before: utils.RandAlphaNumericLower(40), After: utils.RandAlphaNumericLower(40)})
+		payload, err := json.Marshal(GitHub{
+			Ref:    "refs/heads/master",
+			Before: utils.RandAlphaNumericLower(40),
+			After:  utils.RandAlphaNumericLower(40),
+		})
 		if err != nil {
 			return
 		}
@@ -148,7 +152,7 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type)
+	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
 }
 
 // GetSecret for the WebHook.

@@ -167,6 +167,8 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["zulip_chat"].InitMaps()
 
 	// WebHook defaults.
+	webhookType := "github"
+	d.WebHook.Type = &webhookType
 	webhookDelay := "0s"
 	d.WebHook.Delay = &webhookDelay
 	webhookMaxTries := uint(3)
