@@ -131,6 +131,8 @@ const WebHookModal = () => {
               ? "Send the WebHook(s) to upgrade?"
               : modal.type === "SKIP"
               ? "Skip this release? (don't send any WebHooks)"
+              : modal.type === "SKIP_NO_WH"
+              ? "Skip this release?"
               : ""}
           </strong>
         </Modal.Title>
@@ -207,149 +209,160 @@ const WebHookModal = () => {
               </OverlayTrigger>
             </>
           )}
-          <br />
-          <strong>WebHook(s):</strong>
-          <Container fluid className="webhooks">
-            {Object.keys(modalData.webhooks ? modalData.webhooks : {})
-              .length === 0
-              ? [...Array.from(Array(modal.service.webhook).keys())].map(
-                  (num) => (
-                    <Card
-                      key={num}
-                      bg="secondary"
-                      className={"no-margin service"}
-                    >
-                      <Card.Title className="webhook-title">
-                        <Container fluid style={{ paddingLeft: "0px" }}>
-                          {delayedRender(() => (
-                            <Placeholder xs={4} />
-                          ))}
-                        </Container>
-
-                        {modal.type !== "SKIP" && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="float-end"
-                            // Disable if success or waiting send response
-                            disabled
-                          >
-                            <FontAwesomeIcon icon={faSquareFull} />
-                          </Button>
-                        )}
-                      </Card.Title>
-                    </Card>
-                  )
-                )
-              : Object.entries(
-                  modalData.webhooks as WebHookSummaryListType
-                ).map(([id, webhook]) => {
-                  let sending = false;
-                  if (modalData.sent.includes(`${modal.service.id} ${id}`)) {
-                    sendingThisService = true;
-                    sending = true;
-                  }
-                  // const sending = modalData.sent.includes(
-                  //   `${modal.service.id} ${id}`
-                  // );
-                  return (
-                    <Card
-                      key={id}
-                      bg="secondary"
-                      className={"no-margin service"}
-                    >
-                      <Card.Title className="webhook-title" key={id + "-title"}>
-                        <Container fluid style={{ paddingLeft: "0px" }}>
-                          {id}
-                        </Container>
-                        {!sending && webhook.failed !== undefined && (
-                          <OverlayTrigger
-                            key="status"
-                            placement="top"
-                            delay={{ show: 500, hide: 500 }}
-                            overlay={
-                              <Tooltip id={`tooltip-status`}>
-                                {webhook.failed === true
-                                  ? "Send failed"
-                                  : "Sent successfully"}
-                              </Tooltip>
-                            }
-                          >
-                            <Container
-                              fluid
-                              style={{
-                                display: "flex",
-                                justifyContent: "flex-end",
-                                width: "auto",
-                                paddingRight:
-                                  modal.type === "SKIP" ? "0px" : "",
-                              }}
-                            >
-                              <FontAwesomeIcon
-                                icon={
-                                  webhook.failed === true ? faTimes : faCheck
-                                }
-                                style={{
-                                  height: "2rem",
-                                }}
-                                className={
-                                  webhook.failed === true
-                                    ? "icon-danger"
-                                    : "icon-success"
-                                }
-                              />
+          {modal.type !== "SKIP_NO_WH" && (
+            <>
+              <br />
+              <strong>WebHook(s):</strong>
+              <Container fluid className="webhooks">
+                {Object.keys(modalData.webhooks ? modalData.webhooks : {})
+                  .length === 0
+                  ? [...Array.from(Array(modal.service.webhook).keys())].map(
+                      (num) => (
+                        <Card
+                          key={num}
+                          bg="secondary"
+                          className={"no-margin service"}
+                        >
+                          <Card.Title className="webhook-title">
+                            <Container fluid style={{ paddingLeft: "0px" }}>
+                              {delayedRender(() => (
+                                <Placeholder xs={4} />
+                              ))}
                             </Container>
-                          </OverlayTrigger>
-                        )}
 
-                        {/* Send WebHook button */}
-                        {modal.type !== "SKIP" && (
-                          <OverlayTrigger
-                            key="send"
-                            placement="top"
-                            delay={{ show: 500, hide: 500 }}
-                            overlay={
-                              <Tooltip id={`tooltip-send`}>
-                                {modal.type === "RESEND"
-                                  ? "Resend"
-                                  : modal.type === "SEND"
-                                  ? webhook.failed === true
-                                    ? "Resend"
-                                    : "Send"
-                                  : modal.type === "RETRY"
-                                  ? "Retry"
-                                  : ""}
-                              </Tooltip>
-                            }
+                            {modal.type !== "SKIP" && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="float-end"
+                                // Disable if success or waiting send response
+                                disabled
+                              >
+                                <FontAwesomeIcon icon={faSquareFull} />
+                              </Button>
+                            )}
+                          </Card.Title>
+                        </Card>
+                      )
+                    )
+                  : Object.entries(
+                      modalData.webhooks as WebHookSummaryListType
+                    ).map(([id, webhook]) => {
+                      let sending = false;
+                      if (
+                        modalData.sent.includes(`${modal.service.id} ${id}`)
+                      ) {
+                        sendingThisService = true;
+                        sending = true;
+                      }
+                      // const sending = modalData.sent.includes(
+                      //   `${modal.service.id} ${id}`
+                      // );
+                      return (
+                        <Card
+                          key={id}
+                          bg="secondary"
+                          className={"no-margin service"}
+                        >
+                          <Card.Title
+                            className="webhook-title"
+                            key={id + "-title"}
                           >
-                            <Button
-                              key={id}
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => onClickAcknowledge(id)}
-                              className="float-end"
-                              // Disable if success or waiting send response
-                              disabled={sending || webhook.failed === false}
-                            >
-                              <FontAwesomeIcon
-                                icon={
-                                  sending && webhook.failed === undefined
-                                    ? faCircleNotch
-                                    : modal.type === "SEND" &&
-                                      webhook.failed !== true
-                                    ? faPaperPlane
-                                    : faRedo
+                            <Container fluid style={{ paddingLeft: "0px" }}>
+                              {id}
+                            </Container>
+                            {!sending && webhook.failed !== undefined && (
+                              <OverlayTrigger
+                                key="status"
+                                placement="top"
+                                delay={{ show: 500, hide: 500 }}
+                                overlay={
+                                  <Tooltip id={`tooltip-status`}>
+                                    {webhook.failed === true
+                                      ? "Send failed"
+                                      : "Sent successfully"}
+                                  </Tooltip>
                                 }
-                                className={sending ? "fa-spin" : ""}
-                              />
-                            </Button>
-                          </OverlayTrigger>
-                        )}
-                      </Card.Title>
-                    </Card>
-                  );
-                })}
-          </Container>
+                              >
+                                <Container
+                                  fluid
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    width: "auto",
+                                    paddingRight:
+                                      modal.type === "SKIP" ? "0px" : "",
+                                  }}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={
+                                      webhook.failed === true
+                                        ? faTimes
+                                        : faCheck
+                                    }
+                                    style={{
+                                      height: "2rem",
+                                    }}
+                                    className={
+                                      webhook.failed === true
+                                        ? "icon-danger"
+                                        : "icon-success"
+                                    }
+                                  />
+                                </Container>
+                              </OverlayTrigger>
+                            )}
+
+                            {/* Send WebHook button */}
+                            {modal.type !== "SKIP" && (
+                              <OverlayTrigger
+                                key="send"
+                                placement="top"
+                                delay={{ show: 500, hide: 500 }}
+                                overlay={
+                                  <Tooltip id={`tooltip-send`}>
+                                    {modal.type === "RESEND"
+                                      ? "Resend"
+                                      : modal.type === "SEND"
+                                      ? webhook.failed === true
+                                        ? "Resend"
+                                        : "Send"
+                                      : modal.type === "RETRY"
+                                      ? "Retry"
+                                      : ""}
+                                  </Tooltip>
+                                }
+                              >
+                                <Button
+                                  key={id}
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => onClickAcknowledge(id)}
+                                  className="float-end"
+                                  // Disable if success or waiting send response
+                                  disabled={sending || webhook.failed === false}
+                                >
+                                  <FontAwesomeIcon
+                                    icon={
+                                      sending && webhook.failed === undefined
+                                        ? faCircleNotch
+                                        : modal.type === "SEND" &&
+                                          webhook.failed !== true
+                                        ? faPaperPlane
+                                        : faRedo
+                                    }
+                                    className={sending ? "fa-spin" : ""}
+                                  />
+                                </Button>
+                              </OverlayTrigger>
+                            )}
+                          </Card.Title>
+                        </Card>
+                      );
+                    })}
+              </Container>
+            </>
+          )}
         </>
       </Modal.Body>
       <Modal.Footer>
@@ -373,7 +386,7 @@ const WebHookModal = () => {
               ? onClickAcknowledge("ARGUS_FAILED")
               : modal.type === "RETRY"
               ? onClickAcknowledge("ARGUS_FAILED")
-              : modal.type === "SKIP"
+              : modal.type === "SKIP" || modal.type === "SKIP_NO_WH"
               ? onClickAcknowledge("ARGUS_SKIP")
               : hideModal()
           }
@@ -389,7 +402,7 @@ const WebHookModal = () => {
             ? "Confirm"
             : modal.type === "RETRY"
             ? "Retry all failed"
-            : modal.type === "SKIP"
+            : modal.type === "SKIP" || modal.type === "SKIP_NO_WH"
             ? "Skip release"
             : ""}
         </Button>

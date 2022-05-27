@@ -113,16 +113,17 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", *id), logFrom, true)
 		return
 	}
-	if api.Config.Service[*id].WebHook == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any webhooks to approve", *id), logFrom, true)
-		return
-	}
 
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
+		return
+	}
+
+	if api.Config.Service[*id].WebHook == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any webhooks to approve", *id), logFrom, true)
 		return
 	}
 

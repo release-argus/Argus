@@ -32,6 +32,7 @@ type WebHook struct {
 	ServiceID         *string      `yaml:"-"`                             // ID of the service this WebHook is attached to
 	Type              *string      `yaml:"type,omitempty"`                // "github"/"url"
 	URL               *string      `yaml:"url,omitempty"`                 // "https://example.com"
+	AllowInvalidCerts *bool        `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
 	Secret            *string      `yaml:"secret,omitempty"`              // "SECRET"
 	DesiredStatusCode *int         `yaml:"desired_status_code,omitempty"` // e.g. 202
 	Delay             *string      `yaml:"delay,omitempty"`               // The delay before sending the WebHook.

@@ -49,16 +49,19 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			*w.Delay += "s"
 		}
 		if _, err := time.ParseDuration(*w.Delay); err != nil {
-			errs = fmt.Errorf("%s%s  delay: <invalid> %q (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
+			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
 		}
 	}
 
 	if w.Main != nil {
+		if w.GetType() != "github" {
+			errs = fmt.Errorf("%s%stype: %q <invalid> (the only webhook type is 'github' currently)\\", utils.ErrorToString(errs), prefix, w.GetType())
+		}
 		if w.GetURL() == nil {
-			errs = fmt.Errorf("%s%s  url: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
 		}
 		if w.GetSecret() == nil {
-			errs = fmt.Errorf("%s%s  secret: <required> (here or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%ssecret: <required> (here, or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
 		}
 	}
 	return
@@ -81,6 +84,7 @@ func (w *Slice) Print(prefix string) {
 func (w *WebHook) Print(prefix string) {
 	utils.PrintlnIfNotNil(w.Type, fmt.Sprintf("%stype: %s", prefix, utils.DefaultIfNil(w.Type)))
 	utils.PrintlnIfNotNil(w.URL, fmt.Sprintf("%surl: %s", prefix, utils.DefaultIfNil(w.URL)))
+	utils.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(w.AllowInvalidCerts)))
 	utils.PrintlnIfNotNil(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, utils.DefaultIfNil(w.Secret)))
 	utils.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, utils.DefaultIfNil(w.DesiredStatusCode)))
 	utils.PrintlnIfNotNil(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, utils.DefaultIfNil(w.Delay)))

@@ -245,7 +245,7 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 		}
 	default:
 		validType = false
-		errs = fmt.Errorf("%s%stype: <invalid> %q is not a valid url_command (regex/replace/split)\\", utils.ErrorToString(errs), prefix, c.Type)
+		errs = fmt.Errorf("%s%stype: %q <invalid> is not a valid url_command (regex/replace/split)\\", utils.ErrorToString(errs), prefix, c.Type)
 	}
 
 	if errs != nil && validType {

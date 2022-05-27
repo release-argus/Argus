@@ -26,7 +26,7 @@ import (
 
 // CheckValues of this Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
-	if s == nil || len(*s) == 0 {
+	if s == nil {
 		return
 	}
 
@@ -63,7 +63,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 			(*s.Options)["delay"] += "s"
 		}
 		if _, err := time.ParseDuration(delay); err != nil {
-			errsOptions = fmt.Errorf("%s%s  delay: <invalid> %q (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
+			errsOptions = fmt.Errorf("%s%s  delay: %q <invalid> (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
 		}
 	}
 
@@ -152,7 +152,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 		if s.GetURLField("webhookid") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  webhookid: <required> e.g. 'https://discord.com/api/webhooks/[ 975870285909737583 <- WEBHOOKID ]/[ QEdyk-Qi5AiMXoZdxQFpWNcwEfmz5oOm_1Rni9DnjQAUap4zWcurM4IquamVrDIyNgBG <- token ]'\\", utils.ErrorToString(*errsURLFields), prefix)
 		}
-	case "email":
+	case "smtp":
 		// smtp://username:password@host:port[/path]
 		if s.GetURLField("host") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  host: <required> e.g. 'smtp.example.io'\\", utils.ErrorToString(*errsURLFields), prefix)
@@ -160,8 +160,8 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 		if s.GetParam("fromaddress") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  fromaddress: <required> e.g. 'service@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
-		if s.GetParam("toaddress") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  toaddress: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
+		if s.GetParam("toaddresses") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  toaddresses: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
 	case "gotify":
 		// gotify://host:port/path/token

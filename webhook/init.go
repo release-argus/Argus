@@ -106,6 +106,11 @@ func (w *WebHook) initMetrics(serviceID string) {
 	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, serviceID, float64(0))
 }
 
+// GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
+func (w *WebHook) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(w.AllowInvalidCerts, w.Main.AllowInvalidCerts, w.Defaults.AllowInvalidCerts, w.HardDefaults.AllowInvalidCerts)
+}
+
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
 	return *utils.GetFirstNonNilPtr(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
@@ -131,10 +136,15 @@ func (w *WebHook) GetMaxTries() uint {
 func (w *WebHook) GetRequest() (req *http.Request) {
 	// GitHub style payload.
 	if w.GetType() == "github" {
-		payload, err := json.Marshal(GitHub{Ref: "refs/heads/master", Before: utils.RandAlphaNumericLower(40), After: utils.RandAlphaNumericLower(40)})
+		payload, err := json.Marshal(GitHub{
+			Ref:    "refs/heads/master",
+			Before: utils.RandAlphaNumericLower(40),
+			After:  utils.RandAlphaNumericLower(40),
+		})
 		if err != nil {
 			return
 		}
+
 		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), bytes.NewReader(payload))
 		if err != nil {
 			return nil
@@ -148,7 +158,7 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type)
+	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
 }
 
 // GetSecret for the WebHook.

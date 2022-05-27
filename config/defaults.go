@@ -68,14 +68,14 @@ func (d *Defaults) SetDefaults() {
 		Params:  &types.Params{"username": "Argus"},
 	}
 	d.Notify["discord"].InitMaps()
-	d.Notify["email"] = &shoutrrr.Shoutrrr{
+	d.Notify["smtp"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		URLFields: &map[string]string{
 			"port": "25",
 		},
 		Params: &types.Params{},
 	}
-	d.Notify["email"].InitMaps()
+	d.Notify["smtp"].InitMaps()
 	d.Notify["googlechat"] = &shoutrrr.Shoutrrr{
 		Options: &notifyDefaultOptions,
 		Params:  &types.Params{},
@@ -167,10 +167,14 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["zulip_chat"].InitMaps()
 
 	// WebHook defaults.
+	webhookType := "github"
+	d.WebHook.Type = &webhookType
 	webhookDelay := "0s"
 	d.WebHook.Delay = &webhookDelay
 	webhookMaxTries := uint(3)
 	d.WebHook.MaxTries = &webhookMaxTries
+	webhookAllowInvalidCerts := false
+	d.WebHook.AllowInvalidCerts = &webhookAllowInvalidCerts
 	webhookDesiredStatusCode := 0
 	d.WebHook.DesiredStatusCode = &webhookDesiredStatusCode
 	webhookSilentFails := false

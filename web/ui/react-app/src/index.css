@@ -307,6 +307,9 @@ body {
 .same-color {
   color: var(--dark-text) !important;
 }
+.same-color-as-background {
+  color: var(--background);
+}
 .same-background-color {
   color: var(--dark-text);
   background-color: var(--background);
@@ -404,4 +407,9 @@ body {
 
 .spinner {
   color: var(--placeholder-color);
+}
+
+.hiddenElement {
+  visibility: hidden;
+  pointer-events: none;
 }
