@@ -9,26 +9,17 @@ import {
 import { ModalType, ServiceSummaryType } from "types/summary";
 import { ReactElement, forwardRef, useCallback, useContext } from "react";
 import {
-  faAngleDoubleUp,
+  faArrowRotateRight,
   faCheck,
   faInfo,
   faInfoCircle,
+  faSatelliteDish,
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
-
-const FaInfoCircle = forwardRef((props, ref) => (
-  <FontAwesomeIcon
-    forwardedRef={ref}
-    icon={faInfoCircle}
-    {...props}
-    style={{ paddingLeft: "0.5rem" }}
-  />
-));
-FaInfoCircle.displayName = "FaInfoCircle";
 
 interface ServiceInfoData {
   service: ServiceSummaryType;
@@ -58,9 +49,38 @@ export const ServiceInfo = ({
     service?.status?.deployed_version === "" ||
     (updateAvailable && !updateSkipped);
 
+  const IconDeployedVersionIndicator = forwardRef((props, ref) =>
+    service.has_deployed_version ? (
+      <FontAwesomeIcon
+        className="same-color"
+        forwardedRef={ref}
+        style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+        icon={faSatelliteDish}
+        {...props}
+      />
+    ) : (
+      <></>
+    )
+  );
+  IconDeployedVersionIndicator.displayName = "IconDeployedVersionIndicator";
+
   const updateApproved =
     service?.status?.latest_version !== undefined &&
     service.status.latest_version === service?.status?.approved_version;
+
+  const IconSkippedInfo = forwardRef((props, ref) =>
+    updateSkipped ? (
+      <FontAwesomeIcon
+        forwardedRef={ref}
+        icon={faInfoCircle}
+        {...props}
+        style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+      />
+    ) : (
+      <></>
+    )
+  );
+  IconSkippedInfo.displayName = "IconSkippedInfo";
 
   return (
     <Container
@@ -97,12 +117,14 @@ export const ServiceInfo = ({
               </Button>
               <Button
                 key="approve"
-                className="btn-flex btn-update-action"
+                className={`btn-flex btn-update-action${
+                  service.webhook ? "" : " hiddenElement"
+                }`}
                 variant="success"
                 onClick={() =>
                   showModal(updateApproved ? "RESEND" : "SEND", service)
                 }
-                disabled={updateApproved || service.webhook === undefined}
+                disabled={updateApproved || !service.webhook}
               >
                 <FontAwesomeIcon icon={faCheck} />
               </Button>
@@ -110,8 +132,10 @@ export const ServiceInfo = ({
                 key="reject"
                 className="btn-flex btn-update-action"
                 variant="danger"
-                onClick={() => showModal("SKIP", service)}
-                disabled={updateApproved || service.webhook === undefined}
+                onClick={() =>
+                  showModal(service.webhook ? "SKIP" : "SKIP_NO_WH", service)
+                }
+                disabled={updateApproved}
               >
                 <FontAwesomeIcon icon={faTimes} color="white" />
               </Button>
@@ -126,47 +150,66 @@ export const ServiceInfo = ({
             }
           >
             <p style={{ margin: 0 }}>
-              Current version:
-              {service.has_deployed_version === true && (
+              <>
+                Current version:
                 <OverlayTrigger
                   key="deployed-service"
                   placement="top"
                   delay={{ show: 500, hide: 500 }}
                   overlay={
                     <Tooltip id={`tooltip-deployed-service`}>
-                      of the deployed Service
+                      {service.has_deployed_version === true
+                        ? `of the deployed ${service.id}`
+                        : `not monitoring a deployed ${service.id}`}
                     </Tooltip>
                   }
                 >
-                  <FaInfoCircle />
+                  <IconDeployedVersionIndicator />
                 </OverlayTrigger>
-              )}
+                {updateSkipped && service.status?.approved_version && (
+                  <OverlayTrigger
+                    key="skipped-version"
+                    placement="top"
+                    delay={{ show: 500, hide: 500 }}
+                    overlay={
+                      <Tooltip id={`tooltip-skipped-version`}>
+                        Skipped{" "}
+                        {service.status.approved_version.slice("SKIP_".length)}
+                      </Tooltip>
+                    }
+                  >
+                    <IconSkippedInfo />
+                  </OverlayTrigger>
+                )}
+              </>
               <br />
-              <OverlayTrigger
-                key="deployed-version"
-                placement="top"
-                delay={{ show: 500, hide: 500 }}
-                overlay={
-                  service?.status?.deployed_version_timestamp ? (
-                    <Tooltip id={`tooltip-deployed-version`}>
-                      <>
-                        {formatRelative(
-                          new Date(service.status.deployed_version_timestamp),
-                          new Date()
-                        )}
-                      </>
-                    </Tooltip>
-                  ) : (
-                    <>Unknown</>
-                  )
-                }
-              >
-                <p style={{ margin: 0 }}>
-                  {service?.status?.deployed_version
-                    ? service.status.deployed_version
-                    : "Unknown"}{" "}
-                </p>
-              </OverlayTrigger>
+              <div style={{ display: "flex", margin: 0 }}>
+                <OverlayTrigger
+                  key="deployed-version"
+                  placement="top"
+                  delay={{ show: 500, hide: 500 }}
+                  overlay={
+                    service?.status?.deployed_version_timestamp ? (
+                      <Tooltip id={`tooltip-deployed-version`}>
+                        <>
+                          {formatRelative(
+                            new Date(service.status.deployed_version_timestamp),
+                            new Date()
+                          )}
+                        </>
+                      </Tooltip>
+                    ) : (
+                      <>Unknown</>
+                    )
+                  }
+                >
+                  <p style={{ margin: 0 }}>
+                    {service?.status?.deployed_version
+                      ? service.status.deployed_version
+                      : "Unknown"}{" "}
+                  </p>
+                </OverlayTrigger>
+              </div>
             </p>
             {service.webhook && (!updateAvailable || updateSkipped) && (
               <OverlayTrigger
@@ -190,7 +233,7 @@ export const ServiceInfo = ({
                   disabled={service.loading}
                 >
                   <FontAwesomeIcon
-                    icon={updateSkipped ? faCheck : faAngleDoubleUp}
+                    icon={updateSkipped ? faCheck : faArrowRotateRight}
                   />
                 </Button>
               </OverlayTrigger>

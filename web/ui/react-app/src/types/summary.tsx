@@ -23,7 +23,13 @@ export interface WebHookModal {
   service: ServiceSummaryType;
 }
 
-export type ModalType = "RESEND" | "RETRY" | "SEND" | "SKIP" | "";
+export type ModalType =
+  | "RESEND"
+  | "RETRY"
+  | "SEND"
+  | "SKIP"
+  | "SKIP_NO_WH"
+  | "";
 
 export interface WebHookModalData {
   service_id: string;
