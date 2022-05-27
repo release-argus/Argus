@@ -84,6 +84,7 @@ func (w *Slice) Print(prefix string) {
 func (w *WebHook) Print(prefix string) {
 	utils.PrintlnIfNotNil(w.Type, fmt.Sprintf("%stype: %s", prefix, utils.DefaultIfNil(w.Type)))
 	utils.PrintlnIfNotNil(w.URL, fmt.Sprintf("%surl: %s", prefix, utils.DefaultIfNil(w.URL)))
+	utils.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(w.AllowInvalidCerts)))
 	utils.PrintlnIfNotNil(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, utils.DefaultIfNil(w.Secret)))
 	utils.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, utils.DefaultIfNil(w.DesiredStatusCode)))
 	utils.PrintlnIfNotNil(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, utils.DefaultIfNil(w.Delay)))

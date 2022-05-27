@@ -173,6 +173,8 @@ func (d *Defaults) SetDefaults() {
 	d.WebHook.Delay = &webhookDelay
 	webhookMaxTries := uint(3)
 	d.WebHook.MaxTries = &webhookMaxTries
+	webhookAllowInvalidCerts := false
+	d.WebHook.AllowInvalidCerts = &webhookAllowInvalidCerts
 	webhookDesiredStatusCode := 0
 	d.WebHook.DesiredStatusCode = &webhookDesiredStatusCode
 	webhookSilentFails := false
