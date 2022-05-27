@@ -150,13 +150,14 @@ func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 }
 
 func (d *DeployedVersionLookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
-	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
+	customTransport := &http.Transport{}
 	if d.GetAllowInvalidCerts() {
 		customTransport = http.DefaultTransport.(*http.Transport).Clone()
 		//#nosec G402 -- explicitly wanted InsecureSkipVerify
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
 	req, err := http.NewRequest(http.MethodGet, d.URL, nil)
 	if err != nil {
 		jLog.Error(err, logFrom, true)

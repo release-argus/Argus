@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"context"
+	"crypto/tls"
 
 	"fmt"
 	"io/ioutil"
@@ -113,6 +114,7 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	req := w.GetRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
@@ -120,10 +122,18 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	req = req.WithContext(ctx)
 	defer cancel()
 
-	resp, err := http.DefaultClient.Do(req)
+	// HTTPS insecure skip verify.
+	customTransport := &http.Transport{}
+	if w.GetAllowInvalidCerts() {
+		customTransport = http.DefaultTransport.(*http.Transport).Clone()
+		//#nosec G402 -- explicitly wanted InsecureSkipVerify
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	client := &http.Client{Transport: customTransport}
+	resp, err := client.Do(req)
 	if err != nil {
 		// If verbose or above, print the error every time
-		err = fmt.Errorf("WebHook:\n%s", err)
 		jLog.Error(err, logFrom, (jLog.Level > 2))
 		return
 	}

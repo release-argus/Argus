@@ -106,6 +106,11 @@ func (w *WebHook) initMetrics(serviceID string) {
 	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, serviceID, float64(0))
 }
 
+// GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
+func (w *WebHook) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(w.AllowInvalidCerts, w.Main.AllowInvalidCerts, w.Defaults.AllowInvalidCerts, w.HardDefaults.AllowInvalidCerts)
+}
+
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
 	return *utils.GetFirstNonNilPtr(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
@@ -139,6 +144,7 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 		if err != nil {
 			return
 		}
+
 		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), bytes.NewReader(payload))
 		if err != nil {
 			return nil
