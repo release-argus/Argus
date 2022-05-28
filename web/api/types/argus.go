@@ -28,6 +28,7 @@ type ServiceSummary struct {
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
 	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
+	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release.
 	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release.
 	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses).
 }
@@ -255,6 +256,7 @@ type Service struct {
 	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use.
 	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
 	Icon                  string                 `json:"icon,omitempty"`                // Icon URL to use for messages/Web UI
+	Command               *CommandSummary        `json:"command,omitempty"`             // OS Commands to run on new release.
 	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars.
 	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
@@ -317,4 +319,22 @@ type WebHook struct {
 // Notifiers are the notifiers to use when a WebHook fails.
 type Notifiers struct {
 	Notify *NotifySlice // Service.Notify
+}
+
+// CommandSummary is the summary of a Command.
+type CommandSummary struct {
+	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion.
+}
+
+// Command is the OS Command to run along with whether the last run failed
+type Command struct {
+	CMD    string `json:"cmd"`
+	Failed *bool  `json:"failed,omitempty"`
+}
+
+// CommandStateUpdate will give an update of the current state of the Command
+// @ index
+type CommandStatusUpdate struct {
+	Command string `json:"command"` // Index of the Command
+	Failed  bool   `json:"failed"`  // Whether the last attempt of this command failed
 }

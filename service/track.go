@@ -58,16 +58,12 @@ func (s *Service) Track() {
 			// Get updated serviceInfo
 			serviceInfo = s.GetServiceInfo()
 
-			// Run the Command(s)
-			//nolint:errcheck
-			go s.Commands.Exec(&utils.LogFrom{Primary: *s.ID, Secondary: "Commands"})
-
 			// Send the Notify Message(s).
 			//nolint:errcheck
 			go s.Notify.Send("", "", &serviceInfo)
 
-			// WebHook(s)
-			go s.HandleWebHooks(false)
+			// WebHook(s)/Command(s)
+			go s.HandleUpdateActions(false)
 		}
 
 		// If it failed

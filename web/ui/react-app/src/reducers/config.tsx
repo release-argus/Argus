@@ -83,7 +83,6 @@ export default function reducerConfig(
       switch (action.sub_type) {
         case "INIT":
           state.data.defaults = action.config_data.defaults;
-          console.log(action.config_data.defaults);
           // Notify
           if (state.data.defaults?.notify) {
             pruneNotifies(state.data.defaults.notify);

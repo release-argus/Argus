@@ -15,6 +15,7 @@
 package command
 
 import (
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -26,3 +27,18 @@ var (
 type Slice []Command
 
 type Command []string
+
+type Fails []*bool
+
+type Controller struct {
+	ServiceID *string      `yaml:"-"` // ID of the service this Controller is attached to
+	Command   *Slice       `yaml:"-"` // command to run (with args)
+	Failed    Fails        `yaml:"-"` // Whether the last execution attempt failed
+	Notifiers Notifiers    `yaml:"-"` // The Notify's to notify on failures
+	Announce  *chan []byte `yaml:"-"` // Announce to the WebSocket
+}
+
+// Notifiers to use when their WebHook fails.
+type Notifiers struct {
+	Shoutrrr *shoutrrr.Slice // Shoutrrr
+}

@@ -15,9 +15,12 @@
 package command
 
 import (
+	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/release-argus/Argus/utils"
+	metrics "github.com/release-argus/Argus/web/metrics"
 )
 
 // Init will set the logger for the package
@@ -25,28 +28,68 @@ func Init(log *utils.JLog) {
 	jLog = log
 }
 
-func (c *Slice) Exec(logFrom *utils.LogFrom) error {
-	if c == nil {
+// Exec will execute all `Command` for the controller and returns all errors encountered
+func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
+	if c == nil || c.Command == nil || len(*c.Command) == 0 {
 		return nil
 	}
 
-	for i := range *c {
-		if err := (*c)[i].Exec(logFrom); err != nil {
-			return err
+	errChan := make(chan error)
+	for index := range *c.Command {
+		go func(controller *Controller) {
+			errChan <- controller.ExecIndex(logFrom, index)
+		}(c)
+
+		// Space out Command starts.
+		time.Sleep(3 * time.Second)
+	}
+
+	for range *c.Command {
+		err := <-errChan
+		if err != nil {
+			errs = fmt.Errorf("%s\n%w", utils.ErrorToString(errs), err)
 		}
 	}
 
-	return nil
+	return
+}
+
+func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
+	if index >= len(*c.Command) {
+		return nil
+	}
+
+	// Execute
+	err := (*c.Command)[index].Exec(logFrom)
+
+	// Set fail/not
+	failed := err != nil
+	c.Failed[index] = &failed
+
+	// Announce
+	c.AnnounceCommand(index)
+
+	metricResult := "SUCCESS"
+	if failed {
+		metricResult = "FAIL"
+		//#nosec G104 -- Errors will be logged to CL
+		//nolint:errcheck // ^
+		c.Notifiers.Shoutrrr.Send(
+			"Command failed for "+*c.ServiceID,
+			(*c.Command)[index].String()+"\n"+err.Error(),
+			nil)
+	}
+	metrics.IncreasePrometheusCounterActions(metrics.CommandMetric, (*c.Command)[index].String(), *c.ServiceID, "", metricResult)
+
+	return err
 }
 
 func (c *Command) Exec(logFrom *utils.LogFrom) error {
+	jLog.Info(fmt.Sprintf("Executing '%s'", c.String()), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
-	if err != nil {
-		jLog.Error(utils.ErrorToString(err), *logFrom, true)
-		return err
-	}
-
+	jLog.Error(utils.ErrorToString(err), *logFrom, true)
 	jLog.Info(string(out), *logFrom, err == nil && string(out) != "")
-	return nil
+
+	return err
 }

@@ -62,9 +62,9 @@ func TestCommands(flag *string, cfg *config.Config) {
 			"Service %q does not have any `commands` defined",
 			*flag),
 		logFrom,
-		service.Commands == nil)
+		service.Command == nil)
 
 	//nolint:errcheck
-	(*service.Commands).Exec(&logFrom)
+	(*service.CommandController).Exec(&logFrom)
 	os.Exit(0)
 }

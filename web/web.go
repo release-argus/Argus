@@ -66,6 +66,9 @@ func Main(cfg *config.Config, log *utils.JLog) {
 				(*cfg.Service[sKey].WebHook)[whKey].Announce = &hub.Broadcast
 			}
 		}
+		if (*cfg.Service[sKey]).CommandController != nil {
+			(*cfg.Service[sKey]).CommandController.Announce = &hub.Broadcast
+		}
 	}
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())

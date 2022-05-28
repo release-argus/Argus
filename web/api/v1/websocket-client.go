@@ -208,7 +208,7 @@ func (c *Client) writePump() {
 			// If message is from the server (doesn't use version)
 			if msg.Version == nil {
 				switch *msg.Type {
-				case "VERSION", "WEBHOOK":
+				case "VERSION", "WEBHOOK", "COMMAND":
 					err := c.conn.WriteJSON(msg)
 					c.api.Log.Error(
 						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", *msg.Type, utils.ErrorToString(err)),
@@ -233,9 +233,11 @@ func (c *Client) writePump() {
 					case "VERSION":
 						// Approval/Skip
 						c.api.wsServiceAction(c, msg)
-					case "WEBHOOK":
+					case "ACTIONS":
 						// Get WebHook data for a service
 						c.api.wsWebHook(c, msg)
+						// Get Command data for a service
+						c.api.wsCommand(c, msg)
 					case "INIT":
 						// Get all Service data
 						c.api.wsService(c)

@@ -60,6 +60,16 @@ func (c *Config) Init() {
 			&c.HardDefaults.WebHook,
 			c.Service[serviceID].Notify,
 		)
+
+		if c.Service[serviceID].Command != nil {
+			c.Service[serviceID].CommandController = &command.Controller{}
+		}
+		c.Service[serviceID].CommandController.Init(
+			jLog,
+			&serviceID,
+			c.Service[serviceID].Command,
+			c.Service[serviceID].Notify,
+		)
 	}
 
 	// c.Notify
