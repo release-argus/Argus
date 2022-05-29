@@ -38,9 +38,10 @@ func TestLoad(t *testing.T) {
 	}
 
 	// Notify
-	gotNotifyTitle := (*config.Defaults.Notify["slack"].Params)["title"]
+	gotNotifyTitle := config.Defaults.Notify["slack"].GetSelfParam("title")
 	if !(wantNotifyTitle == gotNotifyTitle) {
-		t.Fatalf(`config.Defaults.Notify.Params.Title = %s, want match for %s`, gotNotifyTitle, wantNotifyTitle)
+		fmt.Println(config.Defaults.Notify["slack"])
+		t.Fatalf(`config.Defaults.Notify["slack"].Params.Title = %q, want match for %q`, gotNotifyTitle, wantNotifyTitle)
 	}
 
 	// WebHook

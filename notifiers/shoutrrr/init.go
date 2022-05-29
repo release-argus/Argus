@@ -44,10 +44,15 @@ func (s *Slice) Init(
 			(*s)[key] = &Shoutrrr{}
 		}
 		(*s)[key].ID = &id
+
+		if (*mains)[key] == nil {
+			(*mains)[key] = &Shoutrrr{}
+		}
+
 		// Get Type from this or the associated Main
 		notifyType := utils.GetFirstNonDefault(
 			(*s)[key].Type,
-			utils.DefaultIfNil((*mains)[key]).Type,
+			(*mains)[key].Type,
 		)
 
 		// Ensure defaults aren't nil
@@ -96,34 +101,28 @@ func (s *Shoutrrr) Init(
 // initOptions mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initOptions() {
 	Options := make(map[string]string)
-	if s.Options != nil {
-		for i := range *s.Options {
-			Options[strings.ToLower(i)] = (*s.Options)[i]
-		}
+	for i := range s.Options {
+		Options[strings.ToLower(i)] = s.Options[i]
 	}
-	s.Options = &Options
+	s.Options = Options
 }
 
 // initURLFields mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initURLFields() {
 	URLFields := make(map[string]string)
-	if s.URLFields != nil {
-		for i := range *s.URLFields {
-			URLFields[strings.ToLower(i)] = (*s.URLFields)[i]
-		}
+	for i := range s.URLFields {
+		URLFields[strings.ToLower(i)] = s.URLFields[i]
 	}
-	s.URLFields = &URLFields
+	s.URLFields = URLFields
 }
 
 // initParams mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initParams() {
 	params := make(shoutrrr_types.Params)
-	if s.Params != nil {
-		for i := range *s.Params {
-			params[strings.ToLower(i)] = (*s.Params)[i]
-		}
+	for i := range s.Params {
+		params[strings.ToLower(i)] = s.Params[i]
 	}
-	s.Params = &params
+	s.Params = params
 }
 
 // InitMaps will initialise all maps, converting all keys to lowercase.
