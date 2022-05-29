@@ -23,47 +23,47 @@ import (
 
 // GetOption from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetOption(key string) string {
-	return utils.GetFirstNonDefault((*s.Options)[key], (*s.Main.Options)[key], (*s.Defaults.Options)[key], (*s.HardDefaults.Options)[key])
+	return utils.GetFirstNonDefault(s.Options[key], s.Main.Options[key], s.Defaults.Options[key], s.HardDefaults.Options[key])
 }
 
 // GetSelfOption gets Options[key] from this Shoutrrr
 func (s *Shoutrrr) GetSelfOption(key string) string {
-	return (*s.Options)[key]
+	return s.Options[key]
 }
 
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetURLField(key string) string {
-	return utils.GetFirstNonDefault((*s.URLFields)[key], (*s.Main.URLFields)[key], (*s.Defaults.URLFields)[key], (*s.HardDefaults.URLFields)[key])
+	return utils.GetFirstNonDefault(s.URLFields[key], s.Main.URLFields[key], s.Defaults.URLFields[key], s.HardDefaults.URLFields[key])
 }
 
 // GetSelfURLField gets URLFields[key] from this Shoutrrr
 func (s *Shoutrrr) GetSelfURLField(key string) string {
-	return (*s.URLFields)[key]
+	return s.URLFields[key]
 }
 
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetParam(key string) string {
-	return utils.GetFirstNonDefault((*s.Params)[key], (*s.Main.Params)[key], (*s.Defaults.Params)[key], (*s.HardDefaults.Params)[key])
+	return utils.GetFirstNonDefault(s.Params[key], s.Main.Params[key], s.Defaults.Params[key], s.HardDefaults.Params[key])
 }
 
 // GetSelfParam gets Params[key] from this Shoutrrr
 func (s *Shoutrrr) GetSelfParam(key string) string {
-	return (*s.Params)[key]
+	return s.Params[key]
 }
 
 // SetOption[key] to value
 func (s *Shoutrrr) SetOption(key string, value string) {
-	(*s.Options)[key] = value
+	s.Options[key] = value
 }
 
 // SetURLField[key] to value
 func (s *Shoutrrr) SetURLField(key string, value string) {
-	(*s.URLFields)[key] = value
+	s.URLFields[key] = value
 }
 
 // SetParam[key] to value
 func (s *Shoutrrr) SetParam(key string, value string) {
-	(*s.Params)[key] = value
+	s.Params[key] = value
 }
 
 // GetDelay before sending.

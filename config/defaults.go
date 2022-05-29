@@ -64,105 +64,105 @@ func (d *Defaults) SetDefaults() {
 	// Notify defaults.
 	d.Notify = make(shoutrrr.Slice)
 	d.Notify["discord"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"username": "Argus"},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{"username": "Argus"},
 	}
 	d.Notify["discord"].InitMaps()
 	d.Notify["smtp"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		URLFields: &map[string]string{
+		Options: notifyDefaultOptions,
+		URLFields: map[string]string{
 			"port": "25",
 		},
-		Params: &types.Params{},
+		Params: types.Params{},
 	}
 	d.Notify["smtp"].InitMaps()
 	d.Notify["googlechat"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["googlechat"].InitMaps()
 	d.Notify["gotify"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		URLFields: &map[string]string{
+		Options: notifyDefaultOptions,
+		URLFields: map[string]string{
 			"port": "443",
 		},
-		Params: &types.Params{"title": "Argus"},
+		Params: types.Params{"title": "Argus"},
 	}
 	d.Notify["gotify"].InitMaps()
 	d.Notify["ifttt"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"title": "Argus"},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{"title": "Argus"},
 	}
 	d.Notify["ifttt"].InitMaps()
 	d.Notify["join"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["join"].InitMaps()
 	d.Notify["mattermost"] = &shoutrrr.Shoutrrr{
-		Options: &map[string]string{
+		Options: map[string]string{
 			"message":   "<{{ service_url }}|{{ service_id }}> - {{ version }}released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
 			"max_tries": "3",
 			"delay":     "0s",
 		},
-		URLFields: &map[string]string{
+		URLFields: map[string]string{
 			"port": "443",
 		},
-		Params: &types.Params{"username": "Argus"},
+		Params: types.Params{"username": "Argus"},
 	}
 	d.Notify["mattermost"].InitMaps()
 	d.Notify["matrix"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		URLFields: &map[string]string{
+		Options: notifyDefaultOptions,
+		URLFields: map[string]string{
 			"port": "443",
 		},
-		Params: &types.Params{},
+		Params: types.Params{},
 	}
 	d.Notify["matrix"].InitMaps()
 	d.Notify["ops_genie"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["ops_genie"].InitMaps()
 	d.Notify["pushbullet"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		URLFields: &map[string]string{
+		Options: notifyDefaultOptions,
+		URLFields: map[string]string{
 			"port": "443",
 		},
-		Params: &types.Params{"title": "Argus"},
+		Params: types.Params{"title": "Argus"},
 	}
 	d.Notify["pushbullet"].InitMaps()
 	d.Notify["pushover"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["pushover"].InitMaps()
 	d.Notify["rocketchat"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		URLFields: &map[string]string{
+		Options: notifyDefaultOptions,
+		URLFields: map[string]string{
 			"port": "443",
 		},
-		Params: &types.Params{},
+		Params: types.Params{},
 	}
 	d.Notify["rocketchat"].InitMaps()
 	d.Notify["slack"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{"botname": "Argus"},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{"botname": "Argus"},
 	}
 	d.Notify["slack"].InitMaps()
 	d.Notify["team"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["team"].InitMaps()
 	d.Notify["telegram"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["telegram"].InitMaps()
 	d.Notify["zulip_chat"] = &shoutrrr.Shoutrrr{
-		Options: &notifyDefaultOptions,
-		Params:  &types.Params{},
+		Options: notifyDefaultOptions,
+		Params:  types.Params{},
 	}
 	d.Notify["zulip_chat"].InitMaps()
 

@@ -98,7 +98,7 @@ func (c *Config) Save() {
 		indentation  string = strings.Repeat(" ", int(c.Settings.Indentation))
 		serviceCount int    = len(c.Service)
 
-		configType string
+		configType string // section of the config we're in, e.g. 'service'
 
 		orderIndexStart int
 		orderIndexEnd   int
@@ -116,8 +116,8 @@ func (c *Config) Save() {
 		index -= linesRemoved
 		if index < 0 {
 			// Say in the first 5 lines we read, we removed 10, index-linesRemoved would be <0, so can't index
-			// So we reset the linesRemoved number to -index and set index to 0
-			linesRemoved = 0 - index
+			// So we reset the linesRemoved number by subtracking -index and set index to 0
+			linesRemoved -= index
 			index = 0
 		} else if index == len(lines) {
 			break
@@ -164,7 +164,13 @@ func (c *Config) Save() {
 		// Remove empty key:values
 		if strings.HasSuffix(lines[index], ": {}") {
 			// Ignore empty notify mappings under a service as they are using defaults
-			if configType == "service" && !strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))+" ") && strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))) {
+			// service:
+			// <>example:
+			// <><>notify:
+			// <><><>DISCORD: {}
+			if configType == "service" &&
+				!strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))+" ") &&
+				strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))) {
 				continue
 			}
 
@@ -180,10 +186,21 @@ func (c *Config) Save() {
 
 			// Remove level by level
 			// Until we don't find an empty map to remove
+			// Possible current state:
+			// bish
+			//   bash:
+			//     bosh: {} <- index
+			// foo: bar
 			removed := true
+			parentsRemoved := 0 // shift index by this number (+1 when remove index-1)
 			for removed {
+				index -= parentsRemoved
 				if index == len(lines) {
 					continue
+				}
+				if index < 0 {
+					parentsRemoved -= index
+					index = 0
 				}
 				removed = false
 
@@ -195,11 +212,15 @@ func (c *Config) Save() {
 					linesRemoved++
 				} else {
 					deepestRemovable := utils.GetIndentation(lines[index], c.Settings.Indentation)
-					if index != 0 && strings.HasSuffix(lines[index-1], ":") && strings.HasPrefix(lines[index-1], deepestRemovable) {
+					if index != 0 &&
+						strings.HasSuffix(lines[index-1], ":") &&
+						strings.HasPrefix(lines[index-1], deepestRemovable) {
+
 						utils.RemoveIndex(&lines, index-1)
 						currentOrderIndexEnd[currentServiceNumber]--
 						removed = true
 						linesRemoved++
+						parentsRemoved++
 					}
 				}
 			}

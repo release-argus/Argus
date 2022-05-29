@@ -60,7 +60,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	if delay := s.GetSelfOption("delay"); delay != "" {
 		// Default to seconds when an integer is provided
 		if _, err := strconv.Atoi(delay); err == nil {
-			(*s.Options)["delay"] += "s"
+			s.Options["delay"] += "s"
 		}
 		if _, err := time.ParseDuration(delay); err != nil {
 			errsOptions = fmt.Errorf("%s%s  delay: %q <invalid> (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
@@ -113,7 +113,7 @@ func (s *Shoutrrr) correctSelf() {
 		}
 	case "slack":
 		// # -> %23
-		for key := range *s.Params {
+		for key := range s.Params {
 			// https://containrrr.dev/shoutrrr/v0.5/services/slack/
 			// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
 			// So #ff8000 would be %23ff8000 etc.
@@ -318,24 +318,18 @@ func (s *Slice) Print(prefix string) bool {
 func (s *Shoutrrr) Print(prefix string) {
 	utils.PrintlnIfNotDefault(s.Type, fmt.Sprintf("%stype: %s", prefix, s.Type))
 
-	if s.Options != nil && len(*s.Options) > 0 {
-		fmt.Printf("%soptions:\n", prefix)
-		for key := range *s.Options {
-			utils.PrintlnIfNotDefault(s.GetSelfOption(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
-		}
+	fmt.Printf("%soptions:\n", prefix)
+	for key := range s.Options {
+		utils.PrintlnIfNotDefault(s.GetSelfOption(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
 	}
 
-	if s.URLFields != nil && len(*s.URLFields) > 0 {
-		fmt.Printf("%surl_fields:\n", prefix)
-		for key := range *s.URLFields {
-			utils.PrintlnIfNotDefault(s.GetSelfURLField(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
-		}
+	fmt.Printf("%surl_fields:\n", prefix)
+	for key := range s.URLFields {
+		utils.PrintlnIfNotDefault(s.GetSelfURLField(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
 	}
 
-	if s.Params != nil && len(*s.Params) != 0 {
-		fmt.Printf("%sparams:\n", prefix)
-		for key := range *s.Params {
-			utils.PrintlnIfNotDefault(s.GetSelfParam(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
-		}
+	fmt.Printf("%sparams:\n", prefix)
+	for key := range s.Params {
+		utils.PrintlnIfNotDefault(s.GetSelfParam(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
 	}
 }

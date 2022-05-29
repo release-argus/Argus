@@ -30,15 +30,15 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 	params = &p
 
 	// Service Params
-	for key := range *s.Params {
+	for key := range s.Params {
 		cKey := fixParamKey(key)
 		(*params)[cKey] = s.GetSelfParam(key)
 	}
 
 	// Main Params
-	for key := range *s.Main.Params {
+	for key := range s.Main.Params {
 		cKey := fixParamKey(key)
-		_, exist := (*s.Params)[key]
+		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[cKey] = s.Main.GetSelfParam(key)
@@ -46,9 +46,9 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 	}
 
 	// Default Params
-	for key := range *s.Defaults.Params {
+	for key := range s.Defaults.Params {
 		cKey := fixParamKey(key)
-		_, exist := (*s.Params)[key]
+		_, exist := (s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[cKey] = s.Defaults.GetSelfParam(key)
@@ -56,9 +56,9 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 	}
 
 	// HardDefault Params
-	for key := range *s.HardDefaults.Params {
+	for key := range s.HardDefaults.Params {
 		cKey := fixParamKey(key)
-		_, exist := (*s.Params)[key]
+		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[cKey] = s.HardDefaults.GetSelfParam(key)

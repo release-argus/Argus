@@ -153,11 +153,11 @@ func (n *NotifySlice) Censor() *NotifySlice {
 
 // Notify is a message w/ destination and from details.
 type Notify struct {
-	ID        *string                `json:"-"`                    // ID for this Notify sender
-	Type      string                 `json:"type,omitempty"`       // Notification type, e.g. slack
-	Options   *map[string]string     `json:"options,omitempty"`    // Options
-	URLFields *map[string]string     `json:"url_fields,omitempty"` // URL Fields
-	Params    *shoutrrr_types.Params `json:"params,omitempty"`     // Param props
+	ID        *string               `json:"-"`                    // ID for this Notify sender
+	Type      string                `json:"type,omitempty"`       // Notification type, e.g. slack
+	Options   map[string]string     `json:"options,omitempty"`    // Options
+	URLFields map[string]string     `json:"url_fields,omitempty"` // URL Fields
+	Params    shoutrrr_types.Params `json:"params,omitempty"`     // Param props
 }
 
 // Censor this Notify for sending over a WebSocket
@@ -178,9 +178,9 @@ func (n *Notify) Censor() *Notify {
 		"tokenb",
 		"webhookid",
 	}
-	if len(*n.URLFields) > 0 {
+	if len(n.URLFields) > 0 {
 		for i := range url_fields_to_censor {
-			if (*n.URLFields)[url_fields_to_censor[i]] != "" {
+			if n.URLFields[url_fields_to_censor[i]] != "" {
 				censorURLFields = true
 			}
 		}
@@ -191,9 +191,9 @@ func (n *Notify) Censor() *Notify {
 		"devices",
 		"host",
 	}
-	if len(*n.Params) > 0 {
+	if len(n.Params) > 0 {
 		for i := range params_to_censor {
-			if (*n.Params)[params_to_censor[i]] != "" {
+			if n.Params[params_to_censor[i]] != "" {
 				censorParams = true
 			}
 		}
@@ -206,21 +206,19 @@ func (n *Notify) Censor() *Notify {
 	// Censor the fields that should be censored
 	urlFields := n.URLFields
 	if censorURLFields {
-		urlFields = &map[string]string{}
-		*urlFields = utils.CopyMap(*n.URLFields)
+		urlFields = utils.CopyMap(n.URLFields)
 		for i := range url_fields_to_censor {
-			if (*urlFields)[url_fields_to_censor[i]] != "" {
-				(*urlFields)[url_fields_to_censor[i]] = "<secret>"
+			if urlFields[url_fields_to_censor[i]] != "" {
+				urlFields[url_fields_to_censor[i]] = "<secret>"
 			}
 		}
 	}
 	params := n.Params
 	if censorParams {
-		params = &shoutrrr_types.Params{}
-		*params = utils.CopyMap(*n.Params)
+		params = utils.CopyMap(n.Params)
 		for i := range params_to_censor {
-			if (*params)[params_to_censor[i]] != "" {
-				(*params)[params_to_censor[i]] = "<secret>"
+			if params[params_to_censor[i]] != "" {
+				params[params_to_censor[i]] = "<secret>"
 			}
 		}
 	}
