@@ -59,3 +59,13 @@ func (c *Controller) Find(command string) *int {
 	}
 	return nil
 }
+
+// ResetFails of this Controller's Commands
+func (c *Controller) ResetFails() {
+	if c == nil {
+		return
+	}
+	for i := range c.Failed {
+		c.Failed[i] = nil
+	}
+}

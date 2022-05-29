@@ -48,7 +48,7 @@ func (s *Service) UpdatedVersion() {
 		s.UpdateLatestApproved()
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.LatestVersion)
+	s.SetDeployedVersion(s.Status.LatestVersion)
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()
@@ -70,9 +70,9 @@ func (s *Service) UpdateLatestApproved() {
 // HandleUpdateActions will run all commands and send all WebHooks for this service if it has been called
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
-func (s *Service) HandleUpdateActions(fromUser bool) {
+func (s *Service) HandleUpdateActions() {
 	if s.WebHook != nil || s.Command != nil {
-		if s.GetAutoApprove() || fromUser {
+		if s.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
 			jLog.Info(msg, utils.LogFrom{Primary: *s.ID}, true)
 
@@ -80,7 +80,7 @@ func (s *Service) HandleUpdateActions(fromUser bool) {
 			cErr := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: *s.ID})
 
 			// Send the WebHook(s)
-			whErr := s.WebHook.Send(s.GetServiceInfo(), !fromUser)
+			whErr := s.WebHook.Send(s.GetServiceInfo(), true)
 			if whErr == nil && cErr == nil {
 				s.UpdatedVersion()
 			}

@@ -63,7 +63,7 @@ func (s *Service) Track() {
 			go s.Notify.Send("", "", &serviceInfo)
 
 			// WebHook(s)/Command(s)
-			go s.HandleUpdateActions(false)
+			go s.HandleUpdateActions()
 		}
 
 		// If it failed

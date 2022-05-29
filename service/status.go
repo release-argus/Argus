@@ -62,13 +62,17 @@ func (s *Status) Init(
 }
 
 // SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
-func (s *Status) SetDeployedVersion(version string) {
-	s.DeployedVersion = version
-	s.DeployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
+func (s *Service) SetDeployedVersion(version string) {
+	s.Status.DeployedVersion = version
+	s.Status.DeployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
 	// Ignore ApprovedVersion if we're on it
-	if version == s.ApprovedVersion {
-		s.ApprovedVersion = ""
+	if version == s.Status.ApprovedVersion {
+		s.Status.ApprovedVersion = ""
 	}
+
+	// Clear the fail status of WebHooks/Commands
+	s.WebHook.ResetFails()
+	s.CommandController.ResetFails()
 }
 
 // SetLastQueried will update LastQueried to now.

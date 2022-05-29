@@ -127,8 +127,8 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 
-	if api.Config.Service[*id].WebHook == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any webhooks to approve", *id), logFrom, true)
+	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any webhooks/commands to approve", *id), logFrom, true)
 		return
 	}
 
@@ -145,9 +145,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	)
 	api.Log.Info(msg, logFrom, true)
 	switch *payload.Target {
-	case "ARGUS_ALL":
-		go api.Config.Service[*id].HandleUpdateActions(true)
-	case "ARGUS_FAILED":
+	case "ARGUS_ALL", "ARGUS_FAILED":
 		go api.Config.Service[*id].HandleFailedActions()
 	default:
 		if strings.HasPrefix(*payload.Target, "webhook_") {
@@ -186,12 +184,10 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	responseSubType := "SUMMARY"
 
 	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[*id].Command))
-	if api.Config.Service[*id].Command != nil {
-		for key := range *api.Config.Service[*id].CommandController.Command {
-			command := strings.Join((*api.Config.Service[*id].CommandController.Command)[key], " ")
-			commandSummary[command] = &api_types.CommandSummary{
-				Failed: api.Config.Service[*id].CommandController.Failed[key],
-			}
+	for key := range *api.Config.Service[*id].CommandController.Command {
+		command := strings.Join((*api.Config.Service[*id].CommandController.Command)[key], " ")
+		commandSummary[command] = &api_types.CommandSummary{
+			Failed: api.Config.Service[*id].CommandController.Failed[key],
 		}
 	}
 
@@ -228,6 +224,9 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
 		return
 	}
+	if api.Config.Service[*id].WebHook == nil {
+		return
+	}
 
 	// Create and send webhookSummary
 	responsePage := "APPROVALS"
@@ -235,11 +234,9 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	responseSubType := "SUMMARY"
 	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[*id].WebHook))
 
-	if api.Config.Service[*id].WebHook != nil {
-		for key := range *api.Config.Service[*id].WebHook {
-			webhookSummary[key] = &api_types.WebHookSummary{
-				Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
-			}
+	for key := range *api.Config.Service[*id].WebHook {
+		webhookSummary[key] = &api_types.WebHookSummary{
+			Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
 		}
 	}
 

@@ -145,11 +145,17 @@ const WebHookModal = () => {
         <Modal.Title>
           <strong>
             {modal.type === "RESEND"
-              ? "Resend the WebHook(s)?"
+              ? `Resend the ${
+                  modal.service.webhook ? "WebHook" : "Command"
+                }(s)?`
               : modal.type === "SEND"
-              ? "Send the WebHook(s) to upgrade?"
+              ? `Send the  ${
+                  modal.service.webhook ? "WebHook" : "Command"
+                }(s) to upgrade?`
               : modal.type === "SKIP"
-              ? "Skip this release? (don't send any WebHooks)"
+              ? `Skip this release? (don't send any  ${
+                  modal.service.webhook ? "WebHook" : "Command"
+                }s)`
               : modal.type === "SKIP_NO_WH"
               ? "Skip this release?"
               : ""}

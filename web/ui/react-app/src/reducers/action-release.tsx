@@ -1,9 +1,4 @@
-import {
-  ActionModalData,
-  CommandSummaryListType,
-  WebHookSummaryListType,
-} from "types/summary";
-
+import { ActionModalData } from "types/summary";
 import { websocketResponse } from "types/websocket";
 
 export default function reducerActionModal(
@@ -78,22 +73,8 @@ export default function reducerActionModal(
           }
           break;
         case "SENDING":
-          let sending = action.webhook_data
-            ? (action.webhook_data as WebHookSummaryListType)
-            : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              (action.command_data! as CommandSummaryListType);
-
-          // Send all button
-          if (Object.keys(sending).length === 0) {
-            sending = action.webhook_data ? state.webhooks : state.commands;
-            // Don't re-send successfullu sent WebHooks
-            Object.keys(sending).filter(
-              (id: string) => sending[id].failed !== true
-            );
-          }
-
           if (action.webhook_data) {
-            for (const webhook_id in sending) {
+            for (const webhook_id in action.webhook_data) {
               // reset the failed state
               if (newState.webhooks[webhook_id] !== undefined) {
                 newState.webhooks[webhook_id].failed = undefined;
@@ -102,13 +83,13 @@ export default function reducerActionModal(
               newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
             }
           } else {
-            for (const command in sending) {
+            for (const command in action.command_data) {
               // reset the failed state
               if (newState.commands[command] !== undefined) {
                 newState.commands[command].failed = undefined;
               }
               // set it as sending
-              newState.sentC.push(`${action.service_data?.id} ${command}`);
+              newState.sentC.push(`${action.service_data.id} ${command}`);
             }
           }
           break;
@@ -129,21 +110,30 @@ export default function reducerActionModal(
           newState.webhooks = {};
           break;
         case "SENDING":
-          for (const webhook_id in state.webhooks) {
+          // Send all button
+          // Don't re-send successfully sent WebHooks
+          const sendingWH = Object.keys(state.webhooks).filter(
+            (id: string) => state.webhooks[id].failed !== true
+          );
+          for (const webhook_id of sendingWH) {
             if (newState.webhooks[webhook_id] !== undefined) {
               newState.webhooks[webhook_id].failed = undefined;
             }
 
             newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
           }
-          for (const command in state.commands) {
+
+          // Don't re-run successfully ran Commands
+          const sendingC = Object.keys(state.commands).filter(
+            (id: string) => state.commands[id].failed !== true
+          );
+          for (const command of sendingC) {
             if (newState.commands[command] !== undefined) {
               newState.commands[command].failed = undefined;
             }
 
             newState.sentC.push(`${action.service_data?.id} ${command}`);
           }
-          console.log(state, newState);
           break;
         default:
           console.log(action);

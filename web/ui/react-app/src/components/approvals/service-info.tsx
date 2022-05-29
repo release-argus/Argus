@@ -97,8 +97,8 @@ export const ServiceInfo = ({
               className={"service-item update-options alert-warning"}
               variant="secondary"
             >
-              {updateApproved && service.webhook
-                ? "WebHooks already sent:"
+              {updateApproved && (service.webhook || service.command)
+                ? `${service.webhook ? "WebHooks" : "Commands"} already sent:`
                 : "Update available:"}
             </ListGroup.Item>
             <ListGroup.Item
@@ -118,13 +118,15 @@ export const ServiceInfo = ({
               <Button
                 key="approve"
                 className={`btn-flex btn-update-action${
-                  service.webhook ? "" : " hiddenElement"
+                  service.webhook || service.command ? "" : " hiddenElement"
                 }`}
                 variant="success"
                 onClick={() =>
                   showModal(updateApproved ? "RESEND" : "SEND", service)
                 }
-                disabled={updateApproved || !service.webhook}
+                disabled={
+                  updateApproved || !(service.webhook || service.command)
+                }
               >
                 <FontAwesomeIcon icon={faCheck} />
               </Button>
@@ -133,7 +135,10 @@ export const ServiceInfo = ({
                 className="btn-flex btn-update-action"
                 variant="danger"
                 onClick={() =>
-                  showModal(service.webhook ? "SKIP" : "SKIP_NO_WH", service)
+                  showModal(
+                    service.webhook || service.command ? "SKIP" : "SKIP_NO_WH",
+                    service
+                  )
                 }
                 disabled={updateApproved}
               >
@@ -146,7 +151,8 @@ export const ServiceInfo = ({
             key="deployed_v"
             variant={serviceWarning ? "warning" : "secondary"}
             className={
-              "service-item" + (service.webhook ? "" : " justify-left")
+              "service-item" +
+              (service.webhook || service.command ? "" : " justify-left")
             }
           >
             <p style={{ margin: 0 }}>
@@ -158,9 +164,7 @@ export const ServiceInfo = ({
                   delay={{ show: 500, hide: 500 }}
                   overlay={
                     <Tooltip id={`tooltip-deployed-service`}>
-                      {service.has_deployed_version === true
-                        ? `of the deployed ${service.id}`
-                        : `not monitoring a deployed ${service.id}`}
+                      of the deployed {service.id}
                     </Tooltip>
                   }
                 >
@@ -211,33 +215,36 @@ export const ServiceInfo = ({
                 </OverlayTrigger>
               </div>
             </p>
-            {service.webhook && (!updateAvailable || updateSkipped) && (
-              <OverlayTrigger
-                key="resend"
-                placement="top"
-                delay={{ show: 500, hide: 500 }}
-                overlay={
-                  <Tooltip id={`tooltip-resend`}>
-                    {updateSkipped
-                      ? "Approve this release"
-                      : "Resend the WebHooks"}
-                  </Tooltip>
-                }
-              >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() =>
-                    showModal(updateSkipped ? "SEND" : "RESEND", service)
+            {(service.webhook || service.command) &&
+              (!updateAvailable || updateSkipped) && (
+                <OverlayTrigger
+                  key="resend"
+                  placement="top"
+                  delay={{ show: 500, hide: 500 }}
+                  overlay={
+                    <Tooltip id={`tooltip-resend`}>
+                      {updateSkipped
+                        ? "Approve this release"
+                        : `Resend the ${
+                            service.webhook ? "WebHooks" : "Commands"
+                          }`}
+                    </Tooltip>
                   }
-                  disabled={service.loading}
                 >
-                  <FontAwesomeIcon
-                    icon={updateSkipped ? faCheck : faArrowRotateRight}
-                  />
-                </Button>
-              </OverlayTrigger>
-            )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      showModal(updateSkipped ? "SEND" : "RESEND", service)
+                    }
+                    disabled={service.loading}
+                  >
+                    <FontAwesomeIcon
+                      icon={updateSkipped ? faCheck : faArrowRotateRight}
+                    />
+                  </Button>
+                </OverlayTrigger>
+              )}
           </ListGroup.Item>
         )}
       </ListGroup>

@@ -88,7 +88,7 @@ func (s *Service) Query() (bool, error) {
 
 			s.Status.SetLatestVersion(version)
 			if s.Status.DeployedVersion == "" && s.DeployedVersionLookup == nil {
-				s.Status.SetDeployedVersion(version)
+				s.SetDeployedVersion(version)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)

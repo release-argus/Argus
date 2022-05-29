@@ -63,7 +63,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 				}
 			}
 			// Announce the updated deployment
-			parent.Status.SetDeployedVersion(deployedVersion)
+			parent.SetDeployedVersion(deployedVersion)
 
 			// Announce version change to WebSocket clients.
 			jLog.Info(
