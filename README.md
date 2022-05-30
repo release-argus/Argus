@@ -89,7 +89,7 @@ For further help, check out the [Getting Started](https://release-argus.io/docs/
 
 #### Config formatting
 
-The config can be broken down into 6 key areas. ([Further help](https://release-argus.io/docs/config/))
+The config can be broken down into 5 key areas. ([Further help](https://release-argus.io/docs/config/))
 - [defaults](https://release-argus.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://release-argus.io/docs/config/defaults/#service-portion), [notify](https://release-argus.io/docs/config/defaults/#notify-portion) and [webhooks](https://release-argus.io/docs/config/defaults/#webhook-portion).
 - [settings](https://release-argus.io/docs/config/settings/) - Settings for the Argus server.
 - [service](https://release-argus.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.
