@@ -81,9 +81,13 @@ func (s *Status) SetLastQueried() {
 }
 
 // SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
-func (s *Status) SetLatestVersion(version string) {
-	s.LatestVersion = version
-	s.LatestVersionTimestamp = s.LastQueried
+func (s *Service) SetLatestVersion(version string) {
+	s.Status.LatestVersion = version
+	s.Status.LatestVersionTimestamp = s.Status.LastQueried
+
+	// Clear the fail status of WebHooks/Commands
+	s.WebHook.ResetFails()
+	s.CommandController.ResetFails()
 }
 
 // Print will print the Status.

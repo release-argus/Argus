@@ -86,7 +86,7 @@ func (s *Service) Query() (bool, error) {
 				}
 			}
 
-			s.Status.SetLatestVersion(version)
+			s.SetLatestVersion(version)
 			if s.Status.DeployedVersion == "" && s.DeployedVersionLookup == nil {
 				s.SetDeployedVersion(version)
 			}
@@ -104,7 +104,7 @@ func (s *Service) Query() (bool, error) {
 		}
 
 		// New version found.
-		s.Status.SetLatestVersion(version)
+		s.SetLatestVersion(version)
 		msg := fmt.Sprintf("New Release - %q", version)
 		jLog.Info(msg, logFrom, true)
 		*s.SaveChannel <- true
