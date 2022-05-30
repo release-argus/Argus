@@ -158,10 +158,10 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 			*errsURLFields = fmt.Errorf("%s%s  host: <required> e.g. 'smtp.example.io'\\", utils.ErrorToString(*errsURLFields), prefix)
 		}
 		if s.GetParam("fromaddress") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  fromaddress: <required> e.g. 'service@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
+			*errsParams = fmt.Errorf("%s%s  fromaddress: <required> e.g. 'service@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
 		if s.GetParam("toaddresses") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  toaddresses: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
+			*errsParams = fmt.Errorf("%s%s  toaddresses: <required> e.g. 'name@gmail.com'\\", utils.ErrorToString(*errsParams), prefix)
 		}
 	case "gotify":
 		// gotify://host:port/path/token
@@ -182,7 +182,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 			*errsURLFields = fmt.Errorf("%s%s  webhookid: <required> e.g. 'h1fyLh42h7lDI2L11T-bv'\\", utils.ErrorToString(*errsURLFields), prefix)
 		}
 		if s.GetParam("events") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  ebets: <required> e.g. 'event1,event2'\\", utils.ErrorToString(*errsParams), prefix)
+			*errsParams = fmt.Errorf("%s%s  ebets: <required> e.g. 'event1,event2'\\", utils.ErrorToString(*errsParams), prefix)
 		}
 	case "join":
 		// join://apiKey@join
