@@ -58,21 +58,20 @@ func TestNotify(flag *string, cfg *config.Config) {
 			(*shoutrrr)["test"] = &argus_shoutrrr.Shoutrrr{
 				ID:           flag,
 				Main:         cfg.Notify[*flag],
-				Defaults:     cfg.Defaults.Notify["telegram"],
-				HardDefaults: hardDefaults.Notify["telegram"],
+				Defaults:     &emptyShoutrrs,
+				HardDefaults: &emptyShoutrrs,
 			}
 			(*shoutrrr)["test"].InitMaps()
 			(*shoutrrr)["test"].Main.InitMaps()
-			if (*shoutrrr)["test"].Defaults == nil {
-				(*shoutrrr)["test"].Defaults = &emptyShoutrrs
-			} else {
-				(*shoutrrr)["test"].Defaults.InitMaps()
+
+			notifyType := (*shoutrrr)["test"].GetType()
+			if cfg.Defaults.Notify[notifyType] != nil {
+				(*shoutrrr)["test"].Defaults = cfg.Defaults.Notify[notifyType]
 			}
-			if (*shoutrrr)["test"].HardDefaults == nil {
-				(*shoutrrr)["test"].HardDefaults = &emptyShoutrrs
-			} else {
-				(*shoutrrr)["test"].HardDefaults.InitMaps()
-			}
+			(*shoutrrr)["test"].Defaults.InitMaps()
+			(*shoutrrr)["test"].HardDefaults = hardDefaults.Notify[notifyType]
+			(*shoutrrr)["test"].HardDefaults.InitMaps()
+
 			if err := (*shoutrrr)["test"].CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", *flag, strings.ReplaceAll(err.Error(), "\\", "\n"))
 				jLog.Fatal(msg, logFrom, true)

@@ -31,48 +31,37 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 
 	// Service Params
 	for key := range s.Params {
-		cKey := fixParamKey(key)
-		(*params)[cKey] = s.GetSelfParam(key)
+		(*params)[key] = s.GetSelfParam(key)
 	}
 
 	// Main Params
 	for key := range s.Main.Params {
-		cKey := fixParamKey(key)
 		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[cKey] = s.Main.GetSelfParam(key)
+			(*params)[key] = s.Main.GetSelfParam(key)
 		}
 	}
 
 	// Default Params
 	for key := range s.Defaults.Params {
-		cKey := fixParamKey(key)
 		_, exist := (s.Params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[cKey] = s.Defaults.GetSelfParam(key)
+			(*params)[key] = s.Defaults.GetSelfParam(key)
 		}
 	}
 
 	// HardDefault Params
 	for key := range s.HardDefaults.Params {
-		cKey := fixParamKey(key)
 		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[cKey] = s.HardDefaults.GetSelfParam(key)
+			(*params)[key] = s.HardDefaults.GetSelfParam(key)
 		}
 	}
 
 	return
-}
-
-func fixParamKey(key string) string {
-	if key == "usestarttls" {
-		return "starttls"
-	}
-	return key
 }
 
 func (s *Shoutrrr) GetURL() (url string) {

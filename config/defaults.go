@@ -106,9 +106,9 @@ func (d *Defaults) SetDefaults() {
 			"delay":     "0s",
 		},
 		URLFields: map[string]string{
-			"port": "443",
+			"username": "Argus",
+			"port":     "443",
 		},
-		Params: types.Params{"username": "Argus"},
 	}
 	d.Notify["mattermost"].InitMaps()
 	d.Notify["matrix"] = &shoutrrr.Shoutrrr{
