@@ -254,7 +254,7 @@ type Service struct {
 	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use.
 	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
 	Icon                  string                 `json:"icon,omitempty"`                // Icon URL to use for messages/Web UI
-	Command               *CommandSummary        `json:"command,omitempty"`             // OS Commands to run on new release.
+	Command               *CommandSlice          `json:"command,omitempty"`             // OS Commands to run on new release.
 	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars.
 	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
@@ -299,6 +299,9 @@ type URLCommand struct {
 	IgnoreMisses *bool   `json:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
 }
 
+type Command []string
+type CommandSlice []Command
+
 // WebHookSlice is a slice mapping of WebHook.
 type WebHookSlice map[string]*WebHook
 
@@ -322,12 +325,6 @@ type Notifiers struct {
 // CommandSummary is the summary of a Command.
 type CommandSummary struct {
 	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion.
-}
-
-// Command is the OS Command to run along with whether the last run failed
-type Command struct {
-	CMD    string `json:"cmd"`
-	Failed *bool  `json:"failed,omitempty"`
 }
 
 // CommandStateUpdate will give an update of the current state of the Command

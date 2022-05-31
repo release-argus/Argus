@@ -618,6 +618,14 @@ func (api *API) wsConfigService(client *Client) {
 					}
 				}
 			}
+			// Command
+			if service.Command != nil {
+				command := make(api_types.CommandSlice, len(*service.Command))
+				serviceConfig[key].Command = &command
+				for index := range *service.Command {
+					copy((*serviceConfig[key].Command)[index], (*service.Command)[index])
+				}
+			}
 		}
 	}
 
