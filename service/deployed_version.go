@@ -47,7 +47,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 		if err == nil && deployedVersion != parent.Status.DeployedVersion {
 			// If this new deployedVersion isn't LatestVersion
 			// Check that it's not a later version than LatestVersion
-			if deployedVersion != parent.Status.LatestVersion && parent.GetSemanticVersioning() {
+			if deployedVersion != parent.Status.LatestVersion && parent.GetSemanticVersioning() && parent.Status.LatestVersion != "" {
 				//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
 				//nolint:errcheck // ^
 				deployedVersionSV, _ := semver.NewVersion(deployedVersion)
