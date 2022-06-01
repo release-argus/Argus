@@ -101,7 +101,7 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["join"].InitMaps()
 	d.Notify["mattermost"] = &shoutrrr.Shoutrrr{
 		Options: map[string]string{
-			"message":   "<{{ service_url }}|{{ service_id }}> - {{ version }}released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
+			"message":   "<{{ service_url }}|{{ service_id }}> - {{ version }} released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
 			"max_tries": "3",
 			"delay":     "0s",
 		},
