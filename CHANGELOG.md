@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.5.1](https://github.com/release-argus/Argus/compare/0.5.0...0.5.1) (2022-06-02)
+
+
+### Bug Fixes
+
+* **skips:** only update approved_version if commands/webhooks are with a deployed_version lookup ([6972734](https://github.com/release-argus/Argus/commits/69727342f8e01c052a08c3a73a1b38216f99d83a)), closes [/github.com/release-argus/Argus/issues/62#issuecomment-1144963060](https://github.com/release-argus//github.com/release-argus/Argus/issues/62/issues/issuecomment-1144963060)
+
 ## [0.5.0](https://github.com/release-argus/Argus/compare/0.4.1...0.5.0) (2022-06-02)
 
 
@@ -11,7 +18,7 @@ All notable changes to this project will be documented in this file. See [standa
 * improve help on toolbar ([e15aed9](https://github.com/release-argus/Argus/commits/e15aed9516ea890cdbe964094d10f64c84a4fd91))
 * open external links in a new tab ([26df3b3](https://github.com/release-argus/Argus/commits/26df3b3cc8f7de1d2c1a2c7e23bf9aa56f511a33))
 * support for running os commands as a new release action ([#70](https://github.com/release-argus/Argus/issues/70)) ([c6a9e75](https://github.com/release-argus/Argus/commits/c6a9e75a8f804ece5b0dff65b00d90710edd66fc))
-* Support for Telegram and lots more ([#63](https://github.com/release-argus/Argus/issues/63)) ([f1b9960](https://github.com/release-argus/Argus/commits/f1b996026e7b6d9f2f2c6ea929df7a3c52e5b944))
+* support for telegram and lots more ([#63](https://github.com/release-argus/Argus/issues/63)) ([f1b9960](https://github.com/release-argus/Argus/commits/f1b996026e7b6d9f2f2c6ea929df7a3c52e5b944))t
 * **ui:** can skip releases for a `deployed_service` without webhooks ([#73](https://github.com/release-argus/Argus/issues/73)) ([cf2a816](https://github.com/release-argus/Argus/commits/cf2a816d22b9daef75dbae464831a4e1040396b2))
 * **webhooks:** add option to allow invalid https certs ([#74](https://github.com/release-argus/Argus/issues/74)) ([e390882](https://github.com/release-argus/Argus/commits/e390882c7a3706b23d80cfddcee31ddcf2322ca0))
 
@@ -22,7 +29,7 @@ All notable changes to this project will be documented in this file. See [standa
 * check that `latest_version`s are newer than `deployed_version` (and !=) ([75aad65](https://github.com/release-argus/Argus/commits/75aad65c6fb14b771c144c01ae2640e53ec3a22e))
 * ensure used webhooks have a `type` on startup ([3eda486](https://github.com/release-argus/Argus/commits/3eda486d55e18ef6a8a3d02bd58d251587b12833)), closes [/github.com/release-argus/Argus/issues/71#issuecomment-1139456015](https://github.com/release-argus//github.com/release-argus/Argus/issues/71/issues/issuecomment-1139456015)
 * ordering struggled with empty newlines ([9a1b4a1](https://github.com/release-argus/Argus/commits/9a1b4a1a26fe02791e77df4962fc2dce058dcc4f))
-* Rename `current_version` to `deployed_version` ([#64](https://github.com/release-argus/Argus/issues/64)) ([0b3b1d5](https://github.com/release-argus/Argus/commits/0b3b1d568cf334765322a488a22d3a41467ae2ff))
+* rename `current_version` to `deployed_version` ([#64](https://github.com/release-argus/Argus/issues/64)) ([0b3b1d5](https://github.com/release-argus/Argus/commits/0b3b1d568cf334765322a488a22d3a41467ae2ff))
 * save sometimes copied a random blank line ([76da7b2](https://github.com/release-argus/Argus/commits/76da7b21459c59ae7f8eac1a2c43a6e1ff166b07))
 
 ### [0.4.1](https://github.com/release-argus/Argus/compare/0.4.0...0.4.1) (2022-05-16)
