@@ -29,6 +29,15 @@ var (
 			"id",
 			"result",
 		})
+	CommandMetric = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "command_result_total",
+		Help: "Number of times a Command has passed/failed.",
+	},
+		[]string{
+			"id",
+			"result",
+			"service_id",
+		})
 	NotifyMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "notify_result_total",
 		Help: "Number of times a Notify message has passed/failed.",

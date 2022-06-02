@@ -39,11 +39,12 @@ var (
 // them as defined. It also sets up the Web UI and SaveHandler.
 func main() {
 	var (
-		config          cfg.Config
-		configFile      = flag.String("config.file", "config.yml", "Argus configuration file path.")
-		configCheckFlag = flag.Bool("config.check", false, "Print the fully-parsed config.")
-		testNotifyFlag  = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
-		testServiceFlag = flag.String("test.service", "", "Put the name of the Service to test the version query.")
+		config           cfg.Config
+		configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
+		configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
+		testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
+		testNotifyFlag   = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
+		testServiceFlag  = flag.String("test.service", "", "Put the name of the Service to test the version query.")
 	)
 
 	flag.Parse()
@@ -57,6 +58,7 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
+	argus_testing.TestCommands(testCommandsFlag, &config)
 	argus_testing.TestNotify(testNotifyFlag, &config)
 	argus_testing.TestService(testServiceFlag, &config)
 

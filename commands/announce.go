@@ -12,37 +12,60 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhook
+package command
 
 import (
 	"encoding/json"
+	"strings"
 
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceSend of the WebHook to the `w.Announce` channel
+// AnnounceCommand will announce the failed status of `c.Announce` channel
 // (Broadcast to all WebSocket clients).
-func (w *WebHook) AnnounceSend() {
+func (c *Controller) AnnounceCommand(index int) {
 	var payloadData []byte
 
-	webhookSummary := make(map[string]*api_types.WebHookSummary)
-	webhookSummary[*w.ID] = &api_types.WebHookSummary{Failed: w.Failed}
+	commandSummary := make(map[string]*api_types.CommandSummary)
+	commandSummary[strings.Join((*c.Command)[index], " ")] = &api_types.CommandSummary{Failed: c.Failed[index]}
 
-	// WebHook pass/fail
+	// Command success/fail
 	wsPage := "APPROVALS"
-	wsType := "WEBHOOK"
+	wsType := "COMMAND"
 	wsSubType := "EVENT"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
 		Page:    &wsPage,
 		Type:    &wsType,
 		SubType: &wsSubType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: w.ServiceID,
+			ID: c.ServiceID,
 		},
-		WebHookData: webhookSummary,
+		CommandData: commandSummary,
 	})
 
-	if w.Announce != nil {
-		*w.Announce <- payloadData
+	if c.Announce != nil {
+		*c.Announce <- payloadData
+	}
+}
+
+// Find `command`.
+func (c *Controller) Find(command string) *int {
+	// Loop through all the Command(s)
+	for i := range *c.Command {
+		// If this command starts with the same text
+		if (*c.Command)[i].String() == command {
+			return &i
+		}
+	}
+	return nil
+}
+
+// ResetFails of this Controller's Commands
+func (c *Controller) ResetFails() {
+	if c == nil {
+		return
+	}
+	for i := range c.Failed {
+		c.Failed[i] = nil
 	}
 }

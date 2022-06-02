@@ -15,6 +15,7 @@ export interface ServiceSummaryType {
   has_deployed_version?: boolean;
   notify?: boolean;
   webhook?: number;
+  command?: number;
   status?: StatusSummaryType;
 }
 
@@ -31,10 +32,12 @@ export type ModalType =
   | "SKIP_NO_WH"
   | "";
 
-export interface WebHookModalData {
+export interface ActionModalData {
   service_id: string;
-  sent: string[];
+  sentC: string[];
+  sentWH: string[];
   webhooks: WebHookSummaryListType;
+  commands: CommandSummaryListType;
 }
 
 export interface StatusSummaryType {
@@ -59,4 +62,17 @@ export interface WebHookSummaryType {
 
 export interface WebHookSummaryListType {
   [id: string]: WebHookSummaryType;
+}
+
+export interface CommandType {
+  parts: string[];
+  failed?: boolean;
+}
+export interface CommandSummaryType {
+  // undefined = unsent/sending
+  failed?: boolean;
+}
+
+export interface CommandSummaryListType {
+  [id: string]: CommandSummaryType;
 }

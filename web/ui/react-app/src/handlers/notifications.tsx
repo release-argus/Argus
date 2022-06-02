@@ -99,6 +99,33 @@ export const handleNotifications = (params: notificationsParams) => {
         case "RESET":
           break;
 
+        case "COMMAND":
+          // SUMMARY
+          // EVENT
+          switch (params.event.sub_type) {
+            case "SUMMARY":
+              break;
+            case "EVENT":
+              for (const key in params.event.command_data) {
+                params.event.command_data[key].failed === false
+                  ? params.addNotification({
+                      type: "success",
+                      title: params.event.service_data?.id || "Unknown",
+                      body: `'${key}' Command ran successfully`,
+                      small: new Date().toString(),
+                      delay: 30000,
+                    })
+                  : params.addNotification({
+                      type: "danger",
+                      title: params.event.service_data?.id || "Unknown",
+                      body: `'${key}' Command failed`,
+                      small: new Date().toString(),
+                      delay: 30000,
+                    });
+              }
+              break;
+          }
+          break;
         case "WEBHOOK":
           // SUMMARY
           // EVENT
@@ -124,13 +151,7 @@ export const handleNotifications = (params: notificationsParams) => {
                     });
               }
               break;
-            case "SENDING":
-              break;
-            case "RESET":
-              break;
           }
-          break;
-        default:
           break;
       }
       break;

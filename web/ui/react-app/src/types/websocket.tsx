@@ -1,4 +1,8 @@
-import { ServiceSummaryType, WebHookSummaryListType } from "./summary";
+import {
+  CommandSummaryListType,
+  ServiceSummaryType,
+  WebHookSummaryListType,
+} from "./summary";
 
 import { ConfigType } from "./config";
 import { Dictionary } from "./util";
@@ -33,6 +37,7 @@ export interface websocketResponse {
   sub_type?: string;
   order?: string[];
   service_data?: ServiceSummaryType;
+  command_data?: CommandSummaryListType;
   webhook_data?: WebHookSummaryListType;
   info_data?: Info;
   flags_data?: Dictionary<string>;

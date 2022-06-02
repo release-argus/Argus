@@ -62,8 +62,8 @@ func (s *Service) Track() {
 			//nolint:errcheck
 			go s.Notify.Send("", "", &serviceInfo)
 
-			// WebHook(s)
-			go s.HandleWebHooks(false)
+			// WebHook(s)/Command(s)
+			go s.HandleUpdateActions()
 		}
 
 		// If it failed

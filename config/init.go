@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
 	"gopkg.in/yaml.v3"
@@ -27,6 +28,7 @@ import (
 func (c *Config) Init() {
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
+	command.Init(jLog)
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
@@ -56,6 +58,16 @@ func (c *Config) Init() {
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
+			c.Service[serviceID].Notify,
+		)
+
+		if c.Service[serviceID].Command != nil {
+			c.Service[serviceID].CommandController = &command.Controller{}
+		}
+		c.Service[serviceID].CommandController.Init(
+			jLog,
+			&serviceID,
+			c.Service[serviceID].Command,
 			c.Service[serviceID].Notify,
 		)
 	}

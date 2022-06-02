@@ -25,12 +25,20 @@ import (
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
-	// Only update if all webhooks have been sent
-	// and none failed
+	// Check that no WebHook(s) failed
 	if s.WebHook != nil {
 		for key := range *s.WebHook {
 			// Default nil to true = failed
 			if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
+				return
+			}
+		}
+	}
+	// Check that no COmmand(s) failed
+	if s.Command != nil {
+		for key := range *s.Command {
+			// Default nil to true = failed
+			if utils.EvalBoolPtr(s.CommandController.Failed[key], true) {
 				return
 			}
 		}
@@ -40,7 +48,7 @@ func (s *Service) UpdatedVersion() {
 		s.UpdateLatestApproved()
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.LatestVersion)
+	s.SetDeployedVersion(s.Status.LatestVersion)
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()
@@ -59,18 +67,21 @@ func (s *Service) UpdateLatestApproved() {
 	}
 }
 
-// HandleWebHooks will send all WebHooks for this service if it has been called automatically and
-// auto-approve is true. If new releases aren't auto-approved, then the WebHooks will only be sent
-// if this is triggered fromUser (via the WebUI).
-func (s *Service) HandleWebHooks(fromUser bool) {
-	if s.WebHook != nil {
-		if s.GetAutoApprove() || fromUser {
-			msg := fmt.Sprintf("Sending WebHooks for %q", s.Status.LatestVersion)
+// HandleUpdateActions will run all commands and send all WebHooks for this service if it has been called
+// automatically and auto-approve is true. If new releases aren't auto-approved, then these will
+// only be run/send if this is triggered fromUser (via the WebUI).
+func (s *Service) HandleUpdateActions() {
+	if s.WebHook != nil || s.Command != nil {
+		if s.GetAutoApprove() {
+			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
 			jLog.Info(msg, utils.LogFrom{Primary: *s.ID}, true)
 
-			// Send the WebHook(s).
-			err := (*s.WebHook).Send(s.GetServiceInfo(), !fromUser)
-			if err == nil {
+			// Run the Command(s)
+			cErr := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: *s.ID})
+
+			// Send the WebHook(s)
+			whErr := s.WebHook.Send(s.GetServiceInfo(), true)
+			if whErr == nil && cErr == nil {
 				s.UpdatedVersion()
 			}
 		} else {
@@ -85,29 +96,49 @@ func (s *Service) HandleWebHooks(fromUser bool) {
 	}
 }
 
-// HandleFailedWebHooks will re-send all the WebHooks for this service
+// HandleFailedActions will re-send all the WebHooks for this service
 // that have either failed, or not been sent for this version.
-func (s *Service) HandleFailedWebHooks() {
-	if s.WebHook == nil {
-		return
-	}
+func (s *Service) HandleFailedActions() {
 	errs := make(chan error)
 	errored := false
 
+	potentialErrors := 0
 	// Send the WebHook(s).
-	for key := range *s.WebHook {
-		if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
-			go func(key string) {
-				err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
-				errs <- err
-			}(key)
-			// Don't send all WebHooks at the same time.
-			time.Sleep(1 * time.Second)
+	if s.WebHook != nil {
+		potentialErrors += len(*s.WebHook)
+		for key := range *s.WebHook {
+			if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
+				go func(key string) {
+					err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
+					errs <- err
+				}(key)
+				// Don't send all WebHooks at the same time.
+				time.Sleep(1 * time.Second)
+			} else {
+				potentialErrors--
+			}
+		}
+	}
+	// Run the Command(s)
+	if s.Command != nil {
+		potentialErrors += len(*s.Command)
+		logFrom := utils.LogFrom{Primary: "Command", Secondary: *s.ID}
+		for key := range *s.Command {
+			if utils.EvalBoolPtr(s.CommandController.Failed[key], true) {
+				go func(key int) {
+					err := s.CommandController.ExecIndex(&logFrom, key)
+					errs <- err
+				}(key)
+				// Don't start all Commands at the same time.
+				time.Sleep(1 * time.Second)
+			} else {
+				potentialErrors--
+			}
 		}
 	}
 
 	var err error
-	for range *s.WebHook {
+	for i := 0; i < potentialErrors; i++ {
 		errFound := <-errs
 		if errFound != nil {
 			errored = true
@@ -119,6 +150,27 @@ func (s *Service) HandleFailedWebHooks() {
 		}
 	}
 	if !errored {
+		s.UpdatedVersion()
+	}
+}
+
+// HandleCommand will handle running the Command for this service
+// to the matching Command.
+func (s *Service) HandleCommand(command string) {
+	if s.Command == nil {
+		return
+	}
+
+	// Find the command
+	index := s.CommandController.Find(command)
+	if index == nil {
+		jLog.Warn(command+" not found", utils.LogFrom{Primary: "Command", Secondary: *s.ID}, true)
+		return
+	}
+
+	// Send the Command.
+	err := (*s.CommandController).ExecIndex(&utils.LogFrom{Primary: "Command", Secondary: *s.ID}, *index)
+	if err == nil {
 		s.UpdatedVersion()
 	}
 }

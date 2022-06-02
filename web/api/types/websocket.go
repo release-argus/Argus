@@ -23,6 +23,7 @@ type WebSocketMessage struct {
 	Target      *string                    `json:"target,omitempty"`
 	Order       *[]string                  `json:"order,omitempty"`
 	ServiceData *ServiceSummary            `json:"service_data,omitempty"`
+	CommandData map[string]*CommandSummary `json:"command_data,omitempty"`
 	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
 	InfoData    *Info                      `json:"info_data,omitempty"`
 	FlagsData   *Flags                     `json:"flags_data,omitempty"`

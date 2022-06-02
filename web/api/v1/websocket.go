@@ -58,6 +58,10 @@ func (api *API) wsService(client *Client) {
 		if service.WebHook != nil {
 			webhookCount = len(*service.WebHook)
 		}
+		commandCount := 0
+		if service.Command != nil {
+			commandCount = len(*service.Command)
+		}
 		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
 		serviceSummary := api_types.ServiceSummary{
@@ -66,6 +70,7 @@ func (api *API) wsService(client *Client) {
 			URL:                      &url,
 			Icon:                     (*service).GetIconURL(),
 			HasDeployedVersionLookup: &hasDeployedVersionLookup,
+			Command:                  commandCount,
 			WebHook:                  webhookCount,
 			Status: &api_types.Status{
 				ApprovedVersion:          service.Status.ApprovedVersion,
@@ -122,28 +127,82 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 
-	if api.Config.Service[*id].WebHook == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any webhooks to approve", *id), logFrom, true)
+	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any webhooks/commands to approve", *id), logFrom, true)
 		return
 	}
 
 	// Send the WebHook(s).
-	msg := fmt.Sprintf("%s Release approved - %q WebHook", *id,
+	msg := fmt.Sprintf("%s %q Release actioned - %q",
+		*id,
+		api.Config.Service[*id].Status.LatestVersion,
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,
 					"ARGUS_ALL", "ALL"),
 				"ARGUS_FAILED", "ALL UNSENT/FAILED"),
-			"ARGUS_SKIP", "ALL"),
+			"ARGUS_SKIP", "SKIP"),
 	)
 	api.Log.Info(msg, logFrom, true)
 	switch *payload.Target {
-	case "ARGUS_ALL":
-		go api.Config.Service[*id].HandleWebHooks(true)
-	case "ARGUS_FAILED":
-		go api.Config.Service[*id].HandleFailedWebHooks()
+	case "ARGUS_ALL", "ARGUS_FAILED":
+		go api.Config.Service[*id].HandleFailedActions()
 	default:
-		go api.Config.Service[*id].HandleWebHook(*payload.Target)
+		if strings.HasPrefix(*payload.Target, "webhook_") {
+			go api.Config.Service[*id].HandleWebHook(strings.TrimPrefix(*payload.Target, "webhook_"))
+		} else {
+			go api.Config.Service[*id].HandleCommand(strings.TrimPrefix(*payload.Target, "command_"))
+		}
+	}
+}
+
+// wsCommand handles getting the Command(s) of a service.
+//
+// Required params:
+//
+// service_data.id - Service ID to get the Command(s) of.
+func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
+	logFrom := utils.LogFrom{Primary: "wsCommand", Secondary: client.ip}
+	api.Log.Verbose("-", logFrom, true)
+
+	if payload.ServiceData.ID == nil {
+		api.Log.Error("service_data.id not provided", logFrom, true)
+		return
+	}
+	id := payload.ServiceData.ID
+	if api.Config.Service[*id] == nil {
+		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
+		return
+	}
+	if api.Config.Service[*id].CommandController == nil {
+		return
+	}
+
+	// Create and send commandSummary
+	responsePage := "APPROVALS"
+	responseType := "COMMAND"
+	responseSubType := "SUMMARY"
+
+	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[*id].Command))
+	for key := range *api.Config.Service[*id].CommandController.Command {
+		command := strings.Join((*api.Config.Service[*id].CommandController.Command)[key], " ")
+		commandSummary[command] = &api_types.CommandSummary{
+			Failed: api.Config.Service[*id].CommandController.Failed[key],
+		}
+	}
+
+	msg := api_types.WebSocketMessage{
+		Page:    &responsePage,
+		Type:    &responseType,
+		SubType: &responseSubType,
+		ServiceData: &api_types.ServiceSummary{
+			ID: id,
+		},
+		CommandData: commandSummary,
+	}
+	if err := client.conn.WriteJSON(msg); err != nil {
+		api.Log.Error(err, logFrom, true)
+		return
 	}
 }
 
@@ -162,7 +221,10 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 	id := payload.ServiceData.ID
 	if api.Config.Service[*id] == nil {
-		api.Log.Error(fmt.Sprintf("%q is not a valid id of a service", *id), logFrom, true)
+		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
+		return
+	}
+	if api.Config.Service[*id].WebHook == nil {
 		return
 	}
 
@@ -170,13 +232,11 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	responsePage := "APPROVALS"
 	responseType := "WEBHOOK"
 	responseSubType := "SUMMARY"
-	webhookSummary := make(map[string]*api_types.WebHookSummary)
+	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[*id].WebHook))
 
-	if api.Config.Service[*id].WebHook != nil {
-		for key := range *api.Config.Service[*id].WebHook {
-			webhookSummary[key] = &api_types.WebHookSummary{
-				Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
-			}
+	for key := range *api.Config.Service[*id].WebHook {
+		webhookSummary[key] = &api_types.WebHookSummary{
+			Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
 		}
 	}
 
@@ -556,6 +616,14 @@ func (api *API) wsConfigService(client *Client) {
 						MaxTries:          (*service.WebHook)[index].MaxTries,
 						SilentFails:       (*service.WebHook)[index].SilentFails,
 					}
+				}
+			}
+			// Command
+			if service.Command != nil {
+				command := make(api_types.CommandSlice, len(*service.Command))
+				serviceConfig[key].Command = &command
+				for index := range *service.Command {
+					copy((*serviceConfig[key].Command)[index], (*service.Command)[index])
 				}
 			}
 		}

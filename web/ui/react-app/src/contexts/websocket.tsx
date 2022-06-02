@@ -80,7 +80,6 @@ export const WebSocketProvider = (props: Props) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ws.onerror = (event: any) => {
-    console.log(typeof event);
     connected && setConnected(false);
     console.log("ws.onerror");
     console.log(event);

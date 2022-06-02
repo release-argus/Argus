@@ -57,6 +57,7 @@ export interface ServiceType {
   ignore_misses?: string;
   icon?: string;
   notify?: ServiceDict<NotifyType>;
+  command?: string[];
   webhook?: ServiceDict<WebHookType>;
   deployed_version?: DeployedVersionLookupType;
   status?: StatusType;

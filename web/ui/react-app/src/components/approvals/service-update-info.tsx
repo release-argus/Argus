@@ -50,7 +50,9 @@ export const UpdateInfo = ({
               </Tooltip>
             }
           >
-            <p style={{ marginTop: 5, marginBottom: 5 }}>
+            <p
+              style={{ marginTop: 5, marginBottom: 5, maxWidth: "fit-content" }}
+            >
               <strong>From:</strong>{" "}
               {service?.status?.deployed_version
                 ? service.status.deployed_version
@@ -76,7 +78,7 @@ export const UpdateInfo = ({
               </Tooltip>
             }
           >
-            <p style={{ marginBottom: 0 }}>
+            <p style={{ marginBottom: 0, maxWidth: "fit-content" }}>
               <strong>To:</strong>{" "}
               {service?.status?.latest_version
                 ? service.status.latest_version

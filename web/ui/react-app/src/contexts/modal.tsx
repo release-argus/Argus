@@ -1,7 +1,7 @@
 import { ModalType, ServiceSummaryType, WebHookModal } from "types/summary";
 import { ReactElement, ReactNode, createContext } from "react";
 
-import ApprovalModal from "modals/webhook";
+import ApprovalModal from "modals/action-release";
 import useModal from "hooks/modal";
 
 interface ModalCtx {

@@ -175,3 +175,13 @@ func (w *WebHook) GetSilentFails() bool {
 func (w *WebHook) GetURL() *string {
 	return utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
 }
+
+// ResetFails of this Slice
+func (w *Slice) ResetFails() {
+	if w == nil {
+		return
+	}
+	for i := range *w {
+		(*w)[i].Failed = nil
+	}
+}
