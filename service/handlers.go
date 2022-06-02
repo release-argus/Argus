@@ -34,7 +34,7 @@ func (s *Service) UpdatedVersion() {
 			}
 		}
 	}
-	// Check that no COmmand(s) failed
+	// Check that no Command(s) failed
 	if s.Command != nil {
 		for key := range *s.Command {
 			// Default nil to true = failed
@@ -45,7 +45,12 @@ func (s *Service) UpdatedVersion() {
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
-		s.UpdateLatestApproved()
+		if s.Command != nil || s.WebHook != nil {
+			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
+			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
+			// They should have all ran/sent successfully at this point
+			s.UpdateLatestApproved()
+		}
 		return
 	}
 	s.SetDeployedVersion(s.Status.LatestVersion)
