@@ -127,6 +127,7 @@ export interface WebHookType {
   type: string;
   url: string;
   secret?: string;
+  custom_headers?: Map<string, string>;
   desired_status_code?: number;
   delay?: string;
   max_tries?: number;

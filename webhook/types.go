@@ -28,22 +28,23 @@ type Slice map[string]*WebHook
 
 // WebHook to send.
 type WebHook struct {
-	ID                *string      `yaml:"-"`                             // Unique across the Slice
-	ServiceID         *string      `yaml:"-"`                             // ID of the service this WebHook is attached to
-	Type              *string      `yaml:"type,omitempty"`                // "github"/"url"
-	URL               *string      `yaml:"url,omitempty"`                 // "https://example.com"
-	AllowInvalidCerts *bool        `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	Secret            *string      `yaml:"secret,omitempty"`              // "SECRET"
-	DesiredStatusCode *int         `yaml:"desired_status_code,omitempty"` // e.g. 202
-	Delay             *string      `yaml:"delay,omitempty"`               // The delay before sending the WebHook.
-	MaxTries          *uint        `yaml:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
-	SilentFails       *bool        `yaml:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
-	Failed            *bool        `yaml:"-"`                             // Whether the last send attempt failed
-	HardDefaults      *WebHook     `yaml:"-"`                             // Hardcoded default values
-	Defaults          *WebHook     `yaml:"-"`                             // Default values
-	Main              *WebHook     `yaml:"-"`                             // The Webhook that this Webhook is calling (and may override parts of)
-	Notifiers         *Notifiers   `yaml:"-"`                             // The Notify's to notify on failures
-	Announce          *chan []byte `yaml:"-"`                             // Announce to the WebSocket
+	ID                *string            `yaml:"-"`                             // Unique across the Slice
+	ServiceID         *string            `yaml:"-"`                             // ID of the service this WebHook is attached to
+	Type              *string            `yaml:"type,omitempty"`                // "github"/"url"
+	URL               *string            `yaml:"url,omitempty"`                 // "https://example.com"
+	AllowInvalidCerts *bool              `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	CustomHeaders     *map[string]string `yaml:"custom_headers,omitempty"`      // Custom Headers for the WebHook
+	Secret            *string            `yaml:"secret,omitempty"`              // "SECRET"
+	DesiredStatusCode *int               `yaml:"desired_status_code,omitempty"` // e.g. 202
+	Delay             *string            `yaml:"delay,omitempty"`               // The delay before sending the WebHook.
+	MaxTries          *uint              `yaml:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
+	SilentFails       *bool              `yaml:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
+	Failed            *bool              `yaml:"-"`                             // Whether the last send attempt failed
+	HardDefaults      *WebHook           `yaml:"-"`                             // Hardcoded default values
+	Defaults          *WebHook           `yaml:"-"`                             // Default values
+	Main              *WebHook           `yaml:"-"`                             // The Webhook that this Webhook is calling (and may override parts of)
+	Notifiers         *Notifiers         `yaml:"-"`                             // The Notify's to notify on failures
+	Announce          *chan []byte       `yaml:"-"`                             // Announce to the WebSocket
 }
 
 // Notifiers to use when their WebHook fails.

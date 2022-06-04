@@ -611,6 +611,7 @@ func (api *API) wsConfigService(client *Client) {
 						Type:              (*service.WebHook)[index].Type,
 						URL:               (*service.WebHook)[index].URL,
 						Secret:            utils.ValueIfNotNil((*service.WebHook)[index].Secret, "<secret>"),
+						CustomHeaders:     (*service.WebHook)[index].CustomHeaders,
 						DesiredStatusCode: (*service.WebHook)[index].DesiredStatusCode,
 						Delay:             (*service.WebHook)[index].Delay,
 						MaxTries:          (*service.WebHook)[index].MaxTries,

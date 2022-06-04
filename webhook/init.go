@@ -151,7 +151,8 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		req = SetGitHubHeaders(req, payload, *w.GetSecret())
+		w.SetCustomHeaders(req)
+		SetGitHubHeaders(req, payload, *w.GetSecret())
 	}
 	return
 }
