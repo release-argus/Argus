@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0](https://github.com/release-argus/Argus/compare/0.5.1...0.6.0) (2022-06-04)
+
+
+### Features
+
+* **webhook:** support for custom headers ([#83](https://github.com/release-argus/Argus/issues/83)) ([4cc0a14](https://github.com/release-argus/Argus/commits/4cc0a14cb3ecc441e803b565b82c092b76302c06))
+
 ### [0.5.1](https://github.com/release-argus/Argus/compare/0.5.0...0.5.1) (2022-06-02)
 
 
