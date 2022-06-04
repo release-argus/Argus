@@ -307,14 +307,15 @@ type WebHookSlice map[string]*WebHook
 
 // WebHook is a WebHook to send.
 type WebHook struct {
-	ServiceID         *string `json:"-"`                             // ID of the service this WebHook is attached to
-	Type              *string `json:"type,omitempty"`                // "github"/"url"
-	URL               *string `json:"url,omitempty"`                 // "https://example.com"
-	Secret            *string `json:"secret,omitempty"`              // "SECRET"
-	DesiredStatusCode *int    `json:"desired_status_code,omitempty"` // e.g. 202
-	Delay             *string `json:"delay,omitempty"`               // The delay before sending the WebHook.
-	MaxTries          *uint   `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
-	SilentFails       *bool   `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
+	ServiceID         *string            `json:"-"`                             // ID of the service this WebHook is attached to
+	Type              *string            `json:"type,omitempty"`                // "github"/"url"
+	URL               *string            `json:"url,omitempty"`                 // "https://example.com"
+	Secret            *string            `json:"secret,omitempty"`              // "SECRET"
+	CustomHeaders     *map[string]string `json:"custom_headers,omitempty"`      // Custom Headers for the WebHook
+	DesiredStatusCode *int               `json:"desired_status_code,omitempty"` // e.g. 202
+	Delay             *string            `json:"delay,omitempty"`               // The delay before sending the WebHook.
+	MaxTries          *uint              `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
+	SilentFails       *bool              `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
 }
 
 // Notifiers are the notifiers to use when a WebHook fails.

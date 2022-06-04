@@ -33,8 +33,19 @@ type GitHub struct {
 	After  string `json:"after"`  // "RandAlphaNumericLower(40)"
 }
 
+// SetCustomHeaders of the req.
+func (w *WebHook) SetCustomHeaders(req *http.Request) {
+	if w.CustomHeaders == nil {
+		return
+	}
+
+	for key := range *w.CustomHeaders {
+		req.Header[key] = []string{(*w.CustomHeaders)[key]}
+	}
+}
+
 // SetGitHubHeaders of the req based on the payload and secret.
-func SetGitHubHeaders(req *http.Request, payload []byte, secret string) *http.Request {
+func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	req.Header.Set("X-GitHub-Event", "push")
 	req.Header.Set("X-GitHub-Hook-ID", utils.RandNumeric(9))
 	req.Header.Set("X-GitHub-Delivery", fmt.Sprintf("%s-%s-%s-%s-%s", utils.RandAlphaNumericLower(8), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(12)))
@@ -50,6 +61,4 @@ func SetGitHubHeaders(req *http.Request, payload []byte, secret string) *http.Re
 	hash = hmac.New(sha1.New, []byte(secret))
 	hash.Write(payload)
 	req.Header.Set("X-Hub-Signature", fmt.Sprintf("sha1=%s", hex.EncodeToString(hash.Sum(nil))))
-
-	return req
 }
