@@ -16,6 +16,9 @@ package config
 
 import (
 	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/release-argus/Argus/utils"
@@ -159,10 +162,48 @@ func (s *Settings) GetWebRoutePrefix() string {
 
 // GetWebCertFile.
 func (s *Settings) GetWebCertFile() *string {
-	return utils.GetFirstNonNilPtr(s.FromFlags.Web.CertFile, s.Web.CertFile, s.HardDefaults.Web.CertFile)
+	certFile := utils.GetFirstNonNilPtr(s.FromFlags.Web.CertFile, s.Web.CertFile, s.HardDefaults.Web.CertFile)
+	if certFile == nil || *certFile == "" {
+		return nil
+	}
+	if _, err := os.Stat(*certFile); err != nil {
+		if !filepath.IsAbs(*certFile) {
+			path, execErr := os.Executable()
+			if execErr != nil {
+				jLog.Error(execErr, utils.LogFrom{}, true)
+			}
+			err = fmt.Errorf(strings.Replace(
+				err.Error(),
+				" "+*certFile+":",
+				" "+path+"/"+*certFile+":",
+				1,
+			))
+		}
+		jLog.Fatal("settings.web.cert_file "+err.Error(), utils.LogFrom{}, true)
+	}
+	return certFile
 }
 
 // GetWebKeyFile.
 func (s *Settings) GetWebKeyFile() *string {
-	return utils.GetFirstNonNilPtr(s.FromFlags.Web.KeyFile, s.Web.KeyFile, s.HardDefaults.Web.KeyFile)
+	keyFile := utils.GetFirstNonNilPtr(s.FromFlags.Web.KeyFile, s.Web.KeyFile, s.HardDefaults.Web.KeyFile)
+	if keyFile == nil || *keyFile == "" {
+		return nil
+	}
+	if _, err := os.Stat(*keyFile); err != nil {
+		if !filepath.IsAbs(*keyFile) {
+			path, execErr := os.Executable()
+			if execErr != nil {
+				jLog.Error(execErr, utils.LogFrom{}, true)
+			}
+			err = fmt.Errorf(strings.Replace(
+				err.Error(),
+				" "+*keyFile+":",
+				" "+path+"/"+*keyFile+":",
+				1,
+			))
+		}
+		jLog.Fatal("settings.web.key_file "+err.Error(), utils.LogFrom{}, true)
+	}
+	return keyFile
 }
