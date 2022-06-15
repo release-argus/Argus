@@ -512,6 +512,7 @@ func (api *API) wsConfigService(client *Client) {
 
 			serviceConfig[key] = &api_types.Service{
 				Active:             service.Active,
+				Comment:            service.Comment,
 				Type:               service.Type,
 				URL:                service.URL,
 				WebURL:             service.WebURL,
