@@ -26,6 +26,12 @@ import (
 // Track will call Track on all Services in this Slice.
 func (s *Slice) Track(ordering *[]string) {
 	for _, key := range *ordering {
+		// Skip disabled Services
+		if !(*s)[key].GetActive() {
+			continue
+		}
+		(*s)[key].Active = nil
+
 		jLog.Verbose(
 			fmt.Sprintf("Tracking %s at %s every %s", *(*s)[key].ID, (*s)[key].GetServiceURL(true), (*s)[key].GetInterval()),
 			utils.LogFrom{Primary: *(*s)[key].ID},

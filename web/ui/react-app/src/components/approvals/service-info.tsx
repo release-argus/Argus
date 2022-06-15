@@ -262,7 +262,7 @@ export const ServiceInfo = ({
         >
           {service?.status?.last_queried ? (
             <>
-              Queried{" "}
+              queried{" "}
               {formatRelative(
                 new Date(service.status.last_queried),
                 new Date()

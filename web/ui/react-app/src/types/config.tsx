@@ -42,6 +42,7 @@ export interface ServiceListType {
 }
 
 export interface ServiceType {
+  active?: boolean;
   type: string;
   url?: string;
   allow_invalid_certs?: boolean;

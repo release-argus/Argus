@@ -29,7 +29,7 @@ func (s *Service) UpdatedVersion() {
 	if s.WebHook != nil {
 		for key := range *s.WebHook {
 			// Default nil to true = failed
-			if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
+			if utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
 				return
 			}
 		}
@@ -38,7 +38,7 @@ func (s *Service) UpdatedVersion() {
 	if s.Command != nil {
 		for key := range *s.Command {
 			// Default nil to true = failed
-			if utils.EvalBoolPtr(s.CommandController.Failed[key], true) {
+			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
 				return
 			}
 		}
@@ -112,7 +112,7 @@ func (s *Service) HandleFailedActions() {
 	if s.WebHook != nil {
 		potentialErrors += len(*s.WebHook)
 		for key := range *s.WebHook {
-			if utils.EvalBoolPtr((*s.WebHook)[key].Failed, true) {
+			if utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
 				go func(key string) {
 					err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
 					errs <- err
@@ -129,7 +129,7 @@ func (s *Service) HandleFailedActions() {
 		potentialErrors += len(*s.Command)
 		logFrom := utils.LogFrom{Primary: "Command", Secondary: *s.ID}
 		for key := range *s.Command {
-			if utils.EvalBoolPtr(s.CommandController.Failed[key], true) {
+			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
 				go func(key int) {
 					err := s.CommandController.ExecIndex(&logFrom, key)
 					errs <- err
