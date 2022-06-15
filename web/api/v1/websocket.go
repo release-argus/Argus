@@ -65,6 +65,7 @@ func (api *API) wsService(client *Client) {
 		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
 		serviceSummary := api_types.ServiceSummary{
+			Active:                   service.Active,
 			ID:                       service.ID,
 			Type:                     service.Type,
 			URL:                      &url,
@@ -510,6 +511,7 @@ func (api *API) wsConfigService(client *Client) {
 			service := api.Config.Service[key]
 
 			serviceConfig[key] = &api_types.Service{
+				Active:             service.Active,
 				Type:               service.Type,
 				URL:                service.URL,
 				WebURL:             service.WebURL,

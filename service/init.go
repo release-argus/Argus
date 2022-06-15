@@ -84,6 +84,11 @@ func (s *Service) GetAccessToken() string {
 	return utils.DefaultIfNil(utils.GetFirstNonNilPtr(s.AccessToken, s.Defaults.AccessToken, s.HardDefaults.AccessToken))
 }
 
+// GetActive will return whether the Service is Active or not (default = true)
+func (s *Service) GetActive() bool {
+	return utils.EvalBoolPtr(s.Active, true)
+}
+
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (s *Service) GetAllowInvalidCerts() bool {
 	return *utils.GetFirstNonNilPtr(s.AllowInvalidCerts, s.Defaults.AllowInvalidCerts, s.HardDefaults.AllowInvalidCerts)
