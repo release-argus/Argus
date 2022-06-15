@@ -7,6 +7,7 @@ export interface ServiceSummaryListType {
 }
 
 export interface ServiceSummaryType {
+  active?: boolean;
   id: string;
   loading: boolean;
   type?: string;

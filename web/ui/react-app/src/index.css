@@ -310,10 +310,6 @@ body {
 .same-color-as-background {
   color: var(--background);
 }
-.same-background-color {
-  color: var(--dark-text);
-  background-color: var(--background);
-}
 
 .card-footer {
   border-top: none;
@@ -340,7 +336,7 @@ body {
 }
 
 .list-group-item-secondary {
-  background-color: var(--background);
+  background-color: transparent;
   color: var(--dark-text);
 }
 .list-group-item-warning {
