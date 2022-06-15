@@ -30,7 +30,8 @@ type Slice map[string]*Service
 // the latest version from the URL provided.
 type Service struct {
 	ID                    *string                `yaml:"-"`                             // service_name.
-	Active                *bool                  `yaml:"active,omitempty"`              // Disable the service
+	Active                *bool                  `yaml:"active,omitempty"`              // Disable the service.
+	Comment               *string                `yaml:"comment,omitempty"`             // Comment on the Service.
 	Type                  *string                `yaml:"type,omitempty"`                // "github"/"URL"
 	URL                   *string                `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
 	AllowInvalidCerts     *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
