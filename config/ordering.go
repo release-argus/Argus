@@ -50,8 +50,8 @@ func (c *Config) GetOrder(data []byte) {
 					}
 					c.Settings.Indentation = uint8(len(indentation))
 				}
-			} else {
-				afterService = false
+			} else if afterService {
+				break
 			}
 		}
 		if afterService && strings.HasPrefix(line, indentation) && !strings.HasPrefix(line, indentation+" ") {
@@ -60,31 +60,20 @@ func (c *Config) GetOrder(data []byte) {
 		}
 	}
 
-	if len(c.Order) != 0 {
-		// Add Services not in the existing Order.
-		for _, serviceID := range order {
-			if !utils.Contains(c.Order, serviceID) {
-				c.Order = append(c.Order, serviceID)
-			}
-		}
+	c.All = order
+	c.Order = &c.All
 
-		// Remove Services in the existing Order that have been removed.
-		if len(order) != len(c.Order) {
-			deleted := 0
-			services := len(c.Order)
-			for i := 0; i < services; i++ {
-				if !utils.Contains(order, c.Order[i-deleted]) {
-					if i == len(c.Order) {
-						c.Order = c.Order[:deleted]
-					} else {
-						c.Order = append(c.Order[:i-deleted], c.Order[i-deleted+1:]...)
-					}
-					deleted++
-				}
+	// Filter out Services that aren't Active
+	removed := 0
+	for index, id := range c.All {
+		if !utils.EvalNilPtr(c.Service[id].Active, true) {
+			if removed == 0 {
+				order = make([]string, len(order))
+				copy(order, c.All)
+				c.Order = &order
 			}
-
+			utils.RemoveIndex(c.Order, index-removed)
+			removed++
 		}
-	} else {
-		c.Order = order
 	}
 }
