@@ -23,6 +23,7 @@ import (
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
+	Active                   *bool   `json:"active,omitempty"` // Active Service?
 	ID                       *string `json:"id"`
 	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
@@ -240,6 +241,7 @@ type ServiceSlice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
+	Active                *bool                  `json:"active,omitempty"`              // Active Service?
 	Type                  *string                `json:"type,omitempty"`                // "github"/"URL"
 	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
 	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI
