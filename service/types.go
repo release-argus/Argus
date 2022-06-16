@@ -46,6 +46,7 @@ type Service struct {
 	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
 	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
 	Icon                  string                 `yaml:"icon,omitempty"`                // Icon URL to use for messages/Web UI.
+	IconLinkTo            *string                `yaml:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to.
 	CommandController     *command.Controller    `yaml:"-"`                             // The controller for the OS Commands that tracks fails and has the announce channel.
 	Command               *command.Slice         `yaml:"command,omitempty"`             // OS Commands to run on new release.
 	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
