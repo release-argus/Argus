@@ -58,6 +58,7 @@ export interface ServiceType {
   auto_approve?: boolean;
   ignore_misses?: string;
   icon?: string;
+  icon_link_to?: string;
   notify?: ServiceDict<NotifyType>;
   command?: string[];
   webhook?: ServiceDict<WebHookType>;
