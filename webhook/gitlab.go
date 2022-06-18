@@ -15,7 +15,6 @@
 package webhook
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -26,6 +25,4 @@ func SetGitLabParameter(req *http.Request, secret string) {
 	q.Add("token", secret)
 	q.Add("ref", "master")
 	req.URL.RawQuery = q.Encode()
-
-	fmt.Println(req.URL.String())
 }
