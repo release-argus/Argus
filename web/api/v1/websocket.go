@@ -70,6 +70,7 @@ func (api *API) wsService(client *Client) {
 			Type:                     service.Type,
 			URL:                      &url,
 			Icon:                     service.GetIconURL(),
+			IconLinkTo:               service.IconLinkTo,
 			HasDeployedVersionLookup: &hasDeployedVersionLookup,
 			Command:                  commandCount,
 			WebHook:                  webhookCount,
@@ -525,6 +526,7 @@ func (api *API) wsConfigService(client *Client) {
 				IgnoreMisses:       service.IgnoreMisses,
 				AllowInvalidCerts:  service.AllowInvalidCerts,
 				Icon:               service.Icon,
+				IconLinkTo:         service.IconLinkTo,
 				Status: &api_types.Status{
 					ApprovedVersion:          service.Status.ApprovedVersion,
 					DeployedVersion:          service.Status.DeployedVersion,
