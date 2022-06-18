@@ -22,6 +22,9 @@ import (
 // SetGitHubHeaders of the req based on the payload and secret.
 func SetGitLabParameter(req *http.Request, secret string) {
 	q := url.Values{}
+	if req.URL.Query() != nil && len(req.URL.Query()) != 0 {
+		q = req.URL.Query()
+	}
 	q.Add("token", secret)
 	q.Add("ref", "master")
 	req.URL.RawQuery = q.Encode()
