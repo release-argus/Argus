@@ -153,6 +153,15 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 		w.SetCustomHeaders(req)
 		SetGitHubHeaders(req, payload, *w.GetSecret())
+	} else if w.GetType() == "gitlab" {
+		var err error
+		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), nil)
+		if err != nil {
+			return nil
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		SetGitLabParameter(req, *w.GetSecret())
 	}
 	return
 }
