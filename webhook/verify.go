@@ -54,7 +54,8 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 	}
 
 	if w.Main != nil {
-		if w.GetType() != "github" && w.GetType() != "gitlab" {
+		types := []string{"github", "gitlab"}
+		if !utils.Contains(types, w.GetType()) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (the only webhook type is 'github' or 'gitlab' currently)\\", utils.ErrorToString(errs), prefix, w.GetType())
 		}
 		if w.GetURL() == nil {
