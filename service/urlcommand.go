@@ -160,14 +160,14 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 
 	if len(texts) == 0 {
 		err := fmt.Errorf("%s (%s) didn't return any matches", c.Type, *c.Regex)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, !utils.EvalBoolPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
 	}
 
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Regex, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, !utils.EvalBoolPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
 	}
@@ -180,7 +180,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 
 	if len(texts) == 1 {
 		err := fmt.Errorf("%s didn't find any %q to split on", c.Type, *c.Text)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, !utils.EvalBoolPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
 	}
@@ -193,7 +193,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Text, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, !utils.EvalBoolPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
 	}

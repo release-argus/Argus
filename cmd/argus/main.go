@@ -63,7 +63,7 @@ func main() {
 	argus_testing.TestService(testServiceFlag, &config)
 
 	// config.Service.Init()
-	serviceCount := len(*config.Order)
+	serviceCount := len(config.Service)
 	if serviceCount == 0 {
 		jLog.Warn("No services to monitor were found.", utils.LogFrom{}, true)
 		os.Exit(0)
@@ -74,13 +74,13 @@ func main() {
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
 		jLog.Info(msg, utils.LogFrom{}, true)
 
-		for _, key := range *config.Order {
+		for _, key := range config.Order {
 			fmt.Printf("  - %s\n", *config.Service[key].ID)
 		}
 	}
 
 	// Track all targets for changes in version and act on any found changes.
-	go (&config).Service.Track(config.Order)
+	go (&config).Service.Track(&config.Order)
 
 	// SaveHandler that listens for calls to save config changes.
 	go (&config).SaveHandler(configFile)

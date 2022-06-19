@@ -35,8 +35,7 @@ type Config struct {
 	Notify       shoutrrr.Slice `yaml:"notify,omitempty"`   // Shoutrrr message(s) to send on a new release.
 	WebHook      webhook.Slice  `yaml:"webhook,omitempty"`  // WebHook(s) to send on a new release.
 	Service      service.Slice  `yaml:"service,omitempty"`  // The service(s) to monitor.
-	All          []string       `yaml:"-"`                  // Ordered list of all Service(s).
-	Order        *[]string      `yaml:"-"`                  // Ordered list of all enabled Service(s).
+	Order        []string       `yaml:"-"`                  // Ordering for the Service(s) in the WebUI.
 	SaveChannel  *chan bool     `yaml:"-"`                  // Channel for triggering a save of the config.
 	// TODO: Remove deprecated V
 	Gotify *conversions.GotifySlice `yaml:"gotify,omitempty"` // Gotify message(s) to send on a new release.

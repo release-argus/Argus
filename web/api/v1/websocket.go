@@ -37,7 +37,7 @@ func (api *API) wsService(client *Client) {
 		Page:    &responsePage,
 		Type:    &responseType,
 		SubType: &responseSubType,
-		Order:   api.Config.Order,
+		Order:   &api.Config.Order,
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
@@ -46,7 +46,7 @@ func (api *API) wsService(client *Client) {
 
 	// Initialise the services
 	responseSubType = "INIT"
-	for _, key := range *api.Config.Order {
+	for _, key := range api.Config.Order {
 		// Check Service still exists in this ordering
 		if api.Config.Service[key] == nil {
 			continue
@@ -69,8 +69,7 @@ func (api *API) wsService(client *Client) {
 			ID:                       service.ID,
 			Type:                     service.Type,
 			URL:                      &url,
-			Icon:                     service.GetIconURL(),
-			IconLinkTo:               service.IconLinkTo,
+			Icon:                     (*service).GetIconURL(),
 			HasDeployedVersionLookup: &hasDeployedVersionLookup,
 			Command:                  commandCount,
 			WebHook:                  webhookCount,
@@ -508,7 +507,7 @@ func (api *API) wsConfigService(client *Client) {
 
 	serviceConfig := make(api_types.ServiceSlice)
 	if api.Config.Service != nil {
-		for _, key := range api.Config.All {
+		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]
 
 			serviceConfig[key] = &api_types.Service{
@@ -526,7 +525,6 @@ func (api *API) wsConfigService(client *Client) {
 				IgnoreMisses:       service.IgnoreMisses,
 				AllowInvalidCerts:  service.AllowInvalidCerts,
 				Icon:               service.Icon,
-				IconLinkTo:         service.IconLinkTo,
 				Status: &api_types.Status{
 					ApprovedVersion:          service.Status.ApprovedVersion,
 					DeployedVersion:          service.Status.DeployedVersion,
@@ -641,7 +639,7 @@ func (api *API) wsConfigService(client *Client) {
 		SubType: &responseSubType,
 		ConfigData: &api_types.Config{
 			Service: &serviceConfig,
-			Order:   api.Config.All,
+			Order:   api.Config.Order,
 		},
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {

@@ -25,44 +25,43 @@ import (
 type ServiceSummary struct {
 	ID                       *string `json:"id,omitempty"`                   //
 	Active                   *bool   `json:"active,omitempty"`               // Active Service?
-	Comment                  *string `json:"comment,omitempty"`              // Comment on the Service
+	Comment                  *string `json:"comment,omitempty"`              // Comment on the Service/
 	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
-	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
+	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
-	IconLinkTo               *string `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
-	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup
-	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release
-	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release
-	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses)
+	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
+	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release.
+	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release.
+	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses).
 }
 
 // Status is the Status of a Service.
 type Status struct {
 	ApprovedVersion          string `json:"approved_version,omitempty"`           // The version that's been approved
-	DeployedVersion          string `json:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook
-	DeployedVersionTimestamp string `json:"deployed_version_timestamp,omitempty"` // UTC timestamp that the deployed version change was noticed
-	LatestVersion            string `json:"latest_version,omitempty"`             // Latest version found from query()
-	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitempty"`   // UTC timestamp that the latest version change was noticed
-	LastQueried              string `json:"last_queried,omitempty"`               // UTC timestamp that version was last queried/checked
-	RegexMissesContent       uint   `json:"regex_misses_content,omitempty"`       // Counter for the number of regex misses on URL content
-	RegexMissesVersion       uint   `json:"regex_misses_version,omitempty"`       // Counter for the number of regex misses on version
+	DeployedVersion          string `json:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
+	DeployedVersionTimestamp string `json:"deployed_version_timestamp,omitempty"` // UTC timestamp that the deployed version change was noticed.
+	LatestVersion            string `json:"latest_version,omitempty"`             // Latest version found from query().
+	LatestVersionTimestamp   string `json:"latest_version_timestamp,omitempty"`   // UTC timestamp that the latest version change was noticed.
+	LastQueried              string `json:"last_queried,omitempty"`               // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint   `json:"regex_misses_content,omitempty"`       // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint   `json:"regex_misses_version,omitempty"`       // Counter for the number of regex misses on version.
 }
 
 // StatusFails keeps track of whether each of the notifications failed on the last version change.
 type StatusFails struct {
-	Notify  *[]bool `json:"notify,omitempty"`  // Track whether any of the Slice failed
-	WebHook *[]bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed
+	Notify  *[]bool `json:"notify,omitempty"`  // Track whether any of the Slice failed.
+	WebHook *[]bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
 }
 
 // StatusFailsSummary keeps track of whether any of the notifications failed on the last version change.
 type StatusFailsSummary struct {
-	Notify  *bool `json:"notify,omitempty"`  // Track whether any of the Slice failed
-	WebHook *bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed
+	Notify  *bool `json:"notify,omitempty"`  // Track whether any of the Slice failed.
+	WebHook *bool `json:"webhook,omitempty"` // Track whether any of the WebHookSlice failed.
 }
 
 // WebHookSummary is the summary of a WebHook.
 type WebHookSummary struct {
-	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion
+	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion.
 }
 
 // Info is runtime and build information.
@@ -110,10 +109,10 @@ type Defaults struct {
 // Config is the config for Argus.
 type Config struct {
 	File     string        `json:"-"`                  // Path to the config file (-config.file='')
-	Defaults *Defaults     `json:"defaults,omitempty"` // Default values for the various parameters
-	Service  *ServiceSlice `json:"service,omitempty"`  // The service(s) to monitor
-	Notify   *NotifySlice  `json:"notify,omitempty"`   // Notify message(s) to send on a new release
-	WebHook  *WebHookSlice `json:"webhook,omitempty"`  // WebHook(s) to send on a new release
+	Defaults *Defaults     `json:"defaults,omitempty"` // Default values for the various parameters.
+	Service  *ServiceSlice `json:"service,omitempty"`  // The service(s) to monitor.
+	Notify   *NotifySlice  `json:"notify,omitempty"`   // Notify message(s) to send on a new release.
+	WebHook  *WebHookSlice `json:"webhook,omitempty"`  // WebHook(s) to send on a new release.
 	Settings *Settings     `json:"settings,omitempty"` // Settings for the program
 	Order    []string      `json:"order,omitempty"`    // Ordering for the Service(s) in the WebUI
 }
@@ -244,39 +243,38 @@ type ServiceSlice map[string]*Service
 // the latest version from the URL provided.
 type Service struct {
 	Active                *bool                  `json:"active,omitempty"`              // Active Service?
-	Comment               *string                `json:"comment,omitempty"`             // Comment on the Service
+	Comment               *string                `json:"comment,omitempty"`             // Comment on the Service/
 	Type                  *string                `json:"type,omitempty"`                // "github"/"URL"
-	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
+	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
 	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI
-	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
-	Interval              *string                `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
-	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
-	RegexContent          *string                `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
-	RegexVersion          *string                `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions
+	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
+	Interval              *string                `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks.
+	RegexContent          *string                `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
+	RegexVersion          *string                `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
 	UsePreRelease         *bool                  `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
 	AutoApprove           *bool                  `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
 	IgnoreMisses          *bool                  `json:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist)
-	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use
-	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use.
+	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
 	Icon                  string                 `json:"icon,omitempty"`                // Icon URL to use for messages/Web UI
-	IconLinkTo            *string                `json:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to
-	Command               *CommandSlice          `json:"command,omitempty"`             // OS Commands to run on new release
-	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars
-	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars
-	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version
-	Status                *Status                `json:"status,omitempty"`              // Track the Status of this source (version and regex misses)
+	Command               *CommandSlice          `json:"command,omitempty"`             // OS Commands to run on new release.
+	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars.
+	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars.
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
+	Status                *Status                `json:"status,omitempty"`              // Track the Status of this source (version and regex misses).
 }
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
-	URL               string                 `json:"url,omitempty"`                 // URL to query
-	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request
-	Headers           []Header               `json:"headers,omitempty"`             // Headers for the HTTP(S) request
-	JSON              string                 `json:"json,omitempty"`                // JSON key to use e.g. version_current
+	URL               string                 `json:"url,omitempty"`                 // URL to query.
+	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
+	Headers           []Header               `json:"headers,omitempty"`             // Headers for the HTTP(S) request.
+	JSON              string                 `json:"json,omitempty"`                // JSON key to use e.g. version_current.
 	Regex             string                 `json:"regex,omitempty"`               // Regex to get the DeployedVersion
-	HardDefaults      *DeployedVersionLookup `json:"-"`                             // Hardcoded default values
-	Defaults          *DeployedVersionLookup `json:"-"`                             // Default values
+	HardDefaults      *DeployedVersionLookup `json:"-"`                             // Hardcoded default values.
+	Defaults          *DeployedVersionLookup `json:"-"`                             // Default values.
 }
 
 // BasicAuth to use on the HTTP(s) request.
@@ -319,9 +317,9 @@ type WebHook struct {
 	Secret            *string            `json:"secret,omitempty"`              // "SECRET"
 	CustomHeaders     *map[string]string `json:"custom_headers,omitempty"`      // Custom Headers for the WebHook
 	DesiredStatusCode *int               `json:"desired_status_code,omitempty"` // e.g. 202
-	Delay             *string            `json:"delay,omitempty"`               // The delay before sending the WebHook
-	MaxTries          *uint              `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received
-	SilentFails       *bool              `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times
+	Delay             *string            `json:"delay,omitempty"`               // The delay before sending the WebHook.
+	MaxTries          *uint              `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
+	SilentFails       *bool              `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
 }
 
 // Notifiers are the notifiers to use when a WebHook fails.
@@ -331,7 +329,7 @@ type Notifiers struct {
 
 // CommandSummary is the summary of a Command.
 type CommandSummary struct {
-	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion
+	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion.
 }
 
 // CommandStateUpdate will give an update of the current state of the Command

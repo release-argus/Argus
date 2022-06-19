@@ -240,14 +240,14 @@ func (c *Config) Save() {
 
 			// Check if `i-1` should be before `i-2`
 			swap := false
-			for j := range c.All {
+			for j := range c.Order {
 				// Found i-1 (current item)
-				if c.All[j] == currentOrder[i-1] {
+				if c.Order[j] == currentOrder[i-1] {
 					swap = true
 					break
 				}
 				// Found i-2 (previous item)
-				if c.All[j] == currentOrder[i-2] {
+				if c.Order[j] == currentOrder[i-2] {
 					break
 				}
 			}

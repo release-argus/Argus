@@ -13,7 +13,6 @@ export interface ServiceSummaryType {
   type?: string;
   url?: string;
   icon?: string;
-  icon_link_to?: string;
   has_deployed_version?: boolean;
   notify?: boolean;
   webhook?: number;

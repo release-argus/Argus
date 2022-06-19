@@ -32,12 +32,12 @@ func Contains[T comparable](s []T, e T) bool {
 	return false
 }
 
-// EvalNilPtr - Return the value of pointer if it's non-nil, otherwise nilValue.
-func EvalNilPtr[T comparable](pointer *T, nilValue T) T {
-	if pointer == nil {
+// EvalBoolPtr.
+func EvalBoolPtr(boolean *bool, nilValue bool) bool {
+	if boolean == nil {
 		return nilValue
 	}
-	return *pointer
+	return *boolean
 }
 
 // PtrOrValueToPtr will take the pointer `a` and the value `b`, returning
