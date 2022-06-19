@@ -75,8 +75,8 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	if s.Defaults != nil {
 		if s.Type == nil {
 			errs = fmt.Errorf("%s%s  type: <missing> (Services require a type)\\", utils.ErrorToString(errs), prefix)
-		} else if *s.Type != "github" && *s.Type != "gitlab" && *s.Type != "url" {
-			errs = fmt.Errorf("%s%s  type: %q <invalid> (Should be either 'github', 'gitlab' or 'url')\\", utils.ErrorToString(errs), prefix, *s.Type)
+		} else if *s.Type != "github" && *s.Type != "url" {
+			errs = fmt.Errorf("%s%s  type: %q <invalid> (Should be either 'github' or 'url')\\", utils.ErrorToString(errs), prefix, *s.Type)
 		}
 	}
 
