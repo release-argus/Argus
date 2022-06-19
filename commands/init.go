@@ -30,17 +30,19 @@ func (c *Controller) Init(
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
-	jLog = log
+	if log != nil {
+		jLog = log
+	}
 	if c == nil {
 		return
 	}
-	parentID := *serviceID
 
 	c.Command = command
 	c.Failed = make(Fails, len(*command))
 
+	parentID := *serviceID
 	c.ServiceID = &parentID
-	c.initMetrics(parentID)
+	c.initMetrics()
 
 	// Command fail notifiers
 	(*c).Notifiers = Notifiers{
@@ -49,20 +51,20 @@ func (c *Controller) Init(
 }
 
 // initMetrics, giving them all a starting value.
-func (c *Controller) initMetrics(serviceID string) {
+func (c *Controller) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, serviceID, "", "SUCCESS")
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, serviceID, "", "FAIL")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "SUCCESS")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, serviceID, float64(0))
+	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceID, float64(0))
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'
