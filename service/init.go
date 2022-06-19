@@ -86,7 +86,7 @@ func (s *Service) GetAccessToken() string {
 
 // GetActive will return whether the Service is Active or not (default = true)
 func (s *Service) GetActive() bool {
-	return utils.EvalBoolPtr(s.Active, true)
+	return utils.EvalNilPtr(s.Active, true)
 }
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
