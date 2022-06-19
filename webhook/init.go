@@ -134,7 +134,6 @@ func (w *WebHook) GetMaxTries() uint {
 
 // GetRequest will return the WebHook http.request ready to be sent.
 func (w *WebHook) GetRequest() (req *http.Request) {
-	// GitHub style payload.
 	switch w.GetType() {
 	case "github":
 		payload, err := json.Marshal(GitHub{
