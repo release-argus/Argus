@@ -19,7 +19,7 @@ import (
 	"net/url"
 )
 
-// SetGitHubHeaders of the req based on the payload and secret.
+// SetGitLabParameter of the req based on the secret.
 func SetGitLabParameter(req *http.Request, secret string) {
 	q := url.Values{}
 	if req.URL.Query() != nil && len(req.URL.Query()) != 0 {
