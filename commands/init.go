@@ -30,7 +30,9 @@ func (c *Controller) Init(
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
-	jLog = log
+	if log != nil {
+		jLog = log
+	}
 	if c == nil {
 		return
 	}
