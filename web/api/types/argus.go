@@ -244,7 +244,7 @@ type ServiceSlice map[string]*Service
 // the latest version from the URL provided.
 type Service struct {
 	Active                *bool                  `json:"active,omitempty"`              // Active Service?
-	Comment               *string                `json:"comment,omitempty"`             // Comment on the Service/
+	Comment               *string                `json:"comment,omitempty"`             // Comment on the Service
 	Type                  *string                `json:"type,omitempty"`                // "github"/"URL"
 	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
 	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI

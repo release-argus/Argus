@@ -45,10 +45,9 @@ export const ServiceInfo = ({
 
   // If version hasn't been found or a new version has been found
   const serviceWarning =
-    service.active !== false &&
-    (service?.status?.deployed_version === undefined ||
-      service?.status?.deployed_version === "" ||
-      (updateAvailable && !updateSkipped));
+    service?.status?.deployed_version === undefined ||
+    service?.status?.deployed_version === "" ||
+    (updateAvailable && !updateSkipped);
 
   const IconDeployedVersionIndicator = forwardRef((props, ref) =>
     service.has_deployed_version ? (
@@ -271,8 +270,6 @@ export const ServiceInfo = ({
             </>
           ) : service.loading ? (
             "loading"
-          ) : service.active === false ? (
-            "disabled"
           ) : (
             "no successful queries"
           )}
