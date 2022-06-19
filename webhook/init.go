@@ -134,8 +134,8 @@ func (w *WebHook) GetMaxTries() uint {
 
 // GetRequest will return the WebHook http.request ready to be sent.
 func (w *WebHook) GetRequest() (req *http.Request) {
-	// GitHub style payload.
-	if w.GetType() == "github" {
+	switch w.GetType() {
+	case "github":
 		payload, err := json.Marshal(GitHub{
 			Ref:    "refs/heads/master",
 			Before: utils.RandAlphaNumericLower(40),
@@ -153,6 +153,15 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 		w.SetCustomHeaders(req)
 		SetGitHubHeaders(req, payload, *w.GetSecret())
+	case "gitlab":
+		var err error
+		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), nil)
+		if err != nil {
+			return nil
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		SetGitLabParameter(req, *w.GetSecret())
 	}
 	return
 }
