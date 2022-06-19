@@ -20,33 +20,99 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestCommands(t *testing.T) {
+func TestExec(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
-	var commandController Controller
-	commandController.Failed = make(Fails, 1)
-	err := commandController.Exec(&utils.LogFrom{})
-	name := "TEST"
-	commandController.ServiceID = &name
-	if err != nil {
-		t.Fatalf(`%v command shouldn't have errored as it didn't do anything\n%s`, commandController.Command, err.Error())
+	{ // GIVEN an empty Controller
+		controllerName := "TEST"
+		commandController := Controller{
+			ServiceID: &controllerName,
+			Failed:    make(Fails, 0),
+		}
+		// WHEN executed
+		err := commandController.Exec(&utils.LogFrom{})
+		// THEN err is nil
+		if err != nil {
+			t.Fatalf(`%v command shouldn't have errored as it didn't do anything\n%s`, commandController.Command, err.Error())
+		}
 	}
 
-	commandController.Command = &Slice{Command{"ls", "/root"}}
-	if (*commandController.Command)[0].String() != "ls /root" {
-		t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls /root")
-	}
-	err = commandController.Exec(&utils.LogFrom{})
-	if err == nil {
-		t.Fatalf(`%v commands should have errored unless you're running as root`, commandController.Command)
+	{ // GIVEN a Command that should fail
+		controllerName := "TEST"
+		commandController := Controller{
+			ServiceID: &controllerName,
+		}
+		commandController.Init(nil, &controllerName, &Slice{Command{"ls", "/root"}}, nil)
+		{
+			// WHEN it's stringified with .String()
+			// THEN it's joined with spaces
+			if (*commandController.Command)[0].String() != "ls /root" {
+				t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls /root")
+			}
+
+			// WHEN it's executed
+			err := commandController.Exec(&utils.LogFrom{})
+			// THEN it returns and error
+			if err == nil {
+				t.Fatalf(`%v commands should have errored unless you're running as root`, commandController.Command)
+			}
+		}
 	}
 
-	commandController.Command = &Slice{Command{"ls"}}
-	if (*commandController.Command)[0].String() != "ls" {
-		t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls")
+	{ // GIVEN a Command that should pass
+		controllerName := "TEST"
+		commandController := Controller{
+			ServiceID: &controllerName,
+		}
+		commandController.Init(nil, &controllerName, &Slice{Command{"ls"}}, nil)
+		{
+			// WHEN it's stringified with .String()
+			// THEN it's returned as the correct string
+			if (*commandController.Command)[0].String() != "ls" {
+				t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls")
+			}
+
+			// WHEN it's executed
+			err := commandController.Exec(&utils.LogFrom{})
+			// THEN it returns a nil error
+			if err != nil {
+				t.Fatalf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, commandController.Command, err.Error())
+			}
+		}
 	}
-	err = commandController.Exec(&utils.LogFrom{})
-	if err != nil {
-		t.Fatalf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, commandController.Command, err.Error())
+}
+
+func TestExecIndex(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	// GIVEN a Controller with Commands
+	controllerName := "TEST"
+	commandController := Controller{
+		ServiceID: &controllerName,
+		Command: &Slice{
+			Command{"false"},
+			Command{"false"},
+		},
+		Failed: make(Fails, 2),
+	}
+	{ // WHEN ExecIndex is called on an index that exists
+		err := commandController.ExecIndex(&utils.LogFrom{}, 0)
+		// THEN err is nil
+		if err == nil {
+			t.Fatalf(`%q command shouldn't have errored as it was just an\n%s`, (*commandController.Command)[0].String(), err.Error())
+		}
+		// WHEN ExecIndex is called on an index that exists
+		err = commandController.ExecIndex(&utils.LogFrom{}, 1)
+		// THEN err is nil
+		if err == nil {
+			t.Fatalf(`%q command shouldn't have errored as it was just an\n%s`, (*commandController.Command)[1].String(), err.Error())
+		}
+
+		// WHEN ExecIndex is called on an index that doesn't exist
+		err = commandController.ExecIndex(&utils.LogFrom{}, 2)
+		// THEN err is nil
+		if err != nil {
+			t.Fatalf(`%v command shouldn't have errored as the index was outside the bounds\n%s`, commandController.Command, err.Error())
+		}
 	}
 }
