@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -27,6 +28,7 @@ import (
 func (c *Controller) Init(
 	log *utils.JLog,
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
@@ -37,6 +39,7 @@ func (c *Controller) Init(
 		return
 	}
 
+	c.ServiceStatus = serviceStatus
 	c.Command = command
 	c.Failed = make(Fails, len(*command))
 

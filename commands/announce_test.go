@@ -172,15 +172,18 @@ func TestResetFails(t *testing.T) {
 		commandController.Failed[4] = &failed4
 
 		// WHEN ResetFails is called
+		failsBefore := len(commandController.Failed)
 		commandController.ResetFails()
-		// THEN all the fails become nil and the count stays the same
+		// THEN all the fails become nil
 		for _, failed := range commandController.Failed {
 			if failed != nil {
 				t.Fatalf("Reset failed, got %v", commandController.Failed)
 			}
 		}
-		if len(commandController.Failed) != len(*commandController.Command) {
-			t.Fatalf("Reset added/removed elements to the Failed list, got %v", commandController.Failed)
+		// AND the count stays the same
+		failsAfter := len(commandController.Failed)
+		if failsBefore != failsAfter {
+			t.Fatalf("Reset added/removed elements to the Failed list. Wanted %d, got %d", failsBefore, failsAfter)
 		}
 	}
 }

@@ -16,18 +16,18 @@ package command
 
 import (
 	"encoding/json"
-	"strings"
 
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceCommand will announce the failed status of `c.Announce` channel
+// AnnounceCommand will announce the Command fail status to `c.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (c *Controller) AnnounceCommand(index int) {
 	var payloadData []byte
 
 	commandSummary := make(map[string]*api_types.CommandSummary)
-	commandSummary[strings.Join((*c.Command)[index], " ")] = &api_types.CommandSummary{Failed: c.Failed[index]}
+	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
+	commandSummary[formatted.String()] = &api_types.CommandSummary{Failed: c.Failed[index]}
 
 	// Command success/fail
 	wsPage := "APPROVALS"
@@ -51,10 +51,11 @@ func (c *Controller) AnnounceCommand(index int) {
 // Find `command`.
 func (c *Controller) Find(command string) *int {
 	// Loop through all the Command(s)
-	for i := range *c.Command {
-		// If this command starts with the same text
-		if (*c.Command)[i].String() == command {
-			return &i
+	for key := range *c.Command {
+		formatted := (*c.Command)[key].ApplyTemplate(c.ServiceStatus)
+		// If this key is the command
+		if formatted.String() == command {
+			return &key
 		}
 	}
 	return nil

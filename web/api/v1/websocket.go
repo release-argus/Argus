@@ -187,8 +187,8 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 
 	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[*id].Command))
 	for key := range *api.Config.Service[*id].CommandController.Command {
-		command := strings.Join((*api.Config.Service[*id].CommandController.Command)[key], " ")
-		commandSummary[command] = &api_types.CommandSummary{
+		command := (*api.Config.Service[*id].CommandController.Command)[key].ApplyTemplate(api.Config.Service[*id].Status)
+		commandSummary[command.String()] = &api_types.CommandSummary{
 			Failed: api.Config.Service[*id].CommandController.Failed[key],
 		}
 	}
