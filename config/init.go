@@ -37,7 +37,7 @@ func (c *Config) Init() {
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
-	for serviceID := range c.Service {
+	for serviceID, service := range c.Service {
 		c.Service[serviceID].Init(
 			jLog,
 			&c.Defaults.Service,
@@ -55,6 +55,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].WebHook.Init(
 			jLog,
 			&serviceID,
+			service.Status,
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
