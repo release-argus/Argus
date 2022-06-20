@@ -237,6 +237,7 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[*id].WebHook))
 
 	for key := range *api.Config.Service[*id].WebHook {
+		key = utils.TemplateString(key, utils.ServiceInfo{LatestVersion: api.Config.Service[*id].Status.LatestVersion})
 		webhookSummary[key] = &api_types.WebHookSummary{
 			Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
 		}

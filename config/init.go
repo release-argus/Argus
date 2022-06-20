@@ -55,6 +55,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].WebHook.Init(
 			jLog,
 			&serviceID,
+			service.Status,
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -29,6 +30,7 @@ import (
 func (w *Slice) Init(
 	log *utils.JLog,
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *WebHook,
 	hardDefaults *WebHook,
@@ -50,6 +52,7 @@ func (w *Slice) Init(
 		(*w)[key].ID = &id
 		(*w)[key].Init(
 			serviceID,
+			serviceStatus,
 			(*mains)[key],
 			defaults,
 			hardDefaults,
@@ -61,6 +64,7 @@ func (w *Slice) Init(
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	main *WebHook,
 	defaults *WebHook,
 	hardDefaults *WebHook,
@@ -71,6 +75,7 @@ func (w *WebHook) Init(
 	}
 
 	w.initMetrics(*serviceID)
+	w.ServiceStatus = serviceStatus
 
 	if w == nil {
 		w = &WebHook{}
@@ -183,7 +188,9 @@ func (w *WebHook) GetSilentFails() bool {
 
 // GetURL of the WebHook.
 func (w *WebHook) GetURL() *string {
-	return utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
+	url := utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
+	*url = utils.TemplateString(*url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion})
+	return url
 }
 
 // ResetFails of this Slice
