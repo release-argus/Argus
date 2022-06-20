@@ -30,6 +30,7 @@ func TestInit(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
 		)
 		// THEN the controller stays nil
 		if commandController != nil {
@@ -44,6 +45,7 @@ func TestInit(t *testing.T) {
 	commandController.Init(
 		utils.NewJLog("DEBUG", false),
 		&controllerName,
+		nil,
 		&Slice{
 			Command{"false"},
 			Command{"false"},

@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"time"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -59,8 +60,10 @@ func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
 		return nil
 	}
 
+	command := (*c.Command)[index].ApplyTemplateVars(c.ServiceStatus)
+
 	// Execute
-	err := (*c.Command)[index].Exec(logFrom)
+	err := command.Exec(logFrom)
 
 	// Set fail/not
 	failed := err != nil
@@ -92,4 +95,17 @@ func (c *Command) Exec(logFrom *utils.LogFrom) error {
 	jLog.Info(string(out), *logFrom, err == nil && string(out) != "")
 
 	return err
+}
+
+func (c *Command) ApplyTemplateVars(serviceStatus *service_status.Status) Command {
+	if serviceStatus == nil {
+		return *c
+	}
+
+	command := Command(make([]string, len(*c)))
+	copy(command, *c)
+	for i := range command {
+		command[i] = utils.TemplateString(command[i], utils.ServiceInfo{LatestVersion: serviceStatus.LatestVersion})
+	}
+	return command
 }

@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"testing"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -58,7 +59,7 @@ func TestServiceQuery(t *testing.T) {
 		RegexVersion: &serviceRegexVersion,
 		Defaults:     &Service{},
 		HardDefaults: &hardDefaults,
-		Status:       &Status{},
+		Status:       &service_status.Status{},
 	}
 
 	_, _ = service["GitHub_Query_Test"].Query()

@@ -17,6 +17,7 @@ package command
 import (
 	"testing"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -42,7 +43,7 @@ func TestExec(t *testing.T) {
 		commandController := Controller{
 			ServiceID: &controllerName,
 		}
-		commandController.Init(nil, &controllerName, &Slice{Command{"ls", "/root"}}, nil)
+		commandController.Init(nil, &controllerName, nil, &Slice{Command{"ls", "/root"}}, nil)
 		{
 			// WHEN it's stringified with .String()
 			// THEN it's joined with spaces
@@ -64,7 +65,7 @@ func TestExec(t *testing.T) {
 		commandController := Controller{
 			ServiceID: &controllerName,
 		}
-		commandController.Init(nil, &controllerName, &Slice{Command{"ls"}}, nil)
+		commandController.Init(nil, &controllerName, nil, &Slice{Command{"ls"}}, nil)
 		{
 			// WHEN it's stringified with .String()
 			// THEN it's returned as the correct string
@@ -113,6 +114,49 @@ func TestExecIndex(t *testing.T) {
 		// THEN err is nil
 		if err != nil {
 			t.Fatalf(`%v command shouldn't have errored as the index was outside the bounds\n%s`, commandController.Command, err.Error())
+		}
+	}
+}
+
+func TestApplyTemplateVars(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	{ // GIVEN a Controller with nil ServiceStatus
+		controllerName := "TEST"
+		commandController := Controller{
+			ServiceID: &controllerName,
+			Command: &Slice{
+				Command{"false", "{{ version }}"},
+			},
+			Failed: make(Fails, 1),
+		}
+		// WHEN ApplyTemplateVars is called with that nil Status
+		command := (*commandController.Command)[0].ApplyTemplateVars(commandController.ServiceStatus)
+		// THEN the {{ version }} var is not evaluated
+		got := command.String()
+		want := "false {{ version }}"
+		if got != want {
+			t.Fatalf(`Failed with nil Status. Got %q, wanted %q`, got, want)
+		}
+	}
+
+	{ // GIVEN a Controller with a non-nil ServiceStatus
+		controllerName := "TEST"
+		commandController := Controller{
+			ServiceID: &controllerName,
+			Command: &Slice{
+				Command{"false", "{{ version }}"},
+			},
+			Failed:        make(Fails, 1),
+			ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+		}
+		// WHEN ApplyTemplateVars is called
+		command := (*commandController.Command)[0].ApplyTemplateVars(commandController.ServiceStatus)
+		// THEN the {{ version }} var is evaluated
+		got := command.String()
+		want := "false 1.2.3"
+		if got != want {
+			t.Fatalf(`Failed with non-nil Status. Got %q, wanted %q`, got, want)
 		}
 	}
 }

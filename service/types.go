@@ -20,6 +20,7 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/conversions"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -52,7 +53,7 @@ type Service struct {
 	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
 	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
-	Status                *Status                `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
+	Status                *service_status.Status `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
 	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.
 	Defaults              *Service               `yaml:"-"`                             // Default values.
 	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.

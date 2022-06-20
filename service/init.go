@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/web/metrics"
 )
@@ -36,10 +37,10 @@ func (s *Service) Init(
 	jLog = log
 	s.initMetrics()
 	if s.Status == nil {
-		s.Status = &Status{}
+		s.Status = &service_status.Status{}
 	}
 	if s.Status.Fails == nil {
-		s.Status.Fails = &StatusFails{}
+		s.Status.Fails = &service_status.Fails{}
 	}
 	// Default LatestVersion to DeployedVersion
 	if s.Status.LatestVersion == "" {

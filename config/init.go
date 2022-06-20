@@ -37,7 +37,7 @@ func (c *Config) Init() {
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
-	for serviceID := range c.Service {
+	for serviceID, service := range c.Service {
 		c.Service[serviceID].Init(
 			jLog,
 			&c.Defaults.Service,
@@ -67,6 +67,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].CommandController.Init(
 			jLog,
 			&serviceID,
+			service.Status,
 			c.Service[serviceID].Command,
 			c.Service[serviceID].Notify,
 		)
