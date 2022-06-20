@@ -39,18 +39,25 @@ func (w *WebHook) SetCustomHeaders(req *http.Request) {
 		return
 	}
 
-	for key := range *w.CustomHeaders {
-		req.Header[key] = []string{(*w.CustomHeaders)[key]}
+	serviceInfo := utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}
+	for key, value := range *w.CustomHeaders {
+		value = utils.TemplateString(value, serviceInfo)
+		req.Header[key] = []string{value}
 	}
 }
 
 // SetGitHubHeaders of the req based on the payload and secret.
 func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
-	req.Header.Set("X-GitHub-Event", "push")
-	req.Header.Set("X-GitHub-Hook-ID", utils.RandNumeric(9))
-	req.Header.Set("X-GitHub-Delivery", fmt.Sprintf("%s-%s-%s-%s-%s", utils.RandAlphaNumericLower(8), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(4), utils.RandAlphaNumericLower(12)))
-	req.Header.Set("X-GitHub-Hook-Installation-Target-ID", utils.RandNumeric(9))
-	req.Header.Set("X-GitHub-Hook-Installation-Target-Type", "repository")
+	req.Header.Set("X-Github-Event", "push")
+	req.Header.Set("X-Github-Hook-Id", utils.RandNumeric(9))
+	req.Header.Set("X-Github-Delivery", fmt.Sprintf("%s-%s-%s-%s-%s",
+		utils.RandAlphaNumericLower(8),
+		utils.RandAlphaNumericLower(4),
+		utils.RandAlphaNumericLower(4),
+		utils.RandAlphaNumericLower(4),
+		utils.RandAlphaNumericLower(12)))
+	req.Header.Set("X-Github-Hook-Installation-Target-Id", utils.RandNumeric(9))
+	req.Header.Set("X-Github-Hook-Installation-Target-Type", "repository")
 
 	// X-Hub-Signature-256.
 	hash := hmac.New(sha256.New, []byte(secret))

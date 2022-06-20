@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -158,7 +159,7 @@ func (s *Service) Print(prefix string) {
 
 	s.DeployedVersionLookup.Print(prefix)
 
-	if s.Status != nil && *s.Status != (Status{}) {
+	if s.Status != nil && *s.Status != (service_status.Status{}) {
 		fmt.Printf("%sstatus:\n", prefix)
 		s.Status.Print(prefix + "  ")
 	}

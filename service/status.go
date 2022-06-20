@@ -14,52 +14,7 @@
 
 package service
 
-import (
-	"fmt"
-	"time"
-
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/webhook"
-)
-
-// Status is the current state of the Service element (version and regex misses).
-type Status struct {
-	ApprovedVersion          string       `yaml:"approved_version,omitempty"`           // The version that's been approved
-	DeployedVersion          string       `yaml:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
-	DeployedVersionTimestamp string       `yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp of DeployedVersion being changed.
-	LatestVersion            string       `yaml:"latest_version,omitempty"`             // Latest version found from query().
-	LatestVersionTimestamp   string       `yaml:"latest_version_timestamp,omitempty"`   // UTC timestamp of LatestVersion being changed.
-	LastQueried              string       `yaml:"-"`                                    // UTC timestamp that version was last queried/checked.
-	RegexMissesContent       uint         `yaml:"-"`                                    // Counter for the number of regex misses on URL content.
-	RegexMissesVersion       uint         `yaml:"-"`                                    // Counter for the number of regex misses on version.
-	Fails                    *StatusFails `yaml:"-"`                                    // Track the Notify/WebHook fails
-	// TODO: Remove V
-	CurrentVersion          string `yaml:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
-	CurrentVersionTimestamp string `yaml:"current_version_timestamp,omitempty"` // UTC timestamp that the current version change was noticed.
-}
-
-// StatusFails keeps track of whether any of the notifications failed on the last version change.
-type StatusFails struct {
-	Shoutrrr *[]bool `yaml:"-"` // Track whether any of the Slice failed.
-	WebHook  *[]bool `yaml:"-"` // Track whether any of the WebHookSlice failed.
-}
-
-// Init initialises the Status vars when more than the default value is needed.
-func (s *Status) Init(
-	shoutrrrs *shoutrrr.Slice,
-	webhooks *webhook.Slice,
-) {
-	s.Fails = new(StatusFails)
-	if shoutrrrs != nil {
-		shoutrrrFails := make([]bool, len(*shoutrrrs))
-		s.Fails.Shoutrrr = &shoutrrrFails
-	}
-	if webhooks != nil {
-		webhookFails := make([]bool, len(*webhooks))
-		s.Fails.WebHook = &webhookFails
-	}
-}
+import "time"
 
 // SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
 func (s *Service) SetDeployedVersion(version string) {
@@ -75,11 +30,6 @@ func (s *Service) SetDeployedVersion(version string) {
 	s.CommandController.ResetFails()
 }
 
-// SetLastQueried will update LastQueried to now.
-func (s *Status) SetLastQueried() {
-	s.LastQueried = time.Now().UTC().Format(time.RFC3339)
-}
-
 // SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
 func (s *Service) SetLatestVersion(version string) {
 	s.Status.LatestVersion = version
@@ -88,13 +38,4 @@ func (s *Service) SetLatestVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.WebHook.ResetFails()
 	s.CommandController.ResetFails()
-}
-
-// Print will print the Status.
-func (s *Status) Print(prefix string) {
-	utils.PrintlnIfNotDefault(s.ApprovedVersion, fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
-	utils.PrintlnIfNotDefault(s.DeployedVersion, fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
-	utils.PrintlnIfNotDefault(s.DeployedVersionTimestamp, fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
-	utils.PrintlnIfNotDefault(s.LatestVersion, fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
-	utils.PrintlnIfNotDefault(s.LatestVersionTimestamp, fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
 }

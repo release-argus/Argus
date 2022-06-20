@@ -18,9 +18,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -29,13 +31,14 @@ import (
 func (w *Slice) Init(
 	log *utils.JLog,
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *WebHook,
 	hardDefaults *WebHook,
 	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
 	jLog = log
-	if w == nil {
+	if w == nil || len(*w) == 0 {
 		return
 	}
 	if mains == nil {
@@ -50,6 +53,7 @@ func (w *Slice) Init(
 		(*w)[key].ID = &id
 		(*w)[key].Init(
 			serviceID,
+			serviceStatus,
 			(*mains)[key],
 			defaults,
 			hardDefaults,
@@ -61,22 +65,18 @@ func (w *Slice) Init(
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	main *WebHook,
 	defaults *WebHook,
 	hardDefaults *WebHook,
 	shoutrrrNotifiers *shoutrrr.Slice,
 ) {
-	if w == nil {
-		return
-	}
-
 	w.initMetrics(*serviceID)
-
-	if w == nil {
-		w = &WebHook{}
+	if serviceStatus != nil {
+		w.ServiceStatus = serviceStatus
 	}
 
-	// Give the matchinw main
+	// Give the matching main
 	(*w).Main = main
 	if main == nil {
 		w.Main = &WebHook{}
@@ -134,16 +134,16 @@ func (w *WebHook) GetMaxTries() uint {
 
 // GetRequest will return the WebHook http.request ready to be sent.
 func (w *WebHook) GetRequest() (req *http.Request) {
+	var err error
 	switch w.GetType() {
 	case "github":
-		payload, err := json.Marshal(GitHub{
+		//#nosec G104 -- Disregard
+		//nolint:errcheck // ^
+		payload, _ := json.Marshal(GitHub{
 			Ref:    "refs/heads/master",
 			Before: utils.RandAlphaNumericLower(40),
 			After:  utils.RandAlphaNumericLower(40),
 		})
-		if err != nil {
-			return
-		}
 
 		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), bytes.NewReader(payload))
 		if err != nil {
@@ -154,7 +154,6 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 		w.SetCustomHeaders(req)
 		SetGitHubHeaders(req, payload, *w.GetSecret())
 	case "gitlab":
-		var err error
 		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), nil)
 		if err != nil {
 			return nil
@@ -183,7 +182,11 @@ func (w *WebHook) GetSilentFails() bool {
 
 // GetURL of the WebHook.
 func (w *WebHook) GetURL() *string {
-	return utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
+	url := utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
+	if w.ServiceStatus != nil && url != nil && strings.Contains(*url, "{") {
+		*url = strings.Clone(utils.TemplateString(*url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
+	}
+	return url
 }
 
 // ResetFails of this Slice
