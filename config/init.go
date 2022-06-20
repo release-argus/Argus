@@ -68,6 +68,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].CommandController.Init(
 			jLog,
 			&serviceID,
+			service.Status,
 			c.Service[serviceID].Command,
 			c.Service[serviceID].Notify,
 		)
