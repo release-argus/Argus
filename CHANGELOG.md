@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/release-argus/Argus/compare/0.6.0...0.7.0) (2022-06-22)
+
+
+### Features
+
+* **command:** apply version var templating to args ([5bf93b7](https://github.com/release-argus/Argus/commits/5bf93b7930978a4c65fe6fb3aaf57f4b9f0b7d56))
+* **config:** `active` var to disable a service ([#88](https://github.com/release-argus/argus/issues/88)) ([af756f4](https://github.com/release-argus/Argus/commits/af756f458cfbe9f379a96e338376d20c1702976c))
+* **config:** `comment` var for services ([#90](https://github.com/release-argus/argus/issues/90)) ([a6b68eb](https://github.com/release-argus/Argus/commits/a6b68eb72495f8ff450feba1b9cb2f47fe1523db))
+* **ui:** icons can be links - `icon_link_to` ([#92](https://github.com/release-argus/argus/issues/92)) ([8c3a9af](https://github.com/release-argus/Argus/commits/8c3a9af5c38a8ea3ce16fdf1c62ab0a730a16359))
+* **webhook:** add `gitlab` type ([#95](https://github.com/release-argus/argus/issues/95)) ([5a8ab55](https://github.com/release-argus/Argus/commits/5a8ab551e672f08e6a82fdcbd3e0d3bc8f498c0d))
+* **webhook:** apply version var templating to custom headers + url ([e31f51b](https://github.com/release-argus/Argus/commits/e31f51bc9877a40101e74c9cb930f2adf9be564d))
+
+
+### Bug Fixes
+
+* **https:** verify cert/key exist ([a24e194](https://github.com/release-argus/Argus/commits/a24e1948020cadcc888c33a739c2a896213902b0)), closes [/github.com/release-argus/Argus/issues/84#issuecomment-1150016743](https://github.com/release-argus/Argus/issues/84/#issuecomment-1150016743)
+
 ## [0.6.0](https://github.com/release-argus/Argus/compare/0.5.1...0.6.0) (2022-06-04)
 
 
@@ -14,7 +31,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Bug Fixes
 
-* **skips:** only update approved_version if commands/webhooks are with a deployed_version lookup ([6972734](https://github.com/release-argus/Argus/commits/69727342f8e01c052a08c3a73a1b38216f99d83a)), closes [/github.com/release-argus/Argus/issues/62#issuecomment-1144963060](https://github.com/release-argus//github.com/release-argus/Argus/issues/62/issues/issuecomment-1144963060)
+* **skips:** only update approved_version if commands/webhooks are with a deployed_version lookup ([6972734](https://github.com/release-argus/Argus/commits/69727342f8e01c052a08c3a73a1b38216f99d83a)), closes [/github.com/release-argus/Argus/issues/62#issuecomment-1144963060](https://github.com/release-argus/Argus/issues/62/#issuecomment-1144963060)
 
 ## [0.5.0](https://github.com/release-argus/Argus/compare/0.4.1...0.5.0) (2022-06-02)
 
@@ -34,7 +51,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 * allow negative split `index` ([ab61399](https://github.com/release-argus/Argus/commits/ab613995654a5bbc7d3d7855105c1195bf59aed4))
 * check that `latest_version`s are newer than `deployed_version` (and !=) ([75aad65](https://github.com/release-argus/Argus/commits/75aad65c6fb14b771c144c01ae2640e53ec3a22e))
-* ensure used webhooks have a `type` on startup ([3eda486](https://github.com/release-argus/Argus/commits/3eda486d55e18ef6a8a3d02bd58d251587b12833)), closes [/github.com/release-argus/Argus/issues/71#issuecomment-1139456015](https://github.com/release-argus//github.com/release-argus/Argus/issues/71/issues/issuecomment-1139456015)
+* ensure used webhooks have a `type` on startup ([3eda486](https://github.com/release-argus/Argus/commits/3eda486d55e18ef6a8a3d02bd58d251587b12833)), closes [/github.com/release-argus/Argus/issues/71#issuecomment-1139456015](https://github.com/release-argus/Argus/issues/71/#issuecomment-1139456015)
 * ordering struggled with empty newlines ([9a1b4a1](https://github.com/release-argus/Argus/commits/9a1b4a1a26fe02791e77df4962fc2dce058dcc4f))
 * rename `current_version` to `deployed_version` ([#64](https://github.com/release-argus/Argus/issues/64)) ([0b3b1d5](https://github.com/release-argus/Argus/commits/0b3b1d568cf334765322a488a22d3a41467ae2ff))
 * save sometimes copied a random blank line ([76da7b2](https://github.com/release-argus/Argus/commits/76da7b21459c59ae7f8eac1a2c43a6e1ff166b07))
