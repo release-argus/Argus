@@ -50,8 +50,8 @@ type Service struct {
 	IconLinkTo            *string                `yaml:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to.
 	CommandController     *command.Controller    `yaml:"-"`                             // The controller for the OS Commands that tracks fails and has the announce channel.
 	Command               *command.Slice         `yaml:"command,omitempty"`             // OS Commands to run on new release.
-	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
+	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
 	Status                *service_status.Status `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
 	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.

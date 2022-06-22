@@ -59,9 +59,9 @@ export interface ServiceType {
   ignore_misses?: string;
   icon?: string;
   icon_link_to?: string;
-  notify?: ServiceDict<NotifyType>;
   command?: string[];
   webhook?: ServiceDict<WebHookType>;
+  notify?: ServiceDict<NotifyType>;
   deployed_version?: DeployedVersionLookupType;
   status?: StatusType;
 }
@@ -127,10 +127,11 @@ export interface OptionsType {
 }
 
 export interface WebHookType {
-  type: string;
-  url: string;
-  secret?: string;
+  type?: string;
+  url?: string;
+  allow_invalid_certs?: boolean;
   custom_headers?: Map<string, string>;
+  secret?: string;
   desired_status_code?: number;
   delay?: string;
   max_tries?: number;
