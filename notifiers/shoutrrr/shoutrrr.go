@@ -25,7 +25,7 @@ import (
 	"github.com/release-argus/Argus/web/metrics"
 )
 
-func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
+func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types.Params) {
 	p := make(shoutrrr_types.Params)
 	params = &p
 
@@ -59,6 +59,11 @@ func (s *Shoutrrr) GetParams() (params *shoutrrr_types.Params) {
 		if !exist {
 			(*params)[key] = s.HardDefaults.GetSelfParam(key)
 		}
+	}
+
+	// Apply Jinja templating
+	for key := range *params {
+		(*params)[key] = utils.TemplateString((*params)[key], *context)
 	}
 
 	return
@@ -229,7 +234,7 @@ func (s *Slice) Send(
 				errs <- err
 				return
 			}
-			params := shoutrrr.GetParams()
+			params := shoutrrr.GetParams(serviceInfo)
 			if params == nil {
 				p := make(shoutrrr_types.Params)
 				params = &p

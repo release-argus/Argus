@@ -103,7 +103,12 @@ func TestNotify(flag *string, cfg *config.Config) {
 
 	title := (*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
 	message := "TEST - " + (*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"})
-	err := shoutrrr.Send(title, message, &utils.ServiceInfo{})
+	err := shoutrrr.Send(title, message, &utils.ServiceInfo{
+		ID:            "ID",
+		URL:           "URL",
+		WebURL:        "WebURL",
+		LatestVersion: "MAJOR.MINOR.PATCH",
+	})
 	jLog.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	jLog.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
 	os.Exit(0)

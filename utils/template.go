@@ -15,13 +15,20 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/flosch/pongo2/v5"
 )
 
 // TemplateString with pongo2 and `context`.
-func TemplateString(tmpl string, context ServiceInfo) string {
+func TemplateString(template string, context ServiceInfo) string {
+	// If the string isn't a Jinja template
+	if !strings.Contains(template, "{") {
+		return template
+	}
+
 	// Compile the template.
-	tpl, err := pongo2.FromString(tmpl)
+	tpl, err := pongo2.FromString(template)
 	if err != nil {
 		panic(err)
 	}
