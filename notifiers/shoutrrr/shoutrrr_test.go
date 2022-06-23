@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
+	"github.com/release-argus/Argus/utils"
 )
 
 func TestShoutrrr(t *testing.T) {
@@ -39,7 +40,7 @@ func TestShoutrrr(t *testing.T) {
 	}
 
 	test.initParams()
-	gotParams := test.GetParams()
+	gotParams := test.GetParams(&utils.ServiceInfo{})
 	for key := range *gotParams {
 		if (*gotParams)[key] != wantedParams[key] {
 			t.Fatalf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
@@ -65,7 +66,7 @@ func TestShoutrrr(t *testing.T) {
 		"icon":    "github",
 	}
 	test.initParams()
-	gotParams = test.GetParams()
+	gotParams = test.GetParams(&utils.ServiceInfo{})
 	for key := range *gotParams {
 		if (*gotParams)[key] != wantedParams[key] {
 			t.Fatalf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
