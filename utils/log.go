@@ -42,6 +42,7 @@ type JLog struct {
 	Level      uint
 	LevelStr   string // The string value of Level (ERROR/WARN/INFO/VERBOSE/DEBUG)
 	Timestamps bool   // whether to log timestamps with the msg, or just the msg.
+	Testing    bool   // Whether we're in tests (don't Fatal)
 }
 
 type LogFrom struct {
@@ -194,6 +195,9 @@ func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 func (l *JLog) Fatal(msg interface{}, from LogFrom, otherCondition bool) {
 	if otherCondition {
 		l.Error(msg, from, true)
-		os.Exit(1)
+		if !l.Testing {
+			os.Exit(1)
+		}
+		panic(msg)
 	}
 }
