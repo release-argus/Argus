@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-// Contains returns whether `s` contains `e``
+// Contains returns whether `s` contains `e`
 func Contains[T comparable](s []T, e T) bool {
 	for _, v := range s {
 		if v == e {
@@ -41,7 +41,7 @@ func EvalNilPtr[T comparable](pointer *T, nilValue T) T {
 }
 
 // PtrOrValueToPtr will take the pointer `a` and the value `b`, returning
-// the first that isn't nil.
+// `a` when it isn't nil.
 func PtrOrValueToPtr[T comparable](a *T, b T) *T {
 	if a == nil {
 		return &b
@@ -49,7 +49,7 @@ func PtrOrValueToPtr[T comparable](a *T, b T) *T {
 	return a
 }
 
-// ValueIfNotNil will take the `check` pointer and return `value`
+// ValueIfNotNil will take the `check` pointer and return address of `value`
 // when `check` is not nil.
 func ValueIfNotNil[T comparable](check *T, value T) *T {
 	if check == nil {
@@ -190,7 +190,7 @@ func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
 	if strings.HasPrefix(url, "https") {
 		convertedPort = "443"
 		url = strings.TrimPrefix(url, "https://")
-	} else {
+	} else if strings.HasPrefix(url, "http") {
 		convertedPort = "80"
 		url = strings.TrimPrefix(url, "http://")
 	}
@@ -204,4 +204,13 @@ func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
 		return defaultPort
 	}
 	return convertedPort
+}
+
+// LowercaseStringStringMap will convert all lowercase all keys in the map
+func LowercaseStringStringMap(change *map[string]string) map[string]string {
+	new := make(map[string]string, len(*change))
+	for i := range *change {
+		new[strings.ToLower(i)] = (*change)[i]
+	}
+	return new
 }

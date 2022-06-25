@@ -61,7 +61,7 @@ func (g *Gotify) Convert(id string) (converted shoutrrr.Shoutrrr) {
 			hostSplit := strings.Split(parts[0], ":")
 			converted.SetURLField("host", hostSplit[0])
 		}
-		converted.SetURLField("port", utils.GetPortFromURL(*g.URL, "443"))
+		converted.SetURLField("port", utils.GetPortFromURL(*g.URL, "80"))
 
 		// gotify.example.io -> [ "gotify.example.io" ]
 		// gotify.example.io/test/123 -> [ "gotify.example.io", "test", "123" ]

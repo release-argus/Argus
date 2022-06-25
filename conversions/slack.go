@@ -72,7 +72,7 @@ func (s *Slack) Convert(
 			url = strings.TrimPrefix(url, "http://")
 			parts := strings.Split(url, "/")
 			converted.SetURLField("host", strings.Split(parts[0], ":")[0])
-			converted.SetURLField("port", utils.GetPortFromURL(*s.URL, "443"))
+			converted.SetURLField("port", utils.GetPortFromURL(*s.URL, "80"))
 
 			convertedPath := ""
 			// mattermost.example.io/hooks/TOKEN -> [ "hooks", "TOKEN"]
