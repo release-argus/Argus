@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package command
 
 import (
@@ -21,25 +23,29 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestInit(t *testing.T) {
+func TestInitNils(t *testing.T) {
 	// GIVEN nil Controller
 	var commandController *Controller
-	{ // WHEN Init is called
-		commandController.Init(
-			&utils.JLog{},
-			nil,
-			nil,
-			nil,
-			nil,
-		)
-		// THEN the controller stays nil
-		if commandController != nil {
-			t.Fatal("Init a nil produced a non-nil")
-		}
-	}
 
+	// WHEN Init is called
+	commandController.Init(
+		&utils.JLog{},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	// THEN the controller stays nil
+	if commandController != nil {
+		t.Error("Init a nil produced a non-nil")
+	}
+}
+
+func TestInitNonNil(t *testing.T) {
 	// GIVEN a non-nil Controller
-	commandController = &Controller{}
+	commandController := &Controller{}
+
 	// WHEN Init is called
 	controllerName := "TEST"
 	commandController.Init(
@@ -52,9 +58,10 @@ func TestInit(t *testing.T) {
 		},
 		&shoutrrr.Slice{},
 	)
+
 	// THEN Failed is initialised with length 2
 	if len(*commandController.Command) != len(commandController.Failed) {
-		t.Fatalf("Failed should have been of length %d, but is length %d", len(*commandController.Command), len(commandController.Failed))
+		t.Errorf("Failed should have been of length %d, but is length %d", len(*commandController.Command), len(commandController.Failed))
 	}
 }
 
@@ -69,11 +76,14 @@ func TestInitMetrics(t *testing.T) {
 		},
 		Failed: make(Fails, 2),
 	}
+
 	// WHEN initMetrics is called on this Controller
 	commandController.initMetrics()
+
+	// THEN the function doesn't hang
 }
 
-func TestFormattedString(t *testing.T) {
+func TestFormattedStringMultiArg(t *testing.T) {
 	// GIVEN a multi-arg Command
 	command := Command{"ls", "-lah", "/root"}
 	// WHEN FormattedString is called on it
@@ -81,21 +91,23 @@ func TestFormattedString(t *testing.T) {
 	want := `[ "ls", "-lah", "/root" ]`
 	// THEN it is returned in this format
 	if got != want {
-		t.Fatalf("FormattedString, got %q, wanted %q", got, want)
-	}
-
-	// GIVEN a no-arg Command
-	command = Command{"ls"}
-	// WHEN FormattedString is called on it
-	got = command.FormattedString()
-	want = `[ "ls" ]`
-	// THEN it is returned in this format
-	if got != want {
-		t.Fatalf("FormattedString, got %q, wanted %q", got, want)
+		t.Errorf("FormattedString, got %q, wanted %q", got, want)
 	}
 }
 
-func TestString(t *testing.T) {
+func TestFormattedStringSingleArg(t *testing.T) {
+	// GIVEN a no-arg Command
+	command := Command{"ls"}
+	// WHEN FormattedString is called on it
+	got := command.FormattedString()
+	want := `[ "ls" ]`
+	// THEN it is returned in this format
+	if got != want {
+		t.Errorf("FormattedString, got %q, wanted %q", got, want)
+	}
+}
+
+func TestStringMultiArg(t *testing.T) {
 	// GIVEN a multi-arg Command
 	command := Command{"ls", "-lah", "/root"}
 	// WHEN String is called on it
@@ -103,16 +115,18 @@ func TestString(t *testing.T) {
 	want := "ls -lah /root"
 	// THEN it is returned in this format
 	if got != want {
-		t.Fatalf("String, got %q, wanted %q", got, want)
+		t.Errorf("String, got %q, wanted %q", got, want)
 	}
+}
 
+func TestStringSingleArg(t *testing.T) {
 	// GIVEN a no-arg Command
-	command = Command{"ls"}
+	command := Command{"ls"}
 	// WHEN String is called on it
-	got = command.String()
-	want = "ls"
+	got := command.String()
+	want := "ls"
 	// THEN it is returned in this format
 	if got != want {
-		t.Fatalf("String, got %q, wanted %q", got, want)
+		t.Errorf("String, got %q, wanted %q", got, want)
 	}
 }
