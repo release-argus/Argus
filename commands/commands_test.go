@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package command
 
 import (
@@ -21,142 +23,152 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestExec(t *testing.T) {
+func testExecController(commands *Slice) Controller {
+	num := 0
+	if commands != nil {
+		num = len(*commands)
+	}
+	controllerName := "TEST"
+	commandController := Controller{
+		ServiceID: &controllerName,
+		Failed:    make(Fails, num),
+		Command:   commands,
+	}
+	return commandController
+}
+
+func TestExecEmptyController(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
-	{ // GIVEN an empty Controller
-		controllerName := "TEST"
-		commandController := Controller{
-			ServiceID: &controllerName,
-			Failed:    make(Fails, 0),
-		}
-		// WHEN executed
-		err := commandController.Exec(&utils.LogFrom{})
-		// THEN err is nil
-		if err != nil {
-			t.Fatalf(`%v command shouldn't have errored as it didn't do anything\n%s`, commandController.Command, err.Error())
-		}
-	}
+	// GIVEN an empty Controller
+	commandController := testExecController(nil)
 
-	{ // GIVEN a Command that should fail
-		controllerName := "TEST"
-		commandController := Controller{
-			ServiceID: &controllerName,
-		}
-		commandController.Init(nil, &controllerName, nil, &Slice{Command{"ls", "/root"}}, nil)
-		{
-			// WHEN it's stringified with .String()
-			// THEN it's joined with spaces
-			if (*commandController.Command)[0].String() != "ls /root" {
-				t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls /root")
-			}
+	// WHEN executed
+	err := commandController.Exec(&utils.LogFrom{})
 
-			// WHEN it's executed
-			err := commandController.Exec(&utils.LogFrom{})
-			// THEN it returns and error
-			if err == nil {
-				t.Fatalf(`%v commands should have errored unless you're running as root`, commandController.Command)
-			}
-		}
-	}
-
-	{ // GIVEN a Command that should pass
-		controllerName := "TEST"
-		commandController := Controller{
-			ServiceID: &controllerName,
-		}
-		commandController.Init(nil, &controllerName, nil, &Slice{Command{"ls"}}, nil)
-		{
-			// WHEN it's stringified with .String()
-			// THEN it's returned as the correct string
-			if (*commandController.Command)[0].String() != "ls" {
-				t.Fatalf(`Command didn't .String() correctly. Expected %q, got %q`, (*commandController.Command)[0].String(), "ls")
-			}
-
-			// WHEN it's executed
-			err := commandController.Exec(&utils.LogFrom{})
-			// THEN it returns a nil error
-			if err != nil {
-				t.Fatalf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, commandController.Command, err.Error())
-			}
-		}
+	// THEN err is nil
+	if err != nil {
+		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`, commandController.Command, err.Error())
 	}
 }
 
-func TestExecIndex(t *testing.T) {
+func TestExecThatErrors(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
-	// GIVEN a Controller with Commands
+	// GIVEN a Command that should fail
+	commandController := testExecController(&Slice{Command{"ls", "/root"}})
+
+	// WHEN it's executed
+	err := commandController.Exec(&utils.LogFrom{})
+
+	// THEN it returns an error
+	if err == nil {
+		t.Errorf(`%v commands should have errored unless you're running as root`, commandController.Command)
+	}
+}
+
+func TestExecThatDoesntError(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	// GIVEN a Command that should pass
+	commandController := testExecController(&Slice{Command{"ls"}})
+
+	// WHEN it's executed
+	err := commandController.Exec(&utils.LogFrom{})
+
+	// THEN it returns a nil error
+	if err != nil {
+		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, commandController.Command, err.Error())
+	}
+}
+
+func testExecIndexController() Controller {
 	controllerName := "TEST"
 	commandController := Controller{
 		ServiceID: &controllerName,
 		Command: &Slice{
-			Command{"false"},
-			Command{"false"},
+			Command{"true", "0"},
+			Command{"true", "1"},
 		},
 		Failed: make(Fails, 2),
 	}
-	{ // WHEN ExecIndex is called on an index that exists
-		err := commandController.ExecIndex(&utils.LogFrom{}, 0)
-		// THEN err is nil
-		if err == nil {
-			t.Fatalf(`%q command shouldn't have errored as it was just an\n%s`, (*commandController.Command)[0].String(), err.Error())
-		}
-		// WHEN ExecIndex is called on an index that exists
-		err = commandController.ExecIndex(&utils.LogFrom{}, 1)
-		// THEN err is nil
-		if err == nil {
-			t.Fatalf(`%q command shouldn't have errored as it was just an\n%s`, (*commandController.Command)[1].String(), err.Error())
-		}
+	return commandController
+}
 
-		// WHEN ExecIndex is called on an index that doesn't exist
-		err = commandController.ExecIndex(&utils.LogFrom{}, 2)
-		// THEN err is nil
-		if err != nil {
-			t.Fatalf(`%v command shouldn't have errored as the index was outside the bounds\n%s`, commandController.Command, err.Error())
-		}
+func TestExecIndexInRange(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	// GIVEN a Controller with Commands
+	commandController := testExecIndexController()
+
+	// WHEN ExecIndex is called on an index that exists
+	index := 1
+	errController := commandController.ExecIndex(&utils.LogFrom{}, index)
+	errCommand := (*commandController.Command)[index].Exec(&utils.LogFrom{})
+
+	// THEN err is the same as on the direct Exec
+	if errController != errCommand {
+		t.Errorf(`%q != %q`, errController.Error(), errCommand.Error())
 	}
 }
 
-func TestApplyTemplate(t *testing.T) {
+func TestExecIndexOutOfRange(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
-	{ // GIVEN a Controller with nil ServiceStatus
-		controllerName := "TEST"
-		commandController := Controller{
-			ServiceID: &controllerName,
-			Command: &Slice{
-				Command{"false", "{{ version }}"},
-			},
-			Failed: make(Fails, 1),
-		}
-		// WHEN ApplyTemplate is called with that nil Status
-		command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
-		// THEN the {{ version }} var is not evaluated
-		got := command.String()
-		want := "false {{ version }}"
-		if got != want {
-			t.Fatalf(`Failed with nil Status. Got %q, wanted %q`, got, want)
-		}
-	}
+	// GIVEN a Controller with Commands
+	commandController := testExecIndexController()
 
-	{ // GIVEN a Controller with a non-nil ServiceStatus
-		controllerName := "TEST"
-		commandController := Controller{
-			ServiceID: &controllerName,
-			Command: &Slice{
-				Command{"false", "{{ version }}"},
-			},
-			Failed:        make(Fails, 1),
-			ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
-		}
-		// WHEN ApplyTemplate is called
-		command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
-		// THEN the {{ version }} var is evaluated
-		got := command.String()
-		want := "false 1.2.3"
-		if got != want {
-			t.Fatalf(`Failed with non-nil Status. Got %q, wanted %q`, got, want)
-		}
+	// WHEN ExecIndex is called on an index that doesn't exist
+	err := commandController.ExecIndex(&utils.LogFrom{}, 2)
+	// THEN err is nil
+	if err != nil {
+		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`, commandController.Command, err.Error())
+	}
+}
+
+func TestApplyTemplateWithNilServiceStatus(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	// GIVEN a Controller with nil ServiceStatus
+	controllerName := "TEST"
+	commandController := Controller{
+		ServiceID: &controllerName,
+		Command: &Slice{
+			Command{"false", "{{ version }}"},
+		},
+		Failed: make(Fails, 1),
+	}
+	// WHEN ApplyTemplate is called with that nil Status
+	command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
+
+	// THEN the {{ version }} var is not evaluated
+	got := command.String()
+	want := "false {{ version }}"
+	if got != want {
+		t.Errorf(`Failed with nil Status. Got %q, wanted %q`, got, want)
+	}
+}
+
+func TestApplyTemplateWithServiceStatus(t *testing.T) {
+	Init(utils.NewJLog("ERROR", false))
+
+	// GIVEN a Controller with a non-nil ServiceStatus
+	controllerName := "TEST"
+	commandController := Controller{
+		ServiceID: &controllerName,
+		Command: &Slice{
+			Command{"false", "{{ version }}"},
+		},
+		Failed:        make(Fails, 1),
+		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+	}
+	// WHEN ApplyTemplate is called
+	command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
+
+	// THEN the {{ version }} var is evaluated
+	got := command.String()
+	want := "false 1.2.3"
+	if got != want {
+		t.Errorf(`Failed with non-nil Status. Got %q, wanted %q`, got, want)
 	}
 }
