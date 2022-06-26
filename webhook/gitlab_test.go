@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package webhook
 
 import (
@@ -19,36 +21,40 @@ import (
 	"testing"
 )
 
-func TestSetGitLabParameter(t *testing.T) {
-	{ // GIVEN a URL without query params
-		req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
-		if err != nil {
-			t.Fatalf("http.NewRequest failed - %s", err.Error())
-		}
-		whSecret := "secret"
-		// WHEN SetGitLabParameter is called
-		SetGitLabParameter(req, whSecret)
-		// THEN the function correctly encodes URL.RawQuery
-		want := "ref=master&token=secret"
-		got := req.URL.RawQuery
-		if got != want {
-			t.Fatalf("SetGitLabParameter failed. Want %s, got %s", want, got)
-		}
+func TestSetGitLabParameterWithoutQueryParams(t *testing.T) {
+	// GIVEN a URL without query params
+	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	if err != nil {
+		t.Errorf("http.NewRequest failed - %s", err.Error())
 	}
+	whSecret := "secret"
 
-	{ // GIVEN a URL with query params
-		req, err := http.NewRequest(http.MethodGet, "https://example.com?test=123", nil)
-		if err != nil {
-			t.Fatalf("http.NewRequest failed - %s", err.Error())
-		}
-		whSecret := "secret"
-		// WHEN SetGitLabParameter is called
-		SetGitLabParameter(req, whSecret)
-		// THEN the function correctly encodes URL.RawQuery
-		want := "ref=master&test=123&token=secret"
-		got := req.URL.RawQuery
-		if got != want {
-			t.Fatalf("SetGitLabParameter failed. Want %s, got %s", want, got)
-		}
+	// WHEN SetGitLabParameter is called
+	SetGitLabParameter(req, whSecret)
+
+	// THEN the function correctly encodes URL.RawQuery
+	want := "ref=master&token=secret"
+	got := req.URL.RawQuery
+	if got != want {
+		t.Errorf("SetGitLabParameter failed. Want %s, got %s", want, got)
+	}
+}
+
+func TestSetGitLabParameterWithQueryParams(t *testing.T) {
+	// GIVEN a URL with query params
+	req, err := http.NewRequest(http.MethodGet, "https://example.com?test=123", nil)
+	if err != nil {
+		t.Errorf("http.NewRequest failed - %s", err.Error())
+	}
+	whSecret := "secret"
+
+	// WHEN SetGitLabParameter is called
+	SetGitLabParameter(req, whSecret)
+
+	// THEN the function correctly encodes URL.RawQuery
+	want := "ref=master&test=123&token=secret"
+	got := req.URL.RawQuery
+	if got != want {
+		t.Errorf("SetGitLabParameter failed. Want %s, got %s", want, got)
 	}
 }
