@@ -83,7 +83,7 @@ func main() {
 	go (&config).Service.Track(config.Order)
 
 	// SaveHandler that listens for calls to save config changes.
-	go (&config).SaveHandler(configFile)
+	go (&config).SaveHandler()
 
 	// Web server
 	web.Main(&config, &jLog)

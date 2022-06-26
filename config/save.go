@@ -27,7 +27,7 @@ import (
 
 // SaveHandler will listen to the `SaveChannel` and save the config (after a delay)
 // when it receives a message.
-func (c *Config) SaveHandler(filePath *string) {
+func (c *Config) SaveHandler() {
 	for {
 		<-*c.SaveChannel
 		waitChannelTimeout(c.SaveChannel)
@@ -46,7 +46,7 @@ func waitChannelTimeout(channel *chan bool) {
 		}
 
 		// Sleep 30s
-		time.Sleep(30 * time.Second)
+		time.Sleep(25 * time.Second)
 
 		// End if channel is still empty
 		if len(*channel) == 0 {

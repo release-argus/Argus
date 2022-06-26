@@ -34,7 +34,7 @@ func (c *Config) GetOrder(data []byte) {
 				afterService = true
 
 				// If a service isn't on the next line
-				if index == len(lines) || (len(lines[index+1]) != 0 && lines[index+1][0] != ' ') {
+				if index == len(lines)-1 || (len(lines[index+1]) != 0 && lines[index+1][0] != ' ') {
 					break
 				}
 
