@@ -19,9 +19,22 @@ import (
 	"testing"
 )
 
+func TestConversionGotifyNil(t *testing.T) {
+	// GIVEN a nil Gotify
+	var gotify *Gotify
+
+	// WHEN Convert is called on it
+	converted := gotify.Convert("")
+
+	// THEN nothing changes
+	if converted.ID != nil {
+		t.Fatalf("Convert of nil changed nil to %v", converted)
+	}
+}
+
 func TestConversionGotify(t *testing.T) {
 	var (
-		url      string = "mock_host:123/test"
+		url      string = "http://mock_host:123/test"
 		host     string = "mock_host"
 		port     string = "123"
 		path     string = "test"
