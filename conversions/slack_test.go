@@ -19,9 +19,22 @@ import (
 	"testing"
 )
 
+func TestConversionSlackNil(t *testing.T) {
+	// GIVEN a nil Slack
+	var slack *Slack
+
+	// WHEN Convert is called on it
+	converted := slack.Convert("", "")
+
+	// THEN nothing changes
+	if converted.ID != nil {
+		t.Fatalf("Convert of nil changed nil to %v", converted)
+	}
+}
+
 func TestConversionSlack(t *testing.T) {
 	var (
-		url       string = "mock_host:123/test/hooks/fez"
+		url       string = "http://mock_host:123/test/hooks/fez"
 		host      string = "mock_host"
 		port      string = "123"
 		path      string = "test"
@@ -58,19 +71,19 @@ func TestConversionSlack(t *testing.T) {
 		t.Fatalf(`convertedSlack.URLFields.token = %q, want match for %q`, converted.GetSelfURLField("token"), token)
 	}
 	if !(username == converted.GetSelfParam("botname")) {
-		t.Fatalf(`convertedSlack.Params.botname = %q, want match for %q`, converted.GetSelfURLField("botname"), username)
+		t.Fatalf(`convertedSlack.Params.botname = %q, want match for %q`, converted.GetSelfParam("botname"), username)
 	}
 	if !(iconEmoji == converted.GetSelfParam("icon")) {
-		t.Fatalf(`convertedSlack.Params.icon = %q, want match for %q`, converted.GetSelfURLField("icon"), iconEmoji)
+		t.Fatalf(`convertedSlack.Params.icon = %q, want match for %q`, converted.GetSelfParam("icon"), iconEmoji)
 	}
 	if !(message == converted.GetSelfOption("message")) {
-		t.Fatalf(`convertedSlack.Options.message = %q, want match for %q`, converted.GetSelfURLField("message"), message)
+		t.Fatalf(`convertedSlack.Options.message = %q, want match for %q`, converted.GetSelfOption("message"), message)
 	}
 	if !(delay == converted.GetSelfOption("delay")) {
-		t.Fatalf(`convertedSlack.Options.delay = %q, want match for %q`, converted.GetSelfURLField("delay"), delay)
+		t.Fatalf(`convertedSlack.Options.delay = %q, want match for %q`, converted.GetSelfOption("delay"), delay)
 	}
 	if !(fmt.Sprint(maxTries) == converted.GetSelfOption("max_tries")) {
-		t.Fatalf(`convertedSlack.Options.max_tries = %q, want match for %d`, converted.GetSelfURLField("max_tries"), maxTries)
+		t.Fatalf(`convertedSlack.Options.max_tries = %q, want match for %d`, converted.GetSelfOption("max_tries"), maxTries)
 	}
 	if !(cType == converted.Type) {
 		t.Fatalf(`convertedSlack.Type = %q, want match for %q`, converted.Type, cType)
