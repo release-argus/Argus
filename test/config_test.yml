@@ -1,24 +1,26 @@
+settings:
+  web:
+    listen_port: "0"
 defaults:
   service:
-    interval: 123
     access_token: ghp_default
     semantic_versioning: n
+    interval: 123
   notify:
-    slack:
-      params:
-        title: defaultTitle
-        username: defaultUsername
-        host: defaultHost
     gotify:
       url_fields:
         host: foo.bar
         token: anonymous
+    slack:
+      params:
+        host: defaultHost
+        title: defaultTitle
+        username: defaultUsername
   webhook:
     desired_status_code: 0
-    max_tries: 3
     delay: 2
+    max_tries: 3
     silent_fails: false
-
 notify:
   default:
     type: gotify
@@ -26,69 +28,72 @@ notify:
       message: mainMessage
     params:
       username: mainUsername
-
 webhook:
   default:
     type: github
     url: https://awx.main.com/api/v2/job_templates/XX/github/
     secret: YYYYmain
     desired_status_code: 202
-    max_tries: 1
     delay: 3s
-
+    max_tries: 1
 service:
   NoDefaults:
     type: github
     url: release-argus/argus
-    url_commands: # Remove the v for semantic versioning
-      - type:  regex_submatch
-        regex: 'v(.*)'
-        index: 1
     interval: 10m
-    regex_version: '^[0-9.]+[0-9]$'
+    url_commands:
+      - type: regex
+        regex: v(.*)
     regex_content: Argus-{{ version }}-linux-amd64
-    notify:
-      personal:
-        type: mattermost
-        url_fields:
-          host: example.io
-          token: 123
-          channel: foo
-        options:
-          message: overriddenMessage
-        params:
-          username: overriddenUsername
+    regex_version: ^[0-9.]+[0-9]$
+    command:
+      - - bash
+        - /opt/upgrade.sh
     webhook:
       personal:
         type: github
         url: https://awx.example.com/api/v2/job_templates/XX/github/
         secret: YYYY
         desired_status_code: 202
-        max_tries: 1
         delay: 3s
+        max_tries: 1
+    notify:
+      personal:
+        type: mattermost
+        options:
+          message: overriddenMessage
+        url_fields:
+          channel: foo
+          host: example.io
+          token: "123"
+        params:
+          username: overriddenUsername
   WantDefaults:
     type: github
     url: release-argus/argus
-    url_commands: # Remove the v for semantic versioning
-      - type:  regex_submatch
-        regex: 'v(.*)'
-        index: 1
-    regex_version: '^[0-9.]+[0-9]$'
+    url_commands:
+      - type: regex
+        regex: v(.*)
     regex_content: Argus-{{ version }}-linux-amd64
-    notify:
-      default:
+    regex_version: ^[0-9.]+[0-9]$
     webhook:
-      default:
+      default: {}
+    notify:
+      default: {}
   Gitea:
-    id: go-gitea/gitea
     type: github
     url: go-gitea/gitea
-    url_commands: # Remove the v for semantic versioning
-      - type:  regex_submatch
-        regex: 'v(.*)'
-        index: 1
-    regex_version: '^[0-9.]+[0-9]$'
+    url_commands:
+      - type: regex
+        regex: v(.*)
     regex_content: gitea-{{ version }}-linux-amd64
+    regex_version: ^[0-9.]+[0-9]$
+    webhook:
+      personal:
+        type: github
+        url: https://awx.example.com/api/v2/job_templates/XX/github/
+        secret: YYYY
+        delay: 0s
     notify:
       personal:
         type: mattermost
@@ -96,13 +101,11 @@ service:
           delay: 0s
         url_fields:
           host: mattermost.example.com
-          port: 443
+          port: "443"
           token: ZZZZ
         params:
           icon: https://raw.githubusercontent.com/go-gitea/gitea/main/public/img/logo.png
-    webhook:
-      personal:
-        type: github
-        url: https://awx.example.com/api/v2/job_templates/XX/github/
-        secret: YYYY
-        delay: 0s
+  Disabled:
+    active: false
+    type: github
+    url: release-argus/argus

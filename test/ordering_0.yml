@@ -1,0 +1,31 @@
+defaults:
+  service:
+    interval: 123
+    access_token: ghp_default
+    semantic_versioning: n
+
+notify:
+  default:
+    type: gotify
+    options:
+      message: mainMessage
+
+service:
+  NoDefaults:
+    type: github
+    url: release-argus/argus
+  WantDefaults:
+    type: github
+    url: release-argus/argus
+  Disabled:
+    active: false
+    type: github
+    url: release-argus/argus
+  Gitea:
+    id: go-gitea/gitea
+    type: github
+
+webhook:
+  default:
+    type: github
+    url: https://awx.main.com/api/v2/job_templates/XX/github/

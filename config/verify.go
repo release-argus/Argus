@@ -43,8 +43,7 @@ func (c *Config) CheckValues() {
 
 	if errs != nil {
 		fmt.Println(strings.Replace(errs.Error(), "\\", "\n", -1))
-		fmt.Println("\nERROR: Config could not be parsed successfully.")
-		os.Exit(1)
+		jLog.Fatal("Config could not be parsed successfully.", utils.LogFrom{}, true)
 	}
 }
 
@@ -54,12 +53,14 @@ func (c *Config) Print(flag *bool) {
 		return
 	}
 
-	c.Service.Print("", *c.Order)
+	c.Service.Print("", c.All)
 	fmt.Println()
 	c.Notify.Print("")
 	fmt.Println()
 	c.WebHook.Print("")
 	fmt.Println()
 	c.Defaults.Print()
-	os.Exit(0)
+	if !jLog.Testing {
+		os.Exit(0)
+	}
 }
