@@ -94,10 +94,6 @@ func (s *Shoutrrr) GetMessage(context *utils.ServiceInfo) string {
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
 func (s *Shoutrrr) GetTitle(serviceInfo *utils.ServiceInfo) string {
-	s.GetSelfParam("title")
-	s.Main.GetSelfParam("title")
-	s.Defaults.GetSelfParam("title")
-	s.HardDefaults.GetSelfParam("title")
 	title := utils.GetFirstNonDefault(s.GetSelfParam("title"), s.Main.GetSelfParam("title"), s.Defaults.GetSelfParam("title"), s.HardDefaults.GetSelfParam("title"))
 	return utils.TemplateString(title, *serviceInfo)
 }

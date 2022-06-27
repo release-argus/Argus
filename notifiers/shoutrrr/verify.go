@@ -62,7 +62,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		if _, err := strconv.Atoi(delay); err == nil {
 			s.Options["delay"] += "s"
 		}
-		if _, err := time.ParseDuration(delay); err != nil {
+		if _, err := time.ParseDuration(s.Options["delay"]); err != nil {
 			errsOptions = fmt.Errorf("%s%s  delay: %q <invalid> (Use 'AhBmCs' duration format)\\", utils.ErrorToString(errsOptions), prefix, delay)
 		}
 	}
@@ -72,9 +72,10 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	if s.Main != nil {
 		s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
 
-		if sender, err := shoutrrr_lib.CreateSender(); err != nil {
-			errsLocate = fmt.Errorf("%s%s^ %s\\", utils.ErrorToString(errsLocate), prefix, err.Error())
-		} else if _, err = sender.Locate(s.GetURL()); err != nil {
+		//#nosec G104 -- Disregard as we're not giving any rawURLs
+		//nolint:errcheck // ^
+		sender, _ := shoutrrr_lib.CreateSender()
+		if _, err := sender.Locate(s.GetURL()); err != nil {
 			errsLocate = fmt.Errorf("%s%s^ %s\\", utils.ErrorToString(errsLocate), prefix, err.Error())
 		}
 	}
@@ -94,6 +95,8 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	return
 }
 
+// correctSelf will do a few corrections to user provided vars
+// e.g. slack color wants $23 instead of #
 func (s *Shoutrrr) correctSelf() {
 	// Port, strip leading :
 	if port := strings.TrimPrefix(s.GetSelfURLField("port"), ":"); port != "" {
@@ -113,13 +116,12 @@ func (s *Shoutrrr) correctSelf() {
 		}
 	case "slack":
 		// # -> %23
-		for key := range s.Params {
-			// https://containrrr.dev/shoutrrr/v0.5/services/slack/
-			// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
-			// So #ff8000 would be %23ff8000 etc.
-			if strings.Contains(key, "color") && s.GetSelfParam(key) != "" {
-				s.SetParam(key, strings.Replace(s.GetSelfParam(key), "#", "%23", 1))
-			}
+		// https://containrrr.dev/shoutrrr/v0.5/services/slack/
+		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
+		// So #ff8000 would be %23ff8000 etc.
+		key := "color"
+		if s.GetSelfParam(key) != "" {
+			s.SetParam(key, strings.Replace(s.GetSelfParam(key), "#", "%23", 1))
 		}
 	case "teams":
 		// AltID, strip leading /
@@ -127,7 +129,7 @@ func (s *Shoutrrr) correctSelf() {
 			s.SetURLField("altid", altid)
 		}
 		// GroupOwner, strip leading /
-		if groupowner := s.GetSelfURLField("groupowner"); groupowner != "" {
+		if groupowner := strings.TrimPrefix(s.GetSelfURLField("groupowner"), "/"); groupowner != "" {
 			s.SetURLField("groupowner", groupowner)
 		}
 	case "zulip_chat":
@@ -138,6 +140,8 @@ func (s *Shoutrrr) correctSelf() {
 	}
 }
 
+// checkValuesMaster will check that the leading Shoutrrr can access all vars required
+// for its Type
 func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *error, errsURLFields *error, errsParams *error) {
 	if utils.GetFirstNonDefault(s.Type, s.Main.Type) == "" {
 		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\", utils.ErrorToString(*errs), prefix)
