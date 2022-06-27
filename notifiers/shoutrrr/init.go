@@ -15,9 +15,6 @@
 package shoutrrr
 
 import (
-	"strings"
-
-	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -56,6 +53,9 @@ func (s *Slice) Init(
 		)
 
 		// Ensure defaults aren't nil
+		if len(*defaults) == 0 {
+			defaults = &Slice{}
+		}
 		if (*defaults)[notifyType] == nil {
 			(*defaults)[notifyType] = &Shoutrrr{}
 		}
@@ -74,11 +74,11 @@ func (s *Shoutrrr) Init(
 	defaults *Shoutrrr,
 	hardDefaults *Shoutrrr,
 ) {
-	s.InitMaps()
-
 	if s == nil {
-		s = &Shoutrrr{}
+		return
 	}
+
+	s.InitMaps()
 
 	// Give the matching main
 	(*s).Main = main
@@ -100,29 +100,18 @@ func (s *Shoutrrr) Init(
 
 // initOptions mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initOptions() {
-	Options := make(map[string]string)
-	for i := range s.Options {
-		Options[strings.ToLower(i)] = s.Options[i]
-	}
-	s.Options = Options
+	s.Options = utils.LowercaseStringStringMap(&s.Options)
 }
 
 // initURLFields mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initURLFields() {
-	URLFields := make(map[string]string)
-	for i := range s.URLFields {
-		URLFields[strings.ToLower(i)] = s.URLFields[i]
-	}
-	s.URLFields = URLFields
+	s.URLFields = utils.LowercaseStringStringMap(&s.URLFields)
 }
 
 // initParams mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initParams() {
-	params := make(shoutrrr_types.Params)
-	for i := range s.Params {
-		params[strings.ToLower(i)] = s.Params[i]
-	}
-	s.Params = params
+	have := map[string]string(s.Params)
+	s.Params = utils.LowercaseStringStringMap(&have)
 }
 
 // InitMaps will initialise all maps, converting all keys to lowercase.

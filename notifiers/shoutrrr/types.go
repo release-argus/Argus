@@ -16,8 +16,6 @@ package shoutrrr
 
 import (
 	"github.com/release-argus/Argus/utils"
-
-	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 )
 
 var (
@@ -37,7 +35,7 @@ type Shoutrrr struct {
 
 	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
 	// Thinking this may be preferable as it makes adding new services much quicker/easier
-	Options   map[string]string     `yaml:"options,omitempty"`    // Options
-	URLFields map[string]string     `yaml:"url_fields,omitempty"` // URL Fields
-	Params    shoutrrr_types.Params `yaml:"params,omitempty"`     // Query/Param Props
+	Options   map[string]string `yaml:"options,omitempty"`    // Options
+	URLFields map[string]string `yaml:"url_fields,omitempty"` // URL Fields
+	Params    map[string]string `yaml:"params,omitempty"`     // Query/Param Props
 }

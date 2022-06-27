@@ -25,6 +25,8 @@ import (
 	"github.com/release-argus/Argus/web/metrics"
 )
 
+// GetParams returns the params using everything from master>main>defaults>hardDefaults when
+// the key is not defined in the lower level
 func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types.Params) {
 	p := make(shoutrrr_types.Params)
 	params = &p
@@ -45,7 +47,7 @@ func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types
 
 	// Default Params
 	for key := range s.Defaults.Params {
-		_, exist := (s.Params)[key]
+		_, exist := (*params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[key] = s.Defaults.GetSelfParam(key)
@@ -54,7 +56,7 @@ func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types
 
 	// HardDefault Params
 	for key := range s.HardDefaults.Params {
-		_, exist := s.Params[key]
+		_, exist := (*params)[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
 			(*params)[key] = s.HardDefaults.GetSelfParam(key)
@@ -124,15 +126,29 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"),
 			utils.ValueIfNotDefault(channel, "/"+channel))
 	case "matrix":
-		// matrix://user:password@host
+		// matrix://user:password@host[:port][/port]/[?rooms=!roomID1[,roomAlias2]][&disableTLS=yes]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
-		url = fmt.Sprintf("matrix://%s%s@%s%s%s",
+		rooms := s.GetParam("rooms")
+		rooms = utils.ValueIfNotDefault(rooms, "?rooms="+rooms)
+		disableTLS := s.GetParam("disabletls")
+		disableTLS = utils.ValueIfNotDefault(disableTLS, "disableTLS="+disableTLS)
+		if disableTLS != "" {
+			if rooms != "" {
+				disableTLS = "&" + disableTLS
+			} else {
+				disableTLS = "?" + disableTLS
+			}
+		}
+		url = fmt.Sprintf("matrix://%s:%s@%s%s%s/%s%s",
 			s.GetURLField("user"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path))
+			utils.ValueIfNotDefault(path, "/"+path),
+			rooms,
+			disableTLS,
+		)
 	case "opsgenie":
 		// opsgenie://host[:port][/path]/apikey
 		port := s.GetURLField("port")
@@ -140,7 +156,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("opsgenie://%s%s%s/%s",
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			utils.ValueIfNotDefault(path, ""+path),
 			s.GetURLField("apikey"))
 	case "pushbullet":
 		// pushbullet://token/targets
@@ -148,10 +164,12 @@ func (s *Shoutrrr) GetURL() (url string) {
 			s.GetURLField("token"),
 			s.GetURLField("targets"))
 	case "pushover":
-		// pushover://shoutrrr:token@user
-		url = fmt.Sprintf("pushover://shoutrrr:%s@%s",
+		// pushover://shoutrrr:token@user/[?devices=device1,device2]
+		devices := s.GetParam("devices")
+		url = fmt.Sprintf("pushover://shoutrrr:%s@%s/%s",
 			s.GetURLField("token"),
-			s.GetURLField("user"))
+			s.GetURLField("user"),
+			utils.ValueIfNotDefault(devices, "?devices="+devices))
 	case "rocketchat":
 		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
 		username := s.GetURLField("username")
@@ -235,10 +253,6 @@ func (s *Slice) Send(
 				return
 			}
 			params := shoutrrr.GetParams(serviceInfo)
-			if params == nil {
-				p := make(shoutrrr_types.Params)
-				params = &p
-			}
 			if title != "" {
 				(*params)["title"] = title
 			}
@@ -288,7 +302,7 @@ func (s *Slice) Send(
 					shoutrrr.Failed = &failed
 					var err error
 					for key := range combinedErrs {
-						err = fmt.Errorf("%s%s x %d\n", utils.ErrorToString(err), key, combinedErrs[key])
+						err = fmt.Errorf("%s%s x %d", utils.ErrorToString(err), key, combinedErrs[key])
 					}
 					errs <- err
 					return
@@ -309,7 +323,7 @@ func (s *Slice) Send(
 			if err == nil {
 				err = errFound
 			} else {
-				err = fmt.Errorf("%s\\%s", err.Error(), errFound.Error())
+				err = fmt.Errorf("%s\\%s\\", err.Error(), errFound.Error())
 			}
 		}
 	}
