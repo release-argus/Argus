@@ -183,7 +183,7 @@ func (s *Service) HandleCommand(command string) {
 // HandleWebHook will handle sending the WebHook for this service
 // to the WebHook with a matching ID.
 func (s *Service) HandleWebHook(webhookID string) {
-	if s.WebHook == nil && (*s.WebHook)[webhookID] != nil {
+	if s.WebHook == nil || (*s.WebHook)[webhookID] == nil {
 		return
 	}
 	// Send the WebHook.
@@ -195,7 +195,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
 func (s *Service) HandleSkip(version string) {
-	if version == "" {
+	if version != s.Status.LatestVersion {
 		return
 	}
 

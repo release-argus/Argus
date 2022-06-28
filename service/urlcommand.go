@@ -63,7 +63,7 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 // Print will print the URLCommand's in the URLCommandSlice.
 func (c *URLCommandSlice) Print(prefix string) {
 	if c == nil {
-		fmt.Printf("%surl_commands: []\n", prefix)
+		fmt.Printf("%s[]\n", prefix)
 		return
 	}
 
@@ -166,7 +166,8 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	}
 
 	if (len(texts) - index) < 1 {
-		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Regex, len(texts), (index + 1))
+		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
+			c.Type, *c.Regex, len(texts), (index + 1))
 		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
 
 		return text, err

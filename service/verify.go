@@ -37,6 +37,11 @@ func (s *Slice) CheckValues(prefix string) error {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
 		}
 
+		// URL Commands
+		if err := service.URLCommands.CheckValues(prefix + "  "); err != nil {
+			errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
+		}
+
 		// Check DeployedVersionLookup
 		if err := service.DeployedVersionLookup.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w", utils.ErrorToString(serviceErrors), err)
@@ -115,11 +120,6 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 		}
 	}
 
-	// URL Commands
-	if err := s.URLCommands.CheckValues(prefix + "  "); err != nil {
-		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
-	}
-
 	return
 }
 
@@ -159,14 +159,14 @@ func (s *Service) Print(prefix string) {
 
 	s.DeployedVersionLookup.Print(prefix)
 
+	// Notify.
+	s.Notify.Print(prefix)
+
+	// WebHook.
+	s.WebHook.Print(prefix)
+
 	if s.Status != nil && *s.Status != (service_status.Status{}) {
 		fmt.Printf("%sstatus:\n", prefix)
 		s.Status.Print(prefix + "  ")
 	}
-
-	// Notify.
-	s.Notify.Print(prefix + "  ")
-
-	// WebHook.
-	s.WebHook.Print(prefix + "  ")
 }

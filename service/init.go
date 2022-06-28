@@ -143,7 +143,7 @@ func (s *Service) GetServiceURL(ignoreWebURL bool) string {
 // GetIconURL returns the URL Icon for the Service.
 func (s *Service) GetIconURL() string {
 	// Service.Icon
-	if s.Icon != "" {
+	if strings.HasPrefix(s.Icon, "http") {
 		return s.Icon
 	}
 
