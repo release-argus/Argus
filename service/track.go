@@ -76,9 +76,11 @@ func (s *Service) Track() {
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "regex ") {
 				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 2)
-			} else if strings.HasSuffix(err.Error(), "semantic version") {
+			} else if strings.HasPrefix(err.Error(), "failed converting") &&
+				strings.Contains(err.Error(), " semantic version.") {
 				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 3)
-			} else if strings.HasPrefix(err.Error(), "queried version") {
+			} else if strings.HasPrefix(err.Error(), "queried version") &&
+				strings.Contains(err.Error(), " less than ") {
 				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 4)
 			} else {
 				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.QueryMetric, *s.ID, "FAIL")

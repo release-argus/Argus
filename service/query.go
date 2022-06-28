@@ -141,7 +141,7 @@ func (s *Service) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error)
 	if err != nil {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
-			err = fmt.Errorf("x509 (Cert invalid)")
+			err = fmt.Errorf("x509 (certificate invalid)")
 			jLog.Warn(err, logFrom, true)
 			return
 		}
@@ -155,6 +155,8 @@ func (s *Service) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error)
 	return
 }
 
+// GetVersions will filter out releases from rawBody that are preReleases (if not wanted) and will sort releases if
+// semantic versioning is wanted
 func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredReleases []GitHubRelease, err error) {
 	var releases []GitHubRelease
 	body := string(rawBody)
@@ -179,8 +181,9 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 
 		if err = json.Unmarshal(rawBody, &releases); err != nil {
 			jLog.Error(err, logFrom, true)
-			msg := fmt.Errorf("unmarshal of GitHub API data failed\n%s", err)
-			jLog.Error(msg, logFrom, true)
+			err = fmt.Errorf("unmarshal of GitHub API data failed\n%s", err)
+			jLog.Error(err, logFrom, true)
+			return
 		}
 
 		semanticVerioning := s.GetSemanticVersioning()
@@ -212,7 +215,7 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 				index := len(filteredReleases)
 				for index != 0 {
 					index--
-					// semVer @ current is less than @ index
+					// semVer @current is less than @index
 					if releases[i].SemanticVersion.LessThan(*filteredReleases[index].SemanticVersion) {
 						if index == len(filteredReleases)-1 {
 							filteredReleases = append(filteredReleases, releases[i])
@@ -246,6 +249,7 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 	return filteredReleases, nil
 }
 
+// GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
 func (s *Service) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version string, err error) {
 	filteredReleases, err := s.GetVersions(rawBody, logFrom)
 	if err != nil {
