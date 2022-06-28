@@ -52,7 +52,7 @@ func (s *Service) regexCheckContent(
 		var searchArea []string
 		switch v := body.(type) {
 		case string:
-			searchArea[0] = body.(string)
+			searchArea = []string{body.(string)}
 		case []GitHubAsset:
 			for i := range body.([]GitHubAsset) {
 				searchArea = append(searchArea,
@@ -61,7 +61,7 @@ func (s *Service) regexCheckContent(
 				)
 			}
 		default:
-			_ = v
+			return fmt.Errorf("invalid body type %T", v)
 		}
 
 		for i := range searchArea {

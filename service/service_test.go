@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package service
 
 import (
@@ -40,7 +42,7 @@ func TestServiceQuery(t *testing.T) {
 
 		want = regexp.MustCompile(`^[0-9.]+[0-9]$`)
 	)
-	jLog = utils.NewJLog("INFO", false)
+	jLog = utils.NewJLog("WARN", false)
 	hardDefaults = Service{
 		AllowInvalidCerts:  &hardDefaultsAllowInvalidCerts,
 		AccessToken:        &hardDefaultsAccessToken,
@@ -66,6 +68,6 @@ func TestServiceQuery(t *testing.T) {
 	got := service["GitHub_Query_Test"].Status.LatestVersion
 
 	if !want.MatchString(got) {
-		t.Fatalf(`%s.status.LatestVersion = %v, want match for %s`, *service["GitHub_Query_Test"].ID, got, want)
+		t.Errorf(`%s.status.LatestVersion = %v, want match for %s`, *service["GitHub_Query_Test"].ID, got, want)
 	}
 }

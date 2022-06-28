@@ -45,6 +45,9 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 		deployedVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
 		// If new release found by ^ query.
 		if err == nil && deployedVersion != parent.Status.DeployedVersion {
+			// Announce the updated deployment
+			parent.SetDeployedVersion(deployedVersion)
+
 			// If this new deployedVersion isn't LatestVersion
 			// Check that it's not a later version than LatestVersion
 			if deployedVersion != parent.Status.LatestVersion && parent.GetSemanticVersioning() && parent.Status.LatestVersion != "" {
@@ -56,14 +59,12 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 				latestVersionSV, _ := semver.NewVersion(parent.Status.LatestVersion)
 
 				// Update LatestVersion to DeployedVersion if it's newer
-				if deployedVersionSV.LessThan(*latestVersionSV) {
+				if latestVersionSV.LessThan(*deployedVersionSV) {
 					parent.Status.LatestVersion = parent.Status.DeployedVersion
 					parent.Status.LatestVersionTimestamp = parent.Status.DeployedVersionTimestamp
 					parent.AnnounceQueryNewVersion()
 				}
 			}
-			// Announce the updated deployment
-			parent.SetDeployedVersion(deployedVersion)
 
 			// Announce version change to WebSocket clients.
 			jLog.Info(
@@ -93,7 +94,7 @@ func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 		var queriedJSON map[string]interface{}
 		err := json.Unmarshal(rawBody, &queriedJSON)
 		if err != nil {
-			err := fmt.Errorf("Failed to unmarshal the following from %q into JSON:%s",
+			err := fmt.Errorf("failed to unmarshal the following from %q into json:%s",
 				d.URL,
 				string(rawBody))
 			jLog.Error(err, logFrom, true)
@@ -215,8 +216,8 @@ func (d *DeployedVersionLookup) Print(prefix string) {
 			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
-	utils.PrintlnIfNotDefault(d.JSON, fmt.Sprintf("%sjson: %s", prefix, d.URL))
-	utils.PrintlnIfNotDefault(d.Regex, fmt.Sprintf("%sregex: %s", prefix, d.URL))
+	utils.PrintlnIfNotDefault(d.JSON, fmt.Sprintf("%sjson: %q", prefix, d.JSON))
+	utils.PrintlnIfNotDefault(d.Regex, fmt.Sprintf("%sregex: %q", prefix, d.Regex))
 }
 
 // CheckValues of the DeployedVersionLookup.
