@@ -19,6 +19,8 @@ package config
 import (
 	"fmt"
 	"testing"
+
+	"github.com/release-argus/Argus/utils"
 )
 
 func testLoad(fileOverride string) Config {
@@ -31,7 +33,7 @@ func testLoad(fileOverride string) Config {
 	}
 
 	flags := make(map[string]bool)
-	config.Load(configFile, &flags)
+	config.Load(configFile, &flags, &utils.JLog{})
 
 	return config
 }
@@ -88,7 +90,7 @@ func TestLoadDefaultsService(t *testing.T) {
 	flags := make(map[string]bool)
 
 	// WHEN Load is called on it
-	config.Load(configFile, &flags)
+	config.Load(configFile, &flags, &utils.JLog{})
 
 	// THEN the defaults are assigned correctly to Services
 	want := false
