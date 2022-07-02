@@ -15,7 +15,6 @@
 package config
 
 import (
-	"github.com/release-argus/Argus/conversions"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
@@ -38,7 +37,4 @@ type Config struct {
 	All          []string       `yaml:"-"`                  // Ordered list of all Service(s).
 	Order        *[]string      `yaml:"-"`                  // Ordered list of all enabled Service(s).
 	SaveChannel  *chan bool     `yaml:"-"`                  // Channel for triggering a save of the config.
-	// TODO: Remove deprecated V
-	Gotify *conversions.GotifySlice `yaml:"gotify,omitempty"` // Gotify message(s) to send on a new release.
-	Slack  *conversions.SlackSlice  `yaml:"slack,omitempty"`  // Slack message(s) to send on a new release.
 }

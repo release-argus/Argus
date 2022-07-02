@@ -225,9 +225,6 @@ func (c *URLCommandSlice) CheckValues(prefix string) error {
 func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	validType := true
 
-	// TODO: Remove V
-	c.Type = strings.ReplaceAll(c.Type, "regex_submatch", "regex")
-
 	switch c.Type {
 	case "split":
 		if c.Text == nil {
