@@ -21,7 +21,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	argus_testing "github.com/release-argus/Argus/testing"
 
@@ -31,27 +30,24 @@ import (
 )
 
 var (
-	jLog utils.JLog
+	jLog             utils.JLog
+	config           cfg.Config
+	configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
+	configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
+	testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
+	testNotifyFlag   = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
+	testServiceFlag  = flag.String("test.service", "", "Put the name of the Service to test the version query.")
 )
 
 // main loads the config and then calls service.Track to monitor
 // each Service of the config for version changes and acts on
 // them as defined. It also sets up the Web UI and SaveHandler.
 func main() {
-	var (
-		config           cfg.Config
-		configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
-		configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
-		testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
-		testNotifyFlag   = flag.String("test.notify", "", "Put the name of the Notify service to send a test message.")
-		testServiceFlag  = flag.String("test.service", "", "Put the name of the Service to test the version query.")
-	)
-
 	flag.Parse()
 	flagset := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
-	config.Load(*configFile, &flagset)
+	config.Load(*configFile, &flagset, &jLog)
 	jLog.SetTimestamps(*config.Settings.GetLogTimestamps())
 	jLog.SetLevel(config.Settings.GetLogLevel())
 
@@ -64,10 +60,7 @@ func main() {
 
 	// config.Service.Init()
 	serviceCount := len(*config.Order)
-	if serviceCount == 0 {
-		jLog.Warn("No services to monitor were found.", utils.LogFrom{}, true)
-		os.Exit(0)
-	}
+	jLog.Fatal("No services to monitor were found.", utils.LogFrom{}, serviceCount == 0)
 
 	// INFO or above
 	if jLog.Level > 1 {

@@ -1,0 +1,37 @@
+defaults:
+  service:
+    interval: 123
+    access_token: ghp_default
+    semantic_versioning: n
+  notify:
+    slack:
+      params:
+        title: defaultTitle
+        username: defaultUsername
+        host: defaultHost
+    gotify:
+      url_fields:
+        host: foo.bar
+        token: anonymous
+  webhook:
+    desired_status_code: 0
+    max_tries: 3
+    delay: 2
+    silent_fails: false
+
+notify:
+  default:
+    type: gotify
+    options:
+      message: mainMessage
+    params:
+      username: mainUsername
+
+webhook:
+  default:
+    type: github
+    url: https://awx.main.com/api/v2/job_templates/XX/github/
+    secret: YYYYmain
+    desired_status_code: 202
+    max_tries: 1
+    delay: 3s

@@ -92,10 +92,9 @@ func (c *Config) Init() {
 }
 
 // Load `file` as Config.
-func (c *Config) Load(file string, flagset *map[string]bool) {
+func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 	c.File = file
-	logLevel := "WARN"
-	jLog = utils.NewJLog(logLevel, false)
+	jLog = log
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user
@@ -120,3 +119,4 @@ func (c *Config) Load(file string, flagset *map[string]bool) {
 	c.Init()
 	c.CheckValues()
 }
+
