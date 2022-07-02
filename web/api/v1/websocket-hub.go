@@ -17,6 +17,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/release-argus/Argus/utils"
 )
@@ -40,7 +41,7 @@ type Hub struct {
 // NewHub will create a new Hub.
 func NewHub() *Hub {
 	return &Hub{
-		Broadcast:  make(chan []byte),
+		Broadcast:  make(chan []byte, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
@@ -66,22 +67,34 @@ func (h *Hub) Run(jLog *utils.JLog) {
 				close(client.send)
 			}
 		case message := <-h.Broadcast:
-			jLog.Debug(
-				fmt.Sprintf("Broadcast %s", string(message)),
-				utils.LogFrom{Primary: "WebSocket"},
-				len(h.clients) > 0,
-			)
-			var msg AnnounceMSG
-			if err := json.Unmarshal(message, &msg); err != nil {
-				// TODO: Don't panic on invalid message?
-				panic(err)
-			}
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
+			n := len(h.Broadcast) + 1
+			for n != 0 {
+				jLog.Debug(
+					fmt.Sprintf("Broadcast %s", string(message)),
+					utils.LogFrom{Primary: "WebSocket"},
+					len(h.clients) > 0,
+				)
+				var msg AnnounceMSG
+				if err := json.Unmarshal(message, &msg); err != nil {
+					jLog.Warn(
+						"Invalid JSON broadcast to the WebSocket",
+						utils.LogFrom{Primary: "WebSocket"},
+						true,
+					)
+					continue
+				}
+				for client := range h.clients {
+					select {
+					case client.send <- message:
+					default:
+						close(client.send)
+						delete(h.clients, client)
+					}
+				}
+				n = len(h.Broadcast)
+				if n != 0 {
+					message = <-h.Broadcast
+					time.Sleep(100 * time.Microsecond)
 				}
 			}
 		}

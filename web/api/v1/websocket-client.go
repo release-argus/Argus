@@ -112,6 +112,10 @@ func getIP(r *http.Request) string {
 	return ""
 }
 
+type serverMessage struct {
+	Version int `json:"version"`
+}
+
 // readPump pumps messages from the websocket connection to the hub.
 //
 // The application runs readPump in a per-connection goroutine. The application
@@ -151,12 +155,26 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+
 		c.api.Log.Debug(
 			fmt.Sprintf("READ %s", message),
 			utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 			true,
 		)
+
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		// Check it's not trying to be a server message by omitting the version key
+		var validation serverMessage
+		err = json.Unmarshal(message, &validation)
+		if err != nil {
+			c.api.Log.Warn(
+				fmt.Sprintf("Invalid message (missing/invalid version key)\n%s", message),
+				utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				true,
+			)
+			continue
+		}
+
 		c.send <- message
 	}
 }
@@ -203,10 +221,14 @@ func (c *Client) writePump() {
 					utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true,
 				)
+				continue
 			}
 
 			// If message is from the server (doesn't use version)
 			if msg.Version == nil {
+				if msg.Page == nil || msg.Type == nil {
+					continue
+				}
 				switch *msg.Type {
 				case "VERSION", "WEBHOOK", "COMMAND":
 					err := c.conn.WriteJSON(msg)
@@ -217,10 +239,11 @@ func (c *Client) writePump() {
 					)
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", *msg.Type, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
+					continue
 				}
 			} else {
 				if msg.Page == nil || msg.Type == nil {
@@ -243,10 +266,11 @@ func (c *Client) writePump() {
 						c.api.wsService(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", *msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
+						continue
 					}
 				case "RUNTIME_BUILD":
 					switch *msg.Type {
@@ -254,7 +278,7 @@ func (c *Client) writePump() {
 						c.api.wsStatus(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown RUNTIME_BUILD Type %q\nFull message: %s", *msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
@@ -265,10 +289,11 @@ func (c *Client) writePump() {
 						c.api.wsFlags(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown FLAGS Type %q\nFull message: %s", *msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
+						continue
 					}
 				case "CONFIG":
 					switch *msg.Type {
@@ -280,17 +305,19 @@ func (c *Client) writePump() {
 						c.api.wsConfigService(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown CONFIG Type %q\nFull message: %s", *msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
+						continue
 					}
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("%q didnt match anything\nFull message: %s", *msg.Type, string(message)),
+						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", *msg.Type, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
+					continue
 				}
 			}
 

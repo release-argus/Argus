@@ -43,6 +43,6 @@ func NewAPI(cfg *config.Config, log *utils.JLog) *API {
 		Router:      baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true),
 		RoutePrefix: routePrefix,
 	}
-	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", 302))
+	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
 	return api
 }

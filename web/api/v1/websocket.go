@@ -112,7 +112,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 	if payload.Target == nil {
-		api.Log.Error("target for webhooks not provided", logFrom, true)
+		api.Log.Error("target for command/webhook not provided", logFrom, true)
 		return
 	}
 	id := payload.ServiceData.ID
@@ -121,16 +121,16 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 
+	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", *id), logFrom, true)
+		return
+	}
+
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
-		return
-	}
-
-	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any webhooks/commands to approve", *id), logFrom, true)
 		return
 	}
 
@@ -204,7 +204,6 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -253,7 +252,6 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -288,7 +286,6 @@ func (api *API) wsStatus(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -316,7 +313,6 @@ func (api *API) wsFlags(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -352,7 +348,6 @@ func (api *API) wsConfigSettings(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -416,7 +411,6 @@ func (api *API) wsConfigDefaults(client *Client) {
 	msg.ConfigData.Defaults.Notify = *msg.ConfigData.Defaults.Notify.Censor()
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -452,7 +446,6 @@ func (api *API) wsConfigNotify(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -492,7 +485,6 @@ func (api *API) wsConfigWebHook(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
 
@@ -592,18 +584,14 @@ func (api *API) wsConfigService(client *Client) {
 				notify := make(api_types.NotifySlice, len(*service.Notify))
 				serviceConfig[key].Notify = &notify
 				for index := range *service.Notify {
-					if (*service.Notify)[index] == nil {
-						(*serviceConfig[key].Notify)[index] = &api_types.Notify{}
-					} else {
-						(*serviceConfig[key].Notify)[index] = &api_types.Notify{
-							Type:      (*service.Notify)[index].Type,
-							Options:   (*service.Notify)[index].Options,
-							URLFields: (*service.Notify)[index].URLFields,
-							Params:    (*service.Notify)[index].Params,
-						}
-						// May be a new pointer as the fields are a map rather than individual pointers/vars
-						(*serviceConfig[key].Notify)[index] = (*serviceConfig[key].Notify)[index].Censor()
+					(*serviceConfig[key].Notify)[index] = &api_types.Notify{
+						Type:      (*service.Notify)[index].Type,
+						Options:   (*service.Notify)[index].Options,
+						URLFields: (*service.Notify)[index].URLFields,
+						Params:    (*service.Notify)[index].Params,
 					}
+					// May be a new pointer as the fields are a map rather than individual pointers/vars
+					(*serviceConfig[key].Notify)[index] = (*serviceConfig[key].Notify)[index].Censor()
 				}
 			}
 
@@ -629,7 +617,7 @@ func (api *API) wsConfigService(client *Client) {
 				command := make(api_types.CommandSlice, len(*service.Command))
 				serviceConfig[key].Command = &command
 				for index := range *service.Command {
-					copy((*serviceConfig[key].Command)[index], (*service.Command)[index])
+					(*serviceConfig[key].Command)[index] = api_types.Command((*service.Command)[index])
 				}
 			}
 		}
@@ -646,6 +634,5 @@ func (api *API) wsConfigService(client *Client) {
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
-		return
 	}
 }
