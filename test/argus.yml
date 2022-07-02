@@ -1,0 +1,4 @@
+service:
+  release-argus/Argus:
+    type: github
+    url: release-argus/argus
