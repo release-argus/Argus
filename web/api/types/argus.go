@@ -186,6 +186,7 @@ func (n *Notify) Censor() *Notify {
 		for i := range url_fields_to_censor {
 			if n.URLFields[url_fields_to_censor[i]] != "" {
 				censorURLFields = true
+				break
 			}
 		}
 	}
@@ -199,6 +200,7 @@ func (n *Notify) Censor() *Notify {
 		for i := range params_to_censor {
 			if n.Params[params_to_censor[i]] != "" {
 				censorParams = true
+				break
 			}
 		}
 	}

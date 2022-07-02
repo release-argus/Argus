@@ -86,5 +86,5 @@ func main() {
 	go (&config).SaveHandler()
 
 	// Web server
-	web.Main(&config, &jLog)
+	web.Run(&config, &jLog)
 }
