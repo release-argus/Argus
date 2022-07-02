@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/containrrr/shoutrrr/pkg/types"
-	"github.com/release-argus/Argus/conversions"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
@@ -30,9 +29,6 @@ type Defaults struct {
 	Service service.Service `yaml:"service,omitempty"`
 	Notify  shoutrrr.Slice  `yaml:"notify,omitempty"`
 	WebHook webhook.WebHook `yaml:"webhook,omitempty"`
-	// TODO: Remove deprecated V
-	Gotify *conversions.Gotify `yaml:"gotify,omitempty"`
-	Slack  *conversions.Slack  `yaml:"slack,omitempty"`
 }
 
 // SetDefaults (last resort vars).

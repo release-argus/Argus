@@ -18,7 +18,6 @@ import (
 	"github.com/coreos/go-semver/semver"
 
 	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/conversions"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
@@ -58,9 +57,6 @@ type Service struct {
 	Defaults              *Service               `yaml:"-"`                             // Default values.
 	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
 	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
-	// TODO: Remove deprecated V
-	Gotify *conversions.GotifySlice `yaml:"gotify,omitempty"` // Gotify message(s) to send on a new release.
-	Slack  *conversions.SlackSlice  `yaml:"slack,omitempty"`  // Slack message(s) to send on a new release.
 }
 
 // GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.

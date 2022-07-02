@@ -32,9 +32,6 @@ type Status struct {
 	RegexMissesContent       uint   `yaml:"-"`                                    // Counter for the number of regex misses on URL content.
 	RegexMissesVersion       uint   `yaml:"-"`                                    // Counter for the number of regex misses on version.
 	Fails                    *Fails `yaml:"-"`                                    // Track the Notify/WebHook fails
-	// TODO: Remove V
-	CurrentVersion          string `yaml:"current_version,omitempty"`           // Track the current version of the service from the last successful WebHook.
-	CurrentVersionTimestamp string `yaml:"current_version_timestamp,omitempty"` // UTC timestamp that the current version change was noticed.
 }
 
 // Fails keeps track of whether any of the notifications failed on the last version change.
