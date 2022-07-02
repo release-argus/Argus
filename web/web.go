@@ -50,9 +50,8 @@ func NewRouter(cfg *config.Config, jLog *utils.JLog, hub *api_v1.Hub) *mux.Route
 	return api.BaseRouter
 }
 
-// Main will set up everything web-related for Argus.
-func Main(cfg *config.Config, log *utils.JLog) {
-	jLog = log
+// newWebUI will set up everything web-related for Argus.
+func newWebUI(cfg *config.Config) *mux.Router {
 	hub := api_v1.NewHub()
 	go hub.Run(jLog)
 	router := NewRouter(cfg, jLog, hub)
@@ -70,6 +69,13 @@ func Main(cfg *config.Config, log *utils.JLog) {
 			(*cfg.Service[sKey]).CommandController.Announce = &hub.Broadcast
 		}
 	}
+
+	return router
+}
+
+func Run(cfg *config.Config, log *utils.JLog) {
+	jLog = log
+	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())
 	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), utils.LogFrom{}, true)
