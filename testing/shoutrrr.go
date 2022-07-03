@@ -20,21 +20,19 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	argus_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
 
-// TestNotify will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
-func TestNotify(flag *string, cfg *config.Config) {
+// NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
+func NotifyTest(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
-	jLog := utils.NewJLog("DEBUG", false)
-	shoutrrr.SetLog(jLog)
+	argus_shoutrrr.SetLog(jLog)
 	jLog.Info(
 		"",
 		logFrom,
@@ -49,6 +47,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 			break
 		}
 	}
+
 	if (*shoutrrr)["test"] == nil {
 		if cfg.Notify != nil && cfg.Notify[*flag] != nil {
 			hardDefaults := config.Defaults{}
@@ -111,5 +110,7 @@ func TestNotify(flag *string, cfg *config.Config) {
 	})
 	jLog.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	jLog.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
-	os.Exit(0)
+	if !jLog.Testing {
+		os.Exit(0)
+	}
 }
