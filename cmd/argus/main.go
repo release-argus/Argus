@@ -54,9 +54,10 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	argus_testing.TestCommands(testCommandsFlag, &config)
-	argus_testing.TestNotify(testNotifyFlag, &config)
-	argus_testing.TestService(testServiceFlag, &config)
+	argus_testing.InitJLog(&jLog)
+	argus_testing.CommandTest(testCommandsFlag, &config)
+	argus_testing.NotifyTest(testNotifyFlag, &config)
+	argus_testing.ServiceTest(testServiceFlag, &config)
 
 	// config.Service.Init()
 	serviceCount := len(*config.Order)

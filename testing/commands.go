@@ -23,13 +23,12 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-// TestCommands will test the commands given to a Service.
-func TestCommands(flag *string, cfg *config.Config) {
+// CommandTest will test the commands given to a Service.
+func CommandTest(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
-	jLog := utils.NewJLog("INFO", false)
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	jLog.Info(
@@ -37,16 +36,16 @@ func TestCommands(flag *string, cfg *config.Config) {
 		logFrom,
 		true,
 	)
-	service := cfg.Service[*flag]
+	service, exist := cfg.Service[*flag]
 
-	if service == nil {
+	if !exist {
 		var allService []string
 		for key := range cfg.Service {
 			if !utils.Contains(allService, key) {
 				allService = append(allService, key)
 			}
 		}
-		jLog.Error(
+		jLog.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(allService, "\n  - "),
@@ -54,7 +53,6 @@ func TestCommands(flag *string, cfg *config.Config) {
 			logFrom,
 			true,
 		)
-		os.Exit(1)
 	}
 
 	jLog.Fatal(
@@ -62,9 +60,11 @@ func TestCommands(flag *string, cfg *config.Config) {
 			"Service %q does not have any `commands` defined",
 			*flag),
 		logFrom,
-		service.Command == nil)
+		service.CommandController == nil)
 
 	//nolint:errcheck
 	(*service.CommandController).Exec(&logFrom)
-	os.Exit(0)
+	if !jLog.Testing {
+		os.Exit(0)
+	}
 }

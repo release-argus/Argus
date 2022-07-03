@@ -20,16 +20,16 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-// TestService will query the service and return the version it finds.
-func TestService(flag *string, cfg *config.Config) {
+// ServiceTest will query the service and return the version it finds.
+func ServiceTest(flag *string, cfg *config.Config) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
-	jLog := utils.NewJLog("INFO", false)
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	jLog.Info(
@@ -39,6 +39,7 @@ func TestService(flag *string, cfg *config.Config) {
 	)
 	service := cfg.Service[*flag]
 
+	//nolint:staticcheck // SA5011 -- pointer is nil if not in the Slice
 	if service == nil {
 		var allService []string
 		for key := range cfg.Service {
@@ -46,7 +47,7 @@ func TestService(flag *string, cfg *config.Config) {
 				allService = append(allService, key)
 			}
 		}
-		jLog.Error(
+		jLog.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(allService, "\n  - "),
@@ -54,11 +55,10 @@ func TestService(flag *string, cfg *config.Config) {
 			logFrom,
 			true,
 		)
-		os.Exit(1)
 	}
 
-	service.Status.DeployedVersion = ""
-	service.Status.LatestVersion = ""
+	//nolint:staticcheck // SA5011 -- service isn't nil from above Fatal
+	service.Status = &service_status.Status{}
 	_, err := service.Query()
 	if err != nil {
 		helpMsg := ""
@@ -82,16 +82,16 @@ func TestService(flag *string, cfg *config.Config) {
 		version, err := service.DeployedVersionLookup.Query(
 			logFrom,
 			service.GetSemanticVersioning())
-		if err == nil {
-			jLog.Info(
-				fmt.Sprintf(
-					"Deployed version - %q",
-					version,
-				),
-				logFrom,
-				true,
-			)
-		}
+		jLog.Info(
+			fmt.Sprintf(
+				"Deployed version - %q",
+				version,
+			),
+			logFrom,
+			err == nil,
+		)
 	}
-	os.Exit(0)
+	if !jLog.Testing {
+		os.Exit(0)
+	}
 }

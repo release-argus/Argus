@@ -1,3 +1,6 @@
+settings:
+  web:
+   listen_port: 0
 service:
   release-argus/Argus:
     type: github
