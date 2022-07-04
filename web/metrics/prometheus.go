@@ -73,11 +73,6 @@ var (
 		})
 )
 
-// InitPrometheusCounterWithID will set the `metric` counter for this service to 0.
-func InitPrometheusCounterWithID(metric *prometheus.CounterVec, id string) {
-	metric.With(prometheus.Labels{"id": id}).Add(float64(0))
-}
-
 // InitPrometheusCounterWithIDAndResult will set the `metric` counter for this service to 0.
 func InitPrometheusCounterWithIDAndResult(metric *prometheus.CounterVec, id string, result string) {
 	metric.With(prometheus.Labels{"id": id, "result": result}).Add(float64(0))
