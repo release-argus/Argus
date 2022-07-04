@@ -40,4 +40,4 @@ jobs:
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Test
-        run: go test -v ./...
+        run: go test -v ./... --tags testing,unit,integration

@@ -12,6 +12,15 @@ DOCKER_IMAGE_NAME ?= argus
 .PHONY: go-build
 go-build: common-build
 
+.PHONY: go-test
+go-test:
+	go test --tags testing,unit,integration ./...
+
+.PHONY: go-test-coverage
+go-test-coverage:
+	go test ./...  -coverpkg=./... -coverprofile ./coverage.out --tags testing,unit,integration
+	go tool cover -func ./coverage.out
+
 .PHONY: web-install
 web-install:
 	cd $(UI_PATH) && npm install
