@@ -1,4 +1,4 @@
-name: Test
+name: Codecov
 
 on:
   push:
@@ -9,10 +9,8 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: test
+  run:
     runs-on: ubuntu-latest
-
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
@@ -40,4 +38,9 @@ jobs:
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Test
-        run: go test ./... -coverpkg=./... -covermode atomic --tags testing,unit,integration
+        run: go test ./... -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags testing,unit,integration
+
+      - name: Publish coverage
+        uses: codecov/codecov-action@v3
+        with:
+          verbose: true

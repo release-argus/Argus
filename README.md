@@ -5,6 +5,7 @@
 [![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
 [![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Test?label=Tests)](https://github.com/release-argus/Argus/actions/workflows/test.yml)
+[![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
 
 
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Binary%20Build?label=Binary%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
