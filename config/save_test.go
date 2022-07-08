@@ -70,7 +70,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 		*config.SaveChannel <- true
 	}()
 	time.Sleep(time.Second)
-	start := time.Now()
+	start := time.Now().UTC()
 	waitChannelTimeout(config.SaveChannel)
 
 	// THEN after `TIMEOUT`, it would have tried to Save (and failed)

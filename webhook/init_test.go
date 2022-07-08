@@ -29,7 +29,7 @@ func TestSliceInitWithNilSlice(t *testing.T) {
 	var slice Slice
 
 	// WHEN Init is called
-	slice.Init(nil, nil, nil, nil, nil, nil, nil)
+	slice.Init(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// THEN the function exits without defining any of the vars
 	got := len(slice)
@@ -47,7 +47,7 @@ func TestSliceInitWithNilWebHook(t *testing.T) {
 	serviceID := "test"
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil)
+	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil, nil)
 
 	// THEN the function initialises the nil WebHook
 	if slice["0"] == nil {
@@ -67,7 +67,7 @@ func TestSliceInitWithNonNil(t *testing.T) {
 	serviceID := ""
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil)
+	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil, nil)
 
 	// THEN the function exits without defining any of the vars
 	got := len(slice)
@@ -120,7 +120,7 @@ func TestSliceInitMainsHandedOut(t *testing.T) {
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// THEN the mains are handed out correctly
 	for key := range slice {
@@ -135,7 +135,7 @@ func TestSliceInitDefaultsHandedOut(t *testing.T) {
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// THEN the defaults are handed out correctly
 	for key := range slice {
@@ -150,7 +150,7 @@ func TestSliceInitHardDefaultsHandedOut(t *testing.T) {
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// THEN the hard defaults are handed out correctly
 	for key := range slice {
@@ -168,7 +168,7 @@ func TestSliceInitNotifiersHandedOut(t *testing.T) {
 	}
 
 	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, &notifiers)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, &notifiers, nil)
 
 	// THEN the notifiers are handed out correctly
 	for key := range slice {
@@ -181,7 +181,7 @@ func TestSliceInitNotifiersHandedOut(t *testing.T) {
 func TestSliceInitMetrics(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN initMetrics is called
 	slice["0"].initMetrics("foo")
@@ -192,7 +192,7 @@ func TestSliceInitMetrics(t *testing.T) {
 func TestGetAllowInvalidCertsWhenTrue(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN AllowInvalidCerts is true and GetAllowInvalidCerts is called
 	wanted := true
@@ -208,7 +208,7 @@ func TestGetAllowInvalidCertsWhenTrue(t *testing.T) {
 func TestGetAllowInvalidCertsWhenFalse(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN AllowInvalidCerts is false and GetAllowInvalidCerts is called
 	wanted := false
@@ -224,7 +224,7 @@ func TestGetAllowInvalidCertsWhenFalse(t *testing.T) {
 func TestGetDelayDuration(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN Delay is "X" and GetDelayDuration is called
 	duration := "1s"
@@ -241,7 +241,7 @@ func TestGetDelayDuration(t *testing.T) {
 func TestGetDesiredStatusCode(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN DesiredStatusCode is 1 and GetDesiredStatusCode is called
 	wanted := 1
@@ -257,7 +257,7 @@ func TestGetDesiredStatusCode(t *testing.T) {
 func TestGetMaxTries(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN MaxTries is X and GetMaxTries is called
 	wanted := uint(4)
@@ -273,7 +273,7 @@ func TestGetMaxTries(t *testing.T) {
 func TestGetType(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN Type is "X" and GetType is called
 	wanted := "gitlab"
@@ -289,7 +289,7 @@ func TestGetType(t *testing.T) {
 func TestGetSecret(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN Secret is "X" and GetSecret is called
 	wanted := "secret"
@@ -305,7 +305,7 @@ func TestGetSecret(t *testing.T) {
 func TestGetSilentFailsWhenTrue(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults with SilentFails true
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN GetSilentFails is called
 	wanted := true
@@ -321,7 +321,7 @@ func TestGetSilentFailsWhenTrue(t *testing.T) {
 func TestGetSilentFailsWhenFalse(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults with SilentFails false
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN SilentFails is false and GetSilentFails is called
 	wanted := false
@@ -337,7 +337,7 @@ func TestGetSilentFailsWhenFalse(t *testing.T) {
 func TestGetURLWithNoTemplating(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN URL requires no Jinja templating and GetURL is called
 	wanted := "https://example.com"
@@ -353,7 +353,7 @@ func TestGetURLWithNoTemplating(t *testing.T) {
 func TestGetURLWithTemplatingWorks(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN URL requires Jinja templating and GetURL is called
 	template := "https://example.com{% if 'a' == 'a' %}/{{ version }}{% endif %}{% if 'a' == 'b' %}foo{% endif %}"
@@ -369,7 +369,7 @@ func TestGetURLWithTemplatingWorks(t *testing.T) {
 func TestGetURLWithTemplatingUnchangesTemplate(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil)
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN URL requires Jinja templating and GetURL is called
 	template := "https://example.com{% if 'a' == 'a' %}/{{ version }}{% endif %}{% if 'a' == 'b' %}foo{% endif %}"
@@ -388,7 +388,7 @@ func TestGetRequestGitHubInvalidURL(t *testing.T) {
 	whType := "github"
 	whURL := "invalid://	test"
 	whSecret := "secret"
-	webhook := WebHook{
+	wh := WebHook{
 		Type:         &whType,
 		URL:          &whURL,
 		Secret:       &whSecret,
@@ -398,7 +398,7 @@ func TestGetRequestGitHubInvalidURL(t *testing.T) {
 	}
 
 	// WHEN GetRequest is called
-	req := webhook.GetRequest()
+	req := wh.GetRequest()
 
 	// THEN req is nil
 	if req != nil {
@@ -411,7 +411,7 @@ func TestGetRequestGitHubValidURL(t *testing.T) {
 	whType := "github"
 	whURL := "https://test"
 	whSecret := "secret"
-	webhook := WebHook{
+	wh := WebHook{
 		Type:         &whType,
 		URL:          &whURL,
 		Secret:       &whSecret,
@@ -425,7 +425,7 @@ func TestGetRequestGitHubValidURL(t *testing.T) {
 	}
 
 	// WHEN GetRequest is called
-	req := webhook.GetRequest()
+	req := wh.GetRequest()
 
 	// THEN req is valid
 	if req == nil {
@@ -453,7 +453,7 @@ func TestGetRequestGitLabInvalidURL(t *testing.T) {
 	whType := "gitlab"
 	whURL := "invalid://	test"
 	whSecret := "secret"
-	webhook := WebHook{
+	wh := WebHook{
 		Type:         &whType,
 		URL:          &whURL,
 		Secret:       &whSecret,
@@ -463,7 +463,7 @@ func TestGetRequestGitLabInvalidURL(t *testing.T) {
 	}
 
 	// WHEN GetRequest is called
-	req := webhook.GetRequest()
+	req := wh.GetRequest()
 
 	// THEN req is nil
 	if req != nil {
@@ -476,7 +476,7 @@ func TestGetRequestGitLabValidURL(t *testing.T) {
 	whType := "gitlab"
 	whURL := "https://test"
 	whSecret := "secret"
-	webhook := WebHook{
+	wh := WebHook{
 		Type:         &whType,
 		URL:          &whURL,
 		Secret:       &whSecret,
@@ -490,7 +490,7 @@ func TestGetRequestGitLabValidURL(t *testing.T) {
 	}
 
 	// WHEN GetRequest is called
-	req := webhook.GetRequest()
+	req := wh.GetRequest()
 
 	// THEN req is valid
 	if req == nil {
@@ -506,9 +506,116 @@ func TestGetRequestGitLabValidURL(t *testing.T) {
 	}
 }
 
+func TestIsRunnableTrue(t *testing.T) {
+	// GIVEN a WebHook with NextRunnable before the current time
+	wh := WebHook{
+		NextRunnable: time.Now().UTC().Add(-time.Minute),
+	}
+
+	// WHEN IsRunnable is called on it
+	ranAt := time.Now().UTC()
+	got := wh.IsRunnable()
+
+	// THEN true was returned
+	want := true
+	if got != want {
+		t.Fatalf("IsRunnable was ran at\n%s with NextRunnable\n%s. Expected %t, got %t",
+			ranAt, wh.NextRunnable, want, got)
+	}
+}
+
+func TestIsRunnableFalse(t *testing.T) {
+	// GIVEN a WebHook with NextRunnable after the current time
+	wh := WebHook{
+		NextRunnable: time.Now().UTC().Add(time.Minute),
+	}
+
+	// WHEN IsRunnable is called on it
+	ranAt := time.Now().UTC()
+	got := wh.IsRunnable()
+
+	// THEN false was returned
+	want := false
+	if got != want {
+		t.Fatalf("IsRunnable was ran at\n%s with NextRunnable\n%s. Expected %t, got %t",
+			ranAt, wh.NextRunnable, want, got)
+	}
+}
+
+func TestSetNextRunnableOfPass(t *testing.T) {
+	// GIVEN a WebHook that passed
+	whType := "gitlab"
+	whURL := "https://test"
+	whSecret := "secret"
+	failed := false
+	serviceInterval := "11m"
+	wh := WebHook{
+		Type:         &whType,
+		URL:          &whURL,
+		Secret:       &whSecret,
+		Main:         &WebHook{},
+		Defaults:     &WebHook{},
+		HardDefaults: &WebHook{},
+		CustomHeaders: &map[string]string{
+			"foo": "bar",
+		},
+		Failed:         &failed,
+		ServiceStatus:  &service_status.Status{},
+		ParentInterval: &serviceInterval,
+	}
+
+	// WHEN SetNextRunnable is called on a webhook that ran successfully
+	wh.SetNextRunnable()
+
+	// THEN MextRunnable is set to ~2*ParentInterval
+	now := time.Now().UTC()
+	got := wh.NextRunnable
+	parentInterval, _ := time.ParseDuration(*wh.ParentInterval)
+	wantMin := now.Add(2 * parentInterval).Add(-1 * time.Second)
+	wantMax := now.Add(2 * parentInterval).Add(1 * time.Second)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between %s and %s, not %s",
+			wantMin, wantMax, got)
+	}
+}
+
+func TestSetNextRunnableOfFail(t *testing.T) {
+	// GIVEN a WebHook that failed
+	whType := "gitlab"
+	whURL := "https://test"
+	whSecret := "secret"
+	failed := true
+	wh := WebHook{
+		Type:         &whType,
+		URL:          &whURL,
+		Secret:       &whSecret,
+		Main:         &WebHook{},
+		Defaults:     &WebHook{},
+		HardDefaults: &WebHook{},
+		CustomHeaders: &map[string]string{
+			"foo": "bar",
+		},
+		Failed:        &failed,
+		ServiceStatus: &service_status.Status{},
+	}
+
+	// WHEN SetNextRunnable is called on a command index that failed running
+	wh.SetNextRunnable()
+
+	// THEN MextRunnable is set to 15s
+	now := time.Now().UTC()
+	got := wh.NextRunnable
+	wantMin := now.Add(14 * time.Second)
+	wantMax := now.Add(16 * time.Second)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between %s and %s, not %s",
+			wantMin, wantMax, got)
+	}
+}
+
 func TestResetFailsWithNilSlice(t *testing.T) {
 	// GIVEN a nil Slice
-	var slice Slice
+	var slice *Slice
 	// WHEN ResetFails is run
 	// THEN it exits successfully
 	slice.ResetFails()

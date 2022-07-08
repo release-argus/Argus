@@ -95,9 +95,7 @@ export const ServiceInfo = ({
                 onClick={() =>
                   showModal(updateApproved ? "RESEND" : "SEND", service)
                 }
-                disabled={
-                  updateApproved || !(service.webhook || service.command)
-                }
+                disabled={!(service.webhook || service.command)}
               >
                 <FontAwesomeIcon icon={faCheck} />
               </Button>
@@ -111,7 +109,6 @@ export const ServiceInfo = ({
                     service
                   )
                 }
-                disabled={updateApproved}
               >
                 <FontAwesomeIcon icon={faTimes} color="white" />
               </Button>
@@ -130,22 +127,23 @@ export const ServiceInfo = ({
               <>
                 Current version:
                 {service.has_deployed_version && (
-                <OverlayTrigger
-                  key="deployed-service"
-                  placement="top"
-                  delay={{ show: 500, hide: 500 }}
-                  overlay={
-                    <Tooltip id={`tooltip-deployed-service`}>
-                      of the deployed {service.id}
-                    </Tooltip>
-                  }
-                >
-                  <FontAwesomeIcon
-                    className="same-color"
-                    style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
-                    icon={faSatelliteDish}
-                  />
-                </OverlayTrigger>)}
+                  <OverlayTrigger
+                    key="deployed-service"
+                    placement="top"
+                    delay={{ show: 500, hide: 500 }}
+                    overlay={
+                      <Tooltip id={`tooltip-deployed-service`}>
+                        of the deployed {service.id}
+                      </Tooltip>
+                    }
+                  >
+                    <FontAwesomeIcon
+                      className="same-color"
+                      style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+                      icon={faSatelliteDish}
+                    />
+                  </OverlayTrigger>
+                )}
                 {updateSkipped && service.status?.approved_version && (
                   <OverlayTrigger
                     key="skipped-version"

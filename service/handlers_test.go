@@ -18,6 +18,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/utils"
@@ -120,7 +121,7 @@ func TestUpdatedVersionDidCheckCommandFails(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
 	service.CommandController.Failed[0] = &failed
 
 	// WHEN UpdatedVersion is called on it
@@ -182,7 +183,7 @@ func TestUpdatedVersionDidUpdateApprovedVersionIfActionsPassed(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
 	service.CommandController.Failed[0] = &failed
 
 	// WHEN UpdatedVersion is called on it
@@ -240,7 +241,7 @@ func TestHandleUpdateActionsWithSuccessfulCommandAndNoAutoApprove(t *testing.T) 
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.DeployedVersion
@@ -264,7 +265,14 @@ func TestHandleUpdateActionsWithSuccessfulCommandAndAutoApprove(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(
+		jLog,
+		&serviceID,
+		nil,
+		service.Command,
+		nil,
+		service.Interval,
+	)
 
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.LatestVersion
@@ -288,7 +296,7 @@ func TestHandleUpdateActionsWithFailingCommandAndAutoApprove(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.DeployedVersion
@@ -330,7 +338,7 @@ func TestHandleFailedActionsWithSuccessfulCommand(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 
 	// WHEN HandleFailedActions is called on it
 	want := service.Status.LatestVersion
@@ -341,6 +349,51 @@ func TestHandleFailedActionsWithSuccessfulCommand(t *testing.T) {
 	if got != want {
 		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
 			want, got)
+	}
+}
+
+func TestHandleFailedActionsWithCommandBeforeNextRunnable(t *testing.T) {
+	// GIVEN a Service with all Commands that'll pass
+	// and they all failed last time
+	// and one of the NextRunnable's hasn't been reached
+	jLog = utils.NewJLog("WARN", false)
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		command.Command{"ls", "-la"},
+		command.Command{"ls", "-la"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
+	failed0 := true
+	service.CommandController.Failed[0] = &failed0
+	failed1 := true
+	service.CommandController.Failed[1] = &failed1
+	nextRunnable0 := time.Now().UTC().Add(-time.Hour)
+	service.CommandController.NextRunnable[0] = nextRunnable0
+	nextRunnable1 := time.Now().UTC().Add(time.Hour)
+	service.CommandController.NextRunnable[1] = nextRunnable1
+
+	// WHEN HandleFailedActions is called on it
+	ranAt := time.Now().UTC()
+	service.HandleFailedActions()
+
+	// THEN only the Command that's past its NextRunnable will have ran
+	if utils.EvalNilPtr(service.CommandController.Failed[0], true) != false {
+		got := "true"
+		if service.CommandController.Failed[0] == nil {
+			got = "nil"
+		}
+		t.Errorf("Command 0 %q should have ran and got failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
+			(*service.CommandController.Command)[0].String(), got, nextRunnable0, ranAt)
+	}
+	if utils.EvalNilPtr(service.CommandController.Failed[1], false) != true {
+		got := "false"
+		if service.CommandController.Failed[1] == nil {
+			got = "nil"
+		}
+		t.Errorf("Command 1 %q shouldn't have ran and stayed failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
+			(*service.CommandController.Command)[1].String(), got, nextRunnable1, ranAt)
 	}
 }
 
@@ -356,7 +409,7 @@ func TestHandleFailedActionsWithFailingCommand(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 	didFail := false
 	fail := true
 	service.CommandController.Failed[0] = &didFail
@@ -384,24 +437,13 @@ func TestHandleFailedActionsWithFailingWebHook(t *testing.T) {
 	whFail := testWebHookFailing()
 	service.WebHook = &webhook.Slice{
 		"fail1": &whFail,
-		"fail2": &whFail,
 		"pass1": &whPass,
-		"pass2": &whPass,
 	}
 	didFail := false
 	fail := true
 	(*service.WebHook)["fail1"].Failed = &fail
-	(*service.WebHook)["fail2"].Failed = &fail
 	(*service.WebHook)["pass1"].Failed = &didFail
-	(*service.WebHook)["pass2"].Failed = &didFail
-	service.WebHook.Init(
-		jLog,
-		service.ID,
-		service.Status,
-		&webhook.Slice{},
-		&webhook.WebHook{},
-		&webhook.WebHook{},
-		nil)
+	service.WebHook.Init(jLog, service.ID, service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Interval)
 
 	// WHEN HandleFailedActions is called on it
 	want := service.Status.DeployedVersion
@@ -412,6 +454,51 @@ func TestHandleFailedActionsWithFailingWebHook(t *testing.T) {
 	if got != want {
 		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
 			want, got)
+	}
+}
+
+func TestHandleFailedActionsWithWebHookBeforeNextRunnable(t *testing.T) {
+	// GIVEN a Service with all WebHooks that'll pass
+	// and they all failed last time
+	// and one of the NextRunnable's hasn't been reached
+	jLog = utils.NewJLog("WARN", false)
+	service := testServiceGitHub()
+	whPass0 := testWebHookSuccessful()
+	whPass1 := testWebHookSuccessful()
+	service.WebHook = &webhook.Slice{
+		"pass0": &whPass0,
+		"pass1": &whPass1,
+	}
+	service.WebHook.Init(jLog, service.ID, service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Interval)
+	fail0 := true
+	(*service.WebHook)["pass0"].Failed = &fail0
+	fail1 := true
+	(*service.WebHook)["pass1"].Failed = &fail1
+	nextRunnable0 := time.Now().UTC().Add(-time.Hour)
+	(*service.WebHook)["pass0"].NextRunnable = nextRunnable0
+	nextRunnable1 := time.Now().UTC().Add(time.Hour)
+	(*service.WebHook)["pass1"].NextRunnable = nextRunnable1
+
+	// WHEN HandleFailedActions is called on it
+	ranAt := time.Now().UTC()
+	service.HandleFailedActions()
+
+	// THEN only the WebHook that's past its NextRunnable will have ran
+	if utils.EvalNilPtr((*service.WebHook)["pass0"].Failed, true) != false {
+		got := "true"
+		if (*service.WebHook)["pass0"].Failed == nil {
+			got = "nil"
+		}
+		t.Errorf("WebHook 0 should have ran and got failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
+			got, nextRunnable0, ranAt)
+	}
+	if utils.EvalNilPtr((*service.WebHook)["pass1"].Failed, false) != true {
+		got := "true"
+		if (*service.WebHook)["pass1"].Failed == nil {
+			got = "nil"
+		}
+		t.Errorf("WebHook 1 shouldn't have ran and stayed failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
+			got, nextRunnable1, ranAt)
 	}
 }
 
@@ -426,7 +513,7 @@ func TestHandleFailedActionsDidOnlyRedoFailed(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 	passes := false
 	service.CommandController.Failed[0] = &passes
 	service.CommandController.Failed[2] = &passes
@@ -471,7 +558,7 @@ func TestHandleCommandWithUnknownCommand(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
 
 	// WHEN HandleCommand is called for an unknown command
 	want := service.Status.DeployedVersion
@@ -485,8 +572,9 @@ func TestHandleCommandWithUnknownCommand(t *testing.T) {
 	}
 }
 
-func TestHandleCommandWithSuccessfulCommand(t *testing.T) {
+func TestHandleCommandWithNextRunnableFail(t *testing.T) {
 	// GIVEN a Service with a WebHook that'll pass
+	// and time is before NextRunnable
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	service.Command = &command.Slice{
@@ -494,13 +582,40 @@ func TestHandleCommandWithSuccessfulCommand(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
+	nextRunnable := time.Now().UTC().Add(time.Minute)
+	service.CommandController.NextRunnable[0] = nextRunnable
+
+	// WHEN HandleCommand is called
+	want := service.Status.DeployedVersion
+	service.HandleCommand((*service.Command)[0].String())
+
+	// THEN the DeployedVersion will be unchanged (Command shouldn't run)
+	got := service.Status.DeployedVersion
+	if got != want {
+		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
+			want, got)
+	}
+}
+
+func TestHandleCommandWithNextRunnablePass(t *testing.T) {
+	// GIVEN a Service with a WebHook that'll pass
+	// and time is after NextRunnable
+	jLog = utils.NewJLog("WARN", false)
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		command.Command{"ls", "-lah"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
+	service.CommandController.NextRunnable[0] = time.Now().UTC()
 
 	// WHEN HandleCommand is called
 	want := service.Status.LatestVersion
 	service.HandleCommand((*service.Command)[0].String())
 
-	// THEN the DeployedVersion will be unchanged
+	// THEN the DeployedVersion will now be LatestVersion
 	got := service.Status.DeployedVersion
 	if got != want {
 		t.Errorf("DeployedVersion should have changed from %s to %s",
@@ -517,13 +632,13 @@ func TestHandleCommandWithFailingCommand(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
 
 	// WHEN HandleCommand is called
 	want := service.Status.LatestVersion
 	service.HandleCommand((*service.Command)[0].String())
 
-	// THEN the DeployedVersion will be unchanged
+	// THEN the DeployedVersion will now be LatestVersion
 	got := service.Status.DeployedVersion
 	if got == want {
 		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
@@ -556,7 +671,7 @@ func TestHandleWebHookWithSuccessfulWebHook(t *testing.T) {
 	service := testServiceGitHub()
 	wh := testWebHookSuccessful()
 	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 	service.WebHook = &webhook.Slice{
 		"test": &wh,
 	}
@@ -573,12 +688,60 @@ func TestHandleWebHookWithSuccessfulWebHook(t *testing.T) {
 	}
 }
 
+func TestHandleWebHookWithNextRunnablePass(t *testing.T) {
+	// GIVEN a Service with a WebHook that'll pass
+	// and time is after NextRunnable
+	service := testServiceGitHub()
+	wh := testWebHookSuccessful()
+	wh.NextRunnable = time.Now().UTC()
+	var logInitSlice webhook.Slice
+	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
+	service.WebHook = &webhook.Slice{
+		"test": &wh,
+	}
+
+	// WHEN HandleWebHook is called for WebHook that doesn't exist
+	want := service.Status.LatestVersion
+	service.HandleWebHook("test")
+
+	// THEN the DeployedVersion will now be LatestVersion
+	got := service.Status.DeployedVersion
+	if got != want {
+		t.Errorf("DeployedVersion should have changed to %s, not %s",
+			want, got)
+	}
+}
+
+func TestHandleWebHookWithNextRunnableFail(t *testing.T) {
+	// GIVEN a Service with a WebHook that'll pass
+	// and time is before NextRunnable
+	service := testServiceGitHub()
+	wh := testWebHookSuccessful()
+	wh.NextRunnable = time.Now().UTC().Add(time.Minute)
+	var logInitSlice webhook.Slice
+	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
+	service.WebHook = &webhook.Slice{
+		"test": &wh,
+	}
+
+	// WHEN HandleWebHook is called for WebHook that doesn't exist
+	want := service.Status.DeployedVersion
+	service.HandleWebHook("test")
+
+	// THEN the DeployedVersion will now be LatestVersion
+	got := service.Status.DeployedVersion
+	if got != want {
+		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
+			want, got)
+	}
+}
+
 func TestHandleWebHookWithFailingWebHook(t *testing.T) {
 	// GIVEN a Service with a WebHook that'll fail
 	service := testServiceGitHub()
 	wh := testWebHookFailing()
 	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
 	service.WebHook = &webhook.Slice{
 		"test": &wh,
 	}
@@ -603,7 +766,7 @@ func TestHandleSkipWithNotLatestVersion(t *testing.T) {
 	want := service.Status.ApprovedVersion
 	service.HandleSkip("something")
 
-	// THEN ApprovedVersion doesn't change
+	// THEN ApprovedVersion will be unchanged
 	got := service.Status.ApprovedVersion
 	if got != want {
 		t.Errorf("Got %s, want %s",

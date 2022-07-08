@@ -36,6 +36,7 @@ func (w *Slice) Init(
 	defaults *WebHook,
 	hardDefaults *WebHook,
 	shoutrrrNotifiers *shoutrrr.Slice,
+	parentInterval *string,
 ) {
 	jLog = log
 	if w == nil || len(*w) == 0 {
@@ -58,6 +59,7 @@ func (w *Slice) Init(
 			defaults,
 			hardDefaults,
 			shoutrrrNotifiers,
+			parentInterval,
 		)
 	}
 }
@@ -70,7 +72,9 @@ func (w *WebHook) Init(
 	defaults *WebHook,
 	hardDefaults *WebHook,
 	shoutrrrNotifiers *shoutrrr.Slice,
+	parentInterval *string,
 ) {
+	w.ParentInterval = parentInterval
 	w.initMetrics(*serviceID)
 	if serviceStatus != nil {
 		w.ServiceStatus = serviceStatus
@@ -187,6 +191,22 @@ func (w *WebHook) GetURL() *string {
 		*url = strings.Clone(utils.TemplateString(*url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
 	}
 	return url
+}
+
+// IsRunnable will return whether the current time is before NextRunnable
+func (w *WebHook) IsRunnable() bool {
+	return time.Now().UTC().After(w.NextRunnable)
+}
+
+// SetNextRunnable time that the WebHook can be re-run.
+func (w *WebHook) SetNextRunnable() {
+	// Different times depending on pass/fail
+	if !utils.EvalNilPtr(w.Failed, true) {
+		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
+		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
+	} else {
+		w.NextRunnable = time.Now().UTC().Add(15 * time.Second)
+	}
 }
 
 // ResetFails of this Slice

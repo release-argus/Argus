@@ -561,7 +561,7 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 	svc.Status.DeployedVersion = "0.0.0"
 	svc.Status.LatestVersion = want
 	svc.Command = &command.Slice{testCommandPass()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	failed := true
 	svc.CommandController.Failed[0] = &failed
 	svc.WebHook = nil
@@ -614,7 +614,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidUpdateLa
 	svc.Status.DeployedVersion = "0.0.0"
 	svc.Status.LatestVersion = want
 	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	failed0 := true
 	svc.CommandController.Failed[0] = &failed0
 	failed1 := false
@@ -669,7 +669,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	want := "0.1.0"
 	svc.Status.LatestVersion = want
 	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	svc.CommandController.Announce = cfg.Service["test"].Announce
 	failed0 := true
 	svc.CommandController.Failed[0] = &failed0
@@ -741,7 +741,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	delete(cfg.Service, testName)
 }
 
-func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidAnnounce(t *testing.T) {
+func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntAnnounce(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
 	// the DeployedVersion for a Service != LatestVersion
 	// and the Failed status for more than one of the Commands is true
@@ -752,7 +752,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidAnnou
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
 	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	svc.CommandController.Announce = cfg.Service["test"].Announce
 	failed0 := true
 	svc.CommandController.Failed[0] = &failed0
@@ -802,7 +802,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidAnnou
 		if receivedMsg.CommandData[(*svc.Command)[0].String()].Failed != nil {
 			got = "true"
 		}
-		t.Errorf("%q should have re-run the Service.Command %q and passed but got %s in the WebSocket response",
+		t.Errorf("%q should have re-run the Service.Command %q and passed but got failed=%s in the WebSocket response",
 			msgTarget, (*svc.Command)[0].String(), got)
 	}
 	delete(cfg.Service, testName)
@@ -819,7 +819,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpd
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
 	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	svc.CommandController.Announce = cfg.Service["test"].Announce
 	failed0 := true
 	svc.CommandController.Failed[0] = &failed0
@@ -1171,7 +1171,7 @@ func TestWebSocketApprovalsActionsWithNoWebHook(t *testing.T) {
 	svc := testService(testName)
 	svc.Announce = cfg.Service["test"].Announce
 	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
 	failed0 := true
 	svc.CommandController.Failed[0] = &failed0
 	failed1 := false

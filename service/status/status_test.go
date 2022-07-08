@@ -77,7 +77,7 @@ func TestSetLastQueried(t *testing.T) {
 	var status Status
 
 	// WHEN we SetLastQueried
-	start := time.Now()
+	start := time.Now().UTC()
 	status.SetLastQueried()
 
 	// THEN LastQueried will have been set to the current timestamp

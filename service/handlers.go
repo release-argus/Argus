@@ -102,22 +102,49 @@ func (s *Service) HandleUpdateActions() {
 }
 
 // HandleFailedActions will re-send all the WebHooks for this service
-// that have either failed, or not been sent for this version.
+// that have either failed, or not been sent for this version. Otherwise,
+// if all WebHooks have been sent successfully, then they'll all be resent.
 func (s *Service) HandleFailedActions() {
 	errs := make(chan error)
 	errored := false
+
+	retryAll := true
+	// retryAll only if every WebHook has been sent successfully
+	if s.WebHook != nil {
+		for key := range *s.WebHook {
+			if !utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
+				retryAll = false
+				break
+			}
+		}
+	}
+	// AND every Command has been run successfully
+	if retryAll && s.Command != nil {
+		for key := range *s.Command {
+			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
+				retryAll = false
+				break
+			}
+		}
+	}
 
 	potentialErrors := 0
 	// Send the WebHook(s).
 	if s.WebHook != nil {
 		potentialErrors += len(*s.WebHook)
 		for key := range *s.WebHook {
-			if utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
+			if retryAll || utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
+				// Skip if it's before NextRunnable
+				if !(*s.WebHook)[key].IsRunnable() {
+					potentialErrors--
+					continue
+				}
+				// Send
 				go func(key string) {
 					err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
 					errs <- err
 				}(key)
-				// Don't send all WebHooks at the same time.
+				// Space out WebHooks.
 				time.Sleep(1 * time.Second)
 			} else {
 				potentialErrors--
@@ -129,12 +156,18 @@ func (s *Service) HandleFailedActions() {
 		potentialErrors += len(*s.Command)
 		logFrom := utils.LogFrom{Primary: "Command", Secondary: *s.ID}
 		for key := range *s.Command {
-			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
+			if retryAll || utils.EvalNilPtr(s.CommandController.Failed[key], true) {
+				// Skip if it's before NextRunnable
+				if !s.CommandController.IsRunnable(key) {
+					potentialErrors--
+					continue
+				}
+				// Run
 				go func(key int) {
 					err := s.CommandController.ExecIndex(&logFrom, key)
 					errs <- err
 				}(key)
-				// Don't start all Commands at the same time.
+				// Space out Commands.
 				time.Sleep(1 * time.Second)
 			} else {
 				potentialErrors--
@@ -143,8 +176,9 @@ func (s *Service) HandleFailedActions() {
 	}
 
 	var err error
-	for i := 0; i < potentialErrors; i++ {
+	for potentialErrors != 0 {
 		errFound := <-errs
+		potentialErrors--
 		if errFound != nil {
 			errored = true
 			if err == nil {
@@ -154,6 +188,7 @@ func (s *Service) HandleFailedActions() {
 			}
 		}
 	}
+
 	if !errored {
 		s.UpdatedVersion()
 	}
@@ -173,6 +208,11 @@ func (s *Service) HandleCommand(command string) {
 		return
 	}
 
+	// Skip if it ran less than 2*Interval ago
+	if !(*s.CommandController).IsRunnable(*index) {
+		return
+	}
+
 	// Send the Command.
 	err := (*s.CommandController).ExecIndex(&utils.LogFrom{Primary: "Command", Secondary: *s.ID}, *index)
 	if err == nil {
@@ -186,6 +226,12 @@ func (s *Service) HandleWebHook(webhookID string) {
 	if s.WebHook == nil || (*s.WebHook)[webhookID] == nil {
 		return
 	}
+
+	// Skip if it's before NextRunnable
+	if !(*s.WebHook)[webhookID].IsRunnable() {
+		return
+	}
+
 	// Send the WebHook.
 	err := (*s.WebHook)[webhookID].Send(s.GetServiceInfo(), false)
 	if err == nil {

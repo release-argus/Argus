@@ -189,7 +189,8 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	for key := range *api.Config.Service[*id].CommandController.Command {
 		command := (*api.Config.Service[*id].CommandController.Command)[key].ApplyTemplate(api.Config.Service[*id].Status)
 		commandSummary[command.String()] = &api_types.CommandSummary{
-			Failed: api.Config.Service[*id].CommandController.Failed[key],
+			Failed:       api.Config.Service[*id].CommandController.Failed[key],
+			NextRunnable: api.Config.Service[*id].CommandController.NextRunnable[key],
 		}
 	}
 
@@ -237,7 +238,8 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 
 	for key := range *api.Config.Service[*id].WebHook {
 		webhookSummary[key] = &api_types.WebHookSummary{
-			Failed: (*api.Config.Service[*id].WebHook)[key].Failed,
+			Failed:       (*api.Config.Service[*id].WebHook)[key].Failed,
+			NextRunnable: (*api.Config.Service[*id].WebHook)[key].NextRunnable,
 		}
 	}
 
