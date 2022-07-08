@@ -2,7 +2,8 @@ name: Binary Build
 
 on:
   release:
-    types: [ published ]
+    types:
+      - published
 
 jobs:
   build-binary:
