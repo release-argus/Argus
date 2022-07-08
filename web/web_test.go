@@ -594,11 +594,11 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
 		t.Errorf("%v", err)
 	}
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 
 	// THEN we receive a response acknowledging it
 	if svc.Status.DeployedVersion != want {
-		t.Errorf("ARGUS_FAILED should have re-run the Service.Command %q and passed. This should've updated LatestVersion to %q, not %q",
+		t.Errorf("ARGUS_FAILED should have re-run the Service.Command %q and passed. This should've updated DeployedVersion to %q, not %q",
 			(*svc.Command)[0].String(), want, svc.Status.DeployedVersion)
 	}
 	delete(cfg.Service, testName)

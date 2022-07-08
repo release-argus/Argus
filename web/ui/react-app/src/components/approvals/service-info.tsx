@@ -7,7 +7,7 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { ModalType, ServiceSummaryType } from "types/summary";
-import { ReactElement, forwardRef, useCallback, useContext } from "react";
+import { ReactElement, useCallback, useContext } from "react";
 import {
   faArrowRotateRight,
   faCheck,
@@ -49,38 +49,9 @@ export const ServiceInfo = ({
     service?.status?.deployed_version === "" ||
     (updateAvailable && !updateSkipped);
 
-  const IconDeployedVersionIndicator = forwardRef((props, ref) =>
-    service.has_deployed_version ? (
-      <FontAwesomeIcon
-        className="same-color"
-        forwardedRef={ref}
-        style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
-        icon={faSatelliteDish}
-        {...props}
-      />
-    ) : (
-      <></>
-    )
-  );
-  IconDeployedVersionIndicator.displayName = "IconDeployedVersionIndicator";
-
   const updateApproved =
     service?.status?.latest_version !== undefined &&
     service.status.latest_version === service?.status?.approved_version;
-
-  const IconSkippedInfo = forwardRef((props, ref) =>
-    updateSkipped ? (
-      <FontAwesomeIcon
-        forwardedRef={ref}
-        icon={faInfoCircle}
-        {...props}
-        style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
-      />
-    ) : (
-      <></>
-    )
-  );
-  IconSkippedInfo.displayName = "IconSkippedInfo";
 
   return (
     <Container
@@ -158,6 +129,7 @@ export const ServiceInfo = ({
             <p style={{ margin: 0 }}>
               <>
                 Current version:
+                {service.has_deployed_version && (
                 <OverlayTrigger
                   key="deployed-service"
                   placement="top"
@@ -168,8 +140,12 @@ export const ServiceInfo = ({
                     </Tooltip>
                   }
                 >
-                  <IconDeployedVersionIndicator />
-                </OverlayTrigger>
+                  <FontAwesomeIcon
+                    className="same-color"
+                    style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+                    icon={faSatelliteDish}
+                  />
+                </OverlayTrigger>)}
                 {updateSkipped && service.status?.approved_version && (
                   <OverlayTrigger
                     key="skipped-version"
@@ -182,7 +158,10 @@ export const ServiceInfo = ({
                       </Tooltip>
                     }
                   >
-                    <IconSkippedInfo />
+                    <FontAwesomeIcon
+                      icon={faInfoCircle}
+                      style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+                    />
                   </OverlayTrigger>
                 )}
               </>
