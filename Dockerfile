@@ -1,7 +1,7 @@
 ########
 # BASE #
 ########
-ARG GO_VERSION="1.18.2"
+ARG GO_VERSION="1.18.3"
 ARG DEBIAN_VERSION="bullseye"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION}
 
