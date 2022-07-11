@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/release-argus/Argus/db"
 	argus_testing "github.com/release-argus/Argus/testing"
 
 	cfg "github.com/release-argus/Argus/config"
@@ -72,6 +73,8 @@ func main() {
 			fmt.Printf("  - %s\n", *config.Service[key].ID)
 		}
 	}
+
+	go db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(config.Order)

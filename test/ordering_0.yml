@@ -1,6 +1,8 @@
 settings:
   web:
    listen_port: 0
+  data:
+    database_file: 'test-ordering_0.db'
 defaults:
   service:
     interval: 123

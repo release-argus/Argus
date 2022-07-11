@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/web/metrics"
 )
@@ -165,7 +166,6 @@ func (s *Service) HandleCommand(command string) {
 	if s.Command == nil {
 		return
 	}
-
 	// Find the command
 	index := s.CommandController.Find(command)
 	if index == nil {
@@ -201,6 +201,13 @@ func (s *Service) HandleSkip(version string) {
 
 	s.Status.ApprovedVersion = "SKIP_" + version
 	s.AnnounceApproved()
+
+	*s.DatabaseChannel <- db_types.Message{
+		ServiceID: "syncthing/syncthing",
+		Cells: []db_types.Cell{
+			{Column: "approved_version", Value: s.Status.ApprovedVersion},
+		},
+	}
 
 	if s.SaveChannel != nil {
 		*s.SaveChannel <- true

@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	db_types "github.com/release-argus/Argus/db/types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
@@ -384,6 +385,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 	serviceID := "test"
 	semanticVersioning := true
 	interval := "10s"
+	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
 		ID:                    &serviceID,
 		Interval:              &interval,
@@ -392,6 +394,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 			DeployedVersion: version,
 			LatestVersion:   "1.2.3",
 		},
+		DatabaseChannel:    &databaseChannel,
 		SemanticVersioning: &semanticVersioning,
 		Defaults:           &Service{},
 		HardDefaults:       &Service{},
@@ -419,17 +422,19 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T
 	serviceID := "test"
 	semanticVersioning := true
 	interval := "10s"
+	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
 		ID:                    &serviceID,
 		Interval:              &interval,
+		SemanticVersioning:    &semanticVersioning,
 		DeployedVersionLookup: &dvl,
 		Status: &service_status.Status{
 			DeployedVersion: version,
 			LatestVersion:   "1.2.4",
 		},
-		SemanticVersioning: &semanticVersioning,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+		DatabaseChannel: &databaseChannel,
+		Defaults:        &Service{},
+		HardDefaults:    &Service{},
 	}
 
 	// WHEN Track is called on this
@@ -458,17 +463,19 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing
 	semanticVersioning := true
 	interval := "10s"
 	oldLatestVersion := "1.2.2"
+	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
 		ID:                    &serviceID,
 		Interval:              &interval,
+		SemanticVersioning:    &semanticVersioning,
 		DeployedVersionLookup: &dvl,
 		Status: &service_status.Status{
 			DeployedVersion: version,
 			LatestVersion:   oldLatestVersion,
 		},
-		SemanticVersioning: &semanticVersioning,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+		DatabaseChannel: &databaseChannel,
+		Defaults:        &Service{},
+		HardDefaults:    &Service{},
 	}
 
 	// WHEN Track is called on this
@@ -518,19 +525,21 @@ func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *test
 	semanticVersioning := true
 	interval := "10s"
 	announceChannel := make(chan []byte, 5)
+	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
 		ID:                    &serviceID,
 		Interval:              &interval,
+		SemanticVersioning:    &semanticVersioning,
 		DeployedVersionLookup: &dvl,
 		Status: &service_status.Status{
 			DeployedVersion:          version,
 			DeployedVersionTimestamp: "2022-01-01T01:01:01Z",
 			LatestVersion:            "1.2.3",
 		},
-		SemanticVersioning: &semanticVersioning,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
-		Announce:           &announceChannel,
+		DatabaseChannel: &databaseChannel,
+		Defaults:        &Service{},
+		HardDefaults:    &Service{},
+		Announce:        &announceChannel,
 	}
 
 	// WHEN Track is called on this

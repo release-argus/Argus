@@ -26,36 +26,44 @@ import (
 
 // Export the flags.
 var (
-	LogLevel       = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
-	LogTimestamps  = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
-	WebListenHost  = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
-	WebListenPort  = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
-	WebCertFile    = flag.String("web.cert-file", "", "HTTPS certificate file path.")
-	WebPKeyFile    = flag.String("web.pkey-file", "", "HTTPS private key file path.")
-	WebRoutePrefix = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
+	LogLevel         = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
+	LogTimestamps    = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
+	DataDatabaseFile = flag.String("data.database-file", "data/argus.db", "Database file path.")
+	WebListenHost    = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
+	WebListenPort    = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
+	WebCertFile      = flag.String("web.cert-file", "", "HTTPS certificate file path.")
+	WebPKeyFile      = flag.String("web.pkey-file", "", "HTTPS private key file path.")
+	WebRoutePrefix   = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
 )
 
 // Settings for the binary.
 type Settings struct {
-	Log          LogSettings  `yaml:"log,omitempty"` // Log settings
-	Web          WebSettings  `yaml:"web,omitempty"` // Web settings
-	FromFlags    SettingsBase `yaml:"-"`             // Values from flags
-	HardDefaults SettingsBase `yaml:"-"`             // Hard defaults
-	Indentation  uint8        `yaml:"-"`             // Number of spaces used in the config.yml for indentation
+	Log          LogSettings  `yaml:"log,omitempty"`  // Log settings
+	Data         DataSettings `yaml:"data,omitempty"` // Data settings
+	Web          WebSettings  `yaml:"web,omitempty"`  // Web settings
+	FromFlags    SettingsBase `yaml:"-"`              // Values from flags
+	HardDefaults SettingsBase `yaml:"-"`              // Hard defaults
+	Indentation  uint8        `yaml:"-"`              // Number of spaces used in the config.yml for indentation
 }
 
 // SettingsBase for the binary.
 //
 // (Used in Defaults)
 type SettingsBase struct {
-	Log LogSettings `yaml:"-"`
-	Web WebSettings `yaml:"-"`
+	Log  LogSettings  `yaml:"-"`
+	Data DataSettings `yaml:"-"`
+	Web  WebSettings  `yaml:"-"`
 }
 
 // LogSettings for the binary.
 type LogSettings struct {
 	Timestamps *bool   `yaml:"timestamps,omitempty"` // Timestamps in CLI output
 	Level      *string `yaml:"level,omitempty"`      // Log level
+}
+
+// DataSettings for the binary.
+type DataSettings struct {
+	DatabaseFile *string `yaml:"database_file,omitempty"` // Database path
 }
 
 // WebSettings for the binary.
@@ -108,6 +116,16 @@ func (s *Settings) SetDefaults() {
 	logLevel := "INFO"
 	s.HardDefaults.Log.Level = &logLevel
 
+	// ########
+	// # DATA #
+	// ########
+	s.FromFlags.Data = DataSettings{}
+
+	// DatabaseFile
+	s.FromFlags.Data.DatabaseFile = DataDatabaseFile
+	webDatabaseFile := "state.db"
+	s.HardDefaults.Data.DatabaseFile = &webDatabaseFile
+
 	// #######
 	// # WEB #
 	// #######
@@ -145,6 +163,11 @@ func (s *Settings) GetLogLevel() string {
 	return strings.ToUpper(*utils.GetFirstNonNilPtr(s.FromFlags.Log.Level, s.Log.Level, s.HardDefaults.Log.Level))
 }
 
+// GetDataDatabaseFile.
+func (s *Settings) GetDataDatabaseFile() *string {
+	return utils.GetFirstNonNilPtr(s.FromFlags.Data.DatabaseFile, s.Data.DatabaseFile, s.HardDefaults.Data.DatabaseFile)
+}
+
 // GetWebListenHost.
 func (s *Settings) GetWebListenHost() string {
 	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.ListenHost, s.Web.ListenHost, s.HardDefaults.Web.ListenHost)
@@ -169,9 +192,7 @@ func (s *Settings) GetWebCertFile() *string {
 	if _, err := os.Stat(*certFile); err != nil {
 		if !filepath.IsAbs(*certFile) {
 			path, execErr := os.Executable()
-			if execErr != nil {
-				jLog.Error(execErr, utils.LogFrom{}, true)
-			}
+			jLog.Error(execErr, utils.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*certFile+":",

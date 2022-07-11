@@ -18,6 +18,7 @@ import (
 	"github.com/coreos/go-semver/semver"
 
 	command "github.com/release-argus/Argus/commands"
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
@@ -52,11 +53,15 @@ type Service struct {
 	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
 	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
 	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
-	Status                *service_status.Status `yaml:"status,omitempty"`              // Track the Status of this source (version and regex misses).
+	Status                *service_status.Status `yaml:"-"`                             // Track the Status of this source (version and regex misses).
 	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.
 	Defaults              *Service               `yaml:"-"`                             // Default values.
 	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
+	DatabaseChannel       *chan db_types.Message `yaml:"-"`                             // Channel for broadcasts to the Database
 	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
+
+	// TODO: Depracate
+	OldStatus *service_status.OldStatus `yaml:"status,omitempty"` // For moving version info to argus.db
 }
 
 // GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.

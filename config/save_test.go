@@ -27,21 +27,6 @@ import (
 
 var TIMEOUT time.Duration = 25
 
-func testConfig() Config {
-	logLevel := "DEBUG"
-	saveChannel := make(chan bool, 5)
-	return Config{
-		File:        "/root/inaccessible",
-		SaveChannel: &saveChannel,
-		Settings: Settings{
-			Indentation: 4,
-			Log: LogSettings{
-				Level: &logLevel,
-			},
-		},
-	}
-}
-
 func TestSaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler
 	jLog = utils.NewJLog("WARN", false)
@@ -66,9 +51,6 @@ func TestWaitChannelTimeout(t *testing.T) {
 	config := testConfig()
 
 	// WHEN the waitChannelTimeout is called
-	go func() {
-		*config.SaveChannel <- true
-	}()
 	time.Sleep(time.Second)
 	start := time.Now()
 	waitChannelTimeout(config.SaveChannel)

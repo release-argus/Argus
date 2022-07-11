@@ -16,8 +16,9 @@ vendor/
 # Output of `make build-all`
 /.build/
 
-# Ignore personal config.yml's
+# Ignore personal files
 config.yml
+argus.db
 
 # React
 node_modules

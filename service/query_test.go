@@ -173,11 +173,6 @@ func TestServiceQueryWithValidSemanticNewVersion(t *testing.T) {
 	*service.RegexContent = ""
 	*service.RegexVersion = ""
 	service.Status.LatestVersion = "0.0.0"
-	go func() {
-		for {
-			<-*service.SaveChannel
-		}
-	}()
 
 	// WHEN Query is called on this Service
 	_, err := service.Query()
@@ -303,11 +298,6 @@ func TestServiceQueryWithValidFirstVersion(t *testing.T) {
 	*service.RegexContent = ""
 	*service.RegexVersion = ""
 	service.Status.LatestVersion = ""
-	go func() {
-		for {
-			<-*service.SaveChannel
-		}
-	}()
 
 	// WHEN Query is called on this Service
 	_, err := service.Query()
@@ -370,11 +360,6 @@ func TestServiceQueryFirstVersionWithNoDeployedLookup(t *testing.T) {
 	*service.RegexVersion = ""
 	service.Status.LatestVersion = ""
 	service.Status.DeployedVersion = ""
-	go func() {
-		for {
-			<-*service.SaveChannel
-		}
-	}()
 
 	// WHEN Query is called on this Service
 	was := service.Status.DeployedVersion
