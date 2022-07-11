@@ -223,6 +223,7 @@ func TestHandleUpdateActionsWithNothing(t *testing.T) {
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.LatestVersion
 	service.HandleUpdateActions()
+	time.Sleep(time.Second)
 
 	// THEN DeployedVersion is now LatestVersion
 	got := service.Status.DeployedVersion
@@ -246,6 +247,7 @@ func TestHandleUpdateActionsWithSuccessfulCommandAndNoAutoApprove(t *testing.T) 
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.DeployedVersion
 	service.HandleUpdateActions()
+	time.Sleep(time.Second)
 
 	// THEN DeployedVersion is unchanged
 	got := service.Status.DeployedVersion
@@ -277,6 +279,7 @@ func TestHandleUpdateActionsWithSuccessfulCommandAndAutoApprove(t *testing.T) {
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.LatestVersion
 	service.HandleUpdateActions()
+	time.Sleep(time.Second)
 
 	// THEN DeployedVersion is now LatestVersion
 	got := service.Status.DeployedVersion
@@ -301,6 +304,7 @@ func TestHandleUpdateActionsWithFailingCommandAndAutoApprove(t *testing.T) {
 	// WHEN HandleUpdateActions is called on it
 	want := service.Status.DeployedVersion
 	service.HandleUpdateActions()
+	time.Sleep(time.Second)
 
 	// THEN DeployedVersion is unchanged
 	got := service.Status.DeployedVersion

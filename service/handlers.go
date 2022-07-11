@@ -82,13 +82,20 @@ func (s *Service) HandleUpdateActions() {
 			jLog.Info(msg, utils.LogFrom{Primary: *s.ID}, true)
 
 			// Run the Command(s)
-			cErr := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: *s.ID})
+			go func() {
+				err := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: *s.ID})
+				if err == nil {
+					s.UpdatedVersion()
+				}
+			}()
 
 			// Send the WebHook(s)
-			whErr := s.WebHook.Send(s.GetServiceInfo(), true)
-			if whErr == nil && cErr == nil {
-				s.UpdatedVersion()
-			}
+			go func() {
+				err := s.WebHook.Send(s.GetServiceInfo(), true)
+				if err == nil {
+					s.UpdatedVersion()
+				}
+			}()
 		} else {
 			jLog.Info("Waiting for approval on the Web UI", utils.LogFrom{Primary: *s.ID}, true)
 

@@ -564,8 +564,8 @@ func TestSetNextRunnableOfPass(t *testing.T) {
 		ParentInterval: &serviceInterval,
 	}
 
-	// WHEN SetNextRunnable is called on a webhook that ran successfully
-	wh.SetNextRunnable()
+	// WHEN SetNextRunnable is called on it
+	wh.SetNextRunnable(false, false)
 
 	// THEN MextRunnable is set to ~2*ParentInterval
 	now := time.Now().UTC()
@@ -574,7 +574,7 @@ func TestSetNextRunnableOfPass(t *testing.T) {
 	wantMin := now.Add(2 * parentInterval).Add(-1 * time.Second)
 	wantMax := now.Add(2 * parentInterval).Add(1 * time.Second)
 	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between %s and %s, not %s",
+		t.Errorf("Expected between\n%s and\n%s, not\n%s",
 			wantMin, wantMax, got)
 	}
 }
@@ -599,8 +599,8 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 		ServiceStatus: &service_status.Status{},
 	}
 
-	// WHEN SetNextRunnable is called on a command index that failed running
-	wh.SetNextRunnable()
+	// WHEN SetNextRunnable is called on it
+	wh.SetNextRunnable(false, false)
 
 	// THEN MextRunnable is set to 15s
 	now := time.Now().UTC()
@@ -608,7 +608,120 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 	wantMin := now.Add(14 * time.Second)
 	wantMax := now.Add(16 * time.Second)
 	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between %s and %s, not %s",
+		t.Errorf("Expected between\n%s and\n%s, not\n%s",
+			wantMin, wantMax, got)
+	}
+}
+
+func TestSetNextRunnableOfNotRun(t *testing.T) {
+	// GIVEN a WebHook that hasn't been sent
+	whType := "gitlab"
+	whURL := "https://test"
+	whSecret := "secret"
+	var failed *bool
+	wh := WebHook{
+		Type:         &whType,
+		URL:          &whURL,
+		Secret:       &whSecret,
+		Main:         &WebHook{},
+		Defaults:     &WebHook{},
+		HardDefaults: &WebHook{},
+		CustomHeaders: &map[string]string{
+			"foo": "bar",
+		},
+		Failed:        failed,
+		ServiceStatus: &service_status.Status{},
+	}
+
+	// WHEN SetNextRunnable is called on it
+	wh.SetNextRunnable(false, false)
+
+	// THEN MextRunnable is set to 15s
+	now := time.Now().UTC()
+	got := wh.NextRunnable
+	wantMin := now.Add(14 * time.Second)
+	wantMax := now.Add(16 * time.Second)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between\n%s and\n%s, not\n%s",
+			wantMin, wantMax, got)
+	}
+}
+
+func TestSetNextRunnableWithDelay(t *testing.T) {
+	// GIVEN a WebHook that hasn't been sent
+	whType := "gitlab"
+	whURL := "https://test"
+	whSecret := "secret"
+	whDelay := "1h"
+	var failed *bool
+	serviceInterval := "11m"
+	wh := WebHook{
+		Type:         &whType,
+		URL:          &whURL,
+		Secret:       &whSecret,
+		Main:         &WebHook{},
+		Defaults:     &WebHook{},
+		HardDefaults: &WebHook{},
+		CustomHeaders: &map[string]string{
+			"foo": "bar",
+		},
+		Delay:          &whDelay,
+		Failed:         failed,
+		ServiceStatus:  &service_status.Status{},
+		ParentInterval: &serviceInterval,
+	}
+
+	// WHEN SetNextRunnable is called on a webhook that hasn't been run
+	wh.SetNextRunnable(true, false)
+
+	// THEN MextRunnable is set to 15s
+	now := time.Now().UTC()
+	got := wh.NextRunnable
+	wantDelay, _ := time.ParseDuration(*wh.Delay)
+	wantMin := now.Add(14 * time.Second).Add(wantDelay)
+	wantMax := now.Add(16 * time.Second).Add(wantDelay)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between\n%s and\n%s, not\n%s",
+			wantMin, wantMax, got)
+	}
+}
+
+func TestSetNextRunnableOfSending(t *testing.T) {
+	// GIVEN a WebHook that hasn't been sent
+	whType := "gitlab"
+	whURL := "https://test"
+	whSecret := "secret"
+	var failed *bool
+	whMaxTries := uint(2)
+	serviceInterval := "11m"
+	wh := WebHook{
+		Type:         &whType,
+		URL:          &whURL,
+		Secret:       &whSecret,
+		Main:         &WebHook{},
+		Defaults:     &WebHook{},
+		HardDefaults: &WebHook{},
+		CustomHeaders: &map[string]string{
+			"foo": "bar",
+		},
+		Failed:         failed,
+		MaxTries:       &whMaxTries,
+		ServiceStatus:  &service_status.Status{},
+		ParentInterval: &serviceInterval,
+	}
+
+	// WHEN SetNextRunnable is called on a webhook that's sending
+	wh.SetNextRunnable(false, true)
+
+	// THEN MextRunnable is set to 15s+3*MaxTries
+	now := time.Now().UTC()
+	got := wh.NextRunnable
+	maxTriesIncrement := uint(3)
+	wantDelay := time.Duration(wh.GetMaxTries()*maxTriesIncrement) * time.Second
+	wantMin := now.Add(14 * time.Second).Add(wantDelay)
+	wantMax := now.Add(16 * time.Second).Add(wantDelay)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between\n%s and\n%s, not\n%s",
 			wantMin, wantMax, got)
 	}
 }

@@ -18,6 +18,8 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -283,61 +285,133 @@ func TestGetFirstNonDefaultWithNonDefault(t *testing.T) {
 func TestPrintLnIfNotDefaultWithDefault(t *testing.T) {
 	// GIVEN a default string
 	str := ""
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNotDefault is called with this string
-	PrintlnIfNotDefault(str, "SHOULDNT PRINT")
+	text := "SHOULDNT PRINT"
+	PrintlnIfNotDefault(str, text)
 
 	// THEN it doesn't print
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if strings.Contains(output, text) {
+		t.Fatalf("%q shouldn't have been printed as %q is the %s default\n%s",
+			text, str, "string", output)
+	}
 }
 
 func TestPrintLnIfNotDefaultWithNonDefault(t *testing.T) {
 	// GIVEN a non-default string
 	str := "argus"
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNotDefault is called with this string
-	PrintlnIfNotDefault(str, "SHOULD PRINT")
+	text := "SHOULD PRINT"
+	PrintlnIfNotDefault(str, text)
 
-	// THEN it prints
+	// THEN it was printed
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if !strings.Contains(output, text) {
+		t.Fatalf("%q should have been printed as %q isn't the %s default\n%s",
+			text, str, "string", output)
+	}
 }
 
 func TestPrintLnIfNotNilWithNil(t *testing.T) {
 	// GIVEN a nil pointer
-	var pointer *string
+	var str *string
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNotNil is called with this string
-	PrintlnIfNotNil(pointer, "SHOULDNT PRINT")
+	text := "SHOULDNT PRINT"
+	PrintlnIfNotNil(str, text)
 
 	// THEN it doesn't print
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if strings.Contains(output, text) {
+		t.Fatalf("%q shouldn't have been printed as the pointer is %v\n%s",
+			text, str, output)
+	}
 }
 
 func TestPrintLnIfNotNilWithNonNil(t *testing.T) {
 	// GIVEN a non-default string
 	str := "argus"
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNotNil is called with this string
-	PrintlnIfNotNil(&str, "SHOULD PRINT")
+	text := "SHOULD PRINT"
+	PrintlnIfNotNil(&str, text)
 
 	// THEN it prints
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if !strings.Contains(output, text) {
+		t.Fatalf("%q should have been printed as %v is non-nil\n%s",
+			text, &str, output)
+	}
 }
 
 func TestPrintLnIfNilWithNil(t *testing.T) {
 	// GIVEN a nil pointer
-	var pointer *string
+	var str *string
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNil is called with this string
-	PrintlnIfNil(pointer, "SHOULDNT PRINT")
+	text := "SHOULD PRINT"
+	PrintlnIfNil(str, text)
 
-	// THEN it doesn't print
+	// THEN it prints
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if !strings.Contains(output, text) {
+		t.Fatalf("%q should have been printed as the pointer is %v\n%s",
+			text, str, output)
+	}
 }
 
 func TestPrintLnIfNilWithNonNil(t *testing.T) {
 	// GIVEN a non-default string
 	str := "argus"
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// WHEN PrintlnIfNil is called with this string
-	PrintlnIfNil(&str, "SHOULD PRINT")
+	text := "SHOULDNT PRINT"
+	PrintlnIfNil(&str, text)
 
-	// THEN it prints
+	// THEN it doesn't print
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = stdout
+	output := string(out)
+	if strings.Contains(output, text) {
+		t.Fatalf("%q shouldn't have been printed as %q isn't nil\n%s",
+			text, str, output)
+	}
 }
 
 func TestDefaultOrValueWithNil(t *testing.T) {

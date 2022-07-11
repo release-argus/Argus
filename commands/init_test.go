@@ -302,6 +302,39 @@ func TestIsRunnableOutOfRange(t *testing.T) {
 	}
 }
 
+func TestSetNextRunnableOutOfRange(t *testing.T) {
+	// GIVEN a Controller with 1 Command with NextRunnable times
+	name := "TEST"
+	controller := Controller{
+		ServiceID: &name,
+		Command:   nil,
+		Failed:    make(Fails, 1),
+	}
+	controller.Init(
+		&utils.JLog{},
+		&name,
+		nil,
+		&Slice{
+			Command{"false"},
+		},
+		nil,
+		nil,
+	)
+	nextRunnable, _ := time.Parse(time.RFC3339, "2022-01-01T01:01:01Z")
+	controller.NextRunnable[0] = nextRunnable
+
+	// WHEN SetNextRunnable is called with an index out of bounds
+	controller.SetNextRunnable(1, false)
+
+	// THEN no Controller.NextRunnable has been changed
+	for i := range controller.NextRunnable {
+		if controller.NextRunnable[i] != nextRunnable {
+			t.Errorf("NextRunnable modified from %s, got %s",
+				nextRunnable, controller.NextRunnable[i])
+		}
+	}
+}
+
 func TestSetNextRunnableOfPass(t *testing.T) {
 	// GIVEN a Controller with a Command that passed
 	name := "TEST"
@@ -325,7 +358,7 @@ func TestSetNextRunnableOfPass(t *testing.T) {
 	controller.Failed[0] = &failed
 
 	// WHEN SetNextRunnable is called on a command index that ran successfully
-	controller.SetNextRunnable(0)
+	controller.SetNextRunnable(0, false)
 
 	// THEN MextRunnable is set to ~2*ParentInterval
 	now := time.Now().UTC()
@@ -363,7 +396,7 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 	controller.Failed[0] = &failed
 
 	// WHEN SetNextRunnable is called on a command index that failed running
-	controller.SetNextRunnable(0)
+	controller.SetNextRunnable(0, false)
 
 	// THEN MextRunnable is set to 15s
 	now := time.Now().UTC()
@@ -376,13 +409,15 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 	}
 }
 
-func TestSetNextRunnableOutOfRange(t *testing.T) {
-	// GIVEN a Controller with 1 Command with NextRunnable times
+func TestSetNextRunnableOfExecuting(t *testing.T) {
+	// GIVEN a Controller with a Command that's executive
 	name := "TEST"
+	serviceInterval := "5m"
 	controller := Controller{
-		ServiceID: &name,
-		Command:   nil,
-		Failed:    make(Fails, 1),
+		ServiceID:      &name,
+		Command:        nil,
+		Failed:         make(Fails, 1),
+		ParentInterval: &serviceInterval,
 	}
 	controller.Init(
 		&utils.JLog{},
@@ -394,17 +429,17 @@ func TestSetNextRunnableOutOfRange(t *testing.T) {
 		nil,
 		nil,
 	)
-	nextRunnable, _ := time.Parse(time.RFC3339, "2022-01-01T01:01:01Z")
-	controller.NextRunnable[0] = nextRunnable
 
-	// WHEN SetNextRunnable is called with an index out of bounds
-	controller.SetNextRunnable(1)
+	// WHEN SetNextRunnable is called on a command index that is running
+	controller.SetNextRunnable(0, true)
 
-	// THEN no Controller.NextRunnable has been changed
-	for i := range controller.NextRunnable {
-		if controller.NextRunnable[i] != nextRunnable {
-			t.Errorf("NextRunnable modified from %s, got %s",
-				nextRunnable, controller.NextRunnable[i])
-		}
+	// THEN MextRunnable is set to 15s
+	now := time.Now().UTC()
+	got := controller.GetNextRunnable(0)
+	wantMin := now.Add(14 * time.Second).Add(time.Hour)
+	wantMax := now.Add(16 * time.Second).Add(time.Hour)
+	if got.Before(wantMin) || got.After(wantMax) {
+		t.Errorf("Expected between %s and %s, not %s",
+			wantMin, wantMax, got)
 	}
 }

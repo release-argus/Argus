@@ -30,6 +30,31 @@ interface params {
   ack: (target: string, isWebHook: boolean) => void;
 }
 
+const sendableTimeout = (
+  sendable: boolean,
+  sending: boolean,
+  setSendable: React.Dispatch<React.SetStateAction<boolean>>,
+  now: Date,
+  nextRunnable: Date
+) => {
+  if (sending) {
+    setSendable(false);
+  } else if (!sendable) {
+    let timeout = differenceInMilliseconds(nextRunnable, now);
+    // if we're already after nextRunnable
+    if (now > nextRunnable) {
+      // just wait a second
+      timeout = 1000;
+    }
+    const timer = setTimeout(function () {
+      setSendable(true);
+    }, timeout);
+    return () => {
+      clearTimeout(timer);
+    };
+  }
+};
+
 export const Item = ({
   itemType,
   modalType,
@@ -45,23 +70,15 @@ export const Item = ({
 
   // disable resend button until nextRunnable
   useEffect(() => {
-    if (sending) {
-      setSendable(false);
-    } else if (!sendable) {
-      let timeout = differenceInMilliseconds(nextRunnable, now);
-      // if we're already after nextRunnable
-      if (now > nextRunnable) {
-        // just wait a second
-        timeout = 1000;
-      }
-      const timer = setTimeout(function () {
-        setSendable(true);
-      }, timeout);
-      return () => {
-        clearTimeout(timer);
-      };
-    }
+    sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
   }, [next_runnable, sending]);
+
+  // add timeout if it wasn't sent by this user
+  useEffect(() => {
+    if (!sending && nextRunnable <= now) {
+      sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
+    }
+  }, []);
 
   return (
     <Card bg="secondary" className={"no-margin service"}>
@@ -97,7 +114,7 @@ export const Item = ({
                 style={{
                   height: "1.25rem",
                 }}
-                transform="right-8"
+                transform={failed !== undefined ? "right-8" : ""}
               />
             </Container>
           </OverlayTrigger>

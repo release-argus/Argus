@@ -199,13 +199,25 @@ func (w *WebHook) IsRunnable() bool {
 }
 
 // SetNextRunnable time that the WebHook can be re-run.
-func (w *WebHook) SetNextRunnable() {
+//
+// addDelay - only used on auto_approved releases
+func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
+	// pass
 	if !utils.EvalNilPtr(w.Failed, true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
+		// fail/nil
 	} else {
 		w.NextRunnable = time.Now().UTC().Add(15 * time.Second)
+	}
+	// block for delay
+	if addDelay {
+		w.NextRunnable = w.NextRunnable.Add(w.GetDelayDuration())
+	}
+	// Block reruns whilst sending
+	if sending {
+		w.NextRunnable = w.NextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
 	}
 }
 

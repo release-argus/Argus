@@ -105,7 +105,7 @@ func (c *Controller) IsRunnable(index int) bool {
 }
 
 // SetNextRunnable time that the Command at index can be re-run.
-func (c *Controller) SetNextRunnable(index int) {
+func (c *Controller) SetNextRunnable(index int, executing bool) {
 	// If out of range
 	if !(index < len(c.NextRunnable)) {
 		return
@@ -117,5 +117,10 @@ func (c *Controller) SetNextRunnable(index int) {
 		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {
 		c.NextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
+	}
+
+	// Block reruns whilst running for up to an hour
+	if executing {
+		c.NextRunnable[index] = c.NextRunnable[index].Add(time.Hour)
 	}
 }

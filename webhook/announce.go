@@ -23,7 +23,7 @@ import (
 // AnnounceSend of the WebHook to the `w.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (w *WebHook) AnnounceSend() {
-	w.SetNextRunnable()
+	w.SetNextRunnable(false, false)
 	webhookSummary := make(map[string]*api_types.WebHookSummary)
 	webhookSummary[*w.ID] = &api_types.WebHookSummary{
 		Failed:       w.Failed,
