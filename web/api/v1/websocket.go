@@ -301,14 +301,15 @@ func (api *API) wsFlags(client *Client) {
 		Page: &responsePage,
 		Type: &responseType,
 		FlagsData: &api_types.Flags{
-			ConfigFile:     &api.Config.File,
-			LogLevel:       api.Config.Settings.GetLogLevel(),
-			LogTimestamps:  api.Config.Settings.GetLogTimestamps(),
-			WebListenHost:  api.Config.Settings.GetWebListenHost(),
-			WebListenPort:  api.Config.Settings.GetWebListenPort(),
-			WebCertFile:    api.Config.Settings.GetWebCertFile(),
-			WebPKeyFile:    api.Config.Settings.GetWebKeyFile(),
-			WebRoutePrefix: api.Config.Settings.GetWebRoutePrefix(),
+			ConfigFile:       &api.Config.File,
+			LogLevel:         api.Config.Settings.GetLogLevel(),
+			LogTimestamps:    api.Config.Settings.GetLogTimestamps(),
+			DataDatabaseFile: api.Config.Settings.GetDataDatabaseFile(),
+			WebListenHost:    api.Config.Settings.GetWebListenHost(),
+			WebListenPort:    api.Config.Settings.GetWebListenPort(),
+			WebCertFile:      api.Config.Settings.GetWebCertFile(),
+			WebPKeyFile:      api.Config.Settings.GetWebKeyFile(),
+			WebRoutePrefix:   api.Config.Settings.GetWebRoutePrefix(),
 		},
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
