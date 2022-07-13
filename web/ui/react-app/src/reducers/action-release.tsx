@@ -1,4 +1,5 @@
 import { ActionModalData } from "types/summary";
+import { isAfterDate } from "utils/is_after_date";
 import { websocketResponse } from "types/websocket";
 
 export default function reducerActionModal(
@@ -50,6 +51,7 @@ export default function reducerActionModal(
               if (newState.service_id === action.service_data!.id) {
                 newState.webhooks[webhook_id] = {
                   failed: action.webhook_data[webhook_id].failed,
+                  next_runnable: action.webhook_data[webhook_id].next_runnable,
                 };
               }
             }
@@ -67,6 +69,7 @@ export default function reducerActionModal(
               if (newState.service_id === action.service_data!.id) {
                 newState.commands[command] = {
                   failed: action.command_data[command].failed,
+                  next_runnable: action.command_data[command].next_runnable,
                 };
               }
             }
@@ -111,27 +114,39 @@ export default function reducerActionModal(
           break;
         case "SENDING":
           // Send all button
-          // Don't re-send successfully sent WebHooks
-          const sendingWH = Object.keys(state.webhooks).filter(
-            (id: string) => state.webhooks[id].failed !== true
-          );
-          for (const webhook_id of sendingWH) {
+          // WebHooks
+          for (const webhook_id in state.webhooks) {
+            // skip webhooks that aren't after next_runnable
+            if (
+              state.webhooks[webhook_id].next_runnable !== undefined &&
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              !isAfterDate(state.webhooks[webhook_id].next_runnable!)
+            ) {
+              continue;
+            }
+            // reset the failed states
             if (newState.webhooks[webhook_id] !== undefined) {
               newState.webhooks[webhook_id].failed = undefined;
             }
-
+            // set as sending
             newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
           }
 
-          // Don't re-run successfully ran Commands
-          const sendingC = Object.keys(state.commands).filter(
-            (id: string) => state.commands[id].failed !== true
-          );
-          for (const command of sendingC) {
+          // Commands
+          for (const command in state.commands) {
+            // skip commands that aren't after next_runnable
+            if (
+              state.commands[command].next_runnable !== undefined &&
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              !isAfterDate(state.commands[command].next_runnable!)
+            ) {
+              continue;
+            }
+            // reset the failed states
             if (newState.commands[command] !== undefined) {
               newState.commands[command].failed = undefined;
             }
-
+            // set as sending
             newState.sentC.push(`${action.service_data?.id} ${command}`);
           }
           break;

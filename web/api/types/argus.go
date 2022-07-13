@@ -62,7 +62,8 @@ type StatusFailsSummary struct {
 
 // WebHookSummary is the summary of a WebHook.
 type WebHookSummary struct {
-	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion
+	Failed       *bool     `json:"failed,omitempty"`        // Whether this WebHook failed to send successfully for the LatestVersion
+	NextRunnable time.Time `json:"next_runnable,omitempty"` // Time the WebHook can next be run (for staggering)
 }
 
 // Info is runtime and build information.
@@ -333,7 +334,8 @@ type Notifiers struct {
 
 // CommandSummary is the summary of a Command.
 type CommandSummary struct {
-	Failed *bool `json:"failed,omitempty"` // Whether this WebHook failed to send successfully for the LatestVersion
+	Failed       *bool     `json:"failed,omitempty"`        // Whether this WebHook failed to send successfully for the LatestVersion
+	NextRunnable time.Time `json:"next_runnable,omitempty"` // Time the Command can next be run (for staggering)
 }
 
 // CommandStateUpdate will give an update of the current state of the Command

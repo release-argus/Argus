@@ -23,16 +23,18 @@ import (
 // AnnounceSend of the WebHook to the `w.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (w *WebHook) AnnounceSend() {
-	var payloadData []byte
-
+	w.SetNextRunnable(false, false)
 	webhookSummary := make(map[string]*api_types.WebHookSummary)
-	webhookSummary[*w.ID] = &api_types.WebHookSummary{Failed: w.Failed}
+	webhookSummary[*w.ID] = &api_types.WebHookSummary{
+		Failed:       w.Failed,
+		NextRunnable: w.NextRunnable,
+	}
 
 	// WebHook pass/fail
 	wsPage := "APPROVALS"
 	wsType := "WEBHOOK"
 	wsSubType := "EVENT"
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ := json.Marshal(api_types.WebSocketMessage{
 		Page:    &wsPage,
 		Type:    &wsType,
 		SubType: &wsSubType,

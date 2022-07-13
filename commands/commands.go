@@ -42,7 +42,7 @@ func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
 		}(c)
 
 		// Space out Command starts.
-		time.Sleep(3 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	for range *c.Command {
@@ -59,6 +59,8 @@ func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
 	if index >= len(*c.Command) {
 		return nil
 	}
+	// block reruns whilst running
+	c.SetNextRunnable(index, true)
 
 	// Copy Command and apply Jinja templating
 	command := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)

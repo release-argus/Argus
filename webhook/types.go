@@ -15,6 +15,8 @@
 package webhook
 
 import (
+	"time"
+
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
@@ -41,12 +43,14 @@ type WebHook struct {
 	MaxTries          *uint                  `yaml:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
 	SilentFails       *bool                  `yaml:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
 	Failed            *bool                  `yaml:"-"`                             // Whether the last send attempt failed
+	NextRunnable      time.Time              `yaml:"-"`                             // Time the WebHook can next be run (for staggering)
 	HardDefaults      *WebHook               `yaml:"-"`                             // Hardcoded default values
 	Defaults          *WebHook               `yaml:"-"`                             // Default values
 	Main              *WebHook               `yaml:"-"`                             // The Webhook that this Webhook is calling (and may override parts of)
 	Notifiers         *Notifiers             `yaml:"-"`                             // The Notify's to notify on failures
 	Announce          *chan []byte           `yaml:"-"`                             // Announce to the WebSocket
 	ServiceStatus     *service_status.Status `yaml:"-"`                             // Status of the Service (used for templating vars)
+	ParentInterval    *string                `yaml:"-"`                             // Interval between the parent Service's queries
 }
 
 // Notifiers to use when their WebHook fails.

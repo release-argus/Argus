@@ -193,6 +193,21 @@ func TestServiceGetInterval(t *testing.T) {
 	}
 }
 
+func TestServiceGetIntervalPointer(t *testing.T) {
+	// GIVEN a Service
+	service := testServiceGitHub()
+
+	// WHEN GetIntervalPointer is called on it
+	got := service.GetIntervalPointer()
+
+	// THEN a pointer to service.Interval is returned
+	want := service.Interval
+	if got != want {
+		t.Errorf("Got %v, want %v",
+			got, *want)
+	}
+}
+
 func TestServiceGetIntervalDuration(t *testing.T) {
 	// GIVEN a Service
 	service := testServiceGitHub()

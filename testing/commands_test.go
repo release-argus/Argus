@@ -99,6 +99,7 @@ func TestCommandTestWithKnownService(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
 	serviceID := "test"
+	interval := "11m"
 	cfg := config.Config{
 		Service: service.Slice{
 			serviceID: &service.Service{
@@ -107,17 +108,12 @@ func TestCommandTestWithKnownService(t *testing.T) {
 					command.Command{"true", "0"},
 				},
 				CommandController: &command.Controller{},
+				Interval:          &interval,
 			},
 		},
 	}
-	cfg.Service["test"].CommandController.Init(
-		jLog,
-		&serviceID,
-		nil,
-		cfg.Service["test"].Command,
-		nil,
-	)
-	flag := "test"
+	cfg.Service[serviceID].CommandController.Init(jLog, &serviceID, nil, cfg.Service[serviceID].Command, nil, cfg.Service[serviceID].Interval)
+	flag := serviceID
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w

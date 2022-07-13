@@ -180,7 +180,7 @@ func TestWebHookSendFailDoesRetry(t *testing.T) {
 	*webhook.MaxTries = uint(2)
 
 	// WHEN Send is called on this WebHook
-	start := time.Now()
+	start := time.Now().UTC()
 	err := webhook.Send(utils.ServiceInfo{}, false)
 
 	// THEN err is about the failure
@@ -231,7 +231,7 @@ func TestWebHookSendSuccessWithDelay(t *testing.T) {
 	*webhook.Delay = "5s"
 
 	// WHEN Send is called on this WebHook with useDelay
-	start := time.Now()
+	start := time.Now().UTC()
 	webhook.Send(utils.ServiceInfo{}, true)
 
 	// THEN it took >= 5s to return
@@ -246,7 +246,7 @@ func TestSliceSendWithNilSlice(t *testing.T) {
 	var slice *Slice
 
 	// WHEN Send is called on this Slice
-	start := time.Now()
+	start := time.Now().UTC()
 	slice.Send(utils.ServiceInfo{}, false)
 
 	// THEN it returns almost instantly

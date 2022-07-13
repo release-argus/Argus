@@ -44,7 +44,7 @@ func (w *Slice) Send(
 		}((*w)[index])
 
 		// Space out WebHook send starts.
-		time.Sleep(3 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	for range *w {
@@ -64,11 +64,15 @@ func (w *WebHook) Send(
 	logFrom := utils.LogFrom{Primary: *w.ID, Secondary: serviceInfo.ID} // For logging
 	triesLeft := w.GetMaxTries()                                        // Number of times to send WebHook (until DesiredStatusCode received).
 
-	if useDelay {
+	if useDelay && w.GetDelay() != "0s" {
 		// Delay sending the WebHook message by the defined interval.
 		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
-		jLog.Info(msg, logFrom, (w.GetDelay() != "0s"))
+		jLog.Info(msg, logFrom, true)
+		w.SetNextRunnable(true, true) // disable sending of auto_approved w/ delay
 		time.Sleep(w.GetDelayDuration())
+	} else {
+		w.SetNextRunnable(false, true)
+
 	}
 
 	for {

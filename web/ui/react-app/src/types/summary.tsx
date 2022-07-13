@@ -60,6 +60,7 @@ export interface StatusFailsSummaryType {
 export interface WebHookSummaryType {
   // undefined = unsent/sending
   failed?: boolean;
+  next_runnable?: string;
 }
 
 export interface WebHookSummaryListType {
@@ -73,6 +74,7 @@ export interface CommandType {
 export interface CommandSummaryType {
   // undefined = unsent/sending
   failed?: boolean;
+  next_runnable?: string;
 }
 
 export interface CommandSummaryListType {

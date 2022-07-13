@@ -17,6 +17,7 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
@@ -24,13 +25,14 @@ import (
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
 
-// Init the Command metrics.
+// Init the Command Controller.
 func (c *Controller) Init(
 	log *utils.JLog,
 	serviceID *string,
 	serviceStatus *service_status.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
+	parentInterval *string,
 ) {
 	if log != nil {
 		jLog = log
@@ -40,11 +42,15 @@ func (c *Controller) Init(
 	}
 
 	c.ServiceStatus = serviceStatus
-	c.Command = command
-	c.Failed = make(Fails, len(*command))
+	if command != nil {
+		c.Command = command
+	}
+	c.Failed = make(Fails, len(*c.Command))
+	c.NextRunnable = make([]time.Time, len(*c.Command))
 
 	parentID := *serviceID
 	c.ServiceID = &parentID
+	c.ParentInterval = parentInterval
 	c.initMetrics()
 
 	// Command fail notifiers
@@ -78,4 +84,43 @@ func (c *Command) FormattedString() string {
 // String will convert Command to a string in the format of 'arg0 arg1'
 func (c *Command) String() string {
 	return strings.Join(*c, " ")
+}
+
+// GetNextRunnable returns the NextRunnable of this WebHook as time.time.
+func (c *Controller) GetNextRunnable(index int) (at time.Time) {
+	if index < len(c.NextRunnable) {
+		at = c.NextRunnable[index]
+	}
+	return
+}
+
+// IsRunnable will return whether the current time is before NextRunnable
+func (c *Controller) IsRunnable(index int) bool {
+	// If out of range
+	if !(index < len(c.NextRunnable)) {
+		return false
+	}
+
+	return time.Now().UTC().After(c.NextRunnable[index])
+}
+
+// SetNextRunnable time that the Command at index can be re-run.
+func (c *Controller) SetNextRunnable(index int, executing bool) {
+	// If out of range
+	if !(index < len(c.NextRunnable)) {
+		return
+	}
+
+	// Different times depending on pass/fail
+	if !utils.EvalNilPtr(c.Failed[index], true) {
+		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
+		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
+	} else {
+		c.NextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
+	}
+
+	// Block reruns whilst running for up to an hour
+	if executing {
+		c.NextRunnable[index] = c.NextRunnable[index].Add(time.Hour)
+	}
 }
