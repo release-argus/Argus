@@ -522,13 +522,6 @@ func (api *API) wsConfigService(client *Client) {
 				AllowInvalidCerts:  service.AllowInvalidCerts,
 				Icon:               service.Icon,
 				IconLinkTo:         service.IconLinkTo,
-				Status: &api_types.Status{
-					ApprovedVersion:          service.Status.ApprovedVersion,
-					DeployedVersion:          service.Status.DeployedVersion,
-					DeployedVersionTimestamp: service.Status.DeployedVersionTimestamp,
-					LatestVersion:            service.Status.LatestVersion,
-					LatestVersionTimestamp:   service.Status.LatestVersionTimestamp,
-				},
 			}
 
 			// DeployedVersionLookup

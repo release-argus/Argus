@@ -93,10 +93,6 @@ func (s *Service) Query() (bool, error) {
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)
 
-			if s.SaveChannel != nil {
-				*s.SaveChannel <- true
-			}
-
 			s.AnnounceFirstVersion()
 
 			// Don't notify on first version.
@@ -107,7 +103,6 @@ func (s *Service) Query() (bool, error) {
 		s.SetLatestVersion(version)
 		msg := fmt.Sprintf("New Release - %q", version)
 		jLog.Info(msg, logFrom, true)
-		*s.SaveChannel <- true
 		return true, nil
 	}
 

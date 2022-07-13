@@ -58,9 +58,6 @@ func (s *Service) UpdatedVersion() {
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()
-	if s.SaveChannel != nil {
-		*s.SaveChannel <- true
-	}
 }
 
 // UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
@@ -256,13 +253,9 @@ func (s *Service) HandleSkip(version string) {
 	s.AnnounceApproved()
 
 	*s.DatabaseChannel <- db_types.Message{
-		ServiceID: "syncthing/syncthing",
+		ServiceID: *s.ID,
 		Cells: []db_types.Cell{
 			{Column: "approved_version", Value: s.Status.ApprovedVersion},
 		},
-	}
-
-	if s.SaveChannel != nil {
-		*s.SaveChannel <- true
 	}
 }

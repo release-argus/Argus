@@ -72,9 +72,6 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 				logFrom,
 				true)
 			parent.AnnounceUpdate()
-			if parent.SaveChannel != nil {
-				*parent.SaveChannel <- true
-			}
 		}
 		// Sleep interval between queries.
 		time.Sleep(parent.GetIntervalDuration())

@@ -489,31 +489,6 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing
 	}
 }
 
-func TestDeployedVersionLookupTrackWithSuccessfulTriggersSave(t *testing.T) {
-	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/config/service/"
-	dvl.Regex = "([0-9.]+)test"
-	version := "0.0.0"
-	service := testServiceURL()
-	service.DeployedVersionLookup = &dvl
-	service.Status.DeployedVersion = version
-	service.Status.LatestVersion = "1.2.3"
-
-	// WHEN Track is called on this
-	go service.DeployedVersionLookup.Track(&service)
-
-	// THEN a Save is sent to the Service.SaveChannel
-	time.Sleep(2 * time.Second)
-	got := len(*service.SaveChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the DeployedVersion change. Should be %d",
-			got, want)
-	}
-}
-
 func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *testing.T) {
 	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
 	jLog = utils.NewJLog("WARN", false)
@@ -545,7 +520,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *test
 	// WHEN Track is called on this
 	go service.DeployedVersionLookup.Track(&service)
 
-	// THEN a Save is sent to the Service.SaveChannel
+	// THEN a Message is sent to the Announce channel
 	time.Sleep(2 * time.Second)
 	got := len(*service.Announce)
 	want := 1

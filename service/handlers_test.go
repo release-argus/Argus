@@ -198,22 +198,6 @@ func TestUpdatedVersionDidUpdateApprovedVersionIfActionsPassed(t *testing.T) {
 	}
 }
 
-func TestUpdatedVersionDidTrySave(t *testing.T) {
-	// GIVEN a Service
-	service := testServiceGitHub()
-
-	// WHEN UpdatedVersion is called on it
-	service.UpdatedVersion()
-
-	// THEN a save is requested from the SaveChannel
-	got := len(*service.SaveChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
 func TestHandleUpdateActionsWithNothing(t *testing.T) {
 	// GIVEN a Service with no Commands or WebHooks
 	service := testServiceGitHub()
@@ -803,22 +787,6 @@ func TestHandleSkipDidAnnounce(t *testing.T) {
 
 	// THEN this skip is sent to Announce
 	got := len(*service.Announce)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestHandleSkipDidTrySave(t *testing.T) {
-	// GIVEN a Service
-	service := testServiceGitHub()
-
-	// WHEN HandleSkip is called with LatestVersion
-	service.HandleSkip(service.Status.LatestVersion)
-
-	// THEN a save is requested from the SaveChannel
-	got := len(*service.SaveChannel)
 	want := 1
 	if got != want {
 		t.Errorf("%d messages in the channel from the announce. Should be %d",

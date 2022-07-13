@@ -37,6 +37,7 @@ func initLogging() {
 func testConfig() config.Config {
 	databaseFile := "test.db"
 	svc := service.Service{
+		Status: &service_status.Status{},
 		OldStatus: &service_status.OldStatus{
 			LatestVersion:            "0.0.2",
 			LatestVersionTimestamp:   "2022-01-01T01:01:01Z",

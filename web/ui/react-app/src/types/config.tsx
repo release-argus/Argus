@@ -63,7 +63,6 @@ export interface ServiceType {
   webhook?: ServiceDict<WebHookType>;
   notify?: ServiceDict<NotifyType>;
   deployed_version?: DeployedVersionLookupType;
-  status?: StatusType;
 }
 
 export interface DeployedVersionLookupType {
@@ -83,24 +82,6 @@ export interface BasicAuthType {
 export interface HeaderType {
   key: string;
   value: string;
-}
-
-export interface StatusType {
-  auto_approve?: string;
-  deployed_version?: string;
-  deployed_version_timestamp?: string;
-  latest_version?: string;
-  latest_version_timestamp?: string;
-  last_queried?: number;
-  regex_misses_content?: number;
-  regex_misses_version?: number;
-  service_misses?: string;
-  fails: StatusFailsType;
-}
-
-export interface StatusFailsType {
-  notify?: boolean[];
-  webhook?: boolean[];
 }
 
 export interface URLCommandsType {

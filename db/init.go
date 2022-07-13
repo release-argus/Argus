@@ -175,7 +175,7 @@ func (api *api) convertServiceStatus() {
 				(*api.config.Service[id]).OldStatus.DeployedVersionTimestamp,
 				(*api.config.Service[id]).OldStatus.ApprovedVersion,
 			)
-			(*api.config.Service[id]).Status = &service_status.Status{
+			*(*api.config.Service[id]).Status = service_status.Status{
 				LatestVersion:            (*api.config.Service[id]).OldStatus.LatestVersion,
 				LatestVersionTimestamp:   (*api.config.Service[id]).OldStatus.LatestVersionTimestamp,
 				DeployedVersion:          (*api.config.Service[id]).OldStatus.DeployedVersion,
