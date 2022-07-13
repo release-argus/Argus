@@ -25,8 +25,6 @@ jobs:
           - os: windows
             arch: amd64
           - os: windows
-            arch: arm
-          - os: windows
             arch: arm64
 
     steps:

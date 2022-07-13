@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/release-argus/Argus/config"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
@@ -71,7 +71,7 @@ func Run(cfg *config.Config, log *utils.JLog) {
 func (api *api) initialise() {
 	databaseFile := api.config.Settings.GetDataDatabaseFile()
 	checkFile(*databaseFile)
-	db, err := sql.Open("sqlite3", *databaseFile)
+	db, err := sql.Open("sqlite", *databaseFile)
 	jLog.Fatal(err, *logFrom, err != nil)
 
 	// Create the table

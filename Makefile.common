@@ -3,10 +3,10 @@ FIRST_GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 GOOPTS       ?=
 
 GO_ARCHITECTURES_DARWIN ?= amd64 arm64
-GO_ARCHITECTURES_FREEBSD ?= amd64 arm arm64
+GO_ARCHITECTURES_FREEBSD ?= amd64
 GO_ARCHITECTURES_LINUX ?= amd64 arm arm64
-GO_ARCHITECTURES_OPENBSD ?= amd64 arm arm64
-GO_ARCHITECTURES_WINDOWS ?= amd64 arm arm64
+GO_ARCHITECTURES_OPENBSD ?=
+GO_ARCHITECTURES_WINDOWS ?= amd64 arm64
 
 GO_VERSION        ?= $(shell $(GO) version)
 GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
@@ -89,7 +89,6 @@ build-darwin:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_DARWIN), \
 		" ${GOARCH}" \
 		$(shell \
-            CGO_ENABLED=1 \
 			GOOS=darwin \
 			GOARCH=$(GOARCH) \
 			go build \
@@ -108,7 +107,6 @@ build-freebsd:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_FREEBSD), \
 		" ${GOARCH}" \
 		$(shell \
-            CGO_ENABLED=1 \
 			GOOS=freebsd \
 			GOARCH=$(GOARCH) \
 			go build \
@@ -127,7 +125,6 @@ build-linux:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_LINUX), \
 		" ${GOARCH}" \
 		$(shell \
-            CGO_ENABLED=1 \
 			GOOS=linux \
 			GOARCH=$(GOARCH) \
 			go build \
@@ -146,7 +143,6 @@ build-openbsd:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_OPENBSD), \
 		" ${GOARCH}" \
 		$(shell \
-            CGO_ENABLED=1 \
 			GOOS=openbsd \
 			GOARCH=$(GOARCH) \
 			go build \
@@ -165,7 +161,6 @@ build-windows:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_WINDOWS), \
 		" ${GOARCH}" \
 		$(shell \
-            CGO_ENABLED=1 \
 			GOOS=windows \
 			GOARCH=$(GOARCH) \
 			go build \

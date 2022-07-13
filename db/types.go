@@ -17,7 +17,7 @@ package db
 import (
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/release-argus/Argus/config"
 )
 

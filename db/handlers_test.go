@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	db_types "github.com/release-argus/Argus/db/types"
 )
 
