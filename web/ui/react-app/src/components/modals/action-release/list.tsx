@@ -55,6 +55,7 @@ export const ModalList = ({
                 title={title}
                 failed={item.failed}
                 sending={sending}
+                next_runnable={item.next_runnable || ""}
                 ack={onClickAcknowledge}
               />
             );

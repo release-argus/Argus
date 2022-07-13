@@ -81,6 +81,7 @@ func (h *Hub) Run(jLog *utils.JLog) {
 						utils.LogFrom{Primary: "WebSocket"},
 						true,
 					)
+					n = len(h.Broadcast)
 					continue
 				}
 				for client := range h.clients {

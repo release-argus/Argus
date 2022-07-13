@@ -29,26 +29,26 @@ func testExecController(commands *Slice) Controller {
 		num = len(*commands)
 	}
 	controllerName := "TEST"
-	commandController := Controller{
+	controller := Controller{
 		ServiceID: &controllerName,
 		Failed:    make(Fails, num),
 		Command:   commands,
 	}
-	return commandController
+	return controller
 }
 
 func TestExecEmptyController(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
 	// GIVEN an empty Controller
-	commandController := testExecController(nil)
+	controller := testExecController(nil)
 
 	// WHEN executed
-	err := commandController.Exec(&utils.LogFrom{})
+	err := controller.Exec(&utils.LogFrom{})
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`, commandController.Command, err.Error())
+		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`, controller.Command, err.Error())
 	}
 }
 
@@ -56,14 +56,17 @@ func TestExecThatErrors(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
 	// GIVEN a Command that should fail
-	commandController := testExecController(&Slice{Command{"ls", "/root"}})
+	serviceName := "test"
+	serviceInterval := "11m"
+	controller := testExecController(&Slice{Command{"ls", "/root"}})
+	controller.Init(jLog, &serviceName, nil, nil, nil, &serviceInterval)
 
 	// WHEN it's executed
-	err := commandController.Exec(&utils.LogFrom{})
+	err := controller.Exec(&utils.LogFrom{})
 
 	// THEN it returns an error
 	if err == nil {
-		t.Errorf(`%v commands should have errored unless you're running as root`, commandController.Command)
+		t.Errorf(`%v commands should have errored unless you're running as root`, controller.Command)
 	}
 }
 
@@ -71,40 +74,46 @@ func TestExecThatDoesntError(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
 	// GIVEN a Command that should pass
-	commandController := testExecController(&Slice{Command{"ls"}})
+	name := "test"
+	interval := "11m"
+	controller := testExecController(&Slice{Command{"ls"}})
+	controller.Init(jLog, &name, nil, nil, nil, &interval)
 
 	// WHEN it's executed
-	err := commandController.Exec(&utils.LogFrom{})
+	err := controller.Exec(&utils.LogFrom{})
 
 	// THEN it returns a nil error
 	if err != nil {
-		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, commandController.Command, err.Error())
+		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, controller.Command, err.Error())
 	}
 }
 
 func testExecIndexController() Controller {
-	controllerName := "TEST"
-	commandController := Controller{
-		ServiceID: &controllerName,
+	name := "TEST"
+	serviceInterval := "11m"
+
+	controller := Controller{
+		ServiceID: &name,
 		Command: &Slice{
 			Command{"true", "0"},
 			Command{"true", "1"},
 		},
 		Failed: make(Fails, 2),
 	}
-	return commandController
+	controller.Init(jLog, &name, nil, nil, nil, &serviceInterval)
+	return controller
 }
 
 func TestExecIndexInRange(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
 	// GIVEN a Controller with Commands
-	commandController := testExecIndexController()
+	controller := testExecIndexController()
 
 	// WHEN ExecIndex is called on an index that exists
 	index := 1
-	errController := commandController.ExecIndex(&utils.LogFrom{}, index)
-	errCommand := (*commandController.Command)[index].Exec(&utils.LogFrom{})
+	errController := controller.ExecIndex(&utils.LogFrom{}, index)
+	errCommand := (*controller.Command)[index].Exec(&utils.LogFrom{})
 
 	// THEN err is the same as on the direct Exec
 	if errController != errCommand {
@@ -116,13 +125,13 @@ func TestExecIndexOutOfRange(t *testing.T) {
 	Init(utils.NewJLog("ERROR", false))
 
 	// GIVEN a Controller with Commands
-	commandController := testExecIndexController()
+	controller := testExecIndexController()
 
 	// WHEN ExecIndex is called on an index that doesn't exist
-	err := commandController.ExecIndex(&utils.LogFrom{}, 2)
+	err := controller.ExecIndex(&utils.LogFrom{}, 2)
 	// THEN err is nil
 	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`, commandController.Command, err.Error())
+		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`, controller.Command, err.Error())
 	}
 }
 
@@ -131,7 +140,7 @@ func TestApplyTemplateWithNilServiceStatus(t *testing.T) {
 
 	// GIVEN a Controller with nil ServiceStatus
 	controllerName := "TEST"
-	commandController := Controller{
+	controller := Controller{
 		ServiceID: &controllerName,
 		Command: &Slice{
 			Command{"false", "{{ version }}"},
@@ -139,7 +148,7 @@ func TestApplyTemplateWithNilServiceStatus(t *testing.T) {
 		Failed: make(Fails, 1),
 	}
 	// WHEN ApplyTemplate is called with that nil Status
-	command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
+	command := (*controller.Command)[0].ApplyTemplate(controller.ServiceStatus)
 
 	// THEN the {{ version }} var is not evaluated
 	got := command.String()
@@ -154,7 +163,7 @@ func TestApplyTemplateWithServiceStatus(t *testing.T) {
 
 	// GIVEN a Controller with a non-nil ServiceStatus
 	controllerName := "TEST"
-	commandController := Controller{
+	controller := Controller{
 		ServiceID: &controllerName,
 		Command: &Slice{
 			Command{"false", "{{ version }}"},
@@ -163,7 +172,7 @@ func TestApplyTemplateWithServiceStatus(t *testing.T) {
 		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
 	}
 	// WHEN ApplyTemplate is called
-	command := (*commandController.Command)[0].ApplyTemplate(commandController.ServiceStatus)
+	command := (*controller.Command)[0].ApplyTemplate(controller.ServiceStatus)
 
 	// THEN the {{ version }} var is evaluated
 	got := command.String()

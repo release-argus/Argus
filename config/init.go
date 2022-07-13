@@ -61,6 +61,7 @@ func (c *Config) Init() {
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
 			c.Service[serviceID].Notify,
+			c.Service[serviceID].GetIntervalPointer(),
 		)
 
 		if c.Service[serviceID].Command != nil {
@@ -72,6 +73,7 @@ func (c *Config) Init() {
 			service.Status,
 			c.Service[serviceID].Command,
 			c.Service[serviceID].Notify,
+			c.Service[serviceID].GetIntervalPointer(),
 		)
 	}
 

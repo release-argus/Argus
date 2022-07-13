@@ -165,6 +165,11 @@ func (s *Service) GetInterval() string {
 	return *utils.GetFirstNonNilPtr(s.Interval, s.Defaults.Interval, s.HardDefaults.Interval)
 }
 
+// GetIntervalPointer returns a pointer to the interval between queries on this Service's version.
+func (s *Service) GetIntervalPointer() *string {
+	return utils.GetFirstNonNilPtr(s.Interval, s.Defaults.Interval, s.HardDefaults.Interval)
+}
+
 // GetIntervalDuration returns the interval between queries on this Service's version.
 func (s *Service) GetIntervalDuration() time.Duration {
 	d, _ := time.ParseDuration(s.GetInterval())

@@ -155,7 +155,7 @@ func testService(id string) service.Service {
 		WebHook:            &webhook.Slice{"test": &webhook.WebHook{URL: &whURL}},
 		Status:             &service_status.Status{},
 	}
-	svc.CommandController.Init(jLog, &id, svc.Status, svc.Command, nil)
+	svc.CommandController.Init(jLog, &id, svc.Status, svc.Command, nil, nil)
 	return svc
 }
 
@@ -169,7 +169,7 @@ func testCommandFail() command.Command {
 
 func testWebHookPass(id string) webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
 	whType := "github"
 	whURL := "https://httpbin.org/anything"
@@ -179,6 +179,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	whDelay := "0s"
 	whSilentFails := true
 	whMaxTries := uint(1)
+	parentInterval := "11m"
 	return webhook.WebHook{
 		ID:                &id,
 		Type:              &whType,
@@ -189,6 +190,7 @@ func testWebHookPass(id string) webhook.WebHook {
 		Delay:             &whDelay,
 		SilentFails:       &whSilentFails,
 		MaxTries:          &whMaxTries,
+		ParentInterval:    &parentInterval,
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
@@ -197,7 +199,7 @@ func testWebHookPass(id string) webhook.WebHook {
 
 func testWebHookFail(id string) webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
 	whType := "github"
 	whURL := "https://httpbin.org/hidden-basic-auth/:user/:passwd"
@@ -206,6 +208,7 @@ func testWebHookFail(id string) webhook.WebHook {
 	whDesiredStatusCode := 0
 	whSilentFails := true
 	whMaxTries := uint(1)
+	parentInterval := "11m"
 	return webhook.WebHook{
 		ID:                &id,
 		Type:              &whType,
@@ -215,6 +218,7 @@ func testWebHookFail(id string) webhook.WebHook {
 		DesiredStatusCode: &whDesiredStatusCode,
 		SilentFails:       &whSilentFails,
 		MaxTries:          &whMaxTries,
+		ParentInterval:    &parentInterval,
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},

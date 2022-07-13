@@ -148,6 +148,7 @@ func testWebHookSuccessful() webhook.WebHook {
 	whDesiredStatusCode := 0
 	whSilentFails := true
 	whMaxTries := uint(1)
+	parentInterval := "12m"
 	return webhook.WebHook{
 		ID:                &whID,
 		Type:              &whType,
@@ -157,6 +158,7 @@ func testWebHookSuccessful() webhook.WebHook {
 		DesiredStatusCode: &whDesiredStatusCode,
 		SilentFails:       &whSilentFails,
 		MaxTries:          &whMaxTries,
+		ParentInterval:    &parentInterval,
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
@@ -172,6 +174,7 @@ func testWebHookFailing() webhook.WebHook {
 	whDesiredStatusCode := 0
 	whSilentFails := true
 	whMaxTries := uint(1)
+	parentInterval := "12m"
 	return webhook.WebHook{
 		ID:                &whID,
 		Type:              &whType,
@@ -181,6 +184,7 @@ func testWebHookFailing() webhook.WebHook {
 		DesiredStatusCode: &whDesiredStatusCode,
 		SilentFails:       &whSilentFails,
 		MaxTries:          &whMaxTries,
+		ParentInterval:    &parentInterval,
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},

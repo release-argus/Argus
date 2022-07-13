@@ -47,7 +47,7 @@ func TestSetDeployedVersionDidSetDeployedVersionTimestamp(t *testing.T) {
 	service.Status.ApprovedVersion = service.Status.LatestVersion
 
 	// WHEN SetDeployedVersion is called on it
-	start := time.Now()
+	start := time.Now().UTC()
 	service.SetDeployedVersion(service.Status.LatestVersion)
 
 	// THEN DeployedVersionTimestamp is set to now in time
@@ -103,7 +103,14 @@ func TestSetDeployedVersionDidResetCommandFails(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(
+		jLog,
+		&serviceID,
+		nil,
+		service.Command,
+		nil,
+		service.Interval,
+	)
 	didFail := false
 	fail := true
 	service.CommandController.Failed[0] = &didFail
@@ -175,7 +182,7 @@ func TestSetLatestVersionDidSetLatestVersionTimestamp(t *testing.T) {
 	version := "new"
 
 	// WHEN SetLatestVersion is called on it
-	start := time.Now()
+	start := time.Now().UTC()
 	service.SetLatestVersion(version)
 
 	// THEN LatestVersionTimestamp is set to now in time
@@ -197,7 +204,14 @@ func TestSetLatestVersionDidResetCommandFails(t *testing.T) {
 	}
 	service.CommandController = &command.Controller{}
 	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil)
+	service.CommandController.Init(
+		jLog,
+		&serviceID,
+		nil,
+		service.Command,
+		nil,
+		service.Interval,
+	)
 	didFail := false
 	fail := true
 	service.CommandController.Failed[0] = &didFail

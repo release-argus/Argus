@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package service_status
 
 import (
@@ -77,7 +79,7 @@ func TestSetLastQueried(t *testing.T) {
 	var status Status
 
 	// WHEN we SetLastQueried
-	start := time.Now()
+	start := time.Now().UTC()
 	status.SetLastQueried()
 
 	// THEN LastQueried will have been set to the current timestamp

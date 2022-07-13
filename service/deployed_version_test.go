@@ -364,7 +364,7 @@ func TestDeployedVersionLookupTrackWithNil(t *testing.T) {
 	var dvl *DeployedVersionLookup
 
 	// WHEN CheckValues is called on it
-	start := time.Now()
+	start := time.Now().UTC()
 	dvl.Track(&Service{})
 
 	// THEN the function exits straight away

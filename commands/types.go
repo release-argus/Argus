@@ -18,6 +18,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	"time"
 )
 
 var (
@@ -32,12 +33,14 @@ type Command []string
 type Fails []*bool
 
 type Controller struct {
-	ServiceID     *string                `yaml:"-"` // ID of the service this Controller is attached to
-	Command       *Slice                 `yaml:"-"` // command to run (with args)
-	Failed        Fails                  `yaml:"-"` // Whether the last execution attempt failed
-	Notifiers     Notifiers              `yaml:"-"` // The Notify's to notify on failures
-	Announce      *chan []byte           `yaml:"-"` // Announce to the WebSocket
-	ServiceStatus *service_status.Status `yaml:"-"` // Status of the Service (used for templating commands)
+	ServiceID      *string                `yaml:"-"` // ID of the service this Controller is attached to
+	Command        *Slice                 `yaml:"-"` // command to run (with args)
+	NextRunnable   []time.Time            `yaml:"-"` // Time the Commands can next be run (for staggering)
+	Failed         Fails                  `yaml:"-"` // Whether the last execution attempt failed
+	Notifiers      Notifiers              `yaml:"-"` // The Notify's to notify on failures
+	Announce       *chan []byte           `yaml:"-"` // Announce to the WebSocket
+	ServiceStatus  *service_status.Status `yaml:"-"` // Status of the Service (used for templating commands)
+	ParentInterval *string                `yaml:"-"` // Interval between the parent Service's queries
 }
 
 // Notifiers to use when their WebHook fails.

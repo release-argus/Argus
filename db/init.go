@@ -182,10 +182,10 @@ func (api *api) convertServiceStatus() {
 				DeployedVersionTimestamp: (*api.config.Service[id]).OldStatus.DeployedVersionTimestamp,
 				ApprovedVersion:          (*api.config.Service[id]).OldStatus.ApprovedVersion,
 			}
-			*api.config.SaveChannel <- true
 		}
 	}
 	if servicesToConvert != 0 {
+		*api.config.SaveChannel <- true
 		_, err := api.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
 		jLog.Fatal(
 			fmt.Sprintf("convertServiceStatus: %s\n%s",
