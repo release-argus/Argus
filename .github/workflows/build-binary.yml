@@ -64,6 +64,7 @@ jobs:
 
       - name: Build
         run: >-
+          CGO_ENABLED=1
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
           make
           OUTPUT_BINARY=./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}

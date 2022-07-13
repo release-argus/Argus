@@ -89,13 +89,14 @@ build-darwin:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_DARWIN), \
 		" ${GOARCH}" \
 		$(shell \
+            CGO_ENABLED=1 \
 			GOOS=darwin \
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/darwin/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.darwin \
 			./cmd/argus \
 		) \
 		"- DONE\n" \
@@ -107,13 +108,14 @@ build-freebsd:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_FREEBSD), \
 		" ${GOARCH}" \
 		$(shell \
+            CGO_ENABLED=1 \
 			GOOS=freebsd \
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/freebsd/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.freebsd \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -125,13 +127,14 @@ build-linux:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_LINUX), \
 		" ${GOARCH}" \
 		$(shell \
+            CGO_ENABLED=1 \
 			GOOS=linux \
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/linux/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.linux \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -143,13 +146,14 @@ build-openbsd:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_OPENBSD), \
 		" ${GOARCH}" \
 		$(shell \
+            CGO_ENABLED=1 \
 			GOOS=openbsd \
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/openbsd/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.openbsd \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -161,13 +165,14 @@ build-windows:
 	$(foreach GOARCH, $(GO_ARCHITECTURES_WINDOWS), \
 		" ${GOARCH}" \
 		$(shell \
+            CGO_ENABLED=1 \
 			GOOS=windows \
 			GOARCH=$(GOARCH) \
 			go build \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/windows/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.windows \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
