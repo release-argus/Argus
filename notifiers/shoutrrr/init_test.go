@@ -33,7 +33,8 @@ func TestSetLog(t *testing.T) {
 
 	// THEN jLog is set to this new one
 	if jLog != new {
-		t.Errorf("jLog should be %v but is %v", new, jLog)
+		t.Errorf("jLog should be %v but is %v",
+			new, jLog)
 	}
 }
 
@@ -67,7 +68,8 @@ func TestInitMapsWithNil(t *testing.T) {
 
 	// THEN the maps will stay nil
 	if shoutrrr != nil {
-		t.Errorf("The Shoutrrr was nil, but is now %v", *shoutrrr)
+		t.Errorf("The Shoutrrr was nil, but is now %v",
+			*shoutrrr)
 	}
 }
 
@@ -87,7 +89,8 @@ func TestInitOptions(t *testing.T) {
 	for key := range shoutrrr.Options {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -108,7 +111,8 @@ func TestInitURLFields(t *testing.T) {
 	for key := range shoutrrr.URLFields {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -129,7 +133,8 @@ func TestInitParams(t *testing.T) {
 	for key := range shoutrrr.Params {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -158,7 +163,8 @@ func TestInitMapsUppercasesOptions(t *testing.T) {
 	for key := range shoutrrr.Options {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -187,7 +193,8 @@ func TestInitMapsUppercasesURLFields(t *testing.T) {
 	for key := range shoutrrr.URLFields {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -216,7 +223,8 @@ func TestInitMapsUppercasesParams(t *testing.T) {
 	for key := range shoutrrr.Params {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }
@@ -231,7 +239,8 @@ func TestShoutrrrInitWithNilShoutrrr(t *testing.T) {
 
 	// THEN it is still nil
 	if shoutrrr != nil {
-		t.Errorf("Shoutrrr should still be nil, not %v after Init", shoutrrr)
+		t.Errorf("Shoutrrr should still be nil, not %v after Init",
+			shoutrrr)
 	}
 }
 
@@ -246,7 +255,8 @@ func TestShoutrrrInitWithNilMain(t *testing.T) {
 
 	// THEN it is no longer nil
 	if shoutrrr.Main == nil {
-		t.Errorf("Shoutrrr.Main shouldn't still be %v after Init", shoutrrr)
+		t.Errorf("Shoutrrr.Main shouldn't still be %v after Init",
+			shoutrrr)
 	}
 }
 
@@ -261,7 +271,8 @@ func TestShoutrrrInitGivesMain(t *testing.T) {
 
 	// THEN it is given vars.Main
 	if shoutrrr.Main != vars.Main {
-		t.Errorf("Shoutrrr.Main shouldn't be %v after Init", shoutrrr)
+		t.Errorf("Shoutrrr.Main shouldn't be %v after Init",
+			shoutrrr)
 	}
 }
 
@@ -276,7 +287,8 @@ func TestShoutrrrInitGivesDefaults(t *testing.T) {
 
 	// THEN it is given vars.Defaults
 	if shoutrrr.Defaults != vars.Defaults {
-		t.Errorf("Shoutrrr.Defaults shouldn't be %v after Init", shoutrrr)
+		t.Errorf("Shoutrrr.Defaults shouldn't be %v after Init",
+			shoutrrr)
 	}
 }
 
@@ -291,7 +303,8 @@ func TestShoutrrrInitGivesHardDefaults(t *testing.T) {
 
 	// THEN it is given vars.HardDefaults
 	if shoutrrr.HardDefaults != vars.HardDefaults {
-		t.Errorf("Shoutrrr.HardDefaults shouldn't be %v after Init", shoutrrr)
+		t.Errorf("Shoutrrr.HardDefaults shouldn't be %v after Init",
+			shoutrrr)
 	}
 }
 
@@ -324,7 +337,8 @@ func TestSliceInitWithNil(t *testing.T) {
 
 	// THEN it is still nil
 	if slice != nil {
-		t.Errorf("Slice should still be nil, not %v", slice)
+		t.Errorf("Slice should still be nil, not %v",
+			slice)
 	}
 }
 
@@ -344,7 +358,8 @@ func TestSliceInitWithMatchingMain(t *testing.T) {
 
 	// THEN "1" has that main
 	if slice["1"].Main != mains["1"] {
-		t.Errorf("Slice['1'] was given %v, not the matching Main (%v)", slice["1"].Main, mains["1"])
+		t.Errorf("Slice['1'] was given %v, not the matching Main (%v)",
+			slice["1"].Main, mains["1"])
 	}
 }
 
@@ -364,7 +379,8 @@ func TestSliceInitWithNonMatchingMain(t *testing.T) {
 
 	// THEN "1" has that main
 	if slice["0"].Main.ID != nil {
-		t.Errorf("Slice['0'] was given id=%q, not a fresh Main (id=%v)", *slice["0"].Main.ID, Shoutrrr{}.ID)
+		t.Errorf("Slice['0'] was given id=%q, not a fresh Main (id=%v)",
+			*slice["0"].Main.ID, Shoutrrr{}.ID)
 	}
 }
 
@@ -379,7 +395,8 @@ func TestSliceInitWithNilElement(t *testing.T) {
 
 	// THEN that element is no longer nil
 	if slice["1"] == nil {
-		t.Errorf("Slice['1'] should have been created from the Init. Shouldn't be %v", slice["1"])
+		t.Errorf("Slice['1'] should have been created from the Init. Shouldn't be %v",
+			slice["1"])
 	}
 }
 
@@ -396,7 +413,8 @@ func TestSliceInitWithDefaultMain(t *testing.T) {
 		len(slice["1"].Main.Options) != 0 ||
 		len(slice["1"].Main.URLFields) != 0 ||
 		len(slice["1"].Main.Params) != 0 {
-		t.Errorf("Slice['1'] was given %v, not an empty Main (%v)", slice["1"].Main, Shoutrrr{})
+		t.Errorf("Slice['1'] was given %v, not an empty Main (%v)",
+			slice["1"].Main, Shoutrrr{})
 	}
 }
 
@@ -411,7 +429,8 @@ func TestSliceInitWithNilMains(t *testing.T) {
 
 	// THEN the elements get non-nil mains
 	if slice["1"].Main == nil {
-		t.Errorf("Mains were nil in the Init, but non-nil's should. Shouldn't be %v", slice["1"])
+		t.Errorf("Mains were nil in the Init, but non-nil's should. Shouldn't be %v",
+			slice["1"])
 	}
 }
 
@@ -434,7 +453,8 @@ func TestSliceInitWithDefaults(t *testing.T) {
 	// THEN all "discord" types have the default
 	for i := range slice {
 		if slice[i].Type == "discord" && slice[i].Defaults != defaults["discord"] {
-			t.Errorf("Slice['%s'] should have been given the %s defaults, %v", i, slice[i].Type, defaults["discord"])
+			t.Errorf("Slice['%s'] should have been given the %s defaults, %v",
+				i, slice[i].Type, defaults["discord"])
 		}
 	}
 }
@@ -458,7 +478,8 @@ func TestSliceInitWithNoDefaults(t *testing.T) {
 	// THEN no non "discord" types are given this default
 	for i := range slice {
 		if slice[i].Type != "discord" && slice[i].Defaults == defaults["discord"] {
-			t.Errorf("Slice['%s'] shouldn't have been given the discord defaults, %v", i, defaults["discord"])
+			t.Errorf("Slice['%s'] shouldn't have been given the discord defaults, %v",
+				i, defaults["discord"])
 		}
 	}
 }
@@ -482,7 +503,8 @@ func TestSliceInitWithHardDefaults(t *testing.T) {
 	// THEN all "discord" types have the default
 	for i := range slice {
 		if slice[i].Type == "discord" && slice[i].HardDefaults != hardDefaults["discord"] {
-			t.Errorf("Slice['%s'] should have been given the %s hardDefaults, %v", i, slice[i].Type, hardDefaults["discord"])
+			t.Errorf("Slice['%s'] should have been given the %s hardDefaults, %v",
+				i, slice[i].Type, hardDefaults["discord"])
 		}
 	}
 }
@@ -506,7 +528,8 @@ func TestSliceInitWithNoHardDefaults(t *testing.T) {
 	// THEN no non "discord" types are given this default
 	for i := range slice {
 		if slice[i].Type != "discord" && slice[i].HardDefaults == hardDefaults["discord"] {
-			t.Errorf("Slice['%s'] shouldn't have been given the discord hardDefaults, %v", i, hardDefaults["discord"])
+			t.Errorf("Slice['%s'] shouldn't have been given the discord hardDefaults, %v",
+				i, hardDefaults["discord"])
 		}
 	}
 }

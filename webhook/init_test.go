@@ -35,7 +35,8 @@ func TestSliceInitWithNilSlice(t *testing.T) {
 	got := len(slice)
 	want := 0
 	if got != want {
-		t.Errorf("Got len %d, when expecting %d", got, want)
+		t.Errorf("Got len %d, when expecting %d",
+			got, want)
 	}
 }
 
@@ -51,7 +52,8 @@ func TestSliceInitWithNilWebHook(t *testing.T) {
 
 	// THEN the function initialises the nil WebHook
 	if slice["0"] == nil {
-		t.Errorf("Slice['0'] shouldn't be %v still", slice["0"])
+		t.Errorf("Slice['0'] shouldn't be %v still",
+			slice["0"])
 	}
 }
 
@@ -73,7 +75,8 @@ func TestSliceInitWithNonNil(t *testing.T) {
 	got := len(slice)
 	want := 1
 	if got != want {
-		t.Errorf("Got len %d, when expecting %d", got, want)
+		t.Errorf("Got len %d, when expecting %d",
+			got, want)
 	}
 }
 
@@ -125,7 +128,8 @@ func TestSliceInitMainsHandedOut(t *testing.T) {
 	// THEN the mains are handed out correctly
 	for key := range slice {
 		if slice[key].Main != mains[key] {
-			t.Errorf("Main not handed to %s", key)
+			t.Errorf("Main not handed to %s",
+				key)
 		}
 	}
 }
@@ -140,7 +144,8 @@ func TestSliceInitDefaultsHandedOut(t *testing.T) {
 	// THEN the defaults are handed out correctly
 	for key := range slice {
 		if *slice[key].Defaults != defaults {
-			t.Errorf("Defaults not handed to %s", key)
+			t.Errorf("Defaults not handed to %s",
+				key)
 		}
 	}
 }
@@ -155,7 +160,8 @@ func TestSliceInitHardDefaultsHandedOut(t *testing.T) {
 	// THEN the hard defaults are handed out correctly
 	for key := range slice {
 		if *slice[key].HardDefaults != hardDefaults {
-			t.Errorf("HardDefaults not handed to %s", key)
+			t.Errorf("HardDefaults not handed to %s",
+				key)
 		}
 	}
 }
@@ -173,7 +179,8 @@ func TestSliceInitNotifiersHandedOut(t *testing.T) {
 	// THEN the notifiers are handed out correctly
 	for key := range slice {
 		if slice[key].Notifiers.Shoutrrr == nil {
-			t.Errorf("Notifiers %v weren't handed to %s", notifiers, key)
+			t.Errorf("Notifiers %v weren't handed to %s",
+				notifiers, key)
 		}
 	}
 }
@@ -201,7 +208,8 @@ func TestGetAllowInvalidCertsWhenTrue(t *testing.T) {
 
 	// THEN the function returns true
 	if got != wanted {
-		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t", wanted, got)
+		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t",
+			wanted, got)
 	}
 }
 
@@ -217,7 +225,8 @@ func TestGetAllowInvalidCertsWhenFalse(t *testing.T) {
 
 	// THEN the function returns false
 	if got != wanted {
-		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t", wanted, got)
+		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t",
+			wanted, got)
 	}
 }
 
@@ -234,7 +243,8 @@ func TestGetDelayDuration(t *testing.T) {
 
 	// THEN the function returns the X as a time.Duration
 	if got != wanted {
-		t.Errorf("GetDelayDuration - wanted %s, got %s", wanted, got)
+		t.Errorf("GetDelayDuration - wanted %s, got %s",
+			wanted, got)
 	}
 }
 
@@ -250,7 +260,8 @@ func TestGetDesiredStatusCode(t *testing.T) {
 
 	// THEN the function returns the hardDefault
 	if got != wanted {
-		t.Errorf("GetDesiredStatusCode - wanted %d, got %d", wanted, got)
+		t.Errorf("GetDesiredStatusCode - wanted %d, got %d",
+			wanted, got)
 	}
 }
 
@@ -266,7 +277,8 @@ func TestGetMaxTries(t *testing.T) {
 
 	// THEN the function returns X
 	if got != wanted {
-		t.Errorf("GetMaxTries - wanted %d, got %d", wanted, got)
+		t.Errorf("GetMaxTries - wanted %d, got %d",
+			wanted, got)
 	}
 }
 
@@ -282,7 +294,8 @@ func TestGetType(t *testing.T) {
 
 	// THEN the function returns "X"
 	if got != wanted {
-		t.Errorf("GetType - wanted %s, got %s", wanted, got)
+		t.Errorf("GetType - wanted %s, got %s",
+			wanted, got)
 	}
 }
 
@@ -298,7 +311,8 @@ func TestGetSecret(t *testing.T) {
 
 	// THEN the function returns "X"
 	if *got != wanted {
-		t.Errorf("GetSecret - wanted %s, got %s", wanted, *got)
+		t.Errorf("GetSecret - wanted %s, got %s",
+			wanted, *got)
 	}
 }
 
@@ -314,7 +328,8 @@ func TestGetSilentFailsWhenTrue(t *testing.T) {
 
 	// THEN the function returns true
 	if got != wanted {
-		t.Errorf("GetSilentFails - wanted %t, got %t", wanted, got)
+		t.Errorf("GetSilentFails - wanted %t, got %t",
+			wanted, got)
 	}
 }
 
@@ -330,7 +345,8 @@ func TestGetSilentFailsWhenFalse(t *testing.T) {
 
 	// THEN the function returns false
 	if got != wanted {
-		t.Errorf("GetSilentFails - wanted %t, got %t", wanted, got)
+		t.Errorf("GetSilentFails - wanted %t, got %t",
+			wanted, got)
 	}
 }
 
@@ -346,7 +362,8 @@ func TestGetURLWithNoTemplating(t *testing.T) {
 
 	// THEN the function returns the hardDefault
 	if *got != wanted {
-		t.Errorf("GetURL - wanted %s, got %s", wanted, *got)
+		t.Errorf("GetURL - wanted %s, got %s",
+			wanted, *got)
 	}
 }
 
@@ -363,7 +380,8 @@ func TestGetURLWithTemplatingWorks(t *testing.T) {
 
 	// THEN the function returns the default
 	if *got != wanted {
-		t.Errorf("GetURL - wanted %s, got %s", wanted, *got)
+		t.Errorf("GetURL - wanted %s, got %s",
+			wanted, *got)
 	}
 }
 func TestGetURLWithTemplatingUnchangesTemplate(t *testing.T) {
@@ -379,7 +397,8 @@ func TestGetURLWithTemplatingUnchangesTemplate(t *testing.T) {
 
 	// THEN the template stays intact
 	if *got != wanted {
-		t.Errorf("GetURL modified the template - wanted %s, got %s", wanted, *got)
+		t.Errorf("GetURL modified the template - wanted %s, got %s",
+			wanted, *got)
 	}
 }
 
@@ -434,17 +453,20 @@ func TestGetRequestGitHubValidURL(t *testing.T) {
 	key := "Content-Type"
 	want := "application/json"
 	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s should have been %s, got %s",
+			key, want, req.Header[key][0])
 	}
 	key = "foo"
 	want = "bar"
 	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s should have been %s, got %s",
+			key, want, req.Header[key][0])
 	}
 	key = "X-Github-Event"
 	want = "push"
 	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s should have been %s, got %s",
+			key, want, req.Header[key][0])
 	}
 }
 
@@ -499,7 +521,8 @@ func TestGetRequestGitLabValidURL(t *testing.T) {
 	key := "Content-Type"
 	want := "application/x-www-form-urlencoded"
 	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s should have been %s, got %s",
+			key, want, req.Header[key][0])
 	}
 	if req.URL.RawQuery == "" {
 		t.Error("RawQuery was empty when it should have been encoded data")
@@ -760,7 +783,8 @@ func TestResetFailsWithSlice(t *testing.T) {
 	// THEN all the fails become nil and the count stays the same
 	for i := range slice {
 		if (*slice[i]).Failed != nil {
-			t.Errorf("Reset failed, got %t", *(*slice[i]).Failed)
+			t.Errorf("Reset failed, got %t",
+				*(*slice[i]).Failed)
 		}
 	}
 }

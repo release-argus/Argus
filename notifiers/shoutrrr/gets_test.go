@@ -99,7 +99,8 @@ func TestGetOption(t *testing.T) {
 	// THEN we get the delay of the master Shoutrrr
 	want := shoutrrr.Main.Options["delay"]
 	if got != want {
-		t.Errorf("Should have got %q delay from the main, not %s", want, got)
+		t.Errorf("Should have got %q delay from the main, not %s",
+			want, got)
 	}
 }
 
@@ -113,7 +114,8 @@ func TestGetSelfOption(t *testing.T) {
 	// THEN we get the delay of the master Shoutrrr
 	want := shoutrrr.Options["delay"]
 	if got != want {
-		t.Errorf("Should have got %q delay from the master, not %s", want, got)
+		t.Errorf("Should have got %q delay from the master, not %s",
+			want, got)
 	}
 }
 
@@ -128,7 +130,8 @@ func TestSetOption(t *testing.T) {
 	// THEN we get this value with we GetSelfOption
 	got := shoutrrr.GetSelfOption("delay")
 	if got != want {
-		t.Errorf("Should have got %q delay from the main, not %s", want, got)
+		t.Errorf("Should have got %q delay from the main, not %s",
+			want, got)
 	}
 }
 
@@ -143,7 +146,8 @@ func TestGetURLField(t *testing.T) {
 	// THEN we get the token of the master Shoutrrr
 	want := shoutrrr.Main.URLFields["token"]
 	if got != want {
-		t.Errorf("Should have got %q token from the main, not %s", want, got)
+		t.Errorf("Should have got %q token from the main, not %s",
+			want, got)
 	}
 }
 
@@ -157,7 +161,8 @@ func TestGetSelfURLField(t *testing.T) {
 	// THEN we get the token of the master Shoutrrr
 	want := shoutrrr.URLFields["token"]
 	if got != want {
-		t.Errorf("Should have got %q token from the master, not %s", want, got)
+		t.Errorf("Should have got %q token from the master, not %s",
+			want, got)
 	}
 }
 
@@ -172,7 +177,8 @@ func TestSetURLField(t *testing.T) {
 	// THEN we get this value with we GetSelfURLField
 	got := shoutrrr.GetSelfURLField("token")
 	if got != want {
-		t.Errorf("Should have got %q token from the main, not %s", want, got)
+		t.Errorf("Should have got %q token from the main, not %s",
+			want, got)
 	}
 }
 
@@ -187,7 +193,8 @@ func TestGetParam(t *testing.T) {
 	// THEN we get the avatar of the master Shoutrrr
 	want := shoutrrr.Main.Params["avatar"]
 	if got != want {
-		t.Errorf("Should have got %q avatar from the main, not %s", want, got)
+		t.Errorf("Should have got %q avatar from the main, not %s",
+			want, got)
 	}
 }
 
@@ -201,7 +208,8 @@ func TestGetSelfParam(t *testing.T) {
 	// THEN we get the avatar of the master Shoutrrr
 	want := shoutrrr.Params["avatar"]
 	if got != want {
-		t.Errorf("Should have got %q avatar from the master, not %s", want, got)
+		t.Errorf("Should have got %q avatar from the master, not %s",
+			want, got)
 	}
 }
 
@@ -216,7 +224,8 @@ func TestSetParam(t *testing.T) {
 	// THEN we get this value with we GetSelfParam
 	got := shoutrrr.GetSelfParam("avatar")
 	if got != want {
-		t.Errorf("Should have got %q avatar from the main, not %s", want, got)
+		t.Errorf("Should have got %q avatar from the main, not %s",
+			want, got)
 	}
 }
 func TestGetDelay(t *testing.T) {
@@ -229,7 +238,8 @@ func TestGetDelay(t *testing.T) {
 	// THEN the function returns the closest Options.delay as a time.Duration
 	want := shoutrrr.GetSelfOption("delay")
 	if got != want {
-		t.Errorf("Want %s, got %s", want, got)
+		t.Errorf("Want %s, got %s",
+			want, got)
 	}
 }
 
@@ -247,7 +257,8 @@ func TestGetDelayWithNoDelaySet(t *testing.T) {
 	// THEN the function returns the closest Options.delay as a time.Duration
 	want := "0s"
 	if got != want {
-		t.Errorf("Want %s, got %s", want, got)
+		t.Errorf("Want %s, got %s",
+			want, got)
 	}
 }
 
@@ -261,7 +272,8 @@ func TestGetDelayDuration(t *testing.T) {
 	// THEN the function returns the closest Options.delay as a time.Duration
 	want, _ := time.ParseDuration(shoutrrr.GetOption("delay"))
 	if got != want {
-		t.Errorf("Want %s, got %s", want, got)
+		t.Errorf("Want %s, got %s",
+			want, got)
 	}
 }
 
@@ -275,7 +287,8 @@ func TestGetMaxTries(t *testing.T) {
 	// THEN the function returns the closest Options.delay as a time.Duration
 	want, _ := strconv.ParseUint(shoutrrr.GetSelfOption("max_tries"), 10, 32)
 	if got != uint(want) {
-		t.Errorf("Want %d, got %d", want, got)
+		t.Errorf("Want %d, got %d",
+			want, got)
 	}
 }
 
@@ -290,7 +303,8 @@ func TestGetMessage(t *testing.T) {
 	// THEN the message is formatted with that context
 	want := "1.2.3-foo"
 	if got != want {
-		t.Errorf("Not templated correctly. Want %q, got %q", want, got)
+		t.Errorf("Not templated correctly. Want %q, got %q",
+			want, got)
 	}
 }
 
@@ -305,7 +319,8 @@ func TestGetTitle(t *testing.T) {
 	// THEN the Title is formatted with that context
 	want := "1.2.3-master"
 	if got != want {
-		t.Errorf("Not templated correctly. Want %q, got %q", want, got)
+		t.Errorf("Not templated correctly. Want %q, got %q",
+			want, got)
 	}
 }
 
@@ -319,6 +334,7 @@ func TestGetType(t *testing.T) {
 	// THEN the Type is formatted with that context
 	want := shoutrrr.Type
 	if got != want {
-		t.Errorf("Want %q, got %q", want, got)
+		t.Errorf("Want %q, got %q",
+			want, got)
 	}
 }

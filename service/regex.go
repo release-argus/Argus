@@ -29,7 +29,8 @@ func (s *Service) regexCheckVersion(
 	if s.RegexVersion != nil {
 		regexMatch := utils.RegexCheck(*wantedRegexVersion, version)
 		if !regexMatch {
-			err := fmt.Errorf("regex not matched on version %q", version)
+			err := fmt.Errorf("regex not matched on version %q",
+				version)
 			s.Status.RegexMissesVersion++
 			jLog.Info(err, logFrom, s.Status.RegexMissesVersion == 1)
 			return err
@@ -61,7 +62,8 @@ func (s *Service) regexCheckContent(
 				)
 			}
 		default:
-			return fmt.Errorf("invalid body type %T", v)
+			return fmt.Errorf("invalid body type %T",
+				v)
 		}
 
 		for i := range searchArea {

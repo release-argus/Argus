@@ -99,7 +99,8 @@ func (s *Service) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (
 			err = errors.New("github access token is invalid")
 			jLog.Fatal(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
 
-			err = fmt.Errorf("tag_name not found at %s\n%s", *s.URL, string(*body))
+			err = fmt.Errorf("tag_name not found at %s\n%s",
+				*s.URL, string(*body))
 			jLog.Error(err, logFrom, true)
 			return
 		}
@@ -107,7 +108,8 @@ func (s *Service) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (
 
 	if err = json.Unmarshal(*body, &releases); err != nil {
 		jLog.Error(err, logFrom, true)
-		err = fmt.Errorf("unmarshal of GitHub API data failed\n%s", err)
+		err = fmt.Errorf("unmarshal of GitHub API data failed\n%s",
+			err)
 		jLog.Error(err, logFrom, true)
 	}
 	return

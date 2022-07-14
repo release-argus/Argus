@@ -218,7 +218,8 @@ func TestServiceGetIntervalDuration(t *testing.T) {
 	// THEN the function returns Interval as a time.Duration
 	want, _ := time.ParseDuration(service.GetInterval())
 	if got != want {
-		t.Errorf("Want %s, got %s", want, got)
+		t.Errorf("Want %s, got %s",
+			want, got)
 	}
 }
 

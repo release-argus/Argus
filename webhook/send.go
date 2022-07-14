@@ -50,7 +50,8 @@ func (w *Slice) Send(
 	for range *w {
 		err := <-errChan
 		if err != nil {
-			errs = fmt.Errorf("%s\n%w", utils.ErrorToString(errs), err)
+			errs = fmt.Errorf("%s\n%w",
+				utils.ErrorToString(errs), err)
 		}
 	}
 	return
@@ -91,11 +92,13 @@ func (w *WebHook) Send(
 		jLog.Error(err, logFrom, true)
 		metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "", "FAIL")
 		triesLeft--
-		errs = fmt.Errorf("%s\n%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s\n%w",
+			utils.ErrorToString(errs), err)
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			err := fmt.Errorf("failed %d times to send the WebHook (%s)", w.GetMaxTries(), *w.ID)
+			err := fmt.Errorf("failed %d times to send the WebHook (%s)",
+				w.GetMaxTries(), *w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
 			w.Failed = &failed

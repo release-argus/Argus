@@ -30,7 +30,8 @@ func TestRegexCheckPass(t *testing.T) {
 
 	// THEN a match is found
 	if !match {
-		t.Errorf("%q should have matched the %q RegEx", str, regex)
+		t.Errorf("%q should have matched the %q RegEx",
+			str, regex)
 	}
 }
 
@@ -44,7 +45,8 @@ func TestRegexCheckFail(t *testing.T) {
 
 	// THEN a match is not found
 	if match {
-		t.Errorf("%q shouldn't have matched the %q RegEx", str, regex)
+		t.Errorf("%q shouldn't have matched the %q RegEx",
+			str, regex)
 	}
 }
 
@@ -59,7 +61,8 @@ func TestRegexCheckWithParamsRunsOnTemplatedStringPass(t *testing.T) {
 
 	// THEN a match is found
 	if !match {
-		t.Errorf("%q (version=%s) should have matched the %q RegEx", str, version, regex)
+		t.Errorf("%q (version=%s) should have matched the %q RegEx",
+			str, version, regex)
 	}
 }
 
@@ -74,6 +77,7 @@ func TestRegexCheckWithParamsRunsOnTemplatedStringFail(t *testing.T) {
 
 	// THEN a match is found
 	if match {
-		t.Errorf("%q (version=%s) should not have matched the %q RegEx", str, version, regex)
+		t.Errorf("%q (version=%s) should not have matched the %q RegEx",
+			str, version, regex)
 	}
 }

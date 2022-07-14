@@ -226,7 +226,7 @@ func (s *Slice) Send(
 	title string,
 	message string,
 	serviceInfo *utils.ServiceInfo,
-) error {
+) (errs error) {
 	if s == nil {
 		return nil
 	}
@@ -234,7 +234,7 @@ func (s *Slice) Send(
 		serviceInfo = &utils.ServiceInfo{}
 	}
 
-	errs := make(chan error)
+	errChan := make(chan error)
 	for key := range *s {
 		// Send each message up to s.MaxTries number of times until they don't err.
 		go func(shoutrrr *Shoutrrr) {
@@ -249,7 +249,7 @@ func (s *Slice) Send(
 			url := shoutrrr.GetURL()
 			sender, err := shoutrrr_lib.CreateSender(url)
 			if err != nil {
-				errs <- err
+				errChan <- err
 				return
 			}
 			params := shoutrrr.GetParams(serviceInfo)
@@ -280,7 +280,7 @@ func (s *Slice) Send(
 					metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *shoutrrr.ID, serviceInfo.ID, shoutrrr.GetType(), "SUCCESS")
 					failed := false
 					shoutrrr.Failed = &failed
-					errs <- nil
+					errChan <- nil
 					return
 				}
 
@@ -289,7 +289,6 @@ func (s *Slice) Send(
 					jLog.Error(err[new].Error(), logFrom, true)
 
 					combinedErrs[err[new].Error()]++
-					// errs = fmt.Errorf("%s%s  host: <required> e.g. 'mattermost.example.io'\\", utils.ErrorToString(errs), prefix)
 				}
 				metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *shoutrrr.ID, serviceInfo.ID, shoutrrr.GetType(), "FAIL")
 				triesLeft--
@@ -302,9 +301,10 @@ func (s *Slice) Send(
 					shoutrrr.Failed = &failed
 					var err error
 					for key := range combinedErrs {
-						err = fmt.Errorf("%s%s x %d", utils.ErrorToString(err), key, combinedErrs[key])
+						err = fmt.Errorf("%s%s x %d",
+							utils.ErrorToString(err), key, combinedErrs[key])
 					}
-					errs <- err
+					errChan <- err
 					return
 				}
 
@@ -316,16 +316,12 @@ func (s *Slice) Send(
 		time.Sleep(3 * time.Second)
 	}
 
-	var err error
 	for range *s {
-		errFound := <-errs
-		if errFound != nil {
-			if err == nil {
-				err = errFound
-			} else {
-				err = fmt.Errorf("%s\\%s\\", err.Error(), errFound.Error())
-			}
+		err := <-errChan
+		if err != nil {
+			errs = fmt.Errorf("%s\n%w",
+				utils.ErrorToString(errs), err)
 		}
 	}
-	return err
+	return
 }

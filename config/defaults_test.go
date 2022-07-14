@@ -34,7 +34,8 @@ func TehstSetDefaultsService(t *testing.T) {
 	want := "10m"
 	got := *defaults.Service.Interval
 	if got != want {
-		t.Errorf("defaults.Service.Interval should have been %s, but got %s", want, got)
+		t.Errorf("defaults.Service.Interval should have been %s, but got %s",
+			want, got)
 	}
 }
 
@@ -49,7 +50,8 @@ func TestDefaultsSetDefaultsNotify(t *testing.T) {
 	want := "Argus"
 	got := defaults.Notify["discord"].GetSelfParam("username")
 	if got != want {
-		t.Errorf("defaults.Notify.discord.Params.username should have been %s, but got %s", want, got)
+		t.Errorf("defaults.Notify.discord.Params.username should have been %s, but got %s",
+			want, got)
 	}
 }
 
@@ -64,7 +66,8 @@ func TestDefaultsSetDefaultsWebHook(t *testing.T) {
 	want := "github"
 	got := *defaults.WebHook.Type
 	if got != want {
-		t.Errorf("defaults.WebHook.Type should have been %s, but got %s", want, got)
+		t.Errorf("defaults.WebHook.Type should have been %s, but got %s",
+			want, got)
 	}
 }
 
@@ -79,7 +82,8 @@ func TestDefaultsCheckValuesWithInvalidService(t *testing.T) {
 
 	// THEN err is non-nil
 	if err == nil {
-		t.Errorf("err shouldn't be %v, Service.Interval was invalid with %q", err, *defaults.Service.Interval)
+		t.Errorf("err shouldn't be %v, Service.Interval was invalid with %q",
+			err, *defaults.Service.Interval)
 	}
 }
 
@@ -94,7 +98,8 @@ func TestDefaultsCheckValuesWithInvalidServiceDeployedVersionLookup(t *testing.T
 
 	// THEN err is non-nil
 	if err == nil {
-		t.Errorf("err shouldn't be %v, Service.DeployedVersionLookup.Regex was invalid with %q", err, defaults.Service.DeployedVersionLookup.Regex)
+		t.Errorf("err shouldn't be %v, Service.DeployedVersionLookup.Regex was invalid with %q",
+			err, defaults.Service.DeployedVersionLookup.Regex)
 	}
 }
 
@@ -109,7 +114,8 @@ func TestDefaultsCheckValuesWithInvalidNotify(t *testing.T) {
 
 	// THEN err is non-nil
 	if err == nil {
-		t.Errorf("err shouldn't be %v, Notify.slack.Delay was invalid with %q", err, defaults.Notify["slack"].GetSelfOption("delay"))
+		t.Errorf("err shouldn't be %v, Notify.slack.Delay was invalid with %q",
+			err, defaults.Notify["slack"].GetSelfOption("delay"))
 	}
 }
 
@@ -124,7 +130,8 @@ func TestDefaultsCheckValuesWithInvalidWebHook(t *testing.T) {
 
 	// THEN err is non-nil
 	if err == nil {
-		t.Errorf("err shouldn't be %v, WebHook.Delay was invalid with %q", err, *defaults.WebHook.Delay)
+		t.Errorf("err shouldn't be %v, WebHook.Delay was invalid with %q",
+			err, *defaults.WebHook.Delay)
 	}
 }
 
@@ -146,6 +153,7 @@ func TestDefaultsPrint(t *testing.T) {
 	want := 142
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }

@@ -25,7 +25,8 @@ func TestSetGitLabParameterWithoutQueryParams(t *testing.T) {
 	// GIVEN a URL without query params
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	whSecret := "secret"
 
@@ -36,7 +37,8 @@ func TestSetGitLabParameterWithoutQueryParams(t *testing.T) {
 	want := "ref=master&token=secret"
 	got := req.URL.RawQuery
 	if got != want {
-		t.Errorf("SetGitLabParameter failed. Want %s, got %s", want, got)
+		t.Errorf("SetGitLabParameter failed. Want %s, got %s",
+			want, got)
 	}
 }
 
@@ -44,7 +46,8 @@ func TestSetGitLabParameterWithQueryParams(t *testing.T) {
 	// GIVEN a URL with query params
 	req, err := http.NewRequest(http.MethodGet, "https://example.com?test=123", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	whSecret := "secret"
 
@@ -55,6 +58,7 @@ func TestSetGitLabParameterWithQueryParams(t *testing.T) {
 	want := "ref=master&test=123&token=secret"
 	got := req.URL.RawQuery
 	if got != want {
-		t.Errorf("SetGitLabParameter failed. Want %s, got %s", want, got)
+		t.Errorf("SetGitLabParameter failed. Want %s, got %s",
+			want, got)
 	}
 }
