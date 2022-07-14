@@ -559,8 +559,9 @@ func TestServiceGetVersionsWithFailingURLCommand(t *testing.T) {
 
 	// THEN the releases are ordered
 	e := utils.ErrorToString(err)
-	if !(strings.HasPrefix(e, "WARNING: url_commands, regex") && strings.HasSuffix(e, "didn't return any matches")) {
-		t.Error(err)
+	if !(strings.HasPrefix(e, "regex") && strings.HasSuffix(e, "didn't return any matches")) {
+		t.Errorf("Should have failed url_command %q regex, not %q",
+			*(*service.URLCommands)[0].Regex, e)
 	}
 }
 
