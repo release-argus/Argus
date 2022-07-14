@@ -42,6 +42,9 @@ func (s *Slice) Init(
 		}
 		(*s)[key].ID = &id
 
+		if len(*mains) == 0 {
+			mains = &Slice{}
+		}
 		if (*mains)[key] == nil {
 			(*mains)[key] = &Shoutrrr{}
 		}
