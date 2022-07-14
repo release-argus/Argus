@@ -208,7 +208,7 @@ func TestFilterGitHubReleasesDoesFilterPreReleases(t *testing.T) {
 	// WHEN filterGitHubReleases is called on these releases
 	// with a Service that wants pre_release's
 	wantKept := releases[1]
-	filteredReleases, _ := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the pre_release is filtered out
 	if len(filteredReleases) != 4 || filteredReleases[1].TagName != wantKept.TagName {
@@ -241,7 +241,7 @@ func TestFilterGitHubReleasesDoesntFilterPreReleases(t *testing.T) {
 
 	// WHEN filterGitHubReleases is called on these releases
 	wantGone := releases[1]
-	filteredReleases, _ := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the pre_release is filtered out
 	if len(filteredReleases) != 3 || filteredReleases[1].TagName == wantGone.TagName {
@@ -274,7 +274,7 @@ func TestFilterGitHubReleasesWithNotCareSemantic(t *testing.T) {
 
 	// WHEN filterGitHubReleases is called on these releases
 	// with no semantic versioning not wanted
-	filteredReleases, _ := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN all releases are returned
 	if len(filteredReleases) != 4 {
@@ -309,7 +309,7 @@ func TestFilterGitHubReleasesWithSomeNonSemantic(t *testing.T) {
 	// WHEN filterGitHubReleases is called on these releases
 	// with semantic versioning wanted
 	want := releases[2]
-	filteredReleases, _ := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the non-semantic releases are filtered out
 	if len(filteredReleases) != 1 || filteredReleases[0].TagName != want.TagName {
@@ -350,7 +350,7 @@ func TestFilterGitHubReleasesWithSomeNonSemanticDidSort(t *testing.T) {
 		"0.1.0",
 		"0.0.0",
 	}
-	filteredReleases, _ := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the non-semantic releases are filtered out
 

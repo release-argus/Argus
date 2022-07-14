@@ -52,7 +52,7 @@ func TestOrderingWithService(t *testing.T) {
 	}
 }
 
-func TestGetIndentation(t *testing.T) {
+func TestGetIndentationWithIndentation(t *testing.T) {
 	// GIVEN a line with 3 levels of indentation
 	line := "   abc"
 
@@ -61,6 +61,36 @@ func TestGetIndentation(t *testing.T) {
 
 	// THEN we get the indentation
 	want := "   "
+	if got != want {
+		t.Errorf("%q should have returned an indentation of %q, not %q",
+			line, want, got)
+	}
+}
+
+func TestGetIndentationWithNoIndentation(t *testing.T) {
+	// GIVEN a line with no indentation
+	line := "abc"
+
+	// WHEN getIndentation is called on it
+	got := getIndentation(line)
+
+	// THEN we get the indentation (none)
+	want := ""
+	if got != want {
+		t.Errorf("%q should have returned an indentation of %q, not %q",
+			line, want, got)
+	}
+}
+
+func TestGetIndentationWithBlankLine(t *testing.T) {
+	// GIVEN a blank line
+	line := ""
+
+	// WHEN getIndentation is called on it
+	got := getIndentation(line)
+
+	// THEN we get the indentation (none)
+	want := ""
 	if got != want {
 		t.Errorf("%q should have returned an indentation of %q, not %q",
 			line, want, got)

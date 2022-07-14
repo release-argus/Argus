@@ -24,14 +24,17 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+// filterGitHubReleases will filter releases that fail the URLCommands, aren't semantic (if wanted),
+// or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
 func (s *Service) filterGitHubReleases(
 	releases []GitHubRelease,
 	logFrom utils.LogFrom,
-) (filteredReleases []GitHubRelease, err error) {
+) (filteredReleases []GitHubRelease) {
 	semanticVerioning := s.GetSemanticVersioning()
 	for i := range releases {
 		// If it isn't a prerelease, or it is and they're wanted
 		if !releases[i].PreRelease || (releases[i].PreRelease && s.GetUsePreRelease()) {
+			var err error
 			// Check that TagName matches URLCommands
 			if releases[i].TagName, err = s.URLCommands.run(releases[i].TagName, logFrom); err != nil {
 				continue
@@ -83,6 +86,7 @@ func insertionSort(release GitHubRelease, filteredReleases *[]GitHubRelease) {
 	}
 }
 
+// checkGitHubReleasesBody will check that the body is of the expected API format for a successful query
 func (s *Service) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []GitHubRelease, err error) {
 	// Check for rate limit.
 	if len(string(*body)) < 500 {

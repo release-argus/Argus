@@ -164,13 +164,10 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 		if err != nil {
 			return
 		}
-		filteredReleases, err = s.filterGitHubReleases(
+		filteredReleases = s.filterGitHubReleases(
 			releases,
 			logFrom,
 		)
-		if err != nil {
-			return
-		}
 
 		// url service
 	} else {
