@@ -538,6 +538,32 @@ func TestServiceGetVersionsWithGitHubSortReleases(t *testing.T) {
 	}
 }
 
+func TestServiceGetVersionsWithFailingURLCommand(t *testing.T) {
+	// GIVEN a Service and a Query body containing a beta version
+	jLog = utils.NewJLog("WARN", false)
+	service := testServiceURL()
+	regex := "(argus-[0-9]+)\""
+	service.URLCommands = &URLCommandSlice{
+		{
+			Type:  "regex",
+			Regex: &regex,
+		},
+	}
+	body :=
+		`
+		new release: "https://example.com/argus-0.1.0-beta"
+		`
+
+	// WHEN GetVersions is called on this body
+	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+
+	// THEN the releases are ordered
+	e := utils.ErrorToString(err)
+	if !(strings.HasPrefix(e, "WARNING: url_commands, regex") && strings.HasSuffix(e, "didn't return any matches")) {
+		t.Error(err)
+	}
+}
+
 func TestServiceGetVersionsWithURLCommands(t *testing.T) {
 	// GIVEN a Service with URLCommand(s) to filter versions and a Query body
 	jLog = utils.NewJLog("WARN", false)
@@ -566,6 +592,23 @@ func TestServiceGetVersionsWithURLCommands(t *testing.T) {
 	if len(versions) != 1 || versions[0].TagName == wantFiltered {
 		t.Errorf("URLCommands with Regex % should have only filtered out the %q release from versions, got %v",
 			*urlCommand.Regex, wantFiltered, versions)
+	}
+}
+
+func TestServiceGetVersionWithGetVersionsFail(t *testing.T) {
+	// GIVEN a Service with a Query body erroring about reaching the GitHub rate limit
+	jLog = utils.NewJLog("WARN", false)
+	service := testServiceGitHub()
+	body := "something rate limit something"
+
+	// WHEN GetVersions is called on this body
+	_, err := service.GetVersion([]byte(body), utils.LogFrom{})
+
+	// THEN err is non-nil about this rate limit being reached
+	e := utils.ErrorToString(err)
+	if !strings.Contains(e, "rate limit ") {
+		t.Errorf("%q should've errored about reaching the rate limit, not\n%s",
+			body, e)
 	}
 }
 
