@@ -289,7 +289,6 @@ func (s *Slice) Send(
 					jLog.Error(err[new].Error(), logFrom, true)
 
 					combinedErrs[err[new].Error()]++
-					// errs = fmt.Errorf("%s%s  host: <required> e.g. 'mattermost.example.io'\\", utils.ErrorToString(errs), prefix)
 				}
 				metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *shoutrrr.ID, serviceInfo.ID, shoutrrr.GetType(), "FAIL")
 				triesLeft--
@@ -302,7 +301,9 @@ func (s *Slice) Send(
 					shoutrrr.Failed = &failed
 					var err error
 					for key := range combinedErrs {
-						err = fmt.Errorf("%s%s x %d", utils.ErrorToString(err), key, combinedErrs[key])
+						err = fmt.Errorf("%s%s x %d",
+							utils.ErrorToString(err),
+							key, combinedErrs[key])
 					}
 					errs <- err
 					return
@@ -323,7 +324,8 @@ func (s *Slice) Send(
 			if err == nil {
 				err = errFound
 			} else {
-				err = fmt.Errorf("%s\\%s\\", err.Error(), errFound.Error())
+				err = fmt.Errorf("%s\\%s\\",
+					err.Error(), errFound.Error())
 			}
 		}
 	}

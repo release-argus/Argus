@@ -26,19 +26,23 @@ import (
 func (c *Config) CheckValues() {
 	var errs error
 	if err := c.Defaults.CheckValues(); err != nil {
-		errs = fmt.Errorf("defaults:\\%w", err)
+		errs = fmt.Errorf("defaults:\\%w",
+			err)
 	}
 
 	if err := c.Notify.CheckValues("  "); err != nil {
-		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), err)
 	}
 
 	if err := c.WebHook.CheckValues("  "); err != nil {
-		errs = fmt.Errorf("%s%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), err)
 	}
 
 	if err := c.Service.CheckValues("  "); err != nil {
-		errs = fmt.Errorf("%sservice:\\%w", utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%sservice:\\%w",
+			utils.ErrorToString(errs), err)
 	}
 
 	if errs != nil {

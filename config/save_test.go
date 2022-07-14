@@ -58,7 +58,8 @@ func TestSaveHandler(t *testing.T) {
 
 	// THEN it should have panic'd after TIMEOUT and not reach this
 	time.Sleep(TIMEOUT * time.Second)
-	t.Errorf("Save should panic'd on inaccessible file location %q", config.File)
+	t.Errorf("Save should panic'd on inaccessible file location %q",
+		config.File)
 }
 
 func TestWaitChannelTimeout(t *testing.T) {
@@ -76,7 +77,8 @@ func TestWaitChannelTimeout(t *testing.T) {
 	// THEN after `TIMEOUT`, it would have tried to Save (and failed)
 	elapsed := time.Since(start)
 	if elapsed < TIMEOUT {
-		t.Errorf("waitChannelTimeout should have waited atleast %v, but only waited %v", TIMEOUT, elapsed)
+		t.Errorf("waitChannelTimeout should have waited atleast %v, but only waited %v",
+			TIMEOUT, elapsed)
 	}
 }
 

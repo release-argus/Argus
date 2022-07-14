@@ -212,7 +212,8 @@ func TestGetParamsMaster(t *testing.T) {
 	got := (*params)[key]
 	want := key + "-val"
 	if got != want {
-		t.Errorf("%s key not looked up correctly from master. Got %s, want %s", key, got, want)
+		t.Errorf("%s key not looked up correctly from master. Got %s, want %s",
+			key, got, want)
 	}
 }
 
@@ -228,7 +229,8 @@ func TestGetParamsMain(t *testing.T) {
 	got := (*params)[key]
 	want := key + "-val"
 	if got != want {
-		t.Errorf("%s key not looked up correctly from main. Got %s, want %s", key, got, want)
+		t.Errorf("%s key not looked up correctly from main. Got %s, want %s",
+			key, got, want)
 	}
 }
 
@@ -244,7 +246,8 @@ func TestGetParamsDefault(t *testing.T) {
 	got := (*params)[key]
 	want := key + "-val"
 	if got != want {
-		t.Errorf("%s key not looked up correctly from default. Got %s, want %s", key, got, want)
+		t.Errorf("%s key not looked up correctly from default. Got %s, want %s",
+			key, got, want)
 	}
 }
 
@@ -260,7 +263,8 @@ func TestGetParamsHardDefault(t *testing.T) {
 	got := (*params)[key]
 	want := key + "-val"
 	if got != want {
-		t.Errorf("%s key not looked up correctly from harddefault. Got %s, want %s", key, got, want)
+		t.Errorf("%s key not looked up correctly from harddefault. Got %s, want %s",
+			key, got, want)
 	}
 }
 
@@ -276,7 +280,8 @@ func TestGetParamsTemplating(t *testing.T) {
 	got := (*params)["template"]
 	want := "1.2.3-yes"
 	if got != want {
-		t.Errorf("Param templating not applied as expected. Got %s, want %s", got, want)
+		t.Errorf("Param templating not applied as expected. Got %s, want %s",
+			got, want)
 	}
 }
 
@@ -299,7 +304,8 @@ func TestGetURLForDiscord(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "discord://foo@bar"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -328,7 +334,8 @@ func TestGetURLForSMTP(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "smtp://bar:foo@example.com:123/?fromaddress=me@me.com&toaddresses=you@you.com"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -353,7 +360,8 @@ func TestGetURLForGotify(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "gotify://example.com:123/test/foo"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -375,7 +383,8 @@ func TestGetURLForGoogleChat(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "googlechat://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -400,7 +409,8 @@ func TestGetURLForIFTTT(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "ifttt://foo/?events=event1,event2"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -425,7 +435,8 @@ func TestGetURLForJoin(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "join://shoutrrr:foo@join/?devices=device1,device2"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -452,7 +463,8 @@ func TestGetURLForMattermost(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "mattermost://bar@example.com:123/test/bish/bash"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -482,7 +494,8 @@ func TestGetURLForMatrix(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "matrix://foo:bar@example.com:123/test/?rooms=!roomID1,roomAlias2&disableTLS=yes"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -511,7 +524,8 @@ func TestGetURLForMatrixNoRooms(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "matrix://foo:bar@example.com:123/test/?disableTLS=yes"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -535,7 +549,8 @@ func TestGetURLForOpsGenie(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "opsgenie://example.com:123/foo"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -558,7 +573,8 @@ func TestGetURLForPushbullet(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "pushbullet://foo/bar"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -584,7 +600,8 @@ func TestGetURLForPushover(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "pushover://shoutrrr:foo@bar/?devices=device1"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -611,7 +628,8 @@ func TestGetURLForRocketChat(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "rocketchat://foo@example.com:123/bish/bish/bosh"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -634,7 +652,8 @@ func TestGetURLForSlack(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "slack://hook-foo@bar"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -662,7 +681,8 @@ func TestGetURLForTeams(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "teams://foo@bish/bash/bosh?host=example.webhook.office.com"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -687,7 +707,8 @@ func TestGetURLForTelegram(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "telegram://foo@telegram?chats=channel1,channel2"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -713,7 +734,8 @@ func TestGetURLForZulipChat(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "zulip://bish:bash@bosh:123/test"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -735,7 +757,8 @@ func TestGetURLForShoutrrr(t *testing.T) {
 	// THEN the Shoutrrr URL is correctly formatted
 	want := "something://bish:bash:bosh"
 	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q", got, want)
+		t.Errorf("Unexpected URL returned. Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -749,7 +772,8 @@ func TestSendWithNil(t *testing.T) {
 	// THEN err is nil
 	var want error
 	if err != want {
-		t.Errorf("Send on %v should have produced %v err, not\n%v", slice, want, err)
+		t.Errorf("Send on %v should have produced %v err, not\n%v",
+			slice, want, err)
 	}
 }
 
@@ -780,7 +804,8 @@ func TestSendWithNilServiceInfo(t *testing.T) {
 	contain := " invalid port "
 	e := utils.ErrorToString(err)
 	if !strings.Contains(e, contain) {
-		t.Errorf("Send should err about the %q, not\n%v", contain, e)
+		t.Errorf("Send should err about the %q, not\n%v",
+			contain, e)
 	}
 }
 
@@ -812,6 +837,7 @@ func TestSendWithFail(t *testing.T) {
 	contain := "failed to send slack notification:"
 	e := utils.ErrorToString(err)
 	if !strings.Contains(e, contain) {
-		t.Errorf("Send should err about %q, not\n%v", contain, e)
+		t.Errorf("Send should err about %q, not\n%v",
+			contain, e)
 	}
 }

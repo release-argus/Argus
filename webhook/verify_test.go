@@ -31,7 +31,8 @@ func TestSliceCheckValuesWithNil(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("CheckValues on %v returned an err - %s", slice, err.Error())
+		t.Errorf("CheckValues on %v returned an err - %s",
+			slice, err.Error())
 	}
 }
 
@@ -56,7 +57,8 @@ func TestSliceCheckValuesWithInvalid(t *testing.T) {
 
 	// THEN err is not nil
 	if err == nil {
-		t.Errorf("CheckValues on %v should have err'd. Got %v", slice, err)
+		t.Errorf("CheckValues on %v should have err'd. Got %v",
+			slice, err)
 	}
 }
 
@@ -72,7 +74,8 @@ func TestSliceCheckValuesWithValid(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s", slice, err.Error())
+		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
+			slice, err.Error())
 	}
 }
 
@@ -85,7 +88,8 @@ func TestWebHookCheckValuesWithNil(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s", webhook, err.Error())
+		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
+			webhook, err.Error())
 	}
 }
 
@@ -109,7 +113,8 @@ func TestWebHookCheckValuesWithNilDelay(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s", webhook, err.Error())
+		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
+			webhook, err.Error())
 	}
 }
 
@@ -137,7 +142,8 @@ func TestWebHookCheckValuesWithIntDelay(t *testing.T) {
 	got := webhook.GetDelay()
 	want := declaredDelay + "s"
 	if got != want {
-		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s", webhook, delay, got, want)
+		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s",
+			webhook, delay, got, want)
 	}
 }
 
@@ -165,7 +171,8 @@ func TestWebHookCheckValuesWithDurationDelay(t *testing.T) {
 	got := webhook.GetDelay()
 	want := declaredDelay
 	if got != want {
-		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s", webhook, delay, got, want)
+		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s",
+			webhook, delay, got, want)
 	}
 }
 
@@ -191,7 +198,8 @@ func TestWebHookCheckValuesWithInvalidDurationDelay(t *testing.T) {
 
 	// THEN Delay is converted to seconds
 	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing %s. Got %s err", webhook, declaredDelay, err)
+		t.Errorf("CheckValues on %v should have failed parsing %s. Got %s err",
+			webhook, declaredDelay, err)
 	}
 }
 
@@ -217,7 +225,8 @@ func TestWebHookCheckValuesWithInvalidType(t *testing.T) {
 
 	// THEN Delay is converted to seconds
 	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing %s Type. Got %s err", webhook, wType, err)
+		t.Errorf("CheckValues on %v should have failed parsing %s Type. Got %s err",
+			webhook, wType, err)
 	}
 }
 
@@ -244,7 +253,8 @@ func TestWebHookCheckValuesWithNilURL(t *testing.T) {
 
 	// THEN Delay is converted to seconds
 	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing nil URL. Got %s err", webhook, err)
+		t.Errorf("CheckValues on %v should have failed parsing nil URL. Got %s err",
+			webhook, err)
 	}
 }
 
@@ -271,7 +281,8 @@ func TestWebHookCheckValuesWithNilSecret(t *testing.T) {
 
 	// THEN Delay is converted to seconds
 	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing nil Secret. Got %s err", webhook, err)
+		t.Errorf("CheckValues on %v should have failed parsing nil Secret. Got %s err",
+			webhook, err)
 	}
 }
 
@@ -293,7 +304,8 @@ func TestWebHookCheckValuesWithNilMain(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s", webhook, err.Error())
+		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
+			webhook, err.Error())
 	}
 }
 
@@ -309,7 +321,8 @@ func TestWebHookCheckValuesWithValid(t *testing.T) {
 
 	// THEN the program returns an err
 	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s", slice, err.Error())
+		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
+			slice, err.Error())
 	}
 }
 
@@ -328,7 +341,8 @@ func TestSlicePrintWithFreshWebHook(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Print had output %q with %v WebHook", string(out), webhook)
+		t.Errorf("Print had output %q with %v WebHook",
+			string(out), webhook)
 	}
 }
 
@@ -371,7 +385,8 @@ func TestSlicePrintWithFullWebHook(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Print had output %q with %v Slice. Wanted %q", string(out), webhook, want)
+		t.Errorf("Print had output %q with %v Slice. Wanted %q",
+			string(out), webhook, want)
 	}
 }
 
@@ -390,7 +405,8 @@ func TestSlicePrintWithNilSlice(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Print had output %q with %v Slice", string(out), slice)
+		t.Errorf("Print had output %q with %v Slice",
+			string(out), slice)
 	}
 }
 
@@ -427,6 +443,7 @@ func TestSlicePrintWithNonNilSlice(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want && string(out) != wantOther {
-		t.Errorf("Print had output %q with %v Slice. Wanted %q", string(out), slice, want)
+		t.Errorf("Print had output %q with %v Slice. Wanted %q",
+			string(out), slice, want)
 	}
 }

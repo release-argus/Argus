@@ -191,7 +191,8 @@ func (s *Service) HandleFailedActions() {
 			if err == nil {
 				err = errFound
 			} else {
-				err = fmt.Errorf("%s\n%s", err.Error(), errFound.Error())
+				err = fmt.Errorf("%s\n%s",
+					err.Error(), errFound.Error())
 			}
 		}
 	}

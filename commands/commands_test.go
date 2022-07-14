@@ -48,7 +48,8 @@ func TestExecEmptyController(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`, controller.Command, err.Error())
+		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`,
+			controller.Command, err.Error())
 	}
 }
 
@@ -66,7 +67,8 @@ func TestExecThatErrors(t *testing.T) {
 
 	// THEN it returns an error
 	if err == nil {
-		t.Errorf(`%v commands should have errored unless you're running as root`, controller.Command)
+		t.Errorf(`%v commands should have errored unless you're running as root`,
+			controller.Command)
 	}
 }
 
@@ -84,7 +86,8 @@ func TestExecThatDoesntError(t *testing.T) {
 
 	// THEN it returns a nil error
 	if err != nil {
-		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, controller.Command, err.Error())
+		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`,
+			controller.Command, err.Error())
 	}
 }
 
@@ -117,7 +120,8 @@ func TestExecIndexInRange(t *testing.T) {
 
 	// THEN err is the same as on the direct Exec
 	if errController != errCommand {
-		t.Errorf(`%q != %q`, errController.Error(), errCommand.Error())
+		t.Errorf(`%q != %q`,
+			errController.Error(), errCommand.Error())
 	}
 }
 
@@ -131,7 +135,8 @@ func TestExecIndexOutOfRange(t *testing.T) {
 	err := controller.ExecIndex(&utils.LogFrom{}, 2)
 	// THEN err is nil
 	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`, controller.Command, err.Error())
+		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`,
+			controller.Command, err.Error())
 	}
 }
 
@@ -154,7 +159,8 @@ func TestApplyTemplateWithNilServiceStatus(t *testing.T) {
 	got := command.String()
 	want := "false {{ version }}"
 	if got != want {
-		t.Errorf(`Failed with nil Status. Got %q, wanted %q`, got, want)
+		t.Errorf(`Failed with nil Status. Got %q, wanted %q`,
+			got, want)
 	}
 }
 
@@ -178,6 +184,7 @@ func TestApplyTemplateWithServiceStatus(t *testing.T) {
 	got := command.String()
 	want := "false 1.2.3"
 	if got != want {
-		t.Errorf(`Failed with non-nil Status. Got %q, wanted %q`, got, want)
+		t.Errorf(`Failed with non-nil Status. Got %q, wanted %q`,
+			got, want)
 	}
 }

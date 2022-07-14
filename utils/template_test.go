@@ -39,7 +39,8 @@ func TestTemplateStringNoJinja(t *testing.T) {
 
 	// THEN the string stays the same
 	if got != want {
-		t.Errorf("TemplateString didn't stay the same! Got %q, want %q", got, want)
+		t.Errorf("TemplateString didn't stay the same! Got %q, want %q",
+			got, want)
 	}
 }
 
@@ -53,7 +54,8 @@ func TestTemplateStringCompilePanic(t *testing.T) {
 	got := TemplateString(str, testTemplateStringContext())
 
 	// THEN it should have panic'd at the compile and not reach this
-	t.Errorf("TemplateString didn't panic on invalid Jinja %q. Got %s", str, got)
+	t.Errorf("TemplateString didn't panic on invalid Jinja %q. Got %s",
+		str, got)
 }
 
 func TestTemplateStringJinjaVars(t *testing.T) {
@@ -66,7 +68,8 @@ func TestTemplateStringJinjaVars(t *testing.T) {
 
 	// THEN the string stays the same
 	if got != want {
-		t.Errorf("TemplateString didn't expand %q correctly! Got %q, want %q", str, got, want)
+		t.Errorf("TemplateString didn't expand %q correctly! Got %q, want %q",
+			str, got, want)
 	}
 }
 
@@ -80,7 +83,8 @@ func TestTemplateStringJinjaExpressions(t *testing.T) {
 
 	// THEN the string stays the same
 	if got != want {
-		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q", str, got, want)
+		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q",
+			str, got, want)
 	}
 }
 
@@ -94,20 +98,7 @@ func TestTemplateStringJinjaExpressionsAndVars(t *testing.T) {
 
 	// THEN the string stays the same
 	if got != want {
-		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q", str, got, want)
+		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q",
+			str, got, want)
 	}
 }
-
-// func TestTemplateStringExecutePanic(t *testing.T) {
-// 	// GIVEN a string with a jinja expression that will be much larger than the template
-// 	str := "a{% for i in range(10) %}hello123{% endfor %}"
-// 	str = "{% for i in 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz' %}abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz{% endfor %}"
-// 	// Turn off the panic.
-// 	defer func() { _ = recover() }()
-
-// 	// WHEN TemplateString is called
-// 	got := TemplateString(str, testTemplateStringContext())
-
-// 	// THEN it should have panic'd at the render and not reach this
-// 	t.Errorf("TemplateString didn't panic on template rendering too large %q. Got %s", str, got)
-// }

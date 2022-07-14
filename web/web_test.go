@@ -149,7 +149,8 @@ func connectToWebSocket(t *testing.T) *websocket.Conn {
 	// Connect to the server
 	ws, _, err := dialer.Dial(url, nil)
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 	return ws
@@ -167,7 +168,8 @@ func TestWebSocketInvalidJSON(t *testing.T) {
 	msg := `"version": 1, "key": "value", "key": "value"`
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -194,7 +196,8 @@ func TestWebSocketClientMessageWithNoVersionKey(t *testing.T) {
 	msg := `"key": "value"`
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -229,12 +232,14 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 
 	// THEN we get the expected responses
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	// ORDERING
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -249,7 +254,8 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 		}
 		_, p, err = ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		json.Unmarshal(p, &receivedMsg)
 		if receivedMsg.ServiceData == nil {
@@ -282,7 +288,8 @@ func TestWebSocketApprovalsWithNilService(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -292,7 +299,8 @@ func TestWebSocketApprovalsWithNilService(t *testing.T) {
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	} else if receivedMsg.Order == nil ||
 		len(*receivedMsg.Order) == 0 {
 		order := "[]"
@@ -336,19 +344,22 @@ func TestWebSocketApprovalsVersion(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 
 	// THEN we receive a response acknowledging it
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
 	if !strings.HasPrefix(receivedMsg.ServiceData.Status.ApprovedVersion,
 		"SKIP_"+cfg.Service["test"].Status.LatestVersion) {
-		t.Errorf("LatestVersion wasn't skipped?\n%v", string(p))
+		t.Errorf("LatestVersion wasn't skipped?\n%v",
+			string(p))
 	}
 }
 
@@ -384,7 +395,8 @@ func TestWebSocketApprovalsVersionWithNoServiceID(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -431,7 +443,8 @@ func TestWebSocketApprovalsVersionWithNoTarget(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -480,7 +493,8 @@ func TestWebSocketApprovalsVersionWithInvalidServiceID(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -535,7 +549,8 @@ func TestWebSocketApprovalsVersionWithNoCommandsOrWebHooks(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -592,7 +607,8 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(2 * time.Second)
 
@@ -646,7 +662,8 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidUpdateLa
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -702,7 +719,8 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -710,7 +728,8 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	// EVENT
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -726,7 +745,8 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	// VERSION
 	_, p, err = ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	receivedMsg = api_types.WebSocketMessage{}
 	json.Unmarshal(p, &receivedMsg)
@@ -785,14 +805,16 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntAnn
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we receive a response acknowledging it with no change in DeployedVersion
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -852,7 +874,8 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpd
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -913,7 +936,8 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -921,7 +945,8 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 	// EVENT
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -937,7 +962,8 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 	// VERSION
 	_, p, err = ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	receivedMsg = api_types.WebSocketMessage{}
 	json.Unmarshal(p, &receivedMsg)
@@ -1001,14 +1027,16 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidAnnou
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we receive a response acknowledging it with no change in DeployedVersion
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1073,7 +1101,8 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidntUpd
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1108,7 +1137,8 @@ func TestWebSocketApprovalsActionsWithNoServiceID(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1149,7 +1179,8 @@ func TestWebSocketApprovalsActionsWithUnknownServiceID(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1199,14 +1230,16 @@ func TestWebSocketApprovalsActionsWithNoWebHook(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we only receive a response with the WebHooks
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1257,14 +1290,16 @@ func TestWebSocketApprovalsActionsWithNoCommandController(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we only receive a response with the WebHooks
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1300,14 +1335,16 @@ func TestWebSocketApprovalsActions(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 
 	// THEN we receive a response acknowledging it
 	// WEBHOOK
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1322,7 +1359,8 @@ func TestWebSocketApprovalsActions(t *testing.T) {
 	// COMMAND
 	_, p, err = ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	receivedMsg = api_types.WebSocketMessage{}
 	json.Unmarshal(p, &receivedMsg)
@@ -1358,7 +1396,8 @@ func TestWebSocketApprovalsUnknownType(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1391,14 +1430,16 @@ func TestWebSocketRuntimeBuildInit(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we only receive a response with the WebHooks
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1437,7 +1478,8 @@ func TestWebSocketRuntimeBuildUnknownType(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1470,14 +1512,16 @@ func TestWebSocketFlagsInit(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
 	// THEN it passes and we only receive a response with the WebHooks
 	_, p, err := ws.ReadMessage()
 	if err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
@@ -1516,7 +1560,8 @@ func TestWebSocketFlagsUnknownType(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1549,7 +1594,8 @@ func TestWebSocketConfigInitSettings(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1557,7 +1603,8 @@ func TestWebSocketConfigInitSettings(t *testing.T) {
 	{ // SETTINGS
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		var receivedMsg api_types.WebSocketMessage
 		json.Unmarshal(p, &receivedMsg)
@@ -1606,7 +1653,8 @@ func TestWebSocketConfigUnknownType(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1639,7 +1687,8 @@ func TestWebSocketConfigInitDefaults(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1650,7 +1699,8 @@ func TestWebSocketConfigInitDefaults(t *testing.T) {
 	{ // DEFAULTS
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -1691,7 +1741,8 @@ func TestWebSocketConfigInitNotify(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1705,7 +1756,8 @@ func TestWebSocketConfigInitNotify(t *testing.T) {
 	{ // NOTIFY
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -1746,7 +1798,8 @@ func TestWebSocketConfigInitWebHook(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1763,7 +1816,8 @@ func TestWebSocketConfigInitWebHook(t *testing.T) {
 	{ // WEBHOOK
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -1804,7 +1858,8 @@ func TestWebSocketConfigInitServiceData(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1824,7 +1879,8 @@ func TestWebSocketConfigInitServiceData(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -1862,7 +1918,8 @@ func TestWebSocketConfigInitServiceService(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1882,7 +1939,8 @@ func TestWebSocketConfigInitServiceService(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -1934,7 +1992,8 @@ func TestWebSocketConfigInitServiceDeployedVersion(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -1954,7 +2013,8 @@ func TestWebSocketConfigInitServiceDeployedVersion(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -2009,7 +2069,8 @@ func TestWebSocketConfigInitServiceServiceURLCommands(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -2029,7 +2090,8 @@ func TestWebSocketConfigInitServiceServiceURLCommands(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -2067,7 +2129,8 @@ func TestWebSocketConfigInitServiceServiceNotify(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -2087,7 +2150,8 @@ func TestWebSocketConfigInitServiceServiceNotify(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -2125,7 +2189,8 @@ func TestWebSocketConfigInitServiceServiceWebhook(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -2145,7 +2210,8 @@ func TestWebSocketConfigInitServiceServiceWebhook(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -2183,7 +2249,8 @@ func TestWebSocketConfigInitServiceCommand(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
@@ -2203,7 +2270,8 @@ func TestWebSocketConfigInitServiceCommand(t *testing.T) {
 	{ // SERVICE
 		_, p, err := ws.ReadMessage()
 		if err != nil {
-			t.Errorf("%v", err)
+			t.Errorf("%v",
+				err)
 		}
 		receivedMsg := api_types.WebSocketMessage{}
 		json.Unmarshal(p, &receivedMsg)
@@ -2245,7 +2313,8 @@ func TestWebSocketUnknownPage(t *testing.T) {
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-		t.Errorf("%v", err)
+		t.Errorf("%v",
+			err)
 	}
 	time.Sleep(time.Second)
 
