@@ -18,6 +18,8 @@ package config
 
 import (
 	"testing"
+
+	"github.com/release-argus/Argus/service"
 )
 
 func TestOrderingWithServices(t *testing.T) {
@@ -47,5 +49,44 @@ func TestOrderingWithService(t *testing.T) {
 	want := "123s"
 	if !(want == *got) {
 		t.Errorf(`config.Defaults.Service.Interval = %v, want %s`, *got, want)
+	}
+}
+
+func TestGetIndentation(t *testing.T) {
+	// GIVEN a line with 3 levels of indentation
+	line := "   abc"
+
+	// WHEN getIndentation is called on it
+	got := getIndentation(line)
+
+	// THEN we get the indentation
+	want := "   "
+	if got != want {
+		t.Errorf("%q should have returned an indentation of %q, not %q",
+			line, want, got)
+	}
+}
+
+func TestFilterInactive(t *testing.T) {
+	// GIVEN a Config with inactive and active services
+	active := false
+	allServices := []string{"1", "2", "3"}
+	config := Config{
+		Service: service.Slice{
+			"1": &service.Service{},
+			"2": &service.Service{Active: &active},
+			"3": &service.Service{},
+		},
+		All:   allServices,
+		Order: &allServices,
+	}
+
+	// WHEN filterInactive is called on this Config
+	config.filterInactive()
+
+	// THEN the inactive Service is removed from Order
+	if len(*config.Order) != 2 || (*config.Order)[1] != "3" {
+		t.Fatalf("Service %q should have been removed from Order - %v",
+			"2", config.Order)
 	}
 }
