@@ -159,7 +159,8 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	}
 
 	if len(texts) == 0 {
-		err := fmt.Errorf("%s (%s) didn't return any matches", c.Type, *c.Regex)
+		err := fmt.Errorf("%s (%s) didn't return any matches",
+			c.Type, *c.Regex)
 		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
@@ -180,7 +181,8 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	texts := strings.Split(text, *c.Text)
 
 	if len(texts) == 1 {
-		err := fmt.Errorf("%s didn't find any %q to split on", c.Type, *c.Text)
+		err := fmt.Errorf("%s didn't find any %q to split on",
+			c.Type, *c.Text)
 		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
@@ -193,7 +195,8 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	}
 
 	if (len(texts) - index) < 1 {
-		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d", c.Type, *c.Text, len(texts), (index + 1))
+		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
+			c.Type, *c.Text, len(texts), (index + 1))
 		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
 
 		return text, err
@@ -211,12 +214,14 @@ func (c *URLCommandSlice) CheckValues(prefix string) error {
 	var errs error
 	for index := range *c {
 		if err := (*c)[index].CheckValues(prefix + "    "); err != nil {
-			errs = fmt.Errorf("%s%s  item_%d:\\%w", utils.ErrorToString(errs), prefix, index, err)
+			errs = fmt.Errorf("%s%s  item_%d:\\%w",
+				utils.ErrorToString(errs), prefix, index, err)
 		}
 	}
 
 	if errs != nil {
-		errs = fmt.Errorf("%surl_commands:\\%s", prefix, utils.ErrorToString(errs))
+		errs = fmt.Errorf("%surl_commands:\\%s",
+			prefix, utils.ErrorToString(errs))
 	}
 	return errs
 }
@@ -228,26 +233,32 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	switch c.Type {
 	case "split":
 		if c.Text == nil {
-			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\", utils.ErrorToString(errs), prefix)
+			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
+				utils.ErrorToString(errs), prefix)
 		}
 	case "replace":
 		if c.New == nil {
-			errs = fmt.Errorf("%s%snew: <required> (text you want to replace with)\\", utils.ErrorToString(errs), prefix)
+			errs = fmt.Errorf("%s%snew: <required> (text you want to replace with)\\",
+				utils.ErrorToString(errs), prefix)
 		}
 		if c.Old == nil {
-			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\", utils.ErrorToString(errs), prefix)
+			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\",
+				utils.ErrorToString(errs), prefix)
 		}
 	case "regex":
 		if c.Regex == nil {
-			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\", utils.ErrorToString(errs), prefix)
+			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
+				utils.ErrorToString(errs), prefix)
 		}
 	default:
 		validType = false
-		errs = fmt.Errorf("%s%stype: %q <invalid> is not a valid url_command (regex/replace/split)\\", utils.ErrorToString(errs), prefix, c.Type)
+		errs = fmt.Errorf("%s%stype: %q <invalid> is not a valid url_command (regex/replace/split)\\",
+			utils.ErrorToString(errs), prefix, c.Type)
 	}
 
 	if errs != nil && validType {
-		errs = fmt.Errorf("%stype: %s\\%s", prefix, c.Type, errs)
+		errs = fmt.Errorf("%stype: %s\\%s",
+			prefix, c.Type, errs)
 	}
 	return
 }

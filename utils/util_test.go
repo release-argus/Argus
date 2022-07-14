@@ -35,7 +35,8 @@ func TestContainsTrue(t *testing.T) {
 
 	// THEN true is returned
 	if !found {
-		t.Errorf("%q couldn't be found in %v. But it is there!", want, lst)
+		t.Errorf("%q couldn't be found in %v. But it is there!",
+			want, lst)
 	}
 }
 
@@ -49,7 +50,8 @@ func TestContainsFalse(t *testing.T) {
 
 	// THEN true is returned
 	if found {
-		t.Errorf("%q shouldn't have been found in %v!", want, lst)
+		t.Errorf("%q shouldn't have been found in %v!",
+			want, lst)
 	}
 }
 
@@ -188,7 +190,8 @@ func TestDefaultIfNilWithNil(t *testing.T) {
 
 	// THEN the default of int (0) would be returned
 	if got != want {
-		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer", want, got)
+		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer",
+			want, got)
 	}
 }
 
@@ -201,7 +204,8 @@ func TestDefaultIfNilWithNonNil(t *testing.T) {
 
 	// THEN the default of int (0) would be returned
 	if got != value {
-		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer", value, got)
+		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer",
+			value, got)
 	}
 }
 
@@ -220,7 +224,8 @@ func TestGetFirstNonNilPtrWithAllNil(t *testing.T) {
 
 	// THEN nil should be returned
 	if got != want {
-		t.Errorf("GetFirstNonNilPtr was given a list of nil's which should have returned nil, but returned %v", *got)
+		t.Errorf("GetFirstNonNilPtr was given a list of nil's which should have returned nil, but returned %v",
+			*got)
 	}
 }
 
@@ -240,7 +245,8 @@ func TestGetFirstNonNilPtrWithNonANil(t *testing.T) {
 
 	// THEN nil should be returned
 	if *got != want {
-		t.Errorf("GetFirstNonNilPtr was given a list of string pointers and should have returned the first non-nil, %s", want)
+		t.Errorf("GetFirstNonNilPtr was given a list of string pointers and should have returned the first non-nil, %s",
+			want)
 	}
 }
 
@@ -259,7 +265,8 @@ func TestGetFirstNonDefaultWithAllDefault(t *testing.T) {
 
 	// THEN the default string should be returned
 	if got != want {
-		t.Errorf("GetFirstNonDefault should have returned the empty string when given a list of empty strings. Got %s", got)
+		t.Errorf("GetFirstNonDefault should have returned the empty string when given a list of empty strings. Got %s",
+			got)
 	}
 }
 
@@ -278,7 +285,8 @@ func TestGetFirstNonDefaultWithNonDefault(t *testing.T) {
 
 	// THEN the default string should be returned
 	if got != want {
-		t.Errorf("GetFirstNonDefault should have returned the first non-default (%s). Got %s", want, got)
+		t.Errorf("GetFirstNonDefault should have returned the first non-default (%s). Got %s",
+			want, got)
 	}
 }
 
@@ -425,7 +433,8 @@ func TestDefaultOrValueWithNil(t *testing.T) {
 
 	// THEN the default string is returned
 	if got != want {
-		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q", want, got)
+		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q",
+			want, got)
 	}
 }
 
@@ -439,7 +448,8 @@ func TestDefaultOrValueWithNonNil(t *testing.T) {
 
 	// THEN value is returned
 	if got != value {
-		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q", value, got)
+		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q",
+			value, got)
 	}
 }
 
@@ -453,7 +463,8 @@ func TestErrorToStringWithNil(t *testing.T) {
 
 	// THEN an empty string is returned
 	if got != want {
-		t.Errorf("ErrorToString should have returned %q, but got %q", want, got)
+		t.Errorf("ErrorToString should have returned %q, but got %q",
+			want, got)
 	}
 }
 
@@ -467,7 +478,8 @@ func TestErrorToStringWithErr(t *testing.T) {
 
 	// THEN an empty string is returned
 	if got != want {
-		t.Errorf("ErrorToString should have returned %q, but got %q", want, got)
+		t.Errorf("ErrorToString should have returned %q, but got %q",
+			want, got)
 	}
 }
 
@@ -483,7 +495,8 @@ func TestRandAlphaNumericLower(t *testing.T) {
 	regex := regexp.MustCompile(re)
 	match := regex.MatchString(got)
 	if !match {
-		t.Errorf("%q RegEx didn't match an alphanumeric produced from RandAlphaNumericLower. Got %q", re, got)
+		t.Errorf("%q RegEx didn't match an alphanumeric produced from RandAlphaNumericLower. Got %q",
+			re, got)
 	}
 }
 
@@ -499,7 +512,8 @@ func TestRandNumeric(t *testing.T) {
 	regex := regexp.MustCompile(re)
 	match := regex.MatchString(got)
 	if !match {
-		t.Errorf("%q RegEx didn't match a numeric produced from RandNumeric. Got %q", re, got)
+		t.Errorf("%q RegEx didn't match a numeric produced from RandNumeric. Got %q",
+			re, got)
 	}
 }
 
@@ -516,7 +530,8 @@ func TestRandString(t *testing.T) {
 	regex := regexp.MustCompile(re)
 	match := regex.MatchString(got)
 	if !match {
-		t.Errorf("%q RegEx didn't match a string produced from RandString. Got %q", re, got)
+		t.Errorf("%q RegEx didn't match a string produced from RandString. Got %q",
+			re, got)
 	}
 }
 
@@ -530,7 +545,8 @@ func TestNormaliseNewlinesMac(t *testing.T) {
 
 	// THEN the Mac newlines are normalised to \n
 	if string(got) != want {
-		t.Errorf("Mac newlines were not normalised from %q to %q. Got %q", str, want, string(got))
+		t.Errorf("Mac newlines were not normalised from %q to %q. Got %q",
+			str, want, string(got))
 	}
 }
 
@@ -544,7 +560,8 @@ func TestNormaliseNewlinesWindows(t *testing.T) {
 
 	// THEN the Windows newlines are normalised to \n
 	if string(got) != want {
-		t.Errorf("Windows newlines were not normalised from %q to %q. Got %q", str, want, string(got))
+		t.Errorf("Windows newlines were not normalised from %q to %q. Got %q",
+			str, want, string(got))
 	}
 }
 
@@ -561,11 +578,13 @@ func TestCopyMap(t *testing.T) {
 
 	// THEN the map is a copy of the original one
 	if len(copy) != len(original) {
-		t.Errorf("CopyMap did not return an identical copy, length differed. Got %v from %v", copy, original)
+		t.Errorf("CopyMap did not return an identical copy, length differed. Got %v from %v",
+			copy, original)
 	}
 	for key := range copy {
 		if original[key] != copy[key] {
-			t.Errorf("CopyMap did not return an identical copy, map differed. Got %v from %v", copy, original)
+			t.Errorf("CopyMap did not return an identical copy, map differed. Got %v from %v",
+				copy, original)
 		}
 	}
 	if &original == &copy {
@@ -583,7 +602,8 @@ func TestGetPortFromURLWithNoPortOrProto(t *testing.T) {
 
 	// THEN defaultPort is retunred
 	if got != defaultPort {
-		t.Errorf("GetPortFromURL shouldn't have found a port in %q. Got %q, want %q (defaultPort)", url, got, defaultPort)
+		t.Errorf("GetPortFromURL shouldn't have found a port in %q. Got %q, want %q (defaultPort)",
+			url, got, defaultPort)
 	}
 }
 
@@ -597,7 +617,8 @@ func TestGetPortFromURLWithPort(t *testing.T) {
 
 	// THEN defaultPort is retunred
 	if got != port {
-		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q", url, got, port)
+		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q",
+			url, got, port)
 	}
 }
 
@@ -612,7 +633,8 @@ func TestGetPortFromURLWithProtoAndPort(t *testing.T) {
 
 	// THEN the specified port is retunred
 	if got != port {
-		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q", url, got, port)
+		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q",
+			url, got, port)
 	}
 }
 
@@ -627,7 +649,8 @@ func TestGetPortFromURLWithProtoHTTP(t *testing.T) {
 
 	// THEN default protocol port is retunred
 	if got != want {
-		t.Errorf("GetPortFromURL should have got the port from the 'http://' in %q. Got %q, want %q", url, got, want)
+		t.Errorf("GetPortFromURL should have got the port from the 'http://' in %q. Got %q, want %q",
+			url, got, want)
 	}
 }
 
@@ -641,7 +664,8 @@ func TestGetPortFromURLWithProtoHTTPS(t *testing.T) {
 
 	// THEN defaultPort is retunred
 	if got != want {
-		t.Errorf("GetPortFromURL should have got the port from the 'https://' in %q. Got %q, want %q", url, got, want)
+		t.Errorf("GetPortFromURL should have got the port from the 'https://' in %q. Got %q, want %q",
+			url, got, want)
 	}
 }
 
@@ -659,7 +683,8 @@ func TestLowercaseStringStringMap(t *testing.T) {
 	for key := range got {
 		want := strings.ToLower(key)
 		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s", key, want)
+			t.Errorf("Keys were not lowercased, got %s, want %s",
+				key, want)
 		}
 	}
 }

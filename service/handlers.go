@@ -112,7 +112,7 @@ func (s *Service) HandleUpdateActions() {
 // that have either failed, or not been sent for this version. Otherwise,
 // if all WebHooks have been sent successfully, then they'll all be resent.
 func (s *Service) HandleFailedActions() {
-	errs := make(chan error)
+	errChan := make(chan error)
 	errored := false
 
 	retryAll := true
@@ -149,7 +149,7 @@ func (s *Service) HandleFailedActions() {
 				// Send
 				go func(key string) {
 					err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
-					errs <- err
+					errChan <- err
 				}(key)
 				// Space out WebHooks.
 				time.Sleep(1 * time.Second)
@@ -172,7 +172,7 @@ func (s *Service) HandleFailedActions() {
 				// Run
 				go func(key int) {
 					err := s.CommandController.ExecIndex(&logFrom, key)
-					errs <- err
+					errChan <- err
 				}(key)
 				// Space out Commands.
 				time.Sleep(1 * time.Second)
@@ -182,17 +182,14 @@ func (s *Service) HandleFailedActions() {
 		}
 	}
 
-	var err error
+	var errs error
 	for potentialErrors != 0 {
-		errFound := <-errs
+		err := <-errChan
 		potentialErrors--
-		if errFound != nil {
+		if err != nil {
 			errored = true
-			if err == nil {
-				err = errFound
-			} else {
-				err = fmt.Errorf("%s\n%s", err.Error(), errFound.Error())
-			}
+			errs = fmt.Errorf("%s\n%w",
+				utils.ErrorToString(errs), err)
 		}
 	}
 

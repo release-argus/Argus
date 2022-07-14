@@ -75,7 +75,8 @@ func TestAnnounceCommandWhenNotRun(t *testing.T) {
 
 	// THEN it broadcasts nil to the Announce channel
 	if parsedResult.CommandData["ls -lah"].Failed != nil {
-		t.Errorf("got %t. expected %s", *parsedResult.CommandData["ls -lah"].Failed, "false")
+		t.Errorf("got %t. expected %s",
+ *parsedResult.CommandData["ls -lah"].Failed, "false")
 	}
 }
 
@@ -171,7 +172,8 @@ func TestFindUnknown(t *testing.T) {
 
 	// THEN nil is returned
 	if index != nil {
-		t.Errorf("Command %q was found at index %d instead of nil", function, *index)
+		t.Errorf("Command %q was found at index %d instead of nil",
+ function, *index)
 	}
 }
 
@@ -190,7 +192,8 @@ func TestFindKnown(t *testing.T) {
 		if index != nil {
 			got = fmt.Sprint(index)
 		}
-		t.Errorf("Command %q was found at index %s instead of 1", function, got)
+		t.Errorf("Command %q was found at index %s instead of 1",
+ function, got)
 	}
 }
 
@@ -234,7 +237,8 @@ func TestResetFailsNonNilController(t *testing.T) {
 	// THEN all the fails become nil
 	for _, failed := range controller.Failed {
 		if failed != nil {
-			t.Errorf("Reset failed, got %v", controller.Failed)
+			t.Errorf("Reset failed, got %v",
+ controller.Failed)
 		}
 
 	}

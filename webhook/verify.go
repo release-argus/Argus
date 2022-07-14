@@ -30,12 +30,14 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 
 	for key := range *w {
 		if err := (*w)[key].CheckValues(prefix + "    "); err != nil {
-			errs = fmt.Errorf("%s%s  %s:\\%w", utils.ErrorToString(errs), prefix, key, err)
+			errs = fmt.Errorf("%s%s  %s:\\%w",
+				utils.ErrorToString(errs), prefix, key, err)
 		}
 	}
 
 	if errs != nil {
-		errs = fmt.Errorf("%swebhook:\\%s", prefix, utils.ErrorToString(errs))
+		errs = fmt.Errorf("%swebhook:\\%s",
+			prefix, utils.ErrorToString(errs))
 	}
 	return
 }
@@ -49,20 +51,24 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			*w.Delay += "s"
 		}
 		if _, err := time.ParseDuration(*w.Delay); err != nil {
-			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)", utils.ErrorToString(errs), prefix, *w.Delay)
+			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
+				utils.ErrorToString(errs), prefix, *w.Delay)
 		}
 	}
 
 	if w.Main != nil {
 		types := []string{"github", "gitlab"}
 		if !utils.Contains(types, w.GetType()) {
-			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\", utils.ErrorToString(errs), prefix, w.GetType(), types)
+			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
+				utils.ErrorToString(errs), prefix, w.GetType(), types)
 		}
 		if w.GetURL() == nil {
-			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\",
+				utils.ErrorToString(errs), prefix, *w.ID)
 		}
 		if w.GetSecret() == nil {
-			errs = fmt.Errorf("%s%ssecret: <required> (here, or in webhook.%s)\\", utils.ErrorToString(errs), prefix, *w.ID)
+			errs = fmt.Errorf("%s%ssecret: <required> (here, or in webhook.%s)\\",
+				utils.ErrorToString(errs), prefix, *w.ID)
 		}
 	}
 	return

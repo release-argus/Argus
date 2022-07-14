@@ -321,7 +321,8 @@ func TestDeployedVersionLookupPrintWithNil(t *testing.T) {
 	want := 0
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -354,7 +355,8 @@ func TestDeployedVersionLookupPrint(t *testing.T) {
 	want := 11
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 

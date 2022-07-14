@@ -56,6 +56,7 @@ func TestAnnounceSendWithChannel(t *testing.T) {
 	var unmarshalled api_types.WebSocketMessage
 	json.Unmarshal(msg, &unmarshalled)
 	if *unmarshalled.WebHookData["test"].Failed != whFailed {
-		t.Errorf("AnnounceSend should have given %v Failed, but got \n%v", whFailed, unmarshalled)
+		t.Errorf("AnnounceSend should have given %v Failed, but got \n%v",
+			whFailed, unmarshalled)
 	}
 }

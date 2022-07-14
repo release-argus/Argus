@@ -67,7 +67,8 @@ func TestServiceCheckValuesWithIntInterval(t *testing.T) {
 	// THEN err is nil
 	got := service.GetInterval()
 	if got != want {
-		t.Errorf("Want %s, got %s", want, got)
+		t.Errorf("Want %s, got %s",
+			want, got)
 	}
 	if err != nil {
 		t.Errorf("Expecting %q interval err to be nil, not\n%s",
@@ -315,7 +316,8 @@ func TestServicePrintWithService(t *testing.T) {
 	want := 13
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -357,7 +359,8 @@ func TestServicePrintWithFullService(t *testing.T) {
 	want := 37
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -383,7 +386,8 @@ func TestSlicePrintWithTwoServices(t *testing.T) {
 	want := 29
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -404,7 +408,8 @@ func TestSlicePrintWithNil(t *testing.T) {
 	want := 0
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print with nil should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print with nil should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -439,6 +444,7 @@ func TestSlicePrintWithTwoServicesOrdered(t *testing.T) {
 
 	// THEN the Services are printed in two different orderings
 	if string(gotOne) == string(gotTwo) {
-		t.Errorf("Print should have used ordering\n%s", gotOne)
+		t.Errorf("Print should have used ordering\n%s",
+			gotOne)
 	}
 }

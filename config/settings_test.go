@@ -45,7 +45,8 @@ func TestNilUndefinedFlagsDoesntResetDefined(t *testing.T) {
 	// THEN LogLevel is not nil
 	if LogLevel == nil || *LogLevel != newLevel {
 		got := utils.DefaultIfNil(LogLevel)
-		t.Errorf("LogLevel shouldn't have been reset to %s. Want %s", got, *LogLevel)
+		t.Errorf("LogLevel shouldn't have been reset to %s. Want %s",
+			got, *LogLevel)
 	}
 }
 
@@ -69,7 +70,8 @@ func TestNilUndefinedFlagsDoesResetUndefined(t *testing.T) {
 
 	// THEN LogLevel is not nil
 	if LogLevel != nil {
-		t.Errorf("LogLevel should have been reset to nil, not %s", *LogLevel)
+		t.Errorf("LogLevel should have been reset to nil, not %s",
+			*LogLevel)
 	}
 }
 
@@ -85,7 +87,8 @@ func TestSettingsSetDefaultsWebFromFlags(t *testing.T) {
 	// THEN the Service part is initialised to the defined defaults
 	got := settings.GetWebListenPort()
 	if got != want {
-		t.Errorf("settings.Web.CertFile should have been %s, but got %s", want, got)
+		t.Errorf("settings.Web.CertFile should have been %s, but got %s",
+			want, got)
 	}
 }
 
@@ -103,7 +106,8 @@ func TestSettingsSetDefaultsLogsFromFlags(t *testing.T) {
 	// THEN the Service part is initialised to the defined defaults
 	got := settings.GetLogLevel()
 	if got != want {
-		t.Errorf("settings.Log.Level should have been %s, but got %s", want, got)
+		t.Errorf("settings.Log.Level should have been %s, but got %s",
+			want, got)
 	}
 }
 
@@ -140,7 +144,8 @@ func TestGetLogLevel(t *testing.T) {
 	// THEN it'll return the value from Settings.Log.Level
 	want := settings.Log.Level
 	if want != got {
-		t.Errorf("Settings.Log.Level should have been returned (%s), not %s", *want, *got)
+		t.Errorf("Settings.Log.Level should have been returned (%s), not %s",
+			*want, *got)
 	}
 }
 
@@ -154,7 +159,8 @@ func TestGetLogTimestamps(t *testing.T) {
 	// THEN it'll return the value from Settings.Log.Timestamps
 	want := settings.Log.Timestamps
 	if want != got {
-		t.Errorf("Settings.Log.Timestamps should have been returned (%t), not %t", *want, *got)
+		t.Errorf("Settings.Log.Timestamps should have been returned (%t), not %t",
+			*want, *got)
 	}
 }
 
@@ -168,7 +174,8 @@ func TestGetWebListenHost(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.ListenHost
 	want := settings.Web.ListenHost
 	if *want != got {
-		t.Errorf("Settings.Web.ListenHost should have been returned (%s), not %s", *want, got)
+		t.Errorf("Settings.Web.ListenHost should have been returned (%s), not %s",
+			*want, got)
 	}
 }
 
@@ -182,7 +189,8 @@ func TestGetWebListenPort(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.ListenPort
 	want := settings.Web.ListenPort
 	if *want != got {
-		t.Errorf("Settings.Web.ListenPort should have been returned (%s), not %s", *want, got)
+		t.Errorf("Settings.Web.ListenPort should have been returned (%s), not %s",
+			*want, got)
 	}
 }
 
@@ -196,7 +204,8 @@ func TestGetWebRoutePrefix(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.RoutePrefix
 	want := settings.Web.RoutePrefix
 	if *want != got {
-		t.Errorf("Settings.Web.RoutePrefix should have been returned (%s), not %s", *want, got)
+		t.Errorf("Settings.Web.RoutePrefix should have been returned (%s), not %s",
+			*want, got)
 	}
 }
 
@@ -210,7 +219,8 @@ func TestGetWebCertFile(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.CertFile
 	want := settings.Web.CertFile
 	if want != got {
-		t.Errorf("Settings.Web.CertFile should have been returned (%s), not %s", *want, *got)
+		t.Errorf("Settings.Web.CertFile should have been returned (%s), not %s",
+			*want, *got)
 	}
 }
 
@@ -225,7 +235,8 @@ func TestGetWebCertFileUndefined(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.CertFile
 	var want *string
 	if want != got {
-		t.Errorf("Settings.Web.CertFile should have been returned %v, not %s", want, *got)
+		t.Errorf("Settings.Web.CertFile should have been returned %v, not %s",
+			want, *got)
 	}
 }
 
@@ -242,7 +253,8 @@ func TestGetWebCertFileNotExist(t *testing.T) {
 	settings.GetWebCertFile()
 
 	// THEN this call will crash the program
-	t.Errorf("%s doesn't exist, so this call should have been Fatal", *settings.Web.CertFile)
+	t.Errorf("%s doesn't exist, so this call should have been Fatal",
+		*settings.Web.CertFile)
 }
 
 func TestGetWebKeyFile(t *testing.T) {
@@ -255,7 +267,8 @@ func TestGetWebKeyFile(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.KeyFile
 	want := settings.Web.KeyFile
 	if want != got {
-		t.Errorf("Settings.Web.KeyFile should have been returned (%s), not %s", *want, *got)
+		t.Errorf("Settings.Web.KeyFile should have been returned (%s), not %s",
+			*want, *got)
 	}
 }
 
@@ -270,7 +283,8 @@ func TestGetWebKeyFileUndefined(t *testing.T) {
 	// THEN it'll return the value from Settings.Web.KeyFile
 	var want *string
 	if want != got {
-		t.Errorf("Settings.Web.KeyFile should have been returned %v, not %s", want, *got)
+		t.Errorf("Settings.Web.KeyFile should have been returned %v, not %s",
+			want, *got)
 	}
 }
 
@@ -287,5 +301,6 @@ func TestGetWebKeyFileNotExist(t *testing.T) {
 	settings.GetWebKeyFile()
 
 	// THEN this call will crash the program
-	t.Errorf("%s doesn't exist, so this call should have been Fatal", *settings.Web.KeyFile)
+	t.Errorf("%s doesn't exist, so this call should have been Fatal",
+		*settings.Web.KeyFile)
 }

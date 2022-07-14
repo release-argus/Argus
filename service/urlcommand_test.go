@@ -43,7 +43,8 @@ func TestURLCommandPrintRegex(t *testing.T) {
 	want := 4
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -64,7 +65,8 @@ func TestURLCommandPrintReplace(t *testing.T) {
 	want := 3
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -85,7 +87,8 @@ func TestURLCommandPrintSplit(t *testing.T) {
 	want := 4
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -106,7 +109,8 @@ func TestURLCommandSlicePrintNil(t *testing.T) {
 	want := 1
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -131,7 +135,8 @@ func TestURLCommandSlicePrintAllTypes(t *testing.T) {
 	want := 11
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -260,7 +265,8 @@ func TestURLCommandRunSplit(t *testing.T) {
 	// THEN the text is split correctly and returned
 	want := "secondpart"
 	if err != nil {
-		t.Errorf("err should be nil, got %s", err.Error())
+		t.Errorf("err should be nil, got %s",
+			err.Error())
 	}
 	if want != text {
 		t.Errorf("Want %q, got %q",
@@ -279,7 +285,8 @@ func TestURLCommandRunReplace(t *testing.T) {
 	// THEN the text is replaced correctly and returned
 	want := "iwantbar"
 	if err != nil {
-		t.Errorf("err should be nil, got %s", err.Error())
+		t.Errorf("err should be nil, got %s",
+			err.Error())
 	}
 	if want != text {
 		t.Errorf("Want %q, got %q",
@@ -299,7 +306,8 @@ func TestURLCommandRunRegex(t *testing.T) {
 	// THEN the correct RegEx submatch is returned
 	want := "1.2.3"
 	if err != nil {
-		t.Errorf("err should be nil, got %s", err.Error())
+		t.Errorf("err should be nil, got %s",
+			err.Error())
 	}
 	if want != text {
 		t.Errorf("Want %q, got %q",
@@ -319,7 +327,8 @@ func TestURLCommandRunRegexNegativeIndex(t *testing.T) {
 	// THEN the correct RegEx submatch is returned
 	want := "4"
 	if err != nil {
-		t.Errorf("err should be nil, got %q", err.Error())
+		t.Errorf("err should be nil, got %q",
+			err.Error())
 	}
 	if want != text {
 		t.Errorf("Want %q, got %q",
@@ -375,7 +384,8 @@ func TestURLCommandRunSplitNegativeIndex(t *testing.T) {
 	// THEN the text is split correctly and returned
 	want := "thirdpart"
 	if err != nil {
-		t.Errorf("err should be nil, got %q", err.Error())
+		t.Errorf("err should be nil, got %q",
+			err.Error())
 	}
 	if want != text {
 		t.Errorf("Want %q, got %q",
@@ -543,7 +553,8 @@ func TestCheckValuesWithNil(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("err should be nil, not %q", err.Error())
+		t.Errorf("err should be nil, not %q",
+			err.Error())
 	}
 }
 
@@ -560,7 +571,8 @@ func TestCheckValuesPass(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("err should be nil, not %q", err.Error())
+		t.Errorf("err should be nil, not %q",
+			err.Error())
 	}
 }
 
