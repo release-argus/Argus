@@ -20,8 +20,12 @@ import (
 	"runtime"
 	"strings"
 
+	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/webhook"
 )
 
 func (api *API) wsService(client *Client) {
@@ -363,18 +367,8 @@ func (api *API) wsConfigDefaults(client *Client) {
 	responseType := "DEFAULTS"
 	responseSubType := "INIT"
 
-	notifyDefaults := make(api_types.NotifySlice)
-	// key == type for defaults
-	for key := range api.Config.Defaults.Notify {
-		dflt := api_types.Notify{
-			Type:      api.Config.Defaults.Notify[key].Type,
-			Options:   api.Config.Defaults.Notify[key].Options,
-			URLFields: api.Config.Defaults.Notify[key].URLFields,
-			Params:    api.Config.Defaults.Notify[key].Params,
-		}
-		dflt = *dflt.Censor()
-		notifyDefaults[key] = &dflt
-	}
+	notifyDefaults := convertNotifySliceToAPITypeNotifySlice(&api.Config.Defaults.Notify)
+	webhookDefaults := convertWebHookToAPITypeWebHook(&api.Config.Defaults.WebHook)
 
 	msg := api_types.WebSocketMessage{
 		Page:    &responsePage,
@@ -396,16 +390,8 @@ func (api *API) wsConfigDefaults(client *Client) {
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
 				},
-				Notify: notifyDefaults,
-				WebHook: api_types.WebHook{
-					Type:              api.Config.Defaults.WebHook.Type,
-					Delay:             api.Config.Defaults.WebHook.Delay,
-					DesiredStatusCode: api.Config.Defaults.WebHook.DesiredStatusCode,
-					MaxTries:          api.Config.Defaults.WebHook.MaxTries,
-					Secret:            api.Config.Defaults.WebHook.Secret,
-					SilentFails:       api.Config.Defaults.WebHook.SilentFails,
-					URL:               api.Config.Defaults.WebHook.URL,
-				},
+				Notify:  *notifyDefaults,
+				WebHook: *webhookDefaults,
 			},
 		},
 	}
@@ -426,24 +412,12 @@ func (api *API) wsConfigNotify(client *Client) {
 	responseType := "NOTIFY"
 	responseSubType := "INIT"
 
-	notifyConfig := make(api_types.NotifySlice)
-	if api.Config.Notify != nil {
-		for key := range api.Config.Notify {
-			notifyConfig[key] = &api_types.Notify{
-				Type:      api.Config.Notify[key].Type,
-				Options:   api.Config.Notify[key].Options,
-				URLFields: api.Config.Notify[key].URLFields,
-				Params:    api.Config.Notify[key].Params,
-			}
-			notifyConfig[key] = notifyConfig[key].Censor()
-		}
-	}
 	msg := api_types.WebSocketMessage{
 		Page:    &responsePage,
 		Type:    &responseType,
 		SubType: &responseSubType,
 		ConfigData: &api_types.Config{
-			Notify: &notifyConfig,
+			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify),
 		},
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
@@ -461,28 +435,12 @@ func (api *API) wsConfigWebHook(client *Client) {
 	responseType := "WEBHOOK"
 	responseSubType := "INIT"
 
-	webhookConfig := make(api_types.WebHookSlice)
-	if api.Config.WebHook != nil {
-		secretVar := "<secret>"
-		for key := range api.Config.WebHook {
-			webhookConfig[key] = &api_types.WebHook{
-				Type:              api.Config.WebHook[key].Type,
-				URL:               api.Config.WebHook[key].URL,
-				Secret:            utils.ValueIfNotDefault(api.Config.WebHook[key].URL, &secretVar),
-				DesiredStatusCode: api.Config.WebHook[key].DesiredStatusCode,
-				Delay:             api.Config.WebHook[key].Delay,
-				MaxTries:          api.Config.WebHook[key].MaxTries,
-				SilentFails:       api.Config.WebHook[key].SilentFails,
-			}
-		}
-	}
-
 	msg := api_types.WebSocketMessage{
 		Page:    &responsePage,
 		Type:    &responseType,
 		SubType: &responseSubType,
 		ConfigData: &api_types.Config{
-			WebHook: &webhookConfig,
+			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook),
 		},
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
@@ -531,97 +489,15 @@ func (api *API) wsConfigService(client *Client) {
 			}
 
 			// DeployedVersionLookup
-			if service.DeployedVersionLookup != nil {
-				deployedVersionLookup := api_types.DeployedVersionLookup{}
-				// URL
-				if service.DeployedVersionLookup.URL != "" {
-					deployedVersionLookup.URL = service.DeployedVersionLookup.URL
-				}
-				deployedVersionLookup.AllowInvalidCerts = service.DeployedVersionLookup.AllowInvalidCerts
-				if service.DeployedVersionLookup.BasicAuth != nil {
-					deployedVersionLookup.BasicAuth = &api_types.BasicAuth{
-						Username: service.DeployedVersionLookup.BasicAuth.Username,
-						Password: "<secret>",
-					}
-				}
-				var headers []api_types.Header
-				for _, header := range service.DeployedVersionLookup.Headers {
-					headers = append(
-						headers,
-						api_types.Header{
-							Key:   header.Key,
-							Value: "<secret>",
-						},
-					)
-				}
-				deployedVersionLookup.Headers = headers
-				if service.DeployedVersionLookup.JSON != "" {
-					deployedVersionLookup.JSON = service.DeployedVersionLookup.JSON
-				}
-				if service.DeployedVersionLookup.Regex != "" {
-					deployedVersionLookup.Regex = service.DeployedVersionLookup.Regex
-				}
-				serviceConfig[key].DeployedVersionLookup = &deployedVersionLookup
-			}
-
+			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToApiTypeDeployedVersionLookup(service.DeployedVersionLookup)
 			// URL Commands
-			if service.URLCommands != nil {
-				urlCommands := make(api_types.URLCommandSlice, len(*service.URLCommands))
-				serviceConfig[key].URLCommands = &urlCommands
-				for index := range *service.URLCommands {
-					(*serviceConfig[key].URLCommands)[index] = api_types.URLCommand{
-						Type:         (*service.URLCommands)[index].Type,
-						Regex:        (*service.URLCommands)[index].Regex,
-						Index:        (*service.URLCommands)[index].Index,
-						Text:         (*service.URLCommands)[index].Text,
-						Old:          (*service.URLCommands)[index].Old,
-						New:          (*service.URLCommands)[index].New,
-						IgnoreMisses: (*service.URLCommands)[index].IgnoreMisses,
-					}
-				}
-			}
-
+			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(service.URLCommands)
 			// Notify
-			if service.Notify != nil {
-				notify := make(api_types.NotifySlice, len(*service.Notify))
-				serviceConfig[key].Notify = &notify
-				for index := range *service.Notify {
-					(*serviceConfig[key].Notify)[index] = &api_types.Notify{
-						Type:      (*service.Notify)[index].Type,
-						Options:   (*service.Notify)[index].Options,
-						URLFields: (*service.Notify)[index].URLFields,
-						Params:    (*service.Notify)[index].Params,
-					}
-					// May be a new pointer as the fields are a map rather than individual pointers/vars
-					(*serviceConfig[key].Notify)[index] = (*serviceConfig[key].Notify)[index].Censor()
-				}
-			}
-
-			// WebHook
-			if service.WebHook != nil {
-				webhook := make(api_types.WebHookSlice, len(*service.WebHook))
-				serviceConfig[key].WebHook = &webhook
-				for index := range *service.WebHook {
-					(*serviceConfig[key].WebHook)[index] = &api_types.WebHook{
-						Type:              (*service.WebHook)[index].Type,
-						URL:               (*service.WebHook)[index].URL,
-						Secret:            utils.ValueIfNotNil((*service.WebHook)[index].Secret, "<secret>"),
-						CustomHeaders:     (*service.WebHook)[index].CustomHeaders,
-						DesiredStatusCode: (*service.WebHook)[index].DesiredStatusCode,
-						Delay:             (*service.WebHook)[index].Delay,
-						MaxTries:          (*service.WebHook)[index].MaxTries,
-						SilentFails:       (*service.WebHook)[index].SilentFails,
-					}
-				}
-			}
+			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(service.Notify)
 			// Command
-			if service.Command != nil {
-				command := make(api_types.CommandSlice, len(*service.Command))
-				serviceConfig[key].Command = &command
-				for index := range *service.Command {
-					(*serviceConfig[key].Command)[index] = api_types.Command((*service.Command)[index])
-				}
-			}
+			serviceConfig[key].Command = convertCommandSliceToAPITypeCommandSlice(service.Command)
+			// WebHook
+			serviceConfig[key].WebHook = convertWebHookSliceToAPITypeWebHookSlice(service.WebHook)
 		}
 	}
 
@@ -637,4 +513,112 @@ func (api *API) wsConfigService(client *Client) {
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, logFrom, true)
 	}
+}
+
+func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *service.DeployedVersionLookup) *api_types.DeployedVersionLookup {
+	if dvl == nil {
+		return nil
+	}
+	var headers []api_types.Header
+	apiDVL := api_types.DeployedVersionLookup{
+		URL:               dvl.URL,
+		AllowInvalidCerts: dvl.AllowInvalidCerts,
+		Headers:           headers,
+		JSON:              dvl.JSON,
+		Regex:             dvl.Regex,
+	}
+	// Basic auth
+	if dvl.BasicAuth != nil {
+		apiDVL.BasicAuth = &api_types.BasicAuth{
+			Username: dvl.BasicAuth.Username,
+			Password: "<secret>",
+		}
+	}
+	// Headers
+	for i := range dvl.Headers {
+		apiDVL.Headers = append(
+			apiDVL.Headers,
+			api_types.Header{
+				Key:   dvl.Headers[i].Key,
+				Value: "<secret>",
+			},
+		)
+	}
+	return &apiDVL
+}
+
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *service.URLCommandSlice) *api_types.URLCommandSlice {
+	if commands == nil {
+		return nil
+	}
+	apiSlice := make(api_types.URLCommandSlice, len(*commands))
+	for index := range *commands {
+		apiSlice[index] = api_types.URLCommand{
+			Type:         (*commands)[index].Type,
+			Regex:        (*commands)[index].Regex,
+			Index:        (*commands)[index].Index,
+			Text:         (*commands)[index].Text,
+			Old:          (*commands)[index].Old,
+			New:          (*commands)[index].New,
+			IgnoreMisses: (*commands)[index].IgnoreMisses,
+		}
+	}
+	return &apiSlice
+}
+
+func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_types.NotifySlice {
+	if notifiers == nil {
+		return nil
+	}
+	apiSlice := make(api_types.NotifySlice, len(*notifiers))
+	for index := range *notifiers {
+		apiSlice[index] = &api_types.Notify{
+			Type:      (*notifiers)[index].Type,
+			Options:   (*notifiers)[index].Options,
+			URLFields: (*notifiers)[index].URLFields,
+			Params:    (*notifiers)[index].Params,
+		}
+		// Assign as it may be a new pointer as the fields are a map rather than individual pointers/vars
+		apiSlice[index] = apiSlice[index].Censor()
+	}
+	return &apiSlice
+}
+
+func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_types.CommandSlice {
+	if commands == nil {
+		return nil
+	}
+	apiSlice := make(api_types.CommandSlice, len(*commands))
+	for index := range *commands {
+		apiSlice[index] = api_types.Command((*commands)[index])
+	}
+	return &apiSlice
+}
+
+func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_types.WebHookSlice {
+	if webhooks == nil {
+		return nil
+	}
+	apiSlice := make(api_types.WebHookSlice, len(*webhooks))
+	for index := range *webhooks {
+		apiSlice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
+	}
+	return &apiSlice
+}
+
+func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_types.WebHook) {
+	if webhook == nil {
+		return
+	}
+	apiElement = &api_types.WebHook{
+		Type:              (*webhook).Type,
+		URL:               (*webhook).URL,
+		Secret:            utils.ValueIfNotNil((*webhook).Secret, "<secret>"),
+		CustomHeaders:     (*webhook).CustomHeaders,
+		DesiredStatusCode: (*webhook).DesiredStatusCode,
+		Delay:             (*webhook).Delay,
+		MaxTries:          (*webhook).MaxTries,
+		SilentFails:       (*webhook).SilentFails,
+	}
+	return
 }
