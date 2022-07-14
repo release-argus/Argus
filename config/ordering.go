@@ -41,13 +41,7 @@ func (c *Config) GetOrder(data []byte) {
 				// Get indentation on the next line
 				// (Only do this once)
 				if indentation == "" {
-					for _, v := range lines[index+1] {
-						if v == ' ' {
-							indentation += " "
-						} else {
-							break
-						}
-					}
+					indentation = getIndentation(lines[index+1])
 					c.Settings.Indentation = uint8(len(indentation))
 				}
 			} else if afterService {
@@ -64,11 +58,26 @@ func (c *Config) GetOrder(data []byte) {
 	c.Order = &c.All
 
 	// Filter out Services that aren't Active
+	c.filterInactive()
+}
+
+func getIndentation(line string) (indentation string) {
+	for _, v := range line {
+		if v == ' ' {
+			indentation += " "
+		} else {
+			return
+		}
+	}
+	return
+}
+
+func (c *Config) filterInactive() {
 	removed := 0
 	for index, id := range c.All {
 		if !utils.EvalNilPtr(c.Service[id].Active, true) {
 			if removed == 0 {
-				order = make([]string, len(order))
+				order := make([]string, len(c.All))
 				copy(order, c.All)
 				c.Order = &order
 			}

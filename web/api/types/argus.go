@@ -172,9 +172,7 @@ func (n *Notify) Censor() *Notify {
 		return nil
 	}
 
-	// Check whether the Notify contains a field we should censor
 	// url_fields
-	censorURLFields := false
 	url_fields_to_censor := []string{
 		"apikey",
 		"botkey",
@@ -184,50 +182,22 @@ func (n *Notify) Censor() *Notify {
 		"tokenb",
 		"webhookid",
 	}
-	if len(n.URLFields) > 0 {
-		for i := range url_fields_to_censor {
-			if n.URLFields[url_fields_to_censor[i]] != "" {
-				censorURLFields = true
-				break
-			}
+	urlFields := utils.CopyMap(n.URLFields)
+	for i := range url_fields_to_censor {
+		if urlFields[url_fields_to_censor[i]] != "" {
+			urlFields[url_fields_to_censor[i]] = "<secret>"
 		}
 	}
+
 	// params
-	censorParams := false
 	params_to_censor := []string{
 		"devices",
 		"host",
 	}
-	if len(n.Params) > 0 {
-		for i := range params_to_censor {
-			if n.Params[params_to_censor[i]] != "" {
-				censorParams = true
-				break
-			}
-		}
-	}
-
-	if !(censorURLFields || censorParams) {
-		return n
-	}
-
-	// Censor the fields that should be censored
-	urlFields := n.URLFields
-	if censorURLFields {
-		urlFields = utils.CopyMap(n.URLFields)
-		for i := range url_fields_to_censor {
-			if urlFields[url_fields_to_censor[i]] != "" {
-				urlFields[url_fields_to_censor[i]] = "<secret>"
-			}
-		}
-	}
-	params := n.Params
-	if censorParams {
-		params = utils.CopyMap(n.Params)
-		for i := range params_to_censor {
-			if params[params_to_censor[i]] != "" {
-				params[params_to_censor[i]] = "<secret>"
-			}
+	params := utils.CopyMap(n.Params)
+	for i := range params_to_censor {
+		if params[params_to_censor[i]] != "" {
+			params[params_to_censor[i]] = "<secret>"
 		}
 	}
 

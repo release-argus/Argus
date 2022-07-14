@@ -16,8 +16,6 @@ package service
 
 import (
 	"crypto/tls"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -44,31 +42,36 @@ func (s *Service) Query() (bool, error) {
 
 	s.Status.SetLastQueried()
 	wantSemanticVersioning := s.GetSemanticVersioning()
+
 	// If this version is different (new).
 	if version != s.Status.LatestVersion {
-		// Check for a progressive change in version.
-		if wantSemanticVersioning && s.Status.LatestVersion != "" {
-			oldVersion, err := semver.NewVersion(s.Status.LatestVersion)
-			if err != nil {
-				err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)", s.Status.LatestVersion)
-				jLog.Error(err, logFrom, true)
-				return false, err
-			}
+		if wantSemanticVersioning {
+			// Check it's a valid smenatic version
 			newVersion, err := semver.NewVersion(version)
 			if err != nil {
-				err := fmt.Errorf("failed converting %q to a semantic version", version)
+				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)", version)
 				jLog.Error(err, logFrom, true)
 				return false, err
 			}
 
-			// e.g.
-			// newVersion = 1.2.9
-			// oldVersion = 1.2.10
-			// return false (don't notify anything. Stay on oldVersion)
-			if newVersion.LessThan(*oldVersion) {
-				err := fmt.Errorf("queried version %q is less than the deployed version %q", version, s.Status.LatestVersion)
-				jLog.Warn(err, logFrom, true)
-				return false, err
+			// Check for a progressive change in version.
+			if s.Status.LatestVersion != "" {
+				oldVersion, err := semver.NewVersion(s.Status.LatestVersion)
+				if err != nil {
+					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)", s.Status.LatestVersion)
+					jLog.Error(err, logFrom, true)
+					return false, err
+				}
+
+				// e.g.
+				// newVersion = 1.2.9
+				// oldVersion = 1.2.10
+				// return false (don't notify anything. Stay on oldVersion)
+				if newVersion.LessThan(*oldVersion) {
+					err := fmt.Errorf("queried version %q is less than the deployed version %q", version, s.Status.LatestVersion)
+					jLog.Warn(err, logFrom, true)
+					return false, err
+				}
 			}
 		}
 
@@ -78,14 +81,6 @@ func (s *Service) Query() (bool, error) {
 
 		// First version found.
 		if s.Status.LatestVersion == "" {
-			if wantSemanticVersioning {
-				if _, err := semver.NewVersion(version); err != nil {
-					err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)", version)
-					jLog.Error(err, logFrom, true)
-					return false, err
-				}
-			}
-
 			s.SetLatestVersion(version)
 			if s.Status.DeployedVersion == "" && s.DeployedVersionLookup == nil {
 				s.SetDeployedVersion(version)
@@ -157,75 +152,14 @@ func (s *Service) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRe
 	body := string(rawBody)
 	// GitHub service.
 	if *s.Type == "github" {
-		// Check for rate limit.
-		if len(body) < 500 {
-			if strings.Contains(body, "rate limit") {
-				err = errors.New("rate limit reached for GitHub")
-				jLog.Warn(err, logFrom, true)
-				return
-			}
-			if !strings.Contains(body, `"tag_name"`) {
-				err = errors.New("github access token is invalid")
-				jLog.Fatal(err, logFrom, strings.Contains(body, "Bad credentials"))
-
-				err = fmt.Errorf("tag_name not found at %s\n%s", *s.URL, body)
-				jLog.Error(err, logFrom, true)
-				return
-			}
-		}
-
-		if err = json.Unmarshal(rawBody, &releases); err != nil {
-			jLog.Error(err, logFrom, true)
-			err = fmt.Errorf("unmarshal of GitHub API data failed\n%s", err)
-			jLog.Error(err, logFrom, true)
+		releases, err = s.checkGitHubReleasesBody(&rawBody, logFrom)
+		if err != nil {
 			return
 		}
-
-		semanticVerioning := s.GetSemanticVersioning()
-		for i := range releases {
-			// If it isn't a prerelease, or it is and they're wanted
-			if !releases[i].PreRelease || (releases[i].PreRelease && s.GetUsePreRelease()) {
-				// Check that TagName matches URLCommands
-				if releases[i].TagName, err = s.URLCommands.run(releases[i].TagName, logFrom); err != nil {
-					continue
-				}
-
-				// If SemVer isn't wanted, add all
-				if !semanticVerioning {
-					filteredReleases = append(filteredReleases, releases[i])
-					continue
-				}
-
-				// Else, sort the versions
-				semVer, err := semver.NewVersion(releases[i].TagName)
-				if err != nil {
-					continue
-				}
-				releases[i].SemanticVersion = semVer
-				if len(filteredReleases) == 0 {
-					filteredReleases = append(filteredReleases, releases[i])
-					continue
-				}
-				// Insertion Sort
-				index := len(filteredReleases)
-				for index != 0 {
-					index--
-					// semVer @current is less than @index
-					if releases[i].SemanticVersion.LessThan(*filteredReleases[index].SemanticVersion) {
-						if index == len(filteredReleases)-1 {
-							filteredReleases = append(filteredReleases, releases[i])
-							break
-						}
-						filteredReleases = append(filteredReleases[:index+1], filteredReleases[index:]...)
-						filteredReleases[index+1] = releases[i]
-						break
-					} else if index == 0 {
-						// releases[i] is newer than all filteredReleases. Prepend
-						filteredReleases = append([]GitHubRelease{releases[i]}, filteredReleases...)
-					}
-				}
-			}
-		}
+		filteredReleases = s.filterGitHubReleases(
+			releases,
+			logFrom,
+		)
 
 		// url service
 	} else {
