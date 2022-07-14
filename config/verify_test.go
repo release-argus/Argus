@@ -79,7 +79,8 @@ func TestConfigCheckValuesWithInvalidDefaults(t *testing.T) {
 	config.CheckValues()
 
 	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Defaults.Service.Interval being invalid (%q)", invalid)
+	t.Errorf("Should have panic'd because of Defaults.Service.Interval being invalid (%q)",
+		invalid)
 }
 
 func TestConfigCheckValuesWithInvalidNotify(t *testing.T) {
@@ -96,7 +97,8 @@ func TestConfigCheckValuesWithInvalidNotify(t *testing.T) {
 	config.CheckValues()
 
 	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Notify.discord.options.delay being invalid (%q)", invalid)
+	t.Errorf("Should have panic'd because of Notify.discord.options.delay being invalid (%q)",
+		invalid)
 }
 
 func TestConfigCheckValuesWithInvalidWebHook(t *testing.T) {
@@ -113,7 +115,8 @@ func TestConfigCheckValuesWithInvalidWebHook(t *testing.T) {
 	config.CheckValues()
 
 	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of WebHook.test.Delay being invalid (%q)", invalid)
+	t.Errorf("Should have panic'd because of WebHook.test.Delay being invalid (%q)",
+		invalid)
 }
 
 func TestConfigCheckValuesWithInvalidService(t *testing.T) {
@@ -130,7 +133,8 @@ func TestConfigCheckValuesWithInvalidService(t *testing.T) {
 	config.CheckValues()
 
 	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Service.test.Interval being invalid (%q)", invalid)
+	t.Errorf("Should have panic'd because of Service.test.Interval being invalid (%q)",
+		invalid)
 }
 
 func TestConfigPrintWithFalseFlag(t *testing.T) {
@@ -151,7 +155,8 @@ func TestConfigPrintWithFalseFlag(t *testing.T) {
 	want := 0
 	got := len(string(out))
 	if got != want {
-		t.Errorf("Print with no flag set printed %d lines. Wanted %d", got, want)
+		t.Errorf("Print with no flag set printed %d lines. Wanted %d",
+			got, want)
 	}
 }
 
@@ -175,6 +180,7 @@ func TestConfigPrint(t *testing.T) {
 	want := 165
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print with no flag set printed %d lines. Wanted %d\n%s", got, want, string(out))
+		t.Errorf("Print with no flag set printed %d lines. Wanted %d\n%s",
+			got, want, string(out))
 	}
 }

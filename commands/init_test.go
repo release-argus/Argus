@@ -64,7 +64,8 @@ func TestInitNonNil(t *testing.T) {
 
 	// THEN Failed is initialised with length 2
 	if len(*controller.Command) != len(controller.Failed) {
-		t.Errorf("Failed should have been of length %d, but is length %d", len(*controller.Command), len(controller.Failed))
+		t.Errorf("Failed should have been of length %d, but is length %d",
+			len(*controller.Command), len(controller.Failed))
 	}
 }
 
@@ -96,7 +97,8 @@ func TestFormattedStringMultiArg(t *testing.T) {
 
 	// THEN it is returned in this format
 	if got != want {
-		t.Errorf("FormattedString, got %q, wanted %q", got, want)
+		t.Errorf("FormattedString, got %q, wanted %q",
+			got, want)
 	}
 }
 
@@ -110,7 +112,8 @@ func TestFormattedStringSingleArg(t *testing.T) {
 
 	// THEN it is returned in this format
 	if got != want {
-		t.Errorf("FormattedString, got %q, wanted %q", got, want)
+		t.Errorf("FormattedString, got %q, wanted %q",
+			got, want)
 	}
 }
 
@@ -124,7 +127,8 @@ func TestStringMultiArg(t *testing.T) {
 
 	// THEN it is returned in this format
 	if got != want {
-		t.Errorf("String, got %q, wanted %q", got, want)
+		t.Errorf("String, got %q, wanted %q",
+			got, want)
 	}
 }
 
@@ -138,7 +142,8 @@ func TestStringSingleArg(t *testing.T) {
 
 	// THEN it is returned in this format
 	if got != want {
-		t.Errorf("String, got %q, wanted %q", got, want)
+		t.Errorf("String, got %q, wanted %q",
+			got, want)
 	}
 }
 

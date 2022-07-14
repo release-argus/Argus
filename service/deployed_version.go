@@ -138,7 +138,8 @@ func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 	if semanticVersioning {
 		_, err = semver.NewVersion(version)
 		if err != nil {
-			err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding json/regex to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)", version)
+			err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding json/regex to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
+				version)
 			jLog.Error(err, logFrom, true)
 			return "", err
 		}
@@ -225,17 +226,20 @@ func (d *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
 
 	// URL
 	if d.URL == "" && d.Defaults != nil {
-		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\", utils.ErrorToString(errs), prefix)
+		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\",
+			utils.ErrorToString(errs), prefix)
 	}
 
 	// RegEx
 	_, err := regexp.Compile(d.Regex)
 	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\", utils.ErrorToString(errs), prefix, d.Regex)
+		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\",
+			utils.ErrorToString(errs), prefix, d.Regex)
 	}
 
 	if errs != nil {
-		errs = fmt.Errorf("%sdeployed_version:\\%w", prefix, errs)
+		errs = fmt.Errorf("%sdeployed_version:\\%w",
+			prefix, errs)
 	}
 	return
 }

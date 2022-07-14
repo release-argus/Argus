@@ -35,7 +35,8 @@ func TestSetCustomHeadersNil(t *testing.T) {
 	// GIVEN CustomHeaders are nil
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	webhook := WebHook{CustomHeaders: nil}
 	// WHEN SetCustomHeaders is called
@@ -44,7 +45,8 @@ func TestSetCustomHeadersNil(t *testing.T) {
 	want := 0
 	got := len(req.Header)
 	if got != want {
-		t.Errorf("SetCustomHeaders of nil altered the Header count. Want nil, got %v", got)
+		t.Errorf("SetCustomHeaders of nil altered the Header count. Want nil, got %v",
+			got)
 	}
 }
 
@@ -52,7 +54,8 @@ func TestSetCustomHeadersWithJinjaTemplate(t *testing.T) {
 	// GIVEN CustomHeaders contain a Jinja template
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	webhook := WebHook{
 		CustomHeaders: &map[string]string{
@@ -68,7 +71,8 @@ func TestSetCustomHeadersWithJinjaTemplate(t *testing.T) {
 	got := req.Header["Jinja-Expression"]
 	want := "bang 1.2.3 bang"
 	if len(got) == 1 && got[0] != want {
-		t.Errorf("Pongo2 template not evaluated correctly. Want %q, got %q", want, got[0])
+		t.Errorf("Pongo2 template not evaluated correctly. Want %q, got %q",
+			want, got[0])
 	}
 }
 
@@ -77,7 +81,8 @@ func TestSetGitHubHeadersXGithubEvent(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -85,7 +90,8 @@ func TestSetGitHubHeadersXGithubEvent(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -96,7 +102,8 @@ func TestSetGitHubHeadersXGithubEvent(t *testing.T) {
 	want := "push"
 
 	if req.Header[key][0] != want {
-		t.Errorf("%s - Wanted %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, want, req.Header[key][0])
 	}
 }
 
@@ -105,7 +112,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetType(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -113,7 +121,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetType(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -124,7 +133,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetType(t *testing.T) {
 	want := "repository"
 
 	if req.Header[key][0] != want {
-		t.Errorf("%s - Wanted %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, want, req.Header[key][0])
 	}
 }
 
@@ -133,7 +143,8 @@ func TestSetGitHubHeadersXGithubHookId(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -141,7 +152,8 @@ func TestSetGitHubHeadersXGithubHookId(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -151,7 +163,8 @@ func TestSetGitHubHeadersXGithubHookId(t *testing.T) {
 	regex := "^[0-9]{9}$"
 	key := "X-Github-Hook-Id"
 	if match, _ := regexp.MatchString(regex, req.Header[key][0]); !match {
-		t.Errorf("%s - Wanted %s, got %s", key, regex, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, regex, req.Header[key][0])
 	}
 }
 
@@ -160,7 +173,8 @@ func TestSetGitHubHeadersXGithubDelivery(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -168,7 +182,8 @@ func TestSetGitHubHeadersXGithubDelivery(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -178,7 +193,8 @@ func TestSetGitHubHeadersXGithubDelivery(t *testing.T) {
 	regex := "^[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}$"
 	key := "X-Github-Delivery"
 	if match, _ := regexp.MatchString(regex, req.Header[key][0]); !match {
-		t.Errorf("%s - Wanted %s, got %s", key, regex, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, regex, req.Header[key][0])
 	}
 }
 
@@ -187,7 +203,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetId(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -195,7 +212,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetId(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -205,7 +223,8 @@ func TestSetGitHubHeadersXGithubHookInstallationTargetId(t *testing.T) {
 	regex := "^[0-9]{9}$"
 	key := "X-Github-Hook-Installation-Target-Id"
 	if match, _ := regexp.MatchString(regex, req.Header[key][0]); !match {
-		t.Errorf("%s - Wanted %s, got %s", key, regex, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, regex, req.Header[key][0])
 	}
 }
 
@@ -214,7 +233,8 @@ func TestSetGitHubHeadersXHubSignature256(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -222,7 +242,8 @@ func TestSetGitHubHeadersXHubSignature256(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -235,7 +256,8 @@ func TestSetGitHubHeadersXHubSignature256(t *testing.T) {
 	wantVal := hex.EncodeToString(hash.Sum(nil))
 	want := "sha256=" + wantVal
 	if req.Header[key][0] != "sha256="+wantVal {
-		t.Errorf("%s - Wanted %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, want, req.Header[key][0])
 	}
 }
 
@@ -244,7 +266,8 @@ func TestSetGitHubHeadersXHubSignature(t *testing.T) {
 	secret := "secret"
 	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
 	if err != nil {
-		t.Errorf("http.NewRequest failed - %s", err.Error())
+		t.Errorf("http.NewRequest failed - %s",
+			err.Error())
 	}
 	payload, err := json.Marshal(GitHub{
 		Ref:    "refs/heads/master",
@@ -252,7 +275,8 @@ func TestSetGitHubHeadersXHubSignature(t *testing.T) {
 		After:  "0123456789012345678901234567890123456789",
 	})
 	if err != nil {
-		t.Errorf("json.Marshal failed - %s", err.Error())
+		t.Errorf("json.Marshal failed - %s",
+			err.Error())
 	}
 
 	// WHEN SetGitHubHeaders is called
@@ -265,6 +289,7 @@ func TestSetGitHubHeadersXHubSignature(t *testing.T) {
 	wantVal := hex.EncodeToString(hash.Sum(nil))
 	want := "sha1=" + wantVal
 	if req.Header[key][0] != want {
-		t.Errorf("%s - Wanted %s, got %s", key, want, req.Header[key][0])
+		t.Errorf("%s - Wanted %s, got %s",
+			key, want, req.Header[key][0])
 	}
 }

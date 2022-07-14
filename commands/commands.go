@@ -48,7 +48,8 @@ func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
 	for range *c.Command {
 		err := <-errChan
 		if err != nil {
-			errs = fmt.Errorf("%s\n%w", utils.ErrorToString(errs), err)
+			errs = fmt.Errorf("%s\n%w",
+				utils.ErrorToString(errs), err)
 		}
 	}
 

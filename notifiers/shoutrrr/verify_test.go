@@ -183,7 +183,8 @@ func TestCorrectSelfTeamsAltID(t *testing.T) {
 	got := shoutrrr.GetSelfURLField("altid")
 	want := "foo"
 	if got != want {
-		t.Errorf("Got %s, want %s", got, want)
+		t.Errorf("Got %s, want %s",
+			got, want)
 	}
 }
 
@@ -203,7 +204,8 @@ func TestCorrectSelfTeamsGroupOwner(t *testing.T) {
 	got := shoutrrr.GetSelfURLField("groupowner")
 	want := "bar"
 	if got != want {
-		t.Errorf("Got %s, want %s", got, want)
+		t.Errorf("Got %s, want %s",
+			got, want)
 	}
 }
 
@@ -1169,7 +1171,8 @@ func TestCheckValuesWithValid(t *testing.T) {
 
 	// THEN no error was produced
 	if err != nil {
-		t.Errorf("Err should not have been found on %v.\nGot %s", shoutrrr, err.Error())
+		t.Errorf("Err should not have been found on %v.\nGot %s",
+			shoutrrr, err.Error())
 	}
 }
 
@@ -1384,7 +1387,8 @@ func TestSlicePrint(t *testing.T) {
 	want := 17
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }
 
@@ -1405,6 +1409,7 @@ func TestShoutrrrPrint(t *testing.T) {
 	want := 7
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s",
+			want, got, out)
 	}
 }

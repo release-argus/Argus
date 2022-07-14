@@ -46,7 +46,8 @@ func TestTryWithInvalidURL(t *testing.T) {
 
 	// THEN err is not nil
 	if err == nil {
-		t.Errorf("try should have failed with invalid %q URL. err is %s", whURL, err.Error())
+		t.Errorf("try should have failed with invalid %q URL. err is %s",
+			whURL, err.Error())
 	}
 }
 
@@ -74,7 +75,8 @@ func TestTryWithUnknownHostAndAllowInvalidCerts(t *testing.T) {
 	startsWith := "Post \"https://test\": dial tcp: lookup test"
 	e := utils.ErrorToString(err)
 	if !strings.HasPrefix(e, startsWith) {
-		t.Errorf("try with %v should have errored starting %q. Got %q", webhook, startsWith, e)
+		t.Errorf("try with %v should have errored starting %q. Got %q",
+			webhook, startsWith, e)
 	}
 }
 
@@ -102,7 +104,8 @@ func TestTryWithUnknownHostAndRejectInvalidCerts(t *testing.T) {
 	startsWith := "Post \"https://test\": dial tcp: lookup test"
 	e := utils.ErrorToString(err)
 	if !strings.HasPrefix(e, startsWith) {
-		t.Errorf("try with %v should have errored starting %q. Got %q", webhook, startsWith, e)
+		t.Errorf("try with %v should have errored starting %q. Got %q",
+			webhook, startsWith, e)
 	}
 }
 
@@ -117,7 +120,8 @@ func TestTryWithKnownHostAndAllowAnyStatusCode(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q", webhook, err.Error())
+		t.Errorf("try with %v shouldn't have errored %q",
+			webhook, err.Error())
 	}
 }
 
@@ -141,7 +145,8 @@ func TestTryWithKnownHostAndRejectStatusCode(t *testing.T) {
 		}
 		startsWith := fmt.Sprintf("WebHook didn't %d:", *webhook.DesiredStatusCode)
 		if !strings.HasPrefix(e, startsWith) {
-			t.Errorf("try with %v should have started with %q, but got %q", webhook, startsWith, e)
+			t.Errorf("try with %v should have started with %q, but got %q",
+				webhook, startsWith, e)
 		}
 		return
 	}
@@ -167,7 +172,8 @@ func TestWebHookSendFailWithSilentFails(t *testing.T) {
 		}
 		contains := "WebHook didn't 2XX"
 		if !strings.Contains(e, contains) {
-			t.Errorf("Send with %v should have errored %q. Got %q", webhook, contains, e)
+			t.Errorf("Send with %v should have errored %q. Got %q",
+				webhook, contains, e)
 		}
 		return
 	}
@@ -205,7 +211,8 @@ func TestWebHookSendFailWithoutSilentFails(t *testing.T) {
 	contains := "WebHook didn't 2XX"
 	e := utils.ErrorToString(err)
 	if !strings.Contains(e, contains) {
-		t.Errorf("Send with %v should have errored %q. Got %q", webhook, contains, e)
+		t.Errorf("Send with %v should have errored %q. Got %q",
+			webhook, contains, e)
 	}
 }
 
@@ -220,7 +227,8 @@ func TestWebHookSendSuccess(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q", webhook, err.Error())
+		t.Errorf("try with %v shouldn't have errored %q",
+			webhook, err.Error())
 	}
 }
 
@@ -237,7 +245,8 @@ func TestWebHookSendSuccessWithDelay(t *testing.T) {
 	// THEN it took >= 5s to return
 	elapsed := time.Since(start)
 	if elapsed < 5*time.Second {
-		t.Errorf("Send with useDelay should have taken atleast %v. Only took %s", webhook.Delay, elapsed)
+		t.Errorf("Send with useDelay should have taken atleast %v. Only took %s",
+			webhook.Delay, elapsed)
 	}
 }
 
@@ -252,7 +261,8 @@ func TestSliceSendWithNilSlice(t *testing.T) {
 	// THEN it returns almost instantly
 	elapsed := time.Since(start)
 	if elapsed > time.Second {
-		t.Errorf("Send took more than 1s (%fs) with a %v Slice", elapsed.Seconds(), slice)
+		t.Errorf("Send took more than 1s (%fs) with a %v Slice",
+			elapsed.Seconds(), slice)
 	}
 }
 
@@ -271,7 +281,29 @@ func TestSliceSendFail(t *testing.T) {
 	contains := "WebHook didn't 2XX"
 	e := utils.ErrorToString(err)
 	if !strings.Contains(e, contains) {
-		t.Errorf("Send with %v should have errored %q. Got %q", *slice["test"], contains, e)
+		t.Errorf("Send with %v should have errored %q. Got %q",
+			*slice["test"], contains, e)
+	}
+}
+
+func TestSliceSendWithMultipleFails(t *testing.T) {
+	// GIVEN a Slice with a WebHook which will err on Send
+	jLog = utils.NewJLog("WARN", false)
+	webhook := testWebHookFailing()
+	slice := Slice{
+		"test":  &webhook,
+		"other": &webhook,
+	}
+
+	// WHEN Send is called on this Slice
+	err := slice.Send(utils.ServiceInfo{}, false)
+
+	// THEN err is about the failure
+	contains := "WebHook didn't 2XX"
+	e := utils.ErrorToString(err)
+	if strings.Count(e, contains) != len(slice) {
+		t.Errorf("Send with %v should have errored %q %d times. Got %q",
+			*slice["test"], contains, len(slice), e)
 	}
 }
 
@@ -288,7 +320,8 @@ func TestSliceSendSuccess(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q", *slice["test"], err.Error())
+		t.Errorf("try with %v shouldn't have errored %q",
+			*slice["test"], err.Error())
 	}
 }
 
@@ -301,7 +334,8 @@ func TestNotifiersSendWithNil(t *testing.T) {
 
 	// THEN err is nil
 	if err != nil {
-		t.Errorf("Send on %v Notifiers shouldn't have err'd. Got %s", notifiers, err.Error())
+		t.Errorf("Send on %v Notifiers shouldn't have err'd. Got %s",
+			notifiers, err.Error())
 	}
 }
 
@@ -334,6 +368,7 @@ func TestNotifiersSendWithNotifier(t *testing.T) {
 	// THEN err is a 404
 	e := utils.ErrorToString(err)
 	if !strings.Contains(e, "HTTP 404") {
-		t.Errorf("Send on %v Notifiers should have 404'd. Got \n%s", notifiers, e)
+		t.Errorf("Send on %v Notifiers should have 404'd. Got \n%s",
+			notifiers, e)
 	}
 }

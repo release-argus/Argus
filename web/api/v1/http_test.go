@@ -44,7 +44,8 @@ func TestHTTPVersion(t *testing.T) {
 	// THEN the version is returned in JSON format
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		t.Errorf("expected error to be nil got %v", err)
+		t.Errorf("expected error to be nil got %v",
+			err)
 	}
 	var got api_types.VersionAPI
 	json.Unmarshal(data, &got)

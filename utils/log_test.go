@@ -36,7 +36,8 @@ func TestNewJLogGivesJLog(t *testing.T) {
 	// THEN a JLog pointer is created
 	switch v := jLog.(type) {
 	default:
-		t.Errorf("unexpected type %T, jLog should be of type JLog!", v)
+		t.Errorf("unexpected type %T, jLog should be of type JLog!",
+			v)
 	case *JLog:
 	}
 }
@@ -52,7 +53,8 @@ func TestNewJLogWithLogLevelParam(t *testing.T) {
 	// THEN a JLog pointer is created with this Log Level
 	got := (*jLog).Level
 	if got != wantedLogLevelUInt {
-		t.Errorf("NewJLog didn't use level param. Wanted %q (%d) but got %d", logLevel, wantedLogLevelUInt, got)
+		t.Errorf("NewJLog didn't use level param. Wanted %q (%d) but got %d",
+			logLevel, wantedLogLevelUInt, got)
 	}
 }
 
@@ -66,7 +68,8 @@ func TestNewJLogWithTimestampParam(t *testing.T) {
 	// THEN a JLog pointer is created with this Log Level
 	got := (*jLog).Timestamps
 	if got != timestamps {
-		t.Errorf("NewJLog didn't use level param. Wanted %t but got %t", timestamps, got)
+		t.Errorf("NewJLog didn't use level param. Wanted %t but got %t",
+			timestamps, got)
 	}
 }
 
@@ -82,7 +85,8 @@ func TestSetLevelWithUppercaseValidLevel(t *testing.T) {
 	// THEN a JLog pointer is created with this Log Level
 	got := (*jLog).Level
 	if got != want {
-		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d", level, want, got)
+		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d",
+			level, want, got)
 	}
 }
 
@@ -98,7 +102,8 @@ func TestSetLevelWithLowercaseValidLevel(t *testing.T) {
 	// THEN a JLog pointer is created with this Log Level
 	got := (*jLog).Level
 	if got != want {
-		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d", level, want, got)
+		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d",
+			level, want, got)
 	}
 }
 
@@ -114,7 +119,8 @@ func TestSetLevelWithInvalidLevel(t *testing.T) {
 	jLog.SetLevel(level)
 
 	// THEN this call will crash the program
-	t.Errorf("%s is an unknown log level and should have been Fatal", level)
+	t.Errorf("%s is an unknown log level and should have been Fatal",
+		level)
 }
 
 func TestSetTimestamps(t *testing.T) {
@@ -128,7 +134,8 @@ func TestSetTimestamps(t *testing.T) {
 	// THEN the Timetamps var is flipped
 	got := (*jLog).Timestamps
 	if got != timestamps {
-		t.Errorf("SetTimestamps didn't set Timestamps correctly. Wanted %t but got %t", timestamps, got)
+		t.Errorf("SetTimestamps didn't set Timestamps correctly. Wanted %t but got %t",
+			timestamps, got)
 	}
 }
 
@@ -142,7 +149,8 @@ func TestFormatMessageSourceWithDefaultLogFrom(t *testing.T) {
 
 	// THEN an empty string is returned
 	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with an empty LogFrom, not %q", want, got)
+		t.Errorf("FormatMessageSource should have returned %q with an empty LogFrom, not %q",
+			want, got)
 	}
 }
 
@@ -156,7 +164,8 @@ func TestFormatMessageSourceWithLogFromPrimaryOnly(t *testing.T) {
 
 	// THEN an the string returned is this primary followed by ', '
 	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with only a Primary, not %q", want, got)
+		t.Errorf("FormatMessageSource should have returned %q with only a Primary, not %q",
+			want, got)
 	}
 }
 
@@ -170,7 +179,8 @@ func TestFormatMessageSourceWithLogFromSecondaryOnly(t *testing.T) {
 
 	// THEN an the string returned is this primary followed by ', '
 	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with only a Secondary, not %q", want, got)
+		t.Errorf("FormatMessageSource should have returned %q with only a Secondary, not %q",
+			want, got)
 	}
 }
 
@@ -184,7 +194,8 @@ func TestFormatMessageSourceWithLogFromPrimaryAndSecondary(t *testing.T) {
 
 	// THEN an the string returned is this primary followed by ', '
 	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with a Primary and Secondary, not %q", want, got)
+		t.Errorf("FormatMessageSource should have returned %q with a Primary and Secondary, not %q",
+			want, got)
 	}
 }
 
@@ -198,7 +209,8 @@ func TestIsLevelPass(t *testing.T) {
 
 	// THEN a JLog pointer is created with this Log Level
 	if !check {
-		t.Errorf("IsLevel should have got a match on %s and %d, but returned %t", level, jLog.Level, check)
+		t.Errorf("IsLevel should have got a match on %s and %d, but returned %t",
+			level, jLog.Level, check)
 	}
 }
 
@@ -213,7 +225,8 @@ func TestIsLevelFail(t *testing.T) {
 
 	// THEN a JLog pointer is created with this Log Level
 	if check {
-		t.Errorf("IsLevel shouldn't have got a match on %s and %d, but returned %t", guess, jLog.Level, check)
+		t.Errorf("IsLevel shouldn't have got a match on %s and %d, but returned %t",
+			guess, jLog.Level, check)
 	}
 }
 
@@ -233,7 +246,8 @@ func TestErrorFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Error printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Error printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -253,7 +267,8 @@ func TestErrorTrueTimestamps(t *testing.T) {
 	got := out.String()
 	match := reg.MatchString(got)
 	if !match {
-		t.Errorf("Error printed didn't match %q. Got %q, want %q", regex, got, msg)
+		t.Errorf("Error printed didn't match %q. Got %q, want %q",
+			regex, got, msg)
 	}
 }
 
@@ -274,7 +289,8 @@ func TestErrorTrueNoTimestamps(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Error printed didn't match desired. Got %q, want %q", string(out), msg)
+		t.Errorf("Error printed didn't match desired. Got %q, want %q",
+			string(out), msg)
 	}
 }
 
@@ -294,7 +310,8 @@ func TestWarnFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Warn printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Warn printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -314,7 +331,8 @@ func TestWarnTrueTimestamps(t *testing.T) {
 	got := out.String()
 	match := reg.MatchString(got)
 	if !match {
-		t.Errorf("Warn printed didn't match %q. Got %q, want %q", regex, got, msg)
+		t.Errorf("Warn printed didn't match %q. Got %q, want %q",
+			regex, got, msg)
 	}
 }
 
@@ -335,7 +353,8 @@ func TestWarnTrueNoTimestamps(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Warn printed didn't match desired. Got %q, want %q", string(out), msg)
+		t.Errorf("Warn printed didn't match desired. Got %q, want %q",
+			string(out), msg)
 	}
 }
 
@@ -355,7 +374,8 @@ func TestInfoFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Info printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Info printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -375,7 +395,8 @@ func TestInfoTrueTimestamps(t *testing.T) {
 	got := out.String()
 	match := reg.MatchString(got)
 	if !match {
-		t.Errorf("Info printed didn't match %q. Got %q, want %q", regex, got, msg)
+		t.Errorf("Info printed didn't match %q. Got %q, want %q",
+			regex, got, msg)
 	}
 }
 
@@ -396,7 +417,8 @@ func TestInfoTrueNoTimestamps(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Info printed didn't match desired. Got %q, want %q", string(out), msg)
+		t.Errorf("Info printed didn't match desired. Got %q, want %q",
+			string(out), msg)
 	}
 }
 
@@ -416,7 +438,8 @@ func TestVerboseFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Verbose printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Verbose printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -436,7 +459,8 @@ func TestVerboseTrueTimestamps(t *testing.T) {
 	got := out.String()
 	match := reg.MatchString(got)
 	if !match {
-		t.Errorf("Verbose printed didn't match %q. Got %q, want %q", regex, got, msg)
+		t.Errorf("Verbose printed didn't match %q. Got %q, want %q",
+			regex, got, msg)
 	}
 }
 
@@ -457,7 +481,8 @@ func TestVerboseTrueNoTimestamps(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Verbose printed didn't match desired. Got %q, want %q", string(out), msg)
+		t.Errorf("Verbose printed didn't match desired. Got %q, want %q",
+			string(out), msg)
 	}
 }
 
@@ -477,7 +502,8 @@ func TestDebugFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Debug printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Debug printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -497,7 +523,8 @@ func TestDebugTrueTimestamps(t *testing.T) {
 	got := out.String()
 	match := reg.MatchString(got)
 	if !match {
-		t.Errorf("Debug printed didn't match %q. Got %q, want %q", regex, got, msg)
+		t.Errorf("Debug printed didn't match %q. Got %q, want %q",
+			regex, got, msg)
 	}
 }
 
@@ -518,7 +545,8 @@ func TestDebugTrueNoTimestamps(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != want {
-		t.Errorf("Debug printed didn't match desired. Got %q, want %q", string(out), msg)
+		t.Errorf("Debug printed didn't match desired. Got %q, want %q",
+			string(out), msg)
 	}
 }
 
@@ -538,7 +566,8 @@ func TestFatalFalse(t *testing.T) {
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
 	if string(out) != "" {
-		t.Errorf("Fatal printed when otherCondition was false. (%q)", string(out))
+		t.Errorf("Fatal printed when otherCondition was false. (%q)",
+			string(out))
 	}
 }
 
@@ -563,5 +592,6 @@ func TestFatalTrue(t *testing.T) {
 		return
 	}
 	got := out.String()
-	t.Errorf("Fatal print didn't os.Exit. Got %q", got)
+	t.Errorf("Fatal print didn't os.Exit. Got %q",
+		got)
 }

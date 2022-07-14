@@ -49,7 +49,8 @@ func (s *Service) Query() (bool, error) {
 			// Check it's a valid smenatic version
 			newVersion, err := semver.NewVersion(version)
 			if err != nil {
-				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)", version)
+				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
+					version)
 				jLog.Error(err, logFrom, true)
 				return false, err
 			}
@@ -58,7 +59,8 @@ func (s *Service) Query() (bool, error) {
 			if s.Status.LatestVersion != "" {
 				oldVersion, err := semver.NewVersion(s.Status.LatestVersion)
 				if err != nil {
-					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)", s.Status.LatestVersion)
+					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)",
+						s.Status.LatestVersion)
 					jLog.Error(err, logFrom, true)
 					return false, err
 				}
@@ -68,7 +70,8 @@ func (s *Service) Query() (bool, error) {
 				// oldVersion = 1.2.10
 				// return false (don't notify anything. Stay on oldVersion)
 				if newVersion.LessThan(*oldVersion) {
-					err := fmt.Errorf("queried version %q is less than the deployed version %q", version, s.Status.LatestVersion)
+					err := fmt.Errorf("queried version %q is less than the deployed version %q",
+						version, s.Status.LatestVersion)
 					jLog.Warn(err, logFrom, true)
 					return false, err
 				}
