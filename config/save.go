@@ -45,7 +45,7 @@ func waitChannelTimeout(channel *chan bool) {
 			<-*channel
 		}
 
-		// Sleep 30s
+		// Sleep 25s
 		time.Sleep(25 * time.Second)
 
 		// End if channel is still empty
@@ -175,14 +175,8 @@ func (c *Config) Save() {
 			}
 
 			utils.RemoveIndex(&lines, index)
-			if currentServiceNumber > 26 {
-				fmt.Println()
-			}
 			currentOrderIndexEnd[currentServiceNumber]--
 			linesRemoved++
-			if len(lines) == index {
-				continue
-			}
 
 			// Remove level by level
 			// Until we don't find an empty map to remove
@@ -194,6 +188,7 @@ func (c *Config) Save() {
 			removed := true
 			parentsRemoved := 0 // shift index by this number (+1 when remove index-1)
 			for removed {
+				removed = false
 				index -= parentsRemoved
 				if index == len(lines) {
 					continue
@@ -202,7 +197,6 @@ func (c *Config) Save() {
 					parentsRemoved -= index
 					index = 0
 				}
-				removed = false
 
 				// If it's an empty map
 				if strings.HasSuffix(lines[index], ": {}") {
