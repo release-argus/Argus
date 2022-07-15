@@ -59,7 +59,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 	// THEN after `TIMEOUT`, it would have tried to Save (and failed)
 	elapsed := time.Since(start)
 	if elapsed < TIMEOUT {
-		t.Errorf("waitChannelTimeout should have waited atleast %v, but only waited %v",
+		t.Errorf("waitChannelTimeout should have waited atleast %s, but only waited %s",
 			TIMEOUT, elapsed)
 	}
 }

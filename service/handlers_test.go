@@ -793,3 +793,95 @@ func TestHandleSkipDidAnnounce(t *testing.T) {
 			got, want)
 	}
 }
+
+func TestShouldRetryAllWithWebHooksPassed(t *testing.T) {
+	// GIVEN a Service with WebHooks at failed=false
+	failed := false
+	service := testServiceGitHub()
+	service.WebHook = &webhook.Slice{
+		"test":  {Failed: &failed},
+		"other": {Failed: &failed},
+	}
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got true
+	want := true
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
+			want, got, failed)
+	}
+}
+
+func TestShouldRetryAllWithAWebHookFail(t *testing.T) {
+	// GIVEN a Service with a WebHook that failed
+	failed0 := false
+	failed1 := true
+	service := testServiceGitHub()
+	service.WebHook = &webhook.Slice{
+		"test":  {Failed: &failed0},
+		"other": {Failed: &failed1},
+	}
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got false
+	want := false
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
+			want, got, failed1)
+	}
+}
+
+func TestShouldRetryAllWithCommandsPassed(t *testing.T) {
+	// GIVEN a Service with Commands at failed=false
+	failed := false
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		{"test"},
+		{"other"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
+	service.CommandController.Failed[0] = &failed
+	service.CommandController.Failed[1] = &failed
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got true
+	want := true
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
+			want, got, failed)
+	}
+}
+
+func TestShouldRetryAllWithACommandFail(t *testing.T) {
+	// GIVEN a Service with a Command that failed
+	failed0 := false
+	failed1 := true
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		{"test"},
+		{"other"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
+	service.CommandController.Failed[0] = &failed0
+	service.CommandController.Failed[1] = &failed1
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got false
+	want := false
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
+			want, got, failed1)
+	}
+}

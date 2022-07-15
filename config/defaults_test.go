@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TehstSetDefaultsService(t *testing.T) {
+func TestSetDefaultsService(t *testing.T) {
 	// GIVEN nil defaults
 	var defaults Defaults
 

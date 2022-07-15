@@ -138,36 +138,6 @@ func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
 	}
 }
 
-func TestServiceCheckValuesWithInvalidDeployedVersionTimestamp(t *testing.T) {
-	// GIVEN a Service with an Invalid DeployedVersionTimestamp
-	service := testServiceGitHub()
-	service.Status.DeployedVersionTimestamp = "abc"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from DeployedVersionTimestamp being %q",
-			service.Status.DeployedVersionTimestamp)
-	}
-}
-
-func TestServiceCheckValuesWithInvalidLatestVersionTimestamp(t *testing.T) {
-	// GIVEN a Service with an Invalid LatestVersionTimestamp
-	service := testServiceGitHub()
-	service.Status.LatestVersionTimestamp = "abc"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from LatestVersionTimestamp being %q",
-			service.Status.LatestVersionTimestamp)
-	}
-}
-
 func TestServiceSliceCheckValuesWithSuccess(t *testing.T) {
 	// GIVEN a Service with valid values
 	service := testServiceGitHub()

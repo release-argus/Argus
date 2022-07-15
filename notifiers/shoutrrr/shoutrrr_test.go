@@ -19,6 +19,7 @@ package shoutrrr
 import (
 	"strings"
 	"testing"
+	"time"
 
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/utils"
@@ -767,7 +768,7 @@ func TestSendWithNil(t *testing.T) {
 	var slice *Slice
 
 	// WHEN Send is called on it
-	err := slice.Send("", "", nil)
+	err := slice.Send("", "", nil, true)
 
 	// THEN err is nil
 	var want error
@@ -798,7 +799,7 @@ func TestSendWithNilServiceInfo(t *testing.T) {
 		},
 	}
 	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil)
+	err := slice.Send("title", "message", nil, true)
 
 	// THEN the Send errors related to the Shoutrrr being invalid
 	contain := " invalid port "
@@ -819,7 +820,7 @@ func TestSendWithFail(t *testing.T) {
 			Type: "slack",
 			Options: map[string]string{
 				"max_tries": "2",
-				"delay":     "1s",
+				"delay":     "0s",
 			},
 			URLFields: map[string]string{
 				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
@@ -831,7 +832,7 @@ func TestSendWithFail(t *testing.T) {
 		},
 	}
 	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil)
+	err := slice.Send("title", "message", nil, true)
 
 	// THEN the Send errors related to the Shoutrrr being invalid
 	contain := "failed to send slack notification:"
@@ -839,6 +840,72 @@ func TestSendWithFail(t *testing.T) {
 	if !strings.Contains(e, contain) {
 		t.Errorf("Send should err about %q, not\n%v",
 			contain, e)
+	}
+}
+
+func TestSendWithDelay(t *testing.T) {
+	// GIVEN a Slice with an invalid Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	id := "test"
+	slice := Slice{
+		"test": &Shoutrrr{
+			ID:   &id,
+			Type: "slack",
+			Options: map[string]string{
+				"max_tries": "1",
+				"delay":     "15s",
+			},
+			URLFields: map[string]string{
+				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
+				"channel": "bar",
+			},
+			Main:         &Shoutrrr{},
+			Defaults:     &Shoutrrr{},
+			HardDefaults: &Shoutrrr{},
+		},
+	}
+	// WHEN Send is called with delay to be used
+	start := time.Now().UTC()
+	slice.Send("title", "message", nil, true)
+
+	// THEN the Send returns after using Delay
+	elapsed := time.Since(start)
+	if elapsed < 15*time.Second {
+		t.Errorf("Send should have delayed %s and not returned afte r%s",
+			slice["test"].Options["delay"], elapsed)
+	}
+}
+
+func TestSendWithNoDelay(t *testing.T) {
+	// GIVEN a Slice with an invalid Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	id := "test"
+	slice := Slice{
+		"test": &Shoutrrr{
+			ID:   &id,
+			Type: "slack",
+			Options: map[string]string{
+				"max_tries": "1",
+				"delay":     "15s",
+			},
+			URLFields: map[string]string{
+				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
+				"channel": "bar",
+			},
+			Main:         &Shoutrrr{},
+			Defaults:     &Shoutrrr{},
+			HardDefaults: &Shoutrrr{},
+		},
+	}
+	// WHEN Send is called with no delay to be used
+	start := time.Now().UTC()
+	slice.Send("title", "message", nil, false)
+
+	// THEN the Send returns without using Delay
+	elapsed := time.Since(start)
+	if elapsed > 15*time.Second {
+		t.Errorf("Send shouldn't have used delay and so should have taken less than %s, not %s",
+			slice["test"].Options["delay"], elapsed)
 	}
 }
 
@@ -866,7 +933,7 @@ func TestSendWithMultipleFails(t *testing.T) {
 		"other": failingShoutrrr,
 	}
 	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil)
+	err := slice.Send("title", "message", nil, true)
 
 	// THEN the Send errors related to the Shoutrrr being invalid
 	contain := "failed to send slack notification:"

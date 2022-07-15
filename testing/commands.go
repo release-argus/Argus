@@ -24,14 +24,18 @@ import (
 )
 
 // CommandTest will test the commands given to a Service.
-func CommandTest(flag *string, cfg *config.Config) {
+func CommandTest(
+	flag *string,
+	cfg *config.Config,
+	log *utils.JLog,
+) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
-	jLog.Info(
+	log.Info(
 		"",
 		logFrom,
 		true,
@@ -45,7 +49,7 @@ func CommandTest(flag *string, cfg *config.Config) {
 				allService = append(allService, key)
 			}
 		}
-		jLog.Fatal(
+		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(allService, "\n  - "),
@@ -55,7 +59,7 @@ func CommandTest(flag *string, cfg *config.Config) {
 		)
 	}
 
-	jLog.Fatal(
+	log.Fatal(
 		fmt.Sprintf(
 			"Service %q does not have any `commands` defined",
 			*flag),
@@ -64,7 +68,7 @@ func CommandTest(flag *string, cfg *config.Config) {
 
 	//nolint:errcheck
 	(*service.CommandController).Exec(&logFrom)
-	if !jLog.Testing {
+	if !log.Testing {
 		os.Exit(0)
 	}
 }

@@ -47,7 +47,7 @@ func TestServiceTestWithNoService(t *testing.T) {
 	os.Stdout = w
 
 	// WHEN ServiceTest is called with an empty (undefined) flag
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN nothing will be run/printed
 	w.Close()
@@ -102,7 +102,7 @@ func TestServiceTestWithUnknownService(t *testing.T) {
 	}()
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Error("Should os.Exit(1), err")
@@ -149,7 +149,7 @@ func TestServiceTestWithGitHubServiceAsURL(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	w.Close()
@@ -203,7 +203,7 @@ func TestServiceTestWithKnownService(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will have printed the LatestVersion found
 	w.Close()
@@ -264,7 +264,7 @@ func TestServiceTestWithKnownServiceAndDeployedVersionLookup(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it should have printed the LatestVersion and DeployedVersion
 	w.Close()

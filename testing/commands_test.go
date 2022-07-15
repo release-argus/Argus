@@ -50,7 +50,7 @@ func TestCommandTestWithNoService(t *testing.T) {
 	os.Stdout = w
 
 	// WHEN CommandTest is called with an empty (undefined) flag
-	CommandTest(&flag, &cfg)
+	CommandTest(&flag, &cfg, jLog)
 
 	// THEN nothing will be run/printed
 	w.Close()
@@ -88,7 +88,7 @@ func TestCommandTestWithUnknownService(t *testing.T) {
 	}()
 
 	// WHEN CommandTest is called with a Service not in the config
-	CommandTest(&flag, &cfg)
+	CommandTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Error("Should os.Exit(1), err")
@@ -121,7 +121,7 @@ func TestCommandTestWithKnownService(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN CommandTest is called with a Service not in the config
-	CommandTest(&flag, &cfg)
+	CommandTest(&flag, &cfg, jLog)
 
 	// THEN it Command will be executed and output
 	w.Close()
