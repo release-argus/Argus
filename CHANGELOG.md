@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.8.0](https://github.com/release-argus/Argus/compare/0.7.0...0.8.0) (2022-07-16)
+
+
+### Features
+
+* **notify:** jinja templating on params ([#101](https://github.com/release-argus/Argus/issues/101)) ([b1bf54e](https://github.com/release-argus/Argus/commits/b1bf54e52ce3c04a8812ca003c80814c243aa3fc))
+* sqlite db for state - `data/argus.db` ([#113](https://github.com/release-argus/Argus/issues/113)) ([41294f3](https://github.com/release-argus/Argus/commits/41294f326b66cf49fdbf836667fecd3cc12e3296))
+* **ui:** allow resending of webhooks to update deployed version ([#110](https://github.com/release-argus/Argus/issues/110)) ([862cc97](https://github.com/release-argus/Argus/commits/862cc9774f715a6f2575c571b8b640d40ad67e59))
+
+
+### Bug Fixes
+
+* **notify:** crashed with notify in service, but none in notify global ([66a19fc](https://github.com/release-argus/Argus/commits/66a19fc087b1c4cf8b5659d5ee2d46b86be8d9ba))
+
 ## [0.7.0](https://github.com/release-argus/Argus/compare/0.6.0...0.7.0) (2022-06-22)
 
 
