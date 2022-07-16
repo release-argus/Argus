@@ -82,6 +82,9 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 	if !(*flagset)["log.timestamps"] {
 		LogTimestamps = nil
 	}
+	if !(*flagset)["data.database-file"] {
+		DataDatabaseFile = nil
+	}
 	if !(*flagset)["web.listen-host"] {
 		WebListenHost = nil
 	}
@@ -123,8 +126,8 @@ func (s *Settings) SetDefaults() {
 
 	// DatabaseFile
 	s.FromFlags.Data.DatabaseFile = DataDatabaseFile
-	webDatabaseFile := "state.db"
-	s.HardDefaults.Data.DatabaseFile = &webDatabaseFile
+	dataDatabaseFile := "data/argus.db"
+	s.HardDefaults.Data.DatabaseFile = &dataDatabaseFile
 
 	// #######
 	// # WEB #
