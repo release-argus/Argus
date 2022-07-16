@@ -226,6 +226,7 @@ func (s *Slice) Send(
 	title string,
 	message string,
 	serviceInfo *utils.ServiceInfo,
+	useDelay bool,
 ) (errs error) {
 	if s == nil {
 		return nil
@@ -238,82 +239,11 @@ func (s *Slice) Send(
 	for key := range *s {
 		// Send each message up to s.MaxTries number of times until they don't err.
 		go func(shoutrrr *Shoutrrr) {
-			logFrom := utils.LogFrom{Primary: *shoutrrr.ID, Secondary: serviceInfo.ID} // For logging
-			triesLeft := shoutrrr.GetMaxTries()                                        // Number of times to send Shoutrrr (until 200 received).
-
-			// Delay sending the Shoutrrr message by the defined interval.
-			msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", *shoutrrr.ID, shoutrrr.GetDelay())
-			jLog.Info(msg, logFrom, shoutrrr.GetDelay() != "0s")
-			time.Sleep(shoutrrr.GetDelayDuration())
-
-			url := shoutrrr.GetURL()
-			sender, err := shoutrrr_lib.CreateSender(url)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			params := shoutrrr.GetParams(serviceInfo)
-			if title != "" {
-				(*params)["title"] = title
-			}
-			toSend := message
-			if message == "" {
-				toSend = shoutrrr.GetMessage(serviceInfo)
-			}
-			combinedErrs := make(map[string]int)
-			for {
-				msg := fmt.Sprintf("Sending %q to %q", toSend, url)
-				jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
-				jLog.Debug(msg+fmt.Sprintf(" with params=%q", *params), logFrom, jLog.IsLevel("debug"))
-				err := sender.Send(toSend, params)
-
-				failed := false
-				for i := range err {
-					if err[i] != nil {
-						failed = true
-						break
-					}
-				}
-
-				// SUCCESS!
-				if !failed {
-					metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *shoutrrr.ID, serviceInfo.ID, shoutrrr.GetType(), "SUCCESS")
-					failed := false
-					shoutrrr.Failed = &failed
-					errChan <- nil
-					return
-				}
-
-				// FAIL
-				for new := range err {
-					jLog.Error(err[new].Error(), logFrom, true)
-
-					combinedErrs[err[new].Error()]++
-				}
-				metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *shoutrrr.ID, serviceInfo.ID, shoutrrr.GetType(), "FAIL")
-				triesLeft--
-
-				// Give up after MaxTries.
-				if triesLeft == 0 {
-					msg = fmt.Sprintf("failed %d times to send a %s message to %s", shoutrrr.GetMaxTries(), shoutrrr.GetType(), shoutrrr.GetURL())
-					jLog.Error(msg, logFrom, true)
-					failed := true
-					shoutrrr.Failed = &failed
-					var err error
-					for key := range combinedErrs {
-						err = fmt.Errorf("%s%s x %d",
-							utils.ErrorToString(err), key, combinedErrs[key])
-					}
-					errChan <- err
-					return
-				}
-
-				// Space out retries.
-				time.Sleep(10 * time.Second)
-			}
+			errChan <- shoutrrr.Send(title, message, serviceInfo, useDelay)
 		}((*s)[key])
-		// Space out Shoutrrr messages.const.
-		time.Sleep(3 * time.Second)
+
+		// Space out Shoutrrr send starts.
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	for range *s {
@@ -324,4 +254,80 @@ func (s *Slice) Send(
 		}
 	}
 	return
+}
+
+func (s *Shoutrrr) Send(
+	title string,
+	message string,
+	serviceInfo *utils.ServiceInfo,
+	useDelay bool,
+) (errs error) {
+	logFrom := utils.LogFrom{Primary: *s.ID, Secondary: serviceInfo.ID} // For logging
+	triesLeft := s.GetMaxTries()                                        // Number of times to send Shoutrrr (until 200 received).
+
+	if useDelay && s.GetDelay() != "0s" {
+		// Delay sending the Shoutrrr message by the defined interval.
+		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", *s.ID, s.GetDelay())
+		jLog.Info(msg, logFrom, s.GetDelay() != "0s")
+		time.Sleep(s.GetDelayDuration())
+	}
+
+	url := s.GetURL()
+	sender, err := shoutrrr_lib.CreateSender(url)
+	if err != nil {
+		return err
+	}
+	params := s.GetParams(serviceInfo)
+	if title != "" {
+		(*params)["title"] = title
+	}
+	toSend := message
+	if message == "" {
+		toSend = s.GetMessage(serviceInfo)
+	}
+
+	combinedErrs := make(map[string]int)
+	for {
+		msg := fmt.Sprintf("Sending %q to %q", toSend, url)
+		jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
+		jLog.Debug(msg+fmt.Sprintf(" with params=%q", *params), logFrom, jLog.IsLevel("debug"))
+		err := sender.Send(toSend, params)
+
+		failed := false
+		for i := range err {
+			if err[i] != nil {
+				failed = true
+				jLog.Error(err[i].Error(), logFrom, true)
+				combinedErrs[err[i].Error()]++
+			}
+		}
+
+		// SUCCESS!
+		if !failed {
+			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
+			failed := false
+			s.Failed = &failed
+			return
+		}
+
+		// FAIL
+		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "FAIL")
+		triesLeft--
+
+		// Give up after MaxTries.
+		if triesLeft == 0 {
+			msg = fmt.Sprintf("failed %d times to send a %s message to %s", s.GetMaxTries(), s.GetType(), s.GetURL())
+			jLog.Error(msg, logFrom, true)
+			failed := true
+			s.Failed = &failed
+			for key := range combinedErrs {
+				errs = fmt.Errorf("%s%s x %d",
+					utils.ErrorToString(errs), key, combinedErrs[key])
+			}
+			return
+		}
+
+		// Space out retries.
+		time.Sleep(10 * time.Second)
+	}
 }

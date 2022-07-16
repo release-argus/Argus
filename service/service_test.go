@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"testing"
 
+	db_types "github.com/release-argus/Argus/db/types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
@@ -32,13 +33,14 @@ func TestServiceQuery(t *testing.T) {
 		hardDefaultsSemanticVersioning bool   = true
 		hardDefaultsUsePreRelease      bool   = false
 
-		service                 Slice  = Slice{}
-		serviceID               string = "GitHub_Query_Test"
-		serviceType             string = "github"
-		serviceURL              string = "go-gitea/gitea"
-		serviceURLcommand0Type  string = "regex"
-		serviceURLcommand0Regex string = "v([0-9.]+)"
-		serviceRegexVersion     string = "^[0-9.]+[0-9]$"
+		service                 Slice                 = Slice{}
+		serviceID               string                = "GitHub_Query_Test"
+		serviceType             string                = "github"
+		serviceURL              string                = "go-gitea/gitea"
+		serviceURLcommand0Type  string                = "regex"
+		serviceURLcommand0Regex string                = "v([0-9.]+)"
+		serviceRegexVersion     string                = "^[0-9.]+[0-9]$"
+		serviceDatabaseChannel  chan db_types.Message = make(chan db_types.Message, 5)
 
 		want = regexp.MustCompile(`^[0-9.]+[0-9]$`)
 	)
@@ -58,10 +60,11 @@ func TestServiceQuery(t *testing.T) {
 				Type:  serviceURLcommand0Type,
 				Regex: &serviceURLcommand0Regex,
 			}},
-		RegexVersion: &serviceRegexVersion,
-		Defaults:     &Service{},
-		HardDefaults: &hardDefaults,
-		Status:       &service_status.Status{},
+		RegexVersion:    &serviceRegexVersion,
+		Status:          &service_status.Status{},
+		DatabaseChannel: &serviceDatabaseChannel,
+		Defaults:        &Service{},
+		HardDefaults:    &hardDefaults,
 	}
 
 	_, _ = service["GitHub_Query_Test"].Query()

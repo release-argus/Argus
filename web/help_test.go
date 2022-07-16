@@ -22,6 +22,7 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	service_status "github.com/release-argus/Argus/service/status"
@@ -112,21 +113,22 @@ func getFreePort() (int, error) {
 
 func testService(id string) service.Service {
 	var (
-		sType               string      = "url"
-		sAccessToken        string      = "secret"
-		sURL                string      = "https://release-argus.io"
-		sWebURL             string      = "https://release-argus.io"
-		sRegexContent       string      = "content"
-		sRegexVersion       string      = "version"
-		sAnnounceChannel    chan []byte = make(chan []byte, 2)
-		sAllowInvalidCerts  bool        = false
-		sSemanticVersioning bool        = true
-		sAutoApprove        bool        = false
-		sIgnoreMisses       bool        = false
-		sUsePreRelease      bool        = false
-		sInterval           string      = "10s"
-		sSaveChannel        chan bool   = make(chan bool, 5)
-		whURL               string      = "example.com"
+		sType               string                = "url"
+		sAccessToken        string                = "secret"
+		sURL                string                = "https://release-argus.io"
+		sWebURL             string                = "https://release-argus.io"
+		sRegexContent       string                = "content"
+		sRegexVersion       string                = "version"
+		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
+		sAllowInvalidCerts  bool                  = false
+		sSemanticVersioning bool                  = true
+		sAutoApprove        bool                  = false
+		sIgnoreMisses       bool                  = false
+		sUsePreRelease      bool                  = false
+		sInterval           string                = "10s"
+		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
+		sSaveChannel        chan bool             = make(chan bool, 5)
+		whURL               string                = "example.com"
 	)
 	svc := service.Service{
 		ID:                 &id,
@@ -143,6 +145,7 @@ func testService(id string) service.Service {
 		Icon:               "test",
 		UsePreRelease:      &sUsePreRelease,
 		Announce:           &sAnnounceChannel,
+		DatabaseChannel:    &sDatabaseChannel,
 		SaveChannel:        &sSaveChannel,
 		Interval:           &sInterval,
 		Defaults:           &service.Service{},

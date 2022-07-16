@@ -401,14 +401,14 @@ func TestSliceInitWithNilElement(t *testing.T) {
 }
 
 func TestSliceInitWithDefaultMain(t *testing.T) {
-	// GIVEN a Slice and a Slice with a Main for "1"
+	// GIVEN a Slice and a Slice
 	slice := testSlice()
 	serviceID := "test"
 
-	// WHEN Init is called on it with a main for "1"
+	// WHEN Init is called on it with no mains defined (default Slice)
 	slice.Init(nil, &serviceID, &Slice{}, &Slice{}, &Slice{})
 
-	// THEN "1" has an empty main
+	// THEN "1" gets an empty main
 	if slice["1"].Main.Type != "" ||
 		len(slice["1"].Main.Options) != 0 ||
 		len(slice["1"].Main.URLFields) != 0 ||

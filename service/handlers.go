@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/web/metrics"
 )
@@ -57,9 +58,6 @@ func (s *Service) UpdatedVersion() {
 
 	// Announce version change to WebSocket clients
 	s.AnnounceUpdate()
-	if s.SaveChannel != nil {
-		*s.SaveChannel <- true
-	}
 }
 
 // UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
@@ -115,25 +113,7 @@ func (s *Service) HandleFailedActions() {
 	errChan := make(chan error)
 	errored := false
 
-	retryAll := true
-	// retryAll only if every WebHook has been sent successfully
-	if s.WebHook != nil {
-		for key := range *s.WebHook {
-			if !utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
-				retryAll = false
-				break
-			}
-		}
-	}
-	// AND every Command has been run successfully
-	if retryAll && s.Command != nil {
-		for key := range *s.Command {
-			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
-				retryAll = false
-				break
-			}
-		}
-	}
+	retryAll := s.shouldRetryAll()
 
 	potentialErrors := 0
 	// Send the WebHook(s).
@@ -204,7 +184,6 @@ func (s *Service) HandleCommand(command string) {
 	if s.Command == nil {
 		return
 	}
-
 	// Find the command
 	index := s.CommandController.Find(command)
 	if index == nil {
@@ -252,7 +231,33 @@ func (s *Service) HandleSkip(version string) {
 	s.Status.ApprovedVersion = "SKIP_" + version
 	s.AnnounceApproved()
 
-	if s.SaveChannel != nil {
-		*s.SaveChannel <- true
+	*s.DatabaseChannel <- db_types.Message{
+		ServiceID: *s.ID,
+		Cells: []db_types.Cell{
+			{Column: "approved_version", Value: s.Status.ApprovedVersion},
+		},
 	}
+}
+
+func (s *Service) shouldRetryAll() bool {
+	retry := true
+	// retry all only if every WebHook has been sent successfully
+	if s.WebHook != nil {
+		for key := range *s.WebHook {
+			if utils.EvalNilPtr((*s.WebHook)[key].Failed, true) {
+				retry = false
+				break
+			}
+		}
+	}
+	// AND every Command has been run successfully
+	if retry && s.Command != nil {
+		for key := range *s.Command {
+			if utils.EvalNilPtr(s.CommandController.Failed[key], true) {
+				retry = false
+				break
+			}
+		}
+	}
+	return retry
 }

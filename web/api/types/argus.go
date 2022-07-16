@@ -91,14 +91,15 @@ type RuntimeInfo struct {
 
 // Flags is the runtime flags.
 type Flags struct {
-	ConfigFile     *string `json:"config.file,omitempty"`
-	LogLevel       string  `json:"log.level,omitempty"`
-	LogTimestamps  *bool   `json:"log.timestamps,omitempty"`
-	WebListenHost  string  `json:"web.listen-host,omitempty"`
-	WebListenPort  string  `json:"web.listen-port,omitempty"`
-	WebCertFile    *string `json:"web.cert-file"`
-	WebPKeyFile    *string `json:"web.pkey-file"`
-	WebRoutePrefix string  `json:"web.route-prefix,omitempty"`
+	ConfigFile       *string `json:"config.file,omitempty"`
+	LogLevel         string  `json:"log.level,omitempty"`
+	LogTimestamps    *bool   `json:"log.timestamps,omitempty"`
+	DataDatabaseFile *string `json:"data.database-file,omitempty"`
+	WebListenHost    string  `json:"web.listen-host,omitempty"`
+	WebListenPort    string  `json:"web.listen-port,omitempty"`
+	WebCertFile      *string `json:"web.cert-file"`
+	WebPKeyFile      *string `json:"web.pkey-file"`
+	WebRoutePrefix   string  `json:"web.route-prefix,omitempty"`
 }
 
 // Defaults is the global default for vars.

@@ -25,22 +25,7 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-var TIMEOUT time.Duration = 25
-
-func testConfig() Config {
-	logLevel := "DEBUG"
-	saveChannel := make(chan bool, 5)
-	return Config{
-		File:        "/root/inaccessible",
-		SaveChannel: &saveChannel,
-		Settings: Settings{
-			Indentation: 4,
-			Log: LogSettings{
-				Level: &logLevel,
-			},
-		},
-	}
-}
+var TIMEOUT time.Duration = 25 * time.Second
 
 func TestSaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler
@@ -67,9 +52,6 @@ func TestWaitChannelTimeout(t *testing.T) {
 	config := testConfig()
 
 	// WHEN the waitChannelTimeout is called
-	go func() {
-		*config.SaveChannel <- true
-	}()
 	time.Sleep(time.Second)
 	start := time.Now().UTC()
 	waitChannelTimeout(config.SaveChannel)
@@ -77,8 +59,60 @@ func TestWaitChannelTimeout(t *testing.T) {
 	// THEN after `TIMEOUT`, it would have tried to Save (and failed)
 	elapsed := time.Since(start)
 	if elapsed < TIMEOUT {
-		t.Errorf("waitChannelTimeout should have waited atleast %v, but only waited %v",
+		t.Errorf("waitChannelTimeout should have waited atleast %s, but only waited %s",
 			TIMEOUT, elapsed)
+	}
+}
+
+func TestWaitChannelTimeoutDoesExtend(t *testing.T) {
+	// GIVEN a Config.SaveChannel that is in the waitChannelTimeout
+	config := testConfig()
+	go func() {
+		*config.SaveChannel <- true
+	}()
+
+	// WHEN another message is sent to the channel mid-way through the wait
+	go func() {
+		time.Sleep(10 * time.Second)
+		*config.SaveChannel <- true
+	}()
+	time.Sleep(time.Second)
+	start := time.Now().UTC()
+	waitChannelTimeout(config.SaveChannel)
+
+	// THEN after 2*`TIMEOUT`, it would have tried to Save (and failed)
+	elapsed := time.Since(start)
+	if elapsed < 2*TIMEOUT ||
+		elapsed > 2*TIMEOUT+5*time.Second {
+		t.Errorf("waitChannelTimeout should have waited ~%s, but waited %v",
+			2*TIMEOUT, elapsed)
+	}
+}
+
+func TestWaitChannelTimeoutDoesExtendOnce(t *testing.T) {
+	// GIVEN a Config.SaveChannel that is in the waitChannelTimeout
+	config := testConfig()
+	go func() {
+		*config.SaveChannel <- true
+	}()
+
+	// WHEN two messages are sent to the channel mid-way through the wait
+	go func() {
+		time.Sleep(10 * time.Second)
+		*config.SaveChannel <- true
+		time.Sleep(10 * time.Second)
+		*config.SaveChannel <- true
+	}()
+	time.Sleep(time.Second)
+	start := time.Now().UTC()
+	waitChannelTimeout(config.SaveChannel)
+
+	// THEN after 2*`TIMEOUT`, it would have tried to Save (and failed)
+	elapsed := time.Since(start)
+	if elapsed < 2*TIMEOUT ||
+		elapsed > 2*TIMEOUT+5*time.Second {
+		t.Errorf("waitChannelTimeout should have waited ~%s, but waited %v",
+			2*TIMEOUT, elapsed)
 	}
 }
 

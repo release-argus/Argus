@@ -14,7 +14,11 @@
 
 package service
 
-import "time"
+import (
+	"time"
+
+	db_types "github.com/release-argus/Argus/db/types"
+)
 
 // SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
 func (s *Service) SetDeployedVersion(version string) {
@@ -28,6 +32,14 @@ func (s *Service) SetDeployedVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.WebHook.ResetFails()
 	s.CommandController.ResetFails()
+
+	*s.DatabaseChannel <- db_types.Message{
+		ServiceID: *s.ID,
+		Cells: []db_types.Cell{
+			{Column: "deployed_version", Value: s.Status.DeployedVersion},
+			{Column: "deployed_version_timestamp", Value: s.Status.DeployedVersionTimestamp},
+		},
+	}
 }
 
 // SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
@@ -38,4 +50,12 @@ func (s *Service) SetLatestVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.WebHook.ResetFails()
 	s.CommandController.ResetFails()
+
+	*s.DatabaseChannel <- db_types.Message{
+		ServiceID: *s.ID,
+		Cells: []db_types.Cell{
+			{Column: "latest_version", Value: s.Status.LatestVersion},
+			{Column: "latest_version_timestamp", Value: s.Status.LatestVersionTimestamp},
+		},
+	}
 }

@@ -544,58 +544,6 @@ func TestServiceInitWithNoStatus(t *testing.T) {
 	}
 }
 
-func TestServiceInitWithNoLatestVersion(t *testing.T) {
-	// GIVEN a Service with no LatestVersion
-	service := testServiceGitHub()
-	service.Status.LatestVersion = ""
-
-	// WHEN Init is called on it
-	service.Init(nil, &Service{}, &Service{})
-
-	// THEN LatestVersion is now DeployedVersion
-	got := service.Status.LatestVersion
-	want := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("LatestVersion should have been defaulted to %q, not %q",
-			want, got)
-	}
-}
-
-func TestServiceInitWithNoDeployedVersion(t *testing.T) {
-	// GIVEN a Service with no DeployedVersion
-	service := testServiceGitHub()
-	service.Status.LatestVersion = ""
-
-	// WHEN Init is called on it
-	service.Init(nil, &Service{}, &Service{})
-
-	// THEN DeployedVersion is now LatestVersion
-	got := service.Status.DeployedVersion
-	want := service.Status.LatestVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have been defaulted to %q, not %q",
-			want, got)
-	}
-}
-
-func TestServiceInitWithLatestVersionApprovedAndDeployed(t *testing.T) {
-	// GIVEN a Service with DeployedVersion == LatestVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion
-	service.Status.DeployedVersion = service.Status.ApprovedVersion
-
-	// WHEN Init is called on it
-	service.Init(nil, &Service{}, &Service{})
-
-	// THEN ApprovedVersion is reset
-	got := service.Status.ApprovedVersion
-	want := ""
-	if got != want {
-		t.Errorf("Latest==Deployed==Approved, so ApprovedVersion should have been reset to %q, not %q",
-			want, got)
-	}
-}
-
 func TestServiceInitHandsOutDefaults(t *testing.T) {
 	// GIVEN a Service with nil Defaults
 	service := testServiceGitHub()

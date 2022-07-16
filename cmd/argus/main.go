@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/release-argus/Argus/db"
 	argus_testing "github.com/release-argus/Argus/testing"
 
 	cfg "github.com/release-argus/Argus/config"
@@ -54,10 +55,9 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	argus_testing.InitJLog(&jLog)
-	argus_testing.CommandTest(testCommandsFlag, &config)
-	argus_testing.NotifyTest(testNotifyFlag, &config)
-	argus_testing.ServiceTest(testServiceFlag, &config)
+	argus_testing.CommandTest(testCommandsFlag, &config, &jLog)
+	argus_testing.NotifyTest(testNotifyFlag, &config, &jLog)
+	argus_testing.ServiceTest(testServiceFlag, &config, &jLog)
 
 	// config.Service.Init()
 	serviceCount := len(*config.Order)
@@ -72,6 +72,8 @@ func main() {
 			fmt.Printf("  - %s\n", *config.Service[key].ID)
 		}
 	}
+
+	go db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(config.Order)

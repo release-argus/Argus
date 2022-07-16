@@ -31,6 +31,7 @@ import (
 	"github.com/gorilla/websocket"
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
@@ -319,6 +320,8 @@ func TestWebSocketApprovalsVersion(t *testing.T) {
 	// and the DeployedVersion for a Service != LatestVersion
 	cfg.Service["test"].Status.DeployedVersion = "0.0.0"
 	cfg.Service["test"].Status.LatestVersion = "0.1.0"
+	databaseChannel := make(chan db_types.Message, 5)
+	cfg.Service["test"].DatabaseChannel = &databaseChannel
 	ws := connectToWebSocket(t)
 	defer ws.Close()
 

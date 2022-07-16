@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package testing
+package db
 
-import "github.com/release-argus/Argus/utils"
+import (
+	"database/sql"
 
-var jLog *utils.JLog
+	_ "modernc.org/sqlite"
+	"github.com/release-argus/Argus/config"
+)
 
-func InitJLog(log *utils.JLog) {
-	jLog = log
+type api struct {
+	config *config.Config
+	db     *sql.DB
 }

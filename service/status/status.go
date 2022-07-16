@@ -23,15 +23,25 @@ import (
 
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
+	ApprovedVersion          string `yaml:"-"` // The version that's been approved
+	DeployedVersion          string `yaml:"-"` // Track the deployed version of the service from the last successful WebHook.
+	DeployedVersionTimestamp string `yaml:"-"` // UTC timestamp of DeployedVersion being changed.
+	LatestVersion            string `yaml:"-"` // Latest version found from query().
+	LatestVersionTimestamp   string `yaml:"-"` // UTC timestamp of LatestVersion being changed.
+	LastQueried              string `yaml:"-"` // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint   `yaml:"-"` // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint   `yaml:"-"` // Counter for the number of regex misses on version.
+	Fails                    *Fails `yaml:"-"` // Track the Notify/WebHook fails
+}
+
+// TODO: Deprecate
+// OldStatus is for handling config.yml's containing data that now belongs in argus.db
+type OldStatus struct {
 	ApprovedVersion          string `yaml:"approved_version,omitempty"`           // The version that's been approved
 	DeployedVersion          string `yaml:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
 	DeployedVersionTimestamp string `yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp of DeployedVersion being changed.
 	LatestVersion            string `yaml:"latest_version,omitempty"`             // Latest version found from query().
 	LatestVersionTimestamp   string `yaml:"latest_version_timestamp,omitempty"`   // UTC timestamp of LatestVersion being changed.
-	LastQueried              string `yaml:"-"`                                    // UTC timestamp that version was last queried/checked.
-	RegexMissesContent       uint   `yaml:"-"`                                    // Counter for the number of regex misses on URL content.
-	RegexMissesVersion       uint   `yaml:"-"`                                    // Counter for the number of regex misses on version.
-	Fails                    *Fails `yaml:"-"`                                    // Track the Notify/WebHook fails
 }
 
 // Fails keeps track of whether any of the notifications failed on the last version change.

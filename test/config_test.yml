@@ -1,4 +1,6 @@
 settings:
+  data:
+    database_file: test-config_test.db
   web:
     listen_port: "0"
 defaults:

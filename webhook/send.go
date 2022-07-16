@@ -73,7 +73,6 @@ func (w *WebHook) Send(
 		time.Sleep(w.GetDelayDuration())
 	} else {
 		w.SetNextRunnable(false, true)
-
 	}
 
 	for {
@@ -106,7 +105,7 @@ func (w *WebHook) Send(
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL
 				//nolint:errcheck // ^
-				w.Notifiers.Shoutrrr.Send("WebHook fail", err.Error(), &serviceInfo)
+				w.Notifiers.Send("WebHook fail", err.Error(), &serviceInfo)
 			}
 			return
 		}
@@ -172,9 +171,9 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 }
 
 func (n *Notifiers) Send(title string, message string, serviceInfo *utils.ServiceInfo) error {
-	if n == nil {
+	if n == nil || n.Shoutrrr == nil {
 		return nil
 	}
 
-	return (*n.Shoutrrr).Send(title, message, serviceInfo)
+	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
 }

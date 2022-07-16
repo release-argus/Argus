@@ -19,6 +19,7 @@ import (
 	"os"
 
 	command "github.com/release-argus/Argus/commands"
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/utils"
 	"gopkg.in/yaml.v3"
@@ -110,12 +111,16 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	c.GetOrder(data)
 
-	saveChannel := make(chan bool, 5)
+	databaseChannel := make(chan db_types.Message, 8)
+	c.DatabaseChannel = &databaseChannel
+
+	saveChannel := make(chan bool, 4)
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {
 		id := key
 		c.Service[key].ID = &id
+		c.Service[key].DatabaseChannel = c.DatabaseChannel
 		c.Service[key].SaveChannel = c.SaveChannel
 	}
 	c.Init()

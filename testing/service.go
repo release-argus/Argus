@@ -25,21 +25,24 @@ import (
 )
 
 // ServiceTest will query the service and return the version it finds.
-func ServiceTest(flag *string, cfg *config.Config) {
+func ServiceTest(
+	flag *string,
+	cfg *config.Config,
+	log *utils.JLog,
+) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
-	jLog.Info(
+	log.Info(
 		"",
 		logFrom,
 		true,
 	)
 	service := cfg.Service[*flag]
 
-	//nolint:staticcheck // SA5011 -- pointer is nil if not in the Slice
 	if service == nil {
 		var allService []string
 		for key := range cfg.Service {
@@ -47,7 +50,7 @@ func ServiceTest(flag *string, cfg *config.Config) {
 				allService = append(allService, key)
 			}
 		}
-		jLog.Fatal(
+		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(allService, "\n  - "),
@@ -57,15 +60,17 @@ func ServiceTest(flag *string, cfg *config.Config) {
 		)
 	}
 
-	//nolint:staticcheck // SA5011 -- service isn't nil from above Fatal
-	service.Status = &service_status.Status{}
+	// shouldn't need this as the fatal above prevents it getting here if it is nil, but staticcheck gives a SA5011
+	if service != nil {
+		service.Status = &service_status.Status{}
+	}
 	_, err := service.Query()
 	if err != nil {
 		helpMsg := ""
 		if *service.Type == "url" && strings.Count(*service.URL, "/") == 1 && !strings.HasPrefix(*service.URL, "http") {
 			helpMsg = "\nThis URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type."
 		}
-		jLog.Error(
+		log.Error(
 			fmt.Sprintf(
 				"No version matching the conditions specified could be found for %q at %q%s",
 				*flag,
@@ -82,7 +87,7 @@ func ServiceTest(flag *string, cfg *config.Config) {
 		version, err := service.DeployedVersionLookup.Query(
 			logFrom,
 			service.GetSemanticVersioning())
-		jLog.Info(
+		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",
 				version,
@@ -91,7 +96,7 @@ func ServiceTest(flag *string, cfg *config.Config) {
 			err == nil,
 		)
 	}
-	if !jLog.Testing {
+	if !log.Testing {
 		os.Exit(0)
 	}
 }

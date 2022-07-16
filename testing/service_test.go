@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
+	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
@@ -46,7 +47,7 @@ func TestServiceTestWithNoService(t *testing.T) {
 	os.Stdout = w
 
 	// WHEN ServiceTest is called with an empty (undefined) flag
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN nothing will be run/printed
 	w.Close()
@@ -64,12 +65,13 @@ func TestServiceTestWithUnknownService(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
 	var (
-		sID                string = "test"
-		sType              string = "url"
-		sURL               string = "github.com/release-argus/argus/releases"
-		sRegexVersion      string = "[0-9.]+"
-		sAllowInvalidCerts bool   = false
-		sIgnoreMisses      bool   = false
+		sID                string                = "test"
+		sType              string                = "url"
+		sURL               string                = "github.com/release-argus/argus/releases"
+		sRegexVersion      string                = "[0-9.]+"
+		sAllowInvalidCerts bool                  = false
+		sIgnoreMisses      bool                  = false
+		databaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	svc := service.Service{
 		ID:                &sID,
@@ -79,6 +81,7 @@ func TestServiceTestWithUnknownService(t *testing.T) {
 		AllowInvalidCerts: &sAllowInvalidCerts,
 		IgnoreMisses:      &sIgnoreMisses,
 		Status:            &service_status.Status{},
+		DatabaseChannel:   &databaseChannel,
 		Defaults:          &service.Service{},
 		HardDefaults:      &service.Service{},
 	}
@@ -99,7 +102,7 @@ func TestServiceTestWithUnknownService(t *testing.T) {
 	}()
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Error("Should os.Exit(1), err")
@@ -110,13 +113,14 @@ func TestServiceTestWithGitHubServiceAsURL(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
 	var (
-		sID                 string = "test"
-		sType               string = "url"
-		sURL                string = "github.com/release-argus/argus"
-		sRegexVersion       string = "[0-9.]+"
-		sAllowInvalidCerts  bool   = false
-		sIgnoreMisses       bool   = false
-		sSemanticVersioning bool   = false
+		sID                 string                = "test"
+		sType               string                = "url"
+		sURL                string                = "github.com/release-argus/argus"
+		sRegexVersion       string                = "[0-9.]+"
+		sAllowInvalidCerts  bool                  = false
+		sIgnoreMisses       bool                  = false
+		sSemanticVersioning bool                  = false
+		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	svc := service.Service{
 		ID:                 &sID,
@@ -127,6 +131,7 @@ func TestServiceTestWithGitHubServiceAsURL(t *testing.T) {
 		IgnoreMisses:       &sIgnoreMisses,
 		SemanticVersioning: &sSemanticVersioning,
 		Status:             &service_status.Status{},
+		DatabaseChannel:    &databaseChannel,
 		Defaults:           &service.Service{},
 		HardDefaults:       &service.Service{},
 	}
@@ -144,7 +149,7 @@ func TestServiceTestWithGitHubServiceAsURL(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	w.Close()
@@ -162,13 +167,14 @@ func TestServiceTestWithKnownService(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
 	var (
-		sID                 string = "test"
-		sType               string = "url"
-		sURL                string = "release-argus/argus"
-		sRegexVersion       string = "[0-9.]+"
-		sAllowInvalidCerts  bool   = false
-		sIgnoreMisses       bool   = false
-		sSemanticVersioning bool   = false
+		sID                 string                = "test"
+		sType               string                = "url"
+		sURL                string                = "release-argus/argus"
+		sRegexVersion       string                = "[0-9.]+"
+		sAllowInvalidCerts  bool                  = false
+		sIgnoreMisses       bool                  = false
+		sSemanticVersioning bool                  = false
+		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	svc := service.Service{
 		ID:                 &sID,
@@ -179,6 +185,7 @@ func TestServiceTestWithKnownService(t *testing.T) {
 		IgnoreMisses:       &sIgnoreMisses,
 		SemanticVersioning: &sSemanticVersioning,
 		Status:             &service_status.Status{},
+		DatabaseChannel:    &databaseChannel,
 		Defaults:           &service.Service{},
 		HardDefaults:       &service.Service{},
 	}
@@ -196,7 +203,7 @@ func TestServiceTestWithKnownService(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it will have printed the LatestVersion found
 	w.Close()
@@ -214,12 +221,13 @@ func TestServiceTestWithKnownServiceAndDeployedVersionLookup(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
 	var (
-		sID                 string = "test"
-		sType               string = "github"
-		sURL                string = "release-argus/argus"
-		sAllowInvalidCerts  bool   = false
-		sIgnoreMisses       bool   = false
-		sSemanticVersioning bool   = false
+		sID                 string                = "test"
+		sType               string                = "github"
+		sURL                string                = "release-argus/argus"
+		sAllowInvalidCerts  bool                  = false
+		sIgnoreMisses       bool                  = false
+		sSemanticVersioning bool                  = false
+		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	svc := service.Service{
 		ID:                 &sID,
@@ -228,17 +236,18 @@ func TestServiceTestWithKnownServiceAndDeployedVersionLookup(t *testing.T) {
 		AllowInvalidCerts:  &sAllowInvalidCerts,
 		IgnoreMisses:       &sIgnoreMisses,
 		SemanticVersioning: &sSemanticVersioning,
-		Status:             &service_status.Status{},
+		DeployedVersionLookup: &service.DeployedVersionLookup{
+			URL:               "https://release-argus.io",
+			AllowInvalidCerts: &sAllowInvalidCerts,
+			Regex:             "([0-9]+) The Argus Developers",
+		},
+		Status:          &service_status.Status{},
+		DatabaseChannel: &databaseChannel,
 		Defaults: &service.Service{
 			DeployedVersionLookup: &service.DeployedVersionLookup{},
 		},
 		HardDefaults: &service.Service{
 			DeployedVersionLookup: &service.DeployedVersionLookup{},
-		},
-		DeployedVersionLookup: &service.DeployedVersionLookup{
-			URL:               "https://release-argus.io",
-			AllowInvalidCerts: &sAllowInvalidCerts,
-			Regex:             "([0-9]+) The Argus Developers",
 		},
 	}
 	svc.Init(jLog, svc.Defaults, svc.HardDefaults)
@@ -255,7 +264,7 @@ func TestServiceTestWithKnownServiceAndDeployedVersionLookup(t *testing.T) {
 	jLog.Testing = true
 
 	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg)
+	ServiceTest(&flag, &cfg, jLog)
 
 	// THEN it should have printed the LatestVersion and DeployedVersion
 	w.Close()

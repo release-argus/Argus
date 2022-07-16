@@ -84,7 +84,8 @@ func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
 		c.Notifiers.Shoutrrr.Send(
 			"Command failed for "+*c.ServiceID,
 			(*c.Command)[index].String()+"\n"+err.Error(),
-			nil)
+			nil,
+			true)
 	}
 	metrics.IncreasePrometheusCounterActions(metrics.CommandMetric, (*c.Command)[index].String(), *c.ServiceID, "", metricResult)
 

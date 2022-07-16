@@ -3,10 +3,10 @@ FIRST_GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 GOOPTS       ?=
 
 GO_ARCHITECTURES_DARWIN ?= amd64 arm64
-GO_ARCHITECTURES_FREEBSD ?= amd64 arm arm64
+GO_ARCHITECTURES_FREEBSD ?= amd64
 GO_ARCHITECTURES_LINUX ?= amd64 arm arm64
-GO_ARCHITECTURES_OPENBSD ?= amd64 arm arm64
-GO_ARCHITECTURES_WINDOWS ?= amd64 arm arm64
+GO_ARCHITECTURES_OPENBSD ?=
+GO_ARCHITECTURES_WINDOWS ?= amd64 arm64
 
 GO_VERSION        ?= $(shell $(GO) version)
 GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
@@ -95,7 +95,7 @@ build-darwin:
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/darwin/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.darwin \
 			./cmd/argus \
 		) \
 		"- DONE\n" \
@@ -113,7 +113,7 @@ build-freebsd:
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/freebsd/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.freebsd \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -131,7 +131,7 @@ build-linux:
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/linux/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.linux \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -149,7 +149,7 @@ build-openbsd:
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/openbsd/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.openbsd \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \
@@ -167,7 +167,7 @@ build-windows:
 				-ldflags="\
 					-X 'github.com/release-argus/argus/utils.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/utils.BuildDate=\"${BUILD_DATE}\"'" \
-				-o .build/windows/${GOARCH}/argus \
+				-o .build/argus-${GOARCH}.windows \
 			./cmd/argus  \
 		) \
 		"- DONE\n" \

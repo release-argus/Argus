@@ -20,97 +20,121 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	argus_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
+	shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/utils"
 )
 
 // NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
-func NotifyTest(flag *string, cfg *config.Config) {
+func NotifyTest(
+	flag *string,
+	cfg *config.Config,
+	log *utils.JLog,
+) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
+	var logSlice *shoutrrr.Slice
+	logSlice.Init(log, nil, nil, nil, nil)
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
-	argus_shoutrrr.SetLog(jLog)
-	jLog.Info(
-		"",
-		logFrom,
-		true,
-	)
-
 	// Find the Shoutrrr to test
-	shoutrrr := &argus_shoutrrr.Slice{}
+	slice := findShoutrrr(*flag, cfg, log, logFrom)
+
+	title := slice["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
+	message := "TEST - " + slice["test"].GetMessage(
+		&utils.ServiceInfo{
+			ID:            "NAME_OF_SERVICE",
+			URL:           "QUERY_URL",
+			WebURL:        "WEB_URL",
+			LatestVersion: "MAJOR.MINOR.PATCH",
+		},
+	)
+	err := slice.Send(
+		title,
+		message,
+		&utils.ServiceInfo{
+			ID:            "ID",
+			URL:           "URL",
+			WebURL:        "WebURL",
+			LatestVersion: "MAJOR.MINOR.PATCH",
+		},
+		false)
+	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
+	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
+	if !log.Testing {
+		os.Exit(0)
+	}
+}
+
+// findShoutrrr with name from cfg.Service.Notify || cfg.Notify
+func findShoutrrr(
+	name string,
+	cfg *config.Config,
+	log *utils.JLog,
+	logFrom utils.LogFrom,
+) shoutrrr.Slice {
+	slice := shoutrrr.Slice{}
 	for _, svc := range cfg.Service {
-		if svc.Notify != nil && (*svc.Notify)[*flag] != nil {
-			(*shoutrrr)["test"] = (*svc.Notify)[*flag]
+		if svc.Notify != nil && (*svc.Notify)[name] != nil {
+			slice["test"] = (*svc.Notify)[name]
 			break
 		}
 	}
 
-	if (*shoutrrr)["test"] == nil {
-		if cfg.Notify != nil && cfg.Notify[*flag] != nil {
+	if slice["test"] == nil {
+		if cfg.Notify != nil && cfg.Notify[name] != nil {
 			hardDefaults := config.Defaults{}
 			hardDefaults.SetDefaults()
-			emptyShoutrrs := argus_shoutrrr.Shoutrrr{}
+			emptyShoutrrs := shoutrrr.Shoutrrr{}
 			emptyShoutrrs.InitMaps()
-			(*shoutrrr)["test"] = &argus_shoutrrr.Shoutrrr{
-				ID:           flag,
-				Main:         cfg.Notify[*flag],
-				Defaults:     &emptyShoutrrs,
-				HardDefaults: &emptyShoutrrs,
-			}
-			(*shoutrrr)["test"].InitMaps()
-			(*shoutrrr)["test"].Main.InitMaps()
+			slice["test"] = cfg.Notify[name]
+			slice["test"].ID = &name
+			slice["test"].Main = cfg.Notify[name]
+			slice["test"].Defaults = &emptyShoutrrs
+			slice["test"].HardDefaults = &emptyShoutrrs
+			slice["test"].InitMaps()
+			slice["test"].Main.InitMaps()
 
-			notifyType := (*shoutrrr)["test"].GetType()
+			notifyType := slice["test"].GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
-				(*shoutrrr)["test"].Defaults = cfg.Defaults.Notify[notifyType]
+				slice["test"].Defaults = cfg.Defaults.Notify[notifyType]
 			}
-			(*shoutrrr)["test"].Defaults.InitMaps()
-			(*shoutrrr)["test"].HardDefaults = hardDefaults.Notify[notifyType]
-			(*shoutrrr)["test"].HardDefaults.InitMaps()
+			slice["test"].Defaults.InitMaps()
+			slice["test"].HardDefaults = hardDefaults.Notify[notifyType]
+			slice["test"].HardDefaults.InitMaps()
 
-			if err := (*shoutrrr)["test"].CheckValues("    "); err != nil {
-				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", *flag, strings.ReplaceAll(err.Error(), "\\", "\n"))
-				jLog.Fatal(msg, logFrom, true)
+			if err := slice["test"].CheckValues("    "); err != nil {
+				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))
+				log.Fatal(msg, logFrom, true)
 			}
 		} else {
-			var allShoutrrr []string
-			if cfg.Notify != nil {
-				for key := range cfg.Notify {
-					if !utils.Contains(allShoutrrr, key) {
-						allShoutrrr = append(allShoutrrr, key)
-					}
-				}
-			}
-			if cfg.Service != nil {
-				for _, svc := range cfg.Service {
-					if svc.Notify != nil {
-						for key := range *svc.Notify {
-							if !utils.Contains(allShoutrrr, key) {
-								allShoutrrr = append(allShoutrrr, key)
-							}
-						}
-					}
-				}
-			}
-			msg := fmt.Sprintf("Shoutrrr %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n", *flag, strings.Join(allShoutrrr, "\n  - "))
-			jLog.Fatal(msg, logFrom, true)
+			all := getAllShoutrrrNames(cfg)
+			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
+				name, strings.Join(all, "\n  - "))
+			log.Fatal(msg, logFrom, true)
 		}
 	}
+	return slice
+}
 
-	title := (*shoutrrr)["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
-	message := "TEST - " + (*shoutrrr)["test"].GetMessage(&utils.ServiceInfo{ID: "NAME_OF_SERVICE", URL: "QUERY_URL", WebURL: "WEB_URL", LatestVersion: "MAJOR.MINOR.PATCH"})
-	err := shoutrrr.Send(title, message, &utils.ServiceInfo{
-		ID:            "ID",
-		URL:           "URL",
-		WebURL:        "WebURL",
-		LatestVersion: "MAJOR.MINOR.PATCH",
-	})
-	jLog.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
-	jLog.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
-	if !jLog.Testing {
-		os.Exit(0)
+//  getAllShoutrrrNames will return a list of all unique shoutrrr names
+func getAllShoutrrrNames(cfg *config.Config) (all []string) {
+	if cfg.Notify != nil {
+		for key := range cfg.Notify {
+			all = append(all, key)
+		}
 	}
+	if cfg.Service != nil {
+		for _, svc := range cfg.Service {
+			if svc.Notify != nil {
+				for key := range *svc.Notify {
+					if !utils.Contains(all, key) {
+						all = append(all, key)
+					}
+				}
+			}
+		}
+	}
+	return
 }

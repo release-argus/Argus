@@ -28,25 +28,208 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestNotifyTestWithNoShoutrrr(t *testing.T) {
+func TestGetAllShoutrrrNamesWithBothNotifyAndServiceNotify(t *testing.T) {
+	// GIVEN a Config with a Service containing a Shoutrrr and a Main Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID string = "test"
+	)
+	notifier := shoutrrr.Shoutrrr{
+		ID: &nID,
+	}
+	cfg := config.Config{
+		Service: service.Slice{
+			nID: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID: &notifier,
+				},
+			},
+		},
+		Notify: shoutrrr.Slice{
+			"discord": &shoutrrr.Shoutrrr{},
+		},
+	}
+
+	// WHEN getAllShoutrrrNames is called on this config
+	got := getAllShoutrrrNames(&cfg)
+
+	// THEN a list of all shoutrrr's will be returned
+	want := []string{"discord", nID}
+	fail := false
+	if len(got) != len(want) {
+		fail = true
+	} else {
+		for i := range got {
+			if got[i] != want[i] {
+				fail = true
+				break
+			}
+		}
+	}
+	if fail {
+		t.Errorf("Expected a list of all notifiers\ngot:  %v\nwant: %v",
+			got, want)
+	}
+}
+
+func TestGetAllShoutrrrNamesWithOnlyNotify(t *testing.T) {
+	// GIVEN a Config with a Service containing a Main Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	cfg := config.Config{
+		Notify: shoutrrr.Slice{
+			"discord": &shoutrrr.Shoutrrr{},
+		},
+	}
+
+	// WHEN getAllShoutrrrNames is called on this config
+	got := getAllShoutrrrNames(&cfg)
+
+	// THEN a list of all shoutrrr's will be returned
+	want := []string{"discord"}
+	fail := false
+	if len(got) != len(want) {
+		fail = true
+	} else {
+		for i := range got {
+			if got[i] != want[i] {
+				fail = true
+				break
+			}
+		}
+	}
+	if fail {
+		t.Errorf("Expected a list of all notifiers\ngot:  %v\nwant: %v",
+			got, want)
+	}
+}
+
+func TestGetAllShoutrrrNamesWithOnlyServices(t *testing.T) {
+	// GIVEN a Config with a Service containing a Service Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID0 string = "test"
+		nID1 string = "other"
+	)
+	notifier0 := shoutrrr.Shoutrrr{
+		ID: &nID0,
+	}
+	notifier1 := shoutrrr.Shoutrrr{
+		ID: &nID1,
+	}
+	cfg := config.Config{
+		Service: service.Slice{
+			nID0: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID0: &notifier0,
+				},
+			},
+			nID1: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID1: &notifier1,
+				},
+			},
+		},
+	}
+
+	// WHEN getAllShoutrrrNames is called on this config
+	got := getAllShoutrrrNames(&cfg)
+
+	// THEN a list of all shoutrrr's will be returned
+	want := []string{nID0, nID1}
+	fail := false
+	if len(got) != len(want) {
+		fail = true
+	} else {
+		for i := range got {
+			if got[i] != want[i] {
+				fail = true
+				break
+			}
+		}
+	}
+	if fail {
+		t.Errorf("Expected a list of all notifiers\ngot:  %v\nwant: %v",
+			got, want)
+	}
+}
+
+func TestGetAllShoutrrrNamesWithDuplicates(t *testing.T) {
+	// GIVEN a Config with a Service containing a Service Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID0 string = "test"
+		nID1 string = "other"
+	)
+	notifier0 := shoutrrr.Shoutrrr{
+		ID: &nID0,
+	}
+	notifier1 := shoutrrr.Shoutrrr{
+		ID: &nID1,
+	}
+	cfg := config.Config{
+		Service: service.Slice{
+			nID0: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID0: &notifier0,
+				},
+			},
+			nID1: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID0: &notifier0,
+					nID1: &notifier1,
+				},
+			},
+		},
+		Notify: shoutrrr.Slice{
+			nID0: &shoutrrr.Shoutrrr{},
+		},
+	}
+
+	// WHEN getAllShoutrrrNames is called on this config
+	got := getAllShoutrrrNames(&cfg)
+
+	// THEN a list of all shoutrrr's will be returned
+	want := []string{nID0, nID1}
+	fail := false
+	if len(got) != len(want) {
+		fail = true
+	} else {
+		for i := range got {
+			if got[i] != want[i] {
+				fail = true
+				break
+			}
+		}
+	}
+	if fail {
+		t.Errorf("Expected a list of all notifiers\ngot:  %v\nwant: %v",
+			got, want)
+	}
+}
+
+func TestNotifyTestWithNoShoutrrrFlag(t *testing.T) {
 	// GIVEN a Config with a Service containing a Shoutrrr
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
 	var (
-		sID       string = "test"
+		nID       string = "test"
 		nMaxTries string = "1"
 	)
 	notifier := shoutrrr.Shoutrrr{
-		ID: &sID,
+		ID: &nID,
 		Options: map[string]string{
 			"max_tries": nMaxTries,
 		},
 	}
 	cfg := config.Config{
 		Service: service.Slice{
-			sID: &service.Service{
+			nID: &service.Service{
 				Notify: &shoutrrr.Slice{
-					sID: &notifier,
+					nID: &notifier,
 				},
 			},
 		},
@@ -57,7 +240,7 @@ func TestNotifyTestWithNoShoutrrr(t *testing.T) {
 	os.Stdout = w
 
 	// WHEN NotifyTest is called with an empty (undefined) flag
-	NotifyTest(&flag, &cfg)
+	NotifyTest(&flag, &cfg, jLog)
 
 	// THEN nothing will be run/printed
 	w.Close()
@@ -71,25 +254,25 @@ func TestNotifyTestWithNoShoutrrr(t *testing.T) {
 	}
 }
 
-func TestNotifyTestWithUnknownService(t *testing.T) {
-	// GIVEN a Config with a Service containing a Shoutrrr
+func TestFindShoutrrrWithUnknownShoutrrr(t *testing.T) {
+	// GIVEN a Config with a Service containing a Shoutrrr and a Main Shoutrrr
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
 	var (
-		sID       string = "test"
+		nID       string = "test"
 		nMaxTries string = "1"
 	)
 	notifier := shoutrrr.Shoutrrr{
-		ID: &sID,
+		ID: &nID,
 		Options: map[string]string{
 			"max_tries": nMaxTries,
 		},
 	}
 	cfg := config.Config{
 		Service: service.Slice{
-			sID: &service.Service{
+			nID: &service.Service{
 				Notify: &shoutrrr.Slice{
-					sID: &notifier,
+					nID: &notifier,
 				},
 			},
 		},
@@ -97,7 +280,51 @@ func TestNotifyTestWithUnknownService(t *testing.T) {
 			"discord": &shoutrrr.Shoutrrr{},
 		},
 	}
-	flag := "other_" + sID
+	flag := "other_" + nID
+	// Switch Fatal to panic and disable this panic.
+	jLog.Testing = true
+	defer func() {
+		r := recover()
+		if !strings.Contains(r.(string), " could not be found ") {
+			t.Error(r)
+		}
+	}()
+
+	// WHEN findShoutrrr is called for a Shoutrrr not in the config
+	got := findShoutrrr(flag, &cfg, jLog, utils.LogFrom{})
+
+	// THEN it will be printed that the command couldn't be found
+	t.Errorf("Should os.Exit(1) from %q not being in %v, err got %v",
+		flag, cfg, got)
+}
+
+func TestNotifyTestWithUnknownServiceShoutrrr(t *testing.T) {
+	// GIVEN a Config with a Service containing a Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID       string = "test"
+		nMaxTries string = "1"
+	)
+	notifier := shoutrrr.Shoutrrr{
+		ID: &nID,
+		Options: map[string]string{
+			"max_tries": nMaxTries,
+		},
+	}
+	cfg := config.Config{
+		Service: service.Slice{
+			nID: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID: &notifier,
+				},
+			},
+		},
+		Notify: shoutrrr.Slice{
+			"discord": &shoutrrr.Shoutrrr{},
+		},
+	}
+	flag := "other_" + nID
 	// Switch Fatal to panic and disable this panic.
 	jLog.Testing = true
 	defer func() {
@@ -108,22 +335,22 @@ func TestNotifyTestWithUnknownService(t *testing.T) {
 	}()
 
 	// WHEN NotifyTest is called with a Shoutrrr not in the config
-	NotifyTest(&flag, &cfg)
+	NotifyTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Error("Should os.Exit(1), err")
 }
 
-func TestNotifyTestWithKnownShoutrrr(t *testing.T) {
+func TestFindShoutrrrWithKnownServiceShoutrrr(t *testing.T) {
 	// GIVEN a Config with a Service containing a Shoutrrr
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
 	var (
-		sID       string = "test"
+		nID       string = "test"
 		nMaxTries string = "1"
 	)
 	notifier := shoutrrr.Shoutrrr{
-		ID:   &sID,
+		ID:   &nID,
 		Type: "something",
 		Options: map[string]string{
 			"max_tries": nMaxTries,
@@ -141,9 +368,56 @@ func TestNotifyTestWithKnownShoutrrr(t *testing.T) {
 	}
 	cfg := config.Config{
 		Service: service.Slice{
-			sID: &service.Service{
+			nID: &service.Service{
 				Notify: &shoutrrr.Slice{
-					sID: &notifier,
+					nID: &notifier,
+				},
+			},
+		},
+	}
+	flag := "test"
+
+	// WHEN NotifyTest is called for a Shoutrrr in the config
+	got := findShoutrrr(flag, &cfg, jLog, utils.LogFrom{})
+
+	// THEN it will have returned the correct Shoutrrr
+	want := (*cfg.Service[nID].Notify)[flag]
+	if got["test"] != want {
+		t.Errorf("Expected the %q Notify\ngot:  %v\nwant: %v",
+			flag, got, want)
+	}
+}
+
+func TestNotifyTestWithKnownServiceShoutrrr(t *testing.T) {
+	// GIVEN a Config with a Service containing a Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID       string = "test"
+		nMaxTries string = "1"
+	)
+	notifier := shoutrrr.Shoutrrr{
+		ID:   &nID,
+		Type: "something",
+		Options: map[string]string{
+			"max_tries": nMaxTries,
+		},
+		Params: map[string]string{},
+		Main: &shoutrrr.Shoutrrr{
+			Params: map[string]string{},
+		},
+		Defaults: &shoutrrr.Shoutrrr{
+			Params: map[string]string{},
+		},
+		HardDefaults: &shoutrrr.Shoutrrr{
+			Params: map[string]string{},
+		},
+	}
+	cfg := config.Config{
+		Service: service.Slice{
+			nID: &service.Service{
+				Notify: &shoutrrr.Slice{
+					nID: &notifier,
 				},
 			},
 		},
@@ -158,14 +432,79 @@ func TestNotifyTestWithKnownShoutrrr(t *testing.T) {
 		}
 	}()
 
-	// WHEN NotifyTest is called with a Shoutrrr not in the config
-	NotifyTest(&flag, &cfg)
+	// WHEN NotifyTest is called with a Shoutrrr in the config
+	NotifyTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Errorf("Should os.Exit(0), err")
 }
 
-func TestNotifyTestWithKnownShoutrrrMain(t *testing.T) {
+func TestFindShoutrrrWithKnownNotifyShoutrrr(t *testing.T) {
+	// GIVEN a Config with a Main containing a Shoutrrr
+	jLog = utils.NewJLog("WARN", false)
+	InitJLog(jLog)
+	var (
+		nID                   string = "test"
+		nType                 string = "smtp"
+		optionsMaxTries       string = "1"
+		urlFieldHost          string = "smtp.example.com"
+		paramFieldFromAddress string = "test@release-argus.io"
+		paramFieldtoAddresses string = "someone@you.com"
+	)
+	notifier := shoutrrr.Shoutrrr{
+		ID:   &nID,
+		Type: nType,
+		Options: map[string]string{
+			"max_tries": optionsMaxTries,
+		},
+		URLFields: map[string]string{
+			"host": urlFieldHost,
+		},
+		Params: map[string]string{
+			"fromaddress": paramFieldFromAddress,
+			"toaddresses": paramFieldtoAddresses,
+		},
+	}
+	cfg := config.Config{
+		Notify: shoutrrr.Slice{
+			nID: &notifier,
+		},
+		Defaults: config.Defaults{
+			Notify: shoutrrr.Slice{
+				nType: &shoutrrr.Shoutrrr{},
+			},
+		},
+	}
+	flag := "test"
+
+	// WHEN NotifyTest is called for a Shoutrrr in the config
+	got := findShoutrrr(flag, &cfg, jLog, utils.LogFrom{})
+
+	// THEN it will have returned the correct Shoutrrr
+	want := cfg.Notify[flag]
+	if got["test"] != want {
+		t.Errorf("Expected the %q Notify\ngot:  %v\nwant: %v",
+			flag, got["test"], want)
+	}
+	if len(got["test"].Options) != 1 ||
+		got["test"].Options["max_tries"] != optionsMaxTries {
+		t.Errorf("options:\ngot:  %v\nwant: %v",
+			got["test"], want)
+	}
+	if len(got["test"].URLFields) != 1 ||
+		got["test"].URLFields["host"] != urlFieldHost {
+		t.Errorf("url_fields:\ngot:  %v\nwant: %v",
+			got["test"].Options, want.Options)
+	}
+	if len(got["test"].Params) != 2 ||
+		got["test"].Params["fromaddress"] != paramFieldFromAddress ||
+		got["test"].Params["toaddresses"] != paramFieldtoAddresses {
+		t.Errorf("params:\ngot:  %v\nwant: %v",
+			got["test"].Params, want.Params)
+	}
+}
+
+func TestNotifyTestWithKnownNotifyShoutrrr(t *testing.T) {
 	// GIVEN a Config with a Main containing a Shoutrrr
 	jLog = utils.NewJLog("WARN", false)
 	InitJLog(jLog)
@@ -218,7 +557,7 @@ func TestNotifyTestWithKnownShoutrrrMain(t *testing.T) {
 	}()
 
 	// WHEN NotifyTest is called with a Shoutrrr not in the config
-	NotifyTest(&flag, &cfg)
+	NotifyTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Errorf("Should os.Exit(0), err")
@@ -272,7 +611,7 @@ func TestNotifyTestWithKnownInvalidShoutrrrMain(t *testing.T) {
 	}()
 
 	// WHEN NotifyTest is called with a Shoutrrr not in the config
-	NotifyTest(&flag, &cfg)
+	NotifyTest(&flag, &cfg, jLog)
 
 	// THEN it will be printed that the command couldn't be found
 	t.Errorf("Should os.Exit(0), err")

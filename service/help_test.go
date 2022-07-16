@@ -17,28 +17,30 @@
 package service
 
 import (
+	db_types "github.com/release-argus/Argus/db/types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func testServiceGitHub() Service {
 	var (
-		sID                 string      = "test"
-		sType               string      = "github"
-		sAccessToken        string      = "secret"
-		sURL                string      = "release-argus/Argus"
-		sWebURL             string      = "https://release-argus.io"
-		sRegexContent       string      = "content"
-		sRegexVersion       string      = "version"
-		sAnnounceChannel    chan []byte = make(chan []byte, 2)
-		sAllowInvalidCerts  bool        = false
-		sSemanticVersioning bool        = true
-		sAutoApprove        bool        = false
-		sIgnoreMisses       bool        = false
-		sUsePreRelease      bool        = false
-		sActive             bool        = true
-		sInterval           string      = "1s"
-		sSaveChannel        chan bool   = make(chan bool, 5)
+		sID                 string                = "test"
+		sType               string                = "github"
+		sAccessToken        string                = "secret"
+		sURL                string                = "release-argus/Argus"
+		sWebURL             string                = "https://release-argus.io"
+		sRegexContent       string                = "content"
+		sRegexVersion       string                = "version"
+		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
+		sAllowInvalidCerts  bool                  = false
+		sSemanticVersioning bool                  = true
+		sAutoApprove        bool                  = false
+		sIgnoreMisses       bool                  = false
+		sUsePreRelease      bool                  = false
+		sActive             bool                  = true
+		sInterval           string                = "1s"
+		sSaveChannel        chan bool             = make(chan bool, 5)
+		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	return Service{
 		ID:           &sID,
@@ -62,6 +64,7 @@ func testServiceGitHub() Service {
 		Icon:               "test",
 		UsePreRelease:      &sUsePreRelease,
 		Announce:           &sAnnounceChannel,
+		DatabaseChannel:    &sDatabaseChannel,
 		SaveChannel:        &sSaveChannel,
 		Interval:           &sInterval,
 		Defaults:           &Service{},
@@ -73,22 +76,23 @@ func testServiceGitHub() Service {
 
 func testServiceURL() Service {
 	var (
-		sID                 string      = "test"
-		sType               string      = "url"
-		sAccessToken        string      = "secret"
-		sURL                string      = "https://release-argus.io"
-		sWebURL             string      = "https://release-argus.io"
-		sRegexContent       string      = "content"
-		sRegexVersion       string      = "version"
-		sAnnounceChannel    chan []byte = make(chan []byte, 2)
-		sAllowInvalidCerts  bool        = false
-		sSemanticVersioning bool        = true
-		sAutoApprove        bool        = false
-		sIgnoreMisses       bool        = false
-		sUsePreRelease      bool        = false
-		sActive             bool        = true
-		sInterval           string      = "10s"
-		sSaveChannel        chan bool   = make(chan bool, 5)
+		sID                 string                = "test"
+		sType               string                = "url"
+		sAccessToken        string                = "secret"
+		sURL                string                = "https://release-argus.io"
+		sWebURL             string                = "https://release-argus.io"
+		sRegexContent       string                = "content"
+		sRegexVersion       string                = "version"
+		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
+		sAllowInvalidCerts  bool                  = false
+		sSemanticVersioning bool                  = true
+		sAutoApprove        bool                  = false
+		sIgnoreMisses       bool                  = false
+		sUsePreRelease      bool                  = false
+		sActive             bool                  = true
+		sInterval           string                = "10s"
+		sSaveChannel        chan bool             = make(chan bool, 5)
+		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	return Service{
 		ID:           &sID,
@@ -112,6 +116,7 @@ func testServiceURL() Service {
 		Icon:               "test",
 		UsePreRelease:      &sUsePreRelease,
 		Announce:           &sAnnounceChannel,
+		DatabaseChannel:    &sDatabaseChannel,
 		SaveChannel:        &sSaveChannel,
 		Interval:           &sInterval,
 		Defaults:           &Service{},

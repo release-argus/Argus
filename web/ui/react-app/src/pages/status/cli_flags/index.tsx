@@ -79,7 +79,7 @@ export const Flags = (): ReactElement => {
         </thead>
         <tbody>
           {flags === undefined
-            ? [...Array.from(Array(8).keys())].map((num) => (
+            ? [...Array.from(Array(9).keys())].map((num) => (
                 <tr key={num}>
                   <th style={{ width: "35%" }}>
                     {delayedRender(() => (

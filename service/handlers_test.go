@@ -198,22 +198,6 @@ func TestUpdatedVersionDidUpdateApprovedVersionIfActionsPassed(t *testing.T) {
 	}
 }
 
-func TestUpdatedVersionDidTrySave(t *testing.T) {
-	// GIVEN a Service
-	service := testServiceGitHub()
-
-	// WHEN UpdatedVersion is called on it
-	service.UpdatedVersion()
-
-	// THEN a save is requested from the SaveChannel
-	got := len(*service.SaveChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
 func TestHandleUpdateActionsWithNothing(t *testing.T) {
 	// GIVEN a Service with no Commands or WebHooks
 	service := testServiceGitHub()
@@ -810,18 +794,94 @@ func TestHandleSkipDidAnnounce(t *testing.T) {
 	}
 }
 
-func TestHandleSkipDidTrySave(t *testing.T) {
-	// GIVEN a Service
+func TestShouldRetryAllWithWebHooksPassed(t *testing.T) {
+	// GIVEN a Service with WebHooks at failed=false
+	failed := false
 	service := testServiceGitHub()
+	service.WebHook = &webhook.Slice{
+		"test":  {Failed: &failed},
+		"other": {Failed: &failed},
+	}
 
-	// WHEN HandleSkip is called with LatestVersion
-	service.HandleSkip(service.Status.LatestVersion)
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
 
-	// THEN a save is requested from the SaveChannel
-	got := len(*service.SaveChannel)
-	want := 1
+	// THEN we got true
+	want := true
 	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
+			want, got, failed)
+	}
+}
+
+func TestShouldRetryAllWithAWebHookFail(t *testing.T) {
+	// GIVEN a Service with a WebHook that failed
+	failed0 := false
+	failed1 := true
+	service := testServiceGitHub()
+	service.WebHook = &webhook.Slice{
+		"test":  {Failed: &failed0},
+		"other": {Failed: &failed1},
+	}
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got false
+	want := false
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
+			want, got, failed1)
+	}
+}
+
+func TestShouldRetryAllWithCommandsPassed(t *testing.T) {
+	// GIVEN a Service with Commands at failed=false
+	failed := false
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		{"test"},
+		{"other"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
+	service.CommandController.Failed[0] = &failed
+	service.CommandController.Failed[1] = &failed
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got true
+	want := true
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
+			want, got, failed)
+	}
+}
+
+func TestShouldRetryAllWithACommandFail(t *testing.T) {
+	// GIVEN a Service with a Command that failed
+	failed0 := false
+	failed1 := true
+	service := testServiceGitHub()
+	service.Command = &command.Slice{
+		{"test"},
+		{"other"},
+	}
+	service.CommandController = &command.Controller{}
+	serviceID := "test"
+	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
+	service.CommandController.Failed[0] = &failed0
+	service.CommandController.Failed[1] = &failed1
+
+	// WHEN shouldRetryAll is called on this Service
+	got := service.shouldRetryAll()
+
+	// THEN we got false
+	want := false
+	if got != want {
+		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
+			want, got, failed1)
 	}
 }
