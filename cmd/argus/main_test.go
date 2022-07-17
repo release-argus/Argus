@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -27,69 +28,84 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+func stringPtr(val string) *string {
+	return &val
+}
+func stringListPtr(val []string) *[]string {
+	return &val
+}
+func boolPtr(val bool) *bool {
+	return &val
+}
+
 func reset() {
 	config = cfg.Config{}
-	newConfigFile := ""
-	configFile = &newConfigFile
-	newConfigCheckFlag := false
-	configCheckFlag = &newConfigCheckFlag
-	newTestCommandsFlag := ""
-	testCommandsFlag = &newTestCommandsFlag
-	newTestNotifyFlag := ""
-	testNotifyFlag = &newTestNotifyFlag
-	newTestServiceFlag := ""
-	testServiceFlag = &newTestServiceFlag
+	configFile = stringPtr("")
+	configCheckFlag = boolPtr(false)
+	testCommandsFlag = stringPtr("")
+	testNotifyFlag = stringPtr("")
+	testServiceFlag = stringPtr("")
 }
 
-func TestTheMainWithNoServices(t *testing.T) {
-	// GIVEN an empty Config (no Services)
-	reset()
-	jLog = *utils.NewJLog("WARN", false)
-	file := "../../test/no_services.yml"
-	configFile = &file
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() {
-		r := recover()
-		if r == nil || !strings.Contains(r.(string), "No services to monitor") {
-			t.Error(r)
-		}
-	}()
-
-	// WHEN Main is called
-	main()
-
-	// THEN the program will exit
-	t.Error("This shouldn't be reached since there are 0 Services to monitor")
-}
-
-func TestTheMainWithServices(t *testing.T) {
-	// GIVEN an empty Config (no Services)
-	reset()
-	jLog = *utils.NewJLog("INFO", false)
-	file := "../../test/argus.yml"
-	configFile = &file
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-
-	// WHEN Main is called
-	go main()
-	time.Sleep(5 * time.Second)
-
-	// THEN the program will be monitoring Argus for new releases
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, "services to monitor:") {
-		t.Errorf("Couldn't find the count of how many services it's monitoring\n%s",
-			output)
+func TestTheMain(t *testing.T) {
+	// GIVEN different Config's to test
+	tests := map[string]struct {
+		file               string
+		panicShouldContain *string
+		outputContains     *[]string
+		db                 string
+	}{
+		"config with no services": {file: "../../test/no_services.yml", db: "test-no_services.db", panicShouldContain: stringPtr("No services to monitor")},
+		"config with services": {file: "../../test/argus.yml", db: "test-argus.db", outputContains: stringListPtr([]string{
+			"services to monitor:",
+			"release-argus/Argus, Latest Release - ",
+		})},
 	}
-	if !strings.Contains(output, "release-argus/Argus, Latest Release - ") {
-		t.Errorf("Couldn't find the output of the Latest Release for Argus. Is Track failing?\n%s",
-			output)
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			reset()
+			jLog = *utils.NewJLog("WARN", false)
+			configFile = &tc.file
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN Main is called
+			go func() {
+				// Switch Fatal to panic and disable this panic.
+				jLog.Testing = true
+				defer func() {
+					r := recover()
+					rStr := fmt.Sprint(r)
+					if tc.panicShouldContain != nil {
+						if !strings.Contains(rStr, *tc.panicShouldContain) {
+							t.Errorf("%s:\nshould have panic'd with:\n%q, not:\n%q",
+								name, *tc.panicShouldContain, r)
+						}
+					} else if r != nil {
+						t.Errorf("%s:\nwasn't expecting a panic - %q",
+							name, rStr)
+					}
+				}()
+				main()
+			}()
+			time.Sleep(time.Second)
+
+			// THEN the program will have printed everything expected
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			os.Remove(tc.db)
+			if tc.outputContains != nil {
+				for _, text := range *tc.outputContains {
+					if !strings.Contains(output, text) {
+						t.Errorf("%s:\n%q couldn't be found in the output:\n%s",
+							name, text, output)
+					}
+				}
+			}
+		})
 	}
 }
