@@ -117,37 +117,55 @@ func TestWaitChannelTimeoutDoesExtendOnce(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
-	// GIVEN we have data that wants to be Save'd
-	config := Config{File: "../test/config_test.yml"}
-	originalData, err := os.ReadFile(config.File)
-	had := string(originalData)
-	if err != nil {
-		t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-			err.Error())
+	// GIVEN we have a bunch of files that want to be Save'd
+	tests := map[string]struct {
+		file        string
+		corrections map[string]string
+	}{
+		"config_test.yml": {file: "../test/config_test.yml", corrections: map[string]string{
+			"listen_port: 0\n":         "listen_port: \"0\"\n",
+			"semantic_versioning: n\n": "semantic_versioning: false\n",
+			"interval: 123\n":          "interval: 123s\n",
+			"delay: 2\n":               "delay: 2s\n",
+		}},
+		"argus.yml": {file: "../test/argus.yml", corrections: map[string]string{
+			"listen_port: 0\n": "listen_port: \"0\"\n",
+		}},
 	}
-	flags := make(map[string]bool)
-	config.Load(config.File, &flags, &utils.JLog{})
 
-	// WHEN we Save it to a new location
-	config.File += ".test"
-	config.Save()
+	for name, tc := range tests {
+		config := Config{File: tc.file}
+		originalData, err := os.ReadFile(config.File)
+		had := string(originalData)
+		if err != nil {
+			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
+				err.Error())
+		}
+		flags := make(map[string]bool)
+		config.Load(config.File, &flags, &utils.JLog{})
 
-	// THEN it's the same as the original file
-	failed := false
-	newData, err := os.ReadFile(config.File)
-	had = strings.ReplaceAll(had, "semantic_versioning: n\n", "semantic_versioning: false\n")
-	had = strings.ReplaceAll(had, "interval: 123\n", "interval: 123s\n")
-	had = strings.ReplaceAll(had, "delay: 2\n", "delay: 2s\n")
-	if string(newData) != had {
-		failed = true
-		t.Errorf("File is different after Save. Got \n%s\nexpecting:\n%s",
-			string(newData), had)
-	}
-	err = os.Remove(config.File)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if failed {
-		t.Fatal()
+		// WHEN we Save it to a new location
+		config.File += ".test"
+		config.Save()
+
+		// THEN it's the same as the original file
+		failed := false
+		newData, err := os.ReadFile(config.File)
+		for from := range tc.corrections {
+			had = strings.ReplaceAll(had, from, tc.corrections[from])
+		}
+		if string(newData) != had {
+			failed = true
+			t.Errorf("%s:\n%q is different after Save. Got \n%s\nexpecting:\n%s",
+				name, tc.file, string(newData), had)
+		}
+		err = os.Remove(config.File)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if failed {
+			t.Fatal()
+		}
+		time.Sleep(time.Second)
 	}
 }

@@ -1,8 +1,8 @@
 settings:
-  web:
-   listen_port: 0
   data:
-    database_file: 'test-argus.db'
+    database_file: test-argus.db
+  web:
+    listen_port: 0
 service:
   release-argus/Argus:
     type: github

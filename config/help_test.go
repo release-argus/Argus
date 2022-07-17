@@ -18,6 +18,7 @@ package config
 
 import (
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/utils"
 )
 
 func testConfig() Config {
@@ -35,4 +36,53 @@ func testConfig() Config {
 			},
 		},
 	}
+}
+
+func testSettings() Settings {
+	logTimestamps := true
+	logLevel := "DEBUG"
+	dataDatabaseFile := "somewhere.db"
+	webListenHost := "test"
+	webListenPort := "123"
+	webRoutePrefix := "/something"
+	webCertFile := "../test/ordering_0.yml"
+	webKeyFile := "../test/ordering_1.yml"
+	return Settings{
+		Log: LogSettings{
+			Timestamps: &logTimestamps,
+			Level:      &logLevel,
+		},
+		Data: DataSettings{
+			DatabaseFile: &dataDatabaseFile,
+		},
+		Web: WebSettings{
+			ListenHost:  &webListenHost,
+			ListenPort:  &webListenPort,
+			RoutePrefix: &webRoutePrefix,
+			CertFile:    &webCertFile,
+			KeyFile:     &webKeyFile,
+		},
+	}
+}
+
+func testLoad(fileOverride string) Config {
+	var (
+		config     Config
+		configFile string = "../test/config_test.yml"
+	)
+	if fileOverride != "" {
+		configFile = fileOverride
+	}
+
+	flags := make(map[string]bool)
+	config.Load(configFile, &flags, &utils.JLog{})
+
+	return config
+}
+
+func stringPtr(val string) *string {
+	return &val
+}
+func boolPtr(val bool) *bool {
+	return &val
 }

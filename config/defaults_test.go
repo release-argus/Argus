@@ -21,117 +21,79 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/webhook"
 )
 
-func TestSetDefaultsService(t *testing.T) {
+func TestDefaultsSetDefaults(t *testing.T) {
 	// GIVEN nil defaults
 	var defaults Defaults
 
 	// WHEN SetDefaults is called on it
 	defaults.SetDefaults()
+	tests := map[string]struct {
+		got  *string
+		want string
+	}{
+		"Service.Interval": {
+			got: defaults.Service.Interval, want: "10m"},
+		"Notify.discord.username": {
+			got: stringPtr(defaults.Notify["discord"].GetSelfParam("username")), want: "Argus"},
+		"WebHook.Delay": {
+			got: defaults.WebHook.Delay, want: "0s"},
+	}
 
-	// THEN the Service part is initialised to the defined defaults
-	want := "10m"
-	got := *defaults.Service.Interval
-	if got != want {
-		t.Errorf("defaults.Service.Interval should have been %s, but got %s",
-			want, got)
+	// THEN the defaults are set correctly
+	for name, tc := range tests {
+		if utils.EvalNilPtr(tc.got, "") != tc.want {
+			t.Errorf("%s:\nwant: %s\ngot:  %s",
+				name, tc.want, utils.EvalNilPtr(tc.got, ""))
+		}
 	}
 }
 
-func TestDefaultsSetDefaultsNotify(t *testing.T) {
-	// GIVEN nil defaults
+func TestDefaultsCheckValues(t *testing.T) {
+	// GIVEN defaults with a test of invalid vars
 	var defaults Defaults
-
-	// WHEN SetDefaults is called on it
 	defaults.SetDefaults()
-
-	// THEN the Notify part is initialised to the defined defaults
-	want := "Argus"
-	got := defaults.Notify["discord"].GetSelfParam("username")
-	if got != want {
-		t.Errorf("defaults.Notify.discord.Params.username should have been %s, but got %s",
-			want, got)
+	tests := map[string]struct {
+		input       Defaults
+		errContains string
+	}{
+		"Service.Interval": {
+			input: Defaults{Service: service.Service{
+				Interval: stringPtr("10x")}},
+			errContains: `interval: "10x" <invalid>`},
+		"Service.DeployedVersionLookup.Regex": {
+			input: Defaults{Service: service.Service{
+				DeployedVersionLookup: &service.DeployedVersionLookup{
+					Regex: "^something[0-"}}},
+			errContains: `regex: "^something[0-" <invalid>`},
+		"Notify.x.Delay": {
+			input: Defaults{Notify: shoutrrr.Slice{
+				"slack": &shoutrrr.Shoutrrr{
+					Options: map[string]string{"delay": "10x"}}}},
+			errContains: `delay: "10x" <invalid>`},
+		"WebHook.x.Delay": {
+			input: Defaults{WebHook: webhook.WebHook{
+				Delay: stringPtr("10x")}},
+			errContains: `delay: "10x" <invalid>`},
 	}
-}
 
-func TestDefaultsSetDefaultsWebHook(t *testing.T) {
-	// GIVEN nil defaults
-	var defaults Defaults
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called on it
+			err := utils.ErrorToString(tc.input.CheckValues())
 
-	// WHEN SetDefaults is called on it
-	defaults.SetDefaults()
-
-	// THEN the WebHook part is initialised to the defined defaults
-	want := "github"
-	got := *defaults.WebHook.Type
-	if got != want {
-		t.Errorf("defaults.WebHook.Type should have been %s, but got %s",
-			want, got)
-	}
-}
-
-func TestDefaultsCheckValuesWithInvalidService(t *testing.T) {
-	// GIVEN defaults with an invalid Service.Interval
-	var defaults Defaults
-	defaults.SetDefaults()
-	*defaults.Service.Interval = "10x"
-
-	// WHEN CheckValues is called on it
-	err := defaults.CheckValues()
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("err shouldn't be %v, Service.Interval was invalid with %q",
-			err, *defaults.Service.Interval)
-	}
-}
-
-func TestDefaultsCheckValuesWithInvalidServiceDeployedVersionLookup(t *testing.T) {
-	// GIVEN defaults with an invalid Service.DeployedVersionLookup.Regex
-	var defaults Defaults
-	defaults.SetDefaults()
-	defaults.Service.DeployedVersionLookup.Regex = "^something[0-"
-
-	// WHEN CheckValues is called on it
-	err := defaults.CheckValues()
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("err shouldn't be %v, Service.DeployedVersionLookup.Regex was invalid with %q",
-			err, defaults.Service.DeployedVersionLookup.Regex)
-	}
-}
-
-func TestDefaultsCheckValuesWithInvalidNotify(t *testing.T) {
-	// GIVEN defaults with an invalid Notify.slack.Delay
-	var defaults Defaults
-	defaults.SetDefaults()
-	defaults.Notify["slack"].SetOption("delay", "10x")
-
-	// WHEN CheckValues is called on it
-	err := defaults.CheckValues()
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("err shouldn't be %v, Notify.slack.Delay was invalid with %q",
-			err, defaults.Notify["slack"].GetSelfOption("delay"))
-	}
-}
-
-func TestDefaultsCheckValuesWithInvalidWebHook(t *testing.T) {
-	// GIVEN defaults with an invalid WebHook.Delay
-	var defaults Defaults
-	defaults.SetDefaults()
-	*defaults.WebHook.Delay = "10x"
-
-	// WHEN CheckValues is called on it
-	err := defaults.CheckValues()
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("err shouldn't be %v, WebHook.Delay was invalid with %q",
-			err, *defaults.WebHook.Delay)
+			// THEN err matches expected
+			if !strings.Contains(err, tc.errContains) {
+				t.Errorf("invalid %s should have errored:\nwant: %s\ngot:  %s",
+					name, tc.errContains, err)
+			}
+		})
 	}
 }
 
@@ -153,7 +115,6 @@ func TestDefaultsPrint(t *testing.T) {
 	want := 142
 	got := strings.Count(string(out), "\n")
 	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
+		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)
 	}
 }

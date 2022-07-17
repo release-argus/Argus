@@ -217,9 +217,7 @@ func (s *Settings) GetWebKeyFile() *string {
 	if _, err := os.Stat(*keyFile); err != nil {
 		if !filepath.IsAbs(*keyFile) {
 			path, execErr := os.Executable()
-			if execErr != nil {
-				jLog.Error(execErr, utils.LogFrom{}, true)
-			}
+			jLog.Error(execErr, utils.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*keyFile+":",
