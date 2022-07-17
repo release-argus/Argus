@@ -23,18 +23,39 @@ import (
 )
 
 func TestOrderingWithServices(t *testing.T) {
-	// GIVEN Load is ran on a config.yml
-	config := testLoad("../test/ordering_0.yml")
+	// GIVEN we have configs to load
+	tests := map[string]struct {
+		file  string
+		all   []string
+		order []string
+	}{
+		"with services": {file: "../test/ordering_0.yml",
+			all:   []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"},
+			order: []string{"NoDefaults", "WantDefaults", "Gitea"}},
+		"no services": {file: "../test/ordering_1.yml",
+			all:   []string{},
+			order: []string{}},
+	}
 
-	// WHEN the Default Service Interval is looked at
-	got := config.All
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN they are loaded
+			config := testLoad(tc.file)
 
-	// THEN it matches the config.yml
-	want := []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"}
-	for i := range got {
-		if i >= len(got) || want[i] != (got)[i] {
-			t.Errorf(`Order should have been %v, but got %v`, want, got)
-		}
+			// THEN it gets the ordering correctly
+			gotAll := config.All
+			for i := range gotAll {
+				if i >= len(gotAll) || tc.all[i] != (gotAll)[i] {
+					t.Fatalf("%q %s - all:\nwant:%v\ngot:  %v", tc.file, name, tc.all, gotAll)
+				}
+			}
+			gotOrder := *config.Order
+			for i := range gotOrder {
+				if i >= len(gotOrder) || tc.order[i] != (gotOrder)[i] {
+					t.Fatalf("%q %s - order:\nwant:%v\ngot:  %v", tc.file, name, tc.order, gotOrder)
+				}
+			}
+		})
 	}
 }
 
@@ -52,48 +73,35 @@ func TestOrderingWithService(t *testing.T) {
 	}
 }
 
-func TestGetIndentationWithIndentation(t *testing.T) {
-	// GIVEN a line with 3 levels of indentation
-	line := "   abc"
-
-	// WHEN getIndentation is called on it
-	got := getIndentation(line)
-
-	// THEN we get the indentation
-	want := "   "
-	if got != want {
-		t.Errorf("%q should have returned an indentation of %q, not %q",
-			line, want, got)
+func TestGetIndentationW(t *testing.T) {
+	// GIVEN lines of varying indentation
+	tests := map[string]struct {
+		input string
+		want  string
+	}{
+		"leading space": {
+			input: "   abc", want: "   "},
+		"leading and trailing space": {
+			input: "   abc      ", want: "   "},
+		"trailing space": {
+			input: "abc      ", want: ""},
+		"no indents": {
+			input: "abc", want: ""},
+		"empty string": {
+			input: "", want: ""},
 	}
-}
 
-func TestGetIndentationWithNoIndentation(t *testing.T) {
-	// GIVEN a line with no indentation
-	line := "abc"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN getIndentation is called on it
+			got := getIndentation(tc.input)
 
-	// WHEN getIndentation is called on it
-	got := getIndentation(line)
-
-	// THEN we get the indentation (none)
-	want := ""
-	if got != want {
-		t.Errorf("%q should have returned an indentation of %q, not %q",
-			line, want, got)
-	}
-}
-
-func TestGetIndentationWithBlankLine(t *testing.T) {
-	// GIVEN a blank line
-	line := ""
-
-	// WHEN getIndentation is called on it
-	got := getIndentation(line)
-
-	// THEN we get the indentation (none)
-	want := ""
-	if got != want {
-		t.Errorf("%q should have returned an indentation of %q, not %q",
-			line, want, got)
+			// THEN we get the indentation
+			if got != tc.want {
+				t.Errorf("%s - %q:\nwant: %q\ngot:  %q",
+					name, tc.input, tc.want, got)
+			}
+		})
 	}
 }
 

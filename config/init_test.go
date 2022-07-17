@@ -17,71 +17,38 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/utils"
 )
 
-func testLoad(fileOverride string) Config {
-	var (
-		config     Config
-		configFile string = "../test/config_test.yml"
-	)
-	if fileOverride != "" {
-		configFile = fileOverride
-	}
-
-	flags := make(map[string]bool)
-	config.Load(configFile, &flags, &utils.JLog{})
-
-	return config
-}
-
 func TestLoad(t *testing.T) {
-	// GIVEN Load is ran on a config.yml
+	// GIVEN Load is ran on a config
 	config := testLoad("")
 
-	// WHEN the Default Service Interval is looked at
-	got := config.Defaults.Service.Interval
+	// WHEN the vars loaded are inspected
+	tests := map[string]struct {
+		got  *string
+		want string
+	}{
+		"Defaults.Service.Interval": {
+			got: config.Defaults.Service.Interval, want: "123s"},
+		"Notify.discord.username": {
+			got: stringPtr(config.Defaults.Notify["slack"].GetSelfParam("title")), want: "defaultTitle"},
+		"WebHook.Delay": {
+			got: config.Defaults.WebHook.Delay, want: "2s"},
+	}
 
-	// THEN it matches the config.yml
-	want := "123s"
-	if !(want == *got) {
-		t.Errorf(`config.Defaults.Service.Interval = %v, want %s`, *got, want)
+	// THEN they match the config file
+	for name, tc := range tests {
+		if utils.EvalNilPtr(tc.got, "") != tc.want {
+			t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
+				name, tc.want, utils.EvalNilPtr(tc.got, ""))
+		}
 	}
 }
 
-func TestLoadNotify(t *testing.T) {
-	// GIVEN Load is ran on a config.yml
-	config := testLoad("")
-
-	// WHEN the Default Notify Param.title is looked at for slack
-	got := config.Defaults.Notify["slack"].GetSelfParam("title")
-
-	// THEN it matches the config.yml
-	want := "defaultTitle"
-	if !(want == got) {
-		fmt.Println(config.Defaults.Notify["slack"])
-		t.Errorf(`config.Defaults.Notify["slack"].Params.Title = %q, want %q`, got, want)
-	}
-}
-
-func TestLoadWebHook(t *testing.T) {
-	// GIVEN Load is ran on a config.yml
-	config := testLoad("")
-
-	// WHEN the Default WebHook Delay is looked at
-	got := config.Defaults.WebHook.Delay
-
-	// THEN it matches the config.yml
-	want := "2s"
-	if !(want == *got) {
-		t.Errorf(`config.Defaults.WebHook.Delay = %s, want %s`, *got, want)
-	}
-}
-
-func TestLoadDefaultsService(t *testing.T) {
+func TestLoadDefaults(t *testing.T) {
 	// GIVEN config to Load
 	var (
 		config     Config
@@ -100,26 +67,3 @@ func TestLoadDefaultsService(t *testing.T) {
 			got, *config.Service["WantDefaults"].SemanticVersioning, want)
 	}
 }
-
-// func TestLoadDefaultsService(t *testing.T) {
-// 	// GIVEN config to Load
-// 	var (
-// 		config     Config
-// 		configFile string = "../test/config_test.yml"
-// 	)
-// 	wantBool = false
-// 	gotBool := config.Service["WantDefaults"].GetSemanticVersioning()
-// 	if !(wantBool == gotBool) {
-// 		fmt.Printf("service: %v\n", config.Service["WantDefaults"].SemanticVersioning)
-// 		fmt.Printf("default: %v\n", config.Service["WantDefaults"].Defaults.SemanticVersioning)
-// 		fmt.Printf("hardDefaults: %v\n", config.Service["WantDefaults"].HardDefaults.SemanticVersioning)
-
-// 		t.Errorf(`post-setDefaults config.Defaults.Service.SemanticVersioning = %v, want match for %t`, gotBool, wantBool)
-// 	}
-
-// 	wantString = "0.0.0.0"
-// 	gotString := config.Settings.GetWebListenHost()
-// 	if !(wantString == gotString) {
-// 		t.Errorf(`post-setDefaults config.Settings.Web.ListenHost = %v, want match for %s`, gotString, wantString)
-// 	}
-// }

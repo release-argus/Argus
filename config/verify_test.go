@@ -55,132 +55,115 @@ func testVerify() Config {
 	}
 }
 
-func TestConfigCheckValuesValid(t *testing.T) {
-	// GIVEN a valid Config
-	config := testVerify()
-
-	// WHEN CheckValues is called on it
-	config.CheckValues()
-
-	// THEN no Fatal panic occured
-}
-
-func TestConfigCheckValuesWithInvalidDefaults(t *testing.T) {
-	// GIVEN an invalid Defaults Config
+func TestConfigCheckValues(t *testing.T) {
+	// GIVEN variations of Config to test
 	jLog = utils.NewJLog("WARN", false)
-	config := testVerify()
-	invalid := "0x"
-	config.Defaults.Service.Interval = &invalid
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() { _ = recover() }()
+	tests := map[string]struct {
+		config      Config
+		errContains string
+		noPanic     bool
+	}{
+		"valid Config": {
+			config: testVerify(), errContains: "", noPanic: true},
+		"invalid Defaults": {
+			config: Config{
+				Defaults: Defaults{
+					Service: service.Service{
+						Interval: stringPtr("1x")}}},
+			errContains: `interval: "1x" <invalid>`},
+		"invalid Notify": {
+			config: Config{
+				Notify: shoutrrr.Slice{
+					"test": &shoutrrr.Shoutrrr{
+						Options: map[string]string{
+							"delay": "2x",
+						}}}},
+			errContains: `delay: "2x" <invalid>`},
+		"invalid WebHook": {
+			config: Config{
+				WebHook: webhook.Slice{
+					"test": &webhook.WebHook{
+						Delay: stringPtr("3x"),
+					}}},
+			errContains: `delay: "3x" <invalid>`},
+		"invalid Service": {
+			config: Config{
+				Service: service.Slice{
+					"test": &service.Service{
+						Interval: stringPtr("4x"),
+					}}},
+			errContains: `interval: "4x" <invalid>`},
+	}
 
-	// WHEN CheckValues is called on it
-	config.CheckValues()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			// Switch Fatal to panic and disable this panic.
+			if !tc.noPanic {
+				jLog.Testing = true
+				defer func() {
+					_ = recover()
 
-	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Defaults.Service.Interval being invalid (%q)",
-		invalid)
-}
+					w.Close()
+					out, _ := ioutil.ReadAll(r)
+					os.Stdout = stdout
+					output := string(out)
+					if !strings.Contains(output, tc.errContains) {
+						t.Fatalf("%s: should have panic'd with %q, not:\n%s",
+							name, tc.errContains, output)
+					}
 
-func TestConfigCheckValuesWithInvalidNotify(t *testing.T) {
-	// GIVEN an invalid Defaults Config
-	jLog = utils.NewJLog("WARN", false)
-	config := testVerify()
-	invalid := "0x"
-	config.Notify["test"].SetOption("delay", invalid)
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() { _ = recover() }()
+				}()
+			}
 
-	// WHEN CheckValues is called on it
-	config.CheckValues()
+			// WHEN CheckValues is called on them
+			tc.config.CheckValues()
 
-	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Notify.discord.options.delay being invalid (%q)",
-		invalid)
-}
-
-func TestConfigCheckValuesWithInvalidWebHook(t *testing.T) {
-	// GIVEN an invalid Defaults Config
-	jLog = utils.NewJLog("WARN", false)
-	config := testVerify()
-	invalid := "0x"
-	config.WebHook["test"].Delay = &invalid
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() { _ = recover() }()
-
-	// WHEN CheckValues is called on it
-	config.CheckValues()
-
-	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of WebHook.test.Delay being invalid (%q)",
-		invalid)
-}
-
-func TestConfigCheckValuesWithInvalidService(t *testing.T) {
-	// GIVEN an invalid Defaults Config
-	jLog = utils.NewJLog("WARN", false)
-	config := testVerify()
-	invalid := "0x"
-	config.Service["test"].Interval = &invalid
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() { _ = recover() }()
-
-	// WHEN CheckValues is called on it
-	config.CheckValues()
-
-	// THEN this call will crash the program
-	t.Errorf("Should have panic'd because of Service.test.Interval being invalid (%q)",
-		invalid)
-}
-
-func TestConfigPrintWithFalseFlag(t *testing.T) {
-	// GIVEN a Config and the print flag being false
-	var flag bool = false
-	config := testVerify()
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called
-	config.Print(&flag)
-
-	// THEN nothing is printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 0
-	got := len(string(out))
-	if got != want {
-		t.Errorf("Print with no flag set printed %d lines. Wanted %d",
-			got, want)
+			// THEN this call will/wont crash the program
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			if !strings.Contains(output, tc.errContains) {
+				t.Fatalf("%s: should have panic'd with %q. stdout:\n%s",
+					name, tc.errContains, output)
+			}
+		})
 	}
 }
-
 func TestConfigPrint(t *testing.T) {
-	// GIVEN a Config and the print flag being false
+	// GIVEN a Config and print flags of true and false
 	jLog = utils.NewJLog("WARN", false)
 	jLog.Testing = true
-	var flag bool = true
 	config := testVerify()
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		flag        bool
+		wantedLines int
+	}{
+		"flag on":  {flag: true, wantedLines: 165},
+		"flag off": {flag: false},
+	}
 
-	// WHEN Print is called
-	config.Print(&flag)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN nothing is printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 165
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print with no flag set printed %d lines. Wanted %d\n%s",
-			got, want, string(out))
+			// WHEN Print is called with these flags
+			config.Print(&tc.flag)
+
+			// THEN config is printed onlt when the flag is true
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.wantedLines {
+				t.Errorf("Print with %s wants %d lines but got %d",
+					name, tc.wantedLines, got)
+			}
+		})
 	}
 }
