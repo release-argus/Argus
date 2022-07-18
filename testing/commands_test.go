@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-	"strings"
 	"testing"
 
 	command "github.com/release-argus/Argus/commands"
@@ -35,10 +34,10 @@ func TestCommandTest(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
-		flag          string
-		slice         service.Slice
-		outputRegex   *string
-		panicContains *string
+		flag        string
+		slice       service.Slice
+		outputRegex *string
+		panicRegex  *string
 	}{
 		"flag is empty": {flag: "",
 			outputRegex: stringPtr("^$"),
@@ -53,8 +52,8 @@ func TestCommandTest(t *testing.T) {
 				},
 			}},
 		"unknown service in flag": {flag: "something",
-			panicContains: stringPtr(" could not be found "),
-			outputRegex:   stringPtr("should have panic'd before reaching this"),
+			panicRegex:  stringPtr(" could not be found "),
+			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
 					ID: stringPtr("argus"),
@@ -66,7 +65,7 @@ func TestCommandTest(t *testing.T) {
 				},
 			}},
 		"known service in flag successful command": {flag: "argus",
-			outputRegex: stringPtr("Executing 'echo command did run'\\s+.*command did run\\s+"),
+			outputRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: stringPtr("argus"),
@@ -78,7 +77,7 @@ func TestCommandTest(t *testing.T) {
 				},
 			}},
 		"known service in flag failing command": {flag: "argus",
-			outputRegex: stringPtr(".*Executing 'ls /root'\\s+.*exit status 2\\s+"),
+			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status 2\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: stringPtr("argus"),
@@ -90,8 +89,8 @@ func TestCommandTest(t *testing.T) {
 				},
 			}},
 		"service with no commands": {flag: "argus",
-			panicContains: stringPtr(" does not have any `command` defined"),
-			outputRegex:   stringPtr("should have panic'd before reaching this"),
+			panicRegex:  stringPtr(" does not have any `command` defined"),
+			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
 					ID: stringPtr("argus"),
@@ -105,14 +104,16 @@ func TestCommandTest(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 			jLog.Testing = true
-			if tc.panicContains != nil {
+			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
 					rStr := fmt.Sprint(r)
-					if !strings.Contains(rStr, *tc.panicContains) {
-						t.Errorf("%s:\nexpected a panic containing %q, not %q",
-							name, *tc.panicContains, rStr)
+					re := regexp.MustCompile(*tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
+							name, *tc.panicRegex, rStr)
 					}
 				}()
 			}

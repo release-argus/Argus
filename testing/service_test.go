@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -36,10 +35,10 @@ func TestServiceTest(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
-		flag          string
-		slice         service.Slice
-		outputRegex   *string
-		panicContains *string
+		flag        string
+		slice       service.Slice
+		outputRegex *string
+		panicRegex  *string
 	}{
 		"flag is empty": {flag: "",
 			outputRegex: stringPtr("^$"),
@@ -50,7 +49,7 @@ func TestServiceTest(t *testing.T) {
 				},
 			}},
 		"unknown service": {flag: "test",
-			panicContains: stringPtr("Service \"test\" could not be found in config.service\nDid you mean one of these?\n  - argus"),
+			panicRegex: stringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			slice: service.Slice{
 				"argus": {
 					ID:       stringPtr("argus"),
@@ -58,7 +57,7 @@ func TestServiceTest(t *testing.T) {
 				},
 			}},
 		"github service": {flag: "argus",
-			outputRegex: stringPtr("argus, Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					Type: stringPtr("github"),
@@ -88,14 +87,14 @@ func TestServiceTest(t *testing.T) {
 				},
 			}},
 		"url service": {flag: "argus",
-			outputRegex: stringPtr("Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					Type: stringPtr("url"),
 					ID:   stringPtr("argus"),
 					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
 					URLCommands: &service.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr("tag/([0-9.]+)\"")},
+						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 					},
 					AllowInvalidCerts:  boolPtr(false),
 					SemanticVersioning: boolPtr(true),
@@ -103,14 +102,14 @@ func TestServiceTest(t *testing.T) {
 				},
 			}},
 		"service with deployed version lookup": {flag: "argus",
-			outputRegex: stringPtr("Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\"\\s.*Deployed version - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					Type: stringPtr("url"),
 					ID:   stringPtr("argus"),
 					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
 					URLCommands: &service.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr("tag/([0-9.]+)\"")},
+						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 					},
 					AllowInvalidCerts:  boolPtr(false),
 					SemanticVersioning: boolPtr(true),
@@ -130,14 +129,16 @@ func TestServiceTest(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 			jLog.Testing = true
-			if tc.panicContains != nil {
+			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
 					rStr := fmt.Sprint(r)
-					if !strings.Contains(rStr, *tc.panicContains) {
-						t.Errorf("%s:\nexpected a panic containing %q, not %q",
-							name, *tc.panicContains, rStr)
+					re := regexp.MustCompile(*tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
+							name, *tc.panicRegex, rStr)
 					}
 				}()
 			}
