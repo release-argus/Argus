@@ -17,6 +17,7 @@ package testing
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/release-argus/Argus/config"
@@ -136,5 +137,6 @@ func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 			}
 		}
 	}
+	sort.Strings(all)
 	return
 }

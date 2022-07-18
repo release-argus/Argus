@@ -96,7 +96,7 @@ func (c *Command) Exec(logFrom *utils.LogFrom) error {
 	jLog.Info(fmt.Sprintf("Executing '%s'", c.String()), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
-	jLog.Error(utils.ErrorToString(err), *logFrom, true)
+	jLog.Error(utils.ErrorToString(err), *logFrom, err != nil)
 	jLog.Info(string(out), *logFrom, err == nil && string(out) != "")
 
 	return err
