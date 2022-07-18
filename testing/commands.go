@@ -61,7 +61,7 @@ func CommandTest(
 
 	log.Fatal(
 		fmt.Sprintf(
-			"Service %q does not have any `commands` defined",
+			"Service %q does not have any `command` defined",
 			*flag),
 		logFrom,
 		service.CommandController == nil)

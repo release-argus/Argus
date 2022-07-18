@@ -60,7 +60,7 @@ type Service struct {
 	DatabaseChannel       *chan db_types.Message `yaml:"-"`                             // Channel for broadcasts to the Database
 	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
 
-	// TODO: Depracate
+	// TODO: Deprecate
 	OldStatus *service_status.OldStatus `yaml:"status,omitempty"` // For moving version info to argus.db
 }
 

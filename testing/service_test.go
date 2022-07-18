@@ -17,266 +17,161 @@
 package testing
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/config"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
-	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestServiceTestWithNoService(t *testing.T) {
-	// GIVEN a Config with a Service
-	jLog = utils.NewJLog("WARN", false)
-	InitJLog(jLog)
-	serviceID := "test"
-	cfg := config.Config{
-		Service: service.Slice{
-			serviceID: &service.Service{
-				ID: &serviceID,
-			},
-		},
-	}
-	flag := ""
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN ServiceTest is called with an empty (undefined) flag
-	ServiceTest(&flag, &cfg, jLog)
-
-	// THEN nothing will be run/printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	want := ""
-	if want != output {
-		t.Errorf("ServiceTest with %q flag shouldn't print anything, got\n%s",
-			flag, output)
-	}
-}
-func TestServiceTestWithUnknownService(t *testing.T) {
-	// GIVEN a Config with a Service
-	jLog = utils.NewJLog("WARN", false)
-	InitJLog(jLog)
-	var (
-		sID                string                = "test"
-		sType              string                = "url"
-		sURL               string                = "github.com/release-argus/argus/releases"
-		sRegexVersion      string                = "[0-9.]+"
-		sAllowInvalidCerts bool                  = false
-		sIgnoreMisses      bool                  = false
-		databaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
-	)
-	svc := service.Service{
-		ID:                &sID,
-		Type:              &sType,
-		URL:               &sURL,
-		RegexVersion:      &sRegexVersion,
-		AllowInvalidCerts: &sAllowInvalidCerts,
-		IgnoreMisses:      &sIgnoreMisses,
-		Status:            &service_status.Status{},
-		DatabaseChannel:   &databaseChannel,
-		Defaults:          &service.Service{},
-		HardDefaults:      &service.Service{},
-	}
-	svc.Init(jLog, svc.Defaults, svc.HardDefaults)
-	cfg := config.Config{
-		Service: service.Slice{
-			sID: &svc,
-		},
-	}
-	flag := "other_" + sID
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() {
-		r := recover()
-		if !strings.Contains(r.(string), " could not be found ") {
-			t.Error(r)
-		}
-	}()
-
-	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg, jLog)
-
-	// THEN it will be printed that the command couldn't be found
-	t.Error("Should os.Exit(1), err")
-}
-
-func TestServiceTestWithGitHubServiceAsURL(t *testing.T) {
-	// GIVEN a Config with a Service that should be type github
-	jLog = utils.NewJLog("INFO", false)
-	InitJLog(jLog)
-	var (
-		sID                 string                = "test"
-		sType               string                = "url"
-		sURL                string                = "github.com/release-argus/argus"
-		sRegexVersion       string                = "[0-9.]+"
-		sAllowInvalidCerts  bool                  = false
-		sIgnoreMisses       bool                  = false
-		sSemanticVersioning bool                  = false
-		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
-	)
-	svc := service.Service{
-		ID:                 &sID,
-		Type:               &sType,
-		URL:                &sURL,
-		RegexVersion:       &sRegexVersion,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		IgnoreMisses:       &sIgnoreMisses,
-		SemanticVersioning: &sSemanticVersioning,
-		Status:             &service_status.Status{},
-		DatabaseChannel:    &databaseChannel,
-		Defaults:           &service.Service{},
-		HardDefaults:       &service.Service{},
-	}
-	svc.Init(jLog, svc.Defaults, svc.HardDefaults)
-	cfg := config.Config{
-		Service: service.Slice{
-			sID: &svc,
-		},
-	}
-	flag := "test"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-
-	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg, jLog)
-
-	// THEN it will be printed that the command couldn't be found
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, "unsupported protocol scheme") {
-		t.Errorf("Expected Query to have failed for config reasons\n%s",
-			output)
-	}
-}
-
-func TestServiceTestWithKnownService(t *testing.T) {
-	// GIVEN a Config with a Service
-	jLog = utils.NewJLog("WARN", false)
-	InitJLog(jLog)
-	var (
-		sID                 string                = "test"
-		sType               string                = "url"
-		sURL                string                = "release-argus/argus"
-		sRegexVersion       string                = "[0-9.]+"
-		sAllowInvalidCerts  bool                  = false
-		sIgnoreMisses       bool                  = false
-		sSemanticVersioning bool                  = false
-		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
-	)
-	svc := service.Service{
-		ID:                 &sID,
-		Type:               &sType,
-		URL:                &sURL,
-		RegexVersion:       &sRegexVersion,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		IgnoreMisses:       &sIgnoreMisses,
-		SemanticVersioning: &sSemanticVersioning,
-		Status:             &service_status.Status{},
-		DatabaseChannel:    &databaseChannel,
-		Defaults:           &service.Service{},
-		HardDefaults:       &service.Service{},
-	}
-	svc.Init(jLog, svc.Defaults, svc.HardDefaults)
-	cfg := config.Config{
-		Service: service.Slice{
-			sID: &svc,
-		},
-	}
-	flag := "test"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	// Switch Fatal to panic to disable os.Exit(0).
-	jLog.Testing = true
-
-	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg, jLog)
-
-	// THEN it will have printed the LatestVersion found
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, "unsupported protocol scheme") {
-		t.Errorf("Expected Query to have failed for config reasons\n%s",
-			output)
-	}
-}
-
-func TestServiceTestWithKnownServiceAndDeployedVersionLookup(t *testing.T) {
+func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
 	jLog = utils.NewJLog("INFO", false)
 	InitJLog(jLog)
-	var (
-		sID                 string                = "test"
-		sType               string                = "github"
-		sURL                string                = "release-argus/argus"
-		sAllowInvalidCerts  bool                  = false
-		sIgnoreMisses       bool                  = false
-		sSemanticVersioning bool                  = false
-		databaseChannel     chan db_types.Message = make(chan db_types.Message, 5)
-	)
-	svc := service.Service{
-		ID:                 &sID,
-		Type:               &sType,
-		URL:                &sURL,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		IgnoreMisses:       &sIgnoreMisses,
-		SemanticVersioning: &sSemanticVersioning,
-		DeployedVersionLookup: &service.DeployedVersionLookup{
-			URL:               "https://release-argus.io",
-			AllowInvalidCerts: &sAllowInvalidCerts,
-			Regex:             "([0-9]+) The Argus Developers",
-		},
-		Status:          &service_status.Status{},
-		DatabaseChannel: &databaseChannel,
-		Defaults: &service.Service{
-			DeployedVersionLookup: &service.DeployedVersionLookup{},
-		},
-		HardDefaults: &service.Service{
-			DeployedVersionLookup: &service.DeployedVersionLookup{},
-		},
+	tests := map[string]struct {
+		flag          string
+		slice         service.Slice
+		outputRegex   *string
+		panicContains *string
+	}{
+		"flag is empty": {flag: "",
+			outputRegex: stringPtr("^$"),
+			slice: service.Slice{
+				"argus": {
+					ID:       stringPtr("argus"),
+					Interval: stringPtr("0s"),
+				},
+			}},
+		"unknown service": {flag: "test",
+			panicContains: stringPtr("Service \"test\" could not be found in config.service\nDid you mean one of these?\n  - argus"),
+			slice: service.Slice{
+				"argus": {
+					ID:       stringPtr("argus"),
+					Interval: stringPtr("0s"),
+				},
+			}},
+		"github service": {flag: "argus",
+			outputRegex: stringPtr("argus, Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			slice: service.Slice{
+				"argus": {
+					Type: stringPtr("github"),
+					ID:   stringPtr("argus"),
+					URL:  stringPtr("release-argus/Argus"),
+					URLCommands: &service.URLCommandSlice{
+						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+					},
+					AllowInvalidCerts:  boolPtr(false),
+					SemanticVersioning: boolPtr(true),
+					Interval:           stringPtr("0s"),
+				},
+			}},
+		"url service type but github owner/repo url": {flag: "argus",
+			outputRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
+			slice: service.Slice{
+				"argus": {
+					Type: stringPtr("url"),
+					ID:   stringPtr("argus"),
+					URL:  stringPtr("release-argus/Argus"),
+					URLCommands: &service.URLCommandSlice{
+						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+					},
+					AllowInvalidCerts:  boolPtr(false),
+					SemanticVersioning: boolPtr(true),
+					Interval:           stringPtr("0s"),
+				},
+			}},
+		"url service": {flag: "argus",
+			outputRegex: stringPtr("Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			slice: service.Slice{
+				"argus": {
+					Type: stringPtr("url"),
+					ID:   stringPtr("argus"),
+					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
+					URLCommands: &service.URLCommandSlice{
+						{Type: "regex", Regex: stringPtr("tag/([0-9.]+)\"")},
+					},
+					AllowInvalidCerts:  boolPtr(false),
+					SemanticVersioning: boolPtr(true),
+					Interval:           stringPtr("0s"),
+				},
+			}},
+		"service with deployed version lookup": {flag: "argus",
+			outputRegex: stringPtr("Latest Release - \"[0-9]+\\.[0-9]+\\.[0-9]+\"\\s.*Deployed version - \"[0-9]+\\.[0-9]+\\.[0-9]+\""),
+			slice: service.Slice{
+				"argus": {
+					Type: stringPtr("url"),
+					ID:   stringPtr("argus"),
+					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
+					URLCommands: &service.URLCommandSlice{
+						{Type: "regex", Regex: stringPtr("tag/([0-9.]+)\"")},
+					},
+					AllowInvalidCerts:  boolPtr(false),
+					SemanticVersioning: boolPtr(true),
+					Interval:           stringPtr("0s"),
+					DeployedVersionLookup: &service.DeployedVersionLookup{
+						URL:               "https://release-argus.io/demo/api/v1/version",
+						AllowInvalidCerts: boolPtr(true),
+						JSON:              "version",
+					},
+				},
+			}},
 	}
-	svc.Init(jLog, svc.Defaults, svc.HardDefaults)
-	cfg := config.Config{
-		Service: service.Slice{
-			sID: &svc,
-		},
-	}
-	flag := "test"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	// Switch Fatal to panic to disable os.Exit(0).
-	jLog.Testing = true
 
-	// WHEN ServiceTest is called with a Service not in the config
-	ServiceTest(&flag, &cfg, jLog)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			jLog.Testing = true
+			if tc.panicContains != nil {
+				// Switch Fatal to panic and disable this panic.
+				defer func() {
+					r := recover()
+					rStr := fmt.Sprint(r)
+					if !strings.Contains(rStr, *tc.panicContains) {
+						t.Errorf("%s:\nexpected a panic containing %q, not %q",
+							name, *tc.panicContains, rStr)
+					}
+				}()
+			}
+			if tc.slice[tc.flag] != nil {
+				tc.slice[tc.flag].Init(jLog, &service.Service{}, &service.Service{})
+				// will do a call for latest_version* and one for deployed_version*
+				dbChannel := make(chan db_types.Message, 2)
+				tc.slice[tc.flag].DatabaseChannel = &dbChannel
+				if tc.slice[tc.flag].DeployedVersionLookup != nil {
+					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &service.DeployedVersionLookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &service.DeployedVersionLookup{}
+				}
+			}
 
-	// THEN it should have printed the LatestVersion and DeployedVersion
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, "Latest Release - ") {
-		t.Errorf("Expected LatestVersion to be broadcast, got\n%s",
-			output)
+			// WHEN ServiceTest is called with the test Config
+			cfg := config.Config{
+				Service: tc.slice,
+			}
+			ServiceTest(&tc.flag, &cfg, jLog)
+
+			// THEN we get the expected output
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			if tc.outputRegex != nil {
+				re := regexp.MustCompile(*tc.outputRegex)
+				match := re.MatchString(output)
+				if !match {
+					t.Errorf("%s:\nwant match on %q\ngot: %q",
+						name, *tc.outputRegex, output)
+				}
+			}
+		})
 	}
-	if !strings.Contains(output, "Deployed version - ") {
-		t.Errorf("Expected DeployedVersion to be broadcast, got\n%s",
-			output)
-	}
+	time.Sleep(100 * time.Millisecond)
 }
