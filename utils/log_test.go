@@ -22,576 +22,575 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"regexp"
+	"strings"
 	"testing"
 )
 
-func TestNewJLogGivesJLog(t *testing.T) {
+func TestNewJLog(t *testing.T) {
 	// GIVEN a new JLog is wanted
+	tests := map[string]struct {
+		level      string
+		timestamps bool
+	}{
+		"timestamps JLog":    {level: "INFO", timestamps: true},
+		"no timestamps JLog": {level: "INFO", timestamps: false},
+		"ERROR JLog":         {level: "ERROR", timestamps: false},
+		"WARN JLog":          {level: "WARN", timestamps: false},
+		"INFO JLog":          {level: "INFO", timestamps: false},
+		"VERBOSE JLog":       {level: "VERBOSE", timestamps: false},
+		"DEBUG JLog":         {level: "DEBUG", timestamps: false},
+	}
 
-	// WHEN NewJLog is called
-	var jLog interface{} = NewJLog("DEBUG", false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN NewJLog is called
+			jLog := NewJLog(tc.level, tc.timestamps)
 
-	// THEN a JLog pointer is created
-	switch v := jLog.(type) {
-	default:
-		t.Errorf("unexpected type %T, jLog should be of type JLog!",
-			v)
-	case *JLog:
+			// THEN the correct JLog is returned
+			if jLog.Level != levelMap[tc.level] {
+				t.Errorf("%s:\nwant level=%d\ngot  level=%d",
+					name, levelMap[tc.level], jLog.Level)
+			}
+			if jLog.Timestamps != tc.timestamps {
+				t.Errorf("%s:\nwant timestamps=%t\ngot  timestamps=%t",
+					name, tc.timestamps, jLog.Timestamps)
+			}
+		})
 	}
 }
 
-func TestNewJLogWithLogLevelParam(t *testing.T) {
-	// GIVEN a new JLog is wanted with certain params
-	logLevel := "DEBUG"
-
-	// WHEN NewJLog is called
-	jLog := NewJLog(logLevel, false)
-	wantedLogLevelUInt := uint(4)
-
-	// THEN a JLog pointer is created with this Log Level
-	got := (*jLog).Level
-	if got != wantedLogLevelUInt {
-		t.Errorf("NewJLog didn't use level param. Wanted %q (%d) but got %d",
-			logLevel, wantedLogLevelUInt, got)
+func TestSetLevel(t *testing.T) {
+	// GIVEN a JLog and various new log levels
+	tests := map[string]struct {
+		level      string
+		panicRegex *string
+	}{
+		"ERROR":                   {level: "ERROR"},
+		"WARN":                    {level: "WARN"},
+		"INFO":                    {level: "INFO"},
+		"VERBOSE":                 {level: "VERBOSE"},
+		"DEBUG":                   {level: "DEBUG"},
+		"lower-case verbose":      {level: "verbose"},
+		"mixed-case vERbOse":      {level: "vERbOse"},
+		"invalid level PINEAPPLE": {level: "PINEAPPLE", panicRegex: stringPtr(`not a valid log\.level`)},
 	}
-}
 
-func TestNewJLogWithTimestampParam(t *testing.T) {
-	// GIVEN a new JLog is wanted with certain params
-	timestamps := true
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog("INFO", false)
+			if tc.panicRegex != nil {
+				jLog.Testing = true
+				// Switch Fatal to panic and disable this panic.
+				defer func() {
+					r := recover()
+					rStr := fmt.Sprint(r)
+					re := regexp.MustCompile(*tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
+							name, *tc.panicRegex, rStr)
+					}
+				}()
+			}
 
-	// WHEN NewJLog is called
-	jLog := NewJLog("WARN", timestamps)
+			// WHEN SetLevel is called
+			jLog.SetLevel(tc.level)
 
-	// THEN a JLog pointer is created with this Log Level
-	got := (*jLog).Timestamps
-	if got != timestamps {
-		t.Errorf("NewJLog didn't use level param. Wanted %t but got %t",
-			timestamps, got)
+			// THEN the correct JLog is returned
+			if jLog.Level != levelMap[strings.ToUpper(tc.level)] {
+				t.Errorf("%s:\nwant level=%d\ngot  level=%d",
+					name, levelMap[strings.ToUpper(tc.level)], jLog.Level)
+			}
+		})
 	}
-}
-
-func TestSetLevelWithUppercaseValidLevel(t *testing.T) {
-	// GIVEN you have a valid JLog and want to change the Log Level
-	jLog := NewJLog("INFO", false)
-	level := "WARN"
-
-	// WHEN SetLevel is called with a valid level
-	jLog.SetLevel(level)
-	want := uint(1)
-
-	// THEN a JLog pointer is created with this Log Level
-	got := (*jLog).Level
-	if got != want {
-		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d",
-			level, want, got)
-	}
-}
-
-func TestSetLevelWithLowercaseValidLevel(t *testing.T) {
-	// GIVEN you have a valid JLog and want to change the Log Level
-	jLog := NewJLog("info", false)
-	level := "warn"
-
-	// WHEN SetLevel is called with a valid level
-	jLog.SetLevel(level)
-	want := uint(1)
-
-	// THEN a JLog pointer is created with this Log Level
-	got := (*jLog).Level
-	if got != want {
-		t.Errorf("SetLevel set the level correctly. Wanted %q (%d) but got %d",
-			level, want, got)
-	}
-}
-
-func TestSetLevelWithInvalidLevel(t *testing.T) {
-	// GIVEN you have a valid JLog and want to change the Log Level to something undefined
-	jLog := NewJLog("WARN", false)
-	level := "something123"
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
-	defer func() { _ = recover() }()
-
-	// WHEN SetLevel is called with an unknown level
-	jLog.SetLevel(level)
-
-	// THEN this call will crash the program
-	t.Errorf("%s is an unknown log level and should have been Fatal",
-		level)
 }
 
 func TestSetTimestamps(t *testing.T) {
-	// GIVEN you have a valid JLog and want to change the Log Level
-	jLog := NewJLog("WARN", false)
-	timestamps := true
+	// GIVEN a JLog and various tests
+	tests := map[string]struct {
+		start    bool
+		changeTo bool
+	}{
+		"true to true":   {start: true, changeTo: true},
+		"false to false": {start: false, changeTo: false},
+		"true to false":  {start: true, changeTo: false},
+		"false to true":  {start: false, changeTo: true},
+	}
 
-	// WHEN SetTimestamps is called to invert Timestamps
-	jLog.SetTimestamps(timestamps)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog("INFO", tc.start)
 
-	// THEN the Timetamps var is flipped
-	got := (*jLog).Timestamps
-	if got != timestamps {
-		t.Errorf("SetTimestamps didn't set Timestamps correctly. Wanted %t but got %t",
-			timestamps, got)
+			// WHEN SetTimestamps is called
+			jLog.SetTimestamps(tc.changeTo)
+
+			// THEN the timestamps are set correctly
+			if jLog.Timestamps != tc.changeTo {
+				t.Errorf("%s:\nwant timestamps=%t\ngot  timestamps=%t",
+					name, tc.changeTo, jLog.Timestamps)
+			}
+		})
 	}
 }
 
-func TestFormatMessageSourceWithDefaultLogFrom(t *testing.T) {
-	// GIVEN a default LogFrom var
-	var logFrom LogFrom
-
-	// WHEN FormatMessageSource is called with this LogFrom
-	got := FormatMessageSource(logFrom)
-	want := ""
-
-	// THEN an empty string is returned
-	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with an empty LogFrom, not %q",
-			want, got)
+func TestFormatMessageSource(t *testing.T) {
+	// GIVEN a different LogFrom's
+	tests := map[string]struct {
+		logFrom LogFrom
+		want    string
+	}{
+		"primary and secondary": {logFrom: LogFrom{Primary: "foo", Secondary: "bar"}, want: "foo (bar), "},
+		"only primary":          {logFrom: LogFrom{Primary: "foo"}, want: "foo, "},
+		"only secondary":        {logFrom: LogFrom{Secondary: "bar"}, want: "bar, "},
+		"empty logFrom":         {logFrom: LogFrom{}, want: ""},
 	}
-}
 
-func TestFormatMessageSourceWithLogFromPrimaryOnly(t *testing.T) {
-	// GIVEN a LogFrom var with only Primary non-default
-	logFrom := LogFrom{Primary: "primary"}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN FormatMessageSource is called with this LogFrom
+			got := FormatMessageSource(tc.logFrom)
 
-	// WHEN FormatMessageSource is called with this LogFrom
-	got := FormatMessageSource(logFrom)
-	want := "primary, "
-
-	// THEN an the string returned is this primary followed by ', '
-	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with only a Primary, not %q",
-			want, got)
-	}
-}
-
-func TestFormatMessageSourceWithLogFromSecondaryOnly(t *testing.T) {
-	// GIVEN a LogFrom var with only Primary non-default
-	logFrom := LogFrom{Secondary: "secondary"}
-
-	// WHEN FormatMessageSource is called with this LogFrom
-	got := FormatMessageSource(logFrom)
-	want := "secondary, "
-
-	// THEN an the string returned is this primary followed by ', '
-	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with only a Secondary, not %q",
-			want, got)
-	}
-}
-
-func TestFormatMessageSourceWithLogFromPrimaryAndSecondary(t *testing.T) {
-	// GIVEN a LogFrom var with only Primary non-default
-	logFrom := LogFrom{Primary: "primary", Secondary: "secondary"}
-
-	// WHEN FormatMessageSource is called with this LogFrom
-	got := FormatMessageSource(logFrom)
-	want := "primary (secondary), "
-
-	// THEN an the string returned is this primary followed by ', '
-	if got != want {
-		t.Errorf("FormatMessageSource should have returned %q with a Primary and Secondary, not %q",
-			want, got)
+			// THEN an empty string is returned
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestIsLevelPass(t *testing.T) {
 	// GIVEN you have a valid JLog
-	level := "WARN"
-	jLog := NewJLog(level, false)
+	tests := map[string]struct {
+		startLevel string
+		testLevel  string
+		want       bool
+	}{
+		"@ERROR, test ERROR":                  {startLevel: "ERROR", testLevel: "ERROR", want: true},
+		"@ERROR, test WARN":                   {startLevel: "ERROR", testLevel: "WARN", want: false},
+		"@ERROR, test INFO":                   {startLevel: "ERROR", testLevel: "INFO", want: false},
+		"@ERROR, test VERBOSE":                {startLevel: "ERROR", testLevel: "VERBOSE", want: false},
+		"@ERROR, test DEBUG":                  {startLevel: "ERROR", testLevel: "DEBUG", want: false},
+		"@WARN, test ERROR":                   {startLevel: "WARN", testLevel: "ERROR", want: false},
+		"@WARN, test WARN":                    {startLevel: "WARN", testLevel: "WARN", want: true},
+		"@WARN, test INFO":                    {startLevel: "WARN", testLevel: "INFO", want: false},
+		"@WARN, test VERBOSE":                 {startLevel: "WARN", testLevel: "VERBOSE", want: false},
+		"@WARN, test DEBUG":                   {startLevel: "WARN", testLevel: "DEBUG", want: false},
+		"@INFO, test ERROR":                   {startLevel: "INFO", testLevel: "ERROR", want: false},
+		"@INFO, test WARN":                    {startLevel: "INFO", testLevel: "WARN", want: false},
+		"@INFO, test INFO":                    {startLevel: "INFO", testLevel: "INFO", want: true},
+		"@INFO, test VERBOSE":                 {startLevel: "INFO", testLevel: "VERBOSE", want: false},
+		"@INFO, test DEBUG":                   {startLevel: "INFO", testLevel: "DEBUG", want: false},
+		"@VERBOSE, test ERROR":                {startLevel: "VERBOSE", testLevel: "ERROR", want: false},
+		"@VERBOSE, test WARN":                 {startLevel: "VERBOSE", testLevel: "WARN", want: false},
+		"@VERBOSE, test INFO":                 {startLevel: "VERBOSE", testLevel: "INFO", want: false},
+		"@VERBOSE, test VERBOSE":              {startLevel: "VERBOSE", testLevel: "VERBOSE", want: true},
+		"@VERBOSE, test DEBUG":                {startLevel: "VERBOSE", testLevel: "DEBUG", want: false},
+		"@DEBUG, test ERROR":                  {startLevel: "DEBUG", testLevel: "ERROR", want: false},
+		"@DEBUG, test WARN":                   {startLevel: "DEBUG", testLevel: "WARN", want: false},
+		"@DEBUG, test INFO":                   {startLevel: "DEBUG", testLevel: "INFO", want: false},
+		"@DEBUG, test VERBOSE":                {startLevel: "DEBUG", testLevel: "VERBOSE", want: false},
+		"@DEBUG, test DEBUG":                  {startLevel: "DEBUG", testLevel: "DEBUG", want: true},
+		"@DEBUG, test level not in level map": {startLevel: "DEBUG", testLevel: "FOO", want: false},
+	}
 
-	// WHEN IsLevel is called to check with the matching level
-	check := jLog.IsLevel(level)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.startLevel, false)
 
-	// THEN a JLog pointer is created with this Log Level
-	if !check {
-		t.Errorf("IsLevel should have got a match on %s and %d, but returned %t",
-			level, jLog.Level, check)
+			// WHEN IsLevel is called to check the given level
+			got := jLog.IsLevel(tc.testLevel)
+
+			// THEN the correct response is returned
+			if got != tc.want {
+				t.Errorf("%s:\nlevel is %s, check of whether it's %s got %t. expected %t",
+					name, tc.startLevel, tc.testLevel, got, tc.want)
+			}
+		})
 	}
 }
 
-func TestIsLevelFail(t *testing.T) {
-	// GIVEN you have a valid JLog
-	level := "WARN"
-	jLog := NewJLog(level, false)
-
-	// WHEN IsLevel is called to check with a mismatching level
-	guess := "something"
-	check := jLog.IsLevel("something")
-
-	// THEN a JLog pointer is created with this Log Level
-	if check {
-		t.Errorf("IsLevel shouldn't have got a match on %s and %d, but returned %t",
-			guess, jLog.Level, check)
-	}
-}
-
-func TestErrorFalse(t *testing.T) {
+func TestError(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("WARN", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+	}
 
-	// WHEN Error is called with false
-	jLog.Error(fmt.Errorf(msg), LogFrom{}, false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
 
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Error printed when otherCondition was false. (%q)",
-			string(out))
+			// WHEN Error is called with true
+			jLog.Error(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			var regex string
+			if tc.timestamps {
+				got = logOut.String()
+				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
+			} else if !tc.otherCondition {
+				regex = "^$"
+			} else {
+				regex = fmt.Sprintf("^ERROR: %s\n$", msg)
+			}
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("ERROR printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
 }
 
-func TestErrorTrueTimestamps(t *testing.T) {
+func TestWarn(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("WARN", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+	}
 
-	// WHEN Error is called with true
-	jLog.Error(fmt.Errorf(msg), LogFrom{}, true)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
 
-	// THEN nsg was logged with timestamps
-	regex := fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
-	reg := regexp.MustCompile(regex)
-	got := out.String()
-	match := reg.MatchString(got)
-	if !match {
-		t.Errorf("Error printed didn't match %q. Got %q, want %q",
-			regex, got, msg)
+			// WHEN Warn is called with true
+			jLog.Warn(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			var regex string
+			if !tc.shouldPrint {
+				regex = "^$"
+			} else if tc.timestamps {
+				got = logOut.String()
+				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} WARNING: %s\n$", msg)
+			} else {
+				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
+			}
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("WARNING printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
 }
 
-func TestErrorTrueNoTimestamps(t *testing.T) {
+func TestInfo(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("WARN", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+	}
 
-	// WHEN Error is called with true
-	jLog.Error(fmt.Errorf(msg), LogFrom{}, true)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
 
-	// THEN nsg was
-	want := fmt.Sprintf("ERROR: %s\n", msg)
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Error printed didn't match desired. Got %q, want %q",
-			string(out), msg)
+			// WHEN Info is called with true
+			jLog.Info(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			var regex string
+			if !tc.shouldPrint {
+				regex = "^$"
+			} else if tc.timestamps {
+				got = logOut.String()
+				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} INFO: %s\n$", msg)
+			} else {
+				regex = fmt.Sprintf("^INFO: %s\n$", msg)
+			}
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("INFO printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
 }
 
-func TestWarnFalse(t *testing.T) {
+func TestVerbose(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("ERROR", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+	}
 
-	// WHEN Warn is called with the Log Level higher than what we're calling
-	jLog.Warn(fmt.Errorf(msg), LogFrom{}, false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
 
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Warn printed when otherCondition was false. (%q)",
-			string(out))
+			// WHEN Verbose is called with true
+			jLog.Verbose(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			var regex string
+			if !tc.shouldPrint {
+				regex = "^$"
+			} else if tc.timestamps {
+				got = logOut.String()
+				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} VERBOSE: %s\n$", msg)
+			} else {
+				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
+			}
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("VERBOSE printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
 }
 
-func TestWarnTrueTimestamps(t *testing.T) {
+func TestDebug(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("WARN", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: false},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: false},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+	}
 
-	// WHEN Warn is called with true
-	jLog.Warn(fmt.Errorf(msg), LogFrom{}, true)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
 
-	// THEN nsg was logged with timestamps
-	regex := fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} WARNING: %s\n$", msg)
-	reg := regexp.MustCompile(regex)
-	got := out.String()
-	match := reg.MatchString(got)
-	if !match {
-		t.Errorf("Warn printed didn't match %q. Got %q, want %q",
-			regex, got, msg)
+			// WHEN Debug is called with true
+			jLog.Debug(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			var regex string
+			if !tc.shouldPrint {
+				regex = "^$"
+			} else if tc.timestamps {
+				got = logOut.String()
+				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} DEBUG: %s\n$", msg)
+			} else {
+				regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
+			}
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("DEBUG printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
 }
 
-func TestWarnTrueNoTimestamps(t *testing.T) {
+func TestFatal(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
-	jLog := NewJLog("WARN", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Warn is called with true
-	jLog.Warn(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was
-	want := fmt.Sprintf("WARNING: %s\n", msg)
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Warn printed didn't match desired. Got %q, want %q",
-			string(out), msg)
-	}
-}
-
-func TestInfoFalse(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("INFO", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Info is called with the Log Level higher than what we're calling
-	jLog.Info(fmt.Errorf(msg), LogFrom{}, false)
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Info printed when otherCondition was false. (%q)",
-			string(out))
-	}
-}
-
-func TestInfoTrueTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("INFO", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
-
-	// WHEN Info is called with true
-	jLog.Info(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was logged with timestamps
-	regex := fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} INFO: %s\n$", msg)
-	reg := regexp.MustCompile(regex)
-	got := out.String()
-	match := reg.MatchString(got)
-	if !match {
-		t.Errorf("Info printed didn't match %q. Got %q, want %q",
-			regex, got, msg)
-	}
-}
-
-func TestInfoTrueNoTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("INFO", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Info is called with true
-	jLog.Info(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was
-	want := fmt.Sprintf("INFO: %s\n", msg)
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Info printed didn't match desired. Got %q, want %q",
-			string(out), msg)
-	}
-}
-
-func TestVerboseFalse(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("VERBOSE", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Verbose is called with the Log Level higher than what we're calling
-	jLog.Verbose(fmt.Errorf(msg), LogFrom{}, false)
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Verbose printed when otherCondition was false. (%q)",
-			string(out))
-	}
-}
-
-func TestVerboseTrueTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("VERBOSE", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
-
-	// WHEN Verbose is called with true
-	jLog.Verbose(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was logged with timestamps
-	regex := fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} VERBOSE: %s\n$", msg)
-	reg := regexp.MustCompile(regex)
-	got := out.String()
-	match := reg.MatchString(got)
-	if !match {
-		t.Errorf("Verbose printed didn't match %q. Got %q, want %q",
-			regex, got, msg)
-	}
-}
-
-func TestVerboseTrueNoTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("VERBOSE", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Verbose is called with true
-	jLog.Verbose(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was
-	want := fmt.Sprintf("VERBOSE: %s\n", msg)
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Verbose printed didn't match desired. Got %q, want %q",
-			string(out), msg)
-	}
-}
-
-func TestDebugFalse(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("DEBUG", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Debug is called with the Log Level higher than what we're calling
-	jLog.Debug(fmt.Errorf(msg), LogFrom{}, false)
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Debug printed when otherCondition was false. (%q)",
-			string(out))
-	}
-}
-
-func TestDebugTrueTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("DEBUG", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
-
-	// WHEN Debug is called with true
-	jLog.Debug(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was logged with timestamps
-	regex := fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} DEBUG: %s\n$", msg)
-	reg := regexp.MustCompile(regex)
-	got := out.String()
-	match := reg.MatchString(got)
-	if !match {
-		t.Errorf("Debug printed didn't match %q. Got %q, want %q",
-			regex, got, msg)
-	}
-}
-
-func TestDebugTrueNoTimestamps(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("DEBUG", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Debug is called with true
-	jLog.Debug(fmt.Errorf(msg), LogFrom{}, true)
-
-	// THEN nsg was
-	want := fmt.Sprintf("DEBUG: %s\n", msg)
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Debug printed didn't match desired. Got %q, want %q",
-			string(out), msg)
-	}
-}
-
-func TestFatalFalse(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("ERROR", false)
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Fatal is called with the Log Level higher than what we're calling
-	jLog.Fatal(fmt.Errorf(msg), LogFrom{}, false)
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Fatal printed when otherCondition was false. (%q)",
-			string(out))
-	}
-}
-
-func TestFatalTrue(t *testing.T) {
-	// GIVEN a JLog and message
-	msg := "argus"
-	jLog := NewJLog("ERROR", true)
-	var out bytes.Buffer
-	log.SetOutput(&out)
-
-	// WHEN Fatal is called with true
-	if os.Getenv("RUN_CRASH") == "1" {
-		jLog.Fatal(fmt.Errorf(msg), LogFrom{}, true)
-		return
+	tests := map[string]struct {
+		level          string
+		timestamps     bool
+		otherCondition bool
+		shouldPrint    bool
+	}{
+		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
+		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
+		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
-	// THEN nsg will crash the program (os.Exit)
-	cmd := exec.Command(os.Args[0], "-test.run=TestFatalTrue")
-	cmd.Env = append(os.Environ(), "RUN_CRASH=1")
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		return
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			jLog := NewJLog(tc.level, tc.timestamps)
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			var logOut bytes.Buffer
+			log.SetOutput(&logOut)
+			if tc.shouldPrint {
+				jLog.Testing = true
+				defer func() {
+					_ = recover()
+					regex := fmt.Sprintf("^ERROR: %s\n$", msg)
+					w.Close()
+					out, _ := ioutil.ReadAll(r)
+					got := string(out)
+					if tc.timestamps {
+						got = logOut.String()
+						regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
+					}
+					reg := regexp.MustCompile(regex)
+					match := reg.MatchString(got)
+					if !match {
+						t.Errorf("ERROR wasn't printed/didn't match %q\nGot %q",
+							regex, got)
+					}
+				}()
+			}
+
+			// WHEN Fatal is called with true
+			jLog.Fatal(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+
+			// THEN msg was logged if shouldPrint, with/without timestamps
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			regex := "^$"
+			reg := regexp.MustCompile(regex)
+			match := reg.MatchString(got)
+			if !match {
+				t.Errorf("ERROR printed didn't match %q\nGot %q",
+					regex, got)
+			}
+		})
 	}
-	got := out.String()
-	t.Errorf("Fatal print didn't os.Exit. Got %q",
-		got)
 }

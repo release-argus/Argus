@@ -20,671 +20,669 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
-	"strings"
 	"testing"
 )
 
-func TestContainsTrue(t *testing.T) {
-	// GIVEN a list of strings
-	want := "argus"
-	lst := []string{"hello", want, "foo"}
+func TestContains(t *testing.T) {
+	// GIVEN lists of strings
+	tests := map[string]struct {
+		list        []string
+		contain     string
+		doesContain bool
+	}{
+		"[]string does contain":     {list: []string{"hello", "hi", "hiya"}, contain: "hi", doesContain: true},
+		"[]string does not contain": {list: []string{"hello", "hi", "hiya"}, contain: "howdy", doesContain: false},
+	}
 
-	// WHEN Contains is run on this list with a element inside it
-	found := Contains(lst, want)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN Contains is run on this list with a element inside it
+			var found bool
+			found = Contains(tc.list, tc.contain)
 
-	// THEN true is returned
-	if !found {
-		t.Errorf("%q couldn't be found in %v. But it is there!",
-			want, lst)
+			// THEN true is returned if it does contain the item
+			if found != tc.doesContain {
+				t.Errorf("%s:\nwant Contains=%t, got Contains=%t",
+					name, found, tc.doesContain)
+			}
+		})
 	}
 }
 
-func TestContainsFalse(t *testing.T) {
-	// GIVEN a list of strings
-	want := "test"
-	lst := []string{"hello", "argus", "foo"}
+func TestEvalNilPtr(t *testing.T) {
+	// GIVEN lists of strings
+	tests := map[string]struct {
+		ptr    *string
+		nilStr string
+		want   string
+	}{
+		"nil *string":     {ptr: nil, nilStr: "bar", want: "bar"},
+		"non-nil *string": {ptr: stringPtr("foo"), nilStr: "bar", want: "foo"},
+	}
 
-	// WHEN Contains is run on this list with a element inside it
-	found := Contains(lst, want)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN EvalNilPtr is run on a pointer
+			got := EvalNilPtr(tc.ptr, tc.nilStr)
 
-	// THEN true is returned
-	if found {
-		t.Errorf("%q shouldn't have been found in %v!",
-			want, lst)
+			// THEN the correct value is returned
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestEvalNilPtrWithNilPtr(t *testing.T) {
-	// Given a nil pointer and nilValue to be returned
-	var pointer *string
-	nilValue := "argus"
+func TestPtrOrValueToPtr(t *testing.T) {
+	// GIVEN a pointer and a value
+	tests := map[string]struct {
+		a    *string
+		b    string
+		want string
+	}{
+		"nil `a` pointer":     {a: nil, b: "bar", want: "bar"},
+		"non-nil `a` pointer": {a: stringPtr("foo"), b: "bar", want: "foo"},
+	}
 
-	// WHEN EvalNilPtr is called with these values
-	got := EvalNilPtr(pointer, nilValue)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN PtrOrValueToPtr is run on pointer and a value
+			got := PtrOrValueToPtr(tc.a, tc.b)
 
-	// THEN nilValue is returned
-	if got != nilValue {
-		t.Errorf("EvalNilPtr was called with a nil pointer (%v), so should have returned %q",
-			pointer, nilValue)
+			// THEN the correct value is returned
+			if *got != tc.want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, tc.want, *got)
+			}
+		})
 	}
 }
 
-func TestEvalNilPtrWithNonNilPtr(t *testing.T) {
-	// Given a nil pointer and nilValue to be returned
-	str := "foo"
-	nilValue := "argus"
+func TestValueIfNotNil(t *testing.T) {
+	// GIVEN a value to check and a value we want when it's not nil
+	tests := map[string]struct {
+		check *string
+		value string
+		want  *string
+	}{
+		"nil `check` pointer":     {check: nil, value: "foo", want: nil},
+		"non-nil `check` pointer": {check: stringPtr("foo"), value: "bar", want: stringPtr("bar")},
+	}
 
-	// WHEN EvalNilPtr is called with these values
-	got := EvalNilPtr(&str, nilValue)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN ValueIfNotNil is run on pointer and a value
+			got := ValueIfNotNil(tc.check, tc.value)
 
-	// THEN nilValue is returned
-	if got != str {
-		t.Errorf("EvalNilPtr was called with a nil pointer (%v), so should have returned %q",
-			&str, str)
+			// THEN the correct value is returned
+			if tc.want == nil {
+				if got != nil {
+					t.Errorf("%s:\nwant: %v\ngot:  &%q",
+						name, tc.want, *got)
+				}
+				return
+			}
+			if got == nil {
+				t.Errorf("%s:\nwant: %q\ngot:  &%v",
+					name, *tc.want, got)
+			}
+			if *got != *tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, *tc.want, *got)
+			}
+		})
 	}
 }
 
-func TestPtrOrValueToPtrWithNilPtr(t *testing.T) {
-	// GIVEN a nil pointer and a string
-	var (
-		pointer *string
-		value   string = "argus"
-	)
+func TestValueIfNotDefault(t *testing.T) {
+	// GIVEN a value to check and a value we want when it's not default
+	tests := map[string]struct {
+		check string
+		value string
+		want  string
+	}{
+		"default `check` value":     {check: "", value: "foo", want: ""},
+		"non-default `check` value": {check: "foo", value: "bar", want: "bar"},
+	}
 
-	// WHEN PtrOrValueToPtr is called with these values
-	got := PtrOrValueToPtr(pointer, value)
-	want := value
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN ValueIfNotDefault is run on pointer and a value
+			got := ValueIfNotDefault(tc.check, tc.value)
 
-	// THEN a pointer to value is returned
-	if *got != want {
-		t.Errorf("PtrOrValueToPtr with %v and %q should have returned &%q but returned &%q",
-			pointer, value, value, *got)
+			// THEN the correct value is returned
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestPtrOrValueToPtrWithNonNilPtr(t *testing.T) {
-	// GIVEN a non-nil pointer and a string
-	var (
-		pointer string = "something"
-		value   string = "argus"
-	)
+func TestDefaultIfNil(t *testing.T) {
+	// GIVEN a value to check and a value we want when it's nil
+	tests := map[string]struct {
+		check *string
+		value string
+		want  string
+	}{
+		"nil `check` pointer":     {check: nil, want: ""},
+		"non-nil `check` pointer": {check: stringPtr("foo"), want: "foo"},
+	}
 
-	// WHEN PtrOrValueToPtr is called with these values
-	got := PtrOrValueToPtr(&pointer, value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN DefaultIfNil is run on pointer and a value
+			got := DefaultIfNil(tc.check)
 
-	// THEN the pointer is returned
-	if *got != pointer {
-		t.Errorf("PtrOrValueToPtr with %v and %q should have returned &%q but returned &%q",
-			pointer, value, pointer, *got)
+			// THEN the correct value is returned
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestValueIfNotNilWithNilPtr(t *testing.T) {
-	// Given a nil pointer and a value
-	var pointer *string
-	value := "argus"
+func TestGetFirstNonNilPtr(t *testing.T) {
+	// GIVEN a bunch of pointers
+	tests := map[string]struct {
+		pointers  []*string
+		allNil    bool
+		wantIndex int
+	}{
+		"no pointers":        {pointers: []*string{}, allNil: true},
+		"all nil pointers":   {pointers: []*string{nil, nil, nil, nil}, allNil: true},
+		"1 non-nil pointer":  {pointers: []*string{nil, nil, nil, stringPtr("bar")}, wantIndex: 3},
+		"2 non-nil pointers": {pointers: []*string{stringPtr("foo"), nil, nil, stringPtr("bar")}, wantIndex: 0},
+	}
 
-	// WHEN ValueIfNotNil is called with this pointer
-	got := ValueIfNotNil(pointer, value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN GetFirstNonNilPtr is run on a slice of pointers
+			got := GetFirstNonNilPtr(tc.pointers...)
 
-	// THEN nil is returned
-	if got != nil {
-		t.Errorf("ValueIfNotNil was called with a nil pointer (%v), so should have returned nil, not %q",
-			pointer, *got)
+			// THEN the correct pointer (or nil) is returned
+			if tc.allNil {
+				if got != nil {
+					t.Fatalf("%s:\ngot:  %v\nfrom: %v",
+						name, got, tc.pointers)
+				}
+				return
+			}
+			if got != tc.pointers[tc.wantIndex] {
+				t.Errorf("%s:\nwant: %v\ngot:  %v",
+					name, tc.pointers[tc.wantIndex], got)
+			}
+		})
 	}
 }
 
-func TestValueIfNotNilWithNonNilPtr(t *testing.T) {
-	// Given a nil pointer and a value
-	str := "foo"
-	value := "argus"
+func TestGetFirstNonDefault(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		slice      []string
+		allDefault bool
+		wantIndex  int
+	}{
+		"no vars":            {slice: []string{}, allDefault: true},
+		"all default vars":   {slice: []string{"", "", "", ""}, allDefault: true},
+		"1 non-default var":  {slice: []string{"", "", "", "bar"}, wantIndex: 3},
+		"2 non-default vars": {slice: []string{"foo", "", "", "bar"}, wantIndex: 0},
+	}
 
-	// WHEN ValueIfNotNil is called with this pointer
-	got := ValueIfNotNil(&str, value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN GetFirstNonDefault is run on a slice of slice
+			got := GetFirstNonDefault(tc.slice...)
 
-	// THEN nil is returned
-	if *got != value {
-		t.Errorf("ValueIfNotNil was called with a non-nil pointer &(%q), so should have returned a pointer to value, not %q",
-			str, *got)
+			// THEN the correct var (or "") is returned
+			if tc.allDefault {
+				if got != "" {
+					t.Fatalf("%s:\ngot:  %v\nfrom: %v",
+						name, got, tc.slice)
+				}
+				return
+			}
+			if got != tc.slice[tc.wantIndex] {
+				t.Errorf("%s:\nwant: %v\ngot:  %v",
+					name, tc.slice[tc.wantIndex], got)
+			}
+		})
 	}
 }
 
-func TestValueIfNotDefaultWithDefault(t *testing.T) {
-	// Given a default comparable and a value
-	str := ""
-	value := "argus"
+func TestPrintlnIfNotDefault(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		element  string
+		didPrint bool
+	}{
+		"default var":     {element: "", didPrint: false},
+		"non-default var": {element: "foo", didPrint: true},
+	}
 
-	// WHEN ValueIfNotDefault is called with these vars
-	got := ValueIfNotDefault(str, value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			msg := "var is not default from PrintlnIfNotDefault"
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN value is returned
-	if got != str {
-		t.Errorf("ValueIfNotDefault was called with a default string so should have returned that default, not %q",
-			got)
+			// WHEN PrintlnIfNotDefault is called
+			PrintlnIfNotDefault(tc.element, msg)
+
+			// THEN the var is printed when it should be
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			if !tc.didPrint {
+				if got != "" {
+					t.Fatalf("%s:\nprinted %q",
+						name, got)
+				}
+				return
+			}
+			if got != msg+"\n" {
+				t.Errorf("%s:\nunexpected print %q",
+					name, got)
+			}
+		})
 	}
 }
 
-func TestValueIfNotDefaultWithNonDefault(t *testing.T) {
-	// GIVEN a default comparable and a value
-	str := "test"
-	value := "argus"
+func TestPrintlnIfNotNil(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		element  *string
+		didPrint bool
+	}{
+		"nil pointer":     {element: nil, didPrint: false},
+		"non-nil pointer": {element: stringPtr("foo"), didPrint: true},
+	}
 
-	// WHEN ValueIfNotDefault is called with these vars
-	got := ValueIfNotDefault(str, value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			msg := "var is not default from PrintlnIfNotNil"
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN value is returned
-	if got != value {
-		t.Errorf("ValueIfNotDefault was called with a default string so should have returned %q, not %q",
-			str, got)
+			// WHEN PrintlnIfNotNil is called
+			PrintlnIfNotNil(tc.element, msg)
+
+			// THEN the var is printed when it should be
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			if !tc.didPrint {
+				if got != "" {
+					t.Fatalf("%s:\nprinted %q",
+						name, got)
+				}
+				return
+			}
+			if got != msg+"\n" {
+				t.Errorf("%s:\nunexpected print %q",
+					name, got)
+			}
+		})
 	}
 }
 
-func TestDefaultIfNilWithNil(t *testing.T) {
-	// GIVEN a nil pointer to an int
-	var pointer *int
+func TestPrintlnIfNil(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		element  *string
+		didPrint bool
+	}{
+		"nil pointer":     {element: nil, didPrint: true},
+		"non-nil pointer": {element: stringPtr("foo"), didPrint: false},
+	}
 
-	// WHEN DefaultIfNil is called with this nil pointer
-	want := 0
-	got := DefaultIfNil(pointer)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			msg := "var is not default from PrintlnIfNil"
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN the default of int (0) would be returned
-	if got != want {
-		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer",
-			want, got)
+			// WHEN PrintlnIfNil is called
+			PrintlnIfNil(tc.element, msg)
+
+			// THEN the var is printed when it should be
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			got := string(out)
+			os.Stdout = stdout
+			if !tc.didPrint {
+				if got != "" {
+					t.Fatalf("%s:\nprinted %q",
+						name, got)
+				}
+				return
+			}
+			if got != msg+"\n" {
+				t.Errorf("%s:\nunexpected print %q",
+					name, got)
+			}
+		})
 	}
 }
 
-func TestDefaultIfNilWithNonNil(t *testing.T) {
-	// GIVEN a nil pointer to an int
-	value := 1
+func TestDefaultOrValue(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		element *string
+		value   string
+		want    string
+	}{
+		"nil pointer":     {element: nil, want: ""},
+		"non-nil pointer": {element: stringPtr("foo"), value: "bar", want: "bar"},
+	}
 
-	// WHEN DefaultIfNil is called with this nil pointer
-	got := DefaultIfNil(&value)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN DefaultOrValue is called
+			got := DefaultOrValue(tc.element, tc.value)
 
-	// THEN the default of int (0) would be returned
-	if got != value {
-		t.Errorf("DefaultIfNil should have given %d but gave %d with a nil int pointer",
-			value, got)
+			// THEN the var is printed when it should be
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestGetFirstNonNilPtrWithAllNil(t *testing.T) {
-	// GIVEN a bunch of nil pointers
-	var (
-		a *string
-		b *string
-		c *string
-		d *string
-	)
-
-	// WHEN GetFirstNonNilPtr is called with these items
-	var want *string
-	got := GetFirstNonNilPtr(a, b, c, d)
-
-	// THEN nil should be returned
-	if got != want {
-		t.Errorf("GetFirstNonNilPtr was given a list of nil's which should have returned nil, but returned %v",
-			*got)
+func TestErrorToString(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		err  error
+		want string
+	}{
+		"nil error":     {err: nil, want: ""},
+		"non-nil error": {err: fmt.Errorf("test error"), want: "test error"},
 	}
-}
 
-func TestGetFirstNonNilPtrWithNonANil(t *testing.T) {
-	// GIVEN a bunch of nil pointers
-	var (
-		a *string
-		b string = "argus"
-		c *string
-		d *string
-		e string = "foo"
-	)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN ErrorToString is called
+			got := ErrorToString(tc.err)
 
-	// WHEN GetFirstNonNilPtr is called with these items
-	want := "argus"
-	got := GetFirstNonNilPtr(a, &b, c, d, &e)
-
-	// THEN nil should be returned
-	if *got != want {
-		t.Errorf("GetFirstNonNilPtr was given a list of string pointers and should have returned the first non-nil, %s",
-			want)
-	}
-}
-
-func TestGetFirstNonDefaultWithAllDefault(t *testing.T) {
-	// GIVEN a bunch of empty (default) strings
-	var (
-		a string
-		b string
-		c string
-		d string
-	)
-
-	// WHEN GetFirstNonDefault is called with these items
-	want := ""
-	got := GetFirstNonDefault(a, b, c, d)
-
-	// THEN the default string should be returned
-	if got != want {
-		t.Errorf("GetFirstNonDefault should have returned the empty string when given a list of empty strings. Got %s",
-			got)
-	}
-}
-
-func TestGetFirstNonDefaultWithNonDefault(t *testing.T) {
-	// GIVEN a bunch of empty (default) strings
-	var (
-		a string
-		b string = "argus"
-		c string
-		d string = "foo"
-	)
-
-	// WHEN GetFirstNonDefault is called with these items
-	want := "argus"
-	got := GetFirstNonDefault(a, b, c, d)
-
-	// THEN the default string should be returned
-	if got != want {
-		t.Errorf("GetFirstNonDefault should have returned the first non-default (%s). Got %s",
-			want, got)
-	}
-}
-
-func TestPrintLnIfNotDefaultWithDefault(t *testing.T) {
-	// GIVEN a default string
-	str := ""
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNotDefault is called with this string
-	text := "SHOULDNT PRINT"
-	PrintlnIfNotDefault(str, text)
-
-	// THEN it doesn't print
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if strings.Contains(output, text) {
-		t.Fatalf("%q shouldn't have been printed as %q is the %s default\n%s",
-			text, str, "string", output)
-	}
-}
-
-func TestPrintLnIfNotDefaultWithNonDefault(t *testing.T) {
-	// GIVEN a non-default string
-	str := "argus"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNotDefault is called with this string
-	text := "SHOULD PRINT"
-	PrintlnIfNotDefault(str, text)
-
-	// THEN it was printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, text) {
-		t.Fatalf("%q should have been printed as %q isn't the %s default\n%s",
-			text, str, "string", output)
-	}
-}
-
-func TestPrintLnIfNotNilWithNil(t *testing.T) {
-	// GIVEN a nil pointer
-	var str *string
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNotNil is called with this string
-	text := "SHOULDNT PRINT"
-	PrintlnIfNotNil(str, text)
-
-	// THEN it doesn't print
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if strings.Contains(output, text) {
-		t.Fatalf("%q shouldn't have been printed as the pointer is %v\n%s",
-			text, str, output)
-	}
-}
-
-func TestPrintLnIfNotNilWithNonNil(t *testing.T) {
-	// GIVEN a non-default string
-	str := "argus"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNotNil is called with this string
-	text := "SHOULD PRINT"
-	PrintlnIfNotNil(&str, text)
-
-	// THEN it prints
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, text) {
-		t.Fatalf("%q should have been printed as %v is non-nil\n%s",
-			text, &str, output)
-	}
-}
-
-func TestPrintLnIfNilWithNil(t *testing.T) {
-	// GIVEN a nil pointer
-	var str *string
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNil is called with this string
-	text := "SHOULD PRINT"
-	PrintlnIfNil(str, text)
-
-	// THEN it prints
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if !strings.Contains(output, text) {
-		t.Fatalf("%q should have been printed as the pointer is %v\n%s",
-			text, str, output)
-	}
-}
-
-func TestPrintLnIfNilWithNonNil(t *testing.T) {
-	// GIVEN a non-default string
-	str := "argus"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN PrintlnIfNil is called with this string
-	text := "SHOULDNT PRINT"
-	PrintlnIfNil(&str, text)
-
-	// THEN it doesn't print
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	output := string(out)
-	if strings.Contains(output, text) {
-		t.Fatalf("%q shouldn't have been printed as %q isn't nil\n%s",
-			text, str, output)
-	}
-}
-
-func TestDefaultOrValueWithNil(t *testing.T) {
-	// GIVEN a nil pointer and a string
-	var pointer *string
-	value := "argus"
-
-	// WHEN DefaultOrValue is called with these vars
-	got := DefaultOrValue(pointer, value)
-	var want string
-
-	// THEN the default string is returned
-	if got != want {
-		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q",
-			want, got)
-	}
-}
-
-func TestDefaultOrValueWithNonNil(t *testing.T) {
-	// GIVEN a nil pointer and a string
-	pointer := "test"
-	value := "argus"
-
-	// WHEN DefaultOrValue is called with these vars
-	got := DefaultOrValue(&pointer, value)
-
-	// THEN value is returned
-	if got != value {
-		t.Errorf("DefaultOrValue should have returned %q when used with a nil, not %q",
-			value, got)
-	}
-}
-
-func TestErrorToStringWithNil(t *testing.T) {
-	// GIVEN a nil error
-	var err error
-
-	// WHEN ErrorToString is called with it
-	got := ErrorToString(err)
-	want := ""
-
-	// THEN an empty string is returned
-	if got != want {
-		t.Errorf("ErrorToString should have returned %q, but got %q",
-			want, got)
-	}
-}
-
-func TestErrorToStringWithErr(t *testing.T) {
-	// GIVEN a nil error
-	err := fmt.Errorf("something")
-
-	// WHEN ErrorToString is called with it
-	got := ErrorToString(err)
-	want := err.Error()
-
-	// THEN an empty string is returned
-	if got != want {
-		t.Errorf("ErrorToString should have returned %q, but got %q",
-			want, got)
-	}
-}
-
-func TestRandAlphaNumericLower(t *testing.T) {
-	// GIVEN an alphanumeric string of length 10 is desired
-	n := 10
-
-	// WHEN RandAlphaNumericLower is called
-	got := RandAlphaNumericLower(n)
-
-	// THEN we got an alphanumeric string of length 10
-	re := "^[0-9a-z]{10}$"
-	regex := regexp.MustCompile(re)
-	match := regex.MatchString(got)
-	if !match {
-		t.Errorf("%q RegEx didn't match an alphanumeric produced from RandAlphaNumericLower. Got %q",
-			re, got)
-	}
-}
-
-func TestRandNumeric(t *testing.T) {
-	// GIVEN an alphanumeric string of length 10 is desired
-	n := 10
-
-	// WHEN TestRandNumeric is called with this length
-	got := RandNumeric(n)
-
-	// THEN we got an alphanumeric string of length 10
-	re := "^[0-9]{10}$"
-	regex := regexp.MustCompile(re)
-	match := regex.MatchString(got)
-	if !match {
-		t.Errorf("%q RegEx didn't match a numeric produced from RandNumeric. Got %q",
-			re, got)
+			// THEN the var is printed when it should be
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestRandString(t *testing.T) {
-	// GIVEN a string of only a's and b's of length 20 is wanted
-	alphabet := "ab"
-	n := 20
+	// GIVEN different size strings are wanted with different alphabets
+	tests := map[string]struct {
+		wanted   int
+		alphabet string
+	}{
+		"length 1 string, length 1 alphabet": {wanted: 1, alphabet: "a"},
+		"length 2, length 1 alphabet":        {wanted: 2, alphabet: "b"},
+		"length 3, length 1 alphabet":        {wanted: 3, alphabet: "c"},
+		"length 10, length 1 alphabet":       {wanted: 10, alphabet: "d"},
+		"length 10, length 5 alphabet":       {wanted: 10, alphabet: "abcde"},
+	}
 
-	// WHEN RandString is called with these values
-	got := RandString(n, alphabet)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// THEN we got an alphanumeric string of length 10
-	re := "^[ab]{20}$"
-	regex := regexp.MustCompile(re)
-	match := regex.MatchString(got)
-	if !match {
-		t.Errorf("%q RegEx didn't match a string produced from RandString. Got %q",
-			re, got)
+			// WHEN RandString is called
+			got := RandString(tc.wanted, tc.alphabet)
+
+			// THEN we get a random alphabet string of the specified length
+			if len(got) != tc.wanted {
+				t.Errorf("%s:\ngot length %d. wanted %d",
+					name, tc.wanted, len(got))
+			}
+			charactersVerified := 0
+			for charactersVerified != tc.wanted {
+				var characters []string
+				for i := range tc.alphabet {
+					characters = append(characters, string(tc.alphabet[i]))
+				}
+
+				for i := range characters {
+					if got == characters[i] {
+						RemoveIndex(&characters, i)
+						break
+					}
+				}
+				charactersVerified++
+			}
+		})
 	}
 }
 
-func TestNormaliseNewlinesMac(t *testing.T) {
-	// GIVEN a byte string with Mac newlines
-	str := "hello\nargus\r"
+func TestRandAlphaNumericLower(t *testing.T) {
+	// GIVEN different size strings are wanted
+	tests := map[string]struct {
+		wanted int
+	}{
+		"length 1":  {wanted: 1},
+		"length 2":  {wanted: 2},
+		"length 3":  {wanted: 3},
+		"length 10": {wanted: 10},
+	}
 
-	// WHEN normalised with NormaliseNewlines
-	got := NormaliseNewlines([]byte(str))
-	want := "hello\nargus\n"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// THEN the Mac newlines are normalised to \n
-	if string(got) != want {
-		t.Errorf("Mac newlines were not normalised from %q to %q. Got %q",
-			str, want, string(got))
+			// WHEN RandAlphaNumericLower is called
+			got := RandAlphaNumericLower(tc.wanted)
+
+			// THEN we get a random alphanumeric string of the specified length
+			if len(got) != tc.wanted {
+				t.Errorf("%s:\ngot length %d. wanted %d",
+					name, tc.wanted, len(got))
+			}
+			charactersVerified := 0
+			for charactersVerified != tc.wanted {
+				var characters []string
+				for i := range alphanumericLower {
+					characters = append(characters, string(alphanumericLower[i]))
+				}
+
+				for i := range characters {
+					if got == characters[i] {
+						RemoveIndex(&characters, i)
+						break
+					}
+				}
+				charactersVerified++
+			}
+		})
 	}
 }
 
-func TestNormaliseNewlinesWindows(t *testing.T) {
-	// GIVEN a byte string with Windows newlines
-	str := "hello\nargus\r\n"
+func TestRandNumeric(t *testing.T) {
+	// GIVEN different size strings are wanted
+	tests := map[string]struct {
+		wanted int
+	}{
+		"length 1":  {wanted: 1},
+		"length 2":  {wanted: 2},
+		"length 3":  {wanted: 3},
+		"length 10": {wanted: 10},
+	}
 
-	// WHEN normalised with NormaliseNewlines
-	got := NormaliseNewlines([]byte(str))
-	want := "hello\nargus\n"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// THEN the Windows newlines are normalised to \n
-	if string(got) != want {
-		t.Errorf("Windows newlines were not normalised from %q to %q. Got %q",
-			str, want, string(got))
+			// WHEN RandNumeric is called
+			got := RandNumeric(tc.wanted)
+
+			// THEN we get a random numeric string of the specified length
+			if len(got) != tc.wanted {
+				t.Errorf("%s:\ngot length %d. wanted %d",
+					name, tc.wanted, len(got))
+			}
+			charactersVerified := 0
+			for charactersVerified != tc.wanted {
+				var characters []string
+				for i := range numeric {
+					characters = append(characters, string(numeric[i]))
+				}
+
+				for i := range characters {
+					if got == characters[i] {
+						RemoveIndex(&characters, i)
+						break
+					}
+				}
+				charactersVerified++
+			}
+		})
+	}
+}
+
+func TestNormaliseNewlines(t *testing.T) {
+	// GIVEN different byte strings
+	tests := map[string]struct {
+		input []byte
+		want  []byte
+	}{
+		"string with no newlines":                              {input: []byte("hello there"), want: []byte("hello there")},
+		"string with linux newlines":                           {input: []byte("hello\nthere"), want: []byte("hello\nthere")},
+		"string with multiple linux newlines":                  {input: []byte("hello\nthere\n"), want: []byte("hello\nthere\n")},
+		"string with windows newlines":                         {input: []byte("hello\r\nthere"), want: []byte("hello\nthere")},
+		"string with multiple windows newlines":                {input: []byte("hello\r\nthere\r\n"), want: []byte("hello\nthere\n")},
+		"string with mac newlines":                             {input: []byte("hello\r\nthere"), want: []byte("hello\nthere")},
+		"string with multiple mac newlines":                    {input: []byte("hello\r\nthere\r\n"), want: []byte("hello\nthere\n")},
+		"string with multiple mac and windows newlines":        {input: []byte("\rhello\r\nthere\r\n. hi\r"), want: []byte("\nhello\nthere\n. hi\n")},
+		"string with multiple mac, windows and linux newlines": {input: []byte("\rhello\r\nthere\r\n. hi\r. foo\nbar\n"), want: []byte("\nhello\nthere\n. hi\n. foo\nbar\n")},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			// WHEN NormaliseNewlines is called
+			got := NormaliseNewlines(tc.input)
+
+			// THEN the newlines are normalised correctly
+			if string(got) != string(tc.want) {
+				t.Errorf("%s:want: %q\ngot:  %q",
+					name, string(tc.want), string(got))
+			}
+		})
 	}
 }
 
 func TestCopyMap(t *testing.T) {
-	// GIVEN a string map
-	original := map[string]int{
-		"a": 0,
-		"b": 1,
-		"c": 2,
+	// GIVEN different byte strings
+	tests := map[string]struct {
+		input map[string]string
+		want  map[string]string
+	}{
+		"empty map": {input: map[string]string{}, want: map[string]string{}},
+		"non-empty map": {input: map[string]string{"test": "123", "foo": "bar"},
+			want: map[string]string{"test": "123", "foo": "bar"}},
+		"non-empty map with same keys but differing case": {input: map[string]string{"test": "123", "tESt": "bar"},
+			want: map[string]string{"test": "123", "tESt": "bar"}},
 	}
 
-	// WHEN the map is copied
-	copy := CopyMap(original)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// THEN the map is a copy of the original one
-	if len(copy) != len(original) {
-		t.Errorf("CopyMap did not return an identical copy, length differed. Got %v from %v",
-			copy, original)
-	}
-	for key := range copy {
-		if original[key] != copy[key] {
-			t.Errorf("CopyMap did not return an identical copy, map differed. Got %v from %v",
-				copy, original)
-		}
-	}
-	if &original == &copy {
-		t.Error("CopyMap didn't copy the map, it's got the same address")
-	}
-}
+			// WHEN CopyMap is called
+			got := CopyMap(tc.input)
 
-func TestGetPortFromURLWithNoPortOrProto(t *testing.T) {
-	// GIVEN a url with no protocl or port
-	url := "example.com"
-
-	// GIVEN GetPortFromURL is called on this string
-	defaultPort := "1"
-	got := GetPortFromURL(url, defaultPort)
-
-	// THEN defaultPort is retunred
-	if got != defaultPort {
-		t.Errorf("GetPortFromURL shouldn't have found a port in %q. Got %q, want %q (defaultPort)",
-			url, got, defaultPort)
+			// THEN the map is copied correctly
+			if &got == &tc.want {
+				t.Errorf("%s:\nmap wasn't copied, they have the same addresses",
+					name)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("%s:\nwant: %v\ngot:  %v",
+					name, tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("%s:\nwant: %v\ngot:  %v",
+						name, tc.want, got)
+				}
+			}
+		})
 	}
 }
 
-func TestGetPortFromURLWithPort(t *testing.T) {
-	// GIVEN a url with a port specified
-	port := "30"
-	url := fmt.Sprintf("example.com:%s/hello", port)
-
-	// GIVEN GetPortFromURL is called on this string
-	got := GetPortFromURL(url, "1")
-
-	// THEN defaultPort is retunred
-	if got != port {
-		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q",
-			url, got, port)
+func TestGetPortFromURL(t *testing.T) {
+	// GIVEN different byte strings
+	tests := map[string]struct {
+		url         string
+		defaultPort string
+		want        string
+	}{
+		"http url":                     {url: "http://example.com", defaultPort: "1", want: "80"},
+		"http url with port":           {url: "http://example.com:123", defaultPort: "1", want: "123"},
+		"https url":                    {url: "https://example.com", defaultPort: "1", want: "443"},
+		"https url with port":          {url: "https://example.com:123", defaultPort: "1", want: "123"},
+		"no protocol url with port":    {url: "example.com:123", defaultPort: "1", want: "123"},
+		"no protocol url with no port": {url: "example.com", defaultPort: "1", want: "1"},
 	}
-}
 
-func TestGetPortFromURLWithProtoAndPort(t *testing.T) {
-	// GIVEN a url with protocol and port specified
-	port := "30"
-	url := fmt.Sprintf("https://example.com:%s/hello", port)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// GIVEN GetPortFromURL is called on this string
-	defaultPort := "1"
-	got := GetPortFromURL(url, defaultPort)
+			// WHEN GetPortFromURL is called
+			got := GetPortFromURL(tc.url, tc.defaultPort)
 
-	// THEN the specified port is retunred
-	if got != port {
-		t.Errorf("GetPortFromURL should have got the port from %q. Got %q, want %q",
-			url, got, port)
-	}
-}
-
-func TestGetPortFromURLWithProtoHTTP(t *testing.T) {
-	// GIVEN a url with protocol and port specified
-	url := "http://example.com/hello"
-
-	// GIVEN GetPortFromURL is called on this string
-	defaultPort := "1"
-	got := GetPortFromURL(url, defaultPort)
-	want := "80"
-
-	// THEN default protocol port is retunred
-	if got != want {
-		t.Errorf("GetPortFromURL should have got the port from the 'http://' in %q. Got %q, want %q",
-			url, got, want)
-	}
-}
-
-func TestGetPortFromURLWithProtoHTTPS(t *testing.T) {
-	// GIVEN a url with protocol and port specified
-	url := "https://example.com/hello"
-
-	// WHEN GetPortFromURL is called on this string
-	got := GetPortFromURL(url, "1")
-	want := "443"
-
-	// THEN defaultPort is retunred
-	if got != want {
-		t.Errorf("GetPortFromURL should have got the port from the 'https://' in %q. Got %q, want %q",
-			url, got, want)
+			// THEN the port is extracted/defaulted correctly
+			if got != tc.want {
+				t.Errorf("%s:\nport not extracted from %q correctly\nwant: %q\ngot:  %q",
+					name, tc.url, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestLowercaseStringStringMap(t *testing.T) {
-	// GIVEN a [string]string map
-	had := map[string]string{
-		"fOO":   "1",
-		"OTHER": "2",
+	// GIVEN different byte strings
+	tests := map[string]struct {
+		input map[string]string
+		want  map[string]string
+	}{
+		"empty map": {input: map[string]string{}, want: map[string]string{}},
+		"lower-cased map": {input: map[string]string{"test": "123", "foo": "bar"},
+			want: map[string]string{"test": "123", "foo": "bar"}},
+		"lower-cased map with mixed-cased values": {input: map[string]string{"test": "123", "foo": "bAr"},
+			want: map[string]string{"test": "123", "foo": "bAr"}},
+		"upper-cased map": {input: map[string]string{"TEST": "123", "FOO": "bar"},
+			want: map[string]string{"test": "123", "foo": "bar"}},
+		"upper-cased map with mixed-case values": {input: map[string]string{"TEST": "123", "FOO": "bAr"},
+			want: map[string]string{"test": "123", "foo": "bAr"}},
+		"mixed-case map": {input: map[string]string{"tESt": "123", "Foo": "bar"},
+			want: map[string]string{"test": "123", "foo": "bar"}},
 	}
 
-	// WHEN LowercaseStringStringMap is called on it
-	got := LowercaseStringStringMap(&had)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
 
-	// THEN all the keys in the map are lowercased
-	for key := range got {
-		want := strings.ToLower(key)
-		if key != want {
-			t.Errorf("Keys were not lowercased, got %s, want %s",
-				key, want)
-		}
+			// WHEN LowercaseStringStringMap is called
+			got := LowercaseStringStringMap(&tc.input)
+
+			// THEN the map keys are lower-cased correctly
+			if len(got) != len(tc.want) {
+				t.Fatalf("%s:\nwant: %v\ngot:  %v",
+					name, tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("%s:\nwant: %v\ngot:  %v",
+						name, tc.want, got)
+				}
+			}
+		})
 	}
 }

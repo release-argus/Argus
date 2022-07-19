@@ -17,88 +17,52 @@
 package utils
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 )
 
-func testTemplateStringContext() ServiceInfo {
-	return ServiceInfo{
-		ID:            "something",
-		URL:           "example.com",
-		WebURL:        "other.com",
-		LatestVersion: "NEW",
+func TestTemplateString(t *testing.T) {
+	// GIVEN a variety of string templates
+	serviceInfo := testServiceInfo()
+	tests := map[string]struct {
+		tmpl       string
+		panicRegex *string
+		want       string
+	}{
+		"no jinja template": {tmpl: "testing 123", want: "testing 123"},
+		"valid jinja template": {
+			tmpl: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			want: "-something-example.com-other.com-NEW"},
+		"invalid jinja template panic": {
+			tmpl:       "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			panicRegex: stringPtr("Tag name must be an identifier")},
 	}
-}
 
-func TestTemplateStringNoJinja(t *testing.T) {
-	// GIVEN a string with no Jinja expressions/vars
-	str := "test"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.panicRegex != nil {
+				// Switch Fatal to panic and disable this panic.
+				defer func() {
+					r := recover()
+					rStr := fmt.Sprint(r)
+					re := regexp.MustCompile(*tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
+							name, *tc.panicRegex, rStr)
+					}
+				}()
+			}
 
-	// WHEN TemplateString is called
-	got := TemplateString(str, testTemplateStringContext())
-	want := str
+			// WHEN TemplateString is called
+			got := TemplateString(tc.tmpl, serviceInfo)
 
-	// THEN the string stays the same
-	if got != want {
-		t.Errorf("TemplateString didn't stay the same! Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestTemplateStringCompilePanic(t *testing.T) {
-	// GIVEN a string with an invalid Jinja expression
-	str := "test{% if 'a' == 'a' %}hi{%"
-	// Turn off the panic.
-	defer func() { _ = recover() }()
-
-	// WHEN TemplateString is called
-	got := TemplateString(str, testTemplateStringContext())
-
-	// THEN it should have panic'd at the compile and not reach this
-	t.Errorf("TemplateString didn't panic on invalid Jinja %q. Got %s",
-		str, got)
-}
-
-func TestTemplateStringJinjaVars(t *testing.T) {
-	// GIVEN a string with Jinja vars
-	str := "a={{ version }}, b={{ service_id }}, c={{ service_url }}, d={{ web_url }}"
-
-	// WHEN TemplateString is called
-	got := TemplateString(str, testTemplateStringContext())
-	want := "a=NEW, b=something, c=example.com, d=other.com"
-
-	// THEN the string stays the same
-	if got != want {
-		t.Errorf("TemplateString didn't expand %q correctly! Got %q, want %q",
-			str, got, want)
-	}
-}
-
-func TestTemplateStringJinjaExpressions(t *testing.T) {
-	// GIVEN a string with Jinja expressions
-	str := "{% if 'a' == 'a' %}it_is{% endif %}{% if 'a' == 'b' %}it_isnt{% endif %}"
-
-	// WHEN TemplateString is called
-	got := TemplateString(str, testTemplateStringContext())
-	want := "it_is"
-
-	// THEN the string stays the same
-	if got != want {
-		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q",
-			str, got, want)
-	}
-}
-
-func TestTemplateStringJinjaExpressionsAndVars(t *testing.T) {
-	// GIVEN a string with Jinja expressions and vars
-	str := "{% if 'a' == 'a' %}a={{ version }}, b={{ service_id }}, c={{ service_url }}, d={{ web_url }}{% endif %}{% if 'a' == 'b' %}it_isnt{% endif %}"
-
-	// WHEN TemplateString is called
-	got := TemplateString(str, testTemplateStringContext())
-	want := "a=NEW, b=something, c=example.com, d=other.com"
-
-	// THEN the string stays the same
-	if got != want {
-		t.Errorf("TemplateString didn't eval %q correctly! Got %q, want %q",
-			str, got, want)
+			// THEN the string stays the same
+			if got != tc.want {
+				t.Errorf("%s:want: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }

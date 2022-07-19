@@ -88,7 +88,7 @@ func Swap[T comparable](list *[]T, aStart int, aEnd int, bStart int, bEnd int) {
 
 // RemoveIndex from list
 func RemoveIndex[T comparable](list *[]T, index int) {
-	if index > len(*list) {
+	if index >= len(*list) {
 		return
 	}
 
