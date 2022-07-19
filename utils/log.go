@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	levelMap = map[string]int{
+	levelMap = map[string]uint{
 		"ERROR":   0,
 		"WARN":    1,
 		"INFO":    2,
@@ -40,9 +40,8 @@ type JLog struct {
 	// 2 = INFO,  3 = VERBOSE,
 	// 4 = DEBUG
 	Level      uint
-	LevelStr   string // The string value of Level (ERROR/WARN/INFO/VERBOSE/DEBUG)
-	Timestamps bool   // whether to log timestamps with the msg, or just the msg.
-	Testing    bool   // Whether we're in tests (don't Fatal)
+	Timestamps bool // whether to log timestamps with the msg, or just the msg.
+	Testing    bool // Whether we're in tests (don't Fatal)
 }
 
 type LogFrom struct {
@@ -63,7 +62,6 @@ func NewJLog(level string, timestamps bool) *JLog {
 func (l *JLog) SetLevel(level string) {
 	level = strings.ToUpper(level)
 	value := levelMap[level]
-	l.LevelStr = level
 
 	msg := fmt.Sprintf("%q is not a valid log.level. It should be one of ERROR, WARN, INFO, VERBOSE or DEBUG.", level)
 	l.Fatal(msg, LogFrom{}, value == 0 && level != "ERROR")
@@ -112,7 +110,7 @@ func (l *JLog) IsLevel(level string) bool {
 	if value == 0 && level != "ERROR" {
 		return false
 	}
-	return l.Level == uint(value)
+	return l.Level == value
 }
 
 // Error log the msg.

@@ -20,64 +20,53 @@ import (
 	"testing"
 )
 
-func TestRegexCheckPass(t *testing.T) {
-	// GIVEN a string and matching RegEx
-	regex := "^abc"
-	str := "abc123"
+func TestRegexCheck(t *testing.T) {
+	// GIVEN a variety of RegEx's to apply to a string
+	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
+	tests := map[string]struct {
+		regex string
+		match bool
+	}{
+		"regex match":    {regex: `release": "[0-9.]+"`, match: true},
+		"no regex match": {regex: `release": "[0-9.]+-alpha"`, match: false},
+	}
 
-	// WHEN RegexCheck is called on them
-	match := RegexCheck(regex, str)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN RegexCheck is called
+			got := RegexCheck(tc.regex, str)
 
-	// THEN a match is found
-	if !match {
-		t.Errorf("%q should have matched the %q RegEx",
-			str, regex)
+			// THEN the regex matches when expected
+			if got != tc.match {
+				t.Errorf("%s:wanted match=%t, not %t\n%q on %q",
+					name, tc.match, got, tc.regex, str)
+			}
+		})
 	}
 }
 
-func TestRegexCheckFail(t *testing.T) {
-	// GIVEN a string and non-matching RegEx
-	regex := "^abc"
-	str := "123abc"
-
-	// WHEN RegexCheck is called on them
-	match := RegexCheck(regex, str)
-
-	// THEN a match is not found
-	if match {
-		t.Errorf("%q shouldn't have matched the %q RegEx",
-			str, regex)
+func TestRegexCheckWithParams(t *testing.T) {
+	// GIVEN a variety of RegEx's to apply to a string
+	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
+	tests := map[string]struct {
+		regex   string
+		version string
+		match   bool
+	}{
+		"regex match":    {regex: `release": "{{ version }}"`, version: "0.1.1", match: true},
+		"no regex match": {regex: `release": "{{ version }}"`, version: "0.1.2", match: false},
 	}
-}
 
-func TestRegexCheckWithParamsRunsOnTemplatedStringPass(t *testing.T) {
-	// GIVEN a string and matching RegEx
-	regex := "^abc{{ version }}$"
-	str := "abc1.2.3"
-	version := "1.2.3"
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN RegexCheck is called
+			got := RegexCheckWithParams(tc.regex, str, tc.version)
 
-	// WHEN RegexCheck is called on them
-	match := RegexCheckWithParams(regex, str, version)
-
-	// THEN a match is found
-	if !match {
-		t.Errorf("%q (version=%s) should have matched the %q RegEx",
-			str, version, regex)
-	}
-}
-
-func TestRegexCheckWithParamsRunsOnTemplatedStringFail(t *testing.T) {
-	// GIVEN a string and matching RegEx
-	regex := "^abc{{ version }}$"
-	str := "abc4.5.6"
-	version := "1.2.3"
-
-	// WHEN RegexCheck is called on them
-	match := RegexCheckWithParams(regex, str, version)
-
-	// THEN a match is found
-	if match {
-		t.Errorf("%q (version=%s) should not have matched the %q RegEx",
-			str, version, regex)
+			// THEN the regex matches when expected
+			if got != tc.match {
+				t.Errorf("%s:wanted match=%t, not %t\n%q on %q",
+					name, tc.match, got, tc.regex, str)
+			}
+		})
 	}
 }

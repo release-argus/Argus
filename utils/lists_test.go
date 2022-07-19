@@ -20,188 +20,165 @@ import (
 	"testing"
 )
 
-func TestSwapMoveMatchingSize(t *testing.T) {
-	// GIVEN a list of comparable
-	lst := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
-
-	// WHEN Swap is called on it with matching size swaps
-	Swap(&lst, 0, 1, 8, 9)
-	wantLst := []int{8, 9, 2, 3, 4, 5, 6, 7, 0, 1}
-
-	// THEN the Swap is successfuly
-	for i := range lst {
-		if lst[i] != wantLst[i] {
-			t.Errorf(`Swap got %v, want %v`, lst, wantLst)
-		}
+func TestSwap(t *testing.T) {
+	// GIVEN a set of lists
+	tests := map[string]struct {
+		had    []int
+		want   []int
+		aStart int
+		aEnd   int
+		bStart int
+		bEnd   int
+	}{
+		"handles []int": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{0, 7, 8, 9, 2, 3, 4, 5, 6, 1},
+			aStart: 7, aEnd: 9,
+			bStart: 1, bEnd: 1,
+		},
+		"swap singl element": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{9, 1, 2, 3, 4, 5, 6, 7, 8, 0},
+			aStart: 0, aEnd: 0,
+			bStart: 9, bEnd: 9,
+		},
+		"matching swap sizes": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{8, 9, 2, 3, 4, 5, 6, 7, 0, 1},
+			aStart: 0, aEnd: 1,
+			bStart: 8, bEnd: 9,
+		},
+		"more on left": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{0, 8, 9, 5, 6, 7, 1, 2, 3, 4},
+			aStart: 1, aEnd: 4,
+			bStart: 8, bEnd: 9,
+		},
+		"more on right": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{0, 7, 8, 9, 2, 3, 4, 5, 6, 1},
+			aStart: 1, aEnd: 1,
+			bStart: 7, bEnd: 9,
+		},
+		"indices wrong way round": {
+			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:   []int{0, 7, 8, 9, 2, 3, 4, 5, 6, 1},
+			aStart: 7, aEnd: 9,
+			bStart: 1, bEnd: 1,
+		},
 	}
-	if len(lst) != len(wantLst) {
-		t.Errorf(`Swap added/removed elements! Got %v, want %v`, lst, wantLst)
-	}
-}
 
-func TestSwapMoveMoreOnLeft(t *testing.T) {
-	// GIVEN a list of comparable
-	lst := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN Swap is called on a list
+			Swap(&tc.had, tc.aStart, tc.aEnd, tc.bStart, tc.bEnd)
 
-	// WHEN Swap is called with more elements moving from the left
-	Swap(&lst, 5, 9, 14, 15)
-	wantLst := []int{0, 1, 2, 3, 4, 14, 15, 10, 11, 12, 13, 5, 6, 7, 8, 9, 16, 17, 18, 19, 20}
-
-	// THEN the Swap is successful
-	for i := range lst {
-		if lst[i] != wantLst[i] {
-			t.Errorf(`Swap got %v, want %v`, lst, wantLst)
-		}
-	}
-	if len(lst) != len(wantLst) {
-		t.Errorf(`Swap added/removed elements! Got %v, want %v`, lst, wantLst)
-	}
-}
-
-func TestSwapMoveMoreOnRight(t *testing.T) {
-	// GIVEN a list of comparable
-	lst := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
-
-	// WHEN Swap is called with more elements moving from the right
-	Swap(&lst, 7, 7, 14, 15)
-	wantLst := []int{0, 1, 2, 3, 4, 5, 6, 14, 15, 8, 9, 10, 11, 12, 13, 7, 16, 17, 18, 19, 20}
-
-	// THEN the Swap is successful
-	for i := range lst {
-		if lst[i] != wantLst[i] {
-			t.Errorf(`Swap got %v, want %v`, lst, wantLst)
-		}
-	}
-	if len(lst) != len(wantLst) {
-		t.Errorf(`Swap added/removed elements! Got %v, want %v`, lst, wantLst)
-	}
-}
-
-func TestSwapIndicesOppositeWayRound(t *testing.T) {
-	// GIVEN a list of comparable
-	lst := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
-
-	// WHEN Swap is called with more elements moving from the left
-	Swap(&lst, 14, 15, 5, 9)
-	wantLst := []int{0, 1, 2, 3, 4, 14, 15, 10, 11, 12, 13, 5, 6, 7, 8, 9, 16, 17, 18, 19, 20}
-
-	// THEN the Swap is successful
-	for i := range lst {
-		if lst[i] != wantLst[i] {
-			t.Errorf(`Swap got %v, want %v`, lst, wantLst)
-		}
-	}
-	if len(lst) != len(wantLst) {
-		t.Errorf(`Swap added/removed elements! Got %v, want %v`, lst, wantLst)
+			// THEN the Swap is successful
+			// int
+			if len(tc.had) != len(tc.want) {
+				t.Fatalf("%s:\nSwap added/removed elements!\nwant:%v\ngot:  %v",
+					name, tc.want, tc.had)
+			}
+			for i := range tc.had {
+				if tc.had[i] != tc.want[i] {
+					t.Fatalf("%s:\nwant: %v\ngot:  %v",
+						name, tc.want, tc.had)
+				}
+			}
+		})
 	}
 }
 
-func TestRemoveIndexStart(t *testing.T) {
-	// GIVEN a list of comparable
-	lstInt := []int{0, 1, 2, 3}
+func TestRemoveIndex(t *testing.T) {
+	// GIVEN a set of lists
+	tests := map[string]struct {
+		had     []int
+		want    []int
+		wantStr []string
+		index   int
+	}{
+		"handles []int": {
+			had:   []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:  []int{0, 1, 2, 3, 5, 6, 7, 8, 9},
+			index: 4,
+		},
+		"out of range": {
+			had:   []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			index: 10,
+		},
+		"first index": {
+			had:   []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:  []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			index: 0,
+		},
+		"last index": {
+			had:   []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			want:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8},
+			index: 9,
+		},
+	}
 
-	// WHEN RemoveIndex is called on it with the starting index
-	RemoveIndex(&lstInt, 0)
-	wantLstInt := []int{1, 2, 3}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN RemoveIndex is called on a list
+			RemoveIndex(&tc.had, tc.index)
 
-	// Then that index is removed
-	if len(lstInt) != len(wantLstInt) {
-		t.Errorf(`Failed removing first index! Got %v, want %v`, lstInt, wantLstInt)
+			// THEN the Removal is successful
+			// int
+			if len(tc.had) != len(tc.want) {
+				t.Fatalf("%s:\nRemove index failed\nwant:%v\ngot:  %v",
+					name, tc.want, tc.had)
+			}
+			for i := range tc.had {
+				if tc.had[i] != tc.want[i] {
+					t.Fatalf("%s:\nwant: %v\ngot:  %v",
+						name, tc.want, tc.had)
+				}
+			}
+		})
 	}
 }
 
-func TestRemoveIndexEnd(t *testing.T) {
-	// GIVEN a list of comparable
-	lstInt := []int{0, 1, 2, 3}
-
-	// WHEN RemoveIndex is called on it with the ending index
-	RemoveIndex(&lstInt, 3)
-	wantLstInt := []int{0, 1, 2}
-
-	// Then that index is removed
-	if len(lstInt) != len(wantLstInt) {
-		t.Errorf(`Failed removing final index! Got %v, want %v`, lstInt, wantLstInt)
+func TestGetIndentation(t *testing.T) {
+	// GIVEN a set of strings with varying indentation
+	tests := map[string]struct {
+		text       string
+		indentSize int
+		want       string
+	}{
+		"no indent": {
+			text:       "foo: bar",
+			indentSize: 2,
+			want:       "",
+		},
+		"indent 4, indent size 4": {
+			text:       "    foo: bar",
+			indentSize: 4,
+			want:       "    ",
+		},
+		"indent 4, indent size 2": {
+			text:       "    foo: bar",
+			indentSize: 2,
+			want:       "    ",
+		},
+		"indent 3, indent size 2": {
+			text:       "   foo: bar",
+			indentSize: 2,
+			want:       "  ",
+		},
 	}
-}
 
-func TestRemoveIndexMiddle(t *testing.T) {
-	// GIVEN a list of comparable
-	lstInt := []int{0, 1, 2, 3}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN GetIndentation is called on a string
+			got := GetIndentation(tc.text, uint8(tc.indentSize))
 
-	// WHEN RemoveIndex is called on it with an index not at the start/end
-	RemoveIndex(&lstInt, 1)
-	wantLstInt := []int{0, 2, 3}
-
-	// Then that index is removed
-	if len(lstInt) != len(wantLstInt) {
-		t.Errorf(`Failed removing an index not at the edge! Got %v, want %v`, lstInt, wantLstInt)
-	}
-}
-
-func TestRemoveIndexOutOfRange(t *testing.T) {
-	// GIVEN a list of comparable
-	lstInt := []int{0, 1, 2, 3}
-
-	// WHEN RemoveIndex is called on it with an index not at the start/end
-	RemoveIndex(&lstInt, 10)
-	wantLstInt := []int{0, 1, 2, 3}
-
-	// Then that index is removed
-	if len(lstInt) != len(wantLstInt) {
-		t.Errorf(`Tried to remove an index out of bounds of the array and got %v, want %v`, lstInt, wantLstInt)
-	}
-}
-
-func TestGetIndentationNone(t *testing.T) {
-	// GIVEN a string with no indentation
-	str := "foo: bar"
-
-	// WHEN GetIndentation is called on it
-	gotIndentation := GetIndentation(str, 2)
-	want := ""
-
-	// THEN the returned indentation is correct (none)
-	if gotIndentation != want {
-		t.Errorf(`GetIndentation gave %v, want match for %q`, gotIndentation, want)
-	}
-}
-
-func TestGetIndentationIndentSizeOne(t *testing.T) {
-	// GIVEN a string with one space indentation
-	str := " foo: bar"
-
-	// WHEN GetIndentation is called on it with indentSize 1
-	gotIndentation := GetIndentation(str, 1)
-	want := " "
-
-	// THEN the returned indentation is correct (one space)
-	if gotIndentation != want {
-		t.Errorf(`GetIndentation gave %q, want match for %q`, gotIndentation, want)
-	}
-}
-func TestGetIndentationIndentSizeTwo(t *testing.T) {
-	// GIVEN a string with less than indentSize an indent
-	str := " foo: bar"
-
-	// WHEN GetIndentation is called on it with indentSize 2
-	gotIndentation := GetIndentation(str, 2)
-	want := ""
-
-	// THEN the returned indentation is none as there's no leading blocks of two spaces
-	if gotIndentation != want {
-		t.Errorf(`GetIndentation gave %q, want match for %q`, gotIndentation, want)
-	}
-}
-func TestGetIndentationMultipleIndents(t *testing.T) {
-	// GIVEN a string with multiple indents
-	str := "    foo: bar"
-
-	// WHEN GetIndentation is called on it with indentSize 2
-	gotIndentation := GetIndentation(str, 2)
-	want := "    "
-
-	// THEN the returned indentation is the correct indentation
-	if gotIndentation != want {
-		t.Errorf(`GetIndentation gave %v, want match for %q`, gotIndentation, want)
+			// THEN the expected indentation is returned
+			if got != tc.want {
+				t.Fatalf("%s:\nwant:%q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
