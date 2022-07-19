@@ -3,7 +3,7 @@ module github.com/release-argus/Argus
 go 1.18
 
 require (
-	github.com/containrrr/shoutrrr v0.6.0
+	github.com/containrrr/shoutrrr v0.6.1
 	github.com/coreos/go-semver v0.3.0
 	github.com/flosch/pongo2/v5 v5.0.0
 	github.com/gorilla/mux v1.8.0
