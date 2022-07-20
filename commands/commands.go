@@ -24,11 +24,6 @@ import (
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
 
-// Init will set the logger for the package
-func Init(log *utils.JLog) {
-	jLog = log
-}
-
 // Exec will execute all `Command` for the controller and returns all errors encountered
 func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
