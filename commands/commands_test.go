@@ -17,167 +17,224 @@
 package command
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+	"regexp"
 	"testing"
+	"time"
 
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-func testExecController(commands *Slice) Controller {
-	num := 0
-	if commands != nil {
-		num = len(*commands)
-	}
-	controllerName := "TEST"
-	controller := Controller{
-		ServiceID: &controllerName,
-		Failed:    make(Fails, num),
-		Command:   commands,
-	}
-	return controller
-}
-
-func TestExecEmptyController(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
-
-	// GIVEN an empty Controller
-	controller := testExecController(nil)
-
-	// WHEN executed
-	err := controller.Exec(&utils.LogFrom{})
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as it didn't do anything\n%s`, controller.Command, err.Error())
-	}
-}
-
-func TestExecThatErrors(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
-
-	// GIVEN a Command that should fail
-	serviceName := "test"
-	serviceInterval := "11m"
-	controller := testExecController(&Slice{Command{"ls", "/root"}})
-	controller.Init(jLog, &serviceName, nil, nil, nil, &serviceInterval)
-
-	// WHEN it's executed
-	err := controller.Exec(&utils.LogFrom{})
-
-	// THEN it returns an error
-	if err == nil {
-		t.Errorf(`%v commands should have errored unless you're running as root`, controller.Command)
-	}
-}
-
-func TestExecThatDoesntError(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
-
-	// GIVEN a Command that should pass
-	name := "test"
-	interval := "11m"
-	controller := testExecController(&Slice{Command{"ls"}})
-	controller.Init(jLog, &name, nil, nil, nil, &interval)
-
-	// WHEN it's executed
-	err := controller.Exec(&utils.LogFrom{})
-
-	// THEN it returns a nil error
-	if err != nil {
-		t.Errorf(`%v commands shouldn't have errored as we have access to the current dir\n%s`, controller.Command, err.Error())
-	}
-}
-
-func testExecIndexController() Controller {
-	name := "TEST"
-	serviceInterval := "11m"
-
-	controller := Controller{
-		ServiceID: &name,
-		Command: &Slice{
-			Command{"true", "0"},
-			Command{"true", "1"},
+func TestApplyTemplate(t *testing.T) {
+	// GIVEN various Command's
+	tests := map[string]struct {
+		input         Command
+		want          Command
+		serviceStatus *service_status.Status
+	}{
+		"command with no templating and non-nil service status": {
+			input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"},
+			serviceStatus: &service_status.Status{LatestVersion: "1.2.3"},
 		},
-		Failed: make(Fails, 2),
+		"command with no templating and nil service status": {input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"}},
+		"command with templating and nil service status":    {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "{{ version }}"}},
+		"command with templating and non-nil service status": {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "1.2.3"},
+			serviceStatus: &service_status.Status{LatestVersion: "1.2.3"}},
 	}
-	controller.Init(jLog, &name, nil, nil, nil, &serviceInterval)
-	return controller
-}
 
-func TestExecIndexInRange(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN ApplyTemplate is called on the Command
+			got := tc.input.ApplyTemplate(tc.serviceStatus)
 
-	// GIVEN a Controller with Commands
-	controller := testExecIndexController()
-
-	// WHEN ExecIndex is called on an index that exists
-	index := 1
-	errController := controller.ExecIndex(&utils.LogFrom{}, index)
-	errCommand := (*controller.Command)[index].Exec(&utils.LogFrom{})
-
-	// THEN err is the same as on the direct Exec
-	if errController != errCommand {
-		t.Errorf(`%q != %q`, errController.Error(), errCommand.Error())
+			// THEN the result is expected
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("%s:\nwant: %v\ngot:  %v",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestExecIndexOutOfRange(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
+func TestCommandExec(t *testing.T) {
+	// GIVEN different Command's to execute
+	jLog = utils.NewJLog("INFO", false)
+	tests := map[string]struct {
+		cmd         Command
+		err         error
+		outputRegex string
+	}{
+		"command that will pass": {cmd: Command{"date", "+%m-%d-%Y"}, err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+		"command that will fail": {cmd: Command{"false"}, err: fmt.Errorf("exit status 1"), outputRegex: `exit status 1\s+$`},
+	}
 
-	// GIVEN a Controller with Commands
-	controller := testExecIndexController()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// WHEN ExecIndex is called on an index that doesn't exist
-	err := controller.ExecIndex(&utils.LogFrom{}, 2)
-	// THEN err is nil
-	if err != nil {
-		t.Errorf(`%v command shouldn't have errored as the index was outside the bounds of the commands\n%s`, controller.Command, err.Error())
+			// WHEN Exec is called on it
+			err := tc.cmd.Exec(&utils.LogFrom{})
+
+			// THEN the output is expected
+			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+				t.Fatalf("%s:\nerr's differ\nwant: %s\ngot:  %s",
+					name, tc.err, err)
+			}
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			re := regexp.MustCompile(tc.outputRegex)
+			match := re.MatchString(output)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\non: %q",
+					name, tc.outputRegex, output)
+			}
+		})
 	}
 }
 
-func TestApplyTemplateWithNilServiceStatus(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
-
-	// GIVEN a Controller with nil ServiceStatus
-	controllerName := "TEST"
+func TestExecIndex(t *testing.T) {
+	// GIVEN a Controller with different Command's to execute
+	jLog = utils.NewJLog("INFO", false)
+	announce := make(chan []byte, 8)
 	controller := Controller{
-		ServiceID: &controllerName,
+		ServiceID: stringPtr("service_id"),
 		Command: &Slice{
-			Command{"false", "{{ version }}"},
-		},
-		Failed: make(Fails, 1),
+			{"date", "+%m-%d-%Y"},
+			{"false"}},
+		Failed:         Fails{nil, nil},
+		NextRunnable:   make([]time.Time, 2),
+		ParentInterval: stringPtr("10m"),
+		Announce:       &announce,
 	}
-	// WHEN ApplyTemplate is called with that nil Status
-	command := (*controller.Command)[0].ApplyTemplate(controller.ServiceStatus)
+	tests := map[string]struct {
+		index       int
+		err         error
+		outputRegex string
+		noAnnounce  bool
+	}{
+		"command index out of range":   {index: 2, err: nil, outputRegex: `^$`, noAnnounce: true},
+		"command index that will pass": {index: 0, err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+		"command index that will fail": {index: 1, err: fmt.Errorf("exit status 1"), outputRegex: `exit status 1\s+$`},
+	}
 
-	// THEN the {{ version }} var is not evaluated
-	got := command.String()
-	want := "false {{ version }}"
-	if got != want {
-		t.Errorf(`Failed with nil Status. Got %q, wanted %q`, got, want)
+	runNumber := 0
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN the Command @index is exectured
+			err := controller.ExecIndex(&utils.LogFrom{}, tc.index)
+
+			// THEN the output is expected
+			// err
+			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+				t.Fatalf("%s:\nerr's differ\nwant: %s\ngot:  %s",
+					name, tc.err, err)
+			}
+			// output
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			re := regexp.MustCompile(tc.outputRegex)
+			match := re.MatchString(output)
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\non: %q",
+					name, tc.outputRegex, output)
+			}
+			// announced
+			if !tc.noAnnounce {
+				runNumber++
+			}
+			if len(announce) != runNumber {
+				t.Fatalf("%s:\nCommand run not announced\nat %d, want %d",
+					name, len(announce), runNumber)
+			}
+		})
 	}
 }
 
-func TestApplyTemplateWithServiceStatus(t *testing.T) {
-	Init(utils.NewJLog("ERROR", false))
-
-	// GIVEN a Controller with a non-nil ServiceStatus
-	controllerName := "TEST"
+func TestControllerExec(t *testing.T) {
+	// GIVEN a Controller
+	jLog = utils.NewJLog("INFO", false)
+	announce := make(chan []byte, 8)
 	controller := Controller{
-		ServiceID: &controllerName,
-		Command: &Slice{
-			Command{"false", "{{ version }}"},
-		},
-		Failed:        make(Fails, 1),
-		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+		ServiceID:      stringPtr("service_id"),
+		Failed:         Fails{nil, nil},
+		NextRunnable:   make([]time.Time, 2),
+		ParentInterval: stringPtr("10m"),
+		Announce:       &announce,
 	}
-	// WHEN ApplyTemplate is called
-	command := (*controller.Command)[0].ApplyTemplate(controller.ServiceStatus)
+	tests := map[string]struct {
+		nilController bool
+		commands      *Slice
+		err           error
+		outputRegex   string
+		noAnnounce    bool
+	}{
+		"nil Controller": {nilController: true, err: nil, outputRegex: `^$`, noAnnounce: true},
+		"nil Command":    {err: nil, outputRegex: `^$`, noAnnounce: true},
+		"single Command": {err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
+			commands: &Slice{
+				{"date", "+%m-%d-%Y"}}},
+		"multiple Command's": {err: fmt.Errorf("\nexit status 1"), outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
+			commands: &Slice{
+				{"date", "+%m-%d-%Y"},
+				{"false"}}},
+	}
 
-	// THEN the {{ version }} var is evaluated
-	got := command.String()
-	want := "false 1.2.3"
-	if got != want {
-		t.Errorf(`Failed with non-nil Status. Got %q, wanted %q`, got, want)
+	runNumber := 0
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN the Command @index is exectured
+			var err error
+			if tc.nilController {
+				var controller *Controller
+				err = controller.Exec(&utils.LogFrom{})
+			} else {
+				controller.Command = tc.commands
+				err = controller.Exec(&utils.LogFrom{})
+			}
+
+			// THEN the output is expected
+			// err
+			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+				t.Fatalf("%s:\nerr's differ\nwant: %q\ngot:  %q",
+					name, utils.ErrorToString(tc.err), utils.ErrorToString(err))
+			}
+			// output
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			re := regexp.MustCompile(tc.outputRegex)
+			match := re.MatchString(output)
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\non: %q",
+					name, tc.outputRegex, output)
+			}
+			// announced
+			if !tc.noAnnounce {
+				runNumber += len(*controller.Command)
+			}
+			if len(announce) != runNumber {
+				t.Fatalf("%s:\nCommand run not announced\nat %d, want %d",
+					name, len(announce), runNumber)
+			}
+		})
 	}
 }

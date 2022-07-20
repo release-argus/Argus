@@ -22,224 +22,172 @@ import (
 	"testing"
 	"time"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceCommandNoChannel(t *testing.T) {
-	// GIVEN a Controller with no Announce channel
-	controllerName := "TEST"
-	parentInterval := "10m"
+func TestAnnounceCommand(t *testing.T) {
+	// GIVEN Controllers with various failed Command announces
 	controller := Controller{
-		ServiceID: &controllerName,
+		ServiceID: stringPtr("some_service_id"),
 		Command: &Slice{
+			Command{"ls", "-lah", "/root"},
 			Command{"ls", "-lah"},
+			Command{"ls", "-lah", "a"},
 		},
-		Failed:         make(Fails, 1),
-		NextRunnable:   make([]time.Time, 1),
-		ParentInterval: &parentInterval,
-	}
-
-	// WHEN AnnounceCommand is run
-	controller.AnnounceCommand(0)
-
-	// THEN the function doesn't hang
-}
-
-func testAnnounceCommand() Controller {
-	controllerName := "TEST"
-	channel := make(chan []byte)
-	parentInterval := "5m"
-	controller := Controller{
-		ServiceID: &controllerName,
-		Command: &Slice{
-			Command{"ls", "-lah"},
+		Failed:         Fails{boolPtr(true), boolPtr(false), nil},
+		NextRunnable:   make([]time.Time, 3),
+		ParentInterval: stringPtr("11m")}
+	tests := map[string]struct {
+		nilChannel     bool
+		channel        chan []byte
+		index          int
+		failed         *bool
+		timeDifference time.Duration
+	}{
+		"no channel": {nilChannel: true},
+		"failed nil does delay by 15s": {
+			channel:        make(chan []byte, 4),
+			index:          2,
+			timeDifference: 15 * time.Second,
 		},
-		Failed:         make(Fails, 1),
-		NextRunnable:   make([]time.Time, 1),
-		Announce:       &channel,
-		ParentInterval: &parentInterval,
+		"failed true does delay by 15s": {
+			channel:        make(chan []byte, 4),
+			index:          0,
+			timeDifference: 15 * time.Second,
+		},
+		"failed false does delay by 2*Interval": {
+			channel:        make(chan []byte, 4),
+			index:          1,
+			timeDifference: 22 * time.Minute,
+		},
 	}
-	return controller
-}
 
-func TestAnnounceCommandWhenNotRun(t *testing.T) {
-	// GIVEN a Controller with an Announce channel
-	controller := testAnnounceCommand()
-
-	// WHEN AnnounceCommand is run with the command not having been run
-	controller.Failed[0] = nil
-	go controller.AnnounceCommand(0)
-	result := <-*controller.Announce
-	var parsedResult api_types.WebSocketMessage
-	json.Unmarshal(result, &parsedResult)
-
-	// THEN it broadcasts nil to the Announce channel
-	if parsedResult.CommandData["ls -lah"].Failed != nil {
-		t.Errorf("got %t. expected %s",
-			*parsedResult.CommandData["ls -lah"].Failed, "false")
-	}
-}
-
-func TestAnnounceCommandWhenRunPassed(t *testing.T) {
-	// GIVEN a Controller with an Announce channel
-	controller := testAnnounceCommand()
-
-	// WHEN AnnounceCommand is run with the command not failing
-	failed := false
-	controller.Failed[0] = &failed
-	go controller.AnnounceCommand(0)
-	result := <-*controller.Announce
-	var parsedResult api_types.WebSocketMessage
-	json.Unmarshal(result, &parsedResult)
-
-	// THEN it broadcasts failed=false to the Announce channel
-	if *parsedResult.CommandData["ls -lah"].Failed != false {
-		got := "nil"
-		if parsedResult.CommandData["ls -lah"].Failed != nil {
-			got = fmt.Sprint(*parsedResult.CommandData["ls -lah"].Failed)
+	for name, tc := range tests {
+		if tc.nilChannel {
+			controller.Announce = nil
+		} else {
+			controller.Announce = &tc.channel
 		}
-		t.Errorf("failed - got %s. expected %s",
-			got, "false")
-	}
-	// and NextRunnable is ~2*ParentInterval
-	now := time.Now().UTC()
-	parentInterval, _ := time.ParseDuration(*controller.ParentInterval)
-	wantAfter := now.Add(2 * parentInterval).Add(-time.Second)
-	wantBefore := now.Add(2 * parentInterval).Add(time.Second)
-	got := parsedResult.CommandData["ls -lah"].NextRunnable
-	if got.Before(wantAfter) ||
-		got.After(wantBefore) {
-		t.Errorf("next_runnable - got %s. expected between %s and %s",
-			got, wantAfter, wantBefore)
-	}
-}
 
-func TestAnnounceCommandWhenRunFailed(t *testing.T) {
-	// GIVEN a Controller with an Announce channel
-	controller := testAnnounceCommand()
+		// WHEN AnnounceCommand is run
+		go controller.AnnounceCommand(tc.index)
 
-	// WHEN AnnounceCommand is run with the command failing
-	failed := true
-	controller.Failed[0] = &failed
-	go controller.AnnounceCommand(0)
-	result := <-*controller.Announce
-	var parsedResult api_types.WebSocketMessage
-	json.Unmarshal(result, &parsedResult)
-
-	// THEN it broadcasts failed=true to the Announce channel
-	if *parsedResult.CommandData["ls -lah"].Failed != true {
-		got := "nil"
-		if parsedResult.CommandData["ls -lah"].Failed != nil {
-			got = fmt.Sprint(parsedResult.CommandData["ls -lah"].Failed)
+		// THEN the correct response is received
+		if controller.Announce == nil {
+			return
 		}
-		t.Errorf("failed - got %s. expected %s",
-			got, "true")
-	}
-	// and NextRunnable is ~15s
-	now := time.Now().UTC()
-	wantAfter := now.Add(14 * time.Second)
-	wantBefore := now.Add(16 * time.Second)
-	got := parsedResult.CommandData["ls -lah"].NextRunnable
-	if got.Before(wantAfter) ||
-		got.After(wantBefore) {
-		t.Errorf("next_runnable - got %s. expected between %s and %s",
-			got, wantAfter, wantBefore)
+		m := <-*controller.Announce
+		var parsed api_types.WebSocketMessage
+		json.Unmarshal(m, &parsed)
+
+		if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
+			t.Fatalf("%s:\nmessage wasn't for %q\ngot %v",
+				name, (*controller.Command)[tc.index].String(), parsed.CommandData)
+		}
+
+		// if they failed status matches
+		got := "nil"
+		if parsed.CommandData[(*controller.Command)[tc.index].String()].Failed != nil {
+			got = fmt.Sprint(*parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
+		}
+		want := "nil"
+		if controller.Failed[tc.index] != nil {
+			want = fmt.Sprint(*controller.Failed[tc.index])
+		}
+		if got != want {
+			t.Errorf("%s:\nwant failed=%s\ngot  failed=%s",
+				name, want, got)
+		}
+
+		// next runnable is within expectred range
+		now := time.Now().UTC()
+		minTime := now.Add(tc.timeDifference - time.Second)
+		maxTime := now.Add(tc.timeDifference + time.Second)
+		gotTime := parsed.CommandData[(*controller.Command)[tc.index].String()].NextRunnable
+		if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
+			t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+				name, now, minTime, maxTime, gotTime)
+		}
 	}
 }
 
-func testFindController() Controller {
-	controllerName := "TEST"
+func TestFind(t *testing.T) {
+	// GIVEN we have a Controller with Command's
 	controller := Controller{
-		ServiceID: &controllerName,
+		ServiceID: stringPtr("some_service_id"),
 		Command: &Slice{
 			Command{"ls", "-lah"},
 			Command{"ls", "-lah", "a"},
 			Command{"ls", "-lah", "b"},
+			Command{"bash", "upgrade.sh", "{{ version }}"},
 		},
-		Failed: make(Fails, 3),
+		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+		Failed:        make(Fails, 3),
 	}
-	return controller
-}
-
-func TestFindUnknown(t *testing.T) {
-	// GIVEN we have a Slice of Commands
-	controller := testFindController()
-	var index *int
-
-	// WHEN Find is run for an unknown command
-	function := "random function"
-	index = controller.Find(function)
-
-	// THEN nil is returned
-	if index != nil {
-		t.Errorf("Command %q was found at index %d instead of nil",
-			function, *index)
+	tests := map[string]struct {
+		command string
+		want    *int
+	}{
+		"command at first index":      {command: "ls -lah", want: intPtr(0)},
+		"command at second index":     {command: "ls -lah a", want: intPtr(1)},
+		"command with service_status": {command: "bash upgrade.sh 1.2.3", want: intPtr(3)},
+		"unknwon command":             {command: "ls -lah /root", want: nil},
 	}
-}
 
-func TestFindKnown(t *testing.T) {
-	// GIVEN we have a Slice of Commands
-	controller := testFindController()
-	var index *int
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN Find is run for a command
+			index := controller.Find(tc.command)
 
-	// WHEN Find is run with a known command
-	function := "ls -lah a"
-	index = controller.Find(function)
-
-	// THEN it returns the correct index of that command
-	if index == nil || *index != 1 {
-		got := "nil"
-		if index != nil {
-			got = fmt.Sprint(index)
-		}
-		t.Errorf("Command %q was found at index %s instead of 1",
-			function, got)
+			// THEN the index is returned if it exists
+			got := "nil"
+			if index != nil {
+				got = fmt.Sprint(*index)
+			}
+			want := "nil"
+			if tc.want != nil {
+				want = fmt.Sprint(*tc.want)
+			}
+			if got != want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, want, got)
+			}
+		})
 	}
 }
 
-func TestResetFailsNilController(t *testing.T) {
-	// GIVEN a nil Controller
-	var controller Controller
-
-	// WHEN ResetFails is run
-	controller.ResetFails()
-
-	// THEN the command doesn't hang
-}
-
-func TestResetFailsNonNilController(t *testing.T) {
-	// GIVEN a Controller with Commands that have failed
-	controllerName := "TEST"
-	controller := Controller{
-		ServiceID: &controllerName,
-		Command: &Slice{
-			Command{"ls", "-lah"},
-			Command{"ls", "-lah", "a"},
-			Command{"ls", "-lah", "b"},
-			Command{"ls", "-lah", "c"},
-			Command{"ls", "-lah", "d"},
-		},
-		Failed: make(Fails, 5),
+func TestResetFails(t *testing.T) {
+	// GIVEN we have a Controller
+	tests := map[string]struct {
+		controller *Controller
+	}{
+		"nil controller": {controller: nil},
+		"controller with all fails": {controller: &Controller{
+			Failed: Fails{boolPtr(true), boolPtr(true)}}},
+		"controller with no fails": {controller: &Controller{
+			Failed: Fails{boolPtr(false), boolPtr(false)}}},
+		"controller with some fails": {controller: &Controller{
+			Failed: Fails{boolPtr(true), boolPtr(false)}}},
+		"controller with nil fails": {controller: &Controller{
+			Failed: Fails{nil, nil}}},
 	}
-	failed0 := true
-	controller.Failed[0] = &failed0
-	failed1 := true
-	controller.Failed[1] = &failed1
-	failed2 := false
-	controller.Failed[2] = &failed2
-	failed3 := true
-	controller.Failed[3] = &failed3
-	failed4 := true
-	controller.Failed[4] = &failed4
 
-	// WHEN ResetFails is called
-	controller.ResetFails()
-	// THEN all the fails become nil
-	for _, failed := range controller.Failed {
-		if failed != nil {
-			t.Errorf("Reset failed, got %v",
-				controller.Failed)
-		}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN ResetFails is run on this controller
+			tc.controller.ResetFails()
 
+			// THEN all the Failed's are reset to nil
+			if tc.controller == nil {
+				return
+			}
+			for i := range tc.controller.Failed {
+				if tc.controller.Failed[i] != nil {
+					t.Errorf("%s:\nfails weren't reset to nil. got %v",
+						name, tc.controller.Failed)
+				}
+			}
+		})
 	}
 }

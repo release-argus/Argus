@@ -29,7 +29,6 @@ import (
 func (c *Config) Init() {
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
-	command.Init(jLog)
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
