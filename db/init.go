@@ -61,9 +61,11 @@ func Run(cfg *config.Config, log *utils.JLog) {
 	api := api{config: cfg}
 	api.initialise()
 	defer api.db.Close()
-	api.removeUnknownServices()
-	api.convertServiceStatus()
-	api.extractServiceStatus()
+	if len(api.config.All) > 0 {
+		api.removeUnknownServices()
+		api.convertServiceStatus()
+		api.extractServiceStatus()
+	}
 
 	api.handler()
 }
