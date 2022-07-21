@@ -34,7 +34,7 @@ func (s *Service) SetDeployedVersion(version string) {
 	s.CommandController.ResetFails()
 
 	*s.DatabaseChannel <- db_types.Message{
-		ServiceID: *s.ID,
+		ServiceID: s.ID,
 		Cells: []db_types.Cell{
 			{Column: "deployed_version", Value: s.Status.DeployedVersion},
 			{Column: "deployed_version_timestamp", Value: s.Status.DeployedVersionTimestamp},
@@ -52,7 +52,7 @@ func (s *Service) SetLatestVersion(version string) {
 	s.CommandController.ResetFails()
 
 	*s.DatabaseChannel <- db_types.Message{
-		ServiceID: *s.ID,
+		ServiceID: s.ID,
 		Cells: []db_types.Cell{
 			{Column: "latest_version", Value: s.Status.LatestVersion},
 			{Column: "latest_version_timestamp", Value: s.Status.LatestVersionTimestamp},

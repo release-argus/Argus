@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package github
 
 import (
 	"encoding/json"
@@ -21,22 +21,23 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
+	github_types "github.com/release-argus/Argus/service/github/api_types"
 	"github.com/release-argus/Argus/utils"
 )
 
 // filterGitHubReleases will filter releases that fail the URLCommands, aren't semantic (if wanted),
 // or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
-func (s *Service) filterGitHubReleases(
-	releases []GitHubRelease,
+func (l *LatestVersion) filterGitHubReleases(
+	releases []github_types.Release,
 	logFrom utils.LogFrom,
-) (filteredReleases []GitHubRelease) {
-	semanticVerioning := s.GetSemanticVersioning()
+) (filteredReleases []github_types.Release) {
+	semanticVerioning := l.Options.GetSemanticVersioning()
 	for i := range releases {
 		// If it isn't a prerelease, or it is and they're wanted
-		if !releases[i].PreRelease || (releases[i].PreRelease && s.GetUsePreRelease()) {
+		if !releases[i].PreRelease || (releases[i].PreRelease && l.Options.GetUsePreRelease()) {
 			var err error
 			// Check that TagName matches URLCommands
-			if releases[i].TagName, err = s.URLCommands.run(releases[i].TagName, logFrom); err != nil {
+			if releases[i].TagName, err = l.URLCommands.Run(releases[i].TagName, logFrom); err != nil {
 				continue
 			}
 
@@ -66,7 +67,7 @@ func (s *Service) filterGitHubReleases(
 // insertionSort will do an insertion sort of release on filteredReleases.
 //
 // Every GitHubRelease must be follow SemanticVersioning for this insertion
-func insertionSort(release GitHubRelease, filteredReleases *[]GitHubRelease) {
+func insertionSort(release github_types.Release, filteredReleases *[]github_types.Release) {
 	index := len(*filteredReleases)
 	for index != 0 {
 		index--
@@ -81,14 +82,14 @@ func insertionSort(release GitHubRelease, filteredReleases *[]GitHubRelease) {
 			return
 		} else if index == 0 {
 			// releases[i] is newer than all filteredReleases. Prepend
-			*filteredReleases = append([]GitHubRelease{release}, *filteredReleases...)
+			*filteredReleases = append([]github_types.Release{release}, *filteredReleases...)
 		}
 	}
 }
 
 // checkGitHubReleasesBody will check that the body is of the expected API format for a successful query
-func (s *Service) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []GitHubRelease, err error) {
-	// Check for rate limit.
+func (l *LatestVersion) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []github_types.Release, err error) {
+	// Check for rate lirmRDrit.
 	if len(string(*body)) < 500 {
 		if strings.Contains(string(*body), "rate limit") {
 			err = errors.New("rate limit reached for GitHub")
@@ -100,7 +101,7 @@ func (s *Service) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (
 			jLog.Fatal(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
 
 			err = fmt.Errorf("tag_name not found at %s\n%s",
-				*s.URL, string(*body))
+				l.URL, string(*body))
 			jLog.Error(err, logFrom, true)
 			return
 		}

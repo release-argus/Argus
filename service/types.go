@@ -15,13 +15,16 @@
 package service
 
 import (
-	"github.com/coreos/go-semver/semver"
-
 	command "github.com/release-argus/Argus/commands"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
+)
+
+var (
+	jLog *utils.JLog
 )
 
 // Slice is a slice mapping of Service.
@@ -30,109 +33,55 @@ type Slice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	ID                    *string                `yaml:"-"`                             // service_name.
-	Active                *bool                  `yaml:"active,omitempty"`              // Disable the service.
-	Comment               *string                `yaml:"comment,omitempty"`             // Comment on the Service.
-	Type                  *string                `yaml:"type,omitempty"`                // "github"/"URL"
-	URL                   *string                `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	AllowInvalidCerts     *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	AccessToken           *string                `yaml:"access_token,omitempty"`        // GitHub access token to use.
-	SemanticVersioning    *bool                  `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
-	Interval              *string                `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	URLCommands           *URLCommandSlice       `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
-	RegexContent          *string                `yaml:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion          *string                `yaml:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	UsePreRelease         *bool                  `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default).
-	WebURL                *string                `yaml:"web_url,omitempty"`             // URL to provide on the Web UI.
-	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
-	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
-	Icon                  string                 `yaml:"icon,omitempty"`                // Icon URL to use for messages/Web UI.
-	IconLinkTo            *string                `yaml:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to.
-	CommandController     *command.Controller    `yaml:"-"`                             // The controller for the OS Commands that tracks fails and has the announce channel.
-	Command               *command.Slice         `yaml:"command,omitempty"`             // OS Commands to run on new release.
-	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
-	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
-	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
-	Status                *service_status.Status `yaml:"-"`                             // Track the Status of this source (version and regex misses).
-	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.
-	Defaults              *Service               `yaml:"-"`                             // Default values.
-	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
-	DatabaseChannel       *chan db_types.Message `yaml:"-"`                             // Channel for broadcasts to the Database
-	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
+	ID                    string                 `yaml:"-"`                          // service_name
+	Type                  string                 `yaml:"-"`                          // service_name
+	Comment               *string                `yaml:"comment,omitempty"`          // Comment on the Service
+	Options               Options                `yaml:"options,omitempty"`          // Options to give the Service
+	LatestVersion         LatestVersion          `yaml:"latest_version,omitempty"`   // Vars to getting the latest version of the Service
+	CommandController     *command.Controller    `yaml:"-"`                          // The controller for the OS Commands that tracks fails and has the announce channel
+	Command               *command.Slice         `yaml:"command,omitempty"`          // OS Commands to run on new release
+	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`          // Service-specific WebHook vars
+	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`           // Service-specific Shoutrrr vars
+	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
+	Dashboard             DashboardOptions       `yaml:"dashboard,omitempty"`        // Options for the dashboard
+	Status                *service_status.Status `yaml:"-"`                          // Track the Status of this source (version and regex misses)
+	HardDefaults          *Service               `yaml:"-"`                          // Hardcoded default values
+	Defaults              *Service               `yaml:"-"`                          // Default values
+	Announce              *chan []byte           `yaml:"-"`                          // Announce to the WebSocket
+	DatabaseChannel       *chan db_types.Message `yaml:"-"`                          // Channel for broadcasts to the Database
+	SaveChannel           *chan bool             `yaml:"-"`                          // Channel for triggering a save of the config
 
 	// TODO: Deprecate
 	OldStatus *service_status.OldStatus `yaml:"status,omitempty"` // For moving version info to argus.db
 }
 
-// GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
-type GitHubRelease struct {
-	URL             string          `json:"url"`
-	AssetsURL       string          `json:"assets_url"`
-	UploadURL       string          `json:"upload_url"`
-	HTMLURL         string          `json:"html_url"`
-	ID              uint            `json:"id"`
-	Author          GitHubAuthor    `json:"author"`
-	NodeID          string          `json:"node_id"`
-	SemanticVersion *semver.Version `json:"-"`
-	TagName         string          `json:"tag_name"`
-	TargetCommitish string          `json:"target_commitish"`
-	Name            string          `json:"name"`
-	Draft           bool            `json:"draft"`
-	PreRelease      bool            `json:"prerelease"`
-	CreatedAt       string          `json:"created_at"`
-	PublishedAt     string          `json:"published_at"`
-	Assets          []GitHubAsset   `json:"assets"`
-}
+type LatestVersion interface {
+	GetAccessToken() string // GitHub
+	GetSelfAllowInvalidCerts() bool
+	GetAllowInvalidCerts() bool
+	GetFriendlyURL() string
+	GetLookupURL() string
+	GetVersion([]byte, utils.LogFrom) (string, error)
+	GetType() *string
+	GetURL() string
+	GetRequire() LatestVersionRequireOptions
+	GetURLCommands() *URLCommandSlice
 
-// GitHubAuthor is the format of an Author on api.github.com/repos/OWNER/REPO/releases.
-type GitHubAuthor struct {
-	Login             string `json:"login"`
-	ID                uint   `json:"id"`
-	NodeID            string `json:"node_id"`
-	AvatarURL         string `json:"avatar_url"`
-	GravatarID        string `json:"gravatar_id"`
-	URL               string `json:"url"`
-	HTMLURL           string `json:"html_url"`
-	FollowersURL      string `json:"followers_url"`
-	FollowingURL      string `json:"following_url"`
-	GistsURL          string `json:"gists_url"`
-	StarredURL        string `json:"starred_url"`
-	SubscriptionsURL  string `json:"subscriptions_url"`
-	OrganizationsURL  string `json:"organizations_url"`
-	ReposURL          string `json:"repos_url"`
-	EventsURL         string `json:"events_url"`
-	ReceivedEventsURL string `json:"received__events_url"`
-	Type              string `json:"type"`
-	SiteAdmin         bool   `json:"site_admin"`
-}
-
-// GitHubAsset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
-type GitHubAsset struct {
-	URL                string       `json:"url"`
-	ID                 uint         `json:"id"`
-	NodeID             string       `json:"node_id"`
-	Name               string       `json:"name"`
-	Label              string       `json:"label"`
-	Uploader           GitHubAuthor `json:"uploader"`
-	ContentType        string       `json:"content_type"`
-	State              string       `json:"state"`
-	Size               uint         `json:"size"`
-	DownloadCount      uint         `json:"download_count"`
-	CreatedAt          string       `json:"created_at"`
-	UpdatedAt          string       `json:"updated_at"`
-	BrowserDownloadURL string       `json:"browser_download_url"`
+	URLCommandsCheckValues(string) error
+	Print(string)
 }
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
 	URL               string                 `yaml:"url,omitempty"`                 // URL to query.
-	AllowInvalidCerts *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
 	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
 	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
 	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
 	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
 	HardDefaults      *DeployedVersionLookup `yaml:"-"`                             // Hardcoded default values.
 	Defaults          *DeployedVersionLookup `yaml:"-"`                             // Default values.
+	options           *Options               `yaml:"-"`                             // Options for the lookups
 }
 
 // BasicAuth to use on the HTTP(s) request.

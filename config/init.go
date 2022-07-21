@@ -60,7 +60,7 @@ func (c *Config) Init() {
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
 			c.Service[serviceID].Notify,
-			c.Service[serviceID].GetIntervalPointer(),
+			c.Service[serviceID].Options.GetIntervalPointer(),
 		)
 
 		if c.Service[serviceID].Command != nil {
@@ -72,7 +72,7 @@ func (c *Config) Init() {
 			service.Status,
 			c.Service[serviceID].Command,
 			c.Service[serviceID].Notify,
-			c.Service[serviceID].GetIntervalPointer(),
+			c.Service[serviceID].Options.GetIntervalPointer(),
 		)
 	}
 
@@ -117,8 +117,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {
-		id := key
-		c.Service[key].ID = &id
+		c.Service[key].ID = key
 		c.Service[key].DatabaseChannel = c.DatabaseChannel
 		c.Service[key].SaveChannel = c.SaveChannel
 	}

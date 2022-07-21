@@ -17,6 +17,7 @@ package command
 import (
 	"encoding/json"
 
+	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -41,7 +42,7 @@ func (c *Controller) AnnounceCommand(index int) {
 		Type:    &wsType,
 		SubType: &wsSubType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: c.ServiceID,
+			ID: utils.DefaultIfNil(c.ServiceID),
 		},
 		CommandData: commandSummary,
 	})

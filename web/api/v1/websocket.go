@@ -69,12 +69,12 @@ func (api *API) wsService(client *Client) {
 		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
 		serviceSummary := api_types.ServiceSummary{
-			Active:                   service.Active,
+			Active:                   service.Options.Active,
 			ID:                       service.ID,
-			Type:                     service.Type,
+			Type:                     service.LatestVersion.GetType(),
 			URL:                      &url,
 			Icon:                     service.GetIconURL(),
-			IconLinkTo:               service.IconLinkTo,
+			IconLinkTo:               service.Dashboard.IconLinkTo,
 			HasDeployedVersionLookup: &hasDeployedVersionLookup,
 			Command:                  commandCount,
 			WebHook:                  webhookCount,
@@ -111,7 +111,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	logFrom := utils.LogFrom{Primary: "wsServiceAction", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
-	if payload.ServiceData.ID == nil {
+	if payload.ServiceData.ID == "" {
 		api.Log.Error("service_data.id not provided", logFrom, true)
 		return
 	}
@@ -120,28 +120,28 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 	id := payload.ServiceData.ID
-	if api.Config.Service[*id] == nil {
-		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", *id), logFrom, true)
+	if api.Config.Service[id] == nil {
+		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", id), logFrom, true)
 		return
 	}
 
-	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", *id), logFrom, true)
+	if api.Config.Service[id].WebHook == nil && api.Config.Service[id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", id), logFrom, true)
 		return
 	}
 
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
-		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
+		msg := fmt.Sprintf("%s release skip - %q", id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
-		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
+		api.Config.Service[id].HandleSkip(payload.ServiceData.Status.LatestVersion)
 		return
 	}
 
 	// Send the WebHook(s).
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
-		*id,
-		api.Config.Service[*id].Status.LatestVersion,
+		id,
+		api.Config.Service[id].Status.LatestVersion,
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,
@@ -152,12 +152,12 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	api.Log.Info(msg, logFrom, true)
 	switch *payload.Target {
 	case "ARGUS_ALL", "ARGUS_FAILED":
-		go api.Config.Service[*id].HandleFailedActions()
+		go api.Config.Service[id].HandleFailedActions()
 	default:
 		if strings.HasPrefix(*payload.Target, "webhook_") {
-			go api.Config.Service[*id].HandleWebHook(strings.TrimPrefix(*payload.Target, "webhook_"))
+			go api.Config.Service[id].HandleWebHook(strings.TrimPrefix(*payload.Target, "webhook_"))
 		} else {
-			go api.Config.Service[*id].HandleCommand(strings.TrimPrefix(*payload.Target, "command_"))
+			go api.Config.Service[id].HandleCommand(strings.TrimPrefix(*payload.Target, "command_"))
 		}
 	}
 }
@@ -171,16 +171,16 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	logFrom := utils.LogFrom{Primary: "wsCommand", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
-	if payload.ServiceData.ID == nil {
+	if payload.ServiceData.ID == "" {
 		api.Log.Error("service_data.id not provided", logFrom, true)
 		return
 	}
 	id := payload.ServiceData.ID
-	if api.Config.Service[*id] == nil {
-		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
+	if api.Config.Service[id] == nil {
+		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
 	}
-	if api.Config.Service[*id].CommandController == nil {
+	if api.Config.Service[id].CommandController == nil {
 		return
 	}
 
@@ -189,12 +189,12 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	responseType := "COMMAND"
 	responseSubType := "SUMMARY"
 
-	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[*id].Command))
-	for key := range *api.Config.Service[*id].CommandController.Command {
-		command := (*api.Config.Service[*id].CommandController.Command)[key].ApplyTemplate(api.Config.Service[*id].Status)
+	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[id].Command))
+	for key := range *api.Config.Service[id].CommandController.Command {
+		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(api.Config.Service[id].Status)
 		commandSummary[command.String()] = &api_types.CommandSummary{
-			Failed:       api.Config.Service[*id].CommandController.Failed[key],
-			NextRunnable: api.Config.Service[*id].CommandController.NextRunnable[key],
+			Failed:       api.Config.Service[id].CommandController.Failed[key],
+			NextRunnable: api.Config.Service[id].CommandController.NextRunnable[key],
 		}
 	}
 
@@ -221,16 +221,16 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	logFrom := utils.LogFrom{Primary: "wsWebHook", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
-	if payload.ServiceData.ID == nil {
+	if payload.ServiceData.ID == "" {
 		api.Log.Error("service_data.id not provided", logFrom, true)
 		return
 	}
 	id := payload.ServiceData.ID
-	if api.Config.Service[*id] == nil {
-		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
+	if api.Config.Service[id] == nil {
+		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
 	}
-	if api.Config.Service[*id].WebHook == nil {
+	if api.Config.Service[id].WebHook == nil {
 		return
 	}
 
@@ -238,12 +238,12 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	responsePage := "APPROVALS"
 	responseType := "WEBHOOK"
 	responseSubType := "SUMMARY"
-	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[*id].WebHook))
+	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[id].WebHook))
 
-	for key := range *api.Config.Service[*id].WebHook {
+	for key := range *api.Config.Service[id].WebHook {
 		webhookSummary[key] = &api_types.WebHookSummary{
-			Failed:       (*api.Config.Service[*id].WebHook)[key].Failed,
-			NextRunnable: (*api.Config.Service[*id].WebHook)[key].NextRunnable,
+			Failed:       (*api.Config.Service[id].WebHook)[key].Failed,
+			NextRunnable: (*api.Config.Service[id].WebHook)[key].NextRunnable,
 		}
 	}
 
@@ -378,15 +378,16 @@ func (api *API) wsConfigDefaults(client *Client) {
 		ConfigData: &api_types.Config{
 			Defaults: &api_types.Defaults{
 				Service: api_types.Service{
-					Interval:           api.Config.Defaults.Service.Interval,
-					SemanticVersioning: api.Config.Defaults.Service.SemanticVersioning,
-					RegexContent:       api.Config.Defaults.Service.RegexContent,
-					RegexVersion:       api.Config.Defaults.Service.RegexVersion,
-					UsePreRelease:      api.Config.Defaults.Service.UsePreRelease,
-					AutoApprove:        api.Config.Defaults.Service.AutoApprove,
-					IgnoreMisses:       api.Config.Defaults.Service.IgnoreMisses,
-					AccessToken:        utils.ValueIfNotNil(api.Config.Defaults.Service.AccessToken, "<secret>"),
-					AllowInvalidCerts:  api.Config.Defaults.Service.AllowInvalidCerts,
+					Options: &api_types.ServiceOptions{
+						Interval:           api.Config.Defaults.Service.Options.Interval,
+						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
+						UsePreRelease:      api.Config.Defaults.Service.Options.UsePreRelease,
+						AutoApprove:        api.Config.Defaults.Service.Options.AutoApprove,
+					},
+					LatestVersion: &api_types.LatestVersion{
+						AccessToken:       utils.ValueIfNotDefault(api.Config.Defaults.Service.LatestVersion.GetAccessToken(), "<secret>"),
+						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.GetAllowInvalidCerts(),
+					},
 					DeployedVersionLookup: &api_types.DeployedVersionLookup{
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
@@ -465,27 +466,35 @@ func (api *API) wsConfigService(client *Client) {
 			service := api.Config.Service[key]
 
 			serviceConfig[key] = &api_types.Service{
-				Active:             service.Active,
-				Comment:            service.Comment,
-				Type:               service.Type,
-				URL:                service.URL,
-				WebURL:             service.WebURL,
-				AccessToken:        utils.ValueIfNotNil(service.AccessToken, "<secret>"),
-				SemanticVersioning: service.SemanticVersioning,
-				RegexContent:       service.RegexContent,
-				RegexVersion:       service.RegexVersion,
-				UsePreRelease:      service.UsePreRelease,
-				AutoApprove:        service.AutoApprove,
-				IgnoreMisses:       service.IgnoreMisses,
-				AllowInvalidCerts:  service.AllowInvalidCerts,
-				Icon:               service.Icon,
-				IconLinkTo:         service.IconLinkTo,
+				Type:    service.Type,
+				Comment: service.Comment,
+				Options: &api_types.ServiceOptions{
+					Active:             service.Options.Active,
+					Interval:           service.Options.Interval,
+					SemanticVersioning: service.Options.SemanticVersioning,
+					UsePreRelease:      service.Options.UsePreRelease,
+					AutoApprove:        service.Options.AutoApprove,
+				},
+				LatestVersion: &api_types.LatestVersion{
+					URL:               service.LatestVersion.GetURL(),
+					AccessToken:       utils.ValueIfNotDefault(service.LatestVersion.GetAccessToken(), "<secret>"),
+					AllowInvalidCerts: service.LatestVersion.GetAllowInvalidCerts(),
+					Require: &api_types.LatestVersionRequire{
+						RegexContent: service.LatestVersion.GetRequire().RegexContent,
+						RegexVersion: service.LatestVersion.GetRequire().RegexVersion,
+					},
+				},
+				Dashboard: &api_types.DashboardOptions{
+					Icon:       service.Dashboard.Icon,
+					IconLinkTo: service.Dashboard.IconLinkTo,
+					WebURL:     service.Dashboard.WebURL,
+				},
 			}
 
 			// DeployedVersionLookup
 			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToApiTypeDeployedVersionLookup(service.DeployedVersionLookup)
 			// URL Commands
-			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(service.URLCommands)
+			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(service.LatestVersion.GetURLCommands())
 			// Notify
 			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(service.Notify)
 			// Command

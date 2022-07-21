@@ -23,13 +23,13 @@ import (
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
-	ID                       *string `json:"id,omitempty"`                   //
+	ID                       string  `json:"id,omitempty"`                   //
 	Active                   *bool   `json:"active,omitempty"`               // Active Service?
 	Comment                  *string `json:"comment,omitempty"`              // Comment on the Service
 	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
-	IconLinkTo               *string `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
+	IconLinkTo               string  `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
 	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup
 	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release
 	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release
@@ -217,28 +217,47 @@ type ServiceSlice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	Active                *bool                  `json:"active,omitempty"`              // Active Service?
-	Comment               *string                `json:"comment,omitempty"`             // Comment on the Service
-	Type                  *string                `json:"type,omitempty"`                // "github"/"URL"
-	URL                   *string                `json:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
-	WebURL                *string                `json:"web_url,omitempty"`             // URL to provide on the Web UI
-	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
-	Interval              *string                `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
-	SemanticVersioning    *bool                  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
-	RegexContent          *string                `json:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
-	RegexVersion          *string                `json:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions
-	UsePreRelease         *bool                  `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
-	AutoApprove           *bool                  `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
-	IgnoreMisses          *bool                  `json:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist)
-	AccessToken           *string                `json:"access_token,omitempty"`        // GitHub access token to use
-	AllowInvalidCerts     *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	Icon                  string                 `json:"icon,omitempty"`                // Icon URL to use for messages/Web UI
-	IconLinkTo            *string                `json:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to
-	Command               *CommandSlice          `json:"command,omitempty"`             // OS Commands to run on new release
-	Notify                *NotifySlice           `json:"notify,omitempty"`              // Service-specific Notify vars
-	WebHook               *WebHookSlice          `json:"webhook,omitempty"`             // Service-specific WebHook vars
-	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version
-	Status                *Status                `json:"status,omitempty"`              // Track the Status of this source (version and regex misses)
+	Comment               *string                `json:"comment,omitempty"`          // Comment on the Service
+	Type                  string                 `json:"type,omitempty"`             // "github"/"URL"
+	Options               *ServiceOptions        `json:"options,omitempty"`          // Options to give the Service
+	LatestVersion         *LatestVersion         `json:"latest_version,omitempty"`   // Latest version lookup for the Service
+	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`     // Commands to filter the release from the URL request
+	Command               *CommandSlice          `json:"command,omitempty"`          // OS Commands to run on new release
+	Notify                *NotifySlice           `json:"notify,omitempty"`           // Service-specific Notify vars
+	WebHook               *WebHookSlice          `json:"webhook,omitempty"`          // Service-specific WebHook vars
+	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
+	Dashboard             *DashboardOptions      `json:"dashboard,omitempty"`        // Dashboard options
+}
+
+// ServiceOptions.
+type ServiceOptions struct {
+	Active             *bool   `json:"active,omitempty"`              // Active Service?
+	Interval           *string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
+	SemanticVersioning *bool   `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
+	AutoApprove        *bool   `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
+	UsePreRelease      *bool   `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
+}
+
+// DashboardOptions.
+type DashboardOptions struct {
+	Icon       string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
+	IconLinkTo string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
+	WebURL     string `json:"web_url,omitempty"`      // URL to provide on the Web UI
+}
+
+// LatestVersion lookup of the service.
+type LatestVersion struct {
+	URL               string                `json:"url,omitempty"`                 // URL to query
+	AccessToken       string                `json:"access_token,omitempty"`        // GitHub access token to use
+	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	URLCommands       *URLCommandSlice      `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
+	Require           *LatestVersionRequire `json:"require,omitempty"`             // Requirements for the version to be considered valid
+}
+
+// LatestVersionRequire commands, regex etc for the release to be considered valid.
+type LatestVersionRequire struct {
+	RegexContent *string `json:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
+	RegexVersion *string `json:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
 }
 
 // DeployedVersionLookup of the service.

@@ -106,8 +106,8 @@ func (c *URLCommand) GetIgnoreMisses() *bool {
 	return utils.GetFirstNonNilPtr(c.IgnoreMisses, c.ParentIgnoreMisses)
 }
 
-// run will run all of the URLCommand(s) in this URLCommandSlice.
-func (c *URLCommandSlice) run(text string, logFrom utils.LogFrom) (string, error) {
+// Run will run all of the URLCommand(s) in this URLCommandSlice.
+func (c *URLCommandSlice) Run(text string, logFrom utils.LogFrom) (string, error) {
 	if c == nil {
 		return text, nil
 	}

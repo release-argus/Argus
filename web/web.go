@@ -61,7 +61,7 @@ func newWebUI(cfg *config.Config) *mux.Router {
 		cfg.Service[sKey].Announce = &hub.Broadcast
 		if cfg.Service[sKey].WebHook != nil {
 			for whKey := range *cfg.Service[sKey].WebHook {
-				(*cfg.Service[sKey].WebHook)[whKey].ServiceID = cfg.Service[sKey].ID
+				(*cfg.Service[sKey].WebHook)[whKey].ServiceID = &cfg.Service[sKey].ID
 				(*cfg.Service[sKey].WebHook)[whKey].Announce = &hub.Broadcast
 			}
 		}

@@ -75,13 +75,13 @@ func (s *Service) UpdateLatestApproved() {
 // only be run/send if this is triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions() {
 	if s.WebHook != nil || s.Command != nil {
-		if s.GetAutoApprove() {
+		if s.Options.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
-			jLog.Info(msg, utils.LogFrom{Primary: *s.ID}, true)
+			jLog.Info(msg, utils.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s)
 			go func() {
-				err := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: *s.ID})
+				err := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil {
 					s.UpdatedVersion()
 				}
@@ -95,9 +95,9 @@ func (s *Service) HandleUpdateActions() {
 				}
 			}()
 		} else {
-			jLog.Info("Waiting for approval on the Web UI", utils.LogFrom{Primary: *s.ID}, true)
+			jLog.Info("Waiting for approval on the Web UI", utils.LogFrom{Primary: s.ID}, true)
 
-			metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *s.ID, 1)
+			metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, s.ID, 1)
 			s.AnnounceQueryNewVersion()
 		}
 	} else {
@@ -141,7 +141,7 @@ func (s *Service) HandleFailedActions() {
 	// Run the Command(s)
 	if s.Command != nil {
 		potentialErrors += len(*s.Command)
-		logFrom := utils.LogFrom{Primary: "Command", Secondary: *s.ID}
+		logFrom := utils.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range *s.Command {
 			if retryAll || utils.EvalNilPtr(s.CommandController.Failed[key], true) {
 				// Skip if it's before NextRunnable
@@ -187,7 +187,7 @@ func (s *Service) HandleCommand(command string) {
 	// Find the command
 	index := s.CommandController.Find(command)
 	if index == nil {
-		jLog.Warn(command+" not found", utils.LogFrom{Primary: "Command", Secondary: *s.ID}, true)
+		jLog.Warn(command+" not found", utils.LogFrom{Primary: "Command", Secondary: s.ID}, true)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (s *Service) HandleCommand(command string) {
 	}
 
 	// Send the Command.
-	err := (*s.CommandController).ExecIndex(&utils.LogFrom{Primary: "Command", Secondary: *s.ID}, *index)
+	err := (*s.CommandController).ExecIndex(&utils.LogFrom{Primary: "Command", Secondary: s.ID}, *index)
 	if err == nil {
 		s.UpdatedVersion()
 	}
@@ -232,7 +232,7 @@ func (s *Service) HandleSkip(version string) {
 	s.AnnounceApproved()
 
 	*s.DatabaseChannel <- db_types.Message{
-		ServiceID: *s.ID,
+		ServiceID: s.ID,
 		Cells: []db_types.Cell{
 			{Column: "approved_version", Value: s.Status.ApprovedVersion},
 		},

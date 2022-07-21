@@ -28,7 +28,7 @@ func (s *Service) AnnounceFirstVersion() {
 	wsPage := "APPROVALS"
 	wsType := "VERSION"
 	wsSubType := "INIT"
-	serviceWebURL := s.GetWebURL()
+	serviceWebURL := s.Dashboard.GetWebURL(s.Status.LatestVersion)
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
 		Page:    &wsPage,
 		Type:    &wsType,
@@ -82,7 +82,7 @@ func (s *Service) AnnounceQueryNewVersion() {
 	wsPage := "APPROVALS"
 	wsType := "VERSION"
 	wsSubType := "NEW"
-	serviceWebURL := s.GetWebURL()
+	serviceWebURL := s.Dashboard.GetWebURL(s.Status.LatestVersion)
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
 		Page:    &wsPage,
 		Type:    &wsType,

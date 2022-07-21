@@ -16,23 +16,32 @@ package service
 
 import (
 	"fmt"
+	"regexp"
 
+	github_types "github.com/release-argus/Argus/service/github/api_types"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-func (s *Service) regexCheckVersion(
+type LatestVersionRequireOptions struct {
+	Status       *service_status.Status `yaml:"-"`                       // Service Status
+	RegexContent *string                `yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
+	RegexVersion *string                `yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
+}
+
+func (r *LatestVersionRequireOptions) RegexCheckVersion(
 	version string,
 	logFrom utils.LogFrom,
 ) error {
 	// Check that the version grabbed satisfies the specified regex (if there is any).
-	wantedRegexVersion := s.GetRegexVersion()
-	if s.RegexVersion != nil {
+	wantedRegexVersion := r.RegexVersion
+	if wantedRegexVersion != nil {
 		regexMatch := utils.RegexCheck(*wantedRegexVersion, version)
 		if !regexMatch {
 			err := fmt.Errorf("regex not matched on version %q",
 				version)
-			s.Status.RegexMissesVersion++
-			jLog.Info(err, logFrom, s.Status.RegexMissesVersion == 1)
+			r.Status.RegexMissesVersion++
+			jLog.Info(err, logFrom, r.Status.RegexMissesVersion == 1)
 			return err
 		}
 	}
@@ -40,13 +49,13 @@ func (s *Service) regexCheckVersion(
 	return nil
 }
 
-func (s *Service) regexCheckContent(
+func (r *LatestVersionRequireOptions) RegexCheckContent(
 	version string,
 	body interface{},
 	logFrom utils.LogFrom,
 ) error {
 	// Check for a regex match in the body if one is desired.
-	wantedRegexContent := s.GetRegexContent()
+	wantedRegexContent := r.RegexContent
 	if wantedRegexContent != nil {
 		// Create a list to search as `github` service types we'll only
 		// search asset `name` and `browser_download_url`
@@ -54,11 +63,11 @@ func (s *Service) regexCheckContent(
 		switch v := body.(type) {
 		case string:
 			searchArea = []string{body.(string)}
-		case []GitHubAsset:
-			for i := range body.([]GitHubAsset) {
+		case []github_types.Asset:
+			for i := range body.([]github_types.Asset) {
 				searchArea = append(searchArea,
-					body.([]GitHubAsset)[i].Name,
-					body.([]GitHubAsset)[i].BrowserDownloadURL,
+					body.([]github_types.Asset)[i].Name,
+					body.([]github_types.Asset)[i].BrowserDownloadURL,
 				)
 			}
 		default:
@@ -79,8 +88,8 @@ func (s *Service) regexCheckContent(
 						utils.TemplateString(*wantedRegexContent, utils.ServiceInfo{LatestVersion: version}),
 						version,
 					)
-					s.Status.RegexMissesContent++
-					jLog.Info(err, logFrom, s.Status.RegexMissesContent == 1)
+					r.Status.RegexMissesContent++
+					jLog.Info(err, logFrom, r.Status.RegexMissesContent == 1)
 					return err
 				}
 				continue
@@ -90,4 +99,27 @@ func (s *Service) regexCheckContent(
 	}
 
 	return nil
+}
+
+// CheckValues of the Service.
+func (r *LatestVersionRequireOptions) CheckValues(prefix string) (errs error) {
+	// Content RegEx
+	if r.RegexContent != nil {
+		_, err := regexp.Compile(*r.RegexContent)
+		if err != nil {
+			errs = fmt.Errorf("%s%s  regex_content: %q <invalid> (Invalid RegEx)\\",
+				utils.ErrorToString(errs), prefix, *r.RegexContent)
+		}
+	}
+
+	// Version RegEx
+	if r.RegexVersion != nil {
+		_, err := regexp.Compile(*r.RegexVersion)
+		if err != nil {
+			errs = fmt.Errorf("%s%s  regex_version: %q <invalid> (Invalid RegEx)\\",
+				utils.ErrorToString(errs), prefix, *r.RegexVersion)
+		}
+	}
+
+	return
 }

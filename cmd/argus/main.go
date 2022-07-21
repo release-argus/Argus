@@ -69,7 +69,7 @@ func main() {
 		jLog.Info(msg, utils.LogFrom{}, true)
 
 		for _, key := range *config.Order {
-			fmt.Printf("  - %s\n", *config.Service[key].ID)
+			fmt.Printf("  - %s\n", config.Service[key].ID)
 		}
 	}
 

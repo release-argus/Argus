@@ -30,7 +30,7 @@ import (
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (d *DeployedVersionLookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(d.AllowInvalidCerts, d.Defaults.AllowInvalidCerts, d.HardDefaults.AllowInvalidCerts)
+	return *utils.GetFirstNonNilPtr(d.options.DeployedVersionAllowInvalidCerts, d.options.Defaults.DeployedVersionAllowInvalidCerts, d.options.HardDefaults.DeployedVersionAllowInvalidCerts)
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
@@ -38,11 +38,11 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 	if d == nil {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: *parent.ID}
+	logFrom := utils.LogFrom{Primary: parent.ID}
 
 	// Track forever.
 	for {
-		deployedVersion, err := d.Query(logFrom, parent.GetSemanticVersioning())
+		deployedVersion, err := d.Query(logFrom, parent.Options.GetSemanticVersioning())
 		// If new release found by ^ query.
 		if err == nil && deployedVersion != parent.Status.DeployedVersion {
 			// Announce the updated deployment
@@ -50,7 +50,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 
 			// If this new deployedVersion isn't LatestVersion
 			// Check that it's not a later version than LatestVersion
-			if deployedVersion != parent.Status.LatestVersion && parent.GetSemanticVersioning() && parent.Status.LatestVersion != "" {
+			if deployedVersion != parent.Status.LatestVersion && parent.Options.GetSemanticVersioning() && parent.Status.LatestVersion != "" {
 				//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
 				//nolint:errcheck // ^
 				deployedVersionSV, _ := semver.NewVersion(deployedVersion)
@@ -74,7 +74,7 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 			parent.AnnounceUpdate()
 		}
 		// Sleep interval between queries.
-		time.Sleep(parent.GetIntervalDuration())
+		time.Sleep(parent.Options.GetIntervalDuration())
 	}
 }
 
@@ -201,7 +201,6 @@ func (d *DeployedVersionLookup) Print(prefix string) {
 	prefix += "  "
 
 	utils.PrintlnIfNotDefault(d.URL, fmt.Sprintf("%surl: %s", prefix, d.URL))
-	utils.PrintlnIfNotNil(d.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(d.AllowInvalidCerts)))
 	if d.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
 		fmt.Printf("%s  username: %s\n", prefix, d.BasicAuth.Username)

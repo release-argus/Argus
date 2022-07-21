@@ -66,16 +66,11 @@ func ServiceTest(
 	}
 	_, err := service.Query()
 	if err != nil {
-		helpMsg := ""
-		if *service.Type == "url" && strings.Count(*service.URL, "/") == 1 && !strings.HasPrefix(*service.URL, "http") {
-			helpMsg = "\nThis URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type."
-		}
 		log.Error(
 			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q%s",
+				"No version matching the conditions specified could be found for %q at %q",
 				*flag,
 				service.GetServiceURL(true),
-				helpMsg,
 			),
 			logFrom,
 			true,
@@ -86,7 +81,7 @@ func ServiceTest(
 	if service.DeployedVersionLookup != nil {
 		version, err := service.DeployedVersionLookup.Query(
 			logFrom,
-			service.GetSemanticVersioning())
+			service.Options.GetSemanticVersioning())
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",

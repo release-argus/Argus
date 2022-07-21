@@ -35,21 +35,19 @@ type Defaults struct {
 func (d *Defaults) SetDefaults() {
 	// Service defaults.
 	serviceAutoApprove := false
-	d.Service.AutoApprove = &serviceAutoApprove
-	serviceAllowInvalidCerts := false
-	d.Service.AllowInvalidCerts = &serviceAllowInvalidCerts
-	serviceIgnoreMisses := true
-	d.Service.IgnoreMisses = &serviceIgnoreMisses
 	serviceInterval := "10m"
-	d.Service.Interval = &serviceInterval
-	usePreRelease := false
-	d.Service.UsePreRelease = &usePreRelease
 	serviceSemanticVersioning := true
-	d.Service.SemanticVersioning = &serviceSemanticVersioning
-	// Service DeployedVersionLookup defaults.
+	serviceLatestVersionAllowInvalidCerts := false
+	usePreRelease := false
 	serviceDeployedVersionLookupAllowInvalidCerts := false
-	d.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
-	d.Service.DeployedVersionLookup.AllowInvalidCerts = &serviceDeployedVersionLookupAllowInvalidCerts
+	d.Service.Options = service.Options{
+		AutoApprove:                      &serviceAutoApprove,
+		Interval:                         &serviceInterval,
+		SemanticVersioning:               &serviceSemanticVersioning,
+		UsePreRelease:                    &usePreRelease,
+		LatestVersionAllowInvalidCerts:   &serviceLatestVersionAllowInvalidCerts,
+		DeployedVersionAllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts,
+	}
 
 	notifyDefaultOptions := map[string]string{
 		"message":   "{{ service_id }} - {{ version }} released",

@@ -17,6 +17,7 @@ package webhook
 import (
 	"encoding/json"
 
+	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -39,7 +40,7 @@ func (w *WebHook) AnnounceSend() {
 		Type:    &wsType,
 		SubType: &wsSubType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: w.ServiceID,
+			ID: utils.DefaultIfNil(w.ServiceID),
 		},
 		WebHookData: webhookSummary,
 	})
