@@ -20,6 +20,9 @@ import (
 	"github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version/github"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -34,19 +37,27 @@ type Defaults struct {
 // SetDefaults (last resort vars).
 func (d *Defaults) SetDefaults() {
 	// Service defaults.
-	serviceAutoApprove := false
+	serviceActive := true
 	serviceInterval := "10m"
 	serviceSemanticVersioning := true
+	d.Service.Options = options.Options{
+		Active:             &serviceActive,
+		Interval:           &serviceInterval,
+		SemanticVersioning: &serviceSemanticVersioning,
+	}
 	serviceLatestVersionAllowInvalidCerts := false
 	usePreRelease := false
+	d.Service.LatestVersion = github.LatestVersion{
+		UsePreRelease:     &usePreRelease,
+		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
+	}
 	serviceDeployedVersionLookupAllowInvalidCerts := false
-	d.Service.Options = service.Options{
-		AutoApprove:                      &serviceAutoApprove,
-		Interval:                         &serviceInterval,
-		SemanticVersioning:               &serviceSemanticVersioning,
-		UsePreRelease:                    &usePreRelease,
-		LatestVersionAllowInvalidCerts:   &serviceLatestVersionAllowInvalidCerts,
-		DeployedVersionAllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts,
+	d.Service.DeployedVersionLookup = &deployed_version.Lookup{
+		AllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts,
+	}
+	serviceAutoApprove := false
+	d.Service.Dashboard = service.DashboardOptions{
+		AutoApprove: &serviceAutoApprove,
 	}
 
 	notifyDefaultOptions := map[string]string{

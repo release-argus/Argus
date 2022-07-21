@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package service
+package service_status
 
 import (
 	"encoding/json"

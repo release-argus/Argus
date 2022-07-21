@@ -28,31 +28,31 @@ func (s *Slice) CheckValues(prefix string) error {
 		var serviceErrors error
 		service := (*s)[key]
 
-		// Check Service
+		// Service
 		if err := service.CheckValues(prefix); err != nil {
 			serviceErrors = fmt.Errorf("%s%w",
 				utils.ErrorToString(serviceErrors), err)
 		}
 
-		// URL Commands
-		if err := service.LatestVersion.URLCommandsCheckValues(prefix + "  "); err != nil {
+		// Latest version / URL commands
+		if err := service.LatestVersion.CheckValues(prefix + "  "); err != nil {
 			errs = fmt.Errorf("%s%w",
 				utils.ErrorToString(errs), err)
 		}
 
-		// Check DeployedVersionLookup
+		// Deployed version lookup
 		if err := service.DeployedVersionLookup.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w",
 				utils.ErrorToString(serviceErrors), err)
 		}
 
-		// Check Notify(s)
+		// Notify(s)
 		if err := service.Notify.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w",
 				utils.ErrorToString(serviceErrors), err)
 		}
 
-		// Check WebHook(s)
+		// WebHook(s)
 		if err := service.WebHook.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w",
 				utils.ErrorToString(serviceErrors), err)

@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package require
 
 import (
 	"fmt"
 	"regexp"
 
-	github_types "github.com/release-argus/Argus/service/github/api_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/github/api_types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-type LatestVersionRequireOptions struct {
+// Options to require
+type Options struct {
 	Status       *service_status.Status `yaml:"-"`                       // Service Status
 	RegexContent *string                `yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
 	RegexVersion *string                `yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
 }
 
-func (r *LatestVersionRequireOptions) RegexCheckVersion(
+// RegexCheckVersion
+func (r *Options) RegexCheckVersion(
 	version string,
+	log *utils.JLog,
 	logFrom utils.LogFrom,
 ) error {
 	// Check that the version grabbed satisfies the specified regex (if there is any).
@@ -41,7 +44,7 @@ func (r *LatestVersionRequireOptions) RegexCheckVersion(
 			err := fmt.Errorf("regex not matched on version %q",
 				version)
 			r.Status.RegexMissesVersion++
-			jLog.Info(err, logFrom, r.Status.RegexMissesVersion == 1)
+			log.Info(err, logFrom, r.Status.RegexMissesVersion == 1)
 			return err
 		}
 	}
@@ -49,9 +52,11 @@ func (r *LatestVersionRequireOptions) RegexCheckVersion(
 	return nil
 }
 
-func (r *LatestVersionRequireOptions) RegexCheckContent(
+// RegexCheckContent of body with version
+func (r *Options) RegexCheckContent(
 	version string,
 	body interface{},
+	log *utils.JLog,
 	logFrom utils.LogFrom,
 ) error {
 	// Check for a regex match in the body if one is desired.
@@ -77,7 +82,7 @@ func (r *LatestVersionRequireOptions) RegexCheckContent(
 
 		for i := range searchArea {
 			regexMatch := utils.RegexCheckWithParams(*wantedRegexContent, searchArea[i], version)
-			jLog.Debug(
+			log.Debug(
 				fmt.Sprintf("%q RegexContent on %q, match=%t", *wantedRegexContent, searchArea[i], regexMatch),
 				logFrom,
 				true)
@@ -89,7 +94,7 @@ func (r *LatestVersionRequireOptions) RegexCheckContent(
 						version,
 					)
 					r.Status.RegexMissesContent++
-					jLog.Info(err, logFrom, r.Status.RegexMissesContent == 1)
+					log.Info(err, logFrom, r.Status.RegexMissesContent == 1)
 					return err
 				}
 				continue
@@ -101,8 +106,8 @@ func (r *LatestVersionRequireOptions) RegexCheckContent(
 	return nil
 }
 
-// CheckValues of the Service.
-func (r *LatestVersionRequireOptions) CheckValues(prefix string) (errs error) {
+// CheckValues of the Require Options.
+func (r *Options) CheckValues(prefix string) (errs error) {
 	// Content RegEx
 	if r.RegexContent != nil {
 		_, err := regexp.Compile(*r.RegexContent)

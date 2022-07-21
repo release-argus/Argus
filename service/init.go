@@ -33,12 +33,11 @@ func (s *Service) Init(
 	if s.Status == nil {
 		s.Status = &service_status.Status{}
 	}
-	if s.Status.Fails == nil {
-		s.Status.Fails = &service_status.Fails{}
-	}
 
 	s.Defaults = defaults
+	s.Options.Defaults = &s.Defaults.Options
 	s.HardDefaults = hardDefaults
+	s.Options.HardDefaults = &s.HardDefaults.Options
 	if s.DeployedVersionLookup != nil {
 		s.DeployedVersionLookup.Defaults = defaults.DeployedVersionLookup
 		s.DeployedVersionLookup.HardDefaults = hardDefaults.DeployedVersionLookup
@@ -59,7 +58,7 @@ func (s *Service) GetServiceInfo() utils.ServiceInfo {
 	return utils.ServiceInfo{
 		ID:            s.ID,
 		URL:           s.GetServiceURL(true),
-		WebURL:        s.Dashboard.GetWebURL(s.Status.LatestVersion),
+		WebURL:        s.Status.GetWebURL(),
 		LatestVersion: s.Status.LatestVersion,
 	}
 }
@@ -71,10 +70,10 @@ func (s *Service) GetServiceURL(ignoreWebURL bool) string {
 		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
 		if s.Status.LatestVersion == "" {
 			if !strings.Contains(s.Dashboard.WebURL, "version") {
-				return s.Dashboard.GetWebURL(s.Status.LatestVersion)
+				return s.Status.GetWebURL()
 			}
 		} else {
-			return s.Dashboard.GetWebURL(s.Status.LatestVersion)
+			return s.Status.GetWebURL()
 		}
 	}
 

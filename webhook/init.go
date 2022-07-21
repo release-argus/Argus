@@ -52,6 +52,7 @@ func (w *Slice) Init(
 			(*w)[key] = &WebHook{}
 		}
 		(*w)[key].ID = &id
+		(*w)[key].Failed = &serviceStatus.Fails.WebHook
 		(*w)[key].Init(
 			serviceID,
 			serviceStatus,
@@ -204,7 +205,7 @@ func (w *WebHook) IsRunnable() bool {
 func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
 	// pass
-	if !utils.EvalNilPtr(w.Failed, true) {
+	if !utils.EvalNilPtr((*w.Failed)[*w.ID], true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil

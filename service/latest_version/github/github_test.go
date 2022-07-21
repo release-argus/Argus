@@ -19,12 +19,14 @@ import (
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
+	github_types "github.com/release-argus/Argus/service/github/github_types"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 )
 
 func TestInsertionSortWithNewestVersion(t *testing.T) {
 	// GIVEN a list of releases
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "0.99.0"},
 		{TagName: "0.3.0"},
 		{TagName: "0.1.0"},
@@ -37,7 +39,7 @@ func TestInsertionSortWithNewestVersion(t *testing.T) {
 	}
 
 	// WHEN insertionSort is called with a release newer than the head
-	release := GitHubRelease{
+	release := github_types.Release{
 		TagName: "1.0.0",
 	}
 	semVer, _ := semver.NewVersion(release.TagName)
@@ -53,7 +55,7 @@ func TestInsertionSortWithNewestVersion(t *testing.T) {
 
 func TestInsertionSortWithNotNewestVersion(t *testing.T) {
 	// GIVEN a list of releases
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "0.99.0"},
 		{TagName: "0.3.0"},
 		{TagName: "0.1.0"},
@@ -66,7 +68,7 @@ func TestInsertionSortWithNotNewestVersion(t *testing.T) {
 	}
 
 	// WHEN insertionSort is called with a release somewhere in the middle of the versions so far
-	release := GitHubRelease{
+	release := github_types.Release{
 		TagName: "0.2.0",
 	}
 	semVer, _ := semver.NewVersion(release.TagName)
@@ -82,7 +84,7 @@ func TestInsertionSortWithNotNewestVersion(t *testing.T) {
 
 func TestInsertionSortWithNotOldestVersion(t *testing.T) {
 	// GIVEN a list of releases
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "0.99.0"},
 		{TagName: "0.3.0"},
 		{TagName: "0.2.0"},
@@ -95,7 +97,7 @@ func TestInsertionSortWithNotOldestVersion(t *testing.T) {
 	}
 
 	// WHEN insertionSort is called with a release older than the versions so far
-	release := GitHubRelease{
+	release := github_types.Release{
 		TagName: "0.0.0",
 	}
 	semVer, _ := semver.NewVersion(release.TagName)
@@ -113,10 +115,10 @@ func TestCheckGitHubReleasesBodyWithRateLimit(t *testing.T) {
 	// GIVEN a body detailing a rate limit
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something rate limit something")
-	svc := Service{}
+	lv := LatestVersion{}
 
 	// WHEN filterGitHubReleases is called on this body
-	_, err := svc.checkGitHubReleasesBody(&body, utils.LogFrom{})
+	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
 
 	// THEN we receive a nerr informing of this rate limit
 	if utils.ErrorToString(err) != "rate limit reached for GitHub" {
@@ -130,7 +132,7 @@ func TestCheckGitHubReleasesBodyWithBadCredentials(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something Bad credentials something")
 	url := "https://example.com"
-	svc := Service{URL: &url}
+	lv := LatestVersion{URL: url}
 	// Switch Fatal to panic and disable this panic.
 	jLog.Testing = true
 	defer func() {
@@ -142,7 +144,7 @@ func TestCheckGitHubReleasesBodyWithBadCredentials(t *testing.T) {
 	}()
 
 	// WHEN filterGitHubReleases is called on this body
-	_, err := svc.checkGitHubReleasesBody(&body, utils.LogFrom{})
+	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
 
 	// THEN we receive a nerr informing of this rate limit
 	t.Errorf("Shouldn't reach this as we should Fatal on %q\nerr = %s",
@@ -154,10 +156,10 @@ func TestCheckGitHubReleasesBodyWithNoTagNames(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something something something")
 	url := "https://example.com"
-	svc := Service{URL: &url}
+	lv := LatestVersion{URL: url}
 
 	// WHEN filterGitHubReleases is called on this body
-	_, err := svc.checkGitHubReleasesBody(&body, utils.LogFrom{})
+	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
 
 	// THEN we receive a nerr informing of this rate limit
 	if !strings.HasPrefix(utils.ErrorToString(err), "tag_name not found at") {
@@ -171,10 +173,10 @@ func TestCheckGitHubReleasesBodyWithInvalidJSON(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte(strings.Repeat("something something something", 100))
 	url := "https://example.com"
-	svc := Service{URL: &url}
+	lv := LatestVersion{URL: url}
 
 	// WHEN filterGitHubReleases is called on this body
-	_, err := svc.checkGitHubReleasesBody(&body, utils.LogFrom{})
+	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
 
 	// THEN we receive a nerr informing of this rate limit
 	if !strings.HasPrefix(utils.ErrorToString(err), "unmarshal of GitHub API data failed") {
@@ -191,14 +193,16 @@ func TestFilterGitHubReleasesDoesFilterPreReleases(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = true
 	)
-	svc := Service{
-		URL:                &url,
-		SemanticVersioning: &semanticVersioning,
-		UsePreRelease:      &usePreRelease,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	lv := LatestVersion{
+		URL: url,
+		Options: &options.Options{
+			SemanticVersioning: &semanticVersioning,
+		},
+		UsePreRelease: &usePreRelease,
+		Defaults:      &LatestVersion{},
+		HardDefaults:  &LatestVersion{},
 	}
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "0.99.0"},
 		{TagName: "0.3.0", PreRelease: true},
 		{TagName: "0.2.0"},
@@ -208,7 +212,7 @@ func TestFilterGitHubReleasesDoesFilterPreReleases(t *testing.T) {
 	// WHEN filterGitHubReleases is called on these releases
 	// with a Service that wants pre_release's
 	wantKept := releases[1]
-	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := lv.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the pre_release is filtered out
 	if len(filteredReleases) != 4 || filteredReleases[1].TagName != wantKept.TagName {
@@ -225,14 +229,16 @@ func TestFilterGitHubReleasesDoesntFilterPreReleases(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	svc := Service{
-		URL:                &url,
-		SemanticVersioning: &semanticVersioning,
-		UsePreRelease:      &usePreRelease,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	lv := LatestVersion{
+		URL: url,
+		Options: &options.Options{
+			SemanticVersioning: &semanticVersioning,
+		},
+		UsePreRelease: &usePreRelease,
+		Defaults:      &LatestVersion{},
+		HardDefaults:  &LatestVersion{},
 	}
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "0.99.0"},
 		{TagName: "0.3.0", PreRelease: true},
 		{TagName: "0.2.0"},
@@ -241,7 +247,7 @@ func TestFilterGitHubReleasesDoesntFilterPreReleases(t *testing.T) {
 
 	// WHEN filterGitHubReleases is called on these releases
 	wantGone := releases[1]
-	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := lv.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the pre_release is filtered out
 	if len(filteredReleases) != 3 || filteredReleases[1].TagName == wantGone.TagName {
@@ -258,14 +264,16 @@ func TestFilterGitHubReleasesWithNotCareSemantic(t *testing.T) {
 		semanticVersioning = false
 		usePreRelease      = false
 	)
-	svc := Service{
-		URL:                &url,
-		SemanticVersioning: &semanticVersioning,
-		UsePreRelease:      &usePreRelease,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	lv := LatestVersion{
+		URL: url,
+		Options: &options.Options{
+			SemanticVersioning: &semanticVersioning,
+		},
+		UsePreRelease: &usePreRelease,
+		Defaults:      &LatestVersion{},
+		HardDefaults:  &LatestVersion{},
 	}
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "990"},
 		{TagName: "30"},
 		{TagName: "20"},
@@ -274,7 +282,7 @@ func TestFilterGitHubReleasesWithNotCareSemantic(t *testing.T) {
 
 	// WHEN filterGitHubReleases is called on these releases
 	// with no semantic versioning not wanted
-	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := lv.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN all releases are returned
 	if len(filteredReleases) != 4 {
@@ -291,14 +299,16 @@ func TestFilterGitHubReleasesWithSomeNonSemantic(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	svc := Service{
-		URL:                &url,
-		SemanticVersioning: &semanticVersioning,
-		UsePreRelease:      &usePreRelease,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	lv := LatestVersion{
+		URL: url,
+		Options: &options.Options{
+			SemanticVersioning: &semanticVersioning,
+		},
+		UsePreRelease: &usePreRelease,
+		Defaults:      &LatestVersion{},
+		HardDefaults:  &LatestVersion{},
 	}
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "990"},
 		{TagName: "30"},
 		{TagName: "0.0.0"},
@@ -309,7 +319,7 @@ func TestFilterGitHubReleasesWithSomeNonSemantic(t *testing.T) {
 	// WHEN filterGitHubReleases is called on these releases
 	// with semantic versioning wanted
 	want := releases[2]
-	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := lv.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the non-semantic releases are filtered out
 	if len(filteredReleases) != 1 || filteredReleases[0].TagName != want.TagName {
@@ -326,14 +336,16 @@ func TestFilterGitHubReleasesWithSomeNonSemanticDidSort(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	svc := Service{
-		URL:                &url,
-		SemanticVersioning: &semanticVersioning,
-		UsePreRelease:      &usePreRelease,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	lv := LatestVersion{
+		URL: url,
+		Options: &options.Options{
+			SemanticVersioning: &semanticVersioning,
+		},
+		UsePreRelease: &usePreRelease,
+		Defaults:      &LatestVersion{},
+		HardDefaults:  &LatestVersion{},
 	}
-	releases := []GitHubRelease{
+	releases := []github_types.Release{
 		{TagName: "990"},
 		{TagName: "0.2.0"},
 		{TagName: "30"},
@@ -350,7 +362,7 @@ func TestFilterGitHubReleasesWithSomeNonSemanticDidSort(t *testing.T) {
 		"0.1.0",
 		"0.0.0",
 	}
-	filteredReleases := svc.filterGitHubReleases(releases, utils.LogFrom{})
+	filteredReleases := lv.filterGitHubReleases(releases, utils.LogFrom{})
 
 	// THEN the non-semantic releases are filtered out
 

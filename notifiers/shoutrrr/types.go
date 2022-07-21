@@ -26,12 +26,12 @@ var (
 type Slice map[string]*Shoutrrr
 
 type Shoutrrr struct {
-	Type         string    `yaml:"type,omitempty"` // Notification type, e.g. slack
-	ID           *string   `yaml:"-"`              // ID for this Shoutrrr sender
-	HardDefaults *Shoutrrr `yaml:"-"`              // Harcoded default values
-	Defaults     *Shoutrrr `yaml:"-"`              // Default values
-	Main         *Shoutrrr `yaml:"-"`              // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
-	Failed       *bool     `yaml:"-"`              // Whether the last send attempt failed
+	Type         string            `yaml:"type,omitempty"` // Notification type, e.g. slack
+	ID           *string           `yaml:"-"`              // ID for this Shoutrrr sender
+	HardDefaults *Shoutrrr         `yaml:"-"`              // Harcoded default values
+	Defaults     *Shoutrrr         `yaml:"-"`              // Default values
+	Main         *Shoutrrr         `yaml:"-"`              // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
+	Failed       *map[string]*bool `yaml:"-"`              // Whether the last send attempt failed
 
 	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
 	// Thinking this may be preferable as it makes adding new services much quicker/easier

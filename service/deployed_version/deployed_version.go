@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package deployed_version
 
 import (
 	"crypto/tls"
@@ -29,40 +29,40 @@ import (
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (d *DeployedVersionLookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(d.options.DeployedVersionAllowInvalidCerts, d.options.Defaults.DeployedVersionAllowInvalidCerts, d.options.HardDefaults.DeployedVersionAllowInvalidCerts)
+func (d *Lookup) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(d.AllowInvalidCerts, d.Defaults.AllowInvalidCerts, d.HardDefaults.AllowInvalidCerts)
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
-func (d *DeployedVersionLookup) Track(parent *Service) {
+func (d *Lookup) Track(parentID string) {
 	if d == nil {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: parent.ID}
+	logFrom := utils.LogFrom{Primary: parentID}
 
 	// Track forever.
 	for {
-		deployedVersion, err := d.Query(logFrom, parent.Options.GetSemanticVersioning())
+		deployedVersion, err := d.Query(logFrom, d.options.GetSemanticVersioning())
 		// If new release found by ^ query.
-		if err == nil && deployedVersion != parent.Status.DeployedVersion {
+		if err == nil && deployedVersion != d.Status.DeployedVersion {
 			// Announce the updated deployment
-			parent.SetDeployedVersion(deployedVersion)
+			d.Status.SetDeployedVersion(deployedVersion)
 
 			// If this new deployedVersion isn't LatestVersion
 			// Check that it's not a later version than LatestVersion
-			if deployedVersion != parent.Status.LatestVersion && parent.Options.GetSemanticVersioning() && parent.Status.LatestVersion != "" {
+			if deployedVersion != d.Status.LatestVersion && d.options.GetSemanticVersioning() && d.Status.LatestVersion != "" {
 				//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
 				//nolint:errcheck // ^
 				deployedVersionSV, _ := semver.NewVersion(deployedVersion)
 				//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
 				//nolint:errcheck // ^
-				latestVersionSV, _ := semver.NewVersion(parent.Status.LatestVersion)
+				latestVersionSV, _ := semver.NewVersion(d.Status.LatestVersion)
 
 				// Update LatestVersion to DeployedVersion if it's newer
 				if latestVersionSV.LessThan(*deployedVersionSV) {
-					parent.Status.LatestVersion = parent.Status.DeployedVersion
-					parent.Status.LatestVersionTimestamp = parent.Status.DeployedVersionTimestamp
-					parent.AnnounceQueryNewVersion()
+					d.Status.LatestVersion = d.Status.DeployedVersion
+					d.Status.LatestVersionTimestamp = d.Status.DeployedVersionTimestamp
+					d.Status.AnnounceQueryNewVersion()
 				}
 			}
 
@@ -71,15 +71,15 @@ func (d *DeployedVersionLookup) Track(parent *Service) {
 				fmt.Sprintf("Updated to %q", deployedVersion),
 				logFrom,
 				true)
-			parent.AnnounceUpdate()
+			d.Status.AnnounceUpdate()
 		}
 		// Sleep interval between queries.
-		time.Sleep(parent.Options.GetIntervalDuration())
+		time.Sleep(d.options.GetIntervalDuration())
 	}
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
+func (d *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
 	rawBody, err := d.httpRequest(logFrom)
 	if err != nil {
 		return "", err
@@ -148,7 +148,7 @@ func (d *DeployedVersionLookup) Query(logFrom utils.LogFrom, semanticVersioning 
 	return version, nil
 }
 
-func (d *DeployedVersionLookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+func (d *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
 	// HTTPS insecure skip verify.
 	customTransport := &http.Transport{}
 	if d.GetAllowInvalidCerts() {
@@ -192,8 +192,8 @@ func (d *DeployedVersionLookup) httpRequest(logFrom utils.LogFrom) (rawBody []by
 	return
 }
 
-// Print will print the DeployedVersionLookup.
-func (d *DeployedVersionLookup) Print(prefix string) {
+// Print will print the Lookup.
+func (d *Lookup) Print(prefix string) {
 	if d == nil {
 		return
 	}
@@ -201,6 +201,7 @@ func (d *DeployedVersionLookup) Print(prefix string) {
 	prefix += "  "
 
 	utils.PrintlnIfNotDefault(d.URL, fmt.Sprintf("%surl: %s", prefix, d.URL))
+	utils.PrintlnIfNotNil(d.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(d.AllowInvalidCerts)))
 	if d.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
 		fmt.Printf("%s  username: %s\n", prefix, d.BasicAuth.Username)
@@ -217,8 +218,8 @@ func (d *DeployedVersionLookup) Print(prefix string) {
 	utils.PrintlnIfNotDefault(d.Regex, fmt.Sprintf("%sregex: %q", prefix, d.Regex))
 }
 
-// CheckValues of the DeployedVersionLookup.
-func (d *DeployedVersionLookup) CheckValues(prefix string) (errs error) {
+// CheckValues of the Lookup.
+func (d *Lookup) CheckValues(prefix string) (errs error) {
 	if d == nil {
 		return
 	}

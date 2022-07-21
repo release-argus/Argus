@@ -42,7 +42,7 @@ type WebHook struct {
 	Delay             *string                `yaml:"delay,omitempty"`               // The delay before sending the WebHook.
 	MaxTries          *uint                  `yaml:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
 	SilentFails       *bool                  `yaml:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
-	Failed            *bool                  `yaml:"-"`                             // Whether the last send attempt failed
+	Failed            *map[string]*bool      `yaml:"-"`                             // Whether the last send attempt failed
 	NextRunnable      time.Time              `yaml:"-"`                             // Time the WebHook can next be run (for staggering)
 	HardDefaults      *WebHook               `yaml:"-"`                             // Hardcoded default values
 	Defaults          *WebHook               `yaml:"-"`                             // Default values

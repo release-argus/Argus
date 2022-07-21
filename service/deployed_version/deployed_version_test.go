@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package service
+package deployed_version
 
 import (
 	"io/ioutil"
@@ -28,8 +28,8 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestDeployedVersionLookupGetAllowInvalidCerts(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupGetAllowInvalidCerts(t *testing.T) {
+	// GIVEN a Lookup
 	dvl := testDeployedVersion()
 
 	// WHEN GetAllowInvalidCerts is called on it
@@ -43,8 +43,8 @@ func TestDeployedVersionLookupGetAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithInvalidURL(t *testing.T) {
-	// GIVEN a DeployedVersionLookup with an invalid URL
+func TestLookupQueryWithInvalidURL(t *testing.T) {
+	// GIVEN a Lookup with an invalid URL
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "invalid://	test"
@@ -59,8 +59,8 @@ func TestDeployedVersionLookupQueryWithInvalidURL(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithPassingJSON(t *testing.T) {
-	// GIVEN a DeployedVersionLookup referencing JSON
+func TestLookupQueryWithPassingJSON(t *testing.T) {
+	// GIVEN a Lookup referencing JSON
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
@@ -82,8 +82,8 @@ func TestDeployedVersionLookupQueryWithPassingJSON(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithFailingJSON(t *testing.T) {
-	// GIVEN a DeployedVersionLookup referencing JSON
+func TestLookupQueryWithFailingJSON(t *testing.T) {
+	// GIVEN a Lookup referencing JSON
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
@@ -100,8 +100,8 @@ func TestDeployedVersionLookupQueryWithFailingJSON(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithInvalidSourceJSON(t *testing.T) {
-	// GIVEN a DeployedVersionLookup referencing JSON
+func TestLookupQueryWithInvalidSourceJSON(t *testing.T) {
+	// GIVEN a Lookup referencing JSON
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io"
@@ -118,8 +118,8 @@ func TestDeployedVersionLookupQueryWithInvalidSourceJSON(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithPassingRegex(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupQueryWithPassingRegex(t *testing.T) {
+	// GIVEN a Lookup
 	dvl := testDeployedVersion()
 
 	// WHEN Query is called on it
@@ -137,8 +137,8 @@ func TestDeployedVersionLookupQueryWithPassingRegex(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithFailingRegex(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupQueryWithFailingRegex(t *testing.T) {
+	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.Regex = "^hello$"
@@ -153,8 +153,8 @@ func TestDeployedVersionLookupQueryWithFailingRegex(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithInvalidSemanticVersioning(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupQueryWithInvalidSemanticVersioning(t *testing.T) {
+	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 
@@ -168,8 +168,8 @@ func TestDeployedVersionLookupQueryWithInvalidSemanticVersioning(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithValidSemanticVersioning(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupQueryWithValidSemanticVersioning(t *testing.T) {
+	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/getting-started/"
@@ -190,8 +190,8 @@ func TestDeployedVersionLookupQueryWithValidSemanticVersioning(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithHeadersFail(t *testing.T) {
-	// GIVEN a DeployedVersionLookup with invalid GitHub auth headers
+func TestLookupQueryWithHeadersFail(t *testing.T) {
+	// GIVEN a Lookup with invalid GitHub auth headers
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
@@ -215,8 +215,8 @@ func TestDeployedVersionLookupQueryWithHeadersFail(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithBasicAuth(t *testing.T) {
-	// GIVEN a DeployedVersionLookup with Basic Auth
+func TestLookupQueryWithBasicAuth(t *testing.T) {
+	// GIVEN a Lookup with Basic Auth
 	dvl := testDeployedVersion()
 	dvl.BasicAuth = &BasicAuth{
 		Username: "argus",
@@ -238,8 +238,8 @@ func TestDeployedVersionLookupQueryWithBasicAuth(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupQueryWithAllowInvalidCerts(t *testing.T) {
-	// GIVEN a DeployedVersionLookup
+func TestLookupQueryWithAllowInvalidCerts(t *testing.T) {
+	// GIVEN a Lookup
 	dvl := testDeployedVersion()
 	*dvl.AllowInvalidCerts = true
 
@@ -258,9 +258,9 @@ func TestDeployedVersionLookupQueryWithAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupCheckValuesWithNil(t *testing.T) {
-	// GIVEN a nil DeployedVersionLookup
-	var dvl *DeployedVersionLookup
+func TestLookupCheckValuesWithNil(t *testing.T) {
+	// GIVEN a nil Lookup
+	var dvl *Lookup
 
 	// WHEN CheckValues is called on it
 	err := dvl.CheckValues("")
@@ -272,9 +272,9 @@ func TestDeployedVersionLookupCheckValuesWithNil(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupCheckValuesPass(t *testing.T) {
-	// GIVEN a nil DeployedVersionLookup
-	var dvl *DeployedVersionLookup
+func TestLookupCheckValuesPass(t *testing.T) {
+	// GIVEN a nil Lookup
+	var dvl *Lookup
 
 	// WHEN CheckValues is called on it
 	err := dvl.CheckValues("")
@@ -286,8 +286,8 @@ func TestDeployedVersionLookupCheckValuesPass(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupCheckValuesFail(t *testing.T) {
-	// GIVEN a nil DeployedVersionLookup
+func TestLookupCheckValuesFail(t *testing.T) {
+	// GIVEN a nil Lookup
 	dvl := testDeployedVersion()
 	dvl.URL = ""
 	dvl.Regex = "hello[0-9"
@@ -305,9 +305,9 @@ func TestDeployedVersionLookupCheckValuesFail(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupPrintWithNil(t *testing.T) {
-	// GIVEN a nil DeployedVersionLookup
-	var dvl *DeployedVersionLookup
+func TestLookupPrintWithNil(t *testing.T) {
+	// GIVEN a nil Lookup
+	var dvl *Lookup
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
@@ -327,8 +327,8 @@ func TestDeployedVersionLookupPrintWithNil(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupPrint(t *testing.T) {
-	// GIVEN a fully defined DeployedVersionLookup
+func TestLookupPrint(t *testing.T) {
+	// GIVEN a fully defined Lookup
 	dvl := testDeployedVersion()
 	dvl.Headers = []Header{
 		{
@@ -361,9 +361,9 @@ func TestDeployedVersionLookupPrint(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupTrackWithNil(t *testing.T) {
-	// GIVEN a nil DeployedVersionLookup
-	var dvl *DeployedVersionLookup
+func TestLookupTrackWithNil(t *testing.T) {
+	// GIVEN a nil Lookup
+	var dvl *Lookup
 
 	// WHEN CheckValues is called on it
 	start := time.Now().UTC()
@@ -377,8 +377,8 @@ func TestDeployedVersionLookupTrackWithNil(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
+func TestLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
+	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
@@ -389,9 +389,9 @@ func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 	interval := "10s"
 	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
-		ID:                    &serviceID,
-		Interval:              &interval,
-		DeployedVersionLookup: &dvl,
+		ID:       &serviceID,
+		Interval: &interval,
+		Lookup:   &dvl,
 		Status: &service_status.Status{
 			DeployedVersion: version,
 			LatestVersion:   "1.2.3",
@@ -403,7 +403,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 	}
 
 	// WHEN Track is called on this
-	go service.DeployedVersionLookup.Track(&service)
+	go service.Lookup.Track(&service)
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
@@ -414,8 +414,8 @@ func TestDeployedVersionLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 	}
 }
 
-func TestDeployedVersionLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
+func TestLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T) {
+	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
@@ -426,10 +426,10 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T
 	interval := "10s"
 	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
-		ID:                    &serviceID,
-		Interval:              &interval,
-		SemanticVersioning:    &semanticVersioning,
-		DeployedVersionLookup: &dvl,
+		ID:                 &serviceID,
+		Interval:           &interval,
+		SemanticVersioning: &semanticVersioning,
+		Lookup:             &dvl,
 		Status: &service_status.Status{
 			DeployedVersion: version,
 			LatestVersion:   "1.2.4",
@@ -440,7 +440,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T
 	}
 
 	// WHEN Track is called on this
-	go service.DeployedVersionLookup.Track(&service)
+	go service.Lookup.Track(&service)
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
@@ -454,8 +454,8 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T
 	}
 }
 
-func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
+func TestLookupTrackWithSuccessfulToNewerLatestVersion(t *testing.T) {
+	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
@@ -467,10 +467,10 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing
 	oldLatestVersion := "1.2.2"
 	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
-		ID:                    &serviceID,
-		Interval:              &interval,
-		SemanticVersioning:    &semanticVersioning,
-		DeployedVersionLookup: &dvl,
+		ID:                 &serviceID,
+		Interval:           &interval,
+		SemanticVersioning: &semanticVersioning,
+		Lookup:             &dvl,
 		Status: &service_status.Status{
 			DeployedVersion: version,
 			LatestVersion:   oldLatestVersion,
@@ -481,7 +481,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing
 	}
 
 	// WHEN Track is called on this
-	go service.DeployedVersionLookup.Track(&service)
+	go service.Lookup.Track(&service)
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
@@ -491,8 +491,8 @@ func TestDeployedVersionLookupTrackWithSuccessfulToNewerLatestVersion(t *testing
 	}
 }
 
-func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *testing.T) {
-	// GIVEN a Service with a working DeployedVersionLookup that will get a newer DeployedVersion
+func TestLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *testing.T) {
+	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
 	jLog = utils.NewJLog("WARN", false)
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
@@ -504,10 +504,10 @@ func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *test
 	announceChannel := make(chan []byte, 5)
 	databaseChannel := make(chan db_types.Message, 5)
 	service := Service{
-		ID:                    &serviceID,
-		Interval:              &interval,
-		SemanticVersioning:    &semanticVersioning,
-		DeployedVersionLookup: &dvl,
+		ID:                 &serviceID,
+		Interval:           &interval,
+		SemanticVersioning: &semanticVersioning,
+		Lookup:             &dvl,
 		Status: &service_status.Status{
 			DeployedVersion:          version,
 			DeployedVersionTimestamp: "2022-01-01T01:01:01Z",
@@ -520,7 +520,7 @@ func TestDeployedVersionLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *test
 	}
 
 	// WHEN Track is called on this
-	go service.DeployedVersionLookup.Track(&service)
+	go service.Lookup.Track(&service)
 
 	// THEN a Message is sent to the Announce channel
 	time.Sleep(2 * time.Second)

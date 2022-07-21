@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package options
 
 import (
 	"fmt"
@@ -23,15 +23,11 @@ import (
 )
 
 type Options struct {
-	Active                           *bool    `yaml:"active,omitempty"`                 // Disable the service.
-	Interval                         *string  `yaml:"interval,omitempty"`               // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning               *bool    `yaml:"semantic_versioning,omitempty"`    // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
-	AutoApprove                      *bool    `yaml:"auto_approve,omitempty"`           // default - true = Requre approval before sending WebHook(s) for new releases
-	UsePreRelease                    *bool    `yaml:"use_prerelease,omitempty"`         // Whether the prerelease tag should be used (prereleases are ignored by default)
-	LatestVersionAllowInvalidCerts   *bool    `yaml:"lv_allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates in the latest version lookup
-	DeployedVersionAllowInvalidCerts *bool    `yaml:"dv_allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates in the deployed version lookup
-	Defaults                         *Options `yaml:"-"`                                // Defaults
-	HardDefaults                     *Options `yaml:"-"`                                // Hard Defaults
+	Active             *bool    `yaml:"active,omitempty"`              // Disable the service.
+	Interval           *string  `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	SemanticVersioning *bool    `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
+	Defaults           *Options `yaml:"-"`                             // Defaults
+	HardDefaults       *Options `yaml:"-"`                             // Hard Defaults
 }
 
 // GetInterval between queries for this Service's latest version.
@@ -42,16 +38,6 @@ func (o *Options) GetInterval() string {
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
 func (o *Options) GetSemanticVersioning() bool {
 	return *utils.GetFirstNonDefault(o.SemanticVersioning, o.Defaults.SemanticVersioning, o.HardDefaults.SemanticVersioning)
-}
-
-// GetAutoApprove will return whether new releases should be auto-approved.
-func (o *Options) GetAutoApprove() bool {
-	return *utils.GetFirstNonDefault(o.AutoApprove, o.Defaults.AutoApprove, o.HardDefaults.AutoApprove)
-}
-
-// Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
-func (o *Options) GetUsePreRelease() bool {
-	return *utils.GetFirstNonDefault(o.UsePreRelease, o.Defaults.UsePreRelease, o.HardDefaults.UsePreRelease)
 }
 
 // GetIntervalPointer returns a pointer to the interval between queries on this Service's version.
@@ -88,8 +74,4 @@ func (o *Options) Print(prefix string) {
 	utils.PrintlnIfNotNil(o.Active, fmt.Sprintf("%sactive: %t", prefix, utils.DefaultIfNil(o.Active)))
 	utils.PrintlnIfNotNil(o.Interval, fmt.Sprintf("%sinterval: %s", prefix, utils.DefaultIfNil(o.Interval)))
 	utils.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%ssemantic_versioning: %t", prefix, utils.DefaultIfNil(o.SemanticVersioning)))
-	utils.PrintlnIfNotNil(o.AutoApprove, fmt.Sprintf("%sauto_approve: %t", prefix, utils.DefaultIfNil(o.AutoApprove)))
-	utils.PrintlnIfNotNil(o.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(o.UsePreRelease)))
-	utils.PrintlnIfNotNil(o.LatestVersionAllowInvalidCerts, fmt.Sprintf("%slv_allow_invalid_certs: %t", prefix, utils.DefaultIfNil(o.LatestVersionAllowInvalidCerts)))
-	utils.PrintlnIfNotNil(o.DeployedVersionAllowInvalidCerts, fmt.Sprintf("%sdv_allow_invalid_certs: %t", prefix, utils.DefaultIfNil(o.DeployedVersionAllowInvalidCerts)))
 }

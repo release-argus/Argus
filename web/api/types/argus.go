@@ -26,7 +26,7 @@ type ServiceSummary struct {
 	ID                       string  `json:"id,omitempty"`                   //
 	Active                   *bool   `json:"active,omitempty"`               // Active Service?
 	Comment                  *string `json:"comment,omitempty"`              // Comment on the Service
-	Type                     *string `json:"type,omitempty"`                 // "github"/"URL"
+	Type                     string  `json:"type,omitempty"`                 // "github"/"URL"
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
 	IconLinkTo               string  `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
@@ -234,15 +234,14 @@ type ServiceOptions struct {
 	Active             *bool   `json:"active,omitempty"`              // Active Service?
 	Interval           *string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
 	SemanticVersioning *bool   `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
-	AutoApprove        *bool   `json:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases
-	UsePreRelease      *bool   `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
 }
 
 // DashboardOptions.
 type DashboardOptions struct {
-	Icon       string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
-	IconLinkTo string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
-	WebURL     string `json:"web_url,omitempty"`      // URL to provide on the Web UI
+	AutoApprove *bool  `json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
+	Icon        string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
+	IconLinkTo  string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
+	WebURL      string `json:"web_url,omitempty"`      // URL to provide on the Web UI
 }
 
 // LatestVersion lookup of the service.
@@ -250,6 +249,7 @@ type LatestVersion struct {
 	URL               string                `json:"url,omitempty"`                 // URL to query
 	AccessToken       string                `json:"access_token,omitempty"`        // GitHub access token to use
 	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	UsePreRelease     *bool                 `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
 	URLCommands       *URLCommandSlice      `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
 	Require           *LatestVersionRequire `json:"require,omitempty"`             // Requirements for the version to be considered valid
 }

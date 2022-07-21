@@ -20,13 +20,14 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	deployed_version_lookup "github.com/release-argus/Argus/service/deployed_version"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *testing.T) {
 	// GIVEN a nil DeployedVersionLookup
-	var dvl *service.DeployedVersionLookup
+	var dvl *deployed_version_lookup.Lookup
 
 	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
 	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl)

@@ -82,7 +82,7 @@ func (w *WebHook) Send(
 		if err == nil {
 			metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, *w.ID, serviceInfo.ID, "", "SUCCESS")
 			failed := false
-			w.Failed = &failed
+			(*w.Failed)[*w.ID] = &failed
 			w.AnnounceSend()
 			return nil
 		}
@@ -100,7 +100,7 @@ func (w *WebHook) Send(
 				w.GetMaxTries(), *w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
-			w.Failed = &failed
+			(*w.Failed)[*w.ID] = &failed
 			w.AnnounceSend()
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL

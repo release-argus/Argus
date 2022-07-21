@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/github/api_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/github/api_types"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -32,9 +32,10 @@ func (l *LatestVersion) filterGitHubReleases(
 	logFrom utils.LogFrom,
 ) (filteredReleases []github_types.Release) {
 	semanticVerioning := l.Options.GetSemanticVersioning()
+	usePreReleases := l.GetUsePreRelease()
 	for i := range releases {
 		// If it isn't a prerelease, or it is and they're wanted
-		if !releases[i].PreRelease || (releases[i].PreRelease && l.Options.GetUsePreRelease()) {
+		if !releases[i].PreRelease || (releases[i].PreRelease && usePreReleases) {
 			var err error
 			// Check that TagName matches URLCommands
 			if releases[i].TagName, err = l.URLCommands.Run(releases[i].TagName, logFrom); err != nil {

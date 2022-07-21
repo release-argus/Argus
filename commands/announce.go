@@ -28,7 +28,7 @@ func (c *Controller) AnnounceCommand(index int) {
 	commandSummary := make(map[string]*api_types.CommandSummary)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_types.CommandSummary{
-		Failed:       c.Failed[index],
+		Failed:       (*c.Failed)[index],
 		NextRunnable: c.NextRunnable[index],
 	}
 
@@ -70,7 +70,7 @@ func (c *Controller) ResetFails() {
 	if c == nil {
 		return
 	}
-	for i := range c.Failed {
-		c.Failed[i] = nil
+	for i := range *c.Failed {
+		(*c.Failed)[i] = nil
 	}
 }

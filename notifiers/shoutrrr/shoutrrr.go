@@ -306,7 +306,7 @@ func (s *Shoutrrr) Send(
 		if !failed {
 			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
 			failed := false
-			s.Failed = &failed
+			(*s.Failed)[*s.ID] = &failed
 			return
 		}
 
@@ -319,7 +319,7 @@ func (s *Shoutrrr) Send(
 			msg = fmt.Sprintf("failed %d times to send a %s message to %s", s.GetMaxTries(), s.GetType(), s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
-			s.Failed = &failed
+			(*s.Failed)[*s.ID] = &failed
 			for key := range combinedErrs {
 				errs = fmt.Errorf("%s%s x %d",
 					utils.ErrorToString(errs), key, combinedErrs[key])

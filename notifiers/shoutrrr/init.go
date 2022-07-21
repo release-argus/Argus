@@ -15,6 +15,7 @@
 package shoutrrr
 
 import (
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	metrics "github.com/release-argus/Argus/web/metrics"
 )
@@ -23,6 +24,7 @@ import (
 func (s *Slice) Init(
 	log *utils.JLog,
 	serviceID *string,
+	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *Slice,
 	hardDefaults *Slice,
@@ -41,6 +43,7 @@ func (s *Slice) Init(
 			(*s)[key] = &Shoutrrr{}
 		}
 		(*s)[key].ID = &id
+		(*s)[key].Failed = &serviceStatus.Fails.Shoutrrr
 
 		if len(*mains) == 0 {
 			mains = &Slice{}

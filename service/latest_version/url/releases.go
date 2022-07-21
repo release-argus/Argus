@@ -30,6 +30,7 @@ func (l *LatestVersion) GetVersion(rawBody []byte, logFrom utils.LogFrom) (versi
 	// Break if version passed the regex check
 	if err = l.Require.RegexCheckVersion(
 		version,
+		jLog,
 		logFrom,
 	); err == nil {
 		// regexCheckContent if it's a newer version
@@ -37,6 +38,7 @@ func (l *LatestVersion) GetVersion(rawBody []byte, logFrom utils.LogFrom) (versi
 			if err = l.Require.RegexCheckContent(
 				version,
 				string(rawBody),
+				jLog,
 				logFrom,
 			); err != nil {
 				return

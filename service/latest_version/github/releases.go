@@ -17,7 +17,7 @@ package github
 import (
 	"fmt"
 
-	github_types "github.com/release-argus/Argus/service/github/api_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/github/api_types"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -38,6 +38,7 @@ func (l *LatestVersion) GetVersion(rawBody []byte, logFrom utils.LogFrom) (versi
 		// Break if version passed the regex check
 		if err = l.Require.RegexCheckVersion(
 			version,
+			jLog,
 			logFrom,
 		); err == nil {
 			// regexCheckContent if it's a newer version
@@ -46,6 +47,7 @@ func (l *LatestVersion) GetVersion(rawBody []byte, logFrom utils.LogFrom) (versi
 				if err = l.Require.RegexCheckContent(
 					version,
 					filteredReleases[i].Assets,
+					jLog,
 					logFrom,
 				); err != nil {
 					if i == len(filteredReleases)-1 {

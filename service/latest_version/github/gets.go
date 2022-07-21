@@ -16,16 +16,23 @@ package github
 
 import (
 	"fmt"
+
+	"github.com/release-argus/Argus/utils"
 )
 
 // GetURL will get the non-API URL.
-func (l *LatestVersion) GetFriendlyURL() string {
+func (l LatestVersion) GetFriendlyURL() string {
 	// Convert "owner/repo" to the non-API path.
 	return fmt.Sprintf("https://github.com/%s", l.URL)
 }
 
 // GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
-func (l *LatestVersion) GetLookupURL() string {
+func (l LatestVersion) GetLookupURL() string {
 	// Convert "owner/repo" to the API path.
 	return fmt.Sprintf("https://api.github.com/repos/%s/releases", l.URL)
+}
+
+// Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
+func (l *LatestVersion) GetUsePreRelease() bool {
+	return *utils.GetFirstNonDefault(l.UsePreRelease, l.Defaults.UsePreRelease, l.HardDefaults.UsePreRelease)
 }

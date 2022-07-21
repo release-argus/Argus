@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package service
+package url_command
 
 import (
 	"io/ioutil"
@@ -92,9 +92,9 @@ func TestURLCommandPrintSplit(t *testing.T) {
 	}
 }
 
-func TestURLCommandSlicePrintNil(t *testing.T) {
+func TestSlicePrintNil(t *testing.T) {
 	// GIVEN a nil SLice
-	var slice *URLCommandSlice
+	var slice *Slice
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
@@ -114,9 +114,9 @@ func TestURLCommandSlicePrintNil(t *testing.T) {
 	}
 }
 
-func TestURLCommandSlicePrintAllTypes(t *testing.T) {
+func TestSlicePrintAllTypes(t *testing.T) {
 	// GIVEN a Slice containing each URLCommand type
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandRegex(),
 		testURLCommandReplace(),
 		testURLCommandSplit(),
@@ -142,7 +142,7 @@ func TestURLCommandSlicePrintAllTypes(t *testing.T) {
 
 func TestURLCommandSetParentIgnoreMissesWithNil(t *testing.T) {
 	// GIVEN a nil slice and parentIgnoreMisses
-	var slice *URLCommandSlice
+	var slice *Slice
 	parentIgnoreMisses := false
 
 	// WHEN SetParentIgnoreMisses is called on it
@@ -153,7 +153,7 @@ func TestURLCommandSetParentIgnoreMissesWithNil(t *testing.T) {
 
 func TestURLCommandSetParentIgnoreMisses(t *testing.T) {
 	// GIVEN a Slice containing each URLCommand type and parentIgnoreMisses
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandRegex(),
 		testURLCommandReplace(),
 		testURLCommandSplit(),
@@ -187,9 +187,9 @@ func TestURLCommandGetIgnoreMisses(t *testing.T) {
 	}
 }
 
-func TestURLCommandSliceRunWithNil(t *testing.T) {
+func TestSliceRunWithNil(t *testing.T) {
 	// GIVEN a nil URLCommand Slice
-	var slice *URLCommandSlice
+	var slice *Slice
 
 	// WHEN run is called on it
 	_, err := slice.run("", utils.LogFrom{})
@@ -201,10 +201,10 @@ func TestURLCommandSliceRunWithNil(t *testing.T) {
 	}
 }
 
-func TestURLCommandSliceRunWithSuccess(t *testing.T) {
+func TestSliceRunWithSuccess(t *testing.T) {
 	// GIVEN a URLCommand Slice that will pass
 	jLog = utils.NewJLog("WARN", false)
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandSplit(),
 		testURLCommandRegex(),
 		testURLCommandReplace(),
@@ -230,10 +230,10 @@ func TestURLCommandSliceRunWithSuccess(t *testing.T) {
 	}
 }
 
-func TestURLCommandSliceRunWithFail(t *testing.T) {
+func TestSliceRunWithFail(t *testing.T) {
 	// GIVEN a URLCommand Slice that will pass
 	jLog = utils.NewJLog("WARN", false)
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandSplit(),
 		testURLCommandRegex(),
 		testURLCommandReplace(),
@@ -546,7 +546,7 @@ func TestURLCommandCheckValuesInvalidType(t *testing.T) {
 
 func TestCheckValuesWithNil(t *testing.T) {
 	// GIVEN a nil URLCommand Slice
-	var slice *URLCommandSlice
+	var slice *Slice
 
 	// WHEN CheckValues is called on it
 	err := slice.CheckValues("")
@@ -560,7 +560,7 @@ func TestCheckValuesWithNil(t *testing.T) {
 
 func TestCheckValuesPass(t *testing.T) {
 	// GIVEN a URLCommand Slice with every type
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandRegex(),
 		testURLCommandReplace(),
 		testURLCommandSplit(),
@@ -578,7 +578,7 @@ func TestCheckValuesPass(t *testing.T) {
 
 func TestCheckValuesFail(t *testing.T) {
 	// GIVEN a URLCommand Slice with every type
-	slice := URLCommandSlice{
+	slice := Slice{
 		testURLCommandRegex(),
 		testURLCommandRegex(),
 		testURLCommandReplace(),
@@ -606,8 +606,8 @@ func TestCheckValuesFail(t *testing.T) {
 
 func TestUnmarshalYAMLSingle(t *testing.T) {
 	// GIVEN we've read a config file containg a single URLCommand not in list style
-	var slice URLCommandSlice
-	data, _ := os.ReadFile("../test/urlcommandslice_single.yml")
+	var slice Slice
+	data, _ := os.ReadFile("../test/Slice_single.yml")
 
 	// WHEN Unmarshalled
 	err := yaml.Unmarshal(data, &slice)
@@ -660,8 +660,8 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 
 func TestUnmarshalYAMLMulti(t *testing.T) {
 	// GIVEN we've read a config file containg a list of 2 URLCommands
-	var slice URLCommandSlice
-	data, _ := os.ReadFile("../test/urlcommandslice_multi.yml")
+	var slice Slice
+	data, _ := os.ReadFile("../test/Slice_multi.yml")
 
 	// WHEN Unmarshalled
 	err := yaml.Unmarshal(data, &slice)
@@ -684,8 +684,8 @@ func TestUnmarshalYAMLMulti(t *testing.T) {
 
 func TestUnmarshalYAMLInvalid(t *testing.T) {
 	// GIVEN we've read a config file containg invalid YAML
-	var slice URLCommandSlice
-	data, _ := os.ReadFile("../test/urlcommandslice_invalid.yml")
+	var slice Slice
+	data, _ := os.ReadFile("../test/Slice_invalid.yml")
 
 	// WHEN Unmarshalled
 	err := yaml.Unmarshal(data, &slice)

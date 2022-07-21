@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package url_command
 
 import (
 	"fmt"
@@ -22,29 +22,14 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-// URLCommandSlice is a slice of URLCommand to be used to filter version from the URL Content.
-type URLCommandSlice []URLCommand
-
-// URLCommand is a command to be ran to filter version from the URL body.
-type URLCommand struct {
-	Type               string  `yaml:"type"`                    // regex/replace/split
-	Regex              *string `yaml:"regex,omitempty"`         // regex: regexp.MustCompile(Regex)
-	Index              int     `yaml:"index,omitempty"`         // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text               *string `yaml:"text,omitempty"`          // split:                strings.Split(tgtString, "Text")
-	New                *string `yaml:"new,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	Old                *string `yaml:"old,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	IgnoreMisses       *bool   `yaml:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
-	ParentIgnoreMisses *bool   `yaml:"-"`                       // IgnoreMisses, but from the parent Service (used as default)
-}
-
 // UnmarshalYAML allows handling of a dict as well as a list of dicts.
 //
 // It will convert a dict to a list of a dict.
 //
-// e.g.    URLCommandSlice: { type: "split" }
+// e.g.    Slice: { type: "split" }
 //
-// becomes URLCommandSlice: [ { type: "split" } ]
-func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error {
+// becomes Slice: [ { type: "split" } ]
+func (c *Slice) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var multi []URLCommand
 	err := unmarshal(&multi)
 	if err != nil {
@@ -60,8 +45,8 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
-// Print will print the URLCommand's in the URLCommandSlice.
-func (c *URLCommandSlice) Print(prefix string) {
+// Print will print the URLCommand's in the Slice.
+func (c *Slice) Print(prefix string) {
 	if c == nil {
 		fmt.Printf("%s[]\n", prefix)
 		return
@@ -91,7 +76,7 @@ func (c *URLCommand) Print(prefix string) {
 }
 
 // SetParentIgnoreMisses will set ParentIgnoreMisses of each URLCommand in the Slice to ignore if it's nil in the slice.
-func (c *URLCommandSlice) SetParentIgnoreMisses(ignore *bool) {
+func (c *Slice) SetParentIgnoreMisses(ignore *bool) {
 	if c == nil {
 		return
 	}
@@ -106,8 +91,8 @@ func (c *URLCommand) GetIgnoreMisses() *bool {
 	return utils.GetFirstNonNilPtr(c.IgnoreMisses, c.ParentIgnoreMisses)
 }
 
-// Run will run all of the URLCommand(s) in this URLCommandSlice.
-func (c *URLCommandSlice) Run(text string, logFrom utils.LogFrom) (string, error) {
+// Run will run all of the URLCommand(s) in this Slice.
+func (c *Slice) Run(text string, logFrom utils.LogFrom) (string, error) {
 	if c == nil {
 		return text, nil
 	}
@@ -205,8 +190,8 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	return texts[index], nil
 }
 
-// CheckValues of the URLCommand(s) in the URLCommandSlice.
-func (c *URLCommandSlice) CheckValues(prefix string) error {
+// CheckValues of the URLCommand(s) in the Slice.
+func (c *Slice) CheckValues(prefix string) error {
 	if c == nil {
 		return nil
 	}

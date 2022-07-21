@@ -64,7 +64,7 @@ func ServiceTest(
 	if service != nil {
 		service.Status = &service_status.Status{}
 	}
-	_, err := service.Query()
+	_, err := service.LatestVersion.Query()
 	if err != nil {
 		log.Error(
 			fmt.Sprintf(

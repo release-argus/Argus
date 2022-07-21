@@ -21,10 +21,12 @@ import (
 )
 
 // Print the struct.
-func (l *LatestVersion) Print(prefix string) {
+func (l LatestVersion) Print(prefix string) {
 	fmt.Printf("%stype: github", prefix)
 	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%srepo: %s", prefix, l.URL))
-	utils.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, utils.DefaultIfNil(l.AccessToken)))
+	utils.PrintlnIfNotDefault(l.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, l.AccessToken))
+	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
+	utils.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(l.UsePreRelease)))
 	if l.URLCommands != nil {
 		fmt.Printf("%surl_commands:\n", prefix)
 		l.URLCommands.Print(prefix)

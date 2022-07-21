@@ -18,14 +18,12 @@ import (
 	"fmt"
 	"strings"
 
+	url_command "github.com/release-argus/Argus/service/url_commands"
 	"github.com/release-argus/Argus/utils"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-func (l *LatestVersion) URLCommandsCheckValues(prefix string) error {
-	return l.URLCommands.CheckValues(prefix)
-}
-
-func (l *LatestVersion) CheckValues(prefix string) (errs error) {
+func (l LatestVersion) CheckValues(prefix string) (errs error) {
 	if l.URL == "" {
 		errs = fmt.Errorf("%s%srepo: <required> e.g. 'release-argus/Argus'",
 			utils.ErrorToString(errs), prefix)
@@ -39,6 +37,10 @@ func (l *LatestVersion) CheckValues(prefix string) (errs error) {
 		errs = fmt.Errorf("%s  require:\\%w",
 			prefix, requireErrs)
 	}
+	if urlCommandErrs := l.URLCommands.CheckValues(prefix + "  "); urlCommandErrs != nil {
+		errs = fmt.Errorf("%s  url_commands:\\%w",
+			prefix, urlCommandErrs)
+	}
 
 	if errs != nil {
 		errs = fmt.Errorf("%slatest_version:\\%w",
@@ -48,18 +50,35 @@ func (l *LatestVersion) CheckValues(prefix string) (errs error) {
 	return
 }
 
-func (l *LatestVersion) GetAccessToken() *string {
-	return utils.GetFirstNonNilPtr(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
+func (l *LatestVersion) GetAccessToken() string {
+	return utils.GetFirstNonDefault(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
 }
 
 func (l *LatestVersion) GetAllowInvalidCerts() *bool {
 	return utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
 }
 
-func (l *LatestVersion) GetSelfAllowInvalidCerts() *bool {
-	return l.AllowInvalidCerts
-}
-
 func (l *LatestVersion) GetURL() *string {
 	return &l.URL
+}
+
+func (l LatestVersion) GetType() string {
+	return "github"
+}
+
+func (l LatestVersion) GetURLCommands() *url_command.Slice {
+	return l.URLCommands
+}
+
+func (l LatestVersion) ConvertToAPIType() *api_types.LatestVersion {
+	return &api_types.LatestVersion{
+		URL:               l.URL,
+		AccessToken:       utils.ValueIfNotDefault(l.AccessToken, "<secret>"),
+		AllowInvalidCerts: l.AllowInvalidCerts,
+		UsePreRelease:     l.UsePreRelease,
+		Require: &api_types.LatestVersionRequire{
+			RegexContent: l.Require.RegexContent,
+			RegexVersion: l.Require.RegexVersion,
+		},
+	}
 }

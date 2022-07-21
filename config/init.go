@@ -20,7 +20,8 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -31,7 +32,7 @@ func (c *Config) Init() {
 	c.Settings.SetDefaults()
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
-		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
+		c.Defaults.Service.DeployedVersionLookup = &deployed_version.Lookup{}
 	}
 
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
@@ -47,6 +48,7 @@ func (c *Config) Init() {
 		c.Service[serviceID].Notify.Init(
 			jLog,
 			&serviceID,
+			service.Status,
 			&c.Notify,
 			&c.Defaults.Notify,
 			&c.HardDefaults.Notify,
@@ -118,8 +120,10 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	for key := range c.Service {
 		c.Service[key].ID = key
-		c.Service[key].DatabaseChannel = c.DatabaseChannel
-		c.Service[key].SaveChannel = c.SaveChannel
+		c.Service[key].Status = &service_status.Status{
+			DatabaseChannel: c.DatabaseChannel,
+			SaveChannel:     c.SaveChannel,
+		}
 	}
 	c.Init()
 	c.CheckValues()

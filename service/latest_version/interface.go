@@ -12,20 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package url
+package latest_version
 
 import (
-	"fmt"
-
-	"github.com/release-argus/Argus/utils"
+	url_command "github.com/release-argus/Argus/service/url_commands"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-// Print the struct.
-func (l LatestVersion) Print(prefix string) {
-	fmt.Printf("%stype: url", prefix)
-	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	if l.URLCommands != nil {
-		fmt.Printf("%surl_commands:\n", prefix)
-		l.URLCommands.Print(prefix)
-	}
+type Lookup interface {
+	GetType() string
+	GetFriendlyURL() string
+	GetLookupURL() string
+
+	ConvertToAPIType() *api_types.LatestVersion
+	GetURLCommands() *url_command.Slice
+
+	Query() (bool, error)
+
+	CheckValues(string) error
+	Print(string)
 }

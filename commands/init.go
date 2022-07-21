@@ -45,7 +45,7 @@ func (c *Controller) Init(
 	if command != nil {
 		c.Command = command
 	}
-	c.Failed = make(Fails, len(*c.Command))
+	c.Failed = &serviceStatus.Fails.Command
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 
 	parentID := *serviceID
@@ -112,7 +112,7 @@ func (c *Controller) SetNextRunnable(index int, executing bool) {
 	}
 
 	// Different times depending on pass/fail
-	if !utils.EvalNilPtr(c.Failed[index], true) {
+	if !utils.EvalNilPtr((*c.Failed)[index], true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
 		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {

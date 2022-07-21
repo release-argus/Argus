@@ -17,16 +17,18 @@ package url
 import (
 	"fmt"
 
+	url_command "github.com/release-argus/Argus/service/url_commands"
 	"github.com/release-argus/Argus/utils"
+	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
 func (l *LatestVersion) URLCommandsCheckValues(prefix string) error {
 	return l.URLCommands.CheckValues(prefix)
 }
 
-func (l *LatestVersion) CheckValues(prefix string) (errs error) {
-	if utils.DefaultIfNil(l.URL) == "" {
-		errs = fmt.Errorf("%s%srepo: <required> e.g. 'release-argus/Argus'",
+func (l LatestVersion) CheckValues(prefix string) (errs error) {
+	if l.URL == "" {
+		errs = fmt.Errorf("%s%srepo: <required> e.g. 'https://release-argus.io'",
 			utils.ErrorToString(errs), prefix)
 	}
 
@@ -41,4 +43,39 @@ func (l *LatestVersion) CheckValues(prefix string) (errs error) {
 	}
 
 	return
+}
+
+// GetURL will get the non-API URL.
+func (l LatestVersion) GetFriendlyURL() string {
+	// Convert "owner/repo" to the non-API path.
+	return l.URL
+}
+
+// GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
+func (l LatestVersion) GetLookupURL() string {
+	// Convert "owner/repo" to the API path.
+	return l.URL
+}
+
+func (l *LatestVersion) GetAllowInvalidCerts() *bool {
+	return utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
+}
+
+func (l LatestVersion) GetType() string {
+	return *l.Type
+}
+
+func (l LatestVersion) ConvertToAPIType() *api_types.LatestVersion {
+	return &api_types.LatestVersion{
+		URL:               l.URL,
+		AllowInvalidCerts: l.AllowInvalidCerts,
+		Require: &api_types.LatestVersionRequire{
+			RegexContent: l.Require.RegexContent,
+			RegexVersion: l.Require.RegexVersion,
+		},
+	}
+}
+
+func (l LatestVersion) GetURLCommands() *url_command.Slice {
+	return l.URLCommands
 }

@@ -51,12 +51,12 @@ func (s *Service) Track() {
 	serviceInfo := s.GetServiceInfo()
 
 	// Track the deployed version in a infinite loop goroutine.
-	go s.DeployedVersionLookup.Track(s)
+	go s.DeployedVersionLookup.Track(s.ID)
 
 	// Track forever.
 	for {
 		// If new release found by this query.
-		newVersion, err := s.Query()
+		newVersion, err := s.LatestVersion.Query()
 
 		// If a new version was found and we're not already on it
 		if newVersion {
