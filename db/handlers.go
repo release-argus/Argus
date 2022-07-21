@@ -17,9 +17,9 @@ package db
 import (
 	"fmt"
 
-	_ "modernc.org/sqlite"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/utils"
+	_ "modernc.org/sqlite"
 )
 
 // handler will listen to the DatabaseChannel and act on

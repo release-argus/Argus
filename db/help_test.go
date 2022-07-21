@@ -73,7 +73,7 @@ func testConfig() config.Config {
 	}
 }
 
-func queryRow(db *sql.DB, serviceID string, t *testing.T) service_status.Status {
+func queryRow(t *testing.T, db *sql.DB, serviceID string) service_status.Status {
 	sqlStmt := fmt.Sprintf(`
 	SELECT
 		id,

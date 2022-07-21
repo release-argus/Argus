@@ -20,99 +20,77 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
 	db_types "github.com/release-argus/Argus/db/types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	_ "modernc.org/sqlite"
 )
 
-func TestCheckFilePassNoDirBefore(t *testing.T) {
-	// GIVEN a dir that doesn't exist
+func TestCheckFile(t *testing.T) {
+	// GIVEN various paths
 	initLogging()
-	path := "TestCheckFilePassNoDirBefore/argus.db"
-	folder := filepath.Dir(path)
-	os.RemoveAll(folder)
-
-	// WHEN checkFile is called on that same dir
-	checkFile(path)
-
-	// THEN we get here with no panic
-	os.RemoveAll(folder)
-}
-
-func TestCheckFilePassHadDirBefore(t *testing.T) {
-	// GIVEN the a dir that already exists
-	initLogging()
-	path := "TestCheckFilePassHadDirBefore/argus.db"
-	folder := filepath.Dir(path)
-	os.RemoveAll(folder)
-	err := os.Mkdir(folder, os.ModeDir)
-	if err != nil {
-		t.Fatal(err)
+	tests := map[string]struct {
+		removeBefore     string
+		createDirBefore  string
+		createFileBefore string
+		path             string
+		panicContains    string
+	}{
+		"file doesn't exist":      {path: "something_doesnt_exist.db", removeBefore: "something_doesnt_exist.db"},
+		"dir doesn't exist":       {path: "dir_doesnt_exist/argus.db", removeBefore: "dir_doesnt_exist"},
+		"dir exists but not file": {path: "dir_does_exist/argus.db", createDirBefore: "dir_does_exist"},
+		"file is dir": {path: "folder.db", createDirBefore: "folder.db",
+			panicContains: " exists but is a directory"},
+		"dir is file": {path: "folder_not_a_dir/argus.db", createFileBefore: "folder_not_a_dir",
+			panicContains: " exists but is not a directory"},
 	}
 
-	// WHEN checkFile is called on that same dir
-	checkFile(path)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			os.RemoveAll(tc.removeBefore)
+			os.RemoveAll(tc.createDirBefore)
+			if tc.createDirBefore != "" {
+				err := os.Mkdir(tc.createDirBefore, os.ModeDir|0755)
+				if err != nil {
+					t.Fatalf("%s:\n%s",
+						name, err)
+				}
+			}
+			if tc.createFileBefore != "" {
+				file, err := os.Create(tc.createFileBefore)
+				if err != nil {
+					t.Fatalf("%s:\n%s",
+						name, err)
+				}
+				file.Close()
+			}
+			if tc.panicContains != "" {
+				defer func() {
+					r := recover()
+					rStr := fmt.Sprint(r)
+					os.RemoveAll(tc.createDirBefore)
+					os.RemoveAll(tc.createFileBefore)
+					if !strings.Contains(r.(string), tc.panicContains) {
+						t.Errorf("%s:\nshould have panic'd with:\n%q, not:\n%q",
+							name, tc.panicContains, rStr)
+					}
+				}()
+			}
 
-	// THEN we get here with no panic
-	os.RemoveAll(folder)
-}
+			// WHEN checkFile is called on that same dir
+			checkFile(tc.path)
 
-func TestCheckFileFailNotDirectoryOnTheWay(t *testing.T) {
-	// GIVEN a dir that is actually a file on the way to the db
-	initLogging()
-	path := "TestCheckFileFailNotDirectoryOnTheWay/argus.db"
-	folder := filepath.Dir(path)
-	os.RemoveAll(folder)
-	_, err := os.Create(folder)
-	if err != nil {
-		t.Fatal(err)
+			// THEN we get here only when we should
+			if tc.panicContains != "" {
+				t.Fatalf("%s:\nExpected panic with %q",
+					name, tc.panicContains)
+			}
+		})
 	}
-	defer func() {
-		r := recover()
-		os.RemoveAll(folder)
-		if !strings.Contains(r.(string), " exists but is not a directory") {
-			t.Error(r)
-		}
-	}()
-
-	// WHEN checkFile is called on that same dir
-	checkFile(path)
-
-	// THEN we panic and don't reach this
-	t.Errorf("Shouldn't reach this as %q is used as a dir in %q, but should be a file",
-		folder, path)
-}
-
-func TestCheckFileFailNotDirectoryAtTheEnd(t *testing.T) {
-	// GIVEN a dir that is actually a file at the end
-	initLogging()
-	path := "TestCheckFileFailNotDirectoryAtTheEnd/argus.db"
-	folder := filepath.Dir(path)
-	os.RemoveAll(folder)
-	err := os.MkdirAll(path, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		r := recover()
-		os.RemoveAll(folder)
-		if !strings.Contains(r.(string), " exists but is a directory, not a file") {
-			t.Error(r)
-		}
-	}()
-
-	// WHEN checkFile is called on that same dir
-	checkFile(path)
-
-	// THEN we panic and don't reach this
-	t.Errorf("Shouldn't reach this as %q is used as a dir in %q, but should be a file",
-		folder, path)
 }
 
 func TestInitialise(t *testing.T) {
@@ -153,197 +131,97 @@ func TestInitialise(t *testing.T) {
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
-func TestConvertServiceStatusWhenNotConverted(t *testing.T) {
+func TestConvertServiceStatus(t *testing.T) {
 	// GIVEN a blank DB
 	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatusWhenNotConverted.db"
-	api.initialise()
+	tests := map[string]struct {
+		runs int
+	}{
+		"one run":       {runs: 1},
+		"multiple runs": {runs: 2},
+	}
 
-	// WHEN we call convertServiceStatus
-	api.convertServiceStatus()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := testConfig()
+			api := api{config: &cfg}
+			*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatus.db"
+			api.initialise()
 
-	// THEN each Service.*.OldStatus is pushed to the DB and can be queried
-	rows, err := api.db.Query(`
-		SELECT	id,
-				latest_version,
-				latest_version_timestamp,
-				deployed_version,
-				deployed_version_timestamp,
-				approved_version
-		 FROM status;`)
-	if err != nil {
-		t.Error(err)
-	}
-	count := 0
-	defer rows.Close()
-	for rows.Next() {
-		count++
-		var (
-			id  string
-			lv  string
-			lvt string
-			dv  string
-			dvt string
-			av  string
-		)
-		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
-		svc := api.config.Service[id]
-		if svc == nil {
-			t.Errorf("%q was not pushed to the table",
-				id)
-		} else if svc.Status == nil || svc.OldStatus != nil {
-			if svc.OldStatus != nil {
-				t.Errorf("%q OldStatus should be nil, not %v",
-					id, svc.OldStatus)
+			// WHEN we call convertServiceStatus
+			for i := 0; i < tc.runs; i++ {
+				api.convertServiceStatus()
 			}
-			if svc.Status == nil {
-				t.Errorf("%q Status was not converted. Status=%v",
-					id, svc.Status)
-			}
-		} else {
-			if (*svc).Status.LatestVersion != lv {
-				t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.LatestVersion, lv)
-			}
-			if (*svc).Status.LatestVersionTimestamp != lvt {
-				t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-					(*svc).Status.LatestVersionTimestamp, lvt)
-			}
-			if (*svc).Status.DeployedVersion != dv {
-				t.Errorf("DeployedVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.DeployedVersion, dv)
-			}
-			if (*svc).Status.DeployedVersionTimestamp != dvt {
-				t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-					(*svc).Status.DeployedVersionTimestamp, dvt)
-			}
-			if (*svc).Status.ApprovedVersion != av {
-				t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.ApprovedVersion, av)
-			}
-		}
-	}
-	if count != len(api.config.All) {
-		t.Errorf("%d were pushed to the table. Expected %d",
-			count, len(api.config.All))
-	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
-}
 
-func TestConvertServiceStatusWhenAlreadyConverted(t *testing.T) {
-	// GIVEN a blank DB
-	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatusWhenAlreadyConverted.db"
-	api.initialise()
-
-	// WHEN every Service.*.Status is pushed to the DB with convertServiceStatus
-	// and then convertServiceStatus is ran again with nothing to convert
-	api.convertServiceStatus()
-	api.convertServiceStatus()
-
-	// THEN each Service.*.Status can be queried from the DB
-	// (they weren't removed when the conversion was ran a second time)
-	rows, err := api.db.Query(`
-		SELECT	id,
-				latest_version,
-				latest_version_timestamp,
-				deployed_version,
-				deployed_version_timestamp,
-				approved_version
-		 FROM status;`)
-	if err != nil {
-		t.Error(err)
-	}
-	count := 0
-	defer rows.Close()
-	for rows.Next() {
-		count++
-		var (
-			id  string
-			lv  string
-			lvt string
-			dv  string
-			dvt string
-			av  string
-		)
-		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
-		svc := api.config.Service[id]
-		if svc == nil {
-			t.Errorf("%q was not pushed to the table",
-				id)
-		} else {
-			if (*svc).Status.LatestVersion != lv {
-				t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.LatestVersion, lv)
+			// THEN each Service.*.OldStatus is pushed to the DB and can be queried
+			rows, err := api.db.Query(`
+				SELECT	id,
+						latest_version,
+						latest_version_timestamp,
+						deployed_version,
+						deployed_version_timestamp,
+						approved_version
+				FROM status;`)
+			if err != nil {
+				t.Error(err)
 			}
-			if (*svc).Status.LatestVersionTimestamp != lvt {
-				t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-					(*svc).Status.LatestVersionTimestamp, lvt)
+			count := 0
+			defer rows.Close()
+			for rows.Next() {
+				count++
+				var (
+					id  string
+					lv  string
+					lvt string
+					dv  string
+					dvt string
+					av  string
+				)
+				err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
+				svc := api.config.Service[id]
+				if svc == nil {
+					t.Errorf("%q was not pushed to the table",
+						id)
+				} else if svc.Status == nil || svc.OldStatus != nil {
+					if svc.OldStatus != nil {
+						t.Errorf("%q OldStatus should be nil, not %v",
+							id, svc.OldStatus)
+					}
+					if svc.Status == nil {
+						t.Errorf("%q Status was not converted. Status=%v",
+							id, svc.Status)
+					}
+				} else {
+					if (*svc).Status.LatestVersion != lv {
+						t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
+							(*svc).Status.LatestVersion, lv)
+					}
+					if (*svc).Status.LatestVersionTimestamp != lvt {
+						t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
+							(*svc).Status.LatestVersionTimestamp, lvt)
+					}
+					if (*svc).Status.DeployedVersion != dv {
+						t.Errorf("DeployedVersion %q was not pushed to the db. Got %q",
+							(*svc).Status.DeployedVersion, dv)
+					}
+					if (*svc).Status.DeployedVersionTimestamp != dvt {
+						t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
+							(*svc).Status.DeployedVersionTimestamp, dvt)
+					}
+					if (*svc).Status.ApprovedVersion != av {
+						t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
+							(*svc).Status.ApprovedVersion, av)
+					}
+				}
 			}
-			if (*svc).Status.DeployedVersion != dv {
-				t.Errorf("DeployedVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.DeployedVersion, dv)
+			if count != len(api.config.All) {
+				t.Errorf("%d were pushed to the table. Expected %d",
+					count, len(api.config.All))
 			}
-			if (*svc).Status.DeployedVersionTimestamp != dvt {
-				t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-					(*svc).Status.DeployedVersionTimestamp, dvt)
-			}
-			if (*svc).Status.ApprovedVersion != av {
-				t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-					(*svc).Status.ApprovedVersion, av)
-			}
-		}
+			api.db.Close()
+			os.Remove(*api.config.Settings.Data.DatabaseFile)
+		})
 	}
-	if count != len(api.config.All) {
-		t.Errorf("%d were pushed to the table. Expected %d",
-			count, len(api.config.All))
-	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
-}
-
-func TestQueryService(t *testing.T) {
-	// GIVEN a blank DB
-	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestQueryService.db"
-	api.initialise()
-
-	// WHEN every Service.*.Status is pushed to the DB with convertServiceStatus
-	api.convertServiceStatus()
-
-	// THEN a Services that was copied over can be queried
-	target := "keep0"
-	got := queryRow(api.db, target, t)
-	svc := api.config.Service[target]
-	if (*svc).Status.LatestVersion != got.LatestVersion {
-		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersion, got.LatestVersion)
-	}
-	if (*svc).Status.LatestVersionTimestamp != got.LatestVersionTimestamp {
-		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersionTimestamp, got.LatestVersionTimestamp)
-	}
-	if (*svc).Status.DeployedVersion != got.DeployedVersion {
-		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%v",
-			(*svc).Status.DeployedVersion, got.DeployedVersion, got, *(*svc).Status)
-	}
-	if (*svc).Status.DeployedVersionTimestamp != got.DeployedVersionTimestamp {
-		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.DeployedVersionTimestamp, got.DeployedVersionTimestamp)
-	}
-	if (*svc).Status.ApprovedVersion != got.ApprovedVersion {
-		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.ApprovedVersion, got.ApprovedVersion)
-	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
 func TestRemoveUnknownServices(t *testing.T) {
@@ -446,13 +324,13 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, 0644)
+	err = ioutil.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
 		t.Fatal(err)
 	}
 	api := api{config: &otherCfg}
 	api.initialise()
-	got := queryRow(api.db, target, t)
+	got := queryRow(t, api.db, target)
 	want := service_status.Status{
 		LatestVersion:            "9.9.9",
 		LatestVersionTimestamp:   "2022-01-01T01:01:01Z",

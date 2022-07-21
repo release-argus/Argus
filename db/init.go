@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
 	"github.com/release-argus/Argus/config"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	_ "modernc.org/sqlite"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 
 func checkFile(path string) {
 	dir := filepath.Dir(path)
-	err := os.Mkdir(dir, 0755)
+	err := os.Mkdir(dir, os.ModeDir|0755)
 	if err == nil {
 		return
 	}
