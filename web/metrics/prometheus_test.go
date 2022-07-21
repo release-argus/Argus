@@ -23,7 +23,7 @@ import (
 )
 
 func TestInitPrometheusCounterWithIDAndResult(t *testing.T) {
-	// GIVEN a QueryMetric
+	// GIVEN a LatestVersionQueryMetric
 	metric := QueryMetric
 
 	// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
@@ -122,8 +122,8 @@ func TestIncreasePrometheusCounterActionsWithNotify(t *testing.T) {
 }
 
 func TestSetPrometheusGaugeWithIDDidInitialise(t *testing.T) {
-	// GIVEN a QueryLiveness
-	metric := QueryLiveness
+	// GIVEN a LatestVersionQueryLiveness
+	metric := LatestVersionQueryLiveness
 
 	// WHEN it's initialised with SetPrometheusGaugeWithID
 	SetPrometheusGaugeWithID(metric, "SERVICE_ID", 5)
@@ -132,14 +132,14 @@ func TestSetPrometheusGaugeWithIDDidInitialise(t *testing.T) {
 	got := testutil.CollectAndCount(metric)
 	want := 1
 	if got != want {
-		t.Errorf("%d QueryLiveness's were initialised, expecting %d",
+		t.Errorf("%d LatestVersionQueryLiveness's were initialised, expecting %d",
 			got, want)
 	}
 }
 
 func TestSetPrometheusGaugeWithIDDidChange(t *testing.T) {
-	// GIVEN a QueryLiveness that's been initialised
-	metric := QueryLiveness
+	// GIVEN a LatestVersionQueryLiveness that's been initialised
+	metric := LatestVersionQueryLiveness
 	was := float64(0)
 	SetPrometheusGaugeWithID(metric, "SERVICE_ID", was)
 
@@ -151,7 +151,7 @@ func TestSetPrometheusGaugeWithIDDidChange(t *testing.T) {
 	got := testutil.ToFloat64(metric.WithLabelValues("SERVICE_ID"))
 	want := float64(1)
 	if got != want {
-		t.Errorf("QueryLiveness should've been changed to %g but got %g",
+		t.Errorf("LatestVersionQueryLiveness should've been changed to %g but got %g",
 			want, got)
 	}
 }

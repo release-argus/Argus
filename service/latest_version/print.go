@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package github
+package latest_version
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 )
 
 // Print the struct.
-func (l LatestVersion) Print(prefix string) {
+func (l Lookup) Print(prefix string) {
 	fmt.Printf("%stype: github", prefix)
 	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%srepo: %s", prefix, l.URL))
 	utils.PrintlnIfNotDefault(l.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, l.AccessToken))

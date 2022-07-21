@@ -26,16 +26,16 @@ var (
 
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL               string                 `yaml:"url,omitempty"`                 // URL to query.
-	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
-	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
-	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
-	Status            *service_status.Status `yaml:"-"`                             // Service Status
-	HardDefaults      *Lookup                `yaml:"-"`                             // Hardcoded default values.
-	Defaults          *Lookup                `yaml:"-"`                             // Default values.
-	options           *options.Options       `yaml:"-"`                             // Options for the lookups
+	URL               string                  `yaml:"url,omitempty"`                 // URL to query.
+	AllowInvalidCerts *bool                   `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	BasicAuth         *BasicAuth              `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
+	Headers           []Header                `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
+	JSON              string                  `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
+	Regex             string                  `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
+	Status            **service_status.Status `yaml:"-"`                             // Service Status
+	HardDefaults      **Lookup                `yaml:"-"`                             // Hardcoded default values.
+	Defaults          **Lookup                `yaml:"-"`                             // Default values.
+	options           *options.Options        `yaml:"-"`                             // Options for the lookups
 }
 
 // BasicAuth to use on the HTTP(s) request.

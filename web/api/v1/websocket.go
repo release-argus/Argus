@@ -23,7 +23,7 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service/deployed_version"
-	url_command "github.com/release-argus/Argus/service/url_commands"
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
@@ -58,7 +58,7 @@ func (api *API) wsService(client *Client) {
 		}
 
 		service := api.Config.Service[key]
-		url := service.GetServiceURL(false)
+		url := service.LatestVersion.GetServiceURL(false)
 		webhookCount := 0
 		if service.WebHook != nil {
 			webhookCount = len(*service.WebHook)
@@ -72,7 +72,7 @@ func (api *API) wsService(client *Client) {
 		serviceSummary := api_types.ServiceSummary{
 			Active:                   service.Options.Active,
 			ID:                       service.ID,
-			Type:                     service.LatestVersion.GetType(),
+			Type:                     service.LatestVersion.Type,
 			URL:                      &url,
 			Icon:                     service.GetIconURL(),
 			IconLinkTo:               service.Dashboard.IconLinkTo,
@@ -383,7 +383,11 @@ func (api *API) wsConfigDefaults(client *Client) {
 						Interval:           api.Config.Defaults.Service.Options.Interval,
 						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
 					},
-					LatestVersion: api.Config.Defaults.Service.LatestVersion.ConvertToAPIType(),
+					LatestVersion: &api_types.LatestVersion{
+						AccessToken:       utils.ValueIfNotDefault(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
+						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
+						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
+					},
 					DeployedVersionLookup: &api_types.DeployedVersionLookup{
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
@@ -472,13 +476,24 @@ func (api *API) wsConfigService(client *Client) {
 					Interval:           service.Options.Interval,
 					SemanticVersioning: service.Options.SemanticVersioning,
 				},
-				LatestVersion: service.LatestVersion.ConvertToAPIType(),
+				LatestVersion: &api_types.LatestVersion{
+					URL:               service.LatestVersion.URL,
+					AccessToken:       utils.ValueIfNotDefault(service.LatestVersion.AccessToken, "<secret>"),
+					AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
+					UsePreRelease:     service.LatestVersion.UsePreRelease,
+				},
 				Dashboard: &api_types.DashboardOptions{
 					AutoApprove: service.Dashboard.AutoApprove,
 					Icon:        service.Dashboard.Icon,
 					IconLinkTo:  service.Dashboard.IconLinkTo,
 					WebURL:      service.Dashboard.WebURL,
 				},
+			}
+			if service.LatestVersion.Require != nil {
+				serviceConfig[key].LatestVersion.Require = &api_types.LatestVersionRequire{
+					RegexContent: service.LatestVersion.Require.RegexContent,
+					RegexVersion: service.LatestVersion.Require.RegexVersion,
+				}
 			}
 
 			// DeployedVersionLookup
@@ -540,7 +555,7 @@ func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_ve
 	return &apiDVL
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *url_command.Slice) *api_types.URLCommandSlice {
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommandSlice) *api_types.URLCommandSlice {
 	if commands == nil {
 		return nil
 	}

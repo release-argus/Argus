@@ -26,73 +26,81 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (d *Lookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(d.AllowInvalidCerts, d.Defaults.AllowInvalidCerts, d.HardDefaults.AllowInvalidCerts)
+func (l *Lookup) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, (*l.Defaults).AllowInvalidCerts, (*l.HardDefaults).AllowInvalidCerts)
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
-func (d *Lookup) Track(parentID string) {
-	if d == nil {
+func (l *Lookup) Track(parentID string) {
+	if l == nil {
 		return
 	}
 	logFrom := utils.LogFrom{Primary: parentID}
 
 	// Track forever.
 	for {
-		deployedVersion, err := d.Query(logFrom, d.options.GetSemanticVersioning())
+		deployedVersion, err := l.Query(logFrom, l.options.GetSemanticVersioning())
 		// If new release found by ^ query.
-		if err == nil && deployedVersion != d.Status.DeployedVersion {
-			// Announce the updated deployment
-			d.Status.SetDeployedVersion(deployedVersion)
+		if err == nil {
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "SUCCESS")
+			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *(*l.Status).ServiceID, 1)
+			if deployedVersion != (*l.Status).DeployedVersion {
+				// Announce the updated deployment
+				(*l.Status).SetDeployedVersion(deployedVersion)
 
-			// If this new deployedVersion isn't LatestVersion
-			// Check that it's not a later version than LatestVersion
-			if deployedVersion != d.Status.LatestVersion && d.options.GetSemanticVersioning() && d.Status.LatestVersion != "" {
-				//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
-				//nolint:errcheck // ^
-				deployedVersionSV, _ := semver.NewVersion(deployedVersion)
-				//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
-				//nolint:errcheck // ^
-				latestVersionSV, _ := semver.NewVersion(d.Status.LatestVersion)
+				// If this new deployedVersion isn't LatestVersion
+				// Check that it's not a later version than LatestVersion
+				if deployedVersion != (*l.Status).LatestVersion && l.options.GetSemanticVersioning() && (*l.Status).LatestVersion != "" {
+					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
+					//nolint:errcheck // ^
+					deployedVersionSV, _ := semver.NewVersion(deployedVersion)
+					//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
+					//nolint:errcheck // ^
+					latestVersionSV, _ := semver.NewVersion((*l.Status).LatestVersion)
 
-				// Update LatestVersion to DeployedVersion if it's newer
-				if latestVersionSV.LessThan(*deployedVersionSV) {
-					d.Status.LatestVersion = d.Status.DeployedVersion
-					d.Status.LatestVersionTimestamp = d.Status.DeployedVersionTimestamp
-					d.Status.AnnounceQueryNewVersion()
+					// Update LatestVersion to DeployedVersion if it's newer
+					if latestVersionSV.LessThan(*deployedVersionSV) {
+						(*l.Status).LatestVersion = (*l.Status).DeployedVersion
+						(*l.Status).LatestVersionTimestamp = (*l.Status).DeployedVersionTimestamp
+						(*l.Status).AnnounceQueryNewVersion()
+					}
 				}
-			}
 
-			// Announce version change to WebSocket clients.
-			jLog.Info(
-				fmt.Sprintf("Updated to %q", deployedVersion),
-				logFrom,
-				true)
-			d.Status.AnnounceUpdate()
+				// Announce version change to WebSocket clients.
+				jLog.Info(
+					fmt.Sprintf("Updated to %q", deployedVersion),
+					logFrom,
+					true)
+				(*l.Status).AnnounceUpdate()
+			}
+		} else {
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "FAIL")
+			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *(*l.Status).ServiceID, 0)
 		}
 		// Sleep interval between queries.
-		time.Sleep(d.options.GetIntervalDuration())
+		time.Sleep(l.options.GetIntervalDuration())
 	}
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (d *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
-	rawBody, err := d.httpRequest(logFrom)
+func (l *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
+	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
 	}
 
 	var version string
-	if d.JSON != "" {
-		jsonKeys := strings.Split(d.JSON, ".")
+	if l.JSON != "" {
+		jsonKeys := strings.Split(l.JSON, ".")
 		var queriedJSON map[string]interface{}
 		err := json.Unmarshal(rawBody, &queriedJSON)
 		if err != nil {
 			err := fmt.Errorf("failed to unmarshal the following from %q into json:%s",
-				d.URL,
+				l.URL,
 				string(rawBody))
 			jLog.Error(err, logFrom, true)
 			return "", err
@@ -102,7 +110,7 @@ func (d *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, 
 		for k := range jsonKeys {
 			if queriedJSON[jsonKeys[k]] == nil {
 				err := fmt.Errorf("%q could not be found in the following JSON. Failed at %q:\n%s",
-					d.JSON,
+					l.JSON,
 					jsonKeys[k],
 					string(rawBody))
 				jLog.Warn(err, logFrom, true)
@@ -120,13 +128,13 @@ func (d *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, 
 		version = string(rawBody)
 	}
 
-	if d.Regex != "" {
-		re := regexp.MustCompile(d.Regex)
+	if l.Regex != "" {
+		re := regexp.MustCompile(l.Regex)
 		texts := re.FindStringSubmatch(version)
 
 		if len(texts) < 2 {
 			err := fmt.Errorf("%q RegEx didn't return any matches in %q",
-				d.Regex,
+				l.Regex,
 				version)
 			jLog.Warn(err, logFrom, true)
 			return "", err
@@ -148,29 +156,29 @@ func (d *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, 
 	return version, nil
 }
 
-func (d *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
 	// HTTPS insecure skip verify.
 	customTransport := &http.Transport{}
-	if d.GetAllowInvalidCerts() {
+	if l.GetAllowInvalidCerts() {
 		customTransport = http.DefaultTransport.(*http.Transport).Clone()
 		//#nosec G402 -- explicitly wanted InsecureSkipVerify
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, d.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, l.URL, nil)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
 		return
 	}
 
 	// Set headers
-	for _, header := range d.Headers {
+	for _, header := range l.Headers {
 		req.Header.Set(header.Key, header.Value)
 	}
 
 	// Basic auth
-	if d.BasicAuth != nil {
-		req.SetBasicAuth((*d.BasicAuth).Username, (*d.BasicAuth).Password)
+	if l.BasicAuth != nil {
+		req.SetBasicAuth((*l.BasicAuth).Username, (*l.BasicAuth).Password)
 	}
 
 	client := &http.Client{Transport: customTransport}
@@ -193,48 +201,48 @@ func (d *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 }
 
 // Print will print the Lookup.
-func (d *Lookup) Print(prefix string) {
-	if d == nil {
+func (l *Lookup) Print(prefix string) {
+	if l == nil {
 		return
 	}
 	fmt.Printf("%sdeployed_version:\n", prefix)
 	prefix += "  "
 
-	utils.PrintlnIfNotDefault(d.URL, fmt.Sprintf("%surl: %s", prefix, d.URL))
-	utils.PrintlnIfNotNil(d.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(d.AllowInvalidCerts)))
-	if d.BasicAuth != nil {
+	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
+	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
+	if l.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
-		fmt.Printf("%s  username: %s\n", prefix, d.BasicAuth.Username)
+		fmt.Printf("%s  username: %s\n", prefix, l.BasicAuth.Username)
 		fmt.Printf("%s  password: <secret>\n", prefix)
 	}
-	if d.Headers != nil {
+	if l.Headers != nil {
 		fmt.Printf("%sheaders:\n", prefix)
-		for _, header := range d.Headers {
+		for _, header := range l.Headers {
 			fmt.Printf("%s  - key: %s\n", prefix, header.Key)
 			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
-	utils.PrintlnIfNotDefault(d.JSON, fmt.Sprintf("%sjson: %q", prefix, d.JSON))
-	utils.PrintlnIfNotDefault(d.Regex, fmt.Sprintf("%sregex: %q", prefix, d.Regex))
+	utils.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
+	utils.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
 }
 
 // CheckValues of the Lookup.
-func (d *Lookup) CheckValues(prefix string) (errs error) {
-	if d == nil {
+func (l *Lookup) CheckValues(prefix string) (errs error) {
+	if l == nil {
 		return
 	}
 
 	// URL
-	if d.URL == "" && d.Defaults != nil {
+	if l.URL == "" && l.Defaults != nil {
 		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\",
 			utils.ErrorToString(errs), prefix)
 	}
 
 	// RegEx
-	_, err := regexp.Compile(d.Regex)
+	_, err := regexp.Compile(l.Regex)
 	if err != nil {
 		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\",
-			utils.ErrorToString(errs), prefix, d.Regex)
+			utils.ErrorToString(errs), prefix, l.Regex)
 	}
 
 	if errs != nil {

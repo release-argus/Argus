@@ -15,20 +15,10 @@
 package latest_version
 
 import (
-	url_command "github.com/release-argus/Argus/service/url_commands"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/utils"
 )
 
-type Lookup interface {
-	GetType() string
-	GetFriendlyURL() string
-	GetLookupURL() string
-
-	ConvertToAPIType() *api_types.LatestVersion
-	GetURLCommands() *url_command.Slice
-
-	Query() (bool, error)
-
-	CheckValues(string) error
-	Print(string)
+// Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
+func (l *Lookup) GetUsePreRelease() bool {
+	return *utils.GetFirstNonDefault(l.UsePreRelease, l.Defaults.UsePreRelease, l.HardDefaults.UsePreRelease)
 }

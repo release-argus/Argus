@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version/github"
+	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
@@ -47,7 +47,7 @@ func (d *Defaults) SetDefaults() {
 	}
 	serviceLatestVersionAllowInvalidCerts := false
 	usePreRelease := false
-	d.Service.LatestVersion = github.LatestVersion{
+	d.Service.LatestVersion = latest_version.Lookup{
 		UsePreRelease:     &usePreRelease,
 		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
 	}

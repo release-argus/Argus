@@ -19,8 +19,8 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service"
 	deployed_version_lookup "github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -41,11 +41,11 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *te
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNasicAuthPassword(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
-	basicAuth := service.BasicAuth{
+	basicAuth := deployed_version_lookup.BasicAuth{
 		Username: "username",
 		Password: "pass123",
 	}
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version_lookup.Lookup{
 		URL:       "https://example.com",
 		BasicAuth: &basicAuth,
 	}
@@ -67,9 +67,9 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNas
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHeaderKeys(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with headers
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version_lookup.Lookup{
 		URL: "https://example.com",
-		Headers: []service.Header{
+		Headers: []deployed_version_lookup.Header{
 			{Key: "X-Test-0", Value: "foo"},
 			{Key: "X-Test-1", Value: "foo"},
 		},
@@ -94,7 +94,7 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHea
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
 	allowInvalidCerts := true
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version_lookup.Lookup{
 		URL:               "https://example.com",
 		AllowInvalidCerts: &allowInvalidCerts,
 		JSON:              "foo",
@@ -116,7 +116,7 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 	// GIVEN a nil URL Command slice
-	var slice *service.URLCommandSlice
+	var slice *filters.URLCommandSlice
 
 	// WHEN convertURLCommandSliceToAPITypeURLCommandSlice is called on it
 	got := convertURLCommandSliceToAPITypeURLCommandSlice(slice)
@@ -141,7 +141,7 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	old1 := "1bash"
 	uNew1 := "1bosh"
 	ignoreMisses := true
-	slice := service.URLCommandSlice{
+	slice := filters.URLCommandSlice{
 		{
 			Type:         uType0,
 			Regex:        &regex0,

@@ -70,7 +70,7 @@ func ServiceTest(
 			fmt.Sprintf(
 				"No version matching the conditions specified could be found for %q at %q",
 				*flag,
-				service.GetServiceURL(true),
+				service.LatestVersion.GetServiceURL(true),
 			),
 			logFrom,
 			true,

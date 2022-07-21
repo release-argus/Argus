@@ -28,16 +28,16 @@ func (s *Slice) CheckValues(prefix string) error {
 		var serviceErrors error
 		service := (*s)[key]
 
-		// Service
-		if err := service.CheckValues(prefix); err != nil {
+		// Options
+		if err := service.Options.CheckValues(prefix + "  "); err != nil {
 			serviceErrors = fmt.Errorf("%s%w",
 				utils.ErrorToString(serviceErrors), err)
 		}
 
 		// Latest version / URL commands
 		if err := service.LatestVersion.CheckValues(prefix + "  "); err != nil {
-			errs = fmt.Errorf("%s%w",
-				utils.ErrorToString(errs), err)
+			serviceErrors = fmt.Errorf("%s%w",
+				utils.ErrorToString(serviceErrors), err)
 		}
 
 		// Deployed version lookup
@@ -68,10 +68,6 @@ func (s *Slice) CheckValues(prefix string) error {
 
 // CheckValues of the Service.
 func (s *Service) CheckValues(prefix string) (errs error) {
-	if optionsErrs := s.Options.CheckValues(prefix + "  "); optionsErrs != nil {
-		errs = fmt.Errorf("%soptions:\\%w",
-			prefix, optionsErrs)
-	}
 
 	if latestVersionErrs := s.Options.CheckValues(prefix + "  "); latestVersionErrs != nil {
 		errs = fmt.Errorf("%slatest_version:\\%w",

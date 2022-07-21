@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package github
+package latest_version
 
 import (
 	"encoding/json"
@@ -21,13 +21,13 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/latest_version/github/api_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
 	"github.com/release-argus/Argus/utils"
 )
 
 // filterGitHubReleases will filter releases that fail the URLCommands, aren't semantic (if wanted),
 // or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
-func (l *LatestVersion) filterGitHubReleases(
+func (l *Lookup) filterGitHubReleases(
 	releases []github_types.Release,
 	logFrom utils.LogFrom,
 ) (filteredReleases []github_types.Release) {
@@ -89,7 +89,7 @@ func insertionSort(release github_types.Release, filteredReleases *[]github_type
 }
 
 // checkGitHubReleasesBody will check that the body is of the expected API format for a successful query
-func (l *LatestVersion) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []github_types.Release, err error) {
+func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []github_types.Release, err error) {
 	// Check for rate lirmRDrit.
 	if len(string(*body)) < 500 {
 		if strings.Contains(string(*body), "rate limit") {

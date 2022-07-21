@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package github
+package latest_version
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/github/github_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
 	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 )
@@ -115,7 +115,7 @@ func TestCheckGitHubReleasesBodyWithRateLimit(t *testing.T) {
 	// GIVEN a body detailing a rate limit
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something rate limit something")
-	lv := LatestVersion{}
+	lv := Lookup{}
 
 	// WHEN filterGitHubReleases is called on this body
 	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
@@ -132,7 +132,7 @@ func TestCheckGitHubReleasesBodyWithBadCredentials(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something Bad credentials something")
 	url := "https://example.com"
-	lv := LatestVersion{URL: url}
+	lv := Lookup{URL: url}
 	// Switch Fatal to panic and disable this panic.
 	jLog.Testing = true
 	defer func() {
@@ -156,7 +156,7 @@ func TestCheckGitHubReleasesBodyWithNoTagNames(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte("something something something")
 	url := "https://example.com"
-	lv := LatestVersion{URL: url}
+	lv := Lookup{URL: url}
 
 	// WHEN filterGitHubReleases is called on this body
 	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
@@ -173,7 +173,7 @@ func TestCheckGitHubReleasesBodyWithInvalidJSON(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	body := []byte(strings.Repeat("something something something", 100))
 	url := "https://example.com"
-	lv := LatestVersion{URL: url}
+	lv := Lookup{URL: url}
 
 	// WHEN filterGitHubReleases is called on this body
 	_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
@@ -193,14 +193,16 @@ func TestFilterGitHubReleasesDoesFilterPreReleases(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = true
 	)
-	lv := LatestVersion{
+	lv := Lookup{
 		URL: url,
 		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		UsePreRelease: &usePreRelease,
-		Defaults:      &LatestVersion{},
-		HardDefaults:  &LatestVersion{},
+		Defaults:      &Lookup{},
+		HardDefaults:  &Lookup{},
 	}
 	releases := []github_types.Release{
 		{TagName: "0.99.0"},
@@ -229,14 +231,16 @@ func TestFilterGitHubReleasesDoesntFilterPreReleases(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	lv := LatestVersion{
+	lv := Lookup{
 		URL: url,
 		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		UsePreRelease: &usePreRelease,
-		Defaults:      &LatestVersion{},
-		HardDefaults:  &LatestVersion{},
+		Defaults:      &Lookup{},
+		HardDefaults:  &Lookup{},
 	}
 	releases := []github_types.Release{
 		{TagName: "0.99.0"},
@@ -264,14 +268,16 @@ func TestFilterGitHubReleasesWithNotCareSemantic(t *testing.T) {
 		semanticVersioning = false
 		usePreRelease      = false
 	)
-	lv := LatestVersion{
+	lv := Lookup{
 		URL: url,
 		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		UsePreRelease: &usePreRelease,
-		Defaults:      &LatestVersion{},
-		HardDefaults:  &LatestVersion{},
+		Defaults:      &Lookup{},
+		HardDefaults:  &Lookup{},
 	}
 	releases := []github_types.Release{
 		{TagName: "990"},
@@ -299,14 +305,16 @@ func TestFilterGitHubReleasesWithSomeNonSemantic(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	lv := LatestVersion{
+	lv := Lookup{
 		URL: url,
 		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		UsePreRelease: &usePreRelease,
-		Defaults:      &LatestVersion{},
-		HardDefaults:  &LatestVersion{},
+		Defaults:      &Lookup{},
+		HardDefaults:  &Lookup{},
 	}
 	releases := []github_types.Release{
 		{TagName: "990"},
@@ -336,14 +344,16 @@ func TestFilterGitHubReleasesWithSomeNonSemanticDidSort(t *testing.T) {
 		semanticVersioning = true
 		usePreRelease      = false
 	)
-	lv := LatestVersion{
+	lv := Lookup{
 		URL: url,
 		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		UsePreRelease: &usePreRelease,
-		Defaults:      &LatestVersion{},
-		HardDefaults:  &LatestVersion{},
+		Defaults:      &Lookup{},
+		HardDefaults:  &Lookup{},
 	}
 	releases := []github_types.Release{
 		{TagName: "990"},

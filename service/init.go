@@ -19,7 +19,6 @@ import (
 
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
 )
 
 // Init will initialise the Service metrics.
@@ -29,56 +28,31 @@ func (s *Service) Init(
 	hardDefaults *Service,
 ) {
 	jLog = log
-	s.initMetrics()
-	if s.Status == nil {
-		s.Status = &service_status.Status{}
-	}
 
 	s.Defaults = defaults
 	s.Options.Defaults = &s.Defaults.Options
 	s.HardDefaults = hardDefaults
 	s.Options.HardDefaults = &s.HardDefaults.Options
-	if s.DeployedVersionLookup != nil {
-		s.DeployedVersionLookup.Defaults = defaults.DeployedVersionLookup
-		s.DeployedVersionLookup.HardDefaults = hardDefaults.DeployedVersionLookup
-	}
-}
 
-// initMetrics will initialise the Prometheus metrics.
-func (s *Service) initMetrics() {
-	// ############
-	// # Counters #
-	// ############
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.QueryMetric, (*s).ID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.QueryMetric, (*s).ID, "FAIL")
+	if s.Status == nil {
+		s.Status = &service_status.Status{}
+	}
+	s.Status.ServiceID = &s.ID
+	s.Status.WebURL = &s.Dashboard.WebURL
+
+	s.DeployedVersionLookup.Init(jLog, &s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
+	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
+	s.convert()
 }
 
 // GetServiceInfo returns info about the service.
 func (s *Service) GetServiceInfo() utils.ServiceInfo {
 	return utils.ServiceInfo{
 		ID:            s.ID,
-		URL:           s.GetServiceURL(true),
+		URL:           s.LatestVersion.GetServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
 		LatestVersion: s.Status.LatestVersion,
 	}
-}
-
-// GetServiceURL returns the service's URL (handles the github type where the URL
-// may be `owner/repo`, adding the github.com prefix in that case).
-func (s *Service) GetServiceURL(ignoreWebURL bool) string {
-	if !ignoreWebURL && s.Dashboard.WebURL != "" {
-		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		if s.Status.LatestVersion == "" {
-			if !strings.Contains(s.Dashboard.WebURL, "version") {
-				return s.Status.GetWebURL()
-			}
-		} else {
-			return s.Status.GetWebURL()
-		}
-	}
-
-	serviceURL := s.LatestVersion.GetFriendlyURL()
-	return serviceURL
 }
 
 // GetIconURL returns the URL Icon for the Service.

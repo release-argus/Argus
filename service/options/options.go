@@ -53,6 +53,10 @@ func (o *Options) GetIntervalDuration() time.Duration {
 
 // CheckValues of the Options.
 func (o *Options) CheckValues(prefix string) (errs error) {
+	if o == nil {
+		return
+	}
+
 	// Interval
 	if o.Interval != nil {
 		// Default to seconds when an integer is provided
@@ -63,6 +67,11 @@ func (o *Options) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%s  interval: %q <invalid> (Use 'AhBmCs' duration format)\\",
 				utils.ErrorToString(errs), prefix, *o.Interval)
 		}
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%soptions:\\%w",
+			prefix, errs)
 	}
 
 	return

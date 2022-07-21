@@ -32,7 +32,7 @@ func (s *Slice) Track(ordering *[]string) {
 		}
 
 		jLog.Verbose(
-			fmt.Sprintf("Tracking %s at %s every %s", (*s)[key].ID, (*s)[key].GetServiceURL(true), (*s)[key].Options.GetInterval()),
+			fmt.Sprintf("Tracking %s at %s every %s", (*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
 			utils.LogFrom{Primary: (*s)[key].ID},
 			true)
 
@@ -74,20 +74,20 @@ func (s *Service) Track() {
 		// If it failed
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "regex ") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, s.ID, 2)
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 2)
 			} else if strings.HasPrefix(err.Error(), "failed converting") &&
 				strings.Contains(err.Error(), " semantic version.") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, s.ID, 3)
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 3)
 			} else if strings.HasPrefix(err.Error(), "queried version") &&
 				strings.Contains(err.Error(), " less than ") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, s.ID, 4)
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 4)
 			} else {
-				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.QueryMetric, s.ID, "FAIL")
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, s.ID, 0)
+				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, s.ID, "FAIL")
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 0)
 			}
 		} else {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.QueryMetric, s.ID, "SUCCESS")
-			metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, s.ID, 1)
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, s.ID, "SUCCESS")
+			metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 1)
 		}
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())

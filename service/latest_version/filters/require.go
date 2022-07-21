@@ -12,30 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package require
+package filters
 
 import (
 	"fmt"
 	"regexp"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/github/api_types"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
-// Options to require
-type Options struct {
+// Require for version to be considered valid.
+type Require struct {
 	Status       *service_status.Status `yaml:"-"`                       // Service Status
 	RegexContent *string                `yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
 	RegexVersion *string                `yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
 }
 
 // RegexCheckVersion
-func (r *Options) RegexCheckVersion(
+func (r *Require) RegexCheckVersion(
 	version string,
 	log *utils.JLog,
 	logFrom utils.LogFrom,
 ) error {
+	if r == nil {
+		return nil
+	}
+
 	// Check that the version grabbed satisfies the specified regex (if there is any).
 	wantedRegexVersion := r.RegexVersion
 	if wantedRegexVersion != nil {
@@ -53,12 +57,16 @@ func (r *Options) RegexCheckVersion(
 }
 
 // RegexCheckContent of body with version
-func (r *Options) RegexCheckContent(
+func (r *Require) RegexCheckContent(
 	version string,
 	body interface{},
 	log *utils.JLog,
 	logFrom utils.LogFrom,
 ) error {
+	if r == nil {
+		return nil
+	}
+
 	// Check for a regex match in the body if one is desired.
 	wantedRegexContent := r.RegexContent
 	if wantedRegexContent != nil {
@@ -106,8 +114,12 @@ func (r *Options) RegexCheckContent(
 	return nil
 }
 
-// CheckValues of the Require Options.
-func (r *Options) CheckValues(prefix string) (errs error) {
+// CheckValues of the Require options.
+func (r *Require) CheckValues(prefix string) (errs error) {
+	if r == nil {
+		return
+	}
+
 	// Content RegEx
 	if r.RegexContent != nil {
 		_, err := regexp.Compile(*r.RegexContent)
