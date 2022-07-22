@@ -536,7 +536,7 @@ func TestWebSocketApprovalsVersionWithNoCommandsOrWebHooks(t *testing.T) {
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
 		msgServiceID string = *svc.ID
-		msgTarget    string = "ARGUS_SKIP"
+		msgTarget    string = "ARGUS_ALL"
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,

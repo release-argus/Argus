@@ -125,16 +125,16 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		return
 	}
 
-	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", *id), logFrom, true)
-		return
-	}
-
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%s release skip - %q", *id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[*id].HandleSkip(payload.ServiceData.Status.LatestVersion)
+		return
+	}
+
+	if api.Config.Service[*id].WebHook == nil && api.Config.Service[*id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", *id), logFrom, true)
 		return
 	}
 
