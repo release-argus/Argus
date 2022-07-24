@@ -25,10 +25,21 @@ import (
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
+	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
+
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
 
 func testConfig() config.Config {
 	port, err := getFreePort()
@@ -56,7 +67,7 @@ func testConfig() config.Config {
 	svc := testService("test")
 	dvl := testDeployedVersion()
 	svc.DeployedVersionLookup = &dvl
-	svc.URLCommands = &service.URLCommandSlice{testURLCommandRegex()}
+	svc.URLCommands = &filters.URLCommandSlice{testURLCommandRegex()}
 	emptyNotify := shoutrrr.Shoutrrr{
 		Options:   map[string]string{},
 		Params:    map[string]string{},
@@ -75,7 +86,7 @@ func testConfig() config.Config {
 		},
 	}
 	notify["test"].Params = map[string]string{}
-	svc.Notify = &notify
+	svc.Notify = notify
 	svcComment := "test service's comment"
 	svc.Comment = &svcComment
 	whPass := testWebHookPass("pass")
@@ -92,10 +103,10 @@ func testConfig() config.Config {
 		},
 		Notify: defaults.Notify,
 		Service: service.Slice{
-			*svc.ID: &svc,
+			svc.ID: &svc,
 		},
-		Order: &[]string{*svc.ID},
-		All:   []string{*svc.ID},
+		Order: &[]string{svc.ID},
+		All:   []string{svc.ID},
 	}
 }
 
@@ -113,49 +124,48 @@ func getFreePort() (int, error) {
 
 func testService(id string) service.Service {
 	var (
-		sType               string                = "url"
-		sAccessToken        string                = "secret"
-		sURL                string                = "https://release-argus.io"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sInterval           string                = "10s"
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		whURL               string                = "example.com"
+		sAnnounceChannel chan []byte           = make(chan []byte, 2)
+		sDatabaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		sSaveChannel     chan bool             = make(chan bool, 5)
 	)
 	svc := service.Service{
-		ID:                 &id,
-		Type:               &sType,
-		AccessToken:        &sAccessToken,
-		URL:                &sURL,
-		WebURL:             &sWebURL,
-		RegexContent:       &sRegexContent,
-		RegexVersion:       &sRegexVersion,
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
-		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
-		Announce:           &sAnnounceChannel,
-		DatabaseChannel:    &sDatabaseChannel,
-		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
-		Defaults:           &service.Service{},
-		HardDefaults:       &service.Service{},
-		Command:            &command.Slice{command.Command{"ls", "-lah"}},
-		CommandController:  &command.Controller{},
-		WebHook:            &webhook.Slice{"test": &webhook.WebHook{URL: &whURL}},
-		Status:             &service_status.Status{},
+		ID:          id,
+		Type:        "url",
+		AccessToken: stringPtr("secret"),
+		URL:         stringPtr("https://release-argus.io"),
+		WebURL:      stringPtr("https://release-argus.io"),
+		LatestVersion: latest_version.Lookup{
+			AllowInvalidCerts: boolPtr(false),
+			UsePreRelease:     boolPtr(false),
+			Require: &filters.Require{
+				RegexContent: stringPtr("content"),
+				RegexVersion: stringPtr("version"),
+			},
+		},
+		Options: options.Options{
+			SemanticVersioning: boolPtr(true),
+			Interval:           stringPtr("10m"),
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
+		},
+		Dashboard: service.DashboardOptions{
+			AutoApprove:  boolPtr(false),
+			Icon:         "test",
+			Defaults:     &service.DashboardOptions{},
+			HardDefaults: &service.DashboardOptions{},
+		},
+		Defaults:          &service.Service{},
+		HardDefaults:      &service.Service{},
+		Command:           command.Slice{command.Command{"ls", "-lah"}},
+		CommandController: &command.Controller{},
+		WebHook:           webhook.Slice{"test": &webhook.WebHook{URL: stringPtr("example.com")}},
+		Status: service_status.Status{
+			AnnounceChannel: &sAnnounceChannel,
+			DatabaseChannel: &sDatabaseChannel,
+			SaveChannel:     &sSaveChannel,
+		},
 	}
-	svc.CommandController.Init(jLog, &id, svc.Status, svc.Command, nil, nil)
+	svc.CommandController.Init(jLog, &id, &svc.Status, &svc.Command, nil, nil)
 	return svc
 }
 
@@ -226,32 +236,34 @@ func testWebHookFail(id string) webhook.WebHook {
 	}
 }
 
-func testDeployedVersion() service.DeployedVersionLookup {
+func testDeployedVersion() deployed_version.Lookup {
 	var (
 		allowInvalidCerts bool = false
 	)
-	return service.DeployedVersionLookup{
+	dflt := &deployed_version.Lookup{}
+	hardDflt := &deployed_version.Lookup{}
+	return deployed_version.Lookup{
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
-		Headers: []service.Header{
+		Headers: []deployed_version.Header{
 			{Key: "foo", Value: "bar"},
 		},
 		JSON:  "something",
 		Regex: "([0-9]+) The Argus Developers",
-		BasicAuth: &service.BasicAuth{
+		BasicAuth: &deployed_version.BasicAuth{
 			Username: "fizz",
 			Password: "buzz",
 		},
-		Defaults:     &service.DeployedVersionLookup{},
-		HardDefaults: &service.DeployedVersionLookup{},
+		Defaults:     &dflt,
+		HardDefaults: &hardDflt,
 	}
 }
 
-func testURLCommandRegex() service.URLCommand {
+func testURLCommandRegex() filters.URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
 	ignoreMisses := false
-	return service.URLCommand{
+	return filters.URLCommand{
 		Type:         "regex",
 		Regex:        &regex,
 		IgnoreMisses: &ignoreMisses,

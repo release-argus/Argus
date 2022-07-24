@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
 	"github.com/release-argus/Argus/config"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	_ "modernc.org/sqlite"
 )
 
 var (
@@ -175,7 +175,7 @@ func (api *api) convertServiceStatus() {
 				(*api.config.Service[id]).OldStatus.DeployedVersionTimestamp,
 				(*api.config.Service[id]).OldStatus.ApprovedVersion,
 			)
-			*(*api.config.Service[id]).Status = service_status.Status{
+			(*api.config.Service[id]).Status = service_status.Status{
 				LatestVersion:            (*api.config.Service[id]).OldStatus.LatestVersion,
 				LatestVersionTimestamp:   (*api.config.Service[id]).OldStatus.LatestVersionTimestamp,
 				DeployedVersion:          (*api.config.Service[id]).OldStatus.DeployedVersion,

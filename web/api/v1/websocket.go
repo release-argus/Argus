@@ -59,14 +59,6 @@ func (api *API) wsService(client *Client) {
 
 		service := api.Config.Service[key]
 		url := service.LatestVersion.GetServiceURL(false)
-		webhookCount := 0
-		if service.WebHook != nil {
-			webhookCount = len(*service.WebHook)
-		}
-		commandCount := 0
-		if service.Command != nil {
-			commandCount = len(*service.Command)
-		}
 		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
 		serviceSummary := api_types.ServiceSummary{
@@ -76,9 +68,9 @@ func (api *API) wsService(client *Client) {
 			URL:                      &url,
 			Icon:                     service.GetIconURL(),
 			IconLinkTo:               service.Dashboard.IconLinkTo,
-			HasDeployedVersionLookup: &hasDeployedVersionLookup,
-			Command:                  commandCount,
-			WebHook:                  webhookCount,
+			HasDeployedVersionLookup: hasDeployedVersionLookup,
+			Command:                  len(service.Command),
+			WebHook:                  len(service.WebHook),
 			Status: &api_types.Status{
 				ApprovedVersion:          service.Status.ApprovedVersion,
 				DeployedVersion:          service.Status.DeployedVersion,
@@ -190,9 +182,11 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	responseType := "COMMAND"
 	responseSubType := "SUMMARY"
 
-	commandSummary := make(map[string]*api_types.CommandSummary, len(*api.Config.Service[id].Command))
+	commandSummary := make(map[string]*api_types.CommandSummary, len(api.Config.Service[id].Command))
 	for key := range *api.Config.Service[id].CommandController.Command {
-		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(api.Config.Service[id].Status)
+		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(&api.Config.Service[id].Status)
+		fmt.Printf("%d - %v\n", key, api.Config.Service[id].Status.Fails.Command)
+		fmt.Printf("%d - %v\n", key, api.Config.Service[id].CommandController.NextRunnable)
 		commandSummary[command.String()] = &api_types.CommandSummary{
 			Failed:       api.Config.Service[id].Status.Fails.Command[key],
 			NextRunnable: api.Config.Service[id].CommandController.NextRunnable[key],
@@ -239,12 +233,12 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	responsePage := "APPROVALS"
 	responseType := "WEBHOOK"
 	responseSubType := "SUMMARY"
-	webhookSummary := make(map[string]*api_types.WebHookSummary, len(*api.Config.Service[id].WebHook))
+	webhookSummary := make(map[string]*api_types.WebHookSummary, len(api.Config.Service[id].WebHook))
 
-	for key := range *api.Config.Service[id].WebHook {
+	for key := range api.Config.Service[id].WebHook {
 		webhookSummary[key] = &api_types.WebHookSummary{
 			Failed:       api.Config.Service[id].Status.Fails.WebHook[key],
-			NextRunnable: (*api.Config.Service[id].WebHook)[key].NextRunnable,
+			NextRunnable: api.Config.Service[id].WebHook[key].NextRunnable,
 		}
 	}
 
@@ -501,11 +495,11 @@ func (api *API) wsConfigService(client *Client) {
 			// URL Commands
 			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(service.LatestVersion.GetURLCommands())
 			// Notify
-			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(service.Notify)
+			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
 			// Command
-			serviceConfig[key].Command = convertCommandSliceToAPITypeCommandSlice(service.Command)
+			serviceConfig[key].Command = convertCommandSliceToAPITypeCommandSlice(&service.Command)
 			// WebHook
-			serviceConfig[key].WebHook = convertWebHookSliceToAPITypeWebHookSlice(service.WebHook)
+			serviceConfig[key].WebHook = convertWebHookSliceToAPITypeWebHookSlice(&service.WebHook)
 		}
 	}
 

@@ -35,7 +35,7 @@ func TestSetNextRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   make([]time.Time, 3),
 		ParentInterval: stringPtr("11m"),
 	}
@@ -83,7 +83,7 @@ func TestIsRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
@@ -119,7 +119,7 @@ func TestGetNextRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
@@ -213,7 +213,7 @@ func TestInitMetrics(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}

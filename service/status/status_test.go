@@ -22,19 +22,17 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/webhook"
 )
 
 func TestInitWithNil(t *testing.T) {
 	// GIVEN we have a Status and no shoutrrrs or webhooks
 	shoutrrrs := 0
 	webhooks := 0
+	commands := 0
 	var status Status
 
 	// WHEN Init is called
-	status.Init(shoutrrrs, webhooks)
+	status.Init(shoutrrrs, webhooks, commands, stringPtr("test"), nil)
 
 	// THEN Fails will be empty
 	if status.Fails.Shoutrrr != nil || status.Fails.WebHook != nil {
@@ -47,13 +45,14 @@ func TestInitWithShoutrrs(t *testing.T) {
 	// GIVEN we have a Status and some shoutrrs
 	shoutrrrs := 4
 	webhooks := 0
+	commands := 0
 	var status Status
 
 	// WHEN Init is called
-	status.Init(shoutrrrs, webhooks)
+	status.Init(shoutrrrs, webhooks, commands, stringPtr("test"), nil)
 
 	// THEN Fails will be empty
-	got := len(*status.Fails.Shoutrrr)
+	got := len(status.Fails.Shoutrrr)
 	if got != shoutrrrs {
 		t.Errorf("Init with %d shoutrrrs should have made %d Fails, not %d",
 			shoutrrrs, shoutrrrs, got)
@@ -64,16 +63,35 @@ func TestInitWithWebHooks(t *testing.T) {
 	// GIVEN we have a Status and some webhooks
 	shoutrrrs := 0
 	webhooks := 4
+	commands := 0
 	var status Status
 
 	// WHEN Init is called
-	status.Init(shoutrrrs, webhooks)
+	status.Init(shoutrrrs, webhooks, commands, stringPtr("test"), nil)
 
 	// THEN Fails will be empty
-	got := len(*status.Fails.WebHook)
+	got := len(status.Fails.WebHook)
 	if got != webhooks {
 		t.Errorf("Init with %d webhooks should have made %d Fails, not %d",
 			webhooks, webhooks, got)
+	}
+}
+
+func TestInitWithCommands(t *testing.T) {
+	// GIVEN we have a Status and some commands
+	shoutrrrs := 0
+	webhooks := 0
+	commands := 4
+	var status Status
+
+	// WHEN Init is called
+	status.Init(shoutrrrs, webhooks, commands, stringPtr("test"), nil)
+
+	// THEN Fails will be empty
+	got := len(status.Fails.Command)
+	if got != webhooks {
+		t.Errorf("Init with %d commands should have made %d Fails, not %d",
+			commands, commands, got)
 	}
 }
 
@@ -95,15 +113,15 @@ func TestSetLastQueried(t *testing.T) {
 
 func TestSetDeployedVersion(t *testing.T) {
 	// GIVEN a Service with LatestVersion == ApprovedVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion
+	status := testStatus()
+	status.ApprovedVersion = status.LatestVersion
 
 	// WHEN SetDeployedVersion is called on it
-	service.SetDeployedVersion(service.Status.LatestVersion)
+	status.SetDeployedVersion(status.LatestVersion)
 
 	// THEN DeployedVersion is set to this version
-	got := service.Status.DeployedVersion
-	want := service.Status.LatestVersion
+	got := status.DeployedVersion
+	want := status.LatestVersion
 	if got != want {
 		t.Errorf("Expected DeployedVersion to be set to %q, not %q",
 			want, got)
@@ -112,12 +130,12 @@ func TestSetDeployedVersion(t *testing.T) {
 
 func TestSetDeployedVersionDidSetDeployedVersionTimestamp(t *testing.T) {
 	// GIVEN a Service with LatestVersion == ApprovedVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion
+	status := testStatus()
+	status.ApprovedVersion = status.LatestVersion
 
 	// WHEN SetDeployedVersion is called on it
 	start := time.Now().UTC()
-	service.SetDeployedVersion(service.Status.LatestVersion)
+	status.SetDeployedVersion(status.LatestVersion)
 
 	// THEN DeployedVersionTimestamp is set to now in time
 	since := time.Since(start)
@@ -129,14 +147,14 @@ func TestSetDeployedVersionDidSetDeployedVersionTimestamp(t *testing.T) {
 
 func TestSetDeployedVersionDidResetApprovedWhenMatch(t *testing.T) {
 	// GIVEN a Service with LatestVersion == ApprovedVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion
+	status := testStatus()
+	status.ApprovedVersion = status.LatestVersion
 
 	// WHEN SetDeployedVersion is called on it with this ApprovedVersion
-	service.SetDeployedVersion(service.Status.ApprovedVersion)
+	status.SetDeployedVersion(status.ApprovedVersion)
 
 	// THEN ApprovedVersion is reset
-	got := service.Status.ApprovedVersion
+	got := status.ApprovedVersion
 	want := ""
 	if got != want {
 		t.Errorf("Expected ApprovedVersion to be reset to %q, not %q",
@@ -146,99 +164,73 @@ func TestSetDeployedVersionDidResetApprovedWhenMatch(t *testing.T) {
 
 func TestSetDeployedVersionDidntResetApprovedWhenMatch(t *testing.T) {
 	// GIVEN a Service with LatestVersion != ApprovedVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion + "-beta"
+	status := testStatus()
+	status.ApprovedVersion = status.LatestVersion + "-beta"
 
 	// WHEN SetDeployedVersion is called on it with the LatestVersion
-	want := service.Status.ApprovedVersion
-	service.SetDeployedVersion(service.Status.LatestVersion)
+	want := status.ApprovedVersion
+	status.SetDeployedVersion(status.LatestVersion)
 
 	// THEN ApprovedVersion is not reset
-	got := service.Status.ApprovedVersion
+	got := status.ApprovedVersion
 	if got != want {
 		t.Errorf("ApprovedVersion shouldn't have changed and should still be %q, not %q",
 			want, got)
 	}
 }
 
-func TestSetDeployedVersionDidResetCommandFails(t *testing.T) {
-	// GIVEN a Service with Commands that failed
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la"},
+func TestResetFails(t *testing.T) {
+	// GIVEN a Fails struct
+	tests := map[string]struct {
+		fails Fails
+	}{
+		"all empty":     {fails: Fails{}},
+		"only notifies": {fails: Fails{Shoutrrr: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
+		"only commands": {fails: Fails{Command: []*bool{nil, boolPtr(false), boolPtr(true)}}},
+		"only webhooks": {fails: Fails{WebHook: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
+		"all filled": {fails: Fails{Shoutrrr: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)},
+			Command: []*bool{nil, boolPtr(false), boolPtr(true)},
+			WebHook: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
 	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(
-		jLog,
-		&serviceID,
-		nil,
-		service.Command,
-		nil,
-		service.Interval,
-	)
-	didFail := false
-	fail := true
-	service.CommandController.Failed[0] = &didFail
-	service.CommandController.Failed[1] = &fail
-	service.CommandController.Failed[2] = &fail
-	service.CommandController.Failed[3] = &didFail
 
-	// WHEN SetDeployedVersion is called on it
-	service.SetDeployedVersion(service.Status.LatestVersion)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN resetFails is called on it
+			tc.fails.resetFails()
 
-	// THEN all the Commands Failed's become nil
-	for _, failed := range service.CommandController.Failed {
-		if failed != nil {
-			t.Errorf("CommandController.Failed should have been reset to nil and not be %t",
-				*failed)
-		}
-	}
-}
-
-func TestSetDeployedVersionDidResetWebHookFails(t *testing.T) {
-	// GIVEN a Service with WebHooks that failed
-	service := testServiceGitHub()
-	whPass := testWebHookSuccessful()
-	whFail := testWebHookFailing()
-	service.WebHook = &webhook.Slice{
-		"fail1": &whFail,
-		"fail2": &whFail,
-		"pass1": &whPass,
-		"pass2": &whPass,
-	}
-	didFail := false
-	fail := true
-	(*service.WebHook)["fail1"].Failed = &fail
-	(*service.WebHook)["fail2"].Failed = &fail
-	(*service.WebHook)["pass1"].Failed = &didFail
-	(*service.WebHook)["pass2"].Failed = &didFail
-
-	// WHEN SetDeployedVersion is called on it
-	service.SetDeployedVersion(service.Status.LatestVersion)
-
-	// THEN all the Commands Failed's become nil
-	for index, webhook := range *service.WebHook {
-		if (*webhook).Failed != nil {
-			t.Errorf("WebHook[%s].Failed should have been reset to nil and not be %t",
-				index, *(*webhook).Failed)
-		}
+			// THEN all the fails become nil
+			for i := range tc.fails.Shoutrrr {
+				if tc.fails.Shoutrrr[i] != nil {
+					t.Errorf("Shoutrrr.Failed[%s] should have been reset to nil and not be %t",
+						i, *tc.fails.Shoutrrr[i])
+				}
+			}
+			for i := range tc.fails.Command {
+				if tc.fails.Command[i] != nil {
+					t.Errorf("Command.Failed[%d] should have been reset to nil and not be %t",
+						i, *tc.fails.Command[i])
+				}
+			}
+			for i := range tc.fails.WebHook {
+				if tc.fails.WebHook[i] != nil {
+					t.Errorf("WebHook.Failed[%s] should have been reset to nil and not be %t",
+						i, *tc.fails.WebHook[i])
+				}
+			}
+		})
 	}
 }
 
 func TestSetLatestVersion(t *testing.T) {
 	// GIVEN a Service and a new version
-	service := testServiceGitHub()
+	status := testStatus()
 	version := "new"
 
 	// WHEN SetLatestVersion is called on it
-	service.SetLatestVersion(version)
+	status.SetLatestVersion(version)
 
 	// THEN LatestVersion is set to this version
-	got := service.Status.LatestVersion
+	got := status.LatestVersion
 	if got != version {
 		t.Errorf("Expected LatestVersion to be set to %q, not %q",
 			version, got)
@@ -247,86 +239,18 @@ func TestSetLatestVersion(t *testing.T) {
 
 func TestSetLatestVersionDidSetLatestVersionTimestamp(t *testing.T) {
 	// GIVEN a Service and a new version
-	service := testServiceGitHub()
+	status := testStatus()
 	version := "new"
 
 	// WHEN SetLatestVersion is called on it
 	start := time.Now().UTC()
-	service.SetLatestVersion(version)
+	status.SetLatestVersion(version)
 
 	// THEN LatestVersionTimestamp is set to now in time
 	since := time.Since(start)
 	if since > time.Second {
 		t.Errorf("LatestVersionTimestamp was %v ago, not recent enough!",
 			since)
-	}
-}
-
-func TestSetLatestVersionDidResetCommandFails(t *testing.T) {
-	// GIVEN a Service with Commands that failed
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(
-		jLog,
-		&serviceID,
-		nil,
-		service.Command,
-		nil,
-		service.Interval,
-	)
-	didFail := false
-	fail := true
-	service.CommandController.Failed[0] = &didFail
-	service.CommandController.Failed[1] = &fail
-	service.CommandController.Failed[2] = &fail
-	service.CommandController.Failed[3] = &didFail
-
-	// WHEN SetLatestVersion is called on it
-	service.SetLatestVersion(service.Status.LatestVersion)
-
-	// THEN all the Commands Failed's become nil
-	for _, failed := range service.CommandController.Failed {
-		if failed != nil {
-			t.Errorf("CommandController.Failed should have been reset to nil and not be %t",
-				*failed)
-		}
-	}
-}
-
-func TestSetLatestVersionDidResetWebHookFails(t *testing.T) {
-	// GIVEN a Service with WebHooks that failed
-	service := testServiceGitHub()
-	whPass := testWebHookSuccessful()
-	whFail := testWebHookFailing()
-	service.WebHook = &webhook.Slice{
-		"fail1": &whFail,
-		"fail2": &whFail,
-		"pass1": &whPass,
-		"pass2": &whPass,
-	}
-	didFail := false
-	fail := true
-	(*service.WebHook)["fail1"].Failed = &fail
-	(*service.WebHook)["fail2"].Failed = &fail
-	(*service.WebHook)["pass1"].Failed = &didFail
-	(*service.WebHook)["pass2"].Failed = &didFail
-
-	// WHEN SetLatestVersion is called on it
-	service.SetLatestVersion(service.Status.LatestVersion)
-
-	// THEN all the Commands Failed's become nil
-	for index, webhook := range *service.WebHook {
-		if (*webhook).Failed != nil {
-			t.Errorf("WebHook[%s].Failed should have been reset to nil and not be %t",
-				index, *(*webhook).Failed)
-		}
 	}
 }
 

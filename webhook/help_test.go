@@ -16,6 +16,13 @@
 
 package webhook
 
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
+
 func testWebHookSuccessful() WebHook {
 	whID := "test"
 	whType := "github"

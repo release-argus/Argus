@@ -26,7 +26,7 @@ func (l *Lookup) Init(
 	log *utils.JLog,
 	defaults **Lookup,
 	hardDefaults **Lookup,
-	status **service_status.Status,
+	status *service_status.Status,
 	options *options.Options,
 ) {
 	if l == nil {

@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -43,6 +42,7 @@ func ServiceTest(
 	)
 	service := cfg.Service[*flag]
 
+	//nolint:staticcheck // nil if unknown Service
 	if service == nil {
 		var allService []string
 		for key := range cfg.Service {
@@ -60,10 +60,7 @@ func ServiceTest(
 		)
 	}
 
-	// shouldn't need this as the fatal above prevents it getting here if it is nil, but staticcheck gives a SA5011
-	if service != nil {
-		service.Status = &service_status.Status{}
-	}
+	//nolint:staticcheck // Fatal if nil above
 	_, err := service.LatestVersion.Query()
 	if err != nil {
 		log.Error(

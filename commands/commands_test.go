@@ -109,7 +109,7 @@ func TestExecIndex(t *testing.T) {
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
-		Failed:         Fails{nil, nil},
+		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
 		Announce:       &announce,
@@ -170,7 +170,7 @@ func TestControllerExec(t *testing.T) {
 	announce := make(chan []byte, 8)
 	controller := Controller{
 		ServiceID:      stringPtr("service_id"),
-		Failed:         Fails{nil, nil},
+		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
 		Announce:       &announce,

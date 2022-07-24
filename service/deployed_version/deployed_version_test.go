@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
-
 package deployed_version
 
 import (
@@ -24,6 +22,7 @@ import (
 	"time"
 
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
@@ -367,7 +366,7 @@ func TestLookupTrackWithNil(t *testing.T) {
 
 	// WHEN CheckValues is called on it
 	start := time.Now().UTC()
-	dvl.Track(&Service{})
+	dvl.Track()
 
 	// THEN the function exits straight away
 	since := time.Since(start)
@@ -383,34 +382,29 @@ func TestLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
 	dvl.Regex = "([0-9.]+)test"
-	version := "0.0.0"
-	serviceID := "test"
-	semanticVersioning := true
-	interval := "10s"
 	databaseChannel := make(chan db_types.Message, 5)
-	service := Service{
-		ID:       &serviceID,
-		Interval: &interval,
-		Lookup:   &dvl,
-		Status: &service_status.Status{
-			DeployedVersion: version,
-			LatestVersion:   "1.2.3",
-		},
-		DatabaseChannel:    &databaseChannel,
-		SemanticVersioning: &semanticVersioning,
-		Defaults:           &Service{},
-		HardDefaults:       &Service{},
+	latestVersion := "1.2.3"
+	dvl.Status = &service_status.Status{
+		DeployedVersion: "0.0.0",
+		LatestVersion:   latestVersion,
+		DatabaseChannel: &databaseChannel,
+	}
+	dvl.options = &options.Options{
+		Interval:           stringPtr("10s"),
+		SemanticVersioning: boolPtr(true),
+		Defaults:           &options.Options{},
+		HardDefaults:       &options.Options{},
 	}
 
 	// WHEN Track is called on this
-	go service.Lookup.Track(&service)
+	go dvl.Track()
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
-	got := service.Status.DeployedVersion
-	if got == version {
-		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q",
-			dvl.Regex, dvl.URL, service.Status.DeployedVersion)
+	got := dvl.Status.DeployedVersion
+	if got == latestVersion {
+		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q to %q",
+			dvl.Regex, dvl.URL, dvl.Status.DeployedVersion, latestVersion)
 	}
 }
 
@@ -420,37 +414,32 @@ func TestLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T) {
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
 	dvl.Regex = "([0-9.]+)test"
-	version := "0.0.0"
-	serviceID := "test"
-	semanticVersioning := true
-	interval := "10s"
 	databaseChannel := make(chan db_types.Message, 5)
-	service := Service{
-		ID:                 &serviceID,
-		Interval:           &interval,
-		SemanticVersioning: &semanticVersioning,
-		Lookup:             &dvl,
-		Status: &service_status.Status{
-			DeployedVersion: version,
-			LatestVersion:   "1.2.4",
-		},
+	dvl.Status = &service_status.Status{
+		DeployedVersion: "0.0.0",
+		LatestVersion:   "1.2.4",
 		DatabaseChannel: &databaseChannel,
-		Defaults:        &Service{},
-		HardDefaults:    &Service{},
+	}
+	dvl.options = &options.Options{
+		Interval:           stringPtr("10s"),
+		SemanticVersioning: boolPtr(true),
+		Defaults:           &options.Options{},
+		HardDefaults:       &options.Options{},
 	}
 
 	// WHEN Track is called on this
-	go service.Lookup.Track(&service)
+	go dvl.Track()
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
-	got := service.Status.DeployedVersion
-	if got == service.Status.LatestVersion {
+	got := dvl.Status.DeployedVersion
+	if got == dvl.Status.LatestVersion {
 		t.Error("Shouldn't have got to LatestVersion")
 	}
-	if got == version {
-		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q",
-			dvl.Regex, dvl.URL, service.Status.DeployedVersion)
+	want := "1.2.3"
+	if got == want {
+		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q to %q",
+			dvl.Regex, dvl.URL, dvl.Status.DeployedVersion, want)
 	}
 }
 
@@ -460,34 +449,28 @@ func TestLookupTrackWithSuccessfulToNewerLatestVersion(t *testing.T) {
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
 	dvl.Regex = "([0-9.]+)test"
-	version := "0.0.0"
-	serviceID := "test"
-	semanticVersioning := true
-	interval := "10s"
-	oldLatestVersion := "1.2.2"
 	databaseChannel := make(chan db_types.Message, 5)
-	service := Service{
-		ID:                 &serviceID,
-		Interval:           &interval,
-		SemanticVersioning: &semanticVersioning,
-		Lookup:             &dvl,
-		Status: &service_status.Status{
-			DeployedVersion: version,
-			LatestVersion:   oldLatestVersion,
-		},
+	dvl.Status = &service_status.Status{
+		DeployedVersion: "0.0.0",
+		LatestVersion:   "1.2.2",
 		DatabaseChannel: &databaseChannel,
-		Defaults:        &Service{},
-		HardDefaults:    &Service{},
+	}
+	dvl.options = &options.Options{
+		Interval:           stringPtr("10s"),
+		SemanticVersioning: boolPtr(true),
+		Defaults:           &options.Options{},
+		HardDefaults:       &options.Options{},
 	}
 
 	// WHEN Track is called on this
-	go service.Lookup.Track(&service)
+	go dvl.Track()
 
 	// THEN Service.Status.DeployedVersion is updated
 	time.Sleep(2 * time.Second)
-	if service.Status.DeployedVersion != service.Status.LatestVersion {
+	want := "1.2.3"
+	if dvl.Status.DeployedVersion != want {
 		t.Errorf("LatestVersion %q shouldn't be lower than DeployedVersion %q",
-			service.Status.LatestVersion, service.Status.DeployedVersion)
+			dvl.Status.LatestVersion, dvl.Status.DeployedVersion)
 	}
 }
 
@@ -497,34 +480,27 @@ func TestLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *testing.T) {
 	dvl := testDeployedVersion()
 	dvl.URL = "https://release-argus.io/docs/config/service/"
 	dvl.Regex = "([0-9.]+)test"
-	version := "0.0.0"
-	serviceID := "test"
-	semanticVersioning := true
-	interval := "10s"
 	announceChannel := make(chan []byte, 5)
 	databaseChannel := make(chan db_types.Message, 5)
-	service := Service{
-		ID:                 &serviceID,
-		Interval:           &interval,
-		SemanticVersioning: &semanticVersioning,
-		Lookup:             &dvl,
-		Status: &service_status.Status{
-			DeployedVersion:          version,
-			DeployedVersionTimestamp: "2022-01-01T01:01:01Z",
-			LatestVersion:            "1.2.3",
-		},
+	dvl.Status = &service_status.Status{
+		DeployedVersion: "0.0.0",
+		LatestVersion:   "1.2.4",
+		AnnounceChannel: &announceChannel,
 		DatabaseChannel: &databaseChannel,
-		Defaults:        &Service{},
-		HardDefaults:    &Service{},
-		Announce:        &announceChannel,
+	}
+	dvl.options = &options.Options{
+		Interval:           stringPtr("10s"),
+		SemanticVersioning: boolPtr(true),
+		Defaults:           &options.Options{},
+		HardDefaults:       &options.Options{},
 	}
 
 	// WHEN Track is called on this
-	go service.Lookup.Track(&service)
+	go dvl.Track()
 
 	// THEN a Message is sent to the Announce channel
 	time.Sleep(2 * time.Second)
-	got := len(*service.Announce)
+	got := len(*dvl.Status.AnnounceChannel)
 	want := 1
 	if got != want {
 		t.Errorf("%d messages in the channel from the DeployedVersion change. Should be %d",

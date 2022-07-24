@@ -27,21 +27,17 @@ import (
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
 	// Check that no WebHook(s) failed
-	if s.WebHook != nil {
-		for key := range *s.WebHook {
-			// Default nil to true = failed
-			if utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
-				return
-			}
+	for key := range s.WebHook {
+		// Default nil to true = failed
+		if utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
+			return
 		}
 	}
 	// Check that no Command(s) failed
-	if s.Command != nil {
-		for key := range *s.Command {
-			// Default nil to true = failed
-			if utils.EvalNilPtr(s.Status.Fails.Command[key], true) {
-				return
-			}
+	for key := range s.Command {
+		// Default nil to true = failed
+		if utils.EvalNilPtr(s.Status.Fails.Command[key], true) {
+			return
 		}
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
@@ -118,17 +114,17 @@ func (s *Service) HandleFailedActions() {
 	potentialErrors := 0
 	// Send the WebHook(s).
 	if s.WebHook != nil {
-		potentialErrors += len(*s.WebHook)
-		for key := range *s.WebHook {
+		potentialErrors += len(s.WebHook)
+		for key := range s.WebHook {
 			if retryAll || utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
 				// Skip if it's before NextRunnable
-				if !(*s.WebHook)[key].IsRunnable() {
+				if !s.WebHook[key].IsRunnable() {
 					potentialErrors--
 					continue
 				}
 				// Send
 				go func(key string) {
-					err := (*s.WebHook)[key].Send(s.GetServiceInfo(), false)
+					err := s.WebHook[key].Send(s.GetServiceInfo(), false)
 					errChan <- err
 				}(key)
 				// Space out WebHooks.
@@ -140,9 +136,9 @@ func (s *Service) HandleFailedActions() {
 	}
 	// Run the Command(s)
 	if s.Command != nil {
-		potentialErrors += len(*s.Command)
+		potentialErrors += len(s.Command)
 		logFrom := utils.LogFrom{Primary: "Command", Secondary: s.ID}
-		for key := range *s.Command {
+		for key := range s.Command {
 			if retryAll || utils.EvalNilPtr(s.Status.Fails.Command[key], true) {
 				// Skip if it's before NextRunnable
 				if !s.CommandController.IsRunnable(key) {
@@ -206,17 +202,17 @@ func (s *Service) HandleCommand(command string) {
 // HandleWebHook will handle sending the WebHook for this service
 // to the WebHook with a matching ID.
 func (s *Service) HandleWebHook(webhookID string) {
-	if s.WebHook == nil || (*s.WebHook)[webhookID] == nil {
+	if s.WebHook == nil || s.WebHook[webhookID] == nil {
 		return
 	}
 
 	// Skip if it's before NextRunnable
-	if !(*s.WebHook)[webhookID].IsRunnable() {
+	if !s.WebHook[webhookID].IsRunnable() {
 		return
 	}
 
 	// Send the WebHook.
-	err := (*s.WebHook)[webhookID].Send(s.GetServiceInfo(), false)
+	err := s.WebHook[webhookID].Send(s.GetServiceInfo(), false)
 	if err == nil {
 		s.UpdatedVersion()
 	}
@@ -243,7 +239,7 @@ func (s *Service) shouldRetryAll() bool {
 	retry := true
 	// retry all only if every WebHook has been sent successfully
 	if s.WebHook != nil {
-		for key := range *s.WebHook {
+		for key := range s.WebHook {
 			if utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
 				retry = false
 				break
@@ -252,7 +248,7 @@ func (s *Service) shouldRetryAll() bool {
 	}
 	// AND every Command has been run successfully
 	if retry && s.Command != nil {
-		for key := range *s.Command {
+		for key := range s.Command {
 			if utils.EvalNilPtr(s.Status.Fails.Command[key], true) {
 				retry = false
 				break

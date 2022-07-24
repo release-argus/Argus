@@ -35,11 +35,11 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
-func (l *Lookup) Track(parentID string) {
+func (l *Lookup) Track() {
 	if l == nil {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: parentID}
+	logFrom := utils.LogFrom{Primary: *l.Status.ServiceID}
 
 	// Track forever.
 	for {

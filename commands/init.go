@@ -42,9 +42,7 @@ func (c *Controller) Init(
 	}
 
 	c.ServiceStatus = serviceStatus
-	if command != nil {
-		c.Command = command
-	}
+	c.Command = command
 	c.Failed = &serviceStatus.Fails.Command
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 

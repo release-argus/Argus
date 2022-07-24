@@ -21,6 +21,13 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+func stringPtr(val string) *string {
+	return &val
+}
+func boolPtr(val bool) *bool {
+	return &val
+}
+
 func testConfig() Config {
 	logLevel := "DEBUG"
 	saveChannel := make(chan bool, 5)
@@ -78,11 +85,4 @@ func testLoad(fileOverride string) Config {
 	config.Load(configFile, &flags, &utils.JLog{})
 
 	return config
-}
-
-func stringPtr(val string) *string {
-	return &val
-}
-func boolPtr(val bool) *bool {
-	return &val
 }

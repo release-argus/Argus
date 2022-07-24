@@ -35,7 +35,7 @@ type Status struct {
 	Fails                    Fails  `yaml:"-"` // Track the Notify/WebHook fails
 
 	// Announces
-	Announce        *chan []byte           `yaml:"-"` // Announce to the WebSocket
+	AnnounceChannel *chan []byte           `yaml:"-"` // Announce to the WebSocket
 	DatabaseChannel *chan db_types.Message `yaml:"-"` // Channel for broadcasts to the Database
 	SaveChannel     *chan bool             `yaml:"-"` // Channel for triggering a save of the config
 	ServiceID       *string                `yaml:"-"` // ID of the Service
@@ -70,6 +70,9 @@ func (s *Status) Init(
 	s.Fails.Shoutrrr = make(map[string]*bool, shoutrrrs)
 	s.Fails.WebHook = make(map[string]*bool, webhooks)
 	s.Fails.Command = make([]*bool, commands)
+
+	s.ServiceID = serviceID
+	s.WebURL = webURL
 }
 
 // SetLastQueried will update LastQueried to now.

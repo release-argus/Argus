@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
-
 package metrics
 
 import (
@@ -24,7 +22,7 @@ import (
 
 func TestInitPrometheusCounterWithIDAndResult(t *testing.T) {
 	// GIVEN a LatestVersionQueryMetric
-	metric := QueryMetric
+	metric := LatestVersionQueryMetric
 
 	// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
 	InitPrometheusCounterWithIDAndResult(metric, "SERVICE_ID", "RESULT")
@@ -39,8 +37,8 @@ func TestInitPrometheusCounterWithIDAndResult(t *testing.T) {
 }
 
 func TestIncreasePrometheusCounterWithIDAndResult(t *testing.T) {
-	// GIVEN a QueryMetric that's been initialised
-	metric := QueryMetric
+	// GIVEN a LatestVersionQueryMetric that's been initialised
+	metric := LatestVersionQueryMetric
 	InitPrometheusCounterWithIDAndResult(metric, "SERVICE_ID", "RESULT")
 
 	// WHEN it's incremented with IncreasePrometheusCounterWithIDAndResult

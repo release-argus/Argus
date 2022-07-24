@@ -567,24 +567,21 @@ func TestIsRunnableFalse(t *testing.T) {
 
 func TestSetNextRunnableOfPass(t *testing.T) {
 	// GIVEN a WebHook that passed
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	failed := false
-	serviceInterval := "11m"
+	whID := "test"
 	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
+		ID:           &whID,
+		Type:         stringPtr("gitlab"),
+		URL:          stringPtr("https://test"),
+		Secret:       stringPtr("secret"),
 		Main:         &WebHook{},
 		Defaults:     &WebHook{},
 		HardDefaults: &WebHook{},
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Failed:         &failed,
+		Failed:         &map[string]*bool{whID: boolPtr(false)},
 		ServiceStatus:  &service_status.Status{},
-		ParentInterval: &serviceInterval,
+		ParentInterval: stringPtr("11m"),
 	}
 
 	// WHEN SetNextRunnable is called on it
@@ -604,21 +601,19 @@ func TestSetNextRunnableOfPass(t *testing.T) {
 
 func TestSetNextRunnableOfFail(t *testing.T) {
 	// GIVEN a WebHook that failed
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	failed := true
+	whID := "test"
 	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
+		ID:           &whID,
+		Type:         stringPtr("gitlab"),
+		URL:          stringPtr("https://test"),
+		Secret:       stringPtr("secret"),
 		Main:         &WebHook{},
 		Defaults:     &WebHook{},
 		HardDefaults: &WebHook{},
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Failed:        &failed,
+		Failed:        &map[string]*bool{whID: boolPtr(false)},
 		ServiceStatus: &service_status.Status{},
 	}
 
@@ -638,21 +633,19 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 
 func TestSetNextRunnableOfNotRun(t *testing.T) {
 	// GIVEN a WebHook that hasn't been sent
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	var failed *bool
+	whID := "test"
 	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
+		ID:           &whID,
+		Type:         stringPtr("gitlab"),
+		URL:          stringPtr("https://test"),
+		Secret:       stringPtr("secret"),
 		Main:         &WebHook{},
 		Defaults:     &WebHook{},
 		HardDefaults: &WebHook{},
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Failed:        failed,
+		Failed:        &map[string]*bool{whID: boolPtr(false)},
 		ServiceStatus: &service_status.Status{},
 	}
 
@@ -672,26 +665,22 @@ func TestSetNextRunnableOfNotRun(t *testing.T) {
 
 func TestSetNextRunnableWithDelay(t *testing.T) {
 	// GIVEN a WebHook that hasn't been sent
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	whDelay := "1h"
-	var failed *bool
-	serviceInterval := "11m"
+	whID := "test"
 	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
+		ID:           &whID,
+		Type:         stringPtr("gitlab"),
+		URL:          stringPtr("https://test"),
+		Secret:       stringPtr("secret"),
 		Main:         &WebHook{},
 		Defaults:     &WebHook{},
 		HardDefaults: &WebHook{},
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Delay:          &whDelay,
-		Failed:         failed,
+		Delay:          stringPtr("5m"),
+		Failed:         &map[string]*bool{whID: boolPtr(false)},
 		ServiceStatus:  &service_status.Status{},
-		ParentInterval: &serviceInterval,
+		ParentInterval: stringPtr("1h"),
 	}
 
 	// WHEN SetNextRunnable is called on a webhook that hasn't been run
@@ -711,26 +700,23 @@ func TestSetNextRunnableWithDelay(t *testing.T) {
 
 func TestSetNextRunnableOfSending(t *testing.T) {
 	// GIVEN a WebHook that hasn't been sent
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	var failed *bool
 	whMaxTries := uint(2)
-	serviceInterval := "11m"
+	whID := "test"
 	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
+		ID:           &whID,
+		Type:         stringPtr("gitlab"),
+		URL:          stringPtr("https://test"),
+		Secret:       stringPtr("secret"),
 		Main:         &WebHook{},
 		Defaults:     &WebHook{},
 		HardDefaults: &WebHook{},
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Failed:         failed,
+		Failed:         &map[string]*bool{whID: boolPtr(false)},
 		MaxTries:       &whMaxTries,
 		ServiceStatus:  &service_status.Status{},
-		ParentInterval: &serviceInterval,
+		ParentInterval: stringPtr("11m"),
 	}
 
 	// WHEN SetNextRunnable is called on a webhook that's sending
@@ -767,24 +753,24 @@ func TestResetFailsWithSlice(t *testing.T) {
 		"4": &WebHook{},
 	}
 	failed0 := true
-	(*slice["0"]).Failed = &failed0
+	(*(*slice["0"]).Failed)["0"] = &failed0
 	failed1 := true
-	(*slice["1"]).Failed = &failed1
+	(*(*slice["1"]).Failed)["1"] = &failed1
 	failed2 := true
-	(*slice["2"]).Failed = &failed2
+	(*(*slice["2"]).Failed)["2"] = &failed2
 	failed3 := true
-	(*slice["3"]).Failed = &failed3
+	(*(*slice["3"]).Failed)["3"] = &failed3
 	failed4 := true
-	(*slice["4"]).Failed = &failed4
+	(*(*slice["4"]).Failed)["4"] = &failed4
 
 	// WHEN ResetFails is called
 	slice.ResetFails()
 
 	// THEN all the fails become nil and the count stays the same
 	for i := range slice {
-		if (*slice[i]).Failed != nil {
+		if (*(*slice[i]).Failed)[i] != nil {
 			t.Errorf("Reset failed, got %t",
-				*(*slice[i]).Failed)
+				*(*(*slice[i]).Failed)[i])
 		}
 	}
 }

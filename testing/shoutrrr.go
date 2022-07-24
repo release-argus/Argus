@@ -77,8 +77,8 @@ func findShoutrrr(
 ) shoutrrr.Slice {
 	slice := shoutrrr.Slice{}
 	for _, svc := range cfg.Service {
-		if svc.Notify != nil && (*svc.Notify)[name] != nil {
-			slice["test"] = (*svc.Notify)[name]
+		if svc.Notify != nil && svc.Notify[name] != nil {
+			slice["test"] = svc.Notify[name]
 			break
 		}
 	}
@@ -128,11 +128,9 @@ func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	}
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
-			if svc.Notify != nil {
-				for key := range *svc.Notify {
-					if !utils.Contains(all, key) {
-						all = append(all, key)
-					}
+			for key := range svc.Notify {
+				if !utils.Contains(all, key) {
+					all = append(all, key)
 				}
 			}
 		}

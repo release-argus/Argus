@@ -30,7 +30,7 @@ type ServiceSummary struct {
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
 	IconLinkTo               string  `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
-	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup
+	HasDeployedVersionLookup bool    `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup
 	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release
 	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release
 	Status                   *Status `json:"status,omitempty"`               // Track the Status of this source (version and regex misses)

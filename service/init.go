@@ -17,7 +17,6 @@ package service
 import (
 	"strings"
 
-	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -30,15 +29,11 @@ func (s *Service) Init(
 	jLog = log
 
 	s.Defaults = defaults
+	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Options.Defaults = &s.Defaults.Options
 	s.HardDefaults = hardDefaults
+	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
 	s.Options.HardDefaults = &s.HardDefaults.Options
-
-	if s.Status == nil {
-		s.Status = &service_status.Status{}
-	}
-	s.Status.ServiceID = &s.ID
-	s.Status.WebURL = &s.Dashboard.WebURL
 
 	s.DeployedVersionLookup.Init(jLog, &s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
 	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
@@ -63,9 +58,9 @@ func (s *Service) GetIconURL() string {
 	}
 
 	if s.Notify != nil {
-		for key := range *s.Notify {
+		for key := range s.Notify {
 			// `Params.Icon`
-			icon := (*s.Notify)[key].GetParam("icon")
+			icon := s.Notify[key].GetParam("icon")
 			if icon != "" && strings.HasPrefix(icon, "http") {
 				return icon
 			}

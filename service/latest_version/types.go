@@ -34,7 +34,7 @@ type Lookup struct {
 	URLCommands       *filters.URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request
 	Require           *filters.Require         `yaml:"require,omitempty"`             // Options to require before a release is considered valid
 	Options           *options.Options         `yaml:"-"`                             // Options
-	Status            **service_status.Status  `yaml:"-"`                             // Service Status
+	Status            *service_status.Status   `yaml:"-"`                             // Service Status
 	Defaults          *Lookup                  `yaml:"-"`                             // Defaults
 	HardDefaults      *Lookup                  `yaml:"-"`                             // Hard Defaults
 }

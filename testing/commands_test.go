@@ -43,8 +43,8 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
@@ -56,8 +56,8 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
@@ -68,8 +68,8 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"echo", "command did run"},
 					},
 					CommandController: &command.Controller{},
@@ -80,8 +80,8 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status 2\s+`),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"ls", "/root"},
 					},
 					CommandController: &command.Controller{},
@@ -93,7 +93,7 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
+					ID: "argus",
 				},
 			}},
 	}

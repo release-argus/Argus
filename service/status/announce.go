@@ -20,7 +20,7 @@ import (
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceFirstVersion of a Service to the `s.Announce` channel
+// AnnounceFirstVersion of a Service to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
 func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
@@ -43,12 +43,12 @@ func (s *Status) AnnounceFirstVersion() {
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceQuery to the `s.Announce` channel
+// AnnounceQuery to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
 func (s *Status) AnnounceQuery() {
 	var payloadData []byte
@@ -68,12 +68,12 @@ func (s *Status) AnnounceQuery() {
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceQueryNewVersion to the `s.Announce` channel
+// AnnounceQueryNewVersion to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
 func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
@@ -97,12 +97,12 @@ func (s *Status) AnnounceQueryNewVersion() {
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceUpdate being applied to the `s.Announce` channel
+// AnnounceUpdate being applied to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
 func (s *Status) AnnounceUpdate() {
 	var payloadData []byte
@@ -124,12 +124,12 @@ func (s *Status) AnnounceUpdate() {
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceAction on an update (skip/approve) to the `s.Announce` channel
+// AnnounceAction on an update (skip/approve) to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
 func (s *Status) AnnounceApproved() {
 	var payloadData []byte
@@ -150,7 +150,7 @@ func (s *Status) AnnounceApproved() {
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }

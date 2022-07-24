@@ -126,19 +126,6 @@ func testServiceURL() Service {
 	}
 }
 
-func testDeployedVersion() DeployedVersionLookup {
-	var (
-		allowInvalidCerts bool = false
-	)
-	return DeployedVersionLookup{
-		URL:               "https://release-argus.io",
-		AllowInvalidCerts: &allowInvalidCerts,
-		Regex:             "([0-9]+) The Argus Developers",
-		Defaults:          &DeployedVersionLookup{},
-		HardDefaults:      &DeployedVersionLookup{},
-	}
-}
-
 func testWebHookSuccessful() webhook.WebHook {
 	whID := "test"
 	whType := "github"
@@ -188,39 +175,5 @@ func testWebHookFailing() webhook.WebHook {
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
-	}
-}
-
-func testURLCommandRegex() URLCommand {
-	regex := "-([0-9.]+)-"
-	index := 0
-	ignoreMisses := false
-	return URLCommand{
-		Type:         "regex",
-		Regex:        &regex,
-		IgnoreMisses: &ignoreMisses,
-		Index:        index,
-	}
-}
-
-func testURLCommandReplace() URLCommand {
-	old := "foo"
-	new := "bar"
-	return URLCommand{
-		Type: "replace",
-		Old:  &old,
-		New:  &new,
-	}
-}
-
-func testURLCommandSplit() URLCommand {
-	text := "this"
-	index := 1
-	ignoreMisses := false
-	return URLCommand{
-		Type:         "split",
-		Text:         &text,
-		Index:        index,
-		IgnoreMisses: &ignoreMisses,
 	}
 }

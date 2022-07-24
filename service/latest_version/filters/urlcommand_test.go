@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:built unit
 
 package filters
 
@@ -172,27 +172,12 @@ func TestURLCommandSetParentIgnoreMisses(t *testing.T) {
 	}
 }
 
-func TestURLCommandGetIgnoreMisses(t *testing.T) {
-	// GIVEN a Service
-	service := testServiceGitHub()
-
-	// WHEN GetIgnoreMisses is called on it
-	got := service.GetIgnoreMisses()
-
-	// THEN IgnoreMisses is returned
-	want := service.IgnoreMisses
-	if got != want {
-		t.Errorf("Got %v, want %v",
-			got, want)
-	}
-}
-
 func TestURLCommandSliceRunWithNil(t *testing.T) {
 	// GIVEN a nil URLCommand URLCommandSlice
 	var slice *URLCommandSlice
 
 	// WHEN run is called on it
-	_, err := slice.run("", utils.LogFrom{})
+	_, err := slice.Run("", utils.LogFrom{})
 
 	// THEN err is nil
 	if err != nil {
@@ -217,7 +202,7 @@ func TestURLCommandSliceRunWithSuccess(t *testing.T) {
 	want := "aaa"
 
 	// WHEN run is called on it
-	text, err := slice.run("a0b1c2d3,a3bb2ccc1dddd0", utils.LogFrom{})
+	text, err := slice.Run("a0b1c2d3,a3bb2ccc1dddd0", utils.LogFrom{})
 
 	// THEN the text was correctly extracted
 	if err != nil {
@@ -245,7 +230,7 @@ func TestURLCommandSliceRunWithFail(t *testing.T) {
 	*slice[2].New = "a"
 
 	// WHEN run is called on it
-	_, err := slice.run("a0b1c2d3,a3bb2ccc1dddd0", utils.LogFrom{})
+	_, err := slice.Run("a0b1c2d3,a3bb2ccc1dddd0", utils.LogFrom{})
 
 	// THEN the text was correctly extracted
 	if err == nil {

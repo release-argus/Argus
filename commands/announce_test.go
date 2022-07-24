@@ -28,6 +28,7 @@ import (
 
 func TestAnnounceCommand(t *testing.T) {
 	// GIVEN Controllers with various failed Command announces
+	fails := make([]*bool, 3)
 	controller := Controller{
 		ServiceID: stringPtr("some_service_id"),
 		Command: &Slice{
@@ -35,7 +36,7 @@ func TestAnnounceCommand(t *testing.T) {
 			Command{"ls", "-lah"},
 			Command{"ls", "-lah", "a"},
 		},
-		Failed:         Fails{boolPtr(true), boolPtr(false), nil},
+		Failed:         &fails,
 		NextRunnable:   make([]time.Time, 3),
 		ParentInterval: stringPtr("11m")}
 	tests := map[string]struct {
@@ -92,8 +93,8 @@ func TestAnnounceCommand(t *testing.T) {
 			got = fmt.Sprint(*parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
 		}
 		want := "nil"
-		if controller.Failed[tc.index] != nil {
-			want = fmt.Sprint(*controller.Failed[tc.index])
+		if (*controller.Failed)[tc.index] != nil {
+			want = fmt.Sprint(*(*controller.Failed)[tc.index])
 		}
 		if got != want {
 			t.Errorf("%s:\nwant failed=%s\ngot  failed=%s",
@@ -114,6 +115,7 @@ func TestAnnounceCommand(t *testing.T) {
 
 func TestFind(t *testing.T) {
 	// GIVEN we have a Controller with Command's
+	fails := make([]*bool, 3)
 	controller := Controller{
 		ServiceID: stringPtr("some_service_id"),
 		Command: &Slice{
@@ -123,7 +125,7 @@ func TestFind(t *testing.T) {
 			Command{"bash", "upgrade.sh", "{{ version }}"},
 		},
 		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
-		Failed:        make(Fails, 3),
+		Failed:        &fails,
 	}
 	tests := map[string]struct {
 		command string
@@ -164,13 +166,13 @@ func TestResetFails(t *testing.T) {
 	}{
 		"nil controller": {controller: nil},
 		"controller with all fails": {controller: &Controller{
-			Failed: Fails{boolPtr(true), boolPtr(true)}}},
+			Failed: &[]*bool{boolPtr(true), boolPtr(true)}}},
 		"controller with no fails": {controller: &Controller{
-			Failed: Fails{boolPtr(false), boolPtr(false)}}},
+			Failed: &[]*bool{boolPtr(false), boolPtr(false)}}},
 		"controller with some fails": {controller: &Controller{
-			Failed: Fails{boolPtr(true), boolPtr(false)}}},
+			Failed: &[]*bool{boolPtr(true), boolPtr(false)}}},
 		"controller with nil fails": {controller: &Controller{
-			Failed: Fails{nil, nil}}},
+			Failed: &[]*bool{nil, nil}}},
 	}
 
 	for name, tc := range tests {
@@ -182,8 +184,8 @@ func TestResetFails(t *testing.T) {
 			if tc.controller == nil {
 				return
 			}
-			for i := range tc.controller.Failed {
-				if tc.controller.Failed[i] != nil {
+			for i := range *tc.controller.Failed {
+				if (*tc.controller.Failed)[i] != nil {
 					t.Errorf("%s:\nfails weren't reset to nil. got %v",
 						name, tc.controller.Failed)
 				}

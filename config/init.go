@@ -39,42 +39,49 @@ func (c *Config) Init() {
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
 	for serviceID, service := range c.Service {
-		c.Service[serviceID].Init(
+		service.Status.Init(len(
+			service.Notify),
+			len(service.WebHook),
+			len(service.Command),
+			&service.ID,
+			&service.Dashboard.WebURL)
+
+		service.Init(
 			jLog,
 			&c.Defaults.Service,
 			&c.HardDefaults.Service,
 		)
 
-		c.Service[serviceID].Notify.Init(
+		service.Notify.Init(
 			jLog,
 			&serviceID,
-			service.Status,
+			&service.Status,
 			&c.Notify,
 			&c.Defaults.Notify,
 			&c.HardDefaults.Notify,
 		)
 
-		c.Service[serviceID].WebHook.Init(
+		service.WebHook.Init(
 			jLog,
 			&serviceID,
-			service.Status,
+			&service.Status,
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
-			c.Service[serviceID].Notify,
-			c.Service[serviceID].Options.GetIntervalPointer(),
+			&service.Notify,
+			service.Options.GetIntervalPointer(),
 		)
 
-		if c.Service[serviceID].Command != nil {
-			c.Service[serviceID].CommandController = &command.Controller{}
+		if service.Command != nil {
+			service.CommandController = &command.Controller{}
 		}
-		c.Service[serviceID].CommandController.Init(
+		service.CommandController.Init(
 			jLog,
 			&serviceID,
-			service.Status,
-			c.Service[serviceID].Command,
-			c.Service[serviceID].Notify,
-			c.Service[serviceID].Options.GetIntervalPointer(),
+			&service.Status,
+			&service.Command,
+			&service.Notify,
+			service.Options.GetIntervalPointer(),
 		)
 	}
 
@@ -120,7 +127,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	for key := range c.Service {
 		c.Service[key].ID = key
-		c.Service[key].Status = &service_status.Status{
+		c.Service[key].Status = service_status.Status{
 			DatabaseChannel: c.DatabaseChannel,
 			SaveChannel:     c.SaveChannel,
 		}
