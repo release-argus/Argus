@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -49,12 +48,12 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 	return
 }
 
-func (l *Lookup) GetAccessToken() string {
-	return utils.GetFirstNonDefault(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
+func (l *Lookup) GetAccessToken() *string {
+	return utils.GetFirstNonNilPtr(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
 }
 
-func (l *Lookup) GetAllowInvalidCerts() *bool {
-	return utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
+func (l *Lookup) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
 }
 
 // GetServiceURL returns the service's URL (handles the github type where the URL
@@ -87,8 +86,4 @@ func GetURL(url string, urlType string) string {
 		}
 	}
 	return url
-}
-
-func (l *Lookup) GetURLCommands() *filters.URLCommandSlice {
-	return l.URLCommands
 }

@@ -378,7 +378,7 @@ func (api *API) wsConfigDefaults(client *Client) {
 						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
 					},
 					LatestVersion: &api_types.LatestVersion{
-						AccessToken:       utils.ValueIfNotDefault(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
+						AccessToken:       utils.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
 						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
 					},
@@ -472,7 +472,7 @@ func (api *API) wsConfigService(client *Client) {
 				},
 				LatestVersion: &api_types.LatestVersion{
 					URL:               service.LatestVersion.URL,
-					AccessToken:       utils.ValueIfNotDefault(service.LatestVersion.AccessToken, "<secret>"),
+					AccessToken:       utils.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 					AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 					UsePreRelease:     service.LatestVersion.UsePreRelease,
 				},
@@ -493,7 +493,7 @@ func (api *API) wsConfigService(client *Client) {
 			// DeployedVersionLookup
 			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToApiTypeDeployedVersionLookup(service.DeployedVersionLookup)
 			// URL Commands
-			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(service.LatestVersion.GetURLCommands())
+			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands)
 			// Notify
 			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
 			// Command
@@ -556,13 +556,12 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommand
 	apiSlice := make(api_types.URLCommandSlice, len(*commands))
 	for index := range *commands {
 		apiSlice[index] = api_types.URLCommand{
-			Type:         (*commands)[index].Type,
-			Regex:        (*commands)[index].Regex,
-			Index:        (*commands)[index].Index,
-			Text:         (*commands)[index].Text,
-			Old:          (*commands)[index].Old,
-			New:          (*commands)[index].New,
-			IgnoreMisses: (*commands)[index].IgnoreMisses,
+			Type:  (*commands)[index].Type,
+			Regex: (*commands)[index].Regex,
+			Index: (*commands)[index].Index,
+			Text:  (*commands)[index].Text,
+			Old:   (*commands)[index].Old,
+			New:   (*commands)[index].New,
 		}
 	}
 	return &apiSlice

@@ -130,35 +130,22 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	// GIVEN a URL Command slice
-	uType0 := "0something"
-	regex0 := "0foo"
-	text0 := "0bish"
-	old0 := "0bash"
-	uNew0 := "0bosh"
-	uType1 := "1something"
-	regex1 := "1foo"
-	text1 := "1bish"
-	old1 := "1bash"
-	uNew1 := "1bosh"
-	ignoreMisses := true
 	slice := filters.URLCommandSlice{
 		{
-			Type:         uType0,
-			Regex:        &regex0,
-			Index:        0,
-			Text:         &text0,
-			Old:          &old0,
-			New:          &uNew0,
-			IgnoreMisses: &ignoreMisses,
+			Type:  "regex",
+			Regex: stringPtr("^foo"),
+			Index: 0,
+			Text:  stringPtr("bish"),
+			Old:   stringPtr("bash"),
+			New:   stringPtr("bosh"),
 		},
 		{
-			Type:         uType1,
-			Regex:        &regex1,
-			Index:        1,
-			Text:         &text1,
-			Old:          &old1,
-			New:          &uNew1,
-			IgnoreMisses: &ignoreMisses,
+			Type:  "split",
+			Regex: stringPtr("^foo"),
+			Index: 1,
+			Text:  stringPtr("bosh"),
+			Old:   stringPtr("bish"),
+			New:   stringPtr("bash"),
 		},
 	}
 
@@ -169,10 +156,8 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	if len(*got) != len(slice) ||
 		slice[0].Regex != (*got)[0].Regex ||
 		slice[0].Index != (*got)[0].Index ||
-		slice[0].IgnoreMisses != (*got)[0].IgnoreMisses ||
 		slice[1].Regex != (*got)[1].Regex ||
-		slice[1].Index != (*got)[1].Index ||
-		slice[1].IgnoreMisses != (*got)[1].IgnoreMisses {
+		slice[1].Index != (*got)[1].Index {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			slice, got)
 	}

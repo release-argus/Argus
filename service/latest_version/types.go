@@ -26,15 +26,15 @@ var (
 )
 
 type Lookup struct {
-	Type              string                   `yaml:"type,omitempty"`                // "github"/"URL"
-	URL               string                   `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	AccessToken       string                   `yaml:"access_token,omitempty"`        // GitHub access token to use
-	AllowInvalidCerts *bool                    `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	UsePreRelease     *bool                    `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default)
-	URLCommands       *filters.URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request
-	Require           *filters.Require         `yaml:"require,omitempty"`             // Options to require before a release is considered valid
-	Options           *options.Options         `yaml:"-"`                             // Options
-	Status            *service_status.Status   `yaml:"-"`                             // Service Status
-	Defaults          *Lookup                  `yaml:"-"`                             // Defaults
-	HardDefaults      *Lookup                  `yaml:"-"`                             // Hard Defaults
+	Type              string                  `yaml:"type,omitempty"`                // "github"/"URL"
+	URL               string                  `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
+	AccessToken       *string                 `yaml:"access_token,omitempty"`        // GitHub access token to use
+	AllowInvalidCerts *bool                   `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	UsePreRelease     *bool                   `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default)
+	URLCommands       filters.URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request
+	Require           *filters.Require        `yaml:"require,omitempty"`             // Options to require before a release is considered valid
+	Options           *options.Options        `yaml:"-"`                             // Options
+	Status            *service_status.Status  `yaml:"-"`                             // Service Status
+	Defaults          *Lookup                 `yaml:"-"`                             // Defaults
+	HardDefaults      *Lookup                 `yaml:"-"`                             // Hard Defaults
 }

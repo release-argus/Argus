@@ -238,10 +238,10 @@ type ServiceOptions struct {
 
 // DashboardOptions.
 type DashboardOptions struct {
-	AutoApprove *bool  `json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
-	Icon        string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
-	IconLinkTo  string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
-	WebURL      string `json:"web_url,omitempty"`      // URL to provide on the Web UI
+	AutoApprove *bool   `json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
+	Icon        *string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
+	IconLinkTo  string  `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
+	WebURL      string  `json:"web_url,omitempty"`      // URL to provide on the Web UI
 }
 
 // LatestVersion lookup of the service.
@@ -289,13 +289,12 @@ type URLCommandSlice []URLCommand
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type         string  `json:"type,omitempty"`          // regex/replace/split
-	Regex        *string `json:"regex,omitempty"`         // regex: regexp.MustCompile(Regex)
-	Index        int     `json:"index,omitempty"`         // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text         *string `json:"text,omitempty"`          // split:                strings.Split(tgtString, "Text")
-	New          *string `json:"new,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	Old          *string `json:"old,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	IgnoreMisses *bool   `json:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
+	Type  string  `json:"type,omitempty"`  // regex/replace/split
+	Regex *string `json:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
+	Index int     `json:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Text  *string `json:"text,omitempty"`  // split:                strings.Split(tgtString, "Text")
+	New   *string `json:"new,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
+	Old   *string `json:"old,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 type Command []string

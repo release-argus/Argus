@@ -23,6 +23,13 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
+
 func testClient() Client {
 	hub := NewHub()
 	api := API{}
@@ -46,9 +53,9 @@ func testAPI() API {
 		Config: &config.Config{
 			Service: service.Slice{
 				serviceID: &service.Service{
-					ID:      &serviceID,
+					ID:      serviceID,
 					Comment: &serviceComment,
-					Type:    &serviceType,
+					Type:    serviceType,
 					URL:     &serviceURL,
 				},
 			},
@@ -64,9 +71,9 @@ func testService(id string) service.Service {
 		serviceURL     string = "release-argus/Argus"
 	)
 	return service.Service{
-		ID:      &id,
+		ID:      id,
 		Comment: &serviceComment,
-		Type:    &serviceType,
+		Type:    serviceType,
 		URL:     &serviceURL,
 	}
 }

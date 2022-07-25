@@ -14,34 +14,21 @@
 
 //go:build testing
 
-package filters
+package options
 
-func testURLCommandRegex() URLCommand {
-	regex := "-([0-9.]+)-"
-	index := 0
-	return URLCommand{
-		Type:  "regex",
-		Regex: &regex,
-		Index: index,
-	}
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
 }
 
-func testURLCommandReplace() URLCommand {
-	old := "foo"
-	new := "bar"
-	return URLCommand{
-		Type: "replace",
-		Old:  &old,
-		New:  &new,
-	}
-}
-
-func testURLCommandSplit() URLCommand {
-	text := "this"
-	index := 1
-	return URLCommand{
-		Type:  "split",
-		Text:  &text,
-		Index: index,
+func testOptions() Options {
+	return Options{
+		Active:             boolPtr(true),
+		Interval:           stringPtr("10m"),
+		SemanticVersioning: boolPtr(true),
+		Defaults:           &Options{},
+		HardDefaults:       &Options{},
 	}
 }

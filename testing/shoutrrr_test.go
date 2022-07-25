@@ -324,7 +324,7 @@ func TestFindShoutrrr(t *testing.T) {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Fatalf("%s:\nwant match for %q\non: %q",
+					t.Fatalf("%s:\nwant match for %q\nnot: %q",
 						name, *tc.outputRegex, output)
 				}
 			}
@@ -494,7 +494,7 @@ func TestNotifyTest(t *testing.T) {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nwant match for %q\non: %q",
+					t.Errorf("%s:\nwant match for %q\nnot: %q",
 						name, *tc.outputRegex, output)
 				}
 			}

@@ -101,7 +101,7 @@ func (s *Service) convert() {
 	}
 	if s.AccessToken != nil {
 		didConvert = true
-		s.LatestVersion.AccessToken = *s.AccessToken
+		s.LatestVersion.AccessToken = s.AccessToken
 		s.AccessToken = nil
 	}
 	if s.UsePreRelease != nil {
@@ -111,7 +111,7 @@ func (s *Service) convert() {
 	}
 	if s.URLCommands != nil {
 		didConvert = true
-		s.LatestVersion.URLCommands = s.URLCommands
+		s.LatestVersion.URLCommands = *s.URLCommands
 		s.URLCommands = nil
 	}
 	if s.AutoApprove != nil {
@@ -121,7 +121,7 @@ func (s *Service) convert() {
 	}
 	if s.Icon != nil {
 		didConvert = true
-		s.Dashboard.Icon = *s.Icon
+		s.Dashboard.Icon = s.Icon
 		s.Icon = nil
 	}
 	if s.IconLinkTo != nil {

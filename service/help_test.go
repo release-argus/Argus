@@ -18,112 +18,113 @@ package service
 
 import (
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
+	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
+func stringPtr(val string) *string {
+	return &val
+}
+func boolPtr(val bool) *bool {
+	return &val
+}
+
 func testServiceGitHub() Service {
 	var (
-		sID                 string                = "test"
-		sType               string                = "github"
-		sAccessToken        string                = "secret"
-		sURL                string                = "release-argus/Argus"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sActive             bool                  = true
-		sInterval           string                = "1s"
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte           = make(chan []byte, 2)
+		saveChannel     chan bool             = make(chan bool, 5)
+		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	return Service{
-		ID:           &sID,
-		Type:         &sType,
-		AccessToken:  &sAccessToken,
-		URL:          &sURL,
-		WebURL:       &sWebURL,
-		RegexContent: &sRegexContent,
-		RegexVersion: &sRegexVersion,
-		Status: &service_status.Status{
+	svc := Service{
+		ID:   "test",
+		Type: "github",
+		LatestVersion: latest_version.Lookup{
+			AccessToken: stringPtr("secret"),
+			URL:         "release-argus/Argus",
+			Require: &filters.Require{
+				RegexContent: stringPtr("content"),
+				RegexVersion: stringPtr("version"),
+			},
+			AllowInvalidCerts: boolPtr(true),
+			UsePreRelease:     boolPtr(false),
+		},
+		Dashboard: DashboardOptions{
+			AutoApprove: boolPtr(false),
+			Icon:        stringPtr("test"),
+			IconLinkTo:  "https://example.com",
+			WebURL:      "https://release-argus.io",
+		},
+		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
 			DeployedVersion:          "0.0.0",
 			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
+			AnnounceChannel:          &announceChannel,
+			DatabaseChannel:          &databaseChannel,
+			SaveChannel:              &saveChannel,
 		},
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
-		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
-		Announce:           &sAnnounceChannel,
-		DatabaseChannel:    &sDatabaseChannel,
-		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
-		Defaults:           &Service{},
+		Options: options.Options{
+			Interval:           stringPtr("5s"),
+			SemanticVersioning: boolPtr(true),
+		},
+		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: &sActive,
+			Active: boolPtr(true),
 		},
 	}
+	svc.Status.WebURL = &svc.Dashboard.WebURL
+	return svc
 }
 
 func testServiceURL() Service {
 	var (
-		sID                 string                = "test"
-		sType               string                = "url"
-		sAccessToken        string                = "secret"
-		sURL                string                = "https://release-argus.io"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sActive             bool                  = true
-		sInterval           string                = "10s"
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte           = make(chan []byte, 2)
+		saveChannel     chan bool             = make(chan bool, 5)
+		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	return Service{
-		ID:           &sID,
-		Type:         &sType,
-		AccessToken:  &sAccessToken,
-		URL:          &sURL,
-		WebURL:       &sWebURL,
-		RegexContent: &sRegexContent,
-		RegexVersion: &sRegexVersion,
-		Status: &service_status.Status{
+	svc := Service{
+		ID:   "test",
+		Type: "url",
+		LatestVersion: latest_version.Lookup{
+			URL: "release-argus/Argus",
+			Require: &filters.Require{
+				RegexContent: stringPtr("content"),
+				RegexVersion: stringPtr("version"),
+			},
+			AllowInvalidCerts: boolPtr(true),
+			UsePreRelease:     boolPtr(false),
+		},
+		Dashboard: DashboardOptions{
+			AutoApprove: boolPtr(false),
+			Icon:        stringPtr("test"),
+			IconLinkTo:  "https://release-argus.io",
+			WebURL:      "https://release-argus.io",
+		},
+		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
 			DeployedVersion:          "0.0.0",
 			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
+			AnnounceChannel:          &announceChannel,
+			DatabaseChannel:          &databaseChannel,
+			SaveChannel:              &saveChannel,
 		},
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
-		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
-		Announce:           &sAnnounceChannel,
-		DatabaseChannel:    &sDatabaseChannel,
-		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
-		Defaults:           &Service{},
+		Options: options.Options{
+			Interval:           stringPtr("5s"),
+			SemanticVersioning: boolPtr(true),
+		},
+		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: &sActive,
+			Active: boolPtr(true),
 		},
 	}
+	svc.Status.WebURL = &svc.Dashboard.WebURL
+	return svc
 }
 
 func testWebHookSuccessful() webhook.WebHook {
@@ -137,7 +138,7 @@ func testWebHookSuccessful() webhook.WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "12m"
 	return webhook.WebHook{
-		ID:                &whID,
+		ID:                whID,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,
@@ -163,7 +164,7 @@ func testWebHookFailing() webhook.WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "12m"
 	return webhook.WebHook{
-		ID:                &whID,
+		ID:                whID,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,

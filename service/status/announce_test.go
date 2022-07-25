@@ -25,7 +25,7 @@ import (
 
 func TestAnnounceFirstVersionWithNilAnnounce(t *testing.T) {
 	// GIVEN a Status with a nil Announce
-	status := Status{}
+	status := testStatus()
 	status.AnnounceChannel = nil
 
 	// WHEN AnnounceFirstVersion is called on it

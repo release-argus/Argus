@@ -64,11 +64,11 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 		}
 		if w.GetURL() == nil {
 			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\",
-				utils.ErrorToString(errs), prefix, *w.ID)
+				utils.ErrorToString(errs), prefix, w.ID)
 		}
 		if w.GetSecret() == nil {
 			errs = fmt.Errorf("%s%ssecret: <required> (here, or in webhook.%s)\\",
-				utils.ErrorToString(errs), prefix, *w.ID)
+				utils.ErrorToString(errs), prefix, w.ID)
 		}
 	}
 	return

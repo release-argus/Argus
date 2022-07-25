@@ -31,7 +31,7 @@ type Slice map[string]*WebHook
 
 // WebHook to send.
 type WebHook struct {
-	ID                *string                `yaml:"-"`                             // Unique across the Slice
+	ID                string                 `yaml:"-"`                             // Unique across the Slice
 	ServiceID         *string                `yaml:"-"`                             // ID of the service this WebHook is attached to
 	Type              *string                `yaml:"type,omitempty"`                // "github"/"url"
 	URL               *string                `yaml:"url,omitempty"`                 // "https://example.com"

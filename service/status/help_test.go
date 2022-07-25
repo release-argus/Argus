@@ -32,6 +32,7 @@ func testStatus() Status {
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
 	return Status{
+		ServiceID:                stringPtr("test"),
 		ApprovedVersion:          "1.1.1",
 		LatestVersion:            "2.2.2",
 		LatestVersionTimestamp:   "2002-02-02T02:02:02Z",

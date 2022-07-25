@@ -196,37 +196,43 @@ func TestSliceInitMetrics(t *testing.T) {
 	// THEN the function runs without error
 }
 
-func TestGetAllowInvalidCertsWhenTrue(t *testing.T) {
+func TestGetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
 	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
 	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN AllowInvalidCerts is true and GetAllowInvalidCerts is called
-	wanted := true
-	slice["0"].AllowInvalidCerts = &wanted
-	got := slice["0"].GetAllowInvalidCerts()
-
-	// THEN the function returns true
-	if got != wanted {
-		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t",
-			wanted, got)
+	tests := map[string]struct {
+		allowInvalidCertsRoot        *bool
+		allowInvalidCertsMain        *bool
+		allowInvalidCertsDefault     *bool
+		allowInvalidCertsHardDefault *bool
+		wantBool                     bool
+	}{
+		"root overrides all": {wantBool: true, allowInvalidCertsRoot: boolPtr(true),
+			allowInvalidCertsMain: boolPtr(false), allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
+		"main overrides default+hardDefault": {wantBool: true, allowInvalidCertsRoot: nil,
+			allowInvalidCertsMain: boolPtr(true), allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
+		"default overrides hardDefault": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil,
+			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil, allowInvalidCertsDefault: nil,
+			allowInvalidCertsHardDefault: boolPtr(true)},
 	}
-}
 
-func TestGetAllowInvalidCertsWhenFalse(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			slice["0"].AllowInvalidCerts = tc.allowInvalidCertsRoot
+			slice["0"].Main.AllowInvalidCerts = tc.allowInvalidCertsMain
+			slice["0"].Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
+			slice["0"].HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
 
-	// WHEN AllowInvalidCerts is false and GetAllowInvalidCerts is called
-	wanted := false
-	slice["0"].AllowInvalidCerts = &wanted
-	got := slice["0"].GetAllowInvalidCerts()
+			// WHEN GetAllowInvalidCerts is called
+			got := slice["0"].GetAllowInvalidCerts()
 
-	// THEN the function returns false
-	if got != wanted {
-		t.Errorf("GetAllowInvalidCerts - wanted %t, got %t",
-			wanted, got)
+			// THEN the function returns the correct result
+			if got != tc.wantBool {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					tc.wantBool, got)
+			}
+		})
 	}
 }
 
@@ -262,6 +268,34 @@ func TestGetDesiredStatusCode(t *testing.T) {
 	if got != wanted {
 		t.Errorf("GetDesiredStatusCode - wanted %d, got %d",
 			wanted, got)
+	}
+}
+
+func TestGetFailStatus(t *testing.T) {
+	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
+	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	tests := map[string]struct {
+		status *bool
+	}{
+		"nil":   {status: nil},
+		"false": {status: boolPtr(false)},
+		"true":  {status: boolPtr(true)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			slice["0"].Failed["0"] = tc.status
+
+			// WHEN GetFailStatus is called
+			got := slice["0"].GetFailStatus()
+
+			// THEN the function returns the correct result
+			if got != tc.status {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					tc.status, got)
+			}
+		})
 	}
 }
 
@@ -526,6 +560,33 @@ func TestGetRequestGitLabValidURL(t *testing.T) {
 	}
 	if req.URL.RawQuery == "" {
 		t.Error("RawQuery was empty when it should have been encoded data")
+	}
+}
+
+func TestSetFailStatus(t *testing.T) {
+	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
+	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
+	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	tests := map[string]struct {
+		status *bool
+	}{
+		"nil":   {status: nil},
+		"false": {status: boolPtr(false)},
+		"true":  {status: boolPtr(true)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN SetFailStatus is called
+			slice["0"].SetFailStatus(tc.status)
+
+			// THEN the fail status is correctly set for the WebHook
+			got := slice["0"].Failed["0"]
+			if got != tc.status {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					tc.status, got)
+			}
+		})
 	}
 }
 

@@ -31,14 +31,12 @@ type URLCommandSlice []URLCommand
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type               string  `yaml:"type"`                    // regex/replace/split
-	Regex              *string `yaml:"regex,omitempty"`         // regex: regexp.MustCompile(Regex)
-	Index              int     `yaml:"index,omitempty"`         // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text               *string `yaml:"text,omitempty"`          // split:                strings.Split(tgtString, "Text")
-	New                *string `yaml:"new,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	Old                *string `yaml:"old,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	IgnoreMisses       *bool   `yaml:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
-	ParentIgnoreMisses *bool   `yaml:"-"`                       // IgnoreMisses, but from the parent Service (used as default)
+	Type  string  `yaml:"type"`            // regex/replace/split
+	Regex *string `yaml:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
+	Index int     `yaml:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Text  *string `yaml:"text,omitempty"`  // split:                strings.Split(tgtString, "Text")
+	New   *string `yaml:"new,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
+	Old   *string `yaml:"old,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 // UnmarshalYAML allows handling of a dict as well as a list of dicts.
@@ -86,7 +84,6 @@ func (c *URLCommand) Print(prefix string) {
 	switch c.Type {
 	case "regex":
 		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
 		fmt.Printf("%s  index: %d\n", prefix, c.Index)
 	case "replace":
 		fmt.Printf("%s  new: %q\n", prefix, *c.New)
@@ -94,24 +91,7 @@ func (c *URLCommand) Print(prefix string) {
 	case "split":
 		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
 		fmt.Printf("%s  index: %d\n", prefix, c.Index)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
 	}
-}
-
-// SetParentIgnoreMisses will set ParentIgnoreMisses of each URLCommand in the URLCommandSlice to ignore if it's nil in the slice.
-func (c *URLCommandSlice) SetParentIgnoreMisses(ignore *bool) {
-	if c == nil {
-		return
-	}
-
-	for commandIndex := range *c {
-		(*c)[commandIndex].ParentIgnoreMisses = ignore
-	}
-}
-
-// GetIgnoreMisses will get the IgnoreMisses of this URLCommand, or ParentIgnoreMisses if that's nil.
-func (c *URLCommand) GetIgnoreMisses() *bool {
-	return utils.GetFirstNonNilPtr(c.IgnoreMisses, c.ParentIgnoreMisses)
 }
 
 // Run will run all of the URLCommand(s) in this URLCommandSlice.
@@ -169,7 +149,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	if len(texts) == 0 {
 		err := fmt.Errorf("%s (%s) didn't return any matches",
 			c.Type, *c.Regex)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -177,7 +157,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
 			c.Type, *c.Regex, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -191,7 +171,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	if len(texts) == 1 {
 		err := fmt.Errorf("%s didn't find any %q to split on",
 			c.Type, *c.Text)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -205,7 +185,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
 			c.Type, *c.Text, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}

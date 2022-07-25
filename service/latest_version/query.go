@@ -114,19 +114,20 @@ func (l *Lookup) Query() (bool, error) {
 func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
-	if utils.EvalNilPtr(l.GetAllowInvalidCerts(), false) {
+	if l.GetAllowInvalidCerts() {
 		customTransport = http.DefaultTransport.(*http.Transport).Clone()
 		//#nosec G402 -- explicitly wanted InsecureSkipVerify
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
 	req, err := http.NewRequest(http.MethodGet, GetURL(l.URL, l.Type), nil)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
 		return
 	}
 
-	if l.GetAccessToken() != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", l.GetAccessToken()))
+	if l.Type == "github" && utils.DefaultIfNil(l.GetAccessToken()) != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
 	}
 
 	client := &http.Client{Transport: customTransport}

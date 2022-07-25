@@ -46,17 +46,16 @@ func (w *Slice) Init(
 		mains = &Slice{}
 	}
 
-	for key := range *w {
-		id := key
-		if (*w)[key] == nil {
-			(*w)[key] = &WebHook{}
+	for id := range *w {
+		if (*w)[id] == nil {
+			(*w)[id] = &WebHook{}
 		}
-		(*w)[key].ID = &id
-		(*w)[key].Failed = &serviceStatus.Fails.WebHook
-		(*w)[key].Init(
+		(*w)[id].ID = id
+		(*w)[id].Failed = &serviceStatus.Fails.WebHook
+		(*w)[id].Init(
 			serviceID,
 			serviceStatus,
-			(*mains)[key],
+			(*mains)[id],
 			defaults,
 			hardDefaults,
 			shoutrrrNotifiers,
@@ -102,8 +101,8 @@ func (w *WebHook) initMetrics(serviceID string) {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceID, "", "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceID, "", "FAIL")
 
 	// ##########
 	// # Gauges #
@@ -130,6 +129,11 @@ func (w *WebHook) GetDelayDuration() time.Duration {
 // GetDesiredStatusCode of the WebHook.
 func (w *WebHook) GetDesiredStatusCode() int {
 	return *utils.GetFirstNonNilPtr(w.DesiredStatusCode, w.Main.DesiredStatusCode, w.Defaults.DesiredStatusCode, w.HardDefaults.DesiredStatusCode)
+}
+
+// GetFailStatus of this WebHook.
+func (w *WebHook) GetFailStatus() *bool {
+	return (*w.Failed)[w.ID]
 }
 
 // GetMaxTries allowed for the WebHook.
@@ -194,6 +198,11 @@ func (w *WebHook) GetURL() *string {
 	return url
 }
 
+// SetFailStatus of this WebHook.
+func (w *WebHook) SetFailStatus(status *bool) {
+	(*w.Failed)[w.ID] = status
+}
+
 // IsRunnable will return whether the current time is before NextRunnable
 func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable)
@@ -205,7 +214,7 @@ func (w *WebHook) IsRunnable() bool {
 func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
 	// pass
-	if !utils.EvalNilPtr((*w.Failed)[*w.ID], true) {
+	if !utils.EvalNilPtr(w.GetFailStatus(), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil
@@ -228,6 +237,6 @@ func (w *Slice) ResetFails() {
 		return
 	}
 	for i := range *w {
-		(*w)[i].Failed = nil
+		(*w)[i].SetFailStatus(nil)
 	}
 }

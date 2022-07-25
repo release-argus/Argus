@@ -140,38 +140,6 @@ func TestURLCommandSlicePrintAllTypes(t *testing.T) {
 	}
 }
 
-func TestURLCommandSetParentIgnoreMissesWithNil(t *testing.T) {
-	// GIVEN a nil slice and parentIgnoreMisses
-	var slice *URLCommandSlice
-	parentIgnoreMisses := false
-
-	// WHEN SetParentIgnoreMisses is called on it
-	slice.SetParentIgnoreMisses(&parentIgnoreMisses)
-
-	// THEN nothing crashes
-}
-
-func TestURLCommandSetParentIgnoreMisses(t *testing.T) {
-	// GIVEN a URLCommandSlice containing each URLCommand type and parentIgnoreMisses
-	slice := URLCommandSlice{
-		testURLCommandRegex(),
-		testURLCommandReplace(),
-		testURLCommandSplit(),
-	}
-	parentIgnoreMisses := false
-
-	// WHEN SetParentIgnoreMisses is called on it
-	slice.SetParentIgnoreMisses(&parentIgnoreMisses)
-
-	// THEN all the URLCommandSlice is given parentIgnoreMisses
-	for _, command := range slice {
-		if command.ParentIgnoreMisses != &parentIgnoreMisses {
-			t.Errorf("Command %v was not given ParentIgnoreMisses.\nGot %v, want %v",
-				command, command.ParentIgnoreMisses, &parentIgnoreMisses)
-		}
-	}
-}
-
 func TestURLCommandSliceRunWithNil(t *testing.T) {
 	// GIVEN a nil URLCommand URLCommandSlice
 	var slice *URLCommandSlice
@@ -604,7 +572,6 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 	wantText := "hi"
 	wantOld := "was"
 	wantNew := "now"
-	wantIgnoreMisses := true
 	if err != nil {
 		t.Errorf("Unmarshal err'd %q",
 			err.Error())
@@ -636,10 +603,6 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 	if *slice[0].New != wantNew {
 		t.Errorf("new not unmarshalled to %s, got %v",
 			wantType, *slice[0].New)
-	}
-	if *slice[0].IgnoreMisses != wantIgnoreMisses {
-		t.Errorf("ignore_misses not unmarshalled to %s, got %v",
-			wantType, *slice[0].IgnoreMisses)
 	}
 }
 

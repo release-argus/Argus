@@ -30,6 +30,11 @@ type Options struct {
 	HardDefaults       *Options `yaml:"-"`                             // Hard Defaults
 }
 
+// GetActive status of the Service..
+func (o *Options) GetActive() bool {
+	return utils.EvalNilPtr(o.Active, true)
+}
+
 // GetInterval between queries for this Service's latest version.
 func (o *Options) GetInterval() string {
 	return *utils.GetFirstNonDefault(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
@@ -37,7 +42,7 @@ func (o *Options) GetInterval() string {
 
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
 func (o *Options) GetSemanticVersioning() bool {
-	return *utils.GetFirstNonDefault(o.SemanticVersioning, o.Defaults.SemanticVersioning, o.HardDefaults.SemanticVersioning)
+	return *utils.GetFirstNonNilPtr(o.SemanticVersioning, o.Defaults.SemanticVersioning, o.HardDefaults.SemanticVersioning)
 }
 
 // GetIntervalPointer returns a pointer to the interval between queries on this Service's version.

@@ -262,11 +262,9 @@ func testDeployedVersion() deployed_version.Lookup {
 func testURLCommandRegex() filters.URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
-	ignoreMisses := false
 	return filters.URLCommand{
-		Type:         "regex",
-		Regex:        &regex,
-		IgnoreMisses: &ignoreMisses,
-		Index:        index,
+		Type:  "regex",
+		Regex: &regex,
+		Index: index,
 	}
 }

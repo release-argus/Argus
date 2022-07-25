@@ -62,14 +62,14 @@ type Fails struct {
 // Init initialises the Status vars when more than the default value is needed.
 func (s *Status) Init(
 	shoutrrrs int,
-	webhooks int,
 	commands int,
+	webhooks int,
 	serviceID *string,
 	webURL *string,
 ) {
 	s.Fails.Shoutrrr = make(map[string]*bool, shoutrrrs)
-	s.Fails.WebHook = make(map[string]*bool, webhooks)
 	s.Fails.Command = make([]*bool, commands)
+	s.Fails.WebHook = make(map[string]*bool, webhooks)
 
 	s.ServiceID = serviceID
 	s.WebURL = webURL
