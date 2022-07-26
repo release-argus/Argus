@@ -30,6 +30,16 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
+func boolPtr(val bool) *bool {
+	return &val
+}
+func intPtr(val int) *int {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
+
 func testConfig() config.Config {
 	port, err := getFreePort()
 	if err != nil {
@@ -87,8 +97,8 @@ func testConfig() config.Config {
 		},
 		Defaults: defaults,
 		WebHook: webhook.Slice{
-			*whPass.ID: &whPass,
-			*whFail.ID: &whFail,
+			*whPass.ID: whPass,
+			*whFail.ID: whFail,
 		},
 		Notify: defaults.Notify,
 		Service: service.Slice{
@@ -113,47 +123,38 @@ func getFreePort() (int, error) {
 
 func testService(id string) service.Service {
 	var (
-		sType               string                = "url"
-		sAccessToken        string                = "secret"
-		sURL                string                = "https://release-argus.io"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sInterval           string                = "10s"
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		whURL               string                = "example.com"
+		sAnnounceChannel chan []byte           = make(chan []byte, 2)
+		sDatabaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		sSaveChannel     chan bool             = make(chan bool, 5)
 	)
 	svc := service.Service{
-		ID:                 &id,
-		Type:               &sType,
-		AccessToken:        &sAccessToken,
-		URL:                &sURL,
-		WebURL:             &sWebURL,
-		RegexContent:       &sRegexContent,
-		RegexVersion:       &sRegexVersion,
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
+		ID:                 stringPtr("test"),
+		Type:               stringPtr("url"),
+		AccessToken:        stringPtr("secret"),
+		URL:                stringPtr("https://release-argus.io"),
+		WebURL:             stringPtr("https://release-argus.io"),
+		RegexContent:       stringPtr("content"),
+		RegexVersion:       stringPtr("version"),
+		SemanticVersioning: boolPtr(true),
+		AllowInvalidCerts:  boolPtr(true),
+		AutoApprove:        boolPtr(false),
+		IgnoreMisses:       boolPtr(false),
 		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
+		UsePreRelease:      boolPtr(false),
 		Announce:           &sAnnounceChannel,
 		DatabaseChannel:    &sDatabaseChannel,
 		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
+		Interval:           stringPtr("10s"),
 		Defaults:           &service.Service{},
 		HardDefaults:       &service.Service{},
 		Command:            &command.Slice{command.Command{"ls", "-lah"}},
 		CommandController:  &command.Controller{},
-		WebHook:            &webhook.Slice{"test": &webhook.WebHook{URL: &whURL}},
-		Status:             &service_status.Status{},
+		WebHook:            &webhook.Slice{"test": &webhook.WebHook{URL: stringPtr("example.com")}},
+		Status: &service_status.Status{
+			ApprovedVersion: "0.0.1",
+			DeployedVersion: "0.0.0", DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
+			LatestVersion: "9.9.9", LatestVersionTimestamp: "2022-01-01T01:01:01Z",
+		},
 	}
 	svc.CommandController.Init(jLog, &id, svc.Status, svc.Command, nil, nil)
 	return svc
@@ -167,7 +168,7 @@ func testCommandFail() command.Command {
 	return command.Command{"ls", "-lah", "/root"}
 }
 
-func testWebHookPass(id string) webhook.WebHook {
+func testWebHookPass(id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
@@ -180,7 +181,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	whSilentFails := true
 	whMaxTries := uint(1)
 	parentInterval := "11m"
-	return webhook.WebHook{
+	return &webhook.WebHook{
 		ID:                &id,
 		Type:              &whType,
 		URL:               &whURL,
@@ -197,7 +198,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	}
 }
 
-func testWebHookFail(id string) webhook.WebHook {
+func testWebHookFail(id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
@@ -209,7 +210,7 @@ func testWebHookFail(id string) webhook.WebHook {
 	whSilentFails := true
 	whMaxTries := uint(1)
 	parentInterval := "11m"
-	return webhook.WebHook{
+	return &webhook.WebHook{
 		ID:                &id,
 		Type:              &whType,
 		URL:               &whURL,

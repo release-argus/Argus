@@ -28,13 +28,13 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+func boolPtr(val bool) *bool {
+	return &val
+}
 func stringPtr(val string) *string {
 	return &val
 }
 func stringListPtr(val []string) *[]string {
-	return &val
-}
-func boolPtr(val bool) *bool {
 	return &val
 }
 

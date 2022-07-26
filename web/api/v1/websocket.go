@@ -121,7 +121,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	}
 	id := payload.ServiceData.ID
 	if api.Config.Service[*id] == nil {
-		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", *id), logFrom, true)
+		api.Log.Error(fmt.Sprintf("%q, service not found", *id), logFrom, true)
 		return
 	}
 
