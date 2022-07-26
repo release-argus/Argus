@@ -37,6 +37,9 @@ import (
 func boolPtr(val bool) *bool {
 	return &val
 }
+func intPtr(val int) *int {
+	return &val
+}
 func stringPtr(val string) *string {
 	return &val
 }
@@ -98,8 +101,8 @@ func testConfig() config.Config {
 		},
 		Defaults: defaults,
 		WebHook: webhook.Slice{
-			whPass.ID: &whPass,
-			whFail.ID: &whFail,
+			whPass.ID: whPass,
+			whFail.ID: whFail,
 		},
 		Notify: defaults.Notify,
 		Service: service.Slice{
@@ -177,7 +180,7 @@ func testCommandFail() command.Command {
 	return command.Command{"ls", "-lah", "/root"}
 }
 
-func testWebHookPass(id string) webhook.WebHook {
+func testWebHookPass(id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
@@ -190,7 +193,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	whSilentFails := true
 	whMaxTries := uint(1)
 	parentInterval := "11m"
-	return webhook.WebHook{
+	return &webhook.WebHook{
 		ID:                id,
 		Type:              &whType,
 		URL:               &whURL,
@@ -207,7 +210,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	}
 }
 
-func testWebHookFail(id string) webhook.WebHook {
+func testWebHookFail(id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
@@ -219,7 +222,7 @@ func testWebHookFail(id string) webhook.WebHook {
 	whSilentFails := true
 	whMaxTries := uint(1)
 	parentInterval := "11m"
-	return webhook.WebHook{
+	return &webhook.WebHook{
 		ID:                id,
 		Type:              &whType,
 		URL:               &whURL,

@@ -33,7 +33,7 @@ var (
 
 func checkFile(path string) {
 	dir := filepath.Dir(path)
-	err := os.Mkdir(dir, 0755)
+	err := os.Mkdir(dir, os.ModeDir|0755)
 	if err == nil {
 		return
 	}
@@ -61,9 +61,11 @@ func Run(cfg *config.Config, log *utils.JLog) {
 	api := api{config: cfg}
 	api.initialise()
 	defer api.db.Close()
-	api.removeUnknownServices()
-	api.convertServiceStatus()
-	api.extractServiceStatus()
+	if len(api.config.All) > 0 {
+		api.removeUnknownServices()
+		api.convertServiceStatus()
+		api.extractServiceStatus()
+	}
 
 	api.handler()
 }

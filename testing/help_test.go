@@ -20,13 +20,13 @@ import "github.com/release-argus/Argus/utils"
 
 var jLog *utils.JLog
 
-func InitJLog(log *utils.JLog) {
-	jLog = log
+func boolPtr(val bool) *bool {
+	return &val
 }
-
 func stringPtr(val string) *string {
 	return &val
 }
-func boolPtr(val bool) *bool {
-	return &val
+
+func InitJLog(log *utils.JLog) {
+	jLog = log
 }

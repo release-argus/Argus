@@ -128,7 +128,7 @@ func (s *Service) HandleFailedActions() {
 					errChan <- err
 				}(key)
 				// Space out WebHooks.
-				time.Sleep(1 * time.Second)
+				time.Sleep(250 * time.Millisecond)
 			} else {
 				potentialErrors--
 			}
@@ -151,7 +151,7 @@ func (s *Service) HandleFailedActions() {
 					errChan <- err
 				}(key)
 				// Space out Commands.
-				time.Sleep(1 * time.Second)
+				time.Sleep(250 * time.Millisecond)
 			} else {
 				potentialErrors--
 			}

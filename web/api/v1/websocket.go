@@ -114,12 +114,7 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 	}
 	id := payload.ServiceData.ID
 	if api.Config.Service[id] == nil {
-		api.Log.Error(fmt.Sprintf("%q is not a valid service_id", id), logFrom, true)
-		return
-	}
-
-	if api.Config.Service[id].WebHook == nil && api.Config.Service[id].Command == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", id), logFrom, true)
+		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
 	}
 
@@ -128,6 +123,11 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 		msg := fmt.Sprintf("%s release skip - %q", id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		api.Config.Service[id].HandleSkip(payload.ServiceData.Status.LatestVersion)
+		return
+	}
+
+	if api.Config.Service[id].WebHook == nil && api.Config.Service[id].Command == nil {
+		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", id), logFrom, true)
 		return
 	}
 

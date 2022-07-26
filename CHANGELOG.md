@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.8.1](https://github.com/release-argus/Argus/compare/0.8.0...0.8.1) (2022-07-22)
+
+
+### Bug Fixes
+
+* **db:** only convert if there are services to convert ([1f0938f](https://github.com/release-argus/Argus/commits/1f0938ff72cc67c3a40fa99c6f595ac533dc83f8))
+* **ui:** skip wasn't working for services with no commands/webhooks ([#127](https://github.com/release-argus/Argus/issues/127)) ([43ce3bf](https://github.com/release-argus/Argus/commits/43ce3bf4705aa41567ba921a34bbe1518c2553e4))
+
 ## [0.8.0](https://github.com/release-argus/Argus/compare/0.7.0...0.8.0) (2022-07-16)
 
 

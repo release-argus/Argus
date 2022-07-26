@@ -21,10 +21,10 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func stringPtr(val string) *string {
+func boolPtr(val bool) *bool {
 	return &val
 }
-func boolPtr(val bool) *bool {
+func stringPtr(val string) *string {
 	return &val
 }
 

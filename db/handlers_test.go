@@ -52,7 +52,7 @@ func TestUpdateRow(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 
 			// THEN those cell(s) are changed in the DB
-			row := queryRow(api.db, target, t)
+			row := queryRow(t, api.db, target)
 			for _, cell := range tc.cells {
 				var got *string
 				switch cell.Column {
@@ -92,7 +92,7 @@ func TestHandler(t *testing.T) {
 	// WHEN a message is send to the DatabaseChannel targeting latest_version
 	target := "keep0"
 	cell := db_types.Cell{Column: "latest_version", Value: "9.9.9"}
-	want := queryRow(api.db, target, t)
+	want := queryRow(t, api.db, target)
 	want.LatestVersion = cell.Value
 	*api.config.DatabaseChannel <- db_types.Message{
 		ServiceID: target,
@@ -101,7 +101,7 @@ func TestHandler(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// THEN the cell was changed in the DB
-	got := queryRow(api.db, target, t)
+	got := queryRow(t, api.db, target)
 	if got.LatestVersion != want.LatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
