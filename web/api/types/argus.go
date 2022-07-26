@@ -256,8 +256,8 @@ type LatestVersion struct {
 
 // LatestVersionRequire commands, regex etc for the release to be considered valid.
 type LatestVersionRequire struct {
-	RegexContent *string `json:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
-	RegexVersion *string `json:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
+	RegexContent string `json:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
+	RegexVersion string `json:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
 }
 
 // DeployedVersionLookup of the service.

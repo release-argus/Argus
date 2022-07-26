@@ -62,6 +62,7 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
+// Init will give the filters package this log.
 func (c *URLCommandSlice) Init(log *utils.JLog) {
 	jLog = log
 }
@@ -219,9 +220,9 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	validType := true
 
 	switch c.Type {
-	case "split":
-		if c.Text == nil {
-			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
+	case "regex":
+		if c.Regex == nil {
+			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
 				utils.ErrorToString(errs), prefix)
 		}
 	case "replace":
@@ -233,9 +234,9 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\",
 				utils.ErrorToString(errs), prefix)
 		}
-	case "regex":
-		if c.Regex == nil {
-			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
+	case "split":
+		if c.Text == nil {
+			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
 				utils.ErrorToString(errs), prefix)
 		}
 	default:

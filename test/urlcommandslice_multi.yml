@@ -1,2 +1,9 @@
+- type: regex
+  regex: \"([0-9.+])\"
+  index: 1
 - type: replace
-- type: replace
+  old: foo
+  new: bar
+- type: split
+  text: abc
+  index: 2

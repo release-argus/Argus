@@ -16,6 +16,10 @@
 
 package filters
 
+func stringPtr(val string) *string {
+	return &val
+}
+
 func testURLCommandRegex() URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
