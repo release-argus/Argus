@@ -24,6 +24,7 @@ import (
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -69,7 +70,7 @@ func TestDefaultsCheckValues(t *testing.T) {
 			errContains: `interval: "10x" <invalid>`},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
-				DeployedVersionLookup: &service.DeployedVersionLookup{
+				DeployedVersionLookup: &deployed_version.Lookup{
 					Regex: "^something[0-"}}},
 			errContains: `regex: "^something[0-" <invalid>`},
 		"Notify.x.Delay": {

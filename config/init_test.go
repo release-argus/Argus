@@ -61,7 +61,7 @@ func TestLoadDefaults(t *testing.T) {
 
 	// THEN the defaults are assigned correctly to Services
 	want := false
-	got := config.Service["WantDefaults"].GetSemanticVersioning()
+	got := config.Service["WantDefaults"].Options.GetSemanticVersioning()
 	if got != want {
 		t.Errorf(`config.Service['WantDefaults'].SemanticVersioning = %v. GetSemanticVersion gave %t, want %t`,
 			got, *config.Service["WantDefaults"].SemanticVersioning, want)

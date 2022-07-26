@@ -35,7 +35,7 @@ func testWebHookSuccessful() WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "12m"
 	return WebHook{
-		ID:                &whID,
+		ID:                whID,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,
@@ -62,7 +62,7 @@ func testWebHookFailing() WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "12m"
 	return WebHook{
-		ID:                &whID,
+		ID:                whID,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,

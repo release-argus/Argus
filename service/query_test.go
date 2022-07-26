@@ -17,12 +17,11 @@
 package service
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestServiceGetVersionsWithGitHubRateLimit(t *testing.T) {
@@ -32,7 +31,7 @@ func TestServiceGetVersionsWithGitHubRateLimit(t *testing.T) {
 	body := "something rate limit something"
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN err is non-nil about this rate limit being reached
 	e := utils.ErrorToString(err)
@@ -52,7 +51,7 @@ func TestServiceGetVersionsWithGitHubBadCredentials(t *testing.T) {
 	defer func() { _ = recover() }()
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN err is non-nil about these bad credentials
 	e := utils.ErrorToString(err)
@@ -72,7 +71,7 @@ func TestServiceGetVersionsWithGitHubNoTagNames(t *testing.T) {
 	defer func() { _ = recover() }()
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN err is non-nil about tag_name not being found
 	e := utils.ErrorToString(err)
@@ -89,7 +88,7 @@ func TestServiceGetVersionsWithGitHubInvalidData(t *testing.T) {
 	body := `"tag_name":"argus"\n"url":"test"\n"url":"another_url"`
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN err is non-nil about the unmarshal failing
 	e := utils.ErrorToString(err)
@@ -104,8 +103,8 @@ func TestServiceGetVersionsWithGitHubFilterPreReleases(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	body :=
 		`[
 			{
@@ -118,7 +117,7 @@ func TestServiceGetVersionsWithGitHubFilterPreReleases(t *testing.T) {
 			}
 		]`
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN all prereleases are removed
 	if len(versions) == 0 {
@@ -137,8 +136,8 @@ func TestServiceGetVersionsWithGitHubSortReleases(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	*service.SemanticVersioning = true
 	body :=
 		`[
@@ -160,7 +159,7 @@ func TestServiceGetVersionsWithGitHubSortReleases(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are ordered
 	wantedOrder := []string{"0.8.0", "0.7.0", "0.6.3", "0.6.2", "0.6.1"}
@@ -179,20 +178,15 @@ func TestServiceGetVersionsWithFailingURLCommand(t *testing.T) {
 	// GIVEN a Service and a Query body containing a beta version
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceURL()
-	regex := "(argus-[0-9]+)\""
-	service.URLCommands = &URLCommandSlice{
-		{
-			Type:  "regex",
-			Regex: &regex,
-		},
-	}
+	service.URLCommands = &filters.URLCommandSlice{
+		{Type: "regex", Regex: stringPtr("(argus-[0-9]+)\"")}}
 	body :=
 		`
 		new release: "https://example.com/argus-0.1.0-beta"
 		`
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersions([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are ordered
 	e := utils.ErrorToString(err)
@@ -207,11 +201,11 @@ func TestServiceGetVersionsWithURLCommands(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\.0$"
-	service.URLCommands = &URLCommandSlice{urlCommand}
+	service.URLCommands = &filters.URLCommandSlice{urlCommand}
 	body :=
 		`[
 			{
@@ -223,7 +217,7 @@ func TestServiceGetVersionsWithURLCommands(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are filtered
 	wantFiltered := "0.6.1"
@@ -240,7 +234,7 @@ func TestServiceGetVersionWithGetVersionsFail(t *testing.T) {
 	body := "something rate limit something"
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersion([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersion([]byte(body), utils.LogFrom{})
 
 	// THEN err is non-nil about this rate limit being reached
 	e := utils.ErrorToString(err)
@@ -255,11 +249,11 @@ func TestServiceGetVersionWithRegexVersion(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+$"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\.0$"
-	service.URLCommands = &URLCommandSlice{urlCommand}
+	service.URLCommands = &filters.URLCommandSlice{urlCommand}
 	body :=
 		`[
 			{
@@ -271,13 +265,13 @@ func TestServiceGetVersionWithRegexVersion(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	version, _ := service.GetVersion([]byte(body), utils.LogFrom{})
+	version, _ := service.LatestVersion.GetVersion([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are filtered
 	want := "0.7.0"
 	if version != want {
 		t.Errorf("GetVersion didn't use the RegexVersion %q to filter out releases and return %q. Instead got %q",
-			*service.RegexVersion, want, version)
+			*service.LatestVersion.Require.RegexVersion, want, version)
 	}
 }
 
@@ -286,8 +280,8 @@ func TestServiceGetVersionsWithRegexContent(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
-	*service.RegexVersion = ""
+	*service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
+	*service.LatestVersion.Require.RegexVersion = ""
 	body :=
 		`[
 			{
@@ -315,13 +309,13 @@ func TestServiceGetVersionsWithRegexContent(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	version, _ := service.GetVersion([]byte(body), utils.LogFrom{})
+	version, _ := service.LatestVersion.GetVersion([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are filtered
 	want := "0.6.0"
 	if version != want {
 		t.Errorf("GetVersion didn't use the RegexContent %q to filter out releases and return %q. Instead got %q",
-			*service.RegexContent, want, version)
+			*service.LatestVersion.Require.RegexContent, want, version)
 	}
 }
 
@@ -330,8 +324,8 @@ func TestServiceGetVersionsWithNoMatchingRegexContent(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
-	*service.RegexVersion = ""
+	*service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
+	*service.LatestVersion.Require.RegexVersion = ""
 	body :=
 		`[
 			{
@@ -355,12 +349,12 @@ func TestServiceGetVersionsWithNoMatchingRegexContent(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	_, err := service.GetVersion([]byte(body), utils.LogFrom{})
+	_, err := service.LatestVersion.GetVersion([]byte(body), utils.LogFrom{})
 
 	// THEN an err is occured as no releases match the RegexContent
 	if err == nil {
 		t.Errorf("GetVersion didn't use the RegexContent %q to filter out every release and return an err. Instead got %v",
-			*service.RegexContent, err)
+			*service.LatestVersion.Require.RegexContent, err)
 	}
 }
 
@@ -369,11 +363,11 @@ func TestServiceGetVersionsWithNoMatchingURLCommands(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.RegexContent = ""
-	*service.RegexVersion = ""
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = ""
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\-beta$"
-	service.URLCommands = &URLCommandSlice{urlCommand}
+	service.URLCommands = &filters.URLCommandSlice{urlCommand}
 	body :=
 		`[
 			{
@@ -385,7 +379,7 @@ func TestServiceGetVersionsWithNoMatchingURLCommands(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN the releases are filtered
 	if len(versions) != 0 {
@@ -398,8 +392,8 @@ func TestServiceGetVersionsWithNonSemanticVersioning(t *testing.T) {
 	// GIVEN a Service with non-semantic versioning and a Query body with non-semantic versions
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	*service.SemanticVersioning = false
 	body :=
 		`[
@@ -415,7 +409,7 @@ func TestServiceGetVersionsWithNonSemanticVersioning(t *testing.T) {
 		]`
 
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN no releases are filtered
 	want := 3
@@ -429,8 +423,8 @@ func TestServiceGetVersionsWithSemanticVersioningAndSomeNonSemanticReleases(t *t
 	// GIVEN a Service wanrinf semantic versioning and a Query body with both semantic and non-semantic versions
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = ""
-	*service.RegexVersion = "[0-9.]+"
+	*service.LatestVersion.Require.RegexContent = ""
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	body :=
 		`[
 			{
@@ -445,7 +439,7 @@ func TestServiceGetVersionsWithSemanticVersioningAndSomeNonSemanticReleases(t *t
 		]`
 
 	// WHEN GetVersions is called on this body
-	versions, _ := service.GetVersions([]byte(body), utils.LogFrom{})
+	versions, _ := service.LatestVersion.GetVersions([]byte(body), utils.LogFrom{})
 
 	// THEN the non-semantic releases are filtered
 	wantCount := 1

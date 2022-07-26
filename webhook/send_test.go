@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -359,7 +360,7 @@ func TestNotifiersSendWithNotifier(t *testing.T) {
 		},
 	}
 	jLog = utils.NewJLog("WARN", false)
-	(*notifiers.Shoutrrr).Init(jLog, &id, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{})
+	(*notifiers.Shoutrrr).Init(jLog, &id, &service_status.Status{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{})
 	(*notifiers.Shoutrrr)["test"].Init(&id, &shoutrrr.Shoutrrr{}, &shoutrrr.Shoutrrr{}, &shoutrrr.Shoutrrr{})
 
 	// WHEN Send is called with them

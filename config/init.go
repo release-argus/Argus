@@ -44,7 +44,7 @@ func (c *Config) Init() {
 			len(service.WebHook),
 			len(service.Command),
 			&service.ID,
-			&service.Dashboard.WebURL)
+			service.Dashboard.WebURL)
 
 		service.Init(
 			jLog,

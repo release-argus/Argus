@@ -333,7 +333,7 @@ func TestSliceInitWithNil(t *testing.T) {
 	var slice *Slice
 
 	// WHEN Init is called on it
-	slice.Init(nil, nil, nil, nil, nil)
+	slice.Init(nil, nil, nil, nil, nil, nil)
 
 	// THEN it is still nil
 	if slice != nil {
@@ -354,7 +354,7 @@ func TestSliceInitWithMatchingMain(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with a main for "1"
-	slice.Init(nil, &serviceID, &mains, &Slice{}, &Slice{})
+	slice.Init(nil, &serviceID, nil, &mains, &Slice{}, &Slice{})
 
 	// THEN "1" has that main
 	if slice["1"].Main != mains["1"] {
@@ -375,7 +375,7 @@ func TestSliceInitWithNonMatchingMain(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with a main for "1"
-	slice.Init(nil, &serviceID, &mains, &Slice{}, &Slice{})
+	slice.Init(nil, &serviceID, nil, &mains, &Slice{}, &Slice{})
 
 	// THEN "1" has that main
 	if slice["0"].Main.ID != nil {
@@ -391,7 +391,7 @@ func TestSliceInitWithNilElement(t *testing.T) {
 	slice["1"] = nil
 
 	// WHEN Init is called on it
-	slice.Init(nil, &serviceID, &Slice{}, &Slice{}, &Slice{})
+	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &Slice{})
 
 	// THEN that element is no longer nil
 	if slice["1"] == nil {
@@ -406,7 +406,7 @@ func TestSliceInitWithDefaultMain(t *testing.T) {
 	serviceID := "test"
 
 	// WHEN Init is called on it with no mains defined (default Slice)
-	slice.Init(nil, &serviceID, &Slice{}, &Slice{}, &Slice{})
+	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &Slice{})
 
 	// THEN "1" gets an empty main
 	if slice["1"].Main.Type != "" ||
@@ -425,7 +425,7 @@ func TestSliceInitWithNilMains(t *testing.T) {
 	slice["1"] = nil
 
 	// WHEN Init is called on it
-	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{})
+	slice.Init(nil, &serviceID, nil, nil, &Slice{}, &Slice{})
 
 	// THEN the elements get non-nil mains
 	if slice["1"].Main == nil {
@@ -448,7 +448,7 @@ func TestSliceInitWithDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil defaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, &Slice{}, &defaults, &Slice{})
+	slice.Init(nil, &serviceID, nil, &Slice{}, &defaults, &Slice{})
 
 	// THEN all "discord" types have the default
 	for i := range slice {
@@ -473,7 +473,7 @@ func TestSliceInitWithNoDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil defaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, &Slice{}, &defaults, &Slice{})
+	slice.Init(nil, &serviceID, nil, &Slice{}, &defaults, &Slice{})
 
 	// THEN no non "discord" types are given this default
 	for i := range slice {
@@ -498,7 +498,7 @@ func TestSliceInitWithHardDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil hardDefaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, &Slice{}, &Slice{}, &hardDefaults)
+	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &hardDefaults)
 
 	// THEN all "discord" types have the default
 	for i := range slice {
@@ -523,7 +523,7 @@ func TestSliceInitWithNoHardDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil hardDefaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, &Slice{}, &Slice{}, &hardDefaults)
+	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &hardDefaults)
 
 	// THEN no non "discord" types are given this default
 	for i := range slice {

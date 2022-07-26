@@ -321,7 +321,7 @@ func TestWebSocketApprovalsVersion(t *testing.T) {
 	cfg.Service["test"].Status.DeployedVersion = "0.0.0"
 	cfg.Service["test"].Status.LatestVersion = "0.1.0"
 	databaseChannel := make(chan db_types.Message, 5)
-	cfg.Service["test"].DatabaseChannel = &databaseChannel
+	cfg.Service["test"].Status.DatabaseChannel = &databaseChannel
 	ws := connectToWebSocket(t)
 	defer ws.Close()
 
@@ -338,7 +338,7 @@ func TestWebSocketApprovalsVersion(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -438,7 +438,7 @@ func TestWebSocketApprovalsVersionWithNoTarget(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -487,7 +487,7 @@ func TestWebSocketApprovalsVersionWithInvalidServiceID(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -508,7 +508,7 @@ func TestWebSocketApprovalsVersionWithInvalidServiceID(t *testing.T) {
 	output := string(out)
 	if !strings.Contains(output, "not a valid service_id") {
 		t.Errorf("Expecting an error about the %q service_id being unknown. Got\n%s",
-			*msg.ServiceData.ID, output)
+			msg.ServiceData.ID, output)
 	}
 }
 
@@ -535,7 +535,7 @@ func TestWebSocketApprovalsVersionWithNoCommandsOrWebHooks(t *testing.T) {
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
+		msgServiceID string = svc.ID
 		msgTarget    string = "ARGUS_SKIP"
 	)
 	msg := api_types.WebSocketMessage{
@@ -543,7 +543,7 @@ func TestWebSocketApprovalsVersionWithNoCommandsOrWebHooks(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -564,7 +564,7 @@ func TestWebSocketApprovalsVersionWithNoCommandsOrWebHooks(t *testing.T) {
 	output := string(out)
 	if !strings.Contains(output, "does not have any commands/webhooks to approve") {
 		t.Errorf("Expecting an error about the %q service having no commands/webhooks. Got\n%s",
-			*msg.ServiceData.ID, output)
+			msg.ServiceData.ID, output)
 	}
 	delete(cfg.Service, testName)
 }
@@ -578,10 +578,10 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 	want := "0.1.0"
 	svc.Status.DeployedVersion = "0.0.0"
 	svc.Status.LatestVersion = want
-	svc.Command = &command.Slice{testCommandPass()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
+	svc.Command = command.Slice{testCommandPass()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
 	failed := true
-	svc.CommandController.Failed[0] = &failed
+	(*svc.CommandController.Failed)[0] = &failed
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -593,7 +593,7 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
+		msgServiceID string = svc.ID
 		msgTarget    string = "ARGUS_FAILED"
 	)
 	msg := api_types.WebSocketMessage{
@@ -601,7 +601,7 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -618,7 +618,7 @@ func TestWebSocketApprovalsVersionWithArgusFailedAndFailedCommandThatWillPass(t 
 	// THEN we receive a response acknowledging it
 	if svc.Status.DeployedVersion != want {
 		t.Errorf("ARGUS_FAILED should have re-run the Service.Command %q and passed. This should've updated DeployedVersion to %q, not %q",
-			(*svc.Command)[0].String(), want, svc.Status.DeployedVersion)
+			svc.Command[0].String(), want, svc.Status.DeployedVersion)
 	}
 	delete(cfg.Service, testName)
 }
@@ -632,12 +632,16 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidUpdateLa
 	want := "0.1.0"
 	svc.Status.DeployedVersion = "0.0.0"
 	svc.Status.LatestVersion = want
-	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
-	failed0 := true
-	svc.CommandController.Failed[0] = &failed0
-	failed1 := false
-	svc.CommandController.Failed[1] = &failed1
+	svc.Command = command.Slice{testCommandPass(), testCommandFail()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
+	whPass := testWebHookPass("pass")
+	whPass.ServiceStatus = &svc.Status
+	whPass.Failed = &svc.Status.Fails.WebHook
+	whFail := testWebHookFail("fail")
+	whFail.ServiceStatus = &svc.Status
+	whFail.Failed = &svc.Status.Fails.WebHook
+	whPass.SetFailStatus(boolPtr(true))
+	whFail.SetFailStatus(boolPtr(false))
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -648,15 +652,15 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidUpdateLa
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "command_" + (*svc.Command)[0].String()
+		msgServiceID string = svc.ID
+		msgTarget    string = "command_" + svc.Command[0].String()
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -673,7 +677,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidUpdateLa
 	// THEN it passes and we receive a response acknowledging the change in DeployedVersion
 	if svc.Status.DeployedVersion != want {
 		t.Errorf("%q should have re-run the Service.Command %q and passed. This should've updated LatestVersion to %q, not %q",
-			msgTarget, (*svc.Command)[0].String(), want, svc.Status.DeployedVersion)
+			msgTarget, svc.Command[0].String(), want, svc.Status.DeployedVersion)
 	}
 	delete(cfg.Service, testName)
 }
@@ -684,17 +688,16 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	// and the Failed status for one Command is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	svc.Status.DeployedVersion = "0.0.0"
 	want := "0.1.0"
 	svc.Status.LatestVersion = want
-	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
-	svc.CommandController.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	svc.CommandController.Failed[0] = &failed0
-	failed1 := false
-	svc.CommandController.Failed[1] = &failed1
+	svc.Command = command.Slice{testCommandPass(), testCommandFail()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
+	svc.CommandController.ServiceStatus.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
+	svc.CommandController.Failed = &svc.CommandController.ServiceStatus.Fails.Command
+	(*svc.CommandController.Failed)[0] = boolPtr(true)
+	(*svc.CommandController.Failed)[1] = boolPtr(false)
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -705,15 +708,15 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "command_" + (*svc.Command)[0].String()
+		msgServiceID string = svc.ID
+		msgTarget    string = "command_" + svc.Command[0].String()
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -736,14 +739,14 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsOnlyFailedDidAnnounce
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
-	if receivedMsg.CommandData[(*svc.Command)[0].String()].Failed == nil ||
-		*receivedMsg.CommandData[(*svc.Command)[0].String()].Failed != false {
+	if receivedMsg.CommandData[svc.Command[0].String()].Failed == nil ||
+		*receivedMsg.CommandData[svc.Command[0].String()].Failed != false {
 		got := "nil"
-		if receivedMsg.CommandData[(*svc.Command)[0].String()].Failed != nil {
+		if receivedMsg.CommandData[svc.Command[0].String()].Failed != nil {
 			got = "true"
 		}
 		t.Errorf("%q should have re-run the Service.Command %q and passed but got %s in the WebSocket response",
-			msgTarget, (*svc.Command)[0].String(), got)
+			msgTarget, svc.Command[0].String(), got)
 	}
 	// VERSION
 	_, p, err = ws.ReadMessage()
@@ -770,17 +773,16 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntAnn
 	// and the Failed status for more than one of the Commands is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidAnnounce"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	want := "0.0.0"
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
-	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
-	svc.CommandController.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	svc.CommandController.Failed[0] = &failed0
-	failed1 := true
-	svc.CommandController.Failed[1] = &failed1
+	svc.Command = command.Slice{testCommandPass(), testCommandFail()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
+	svc.CommandController.ServiceStatus.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
+	svc.CommandController.Failed = &svc.CommandController.ServiceStatus.Fails.Command
+	(*svc.CommandController.Failed)[0] = boolPtr(true)
+	(*svc.CommandController.Failed)[1] = boolPtr(true)
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -791,15 +793,15 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntAnn
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "command_" + (*svc.Command)[0].String()
+		msgServiceID string = svc.ID
+		msgTarget    string = "command_" + svc.Command[0].String()
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -821,14 +823,14 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntAnn
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
-	if receivedMsg.CommandData[(*svc.Command)[0].String()].Failed == nil ||
-		*receivedMsg.CommandData[(*svc.Command)[0].String()].Failed != false {
+	if receivedMsg.CommandData[svc.Command[0].String()].Failed == nil ||
+		*receivedMsg.CommandData[svc.Command[0].String()].Failed != false {
 		got := "nil"
-		if receivedMsg.CommandData[(*svc.Command)[0].String()].Failed != nil {
+		if receivedMsg.CommandData[svc.Command[0].String()].Failed != nil {
 			got = "true"
 		}
 		t.Errorf("%q should have re-run the Service.Command %q and passed but got failed=%s in the WebSocket response",
-			msgTarget, (*svc.Command)[0].String(), got)
+			msgTarget, svc.Command[0].String(), got)
 	}
 	delete(cfg.Service, testName)
 }
@@ -839,17 +841,16 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpd
 	// and the Failed status for more than one of the Commands is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpdateLatestVersion"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	want := "0.0.0"
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
-	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
-	svc.CommandController.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	svc.CommandController.Failed[0] = &failed0
-	failed1 := true
-	svc.CommandController.Failed[1] = &failed1
+	svc.Command = command.Slice{testCommandPass(), testCommandFail()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
+	svc.CommandController.ServiceStatus.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
+	svc.CommandController.Failed = &svc.CommandController.ServiceStatus.Fails.Command
+	(*svc.CommandController.Failed)[0] = boolPtr(true)
+	(*svc.CommandController.Failed)[1] = boolPtr(true)
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -860,15 +861,15 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpd
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "command_" + (*svc.Command)[0].String()
+		msgServiceID string = svc.ID
+		msgTarget    string = "command_" + svc.Command[0].String()
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -885,7 +886,7 @@ func TestWebSocketApprovalsVersionWithSpecificCommandThatIsNotOnlyFailedDidntUpd
 	// THEN it passes and the DeployedVersion is unchanged
 	if svc.Status.DeployedVersion != want {
 		t.Errorf("%q should have re-run the Service.Command %q and passed but not have updated LatestVersion to %q, want %q",
-			msgTarget, (*svc.Command)[0].String(), svc.Status.DeployedVersion, want)
+			msgTarget, svc.Command[0].String(), svc.Status.DeployedVersion, want)
 	}
 	delete(cfg.Service, testName)
 }
@@ -896,22 +897,22 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 	// and the Failed status for one WebHook is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	svc.Status.DeployedVersion = "0.0.0"
 	want := "0.1.0"
 	svc.Status.LatestVersion = want
 	svc.Command = nil
 	whPass := testWebHookPass("pass")
+	whPass.ServiceStatus = &svc.Status
+	whPass.Failed = &svc.Status.Fails.WebHook
 	whFail := testWebHookFail("fail")
-	whPass.Announce = cfg.Service["test"].Announce
-	whFail.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	whPass.Failed = &failed0
-	failed1 := false
-	whFail.Failed = &failed1
-	svc.WebHook = &webhook.Slice{
-		*whPass.ID: &whPass,
-		*whFail.ID: &whFail,
+	whFail.ServiceStatus = &svc.Status
+	whFail.Failed = &svc.Status.Fails.WebHook
+	whPass.SetFailStatus(boolPtr(true))
+	whFail.SetFailStatus(boolPtr(false))
+	svc.WebHook = webhook.Slice{
+		whPass.ID: &whPass,
+		whFail.ID: &whFail,
 	}
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -922,15 +923,15 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "webhook_" + *whPass.ID
+		msgServiceID string = svc.ID
+		msgTarget    string = "webhook_" + whPass.ID
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -953,10 +954,10 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsOnlyFailedDidAnnounce
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
-	if receivedMsg.WebHookData[*whPass.ID].Failed == nil ||
-		*receivedMsg.WebHookData[*whPass.ID].Failed != false {
+	if receivedMsg.WebHookData[whPass.ID].Failed == nil ||
+		*receivedMsg.WebHookData[whPass.ID].Failed != false {
 		got := "nil"
-		if receivedMsg.WebHookData[*whPass.ID].Failed != nil {
+		if receivedMsg.WebHookData[whPass.ID].Failed != nil {
 			got = "true"
 		}
 		t.Errorf("%q should have re-run the Service.WebHook and passed but got %s in the WebSocket response",
@@ -987,22 +988,22 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidAnnou
 	// and the Failed status for more than one of the WebHooks is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidAnnounce"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	want := "0.0.0"
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
 	svc.Command = nil
 	wh0 := testWebHookPass("wh0")
 	wh1 := testWebHookFail("wh1")
-	wh0.Announce = cfg.Service["test"].Announce
-	wh1.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	wh0.Failed = &failed0
-	failed1 := true
-	wh1.Failed = &failed1
-	svc.WebHook = &webhook.Slice{
-		*wh0.ID: &wh0,
-		*wh1.ID: &wh1,
+	wh0.ServiceStatus = &cfg.Service["test"].Status
+	wh1.ServiceStatus = &cfg.Service["test"].Status
+	wh0.Failed = &wh0.ServiceStatus.Fails.WebHook
+	wh1.Failed = &wh1.ServiceStatus.Fails.WebHook
+	wh0.SetFailStatus(boolPtr(true))
+	wh1.SetFailStatus(boolPtr(true))
+	svc.WebHook = webhook.Slice{
+		wh0.ID: &wh0,
+		wh1.ID: &wh1,
 	}
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -1013,15 +1014,15 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidAnnou
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "webhook_" + *wh0.ID
+		msgServiceID string = svc.ID
+		msgTarget    string = "webhook_" + wh0.ID
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -1043,10 +1044,10 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidAnnou
 	}
 	var receivedMsg api_types.WebSocketMessage
 	json.Unmarshal(p, &receivedMsg)
-	if receivedMsg.WebHookData[*wh0.ID].Failed == nil ||
-		*receivedMsg.WebHookData[*wh0.ID].Failed != false {
+	if receivedMsg.WebHookData[wh0.ID].Failed == nil ||
+		*receivedMsg.WebHookData[wh0.ID].Failed != false {
 		got := "nil"
-		if receivedMsg.WebHookData[*wh0.ID].Failed != nil {
+		if receivedMsg.WebHookData[wh0.ID].Failed != nil {
 			got = "true"
 		}
 		t.Errorf("%q should have re-run the Service.WebHook and passed but got %s in the WebSocket response",
@@ -1061,22 +1062,22 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidntUpd
 	// and the Failed status for more than one of the WebHooks is true
 	testName := "TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidUpdateLatestVersion"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	want := "0.0.0"
 	svc.Status.DeployedVersion = want
 	svc.Status.LatestVersion = "0.1.0"
 	svc.Command = nil
 	wh0 := testWebHookPass("wh0")
 	wh1 := testWebHookFail("wh1")
-	wh0.Announce = cfg.Service["test"].Announce
-	wh1.Announce = cfg.Service["test"].Announce
-	failed0 := true
-	wh0.Failed = &failed0
-	failed1 := true
-	wh1.Failed = &failed1
-	svc.WebHook = &webhook.Slice{
-		*wh0.ID: &wh0,
-		*wh1.ID: &wh1,
+	wh0.ServiceStatus = &cfg.Service["test"].Status
+	wh1.ServiceStatus = &cfg.Service["test"].Status
+	wh0.Failed = &wh0.ServiceStatus.Fails.WebHook
+	wh1.Failed = &wh1.ServiceStatus.Fails.WebHook
+	wh0.SetFailStatus(boolPtr(true))
+	wh1.SetFailStatus(boolPtr(true))
+	svc.WebHook = webhook.Slice{
+		wh0.ID: &wh0,
+		wh1.ID: &wh1,
 	}
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -1087,15 +1088,15 @@ func TestWebSocketApprovalsVersionWithSpecificWebHookThatIsNotOnlyFailedDidntUpd
 		msgVersion   int    = 1
 		msgPage      string = "APPROVALS"
 		msgType      string = "VERSION"
-		msgServiceID string = *svc.ID
-		msgTarget    string = "webhook" + *wh0.ID
+		msgServiceID string = svc.ID
+		msgTarget    string = "webhook" + wh0.ID
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -1177,7 +1178,7 @@ func TestWebSocketApprovalsActionsWithUnknownServiceID(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 		},
 	}
 	data, _ := json.Marshal(msg)
@@ -1203,13 +1204,12 @@ func TestWebSocketApprovalsActionsWithNoWebHook(t *testing.T) {
 	// and there's a Service with WebHook but no CommandController
 	testName := "TestWebSocketApprovalsActionsWithNoWebHook"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
-	svc.Command = &command.Slice{testCommandPass(), testCommandFail()}
-	svc.CommandController.Init(jLog, svc.ID, svc.Status, svc.Command, nil, svc.Interval)
-	failed0 := true
-	svc.CommandController.Failed[0] = &failed0
-	failed1 := false
-	svc.CommandController.Failed[1] = &failed1
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
+	svc.Command = command.Slice{testCommandPass(), testCommandFail()}
+	svc.CommandController.Init(jLog, &svc.ID, &svc.Status, &svc.Command, nil, svc.Interval)
+	svc.CommandController.Failed = &svc.CommandController.ServiceStatus.Fails.Command
+	(*svc.CommandController.Failed)[0] = boolPtr(true)
+	(*svc.CommandController.Failed)[1] = boolPtr(false)
 	svc.WebHook = nil
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -1228,7 +1228,7 @@ func TestWebSocketApprovalsActionsWithNoWebHook(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 		},
 	}
 	data, _ := json.Marshal(msg)
@@ -1258,18 +1258,20 @@ func TestWebSocketApprovalsActionsWithNoCommandController(t *testing.T) {
 	// and there's a Service with WebHook but no CommandController
 	testName := "TestWebSocketApprovalsActionsWithNoCommandController"
 	svc := testService(testName)
-	svc.Announce = cfg.Service["test"].Announce
+	svc.Status.AnnounceChannel = cfg.Service["test"].Status.AnnounceChannel
 	svc.Command = nil
 	svc.CommandController = nil
 	wh0 := testWebHookPass("wh0")
 	wh1 := testWebHookFail("wh1")
-	failed0 := true
-	wh0.Failed = &failed0
-	failed1 := true
-	wh1.Failed = &failed1
-	svc.WebHook = &webhook.Slice{
-		*wh0.ID: &wh0,
-		*wh1.ID: &wh1,
+	wh0.ServiceStatus = &cfg.Service["test"].Status
+	wh1.ServiceStatus = &cfg.Service["test"].Status
+	wh0.Failed = &wh0.ServiceStatus.Fails.WebHook
+	wh1.Failed = &wh1.ServiceStatus.Fails.WebHook
+	wh0.SetFailStatus(boolPtr(true))
+	wh1.SetFailStatus(boolPtr(true))
+	svc.WebHook = webhook.Slice{
+		wh0.ID: &wh0,
+		wh1.ID: &wh1,
 	}
 	cfg.Service[testName] = &svc
 	ws := connectToWebSocket(t)
@@ -1288,7 +1290,7 @@ func TestWebSocketApprovalsActionsWithNoCommandController(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 		},
 	}
 	data, _ := json.Marshal(msg)
@@ -1330,7 +1332,7 @@ func TestWebSocketApprovalsActions(t *testing.T) {
 		Page:    &msgPage,
 		Type:    &msgType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: &msgServiceID,
+			ID: msgServiceID,
 			Status: &api_types.Status{
 				LatestVersion: cfg.Service["test"].Status.LatestVersion,
 			},
@@ -1371,7 +1373,7 @@ func TestWebSocketApprovalsActions(t *testing.T) {
 		t.Errorf("bad message, expecting CommandData not %v",
 			receivedMsg)
 	}
-	command := (*cfg.Service["test"].Command)[0].String()
+	command := cfg.Service["test"].Command[0].String()
 	if (*receivedMsg.CommandData[command]).Failed != nil {
 		t.Errorf("bad message, expecting Command Failed Status to be nil, not %t",
 			*(*receivedMsg.CommandData[command]).Failed)
@@ -1715,12 +1717,12 @@ func TestWebSocketConfigInitDefaults(t *testing.T) {
 		} else {
 			if receivedMsg.ConfigData == nil ||
 				receivedMsg.ConfigData.Defaults == nil ||
-				receivedMsg.ConfigData.Defaults.Service.Interval == nil {
-				t.Errorf("Didn't receive ConfigData.Defaults.Service.Interval from\n%v",
+				receivedMsg.ConfigData.Defaults.Service.Options.Interval == nil {
+				t.Errorf("Didn't receive ConfigData.Defaults.Service.Options.Interval from\n%v",
 					receivedMsg)
-			} else if *receivedMsg.ConfigData.Defaults.Service.Interval != *cfg.Defaults.Service.Interval {
-				t.Errorf("Expected ConfigData.Defaults.Service.Interval to be %q, got %q\n%v",
-					*cfg.Defaults.Service.Interval, *receivedMsg.ConfigData.Defaults.Service.Interval, receivedMsg)
+			} else if *receivedMsg.ConfigData.Defaults.Service.Options.Interval != *cfg.Defaults.Service.Options.Interval {
+				t.Errorf("Expected ConfigData.Defaults.Service.Options.Interval to be %q, got %q\n%v",
+					*cfg.Defaults.Service.Options.Interval, *receivedMsg.ConfigData.Defaults.Service.Options.Interval, receivedMsg)
 			}
 		}
 	}
@@ -1954,25 +1956,25 @@ func TestWebSocketConfigInitServiceService(t *testing.T) {
 			t.Errorf("ConfigData.Service.test.Comment should've been %q, got %q",
 				*cfgTestService.Comment, *receivedTestService.Comment)
 		}
-		if *receivedTestService.URL != *cfgTestService.URL {
+		if receivedTestService.LatestVersion.URL != *cfgTestService.URL {
 			t.Errorf("ConfigData.Service.test.URL should've been %q, got %q",
-				*cfgTestService.URL, *receivedTestService.URL)
+				*cfgTestService.URL, receivedTestService.LatestVersion.URL)
 		}
-		if *receivedTestService.WebURL != *cfgTestService.WebURL {
+		if *receivedTestService.Dashboard.WebURL != *cfgTestService.WebURL {
 			t.Errorf("ConfigData.Service.test.WebURL should've been %q, got %q",
-				*cfgTestService.WebURL, *receivedTestService.WebURL)
+				*cfgTestService.Dashboard.WebURL, *receivedTestService.Dashboard.WebURL)
 		}
-		if *receivedTestService.RegexContent != *cfgTestService.RegexContent {
+		if *receivedTestService.LatestVersion.Require.RegexContent != *cfgTestService.LatestVersion.Require.RegexContent {
 			t.Errorf("ConfigData.Service.test.RegexContent should've been %q, got %q",
-				*cfgTestService.RegexContent, *receivedTestService.RegexContent)
+				*cfgTestService.LatestVersion.Require.RegexContent, *receivedTestService.LatestVersion.Require.RegexContent)
 		}
-		if *receivedTestService.RegexVersion != *cfgTestService.RegexVersion {
+		if *receivedTestService.LatestVersion.Require.RegexVersion != *cfgTestService.LatestVersion.Require.RegexVersion {
 			t.Errorf("ConfigData.Service.test.RegexVersion should've been %q, got %q",
-				*cfgTestService.RegexVersion, *receivedTestService.RegexVersion)
+				*cfgTestService.LatestVersion.Require.RegexVersion, *receivedTestService.LatestVersion.Require.RegexVersion)
 		}
-		if *receivedTestService.AutoApprove != *cfgTestService.AutoApprove {
+		if *receivedTestService.Dashboard.AutoApprove != *cfgTestService.Dashboard.AutoApprove {
 			t.Errorf("ConfigData.Service.test.AutoApprove should've been %t, got %t",
-				*cfgTestService.AutoApprove, *receivedTestService.AutoApprove)
+				*cfgTestService.Dashboard.AutoApprove, *receivedTestService.Dashboard.AutoApprove)
 		}
 	}
 }
@@ -2164,11 +2166,11 @@ func TestWebSocketConfigInitServiceServiceNotify(t *testing.T) {
 		{
 			if receivedTestService.Notify == nil {
 				t.Errorf("ConfigData.Service.test.Notify should've been %v, got %v",
-					*cfgTestService.Notify, receivedTestService.Notify)
+					cfgTestService.Notify, receivedTestService.Notify)
 			}
-			if (*receivedTestService.Notify)["test"].Options["message"] != (*cfgTestService.Notify)["test"].Options["message"] {
+			if (*receivedTestService.Notify)["test"].Options["message"] != cfgTestService.Notify["test"].Options["message"] {
 				t.Errorf("ConfigData.Service.test.Notify.test.Options.message should've been %q, got %q",
-					(*cfgTestService.Notify)["test"].Options["message"], (*receivedTestService.Notify)["test"].Options["message"])
+					(cfgTestService.Notify)["test"].Options["message"], (*receivedTestService.Notify)["test"].Options["message"])
 			}
 		}
 	}
@@ -2226,9 +2228,9 @@ func TestWebSocketConfigInitServiceServiceWebhook(t *testing.T) {
 				t.Errorf("ConfigData.Service.test.WebHook should've been %v, got %v",
 					*cfgTestService.URLCommands, receivedTestService.URLCommands)
 			}
-			if *(*receivedTestService.WebHook)["test"].URL != *(*cfgTestService.WebHook)["test"].URL {
+			if *(*receivedTestService.WebHook)["test"].URL != *cfgTestService.WebHook["test"].URL {
 				t.Errorf("ConfigData.Service.test.WebHook.pass.URL should've been %q, got %q",
-					*(*cfgTestService.WebHook)["test"].URL, *(*receivedTestService.WebHook)["test"].URL)
+					*cfgTestService.WebHook["test"].URL, *(*receivedTestService.WebHook)["test"].URL)
 			}
 		}
 	}
@@ -2284,12 +2286,12 @@ func TestWebSocketConfigInitServiceCommand(t *testing.T) {
 		{
 			if receivedTestService.Command == nil {
 				t.Errorf("ConfigData.Service.test.Command should've been %v, got %v",
-					*cfgTestService.Command, receivedTestService.Command)
+					cfgTestService.Command, receivedTestService.Command)
 			}
 			got := strings.Join((*receivedTestService.Command)[0], " ")
-			if got != (*cfgTestService.Command)[0].String() {
+			if got != cfgTestService.Command[0].String() {
 				t.Errorf("ConfigData.Service.test.Command[0] should've been %q, got %q",
-					(*cfgTestService.Command)[0].String(), got)
+					cfgTestService.Command[0].String(), got)
 			}
 		}
 	}

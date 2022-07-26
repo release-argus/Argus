@@ -65,7 +65,7 @@ func TestQuery(t *testing.T) {
 		url                 string
 		regex               *string
 		latestVersion       string
-		wantlatestVersion   *string
+		wantLatestVersion   *string
 		requireRegexContent *string
 		requireRegexVersion *string
 		errRegex            string
@@ -113,7 +113,7 @@ func TestQuery(t *testing.T) {
 			}
 			if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
 				t.Fatalf("%s:\nwanted LatestVersion to become %q, not %q",
-					name, tc.wantLatestVersion, lookup.Status.LatestVersion)
+					name, *tc.wantLatestVersion, lookup.Status.LatestVersion)
 			}
 		})
 	}

@@ -27,6 +27,8 @@ import (
 	"github.com/release-argus/Argus/config"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -44,7 +46,7 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
-					ID:       stringPtr("argus"),
+					ID:       "argus",
 					Interval: stringPtr("0s"),
 				},
 			}},
@@ -52,7 +54,7 @@ func TestServiceTest(t *testing.T) {
 			panicRegex: stringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			slice: service.Slice{
 				"argus": {
-					ID:       stringPtr("argus"),
+					ID:       "argus",
 					Interval: stringPtr("0s"),
 				},
 			}},
@@ -60,10 +62,10 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: stringPtr("github"),
-					ID:   stringPtr("argus"),
+					Type: "github",
+					ID:   "argus",
 					URL:  stringPtr("release-argus/Argus"),
-					URLCommands: &service.URLCommandSlice{
+					URLCommands: &filters.URLCommandSlice{
 						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
 					},
 					AllowInvalidCerts:  boolPtr(false),
@@ -75,10 +77,10 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
 			slice: service.Slice{
 				"argus": {
-					Type: stringPtr("url"),
-					ID:   stringPtr("argus"),
+					Type: "url",
+					ID:   "argus",
 					URL:  stringPtr("release-argus/Argus"),
-					URLCommands: &service.URLCommandSlice{
+					URLCommands: &filters.URLCommandSlice{
 						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
 					},
 					AllowInvalidCerts:  boolPtr(false),
@@ -90,10 +92,10 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: stringPtr("url"),
-					ID:   stringPtr("argus"),
+					Type: "url",
+					ID:   "argus",
 					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
-					URLCommands: &service.URLCommandSlice{
+					URLCommands: &filters.URLCommandSlice{
 						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 					},
 					AllowInvalidCerts:  boolPtr(false),
@@ -105,16 +107,16 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: stringPtr("url"),
-					ID:   stringPtr("argus"),
+					Type: "url",
+					ID:   "argus",
 					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
-					URLCommands: &service.URLCommandSlice{
+					URLCommands: &filters.URLCommandSlice{
 						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 					},
 					AllowInvalidCerts:  boolPtr(false),
 					SemanticVersioning: boolPtr(true),
 					Interval:           stringPtr("0s"),
-					DeployedVersionLookup: &service.DeployedVersionLookup{
+					DeployedVersionLookup: &deployed_version.Lookup{
 						URL:               "https://release-argus.io/demo/api/v1/version",
 						AllowInvalidCerts: boolPtr(true),
 						JSON:              "version",
@@ -146,10 +148,12 @@ func TestServiceTest(t *testing.T) {
 				tc.slice[tc.flag].Init(jLog, &service.Service{}, &service.Service{})
 				// will do a call for latest_version* and one for deployed_version*
 				dbChannel := make(chan db_types.Message, 2)
-				tc.slice[tc.flag].DatabaseChannel = &dbChannel
+				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
+				dfltDVL := &deployed_version.Lookup{}
+				hardDfltDVL := &deployed_version.Lookup{}
 				if tc.slice[tc.flag].DeployedVersionLookup != nil {
-					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &service.DeployedVersionLookup{}
-					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &service.DeployedVersionLookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &dfltDVL
+					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &hardDfltDVL
 				}
 			}
 

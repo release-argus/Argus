@@ -238,7 +238,7 @@ func TestWebHookCheckValuesWithNilURL(t *testing.T) {
 	declaredDelay := "5s"
 	delay := declaredDelay
 	webhook := WebHook{
-		ID:           &id,
+		ID:           id,
 		Type:         &wType,
 		URL:          nil,
 		Secret:       &secret,
@@ -266,7 +266,7 @@ func TestWebHookCheckValuesWithNilSecret(t *testing.T) {
 	declaredDelay := "5s"
 	delay := declaredDelay
 	webhook := WebHook{
-		ID:           &id,
+		ID:           id,
 		Type:         &wType,
 		URL:          &url,
 		Secret:       nil,
@@ -359,7 +359,7 @@ func TestSlicePrintWithFullWebHook(t *testing.T) {
 	maxTries := uint(1)
 	silentFails := false
 	webhook := WebHook{
-		ID:                &id,
+		ID:                id,
 		Type:              &wType,
 		URL:               &url,
 		AllowInvalidCerts: &allowInvalidCerts,
@@ -419,12 +419,12 @@ func TestSlicePrintWithNonNilSlice(t *testing.T) {
 	url1 := "other.com"
 	slice := Slice{
 		"test": &WebHook{
-			ID:   &id,
+			ID:   id,
 			Type: &wType0,
 			URL:  &url0,
 		},
 		"other": &WebHook{
-			ID:   &id,
+			ID:   id,
 			Type: &wType1,
 			URL:  &url1,
 		},

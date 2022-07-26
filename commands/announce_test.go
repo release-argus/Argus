@@ -66,19 +66,19 @@ func TestAnnounceCommand(t *testing.T) {
 
 	for name, tc := range tests {
 		if tc.nilChannel {
-			controller.Announce = nil
+			controller.ServiceStatus.AnnounceChannel = nil
 		} else {
-			controller.Announce = &tc.channel
+			controller.ServiceStatus.AnnounceChannel = &tc.channel
 		}
 
 		// WHEN AnnounceCommand is run
 		go controller.AnnounceCommand(tc.index)
 
 		// THEN the correct response is received
-		if controller.Announce == nil {
+		if controller.ServiceStatus.AnnounceChannel == nil {
 			return
 		}
-		m := <-*controller.Announce
+		m := <-*controller.ServiceStatus.AnnounceChannel
 		var parsed api_types.WebSocketMessage
 		json.Unmarshal(m, &parsed)
 

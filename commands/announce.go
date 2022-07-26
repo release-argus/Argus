@@ -47,8 +47,8 @@ func (c *Controller) AnnounceCommand(index int) {
 		CommandData: commandSummary,
 	})
 
-	if c.Announce != nil {
-		*c.Announce <- payloadData
+	if c.ServiceStatus.AnnounceChannel != nil {
+		*c.ServiceStatus.AnnounceChannel <- payloadData
 	}
 }
 

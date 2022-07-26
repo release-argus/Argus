@@ -17,6 +17,7 @@
 package webhook
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func TestSliceInitWithNonNil(t *testing.T) {
 	id0 := "0"
 	slice := Slice{
 		"0": &WebHook{
-			ID: &id0,
+			ID: id0,
 		},
 	}
 	// Won't ever be nil, so don't make it nil in tests
@@ -84,11 +85,11 @@ func testInitWithNonNilAndVars() (string, Slice, service_status.Status, Slice, W
 	id0 := "0"
 	id1 := "1"
 	slice := Slice{
-		"0": &WebHook{
-			ID: &id0,
+		id0: &WebHook{
+			ID: id0,
 		},
-		"1": &WebHook{
-			ID: &id1,
+		id1: &WebHook{
+			ID: id1,
 		},
 	}
 	serviceID := "id_test"
@@ -96,18 +97,18 @@ func testInitWithNonNilAndVars() (string, Slice, service_status.Status, Slice, W
 	mainSecret0 := "main0"
 	mainSecret1 := "main1"
 	mains := Slice{
-		"0": &WebHook{
-			ID:     &id0,
+		id0: &WebHook{
+			ID:     id0,
 			Secret: &mainSecret0,
 		},
-		"1": &WebHook{
-			ID:     &id1,
+		id1: &WebHook{
+			ID:     id1,
 			Secret: &mainSecret1,
 		},
 	}
 	defaultURL := "default"
 	defaults := WebHook{
-		ID:     &id0,
+		ID:     id0,
 		Secret: &defaultURL,
 	}
 	hardDefaultDelay := "1s"
@@ -230,7 +231,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
 				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					tc.wantBool, got)
+					name, tc.wantBool, got)
 			}
 		})
 	}
@@ -285,15 +286,23 @@ func TestGetFailStatus(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			slice["0"].Failed["0"] = tc.status
+			(*slice["0"].Failed)["0"] = tc.status
 
 			// WHEN GetFailStatus is called
 			got := slice["0"].GetFailStatus()
 
 			// THEN the function returns the correct result
-			if got != tc.status {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					tc.status, got)
+			g := "<nil>"
+			if got != nil {
+				g = fmt.Sprint(got)
+			}
+			want := "<nil>"
+			if tc.status != nil {
+				want = fmt.Sprint(tc.status)
+			}
+			if g != want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, want, g)
 			}
 		})
 	}
@@ -581,10 +590,18 @@ func TestSetFailStatus(t *testing.T) {
 			slice["0"].SetFailStatus(tc.status)
 
 			// THEN the fail status is correctly set for the WebHook
-			got := slice["0"].Failed["0"]
-			if got != tc.status {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					tc.status, got)
+			got := (*slice["0"].Failed)["0"]
+			g := "<nil>"
+			if got != nil {
+				g = fmt.Sprint(got)
+			}
+			want := "<nil>"
+			if tc.status != nil {
+				want = fmt.Sprint(tc.status)
+			}
+			if g != want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, want, g)
 			}
 		})
 	}
@@ -630,7 +647,7 @@ func TestSetNextRunnableOfPass(t *testing.T) {
 	// GIVEN a WebHook that passed
 	whID := "test"
 	wh := WebHook{
-		ID:           &whID,
+		ID:           whID,
 		Type:         stringPtr("gitlab"),
 		URL:          stringPtr("https://test"),
 		Secret:       stringPtr("secret"),
@@ -664,7 +681,7 @@ func TestSetNextRunnableOfFail(t *testing.T) {
 	// GIVEN a WebHook that failed
 	whID := "test"
 	wh := WebHook{
-		ID:           &whID,
+		ID:           whID,
 		Type:         stringPtr("gitlab"),
 		URL:          stringPtr("https://test"),
 		Secret:       stringPtr("secret"),
@@ -696,7 +713,7 @@ func TestSetNextRunnableOfNotRun(t *testing.T) {
 	// GIVEN a WebHook that hasn't been sent
 	whID := "test"
 	wh := WebHook{
-		ID:           &whID,
+		ID:           whID,
 		Type:         stringPtr("gitlab"),
 		URL:          stringPtr("https://test"),
 		Secret:       stringPtr("secret"),
@@ -728,7 +745,7 @@ func TestSetNextRunnableWithDelay(t *testing.T) {
 	// GIVEN a WebHook that hasn't been sent
 	whID := "test"
 	wh := WebHook{
-		ID:           &whID,
+		ID:           whID,
 		Type:         stringPtr("gitlab"),
 		URL:          stringPtr("https://test"),
 		Secret:       stringPtr("secret"),
@@ -764,7 +781,7 @@ func TestSetNextRunnableOfSending(t *testing.T) {
 	whMaxTries := uint(2)
 	whID := "test"
 	wh := WebHook{
-		ID:           &whID,
+		ID:           whID,
 		Type:         stringPtr("gitlab"),
 		URL:          stringPtr("https://test"),
 		Secret:       stringPtr("secret"),

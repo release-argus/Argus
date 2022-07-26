@@ -98,8 +98,8 @@ func testConfig() config.Config {
 		},
 		Defaults: defaults,
 		WebHook: webhook.Slice{
-			*whPass.ID: &whPass,
-			*whFail.ID: &whFail,
+			whPass.ID: &whPass,
+			whFail.ID: &whFail,
 		},
 		Notify: defaults.Notify,
 		Service: service.Slice{
@@ -150,7 +150,7 @@ func testService(id string) service.Service {
 		},
 		Dashboard: service.DashboardOptions{
 			AutoApprove:  boolPtr(false),
-			Icon:         "test",
+			Icon:         stringPtr("test"),
 			Defaults:     &service.DashboardOptions{},
 			HardDefaults: &service.DashboardOptions{},
 		},
@@ -191,7 +191,7 @@ func testWebHookPass(id string) webhook.WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "11m"
 	return webhook.WebHook{
-		ID:                &id,
+		ID:                id,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,
@@ -220,7 +220,7 @@ func testWebHookFail(id string) webhook.WebHook {
 	whMaxTries := uint(1)
 	parentInterval := "11m"
 	return webhook.WebHook{
-		ID:                &id,
+		ID:                id,
 		Type:              &whType,
 		URL:               &whURL,
 		Secret:            &whSecret,

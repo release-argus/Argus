@@ -48,8 +48,7 @@ type WebHook struct {
 	Defaults          *WebHook               `yaml:"-"`                             // Default values
 	Main              *WebHook               `yaml:"-"`                             // The Webhook that this Webhook is calling (and may override parts of)
 	Notifiers         *Notifiers             `yaml:"-"`                             // The Notify's to notify on failures
-	Announce          *chan []byte           `yaml:"-"`                             // Announce to the WebSocket
-	ServiceStatus     *service_status.Status `yaml:"-"`                             // Status of the Service (used for templating vars)
+	ServiceStatus     *service_status.Status `yaml:"-"`                             // Status of the Service (used for templating vars and Announce channel)
 	ParentInterval    *string                `yaml:"-"`                             // Interval between the parent Service's queries
 }
 

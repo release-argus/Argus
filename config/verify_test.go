@@ -42,7 +42,7 @@ func testVerify() Config {
 	serviceURL := "release-argus/argus"
 	service := service.Slice{
 		"test": &service.Service{
-			ID:  &serviceID,
+			ID:  serviceID,
 			URL: &serviceURL,
 		},
 	}

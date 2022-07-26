@@ -45,7 +45,7 @@ func (w *WebHook) AnnounceSend() {
 		WebHookData: webhookSummary,
 	})
 
-	if w.Announce != nil {
-		*w.Announce <- payloadData
+	if w.ServiceStatus.AnnounceChannel != nil {
+		*w.ServiceStatus.AnnounceChannel <- payloadData
 	}
 }

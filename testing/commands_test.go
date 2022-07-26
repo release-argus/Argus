@@ -120,7 +120,7 @@ func TestCommandTest(t *testing.T) {
 
 			// WHEN CommandTest is called with the test Config
 			if tc.slice[tc.flag] != nil && tc.slice[tc.flag].CommandController != nil {
-				tc.slice[tc.flag].CommandController.Init(jLog, &tc.flag, nil, tc.slice[tc.flag].Command, nil, tc.slice[tc.flag].Interval)
+				tc.slice[tc.flag].CommandController.Init(jLog, &tc.flag, &tc.slice[tc.flag].Status, &tc.slice[tc.flag].Command, nil, tc.slice[tc.flag].Interval)
 			}
 			cfg := config.Config{
 				Service: tc.slice,

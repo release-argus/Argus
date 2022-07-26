@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -27,7 +28,7 @@ func TestAnnounceSendWithNilChannel(t *testing.T) {
 	// GIVEN a WebHook with a nil Announce channel
 	whID := "test"
 	webhook := WebHook{
-		ID:     &whID,
+		ID:     whID,
 		Failed: nil,
 	}
 
@@ -40,12 +41,12 @@ func TestAnnounceSendWithNilChannel(t *testing.T) {
 func TestAnnounceSendWithChannel(t *testing.T) {
 	// GIVEN a WebHook with an Announce channel
 	whID := "test"
-	whFailed := true
+	whFailed := map[string]*bool{whID: boolPtr(true)}
 	channel := make(chan []byte, 5)
 	webhook := WebHook{
-		ID:       &whID,
-		Failed:   &whFailed,
-		Announce: &channel,
+		ID:            whID,
+		Failed:        &whFailed,
+		ServiceStatus: &service_status.Status{AnnounceChannel: &channel},
 	}
 
 	// WHEN AnnounceSend is called
@@ -53,10 +54,10 @@ func TestAnnounceSendWithChannel(t *testing.T) {
 
 	// THEN the WebHook status is announce to the channel
 	msg := <-channel
-	var unmarshalled api_types.WebSocketMessage
-	json.Unmarshal(msg, &unmarshalled)
-	if *unmarshalled.WebHookData["test"].Failed != whFailed {
+	var got api_types.WebSocketMessage
+	json.Unmarshal(msg, &got)
+	if *got.WebHookData["test"].Failed != *whFailed[whID] {
 		t.Errorf("AnnounceSend should have given %v Failed, but got \n%v",
-			whFailed, unmarshalled)
+			*whFailed[whID], got.WebHookData["test"].Failed)
 	}
 }

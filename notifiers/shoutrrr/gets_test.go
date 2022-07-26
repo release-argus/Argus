@@ -26,7 +26,8 @@ import (
 
 func testGet() Shoutrrr {
 	sID := "test"
-	failed := false
+	failed := make(map[string]*bool)
+	failed[sID] = nil
 
 	hardDefaults := Shoutrrr{
 		Options: map[string]string{

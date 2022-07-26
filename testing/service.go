@@ -42,7 +42,6 @@ func ServiceTest(
 	)
 	service := cfg.Service[*flag]
 
-	//nolint:staticcheck // nil if unknown Service
 	if service == nil {
 		var allService []string
 		for key := range cfg.Service {
@@ -60,18 +59,20 @@ func ServiceTest(
 		)
 	}
 
-	//nolint:staticcheck // Fatal if nil above
-	_, err := service.LatestVersion.Query()
-	if err != nil {
-		log.Error(
-			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q",
-				*flag,
-				service.LatestVersion.GetServiceURL(true),
-			),
-			logFrom,
-			true,
-		)
+	if service != nil {
+		//nolint:staticcheck // log.Fatal if nil above. this ignore doesn't seem to work though
+		_, err := service.LatestVersion.Query()
+		if err != nil {
+			log.Error(
+				fmt.Sprintf(
+					"No version matching the conditions specified could be found for %q at %q",
+					*flag,
+					service.LatestVersion.GetServiceURL(true),
+				),
+				logFrom,
+				true,
+			)
+		}
 	}
 
 	// DeployedVersionLookup

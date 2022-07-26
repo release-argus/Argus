@@ -54,8 +54,8 @@ func testServiceGitHub() Service {
 		Dashboard: DashboardOptions{
 			AutoApprove: boolPtr(false),
 			Icon:        stringPtr("test"),
-			IconLinkTo:  "https://example.com",
-			WebURL:      "https://release-argus.io",
+			IconLinkTo:  stringPtr("https://example.com"),
+			WebURL:      stringPtr("https://release-argus.io"),
 		},
 		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",
@@ -101,8 +101,8 @@ func testServiceURL() Service {
 		Dashboard: DashboardOptions{
 			AutoApprove: boolPtr(false),
 			Icon:        stringPtr("test"),
-			IconLinkTo:  "https://release-argus.io",
-			WebURL:      "https://release-argus.io",
+			IconLinkTo:  stringPtr("https://release-argus.io"),
+			WebURL:      stringPtr("https://release-argus.io"),
 		},
 		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",

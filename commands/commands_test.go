@@ -112,7 +112,7 @@ func TestExecIndex(t *testing.T) {
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		Announce:       &announce,
+		ServiceStatus:  &service_status.Status{AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		index       int
@@ -173,7 +173,7 @@ func TestControllerExec(t *testing.T) {
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		Announce:       &announce,
+		ServiceStatus:  &service_status.Status{AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		nilController bool

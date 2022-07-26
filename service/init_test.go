@@ -17,9 +17,7 @@
 package service
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service/deployed_version"

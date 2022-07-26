@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
@@ -52,25 +54,30 @@ func TestServiceQuery(t *testing.T) {
 		UsePreRelease:      &hardDefaultsUsePreRelease,
 	}
 	service["GitHub_Query_Test"] = &Service{
-		ID:   &serviceID,
-		Type: &serviceType,
+		ID:   serviceID,
+		Type: serviceType,
 		URL:  &serviceURL,
-		URLCommands: &URLCommandSlice{
-			URLCommand{
+		URLCommands: &filters.URLCommandSlice{
+			{
 				Type:  serviceURLcommand0Type,
 				Regex: &serviceURLcommand0Regex,
 			}},
-		RegexVersion:    &serviceRegexVersion,
-		Status:          &service_status.Status{},
-		DatabaseChannel: &serviceDatabaseChannel,
-		Defaults:        &Service{},
-		HardDefaults:    &hardDefaults,
+		LatestVersion: latest_version.Lookup{
+			Require: &filters.Require{
+				RegexVersion: &serviceRegexVersion,
+			},
+		},
+		Status: service_status.Status{
+			DatabaseChannel: &serviceDatabaseChannel,
+		},
+		Defaults:     &Service{},
+		HardDefaults: &hardDefaults,
 	}
 
-	_, _ = service["GitHub_Query_Test"].Query()
+	_, _ = service["GitHub_Query_Test"].LatestVersion.Query()
 	got := service["GitHub_Query_Test"].Status.LatestVersion
 
 	if !want.MatchString(got) {
-		t.Errorf(`%s.status.LatestVersion = %v, want match for %s`, *service["GitHub_Query_Test"].ID, got, want)
+		t.Errorf(`%s.status.LatestVersion = %v, want match for %s`, service["GitHub_Query_Test"].ID, got, want)
 	}
 }

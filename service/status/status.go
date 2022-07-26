@@ -39,7 +39,7 @@ type Status struct {
 	DatabaseChannel *chan db_types.Message `yaml:"-"` // Channel for broadcasts to the Database
 	SaveChannel     *chan bool             `yaml:"-"` // Channel for triggering a save of the config
 	ServiceID       *string                `yaml:"-"` // ID of the Service
-	WebURL          *string                `yaml:"-"` // Web URL of the Service
+	WebURL          **string               `yaml:"-"` // Web URL of the Service
 }
 
 // TODO: Deprecate
@@ -72,7 +72,7 @@ func (s *Status) Init(
 	s.Fails.WebHook = make(map[string]*bool, webhooks)
 
 	s.ServiceID = serviceID
-	s.WebURL = webURL
+	s.WebURL = &webURL
 }
 
 // SetLastQueried will update LastQueried to now.
@@ -133,11 +133,11 @@ func (f *Fails) resetFails() {
 
 // GetWebURL returns the Web URL.
 func (s *Status) GetWebURL() string {
-	if utils.DefaultIfNil(s.WebURL) == "" {
+	if utils.DefaultIfNil(*s.WebURL) == "" {
 		return ""
 	}
 
-	return utils.TemplateString(*s.WebURL, utils.ServiceInfo{LatestVersion: s.LatestVersion})
+	return utils.TemplateString(**s.WebURL, utils.ServiceInfo{LatestVersion: s.LatestVersion})
 }
 
 // Print will print the Status.

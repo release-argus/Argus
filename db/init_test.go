@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
 	db_types "github.com/release-argus/Argus/db/types"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	_ "modernc.org/sqlite"
 )
 
 func TestCheckFilePassNoDirBefore(t *testing.T) {
@@ -193,14 +193,10 @@ func TestConvertServiceStatusWhenNotConverted(t *testing.T) {
 		if svc == nil {
 			t.Errorf("%q was not pushed to the table",
 				id)
-		} else if svc.Status == nil || svc.OldStatus != nil {
+		} else if svc.OldStatus != nil {
 			if svc.OldStatus != nil {
 				t.Errorf("%q OldStatus should be nil, not %v",
 					id, svc.OldStatus)
-			}
-			if svc.Status == nil {
-				t.Errorf("%q Status was not converted. Status=%v",
-					id, svc.Status)
 			}
 		} else {
 			if (*svc).Status.LatestVersion != lv {
@@ -332,7 +328,7 @@ func TestQueryService(t *testing.T) {
 	}
 	if (*svc).Status.DeployedVersion != got.DeployedVersion {
 		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%v",
-			(*svc).Status.DeployedVersion, got.DeployedVersion, got, *(*svc).Status)
+			(*svc).Status.DeployedVersion, got.DeployedVersion, got, (*svc).Status)
 	}
 	if (*svc).Status.DeployedVersionTimestamp != got.DeployedVersionTimestamp {
 		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
@@ -460,7 +456,7 @@ func TestRun(t *testing.T) {
 		DeployedVersion:          "0.0.0",
 		DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
 	}
-	if got != want {
+	if got.LatestVersion != want.LatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
 			cell.Column, cell.Value, got, want)
 	}

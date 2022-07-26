@@ -19,16 +19,17 @@ package service
 import (
 	"testing"
 
+	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
 	"github.com/release-argus/Argus/utils"
 )
 
 func TestRegexCheckVersionWithNil(t *testing.T) {
 	// GIVEN a Service with a nil RegexVersion
 	service := testServiceGitHub()
-	service.RegexVersion = nil
+	service.LatestVersion.Require.RegexVersion = nil
 
 	// WHEN RegexCheckVersion is called on it
-	err := service.regexCheckVersion("1.2.3", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3", jLog, utils.LogFrom{})
 
 	// THEN RegexVersion matches as it doesn't exist, so err is nil
 	var want error
@@ -41,10 +42,10 @@ func TestRegexCheckVersionWithNil(t *testing.T) {
 func TestRegexCheckVersionWithMatch(t *testing.T) {
 	// GIVEN a Service with a RegexVersion
 	service := testServiceGitHub()
-	*service.RegexVersion = "^[0-9.]+$"
+	*service.LatestVersion.Require.RegexVersion = "^[0-9.]+$"
 
 	// WHEN RegexCheckVersion is called on it with a matching version
-	err := service.regexCheckVersion("1.2.3", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3", jLog, utils.LogFrom{})
 
 	// THEN RegexVersion matche, so err is nil
 	var want error
@@ -58,10 +59,10 @@ func TestRegexCheckVersionWithNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexVersion
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexVersion = "[0-9.]+$"
+	*service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
 
 	// WHEN RegexCheckVersion is called on it with a non-matching version
-	err := service.regexCheckVersion("1.2.3-beta", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3-beta", jLog, utils.LogFrom{})
 
 	// THEN RegexVersion doesn't match, so err is non-nil
 	if err == nil {
@@ -73,10 +74,10 @@ func TestRegexCheckVersionWithNoMatch(t *testing.T) {
 func TestRegexCheckContentWithStringNil(t *testing.T) {
 	// GIVEN a Service with a nil RegexContent
 	service := testServiceGitHub()
-	service.RegexContent = nil
+	service.LatestVersion.Require.RegexContent = nil
 
 	// WHEN RegexCheckContent is called on it
-	err := service.regexCheckContent("1.2.3", "something1.2.3.debsomething", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3.debsomething", jLog, utils.LogFrom{})
 
 	// THEN RegexContent matches as it doesn't exist, so err is nil
 	var want error
@@ -90,10 +91,10 @@ func TestRegexCheckContentWithStringMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = "{{ version }}\\.deb"
+	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb"
 
 	// WHEN RegexCheckContent is called on it with a matching version
-	err := service.regexCheckContent("1.2.3", "something1.2.3.debsomething", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3.debsomething", jLog, utils.LogFrom{})
 
 	// THEN RegexContent matche, so err is nil
 	var want error
@@ -107,10 +108,10 @@ func TestRegexCheckContentWithStringNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = "{{ version }}\\.deb$"
+	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 
 	// WHEN RegexCheckContent is called on it with a non-matching version
-	err := service.regexCheckContent("1.2.3", "something1.2.3-beta.debsomething", utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3-beta.debsomething", jLog, utils.LogFrom{})
 
 	// THEN RegexContent doesn't match, so err is non-nil
 	if err == nil {
@@ -123,14 +124,14 @@ func TestRegexCheckContentWithGitHubAssetMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = "{{ version }}\\.deb$"
-	githubAsset := []GitHubAsset{
+	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	githubAsset := []github_types.Asset{
 		{Name: "1.2.2", BrowserDownloadURL: "https://example.com/1.2.2.deb"},
 		{Name: "1.2.3", BrowserDownloadURL: "https://example.com/1.2.3.deb"},
 	}
 
 	// WHEN RegexCheckContent is called on it with a non-matching version
-	err := service.regexCheckContent("1.2.3", githubAsset, utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", githubAsset, jLog, utils.LogFrom{})
 
 	// THEN RegexContent does match, so err is nil
 	if err != nil {
@@ -143,14 +144,14 @@ func TestRegexCheckContentWithGitHubAssetNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = "{{ version }}\\.deb$"
-	githubAsset := []GitHubAsset{
+	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	githubAsset := []github_types.Asset{
 		{Name: "1.2.2", BrowserDownloadURL: "https://example.com/1.2.2.deb"},
 		{Name: "1.2.3", BrowserDownloadURL: "https://example.com/1.2.3.exe"},
 	}
 
 	// WHEN RegexCheckContent is called on it with a non-matching version
-	err := service.regexCheckContent("1.2.3", githubAsset, utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", githubAsset, jLog, utils.LogFrom{})
 
 	// THEN RegexContent doesn't match, so err is bob-nil
 	if err == nil {
@@ -163,10 +164,10 @@ func TestRegexCheckContentWithInvalidBodyType(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.RegexContent = "{{ version }}\\.deb$"
+	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 
 	// WHEN RegexCheckContent is called on it with a non-valid body type
-	err := service.regexCheckContent("1.2.3", 123, utils.LogFrom{})
+	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", 123, jLog, utils.LogFrom{})
 
 	// THEN RegexContent doesn't match, so err is bob-nil
 	if err == nil {

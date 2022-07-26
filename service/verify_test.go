@@ -23,6 +23,8 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/latest_version/filters"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -65,7 +67,7 @@ func TestServiceCheckValuesWithIntInterval(t *testing.T) {
 	err := service.CheckValues("")
 
 	// THEN err is nil
-	got := service.GetInterval()
+	got := service.Options.GetInterval()
 	if got != want {
 		t.Errorf("Want %s, got %s",
 			want, got)
@@ -79,7 +81,7 @@ func TestServiceCheckValuesWithIntInterval(t *testing.T) {
 func TestServiceCheckValuesWithNoType(t *testing.T) {
 	// GIVEN a service with no Type
 	service := testServiceGitHub()
-	service.Type = nil
+	service.Type = ""
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -94,7 +96,7 @@ func TestServiceCheckValuesWithNoType(t *testing.T) {
 func TestServiceCheckValuesWithInvalidType(t *testing.T) {
 	// GIVEN a service with no Type
 	service := testServiceGitHub()
-	*service.Type = "something"
+	service.Type = "something"
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -102,15 +104,14 @@ func TestServiceCheckValuesWithInvalidType(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from Type being %q",
-			*service.Type)
+			service.Type)
 	}
 }
 
 func TestServiceCheckValuesWithInvalidRegexContent(t *testing.T) {
 	// GIVEN a service with invalid RegexContent
 	service := testServiceGitHub()
-	invalidRegex := "abc[0-"
-	service.RegexContent = &invalidRegex
+	service.LatestVersion.Require.RegexContent = stringPtr("abc[0-")
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -118,15 +119,14 @@ func TestServiceCheckValuesWithInvalidRegexContent(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from RegexContent being %q",
-			*service.RegexContent)
+			*service.LatestVersion.Require.RegexContent)
 	}
 }
 
 func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
 	// GIVEN a service with invalid RegexVersion
 	service := testServiceGitHub()
-	invalidRegex := "abc[0-"
-	service.RegexVersion = &invalidRegex
+	service.LatestVersion.Require.RegexVersion = stringPtr("abc[0-")
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -134,7 +134,7 @@ func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from RegexVersion being %q",
-			*service.RegexVersion)
+			*service.LatestVersion.Require.RegexVersion)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestServiceSliceCheckValuesWithSuccess(t *testing.T) {
 func TestServiceSliceCheckValuesWithFailingService(t *testing.T) {
 	// GIVEN a Service with an valid Service value
 	service := testServiceGitHub()
-	*service.Type = "foo"
+	service.Type = "foo"
 	slice := Slice{
 		"test": &service,
 	}
@@ -169,7 +169,7 @@ func TestServiceSliceCheckValuesWithFailingService(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from Service.Type being %q",
-			*slice["test"].Type)
+			slice["test"].Type)
 	}
 }
 
@@ -178,7 +178,7 @@ func TestServiceSliceCheckValuesWithFailingURLCommands(t *testing.T) {
 	service := testServiceGitHub()
 	urlCommand := testURLCommandRegex()
 	urlCommand.Type = "something"
-	service.URLCommands = &URLCommandSlice{urlCommand}
+	service.URLCommands = &filters.URLCommandSlice{urlCommand}
 	slice := Slice{
 		"test": &service,
 	}
@@ -216,7 +216,7 @@ func TestServiceSliceCheckValuesWithFailingDeployedVersionLookup(t *testing.T) {
 func TestServiceSliceCheckValuesWithFailingNotify(t *testing.T) {
 	// GIVEN a Service with an invalid Notify value
 	service := testServiceGitHub()
-	notify := shoutrrr.Slice{
+	service.Notify = shoutrrr.Slice{
 		"test": &shoutrrr.Shoutrrr{
 			Type:         "something",
 			Main:         &shoutrrr.Shoutrrr{},
@@ -224,7 +224,6 @@ func TestServiceSliceCheckValuesWithFailingNotify(t *testing.T) {
 			HardDefaults: &shoutrrr.Shoutrrr{},
 		},
 	}
-	service.Notify = &notify
 	slice := Slice{
 		"test": &service,
 	}
@@ -235,7 +234,7 @@ func TestServiceSliceCheckValuesWithFailingNotify(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from Service.Notify['test'].Type being %q",
-			(*slice["test"].Notify)["test"].Type)
+			slice["test"].Notify["test"].Type)
 	}
 }
 
@@ -244,16 +243,15 @@ func TestServiceSliceCheckValuesWithFailingWebHook(t *testing.T) {
 	service := testServiceGitHub()
 	whType := "something"
 	whID := "test"
-	wh := webhook.Slice{
+	service.WebHook = webhook.Slice{
 		whID: &webhook.WebHook{
-			ID:           &whID,
+			ID:           whID,
 			Type:         &whType,
 			Main:         &webhook.WebHook{},
 			Defaults:     &webhook.WebHook{},
 			HardDefaults: &webhook.WebHook{},
 		},
 	}
-	service.WebHook = &wh
 	slice := Slice{
 		"test": &service,
 	}
@@ -264,14 +262,14 @@ func TestServiceSliceCheckValuesWithFailingWebHook(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from Service.WebHook['test'].Type being %q",
-			*(*slice["test"].WebHook)["test"].Type)
+			*slice["test"].WebHook["test"].Type)
 	}
 }
 
 func TestServicePrintWithService(t *testing.T) {
 	// GIVEN a Service
 	service := testServiceGitHub()
-	service.Status = nil
+	service.Status = service_status.Status{}
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
@@ -295,7 +293,7 @@ func TestServicePrintWithFullService(t *testing.T) {
 	// GIVEN a Service with every var defined
 	service := testServiceGitHub()
 	urlCommand := testURLCommandRegex()
-	service.URLCommands = &URLCommandSlice{urlCommand}
+	service.URLCommands = &filters.URLCommandSlice{urlCommand}
 	dvl := testDeployedVersion()
 	service.DeployedVersionLookup = &dvl
 	notify := shoutrrr.Shoutrrr{
@@ -304,17 +302,17 @@ func TestServicePrintWithFullService(t *testing.T) {
 		Defaults:     &shoutrrr.Shoutrrr{},
 		HardDefaults: &shoutrrr.Shoutrrr{},
 	}
-	service.Notify = &shoutrrr.Slice{"test": &notify}
+	service.Notify = shoutrrr.Slice{"test": &notify}
 	whID := "test"
 	whURL := "example.com"
 	wh := webhook.WebHook{
-		ID:           &whID,
+		ID:           whID,
 		URL:          &whURL,
 		Main:         &webhook.WebHook{},
 		Defaults:     &webhook.WebHook{},
 		HardDefaults: &webhook.WebHook{},
 	}
-	service.WebHook = &webhook.Slice{"test": &wh}
+	service.WebHook = webhook.Slice{"test": &wh}
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
@@ -337,7 +335,7 @@ func TestServicePrintWithFullService(t *testing.T) {
 func TestSlicePrintWithTwoServices(t *testing.T) {
 	// GIVEN a Slice with two Service's
 	service := testServiceGitHub()
-	service.Status = nil
+	service.Status = service_status.Status{}
 	slice := Slice{
 		"one": &service,
 		"two": &service,
@@ -386,7 +384,7 @@ func TestSlicePrintWithNil(t *testing.T) {
 func TestSlicePrintWithTwoServicesOrdered(t *testing.T) {
 	// GIVEN a Slice with two Service's
 	service := testServiceGitHub()
-	service.Status = nil
+	service.Status = service_status.Status{}
 	slice := Slice{
 		"one": &service,
 		"two": &service,

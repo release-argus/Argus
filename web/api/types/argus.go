@@ -29,7 +29,7 @@ type ServiceSummary struct {
 	Type                     string  `json:"type,omitempty"`                 // "github"/"URL"
 	URL                      *string `json:"url,omitempty"`                  // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo"
 	Icon                     string  `json:"icon,omitempty"`                 // Service.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon
-	IconLinkTo               string  `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
+	IconLinkTo               *string `json:"icon_link_to,omitempty"`         // URL to redirect Icon clicks to
 	HasDeployedVersionLookup bool    `json:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup
 	Command                  int     `json:"command,omitempty"`              // Whether there are Command(s) to send on a new release
 	WebHook                  int     `json:"webhook,omitempty"`              // Whether there are WebHook(s) to send on a new release
@@ -240,8 +240,8 @@ type ServiceOptions struct {
 type DashboardOptions struct {
 	AutoApprove *bool   `json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
 	Icon        *string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI
-	IconLinkTo  string  `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
-	WebURL      string  `json:"web_url,omitempty"`      // URL to provide on the Web UI
+	IconLinkTo  *string `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
+	WebURL      *string `json:"web_url,omitempty"`      // URL to provide on the Web UI
 }
 
 // LatestVersion lookup of the service.

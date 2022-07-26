@@ -17,82 +17,66 @@
 package db
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
 	db_types "github.com/release-argus/Argus/db/types"
+	_ "modernc.org/sqlite"
 )
 
-func TestUpdateRowSingleValue(t *testing.T) {
+func TestUpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestUpdateCellLatestVersion.db"
-	api.initialise()
-	api.convertServiceStatus()
-
-	// WHEN updateRow is called targeting latest_version
-	target := "keep0"
-	cell := db_types.Cell{Column: "latest_version", Value: "9.9.9"}
-	want := queryRow(api.db, target, t)
-	want.LatestVersion = cell.Value
-	api.updateRow(target, []db_types.Cell{cell})
-
-	// THEN the cell was changed in the DB
-	got := queryRow(api.db, target, t)
-	// t.Fatal(want)
-	if got != want {
-		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
-			cell.Column, cell.Value, got, want)
+	tests := map[string]struct {
+		cells []db_types.Cell
+	}{
+		"update single column of a row": {cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a row": {cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
-}
 
-func TestUpdateRowMultiValue(t *testing.T) {
-	// GIVEN a DB with a few service status'
-	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestUpdateCellLatestVersion.db"
-	api.initialise()
-	api.convertServiceStatus()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := testConfig()
+			api := api{config: &cfg}
+			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
+			api.initialise()
+			api.convertServiceStatus()
 
-	// WHEN updateRow is called targeting deployed_version and deployed_version_timestamp
-	target := "keep0"
-	dvCell := db_types.Cell{Column: "deployed_version", Value: "9.9.9"}
-	now := time.Now().UTC().Format(time.RFC3339)
-	dvtCell := db_types.Cell{Column: "deployed_version_timestamp", Value: now}
-	want := queryRow(api.db, target, t)
-	want.DeployedVersion = dvCell.Value
-	want.DeployedVersionTimestamp = dvtCell.Value
-	api.updateRow(target, []db_types.Cell{dvCell, dvtCell})
+			// WHEN updateRow is called targeting single/multiple cells
+			target := "keep0"
+			api.updateRow(target, tc.cells)
+			time.Sleep(100 * time.Millisecond)
 
-	// THEN the cell was changed in the DB
-	got := queryRow(api.db, target, t)
-	// t.Fatal(want)
-	if got != want {
-		count := 0
-		if got.DeployedVersion != dvCell.Value {
-			count++
-			t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
-				dvCell.Column, dvCell.Value, got, want)
-		}
-		if got.DeployedVersionTimestamp != dvtCell.Value {
-			count++
-			t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
-				dvtCell.Column, dvtCell.Value, got, want)
-		}
-		if count == 0 {
-			t.Errorf("Didn't expect others to change\ngot  %v\nwant %v",
-				got, want)
-		}
+			// THEN those cell(s) are changed in the DB
+			row := queryRow(api.db, target, t)
+			for _, cell := range tc.cells {
+				var got *string
+				switch cell.Column {
+				case "latest_version":
+					got = &row.LatestVersion
+				case "latest_version_timestamp":
+					got = &row.LatestVersionTimestamp
+				case "deployed_version":
+					got = &row.DeployedVersion
+				case "deployed_version_timestamp":
+					got = &row.DeployedVersionTimestamp
+				case "approved_version":
+					got = &row.ApprovedVersion
+				}
+				if *got != cell.Value {
+					t.Errorf("%s:\nexpecting %s to have been updated to %q. got %q",
+						name, cell.Column, cell.Value, *got)
+				}
+			}
+			api.db.Close()
+			os.Remove(*api.config.Settings.Data.DatabaseFile)
+			time.Sleep(100 * time.Millisecond)
+		})
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
 func TestHandler(t *testing.T) {
@@ -118,9 +102,8 @@ func TestHandler(t *testing.T) {
 
 	// THEN the cell was changed in the DB
 	got := queryRow(api.db, target, t)
-	// t.Fatal(want)
-	if got != want {
-		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
+	if got.LatestVersion != want.LatestVersion {
+		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
 	}
 	api.db.Close()
