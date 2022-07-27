@@ -30,7 +30,7 @@ import (
 // and returning true if it has changed (is a new release),
 // otherwise returns false.
 func (l *Lookup) Query() (bool, error) {
-	logFrom := utils.LogFrom{Primary: *(*l.Status).ServiceID}
+	logFrom := utils.LogFrom{Primary: *l.status.ServiceID}
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -41,11 +41,11 @@ func (l *Lookup) Query() (bool, error) {
 		return false, err
 	}
 
-	(*l.Status).SetLastQueried()
-	wantSemanticVersioning := l.Options.GetSemanticVersioning()
+	l.status.SetLastQueried()
+	wantSemanticVersioning := l.options.GetSemanticVersioning()
 
 	// If this version is different (new).
-	if version != (*l.Status).LatestVersion {
+	if version != l.status.LatestVersion {
 		if wantSemanticVersioning {
 			// Check it's a valid smenatic version
 			newVersion, err := semver.NewVersion(version)
@@ -57,11 +57,11 @@ func (l *Lookup) Query() (bool, error) {
 			}
 
 			// Check for a progressive change in version.
-			if (*l.Status).LatestVersion != "" {
-				oldVersion, err := semver.NewVersion((*l.Status).LatestVersion)
+			if l.status.LatestVersion != "" {
+				oldVersion, err := semver.NewVersion(l.status.LatestVersion)
 				if err != nil {
 					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)",
-						(*l.Status).LatestVersion)
+						l.status.LatestVersion)
 					jLog.Error(err, logFrom, true)
 					return false, err
 				}
@@ -72,7 +72,7 @@ func (l *Lookup) Query() (bool, error) {
 				// return false (don't notify anything. Stay on oldVersion)
 				if newVersion.LessThan(*oldVersion) {
 					err := fmt.Errorf("queried version %q is less than the deployed version %q",
-						version, (*l.Status).LatestVersion)
+						version, l.status.LatestVersion)
 					jLog.Warn(err, logFrom, true)
 					return false, err
 				}
@@ -80,33 +80,33 @@ func (l *Lookup) Query() (bool, error) {
 		}
 
 		// Found new version, so reset regex misses.
-		(*l.Status).RegexMissesContent = 0
-		(*l.Status).RegexMissesVersion = 0
+		l.status.RegexMissesContent = 0
+		l.status.RegexMissesVersion = 0
 
 		// First version found.
-		if (*l.Status).LatestVersion == "" {
-			(*l.Status).SetLatestVersion(version)
-			if (*l.Status).DeployedVersion == "" {
-				(*l.Status).SetDeployedVersion(version)
+		if l.status.LatestVersion == "" {
+			l.status.SetLatestVersion(version)
+			if l.status.DeployedVersion == "" {
+				l.status.SetDeployedVersion(version)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)
 
-			(*l.Status).AnnounceFirstVersion()
+			l.status.AnnounceFirstVersion()
 
 			// Don't notify on first version.
 			return false, nil
 		}
 
 		// New version found.
-		(*l.Status).SetLatestVersion(version)
+		l.status.SetLatestVersion(version)
 		msg := fmt.Sprintf("New Release - %q", version)
 		jLog.Info(msg, logFrom, true)
 		return true, nil
 	}
 
 	// Announce `LastQueried`
-	(*l.Status).AnnounceQuery()
+	l.status.AnnounceQuery()
 	// No version change.
 	return false, nil
 }
@@ -190,7 +190,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 		return
 	}
 
-	wantSemanticVersioning := l.Options.GetSemanticVersioning()
+	wantSemanticVersioning := l.options.GetSemanticVersioning()
 	for i := range filteredReleases {
 		version = filteredReleases[i].TagName
 		if wantSemanticVersioning && l.Type != "url" {
@@ -204,32 +204,24 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 			logFrom,
 		); err == nil {
 			// regexCheckContent if it's a newer version
-			if version != (*l.Status).LatestVersion {
+			if version != l.status.LatestVersion {
+				var body interface{}
 				if l.Type == "github" {
 					// GitHub service
-					if err = l.Require.RegexCheckContent(
-						version,
-						filteredReleases[i].Assets,
-						jLog,
-						logFrom,
-					); err != nil {
-						if i == len(filteredReleases)-1 {
-							return
-						}
-						continue
-					}
-					break
+					body = filteredReleases[i].Assets
 					// Web service
 				} else {
-					if err = l.Require.RegexCheckContent(
-						version,
-						string(rawBody),
-						jLog,
-						logFrom,
-					); err != nil {
-						return
-					}
+					body = string(rawBody)
 				}
+				if err = l.Require.RegexCheckContent(
+					version,
+					body,
+					jLog,
+					logFrom,
+				); err != nil {
+					continue
+				}
+				break
 
 				// Ignore tags older than the deployed latest.
 			} else {

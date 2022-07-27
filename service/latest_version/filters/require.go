@@ -150,5 +150,9 @@ func (r *Require) CheckValues(prefix string) (errs error) {
 		}
 	}
 
+	if errs != nil {
+		errs = fmt.Errorf("%srequire:\\%s",
+			prefix, utils.ErrorToString(errs))
+	}
 	return
 }

@@ -39,16 +39,15 @@ func testLookupGitHub() Lookup {
 	lookup := Lookup{
 		Type:              "github",
 		URL:               "release-argus/Argus",
-		AccessToken:       stringPtr("TOKEN"),
 		AllowInvalidCerts: boolPtr(true),
 		UsePreRelease:     boolPtr(true),
 		Require:           &filters.Require{},
-		Options: &options.Options{
+		options: &options.Options{
 			SemanticVersioning: boolPtr(true),
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
-		Status: &service_status.Status{
+		status: &service_status.Status{
 			ServiceID:       stringPtr("test"),
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel,
@@ -57,7 +56,9 @@ func testLookupGitHub() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	lookup.Require.Status = lookup.Status
+	webURL := stringPtr("")
+	lookup.status.WebURL = &webURL
+	lookup.Require.Status = lookup.status
 	return lookup
 }
 
@@ -69,16 +70,16 @@ func testLookupURL() Lookup {
 	)
 	lookup := Lookup{
 		Type:              "url",
-		URL:               "https://release-argus.io/docs/config/service",
-		AllowInvalidCerts: boolPtr(true),
-		URLCommands:       filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("[0-9.]+test")}},
+		URL:               "https://valid.release-argus.io/plain",
+		AllowInvalidCerts: boolPtr(false),
+		URLCommands:       filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
 		Require:           &filters.Require{},
-		Options: &options.Options{
+		options: &options.Options{
 			SemanticVersioning: boolPtr(true),
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
-		Status: &service_status.Status{
+		status: &service_status.Status{
 			ServiceID:       stringPtr("test"),
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel,
@@ -87,6 +88,8 @@ func testLookupURL() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	lookup.Require.Status = lookup.Status
+	webURL := stringPtr("")
+	lookup.status.WebURL = &webURL
+	lookup.Require.Status = lookup.status
 	return lookup
 }

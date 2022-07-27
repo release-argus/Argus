@@ -69,7 +69,7 @@ func (c *URLCommandSlice) Init(log *utils.JLog) {
 
 // Print will print the URLCommand's in the URLCommandSlice.
 func (c *URLCommandSlice) Print(prefix string) {
-	if c == nil {
+	if c == nil || len(*c) == 0 {
 		fmt.Printf("%s[]\n", prefix)
 		return
 	}
@@ -85,13 +85,13 @@ func (c *URLCommand) Print(prefix string) {
 	switch c.Type {
 	case "regex":
 		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
-		fmt.Printf("%s  index: %d\n", prefix, c.Index)
+		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d\n", prefix, c.Index))
 	case "replace":
 		fmt.Printf("%s  new: %q\n", prefix, *c.New)
 		fmt.Printf("%s  old: %q\n", prefix, *c.Old)
 	case "split":
 		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
-		fmt.Printf("%s  index: %d\n", prefix, c.Index)
+		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d\n", prefix, c.Index))
 	}
 }
 

@@ -33,8 +33,8 @@ func (l *Lookup) Init(
 
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
-	l.Status = status
-	l.Options = options
+	l.status = status
+	l.options = options
 	l.initMetrics()
 	l.URLCommands.Init(jLog)
 }
@@ -44,6 +44,6 @@ func (l *Lookup) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *(*l.Status).ServiceID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *(*l.Status).ServiceID, "FAIL")
+	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *l.status.ServiceID, "SUCCESS")
+	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *l.status.ServiceID, "FAIL")
 }

@@ -18,112 +18,76 @@ package latest_version
 
 import (
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/release-argus/Argus/service/options"
+	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
 
-func TestGetAccessToken(t *testing.T) {
+func TestInitMetrics(t *testing.T) {
 	// GIVEN a Lookup
-	tests := map[string]struct {
-		accessTokenRoot        *string
-		accessTokenDefault     *string
-		accessTokenHardDefault *string
-		wantString             string
-	}{
-		"root overrides all": {wantString: "this", accessTokenRoot: stringPtr("this"),
-			accessTokenDefault: stringPtr("not_this"), accessTokenHardDefault: stringPtr("not_this")},
-		"default overrides hardDefault": {wantString: "this", accessTokenRoot: nil,
-			accessTokenDefault: stringPtr("not_this"), accessTokenHardDefault: stringPtr("not_this")},
-		"hardDefault is last resort": {wantString: "this", accessTokenRoot: nil, accessTokenDefault: nil,
-			accessTokenHardDefault: stringPtr("this")},
-	}
+	lookup := testLookupGitHub()
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
-			lookup.AccessToken = tc.accessTokenRoot
-			lookup.Defaults.AccessToken = tc.accessTokenDefault
-			lookup.HardDefaults.AccessToken = tc.accessTokenHardDefault
+	// WHEN the Prometheus metrics are initialised with initMetrics
+	hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	lookup.initMetrics()
 
-			// WHEN GetAccessToken is called
-			got := lookup.GetAccessToken()
-
-			// THEN the function returns the correct result
-			if got == nil {
-				t.Errorf("%s:\nwant: %q\ngot:  %v",
-					name, tc.wantString, got)
-			} else if *got != tc.wantString {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.wantString, *got)
-			}
-		})
+	// THEN it can be collected
+	// counters
+	gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	wantC := 2
+	if (gotC - hadC) != wantC {
+		t.Errorf("%d Counter metrics's were initialised, expecting %d",
+			(gotC - hadC), wantC)
 	}
 }
 
-func TestGetAllowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup
-	tests := map[string]struct {
-		allowInvalidCertsRoot        *bool
-		allowInvalidCertsDefault     *bool
-		allowInvalidCertsHardDefault *bool
-		wantBool                     bool
-	}{
-		"root overrides all": {wantBool: true, allowInvalidCertsRoot: boolPtr(true),
-			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, allowInvalidCertsRoot: nil,
-			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsDefault: nil,
-			allowInvalidCertsHardDefault: boolPtr(true)},
+func TestInit(t *testing.T) {
+	// GIVEN a Lookup and vars for the Init
+	lookup := testLookupGitHub()
+	log := utils.NewJLog("WARN", false)
+	var defaults Lookup
+	var hardDefaults Lookup
+	status := service_status.Status{ServiceID: stringPtr("test")}
+	var options options.Options
+
+	// WHEN Init is called on it
+	hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	lookup.Init(log, &defaults, &hardDefaults, &status, &options)
+
+	// THEN pointers to those vars are handed out to the Lookup
+	// log
+	if jLog != log {
+		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
+			log, jLog)
 	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
-			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
-			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
-			lookup.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
-
-			// WHEN GetAllowInvalidCerts is called
-			got := lookup.GetAllowInvalidCerts()
-
-			// THEN the function returns the correct result
-			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
-			}
-		})
+	// defaults
+	if lookup.Defaults != &defaults {
+		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&defaults, lookup.Defaults)
 	}
-}
-
-func TestGetUsePreRelease(t *testing.T) {
-	// GIVEN a Lookup
-	tests := map[string]struct {
-		usePreReleaseRoot        *bool
-		usePreReleaseDefault     *bool
-		usePreReleaseHardDefault *bool
-		wantBool                 bool
-	}{
-		"root overrides all": {wantBool: true, usePreReleaseRoot: boolPtr(true),
-			usePreReleaseDefault: boolPtr(false), usePreReleaseHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, usePreReleaseRoot: nil,
-			usePreReleaseDefault: boolPtr(false), usePreReleaseHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, usePreReleaseRoot: nil, usePreReleaseDefault: nil,
-			usePreReleaseHardDefault: boolPtr(true)},
+	// hardDefaults
+	if lookup.HardDefaults != &hardDefaults {
+		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&hardDefaults, lookup.HardDefaults)
 	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
-			lookup.UsePreRelease = tc.usePreReleaseRoot
-			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault
-			lookup.HardDefaults.UsePreRelease = tc.usePreReleaseHardDefault
-
-			// WHEN GetUsePreRelease is called
-			got := lookup.GetUsePreRelease()
-
-			// THEN the function returns the correct result
-			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
-			}
-		})
+	// status
+	if lookup.status != &status {
+		t.Errorf("Status was not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&status, lookup.status)
+	}
+	// options
+	if lookup.options != &options {
+		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&options, lookup.options)
+	}
+	// initMetrics - counters
+	gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	wantC := 2
+	if (gotC - hadC) != wantC {
+		t.Errorf("%d Counter metrics's were initialised, expecting %d",
+			(gotC - hadC), wantC)
 	}
 }

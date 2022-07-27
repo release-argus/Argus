@@ -15,10 +15,53 @@
 package latest_version
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/release-argus/Argus/utils"
 )
 
+func (l *Lookup) GetAccessToken() *string {
+	return utils.GetFirstNonNilPtr(l.AccessToken, (*l.Defaults).AccessToken, (*l.HardDefaults).AccessToken)
+}
+
+func (l *Lookup) GetAllowInvalidCerts() bool {
+	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, (*l.Defaults).AllowInvalidCerts, (*l.HardDefaults).AllowInvalidCerts)
+}
+
+// GetServiceURL returns the service's URL (handles the github type where the URL
+// may be `owner/repo`, adding the github.com prefix in that case).
+func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
+	if !ignoreWebURL && *l.status.WebURL != nil {
+		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
+		if !(l.status.LatestVersion == "" && strings.Contains(**l.status.WebURL, "version")) {
+			return utils.TemplateString(**l.status.WebURL, utils.ServiceInfo{LatestVersion: l.status.LatestVersion})
+		}
+	}
+
+	serviceURL := l.URL
+	// GitHub service. Get the non-API URL.
+	if l.Type == "github" {
+		// If it's "owner/repo" rather than a full path.
+		if strings.Count(serviceURL, "/") == 1 {
+			serviceURL = fmt.Sprintf("https://github.com/%s", serviceURL)
+		}
+	}
+	return serviceURL
+}
+
 // Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
 func (l *Lookup) GetUsePreRelease() bool {
-	return *utils.GetFirstNonDefault(l.UsePreRelease, l.Defaults.UsePreRelease, l.HardDefaults.UsePreRelease)
+	return *utils.GetFirstNonDefault(l.UsePreRelease, (*l.Defaults).UsePreRelease, (*l.HardDefaults).UsePreRelease)
+}
+
+// GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
+func GetURL(url string, urlType string) string {
+	if urlType == "github" {
+		// Convert "owner/repo" to the API path.
+		if strings.Count(url, "/") == 1 {
+			url = fmt.Sprintf("https://api.github.com/repos/%s/releases", url)
+		}
+	}
+	return url
 }
