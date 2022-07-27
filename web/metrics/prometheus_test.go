@@ -17,139 +17,129 @@ package metrics
 import (
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
-func TestInitPrometheusCounterWithIDAndResult(t *testing.T) {
-	// GIVEN a LatestVersionQueryMetric
-	metric := LatestVersionQueryMetric
+func TestInitPrometheusCounterVec(t *testing.T) {
+	// GIVEN a metric
+	tests := map[string]struct {
+		metric *prometheus.CounterVec
+		args   []string
+	}{
+		"LatestVersionQueryMetric":   {metric: LatestVersionQueryMetric, args: []string{"SERVICE_ID", "RESULT"}},
+		"DeployedVersionQueryMetric": {metric: DeployedVersionQueryMetric, args: []string{"SERVICE_ID", "RESULT"}},
+		"CommandMetric":              {metric: CommandMetric, args: []string{"COMMAND_ID", "RESULT", "SERVICE_ID"}},
+		"NotifyMetric":               {metric: NotifyMetric, args: []string{"NOTIFY_ID", "RESULT", "SERVICE_ID", "TYPE"}},
+		"WebHookMetric":              {metric: WebHookMetric, args: []string{"WEBHOOK_ID", "RESULT", "SERVICE_ID"}},
+	}
 
-	// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
-	InitPrometheusCounterWithIDAndResult(metric, "SERVICE_ID", "RESULT")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := testutil.CollectAndCount(tc.metric)
+			want := 0
+			if got != want {
+				t.Errorf("%s:\nhaven't initialised yet but got %d metrics, expecting %d",
+					name, got, want)
+			}
 
-	// THEN it can be collected
-	got := testutil.CollectAndCount(metric)
-	want := 1
-	if got != want {
-		t.Errorf("%d QueryMetric's were initialised, expecting %d",
-			got, want)
+			// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
+			if len(tc.args) == 2 {
+				InitPrometheusCounterWithIDAndResult(tc.metric, tc.args[0], tc.args[1])
+			} else if len(tc.args) == 3 {
+				InitPrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], "", tc.args[1])
+			} else {
+				InitPrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], tc.args[3], tc.args[1])
+			}
+			got = testutil.CollectAndCount(tc.metric)
+			want = 1
+			if got != want {
+				t.Errorf("%s:\nhas been initialised but got %d metrics, expecting %d",
+					name, got, want)
+			}
+			var wantValue float64
+			var gotValue float64
+			if len(tc.args) == 2 {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1]))
+			} else if len(tc.args) == 3 {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2]))
+			} else {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2], tc.args[3]))
+			}
+			if gotValue != wantValue {
+				t.Errorf("%s:\nhas been initialised but got %f, expecting %f",
+					name, gotValue, wantValue)
+			}
+
+			// THEN it can be increased
+			if len(tc.args) == 2 {
+				IncreasePrometheusCounterWithIDAndResult(tc.metric, tc.args[0], tc.args[1])
+			} else if len(tc.args) == 3 {
+				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], "", tc.args[1])
+			} else {
+				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], tc.args[3], tc.args[1])
+			}
+			if len(tc.args) == 2 {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1]))
+			} else if len(tc.args) == 3 {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2]))
+			} else {
+				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2], tc.args[3]))
+			}
+			wantValue++
+			if gotValue != wantValue {
+				t.Errorf("%s:\nhas been changed but got %f, expecting %f",
+					name, gotValue, wantValue)
+			}
+		})
 	}
 }
 
-func TestIncreasePrometheusCounterWithIDAndResult(t *testing.T) {
-	// GIVEN a LatestVersionQueryMetric that's been initialised
-	metric := LatestVersionQueryMetric
-	InitPrometheusCounterWithIDAndResult(metric, "SERVICE_ID", "RESULT")
-
-	// WHEN it's incremented with IncreasePrometheusCounterWithIDAndResult
-	IncreasePrometheusCounterWithIDAndResult(metric, "SERVICE_ID", "RESULT")
-
-	// THEN this increase can be collected
-	got := testutil.ToFloat64(metric.WithLabelValues("SERVICE_ID", "RESULT"))
-	want := float64(1)
-	if got != want {
-		t.Errorf("QueryMetric was incremented. Got %g, want %g",
-			got, want)
+func TestPrometheusGaugeVec(t *testing.T) {
+	// GIVEN a metric
+	tests := map[string]struct {
+		metric     *prometheus.GaugeVec
+		args       []string
+		isGaugeVec bool
+		value      float64
+	}{
+		"LatestVersionQueryLiveness":   {metric: LatestVersionQueryLiveness, args: []string{"SERVICE_ID"}},
+		"DeployedVersionQueryLiveness": {metric: DeployedVersionQueryLiveness, args: []string{"SERVICE_ID"}},
+		"AckWaiting":                   {metric: AckWaiting, args: []string{"SERVICE_ID"}},
 	}
-}
 
-func TestInitPrometheusCounterActionsWithWebHook(t *testing.T) {
-	// GIVEN a WebHookMetric
-	metric := WebHookMetric
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := testutil.CollectAndCount(tc.metric)
+			want := 0
+			if got != want {
+				t.Errorf("%s:\nhaven't initialised yet but got %d metrics, expecting %d",
+					name, got, want)
+			}
 
-	// WHEN it's initialised with InitPrometheusCounterActions
-	InitPrometheusCounterActions(metric, "WEBHOOK_ID", "SERVICE_ID", "", "RESULT")
+			// WHEN it's initialised with SetPrometheusGaugeWithID
+			wantValue := float64(3)
+			SetPrometheusGaugeWithID(tc.metric, tc.args[0], wantValue)
+			got = testutil.CollectAndCount(tc.metric)
+			want = 1
+			if got != want {
+				t.Errorf("%s:\nhas been initialised but got %d metrics, expecting %d",
+					name, got, want)
+			}
+			gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0]))
+			if gotValue != wantValue {
+				t.Errorf("%s:\nhas been initialised but got %f, expecting %f",
+					name, gotValue, wantValue)
+			}
 
-	// THEN it can be collected
-	got := testutil.CollectAndCount(metric)
-	want := 1
-	if got != want {
-		t.Errorf("%d Metrics's were initialised, expecting %d",
-			got, want)
-	}
-}
-
-func TestIncreasePrometheusCounterActionsWithWebHook(t *testing.T) {
-	// GIVEN a WebHookMetric that's been initialised
-	metric := WebHookMetric
-	InitPrometheusCounterActions(metric, "WEBHOOK_ID", "SERVICE_ID", "", "RESULT")
-
-	// WHEN it's incremented with IncreasePrometheusCounterActions
-	IncreasePrometheusCounterActions(metric, "WEBHOOK_ID", "SERVICE_ID", "", "RESULT")
-
-	// THEN this increase can be collected
-	got := testutil.ToFloat64(metric.WithLabelValues("WEBHOOK_ID", "SERVICE_ID", "RESULT"))
-	want := float64(1)
-	if got != want {
-		t.Errorf("WebHookMetric was incremented. Got %g, want %g",
-			got, want)
-	}
-}
-
-func TestInitPrometheusCounterActionsWithNotify(t *testing.T) {
-	// GIVEN a NotifyMetric
-	metric := NotifyMetric
-
-	// WHEN it's initialised with InitPrometheusCounterActions
-	InitPrometheusCounterActions(metric, "NOTIFY_ID", "SERVICE_ID", "NOTIFY_TYPE", "RESULT")
-
-	// THEN it can be collected
-	got := testutil.CollectAndCount(metric)
-	want := 1
-	if got != want {
-		t.Errorf("%d NotifyMetric's were initialised, expecting %d",
-			got, want)
-	}
-}
-
-func TestIncreasePrometheusCounterActionsWithNotify(t *testing.T) {
-	// GIVEN a NotifyMetric that's been initialised
-	metric := NotifyMetric
-	InitPrometheusCounterActions(metric, "NOTIFY_ID", "SERVICE_ID", "NOTIFY_TYPE", "RESULT")
-
-	// WHEN it's incremented with IncreasePrometheusCounterActions
-	IncreasePrometheusCounterActions(metric, "NOTIFY_ID", "SERVICE_ID", "NOTIFY_TYPE", "RESULT")
-
-	// THEN this increase can be collected
-	got := testutil.ToFloat64(metric.WithLabelValues("NOTIFY_ID", "RESULT", "SERVICE_ID", "NOTIFY_TYPE"))
-	want := float64(1)
-	if got != want {
-		t.Errorf("NotifyMetric was incremented. Got %g, want %g",
-			got, want)
-	}
-}
-
-func TestSetPrometheusGaugeWithIDDidInitialise(t *testing.T) {
-	// GIVEN a LatestVersionQueryLiveness
-	metric := LatestVersionQueryLiveness
-
-	// WHEN it's initialised with SetPrometheusGaugeWithID
-	SetPrometheusGaugeWithID(metric, "SERVICE_ID", 5)
-
-	// THEN it can be collected
-	got := testutil.CollectAndCount(metric)
-	want := 1
-	if got != want {
-		t.Errorf("%d LatestVersionQueryLiveness's were initialised, expecting %d",
-			got, want)
-	}
-}
-
-func TestSetPrometheusGaugeWithIDDidChange(t *testing.T) {
-	// GIVEN a LatestVersionQueryLiveness that's been initialised
-	metric := LatestVersionQueryLiveness
-	was := float64(0)
-	SetPrometheusGaugeWithID(metric, "SERVICE_ID", was)
-
-	// WHEN it's changed with SetPrometheusGaugeWithID
-	now := float64(1)
-	SetPrometheusGaugeWithID(metric, "SERVICE_ID", now)
-
-	// THEN this change can be collected
-	got := testutil.ToFloat64(metric.WithLabelValues("SERVICE_ID"))
-	want := float64(1)
-	if got != want {
-		t.Errorf("LatestVersionQueryLiveness should've been changed to %g but got %g",
-			want, got)
+			// THEN changes can be noticed
+			wantValue = float64(0)
+			SetPrometheusGaugeWithID(tc.metric, tc.args[0], wantValue)
+			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0]))
+			if gotValue != wantValue {
+				t.Errorf("%s:\nhas been changed but got %f, expecting %f",
+					name, gotValue, wantValue)
+			}
+		})
 	}
 }

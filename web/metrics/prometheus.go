@@ -62,8 +62,8 @@ var (
 	},
 		[]string{
 			"id",
-			"service_id",
 			"result",
+			"service_id",
 		})
 	LatestVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "latest_version_query_result_last",
