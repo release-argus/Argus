@@ -14,6 +14,11 @@
 
 package deployed_version
 
+import (
+	"github.com/release-argus/Argus/service/options"
+	service_status "github.com/release-argus/Argus/service/status"
+)
+
 func stringPtr(val string) *string {
 	return &val
 }
@@ -31,7 +36,13 @@ func testDeployedVersion() Lookup {
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
 		Regex:             "([0-9]+) The Argus Developers",
-		Defaults:          &dflt,
-		HardDefaults:      &hardDflt,
+		options: &options.Options{
+			SemanticVersioning: boolPtr(true),
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
+		},
+		Status:       &service_status.Status{ServiceID: stringPtr("test")},
+		Defaults:     &dflt,
+		HardDefaults: &hardDflt,
 	}
 }

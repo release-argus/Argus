@@ -17,6 +17,7 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
+	"strings"
 
 	"fmt"
 	"io/ioutil"
@@ -145,17 +146,18 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	}
 	defer resp.Body.Close()
 
+	body, _ := ioutil.ReadAll(resp.Body)
+	bodyOkay := checkWebHookBody(string(body))
+
 	// SUCCESS
 	desiredStatusCode := w.GetDesiredStatusCode()
-	if resp.StatusCode == desiredStatusCode || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2")) {
+	if bodyOkay && (resp.StatusCode == desiredStatusCode || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
 		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
 		jLog.Info(msg, logFrom, true)
 		return
 	}
 
 	// FAIL
-	body, _ := ioutil.ReadAll(resp.Body)
-
 	// Pretty desiredStatusCode.
 	prettyStatusCode := strconv.Itoa(desiredStatusCode)
 	if prettyStatusCode == "0" {
@@ -166,7 +168,7 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 		"%sWebHook didn't %s:\n%s\n%s", utils.FormatMessageSource(logFrom),
 		prettyStatusCode,
 		resp.Status,
-		body,
+		string(body),
 	)
 }
 
@@ -176,4 +178,23 @@ func (n *Notifiers) Send(title string, message string, serviceInfo *utils.Servic
 	}
 
 	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
+}
+
+func checkWebHookBody(body string) (okay bool) {
+	okay = true
+	fmt.Printf("body = %q\n", body)
+	if body == "" {
+		return
+	}
+	invalidContains := []string{
+		"do not have permission",
+		"rules were not satisfied",
+	}
+	for i := range invalidContains {
+		if strings.Contains(body, invalidContains[i]) {
+			okay = false
+			return
+		}
+	}
+	return
 }

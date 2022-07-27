@@ -373,3 +373,29 @@ func TestNotifiersSendWithNotifier(t *testing.T) {
 			notifiers, e)
 	}
 }
+
+func TestCheckWebHookBody(t *testing.T) {
+	// GIVEN a response body
+	tests := map[string]struct {
+		body string
+		want bool
+	}{
+		"empty body":               {body: "", want: true},
+		"success body":             {body: "success", want: true},
+		"awx invalid secret":       {body: `{"detail":"You do not have permission to perform this action."}`, want: false},
+		"adnanh/webhook hook fail": {body: `Hook rules were not satisfied.`, want: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN checkWebHookBody is called on it
+			got := checkWebHookBody(tc.body)
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					name, tc.want, got)
+			}
+		})
+	}
+}

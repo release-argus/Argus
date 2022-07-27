@@ -15,9 +15,7 @@
 package deployed_version
 
 import (
-	"io/ioutil"
-	"os"
-	"strings"
+	"regexp"
 	"testing"
 	"time"
 
@@ -27,483 +25,246 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestLookupGetAllowInvalidCerts(t *testing.T) {
+func TestGetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a Lookup
-	dvl := testDeployedVersion()
+	tests := map[string]struct {
+		allowInvalidCertsRoot        *bool
+		allowInvalidCertsDefault     *bool
+		allowInvalidCertsHardDefault *bool
+		wantBool                     bool
+	}{
+		"root overrides all": {wantBool: true, allowInvalidCertsRoot: boolPtr(true),
+			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
+		"default overrides hardDefault": {wantBool: true, allowInvalidCertsRoot: nil,
+			allowInvalidCertsDefault: boolPtr(true), allowInvalidCertsHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsDefault: nil,
+			allowInvalidCertsHardDefault: boolPtr(true)},
+	}
 
-	// WHEN GetAllowInvalidCerts is called on it
-	got := dvl.GetAllowInvalidCerts()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			lookup := testDeployedVersion()
+			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
+			(*lookup.Defaults).AllowInvalidCerts = tc.allowInvalidCertsDefault
+			(*lookup.HardDefaults).AllowInvalidCerts = tc.allowInvalidCertsHardDefault
 
-	// THEN AllowInvalidCerts is returned
-	want := dvl.AllowInvalidCerts
-	if got != *want {
-		t.Errorf("Got %t, want %t",
-			got, *want)
+			// WHEN GetAllowInvalidCerts is called
+			got := lookup.GetAllowInvalidCerts()
+
+			// THEN the function returns the correct result
+			if got != tc.wantBool {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					name, tc.wantBool, got)
+			}
+		})
 	}
 }
 
-func TestLookupQueryWithInvalidURL(t *testing.T) {
-	// GIVEN a Lookup with an invalid URL
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "invalid://	test"
-
-	// WHEN Query is called on it
-	_, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err to be non-nil because of the invalid url %q, not %v",
-			dvl.URL, err)
-	}
-}
-
-func TestLookupQueryWithPassingJSON(t *testing.T) {
-	// GIVEN a Lookup referencing JSON
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
-	dvl.Regex = ""
-	dvl.JSON = "url"
-
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN the Query is successful
-	startswith := "https://api.github.com/repos/release-argus/Argus/releases/"
-	if err != nil {
-		t.Errorf("Query should have passed without err\n%s",
-			err.Error())
-	}
-	if !strings.HasPrefix(version, startswith) {
-		t.Errorf("Query got %q, want %q",
-			version, startswith)
-	}
-}
-
-func TestLookupQueryWithFailingJSON(t *testing.T) {
-	// GIVEN a Lookup referencing JSON
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
-	dvl.Regex = ""
-	dvl.JSON = "something"
-
-	// WHEN Query is called on it
-	_, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Query should have failed as %q JSON shouldn't map to anything",
-			dvl.JSON)
-	}
-}
-
-func TestLookupQueryWithInvalidSourceJSON(t *testing.T) {
-	// GIVEN a Lookup referencing JSON
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io"
-	dvl.Regex = ""
-	dvl.JSON = "something"
-
-	// WHEN Query is called on it
-	_, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN err is non-nil as URL isn't JSON
-	if err == nil {
-		t.Errorf("Query should have failed as %q JSON shouldn't map to anything",
-			dvl.JSON)
-	}
-}
-
-func TestLookupQueryWithPassingRegex(t *testing.T) {
-	// GIVEN a Lookup
-	dvl := testDeployedVersion()
-
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN the Query is successful
-	want := "2022"
-	if err != nil {
-		t.Errorf("Query should have passed without err\n%s",
-			err.Error())
-	}
-	if version != want {
-		t.Errorf("Query got %q, want %q",
-			version, want)
-	}
-}
-
-func TestLookupQueryWithFailingRegex(t *testing.T) {
+func TestHTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.Regex = "^hello$"
+	tests := map[string]struct {
+		url      string
+		errRegex string
+	}{
+		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
+		"unknown url": {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
+		"valid url":   {url: "https://release-argus.io", errRegex: "^$"},
+	}
 
-	// WHEN Query is called on it
-	_, err := dvl.Query(utils.LogFrom{}, false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			lookup := testDeployedVersion()
+			lookup.URL = tc.url
 
-	// THEN err is non-nil as RegEx didn't match
-	if err == nil {
-		t.Errorf("Query should have failed as %q RegEx shouldn't match anything",
-			dvl.Regex)
+			// WHEN httpRequest is called on it
+			_, err := lookup.httpRequest(utils.LogFrom{})
+
+			// THEN any err is expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+		})
 	}
 }
 
-func TestLookupQueryWithInvalidSemanticVersioning(t *testing.T) {
+func TestQuery(t *testing.T) {
 	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
+	tests := map[string]struct {
+		url                  string
+		allowInvalidCerts    bool
+		noSemanticVersioning bool
+		basicAuth            *BasicAuth
+		headers              []Header
+		json                 string
+		regex                string
+		errRegex             string
+		wantVersion          string
+	}{
+		"JSON lookup that doesn't resolve": {errRegex: "could not be found in the following JSON",
+			url: "https://api.github.com/repos/release-argus/argus/releases/latest", json: "something"},
+		"URL that doesn't resolve to JSON":    {errRegex: "failed to unmarshal", url: "https://release-argus.io", json: "something"},
+		"passing regex":                       {noSemanticVersioning: true, wantVersion: "[0-9]{4}", errRegex: "^$", url: "https://release-argus.io", regex: "([0-9]+) The Argus Developers"},
+		"passing regex with no capture group": {noSemanticVersioning: true, wantVersion: "[0-9]{4}", errRegex: "^$", url: "https://release-argus.io", regex: "[0-9]{4}"},
+		"failing regex":                       {errRegex: "regex didn't return any matches in", url: "https://release-argus.io", regex: "^bishbashbosh$"},
+		"want semantic versioning but get non-semantic version": {noSemanticVersioning: false, errRegex: "failed converting .* to a semantic version", url: "https://release-argus.io",
+			regex: "([0-9]+) The Argus Developers"},
+		"allow non-semantic versioning and get non-semantic version": {noSemanticVersioning: true, errRegex: "^$", url: "https://release-argus.io",
+			regex: "([0-9]+) The Argus Developers"},
+		"valid semantic version": {errRegex: "^$", wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`, regex: "argus-([0-9.]+)\\.",
+			url: "https://release-argus.io/docs/getting-started/"},
+		"headers fail": {errRegex: "Bad credentials", headers: []Header{{Key: "Authorization", Value: "token ghp_FAIL"}},
+			url: "https://api.github.com/repos/release-argus/argus/releases/latest", json: "something"},
+	}
 
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, true)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			dvl := testDeployedVersion()
+			dvl.URL = tc.url
+			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
+			dvl.BasicAuth = tc.basicAuth
+			dvl.Headers = tc.headers
+			dvl.JSON = tc.json
+			dvl.Regex = tc.regex
+			*dvl.options.SemanticVersioning = !tc.noSemanticVersioning
 
-	// THEN err is non-nil as version isn't semantic
-	if err == nil {
-		t.Errorf("Query should have failed as %q isn't semantic versioned",
-			version)
+			// WHEN Query is called on it
+			version, err := dvl.Query(utils.LogFrom{})
+
+			// THEN any err is expected
+			if tc.wantVersion != "" {
+				re := regexp.MustCompile(tc.wantVersion)
+				match := re.MatchString(version)
+				if !match {
+					t.Errorf("%s:\nwant version=%q\ngot  version=%q",
+						name, tc.wantVersion, version)
+				}
+			}
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+		})
 	}
 }
 
-func TestLookupQueryWithValidSemanticVersioning(t *testing.T) {
+func TestTrack(t *testing.T) {
 	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/getting-started/"
-	dvl.Regex = "argus-([0-9.]+)\\."
-
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, true)
-
-	// THEN Query returns the version
-	want := "0.0.0"
-	if err != nil {
-		t.Errorf("Query should have passed without err as %q is valid semantic versioning\n%s",
-			version, err.Error())
-	}
-	if version != want {
-		t.Errorf("Query got %q, want %q",
-			version, want)
-	}
-}
-
-func TestLookupQueryWithHeadersFail(t *testing.T) {
-	// GIVEN a Lookup with invalid GitHub auth headers
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://api.github.com/repos/release-argus/argus/releases/latest"
-	dvl.Regex = ""
-	dvl.JSON = "message"
-	dvl.Headers = []Header{
-		{
-			Key:   "Authorization",
-			Value: "token ghp_FAIL",
-		},
-	}
-
-	// WHEN Query is called on it
-	version, _ := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN version is about "Bad credentials"
-	want := "Bad credentials"
-	if version != want {
-		t.Errorf("Query should have failed as an invalid auth key was used. Want message=%q, not %q",
-			want, version)
-	}
-}
-
-func TestLookupQueryWithBasicAuth(t *testing.T) {
-	// GIVEN a Lookup with Basic Auth
-	dvl := testDeployedVersion()
-	dvl.BasicAuth = &BasicAuth{
-		Username: "argus",
-		Password: "test",
+	tests := map[string]struct {
+		lookup               *Lookup
+		allowInvalidCerts    bool
+		semanticVersioning   bool
+		basicAuth            *BasicAuth
+		expectFinish         bool
+		wait                 time.Duration
+		errRegex             string
+		startDeployedVersion string
+		wantDeployedVersion  string
+		startLatestVersion   string
+		wantLatestVersion    string
+		wantAnnounces        int
+		wantDatabaseMesages  int
+	}{
+		"nil Lookup exits immediately": {lookup: nil, wait: 10 * time.Millisecond, expectFinish: true},
+		"track can get semantic version with regex": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can get semantic version from json": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can get semantic version from multi-level json": {startLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "foo.bar.version"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can reject non-semantic versions": {wantDeployedVersion: "", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
+		"track can allow non-semantic version": {startLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: false, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can get version behind basic auth": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond, basicAuth: &BasicAuth{Username: "test", Password: "123"},
+			lookup: &Lookup{URL: "https://valid.release-argus.io/basic-auth", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can get version behind an invalid cert": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: true, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can fail due to an unallowed invalid cert": {startLatestVersion: "", wantDeployedVersion: "", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: false, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
+		"track can update from an older version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.1", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track can update from a newer version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track that gets a newer deployed version than latest version updates both": {startLatestVersion: "1.2.1", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 2},
+		"track that gets a older deployed version than latest version only updates deployed": {startLatestVersion: "1.2.3", wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
+		"track that gets a deployed version with no latest version updates both": {startLatestVersion: "", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 2},
 	}
 
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.lookup != nil {
+				defaults := &Lookup{}
+				dbChannel := make(chan db_types.Message, 4)
+				announceChannel := make(chan []byte, 4)
+				webURL := &tc.lookup.URL
+				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
+				tc.lookup.BasicAuth = tc.basicAuth
+				tc.lookup.Defaults = &defaults
+				tc.lookup.HardDefaults = &defaults
+				tc.lookup.options = &options.Options{
+					Interval:           stringPtr("2s"),
+					SemanticVersioning: boolPtr(tc.semanticVersioning),
+					Defaults:           &options.Options{},
+					HardDefaults:       &options.Options{},
+				}
+				tc.lookup.Status = &service_status.Status{
+					ServiceID:       stringPtr(name),
+					DeployedVersion: tc.startDeployedVersion,
+					LatestVersion:   tc.startLatestVersion,
+					AnnounceChannel: &announceChannel,
+					DatabaseChannel: &dbChannel,
+					WebURL:          &webURL,
+				}
+			}
+			didFinish := make(chan bool, 1)
 
-	// THEN the Query is successful
-	want := "2022"
-	if err != nil {
-		t.Errorf("Query should have passed without err\n%s",
-			err.Error())
-	}
-	if version != want {
-		t.Errorf("Query got %q, want %q",
-			version, want)
-	}
-}
+			// WHEN CheckValues is called on it
+			go func() {
+				tc.lookup.Track()
+				didFinish <- true
+			}()
 
-func TestLookupQueryWithAllowInvalidCerts(t *testing.T) {
-	// GIVEN a Lookup
-	dvl := testDeployedVersion()
-	*dvl.AllowInvalidCerts = true
-
-	// WHEN Query is called on it
-	version, err := dvl.Query(utils.LogFrom{}, false)
-
-	// THEN the Query is successful
-	want := "2022"
-	if err != nil {
-		t.Errorf("Query should have passed without err\n%s",
-			err.Error())
-	}
-	if version != want {
-		t.Errorf("Query got %q, want %q",
-			version, want)
-	}
-}
-
-func TestLookupCheckValuesWithNil(t *testing.T) {
-	// GIVEN a nil Lookup
-	var dvl *Lookup
-
-	// WHEN CheckValues is called on it
-	err := dvl.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("Got %s, want nil",
-			err.Error())
-	}
-}
-
-func TestLookupCheckValuesPass(t *testing.T) {
-	// GIVEN a nil Lookup
-	var dvl *Lookup
-
-	// WHEN CheckValues is called on it
-	err := dvl.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("Got %s, want nil",
-			err.Error())
-	}
-}
-
-func TestLookupCheckValuesFail(t *testing.T) {
-	// GIVEN a nil Lookup
-	dvl := testDeployedVersion()
-	dvl.URL = ""
-	dvl.Regex = "hello[0-9"
-
-	// WHEN CheckValues is called on it
-	err := dvl.CheckValues("")
-
-	// THEN 3 lines of err are printed
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 3
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			dvl, wantCount, errCount, e)
-	}
-}
-
-func TestLookupPrintWithNil(t *testing.T) {
-	// GIVEN a nil Lookup
-	var dvl *Lookup
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN CheckValues is called on it
-	dvl.Print("")
-
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 0
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
-	}
-}
-
-func TestLookupPrint(t *testing.T) {
-	// GIVEN a fully defined Lookup
-	dvl := testDeployedVersion()
-	dvl.Headers = []Header{
-		{
-			Key:   "Authorization",
-			Value: "token ghp_FAIL",
-		},
-	}
-	dvl.BasicAuth = &BasicAuth{
-		Username: "argus",
-		Password: "test",
-	}
-	dvl.JSON = "yes"
-	dvl.Regex = "also_yes"
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN CheckValues is called on it
-	dvl.Print("")
-
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 11
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
-	}
-}
-
-func TestLookupTrackWithNil(t *testing.T) {
-	// GIVEN a nil Lookup
-	var dvl *Lookup
-
-	// WHEN CheckValues is called on it
-	start := time.Now().UTC()
-	dvl.Track()
-
-	// THEN the function exits straight away
-	since := time.Since(start)
-	if since > time.Second {
-		t.Errorf("Track on %v was %v ago. Should've exited straight away!",
-			dvl, since)
-	}
-}
-
-func TestLookupTrackWithSuccessfulToLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/config/service/"
-	dvl.Regex = "([0-9.]+)test"
-	databaseChannel := make(chan db_types.Message, 5)
-	latestVersion := "1.2.3"
-	dvl.Status = &service_status.Status{
-		DeployedVersion: "0.0.0",
-		LatestVersion:   latestVersion,
-		DatabaseChannel: &databaseChannel,
-	}
-	dvl.options = &options.Options{
-		Interval:           stringPtr("10s"),
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &options.Options{},
-		HardDefaults:       &options.Options{},
-	}
-
-	// WHEN Track is called on this
-	go dvl.Track()
-
-	// THEN Service.Status.DeployedVersion is updated
-	time.Sleep(2 * time.Second)
-	got := dvl.Status.DeployedVersion
-	if got == latestVersion {
-		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q to %q",
-			dvl.Regex, dvl.URL, dvl.Status.DeployedVersion, latestVersion)
-	}
-}
-
-func TestLookupTrackWithSuccessfulToNonLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/config/service/"
-	dvl.Regex = "([0-9.]+)test"
-	databaseChannel := make(chan db_types.Message, 5)
-	dvl.Status = &service_status.Status{
-		DeployedVersion: "0.0.0",
-		LatestVersion:   "1.2.4",
-		DatabaseChannel: &databaseChannel,
-	}
-	dvl.options = &options.Options{
-		Interval:           stringPtr("10s"),
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &options.Options{},
-		HardDefaults:       &options.Options{},
-	}
-
-	// WHEN Track is called on this
-	go dvl.Track()
-
-	// THEN Service.Status.DeployedVersion is updated
-	time.Sleep(2 * time.Second)
-	got := dvl.Status.DeployedVersion
-	if got == dvl.Status.LatestVersion {
-		t.Error("Shouldn't have got to LatestVersion")
-	}
-	want := "1.2.3"
-	if got == want {
-		t.Errorf("%q RegEx on %s should have updated DeployedVersion from %q to %q",
-			dvl.Regex, dvl.URL, dvl.Status.DeployedVersion, want)
-	}
-}
-
-func TestLookupTrackWithSuccessfulToNewerLatestVersion(t *testing.T) {
-	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/config/service/"
-	dvl.Regex = "([0-9.]+)test"
-	databaseChannel := make(chan db_types.Message, 5)
-	dvl.Status = &service_status.Status{
-		DeployedVersion: "0.0.0",
-		LatestVersion:   "1.2.2",
-		DatabaseChannel: &databaseChannel,
-	}
-	dvl.options = &options.Options{
-		Interval:           stringPtr("10s"),
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &options.Options{},
-		HardDefaults:       &options.Options{},
-	}
-
-	// WHEN Track is called on this
-	go dvl.Track()
-
-	// THEN Service.Status.DeployedVersion is updated
-	time.Sleep(2 * time.Second)
-	want := "1.2.3"
-	if dvl.Status.DeployedVersion != want {
-		t.Errorf("LatestVersion %q shouldn't be lower than DeployedVersion %q",
-			dvl.Status.LatestVersion, dvl.Status.DeployedVersion)
-	}
-}
-
-func TestLookupTrackWithSuccessfulTriggersWebHookAnnounce(t *testing.T) {
-	// GIVEN a Service with a working Lookup that will get a newer DeployedVersion
-	jLog = utils.NewJLog("WARN", false)
-	dvl := testDeployedVersion()
-	dvl.URL = "https://release-argus.io/docs/config/service/"
-	dvl.Regex = "([0-9.]+)test"
-	announceChannel := make(chan []byte, 5)
-	databaseChannel := make(chan db_types.Message, 5)
-	dvl.Status = &service_status.Status{
-		DeployedVersion: "0.0.0",
-		LatestVersion:   "1.2.4",
-		AnnounceChannel: &announceChannel,
-		DatabaseChannel: &databaseChannel,
-	}
-	dvl.options = &options.Options{
-		Interval:           stringPtr("10s"),
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &options.Options{},
-		HardDefaults:       &options.Options{},
-	}
-
-	// WHEN Track is called on this
-	go dvl.Track()
-
-	// THEN a Message is sent to the Announce channel
-	time.Sleep(2 * time.Second)
-	got := len(*dvl.Status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the DeployedVersion change. Should be %d",
-			got, want)
+			// THEN the function exits straight away
+			time.Sleep(tc.wait)
+			if tc.expectFinish {
+				if len(didFinish) == 0 {
+					t.Fatalf("%s:\nexpected Track to finish in %s, but it didn't",
+						name, tc.wait)
+				}
+				return
+			}
+			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion {
+				t.Errorf("%s:\nexpected DeployedVersion to be %q after query, not %q",
+					name, tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion)
+			}
+			if tc.wantLatestVersion == "" {
+				tc.wantLatestVersion = tc.wantDeployedVersion
+			}
+			if tc.wantLatestVersion != tc.lookup.Status.LatestVersion {
+				t.Errorf("%s:\nexpected LatestVersion to be %q after query, not %q",
+					name, tc.wantLatestVersion, tc.lookup.Status.LatestVersion)
+			}
+			if tc.wantAnnounces != len(*tc.lookup.Status.AnnounceChannel) {
+				t.Errorf("%s:\nexpected AnnounceChannel to have %d messages in queue, not %d",
+					name, tc.wantAnnounces, len(*tc.lookup.Status.AnnounceChannel))
+			}
+			if tc.wantDatabaseMesages != len(*tc.lookup.Status.DatabaseChannel) {
+				t.Errorf("%s:\nexpected DatabaseChannel to have %d messages in queue, not %d",
+					name, tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
+			}
+		})
 	}
 }

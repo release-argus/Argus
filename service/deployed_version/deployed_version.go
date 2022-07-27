@@ -43,31 +43,35 @@ func (l *Lookup) Track() {
 
 	// Track forever.
 	for {
-		deployedVersion, err := l.Query(logFrom, l.options.GetSemanticVersioning())
+		deployedVersion, err := l.Query(logFrom)
 		// If new release found by ^ query.
 		if err == nil {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "SUCCESS")
-			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *(*l.Status).ServiceID, 1)
-			if deployedVersion != (*l.Status).DeployedVersion {
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
+			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *l.Status.ServiceID, 1)
+			if deployedVersion != l.Status.DeployedVersion {
 				// Announce the updated deployment
-				(*l.Status).SetDeployedVersion(deployedVersion)
+				l.Status.SetDeployedVersion(deployedVersion)
 
 				// If this new deployedVersion isn't LatestVersion
 				// Check that it's not a later version than LatestVersion
-				if deployedVersion != (*l.Status).LatestVersion && l.options.GetSemanticVersioning() && (*l.Status).LatestVersion != "" {
+				if deployedVersion != l.Status.LatestVersion && l.options.GetSemanticVersioning() && l.Status.LatestVersion != "" {
 					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
 					//nolint:errcheck // ^
 					deployedVersionSV, _ := semver.NewVersion(deployedVersion)
 					//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
 					//nolint:errcheck // ^
-					latestVersionSV, _ := semver.NewVersion((*l.Status).LatestVersion)
+					latestVersionSV, _ := semver.NewVersion(l.Status.LatestVersion)
 
 					// Update LatestVersion to DeployedVersion if it's newer
 					if latestVersionSV.LessThan(*deployedVersionSV) {
-						(*l.Status).LatestVersion = (*l.Status).DeployedVersion
-						(*l.Status).LatestVersionTimestamp = (*l.Status).DeployedVersionTimestamp
-						(*l.Status).AnnounceQueryNewVersion()
+						l.Status.LatestVersion = l.Status.DeployedVersion
+						l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
+						l.Status.AnnounceQueryNewVersion()
 					}
+				} else if l.Status.LatestVersion == "" {
+					l.Status.LatestVersion = l.Status.DeployedVersion
+					l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
+					l.Status.AnnounceQueryNewVersion()
 				}
 
 				// Announce version change to WebSocket clients.
@@ -75,11 +79,11 @@ func (l *Lookup) Track() {
 					fmt.Sprintf("Updated to %q", deployedVersion),
 					logFrom,
 					true)
-				(*l.Status).AnnounceUpdate()
+				l.Status.AnnounceUpdate()
 			}
 		} else {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "FAIL")
-			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *(*l.Status).ServiceID, 0)
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *l.Status.ServiceID, 0)
 		}
 		// Sleep interval between queries.
 		time.Sleep(l.options.GetIntervalDuration())
@@ -87,7 +91,7 @@ func (l *Lookup) Track() {
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, error) {
+func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
@@ -131,19 +135,23 @@ func (l *Lookup) Query(logFrom utils.LogFrom, semanticVersioning bool) (string, 
 	if l.Regex != "" {
 		re := regexp.MustCompile(l.Regex)
 		texts := re.FindStringSubmatch(version)
+		index := 1
 
-		if len(texts) < 2 {
-			err := fmt.Errorf("%q RegEx didn't return any matches in %q",
+		if len(texts) == 0 {
+			err := fmt.Errorf("%q regex didn't return any matches in %q",
 				l.Regex,
 				version)
 			jLog.Warn(err, logFrom, true)
 			return "", err
+		} else if len(texts) == 1 {
+			// no capture group in regex
+			index = 0
 		}
 
-		version = texts[1]
+		version = texts[index]
 	}
 
-	if semanticVersioning {
+	if l.options.GetSemanticVersioning() {
 		_, err = semver.NewVersion(version)
 		if err != nil {
 			err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding json/regex to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
@@ -197,57 +205,5 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	// Read the response body.
 	rawBody, err = ioutil.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
-	return
-}
-
-// Print will print the Lookup.
-func (l *Lookup) Print(prefix string) {
-	if l == nil {
-		return
-	}
-	fmt.Printf("%sdeployed_version:\n", prefix)
-	prefix += "  "
-
-	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
-	if l.BasicAuth != nil {
-		fmt.Printf("%sbasic_auth:\n", prefix)
-		fmt.Printf("%s  username: %s\n", prefix, l.BasicAuth.Username)
-		fmt.Printf("%s  password: <secret>\n", prefix)
-	}
-	if l.Headers != nil {
-		fmt.Printf("%sheaders:\n", prefix)
-		for _, header := range l.Headers {
-			fmt.Printf("%s  - key: %s\n", prefix, header.Key)
-			fmt.Printf("%s    value: <secret>\n", prefix)
-		}
-	}
-	utils.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
-	utils.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
-}
-
-// CheckValues of the Lookup.
-func (l *Lookup) CheckValues(prefix string) (errs error) {
-	if l == nil {
-		return
-	}
-
-	// URL
-	if l.URL == "" && l.Defaults != nil {
-		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\",
-			utils.ErrorToString(errs), prefix)
-	}
-
-	// RegEx
-	_, err := regexp.Compile(l.Regex)
-	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\",
-			utils.ErrorToString(errs), prefix, l.Regex)
-	}
-
-	if errs != nil {
-		errs = fmt.Errorf("%sdeployed_version:\\%w",
-			prefix, errs)
-	}
 	return
 }

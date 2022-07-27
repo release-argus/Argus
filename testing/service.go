@@ -77,9 +77,7 @@ func ServiceTest(
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(
-			logFrom,
-			service.Options.GetSemanticVersioning())
+		version, err := service.DeployedVersionLookup.Query(logFrom)
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",

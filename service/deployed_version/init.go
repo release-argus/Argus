@@ -46,6 +46,6 @@ func (l *Lookup) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *(*l.Status).ServiceID, "FAIL")
+	metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
+	metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
 }
