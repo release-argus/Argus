@@ -964,13 +964,13 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					t.Errorf("ConfigData.Service.test.Dashboard.WebURL should've been %q, got %q",
 						*cfgTestService.Dashboard.WebURL, *receivedTestService.Dashboard.WebURL)
 				}
-				if *receivedTestService.LatestVersion.Require.RegexContent != *cfgTestService.LatestVersion.Require.RegexContent {
+				if receivedTestService.LatestVersion.Require.RegexContent != cfgTestService.LatestVersion.Require.RegexContent {
 					t.Errorf("ConfigData.Service.test.LatestVersion.Require.RegexContent should've been %q, got %q",
-						*cfgTestService.LatestVersion.Require.RegexContent, *receivedTestService.LatestVersion.Require.RegexContent)
+						cfgTestService.LatestVersion.Require.RegexContent, receivedTestService.LatestVersion.Require.RegexContent)
 				}
-				if *receivedTestService.LatestVersion.Require.RegexVersion != *cfgTestService.LatestVersion.Require.RegexVersion {
+				if receivedTestService.LatestVersion.Require.RegexVersion != cfgTestService.LatestVersion.Require.RegexVersion {
 					t.Errorf("ConfigData.Service.test.LatestVersion.Require.RegexVersion should've been %q, got %q",
-						*cfgTestService.LatestVersion.Require.RegexVersion, *receivedTestService.LatestVersion.Require.RegexVersion)
+						cfgTestService.LatestVersion.Require.RegexVersion, receivedTestService.LatestVersion.Require.RegexVersion)
 				}
 				if *receivedTestService.Dashboard.AutoApprove != *cfgTestService.Dashboard.AutoApprove {
 					t.Errorf("ConfigData.Service.test.Dashboard.AutoApprove should've been %t, got %t",
@@ -1073,12 +1073,12 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				} else {
 					if receivedTestService.Command == nil {
 						t.Errorf("ConfigData.Service.test.Command should've been %#v, got %#v",
-							*cfgTestService.Command, receivedTestService.Command)
+							cfgTestService.Command, receivedTestService.Command)
 					} else {
 						got := strings.Join((*receivedTestService.Command)[0], " ")
-						if got != (*cfgTestService.Command)[0].String() {
+						if got != cfgTestService.Command[0].String() {
 							t.Errorf("ConfigData.Service.test.Command[0] should've been %q, got %q",
-								(*cfgTestService.Command)[0].String(), got)
+								cfgTestService.Command[0].String(), got)
 						}
 					}
 				}

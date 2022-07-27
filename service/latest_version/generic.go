@@ -59,10 +59,10 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 // GetServiceURL returns the service's URL (handles the github type where the URL
 // may be `owner/repo`, adding the github.com prefix in that case).
 func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
-	if !ignoreWebURL && (*l.Status).WebURL != nil {
+	if !ignoreWebURL && *l.Status.WebURL != nil {
 		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		if !((*l.Status).LatestVersion == "" && strings.Contains(**(*l.Status).WebURL, "version")) {
-			return utils.TemplateString(**(*l.Status).WebURL, utils.ServiceInfo{LatestVersion: (*l.Status).LatestVersion})
+		if !(l.Status.LatestVersion == "" && strings.Contains(**l.Status.WebURL, "version")) {
+			return utils.TemplateString(**l.Status.WebURL, utils.ServiceInfo{LatestVersion: l.Status.LatestVersion})
 		}
 	}
 

@@ -141,8 +141,8 @@ func testService(id string) service.Service {
 			AllowInvalidCerts: boolPtr(false),
 			UsePreRelease:     boolPtr(false),
 			Require: &filters.Require{
-				RegexContent: stringPtr("content"),
-				RegexVersion: stringPtr("version"),
+				RegexContent: "content",
+				RegexVersion: "version",
 			},
 		},
 		Options: options.Options{
