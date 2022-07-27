@@ -29,7 +29,7 @@ func TestServiceTrackWithQueryFailRegex(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceURL()
 	service.Status.LatestVersion = ""
-	*service.LatestVersion.Require.RegexVersion = "beta"
+	service.LatestVersion.Require.RegexVersion = "beta"
 
 	// WHEN Track is called on this Service
 	want := service.Status.LatestVersion
@@ -92,8 +92,8 @@ func TestServiceTrackWithQueryOlderFound(t *testing.T) {
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "([0-9.]+)test"
 	service.URLCommands = &filters.URLCommandSlice{urlCommand}
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = ""
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = ""
 
 	// WHEN Track is called on this Service
 	want := service.Status.LatestVersion
@@ -117,8 +117,8 @@ func TestServiceTrackWithQueryNewFound(t *testing.T) {
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "([0-9.]+)test"
 	service.URLCommands = &filters.URLCommandSlice{urlCommand}
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = ""
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = ""
 
 	// WHEN Track is called on this Service
 	want := "1.2.3"
@@ -142,16 +142,16 @@ func TestServiceSliceTrackWithInactiveServices(t *testing.T) {
 	service0.Status.LatestVersion = ""
 	*service0.URL = "https://release-argus.io/docs/config/service/"
 	service0.URLCommands = &filters.URLCommandSlice{urlCommand}
-	*service0.LatestVersion.Require.RegexContent = ""
-	*service0.LatestVersion.Require.RegexVersion = ""
+	service0.LatestVersion.Require.RegexContent = ""
+	service0.LatestVersion.Require.RegexVersion = ""
 	active := false
 	service0.Active = &active
 	service1 := testServiceURL()
 	service1.Status.LatestVersion = ""
 	*service1.URL = "https://release-argus.io/docs/config/service/"
 	service1.URLCommands = &filters.URLCommandSlice{urlCommand}
-	*service1.LatestVersion.Require.RegexContent = ""
-	*service1.LatestVersion.Require.RegexVersion = ""
+	service1.LatestVersion.Require.RegexContent = ""
+	service1.LatestVersion.Require.RegexVersion = ""
 	slice := Slice{
 		"inactive": &service0,
 		"active":   &service1,

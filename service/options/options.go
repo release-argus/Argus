@@ -58,10 +58,6 @@ func (o *Options) GetIntervalDuration() time.Duration {
 
 // CheckValues of the Options.
 func (o *Options) CheckValues(prefix string) (errs error) {
-	if o == nil {
-		return
-	}
-
 	// Interval
 	if o.Interval != nil {
 		// Default to seconds when an integer is provided
@@ -84,8 +80,12 @@ func (o *Options) CheckValues(prefix string) (errs error) {
 
 // Print the struct.
 func (o *Options) Print(prefix string) {
+	if o.Active == nil && o.Interval == nil && o.SemanticVersioning == nil {
+		return
+	}
+
 	fmt.Printf("%soptions:\n", prefix)
-	utils.PrintlnIfNotNil(o.Active, fmt.Sprintf("%sactive: %t", prefix, utils.DefaultIfNil(o.Active)))
-	utils.PrintlnIfNotNil(o.Interval, fmt.Sprintf("%sinterval: %s", prefix, utils.DefaultIfNil(o.Interval)))
-	utils.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%ssemantic_versioning: %t", prefix, utils.DefaultIfNil(o.SemanticVersioning)))
+	utils.PrintlnIfNotNil(o.Active, fmt.Sprintf("%s  active: %t", prefix, utils.DefaultIfNil(o.Active)))
+	utils.PrintlnIfNotNil(o.Interval, fmt.Sprintf("%s  interval: %s", prefix, utils.DefaultIfNil(o.Interval)))
+	utils.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%s  semantic_versioning: %t", prefix, utils.DefaultIfNil(o.SemanticVersioning)))
 }

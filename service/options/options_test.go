@@ -17,8 +17,14 @@
 package options
 
 import (
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/release-argus/Argus/utils"
 )
 
 func TestGetActive(t *testing.T) {
@@ -60,7 +66,7 @@ func TestGetInterval(t *testing.T) {
 		"root overrides all": {wantString: "10s", intervalRoot: stringPtr("10s"),
 			intervalDefault: stringPtr("1m10s"), intervalHardDefault: stringPtr("1m10s")},
 		"default overrides hardDefault": {wantString: "10s", intervalRoot: nil,
-			intervalDefault: stringPtr("1m10s"), intervalHardDefault: stringPtr("1m10s")},
+			intervalDefault: stringPtr("10s"), intervalHardDefault: stringPtr("1m10s")},
 		"hardDefault is last resort": {wantString: "10s", intervalRoot: nil, intervalDefault: nil,
 			intervalHardDefault: stringPtr("10s")},
 	}
@@ -95,7 +101,7 @@ func TestGetSemanticVersioning(t *testing.T) {
 		"root overrides all": {wantBool: true, semanticVersioningRoot: boolPtr(true),
 			semanticVersioningDefault: boolPtr(false), semanticVersioningHardDefault: boolPtr(false)},
 		"default overrides hardDefault": {wantBool: true, semanticVersioningRoot: nil,
-			semanticVersioningDefault: boolPtr(false), semanticVersioningHardDefault: boolPtr(false)},
+			semanticVersioningDefault: boolPtr(true), semanticVersioningHardDefault: boolPtr(false)},
 		"hardDefault is last resort": {wantBool: true, semanticVersioningRoot: nil, semanticVersioningDefault: nil,
 			semanticVersioningHardDefault: boolPtr(true)},
 	}
@@ -147,5 +153,72 @@ func TestGetIntervalDuration(t *testing.T) {
 	if got != want {
 		t.Errorf("want: %v\ngot:  %v",
 			want, got)
+	}
+}
+
+func TestPrint(t *testing.T) {
+	// GIVEN a Lookup
+	tests := map[string]struct {
+		options Options
+		lines   int
+	}{
+		"empty/default Options":    {options: Options{}, lines: 0},
+		"only active":              {options: Options{Active: boolPtr(false)}, lines: 2},
+		"only interval":            {options: Options{Interval: stringPtr("10s")}, lines: 2},
+		"only semantic_versioning": {options: Options{SemanticVersioning: boolPtr(false)}, lines: 2},
+		"all options defined":      {options: Options{Active: boolPtr(false), Interval: stringPtr("10s"), SemanticVersioning: boolPtr(false)}, lines: 4},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN Print is called
+			tc.options.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+		})
+	}
+}
+
+func TestCheckValues(t *testing.T) {
+	// GIVEN a Lookup
+	tests := map[string]struct {
+		options      Options
+		wantInterval string
+		errRegex     string
+	}{
+		"valid options": {errRegex: `^$`,
+			options: Options{Active: boolPtr(false), Interval: stringPtr("10s"), SemanticVersioning: boolPtr(false)}},
+		"invalid interval": {errRegex: `interval: .* <invalid>`,
+			options: Options{Active: boolPtr(false), Interval: stringPtr("10x"), SemanticVersioning: boolPtr(false)}},
+		"seconds get appended to pure decimal interval": {errRegex: `^$`, wantInterval: "10s",
+			options: Options{Active: boolPtr(false), Interval: stringPtr("10"), SemanticVersioning: boolPtr(false)}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called
+			err := tc.options.CheckValues("")
+
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+		})
 	}
 }

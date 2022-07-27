@@ -103,8 +103,8 @@ func TestServiceGetVersionsWithGitHubFilterPreReleases(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	body :=
 		`[
 			{
@@ -136,8 +136,8 @@ func TestServiceGetVersionsWithGitHubSortReleases(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	*service.SemanticVersioning = true
 	body :=
 		`[
@@ -201,8 +201,8 @@ func TestServiceGetVersionsWithURLCommands(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\.0$"
 	service.URLCommands = &filters.URLCommandSlice{urlCommand}
@@ -249,8 +249,8 @@ func TestServiceGetVersionWithRegexVersion(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\.0$"
 	service.URLCommands = &filters.URLCommandSlice{urlCommand}
@@ -271,7 +271,7 @@ func TestServiceGetVersionWithRegexVersion(t *testing.T) {
 	want := "0.7.0"
 	if version != want {
 		t.Errorf("GetVersion didn't use the RegexVersion %q to filter out releases and return %q. Instead got %q",
-			*service.LatestVersion.Require.RegexVersion, want, version)
+			service.LatestVersion.Require.RegexVersion, want, version)
 	}
 }
 
@@ -280,8 +280,8 @@ func TestServiceGetVersionsWithRegexContent(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
-	*service.LatestVersion.Require.RegexVersion = ""
+	service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
+	service.LatestVersion.Require.RegexVersion = ""
 	body :=
 		`[
 			{
@@ -315,7 +315,7 @@ func TestServiceGetVersionsWithRegexContent(t *testing.T) {
 	want := "0.6.0"
 	if version != want {
 		t.Errorf("GetVersion didn't use the RegexContent %q to filter out releases and return %q. Instead got %q",
-			*service.LatestVersion.Require.RegexContent, want, version)
+			service.LatestVersion.Require.RegexContent, want, version)
 	}
 }
 
@@ -324,8 +324,8 @@ func TestServiceGetVersionsWithNoMatchingRegexContent(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
-	*service.LatestVersion.Require.RegexVersion = ""
+	service.LatestVersion.Require.RegexContent = "Argus-[0-9.]+\\.linux-amd64"
+	service.LatestVersion.Require.RegexVersion = ""
 	body :=
 		`[
 			{
@@ -354,7 +354,7 @@ func TestServiceGetVersionsWithNoMatchingRegexContent(t *testing.T) {
 	// THEN an err is occured as no releases match the RegexContent
 	if err == nil {
 		t.Errorf("GetVersion didn't use the RegexContent %q to filter out every release and return an err. Instead got %v",
-			*service.LatestVersion.Require.RegexContent, err)
+			service.LatestVersion.Require.RegexContent, err)
 	}
 }
 
@@ -363,8 +363,8 @@ func TestServiceGetVersionsWithNoMatchingURLCommands(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
 	*service.UsePreRelease = false
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = ""
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = ""
 	urlCommand := testURLCommandRegex()
 	*urlCommand.Regex = "^[0-9.]+\\-beta$"
 	service.URLCommands = &filters.URLCommandSlice{urlCommand}
@@ -392,8 +392,8 @@ func TestServiceGetVersionsWithNonSemanticVersioning(t *testing.T) {
 	// GIVEN a Service with non-semantic versioning and a Query body with non-semantic versions
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	*service.SemanticVersioning = false
 	body :=
 		`[
@@ -423,8 +423,8 @@ func TestServiceGetVersionsWithSemanticVersioningAndSomeNonSemanticReleases(t *t
 	// GIVEN a Service wanrinf semantic versioning and a Query body with both semantic and non-semantic versions
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = ""
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+"
+	service.LatestVersion.Require.RegexContent = ""
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+"
 	body :=
 		`[
 			{

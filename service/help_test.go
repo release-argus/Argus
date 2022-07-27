@@ -45,8 +45,8 @@ func testServiceGitHub() Service {
 			AccessToken: stringPtr("secret"),
 			URL:         "release-argus/Argus",
 			Require: &filters.Require{
-				RegexContent: stringPtr("content"),
-				RegexVersion: stringPtr("version"),
+				RegexContent: "content",
+				RegexVersion: "version",
 			},
 			AllowInvalidCerts: boolPtr(true),
 			UsePreRelease:     boolPtr(false),
@@ -92,8 +92,8 @@ func testServiceURL() Service {
 		LatestVersion: latest_version.Lookup{
 			URL: "release-argus/Argus",
 			Require: &filters.Require{
-				RegexContent: stringPtr("content"),
-				RegexVersion: stringPtr("version"),
+				RegexContent: "content",
+				RegexVersion: "version",
 			},
 			AllowInvalidCerts: boolPtr(true),
 			UsePreRelease:     boolPtr(false),

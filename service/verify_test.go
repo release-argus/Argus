@@ -111,7 +111,7 @@ func TestServiceCheckValuesWithInvalidType(t *testing.T) {
 func TestServiceCheckValuesWithInvalidRegexContent(t *testing.T) {
 	// GIVEN a service with invalid RegexContent
 	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexContent = stringPtr("abc[0-")
+	service.LatestVersion.Require.RegexContent = "abc[0-"
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -119,14 +119,14 @@ func TestServiceCheckValuesWithInvalidRegexContent(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from RegexContent being %q",
-			*service.LatestVersion.Require.RegexContent)
+			service.LatestVersion.Require.RegexContent)
 	}
 }
 
 func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
 	// GIVEN a service with invalid RegexVersion
 	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexVersion = stringPtr("abc[0-")
+	service.LatestVersion.Require.RegexVersion = "abc[0-"
 
 	// WHEN CheckValues is called
 	err := service.CheckValues("")
@@ -134,7 +134,7 @@ func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
 	// THEN err is non-nil
 	if err == nil {
 		t.Errorf("Expecting err from RegexVersion being %q",
-			*service.LatestVersion.Require.RegexVersion)
+			service.LatestVersion.Require.RegexVersion)
 	}
 }
 

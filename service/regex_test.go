@@ -24,9 +24,9 @@ import (
 )
 
 func TestRegexCheckVersionWithNil(t *testing.T) {
-	// GIVEN a Service with a nil RegexVersion
+	// GIVEN a Service with no RegexVersion
 	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexVersion = nil
+	service.LatestVersion.Require.RegexVersion = ""
 
 	// WHEN RegexCheckVersion is called on it
 	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3", jLog, utils.LogFrom{})
@@ -42,7 +42,7 @@ func TestRegexCheckVersionWithNil(t *testing.T) {
 func TestRegexCheckVersionWithMatch(t *testing.T) {
 	// GIVEN a Service with a RegexVersion
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexVersion = "^[0-9.]+$"
+	service.LatestVersion.Require.RegexVersion = "^[0-9.]+$"
 
 	// WHEN RegexCheckVersion is called on it with a matching version
 	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3", jLog, utils.LogFrom{})
@@ -59,7 +59,7 @@ func TestRegexCheckVersionWithNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexVersion
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
+	service.LatestVersion.Require.RegexVersion = "[0-9.]+$"
 
 	// WHEN RegexCheckVersion is called on it with a non-matching version
 	err := service.LatestVersion.Require.RegexCheckVersion("1.2.3-beta", jLog, utils.LogFrom{})
@@ -72,9 +72,9 @@ func TestRegexCheckVersionWithNoMatch(t *testing.T) {
 }
 
 func TestRegexCheckContentWithStringNil(t *testing.T) {
-	// GIVEN a Service with a nil RegexContent
+	// GIVEN a Service with an empty RegexContent
 	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexContent = nil
+	service.LatestVersion.Require.RegexContent = ""
 
 	// WHEN RegexCheckContent is called on it
 	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3.debsomething", jLog, utils.LogFrom{})
@@ -91,7 +91,7 @@ func TestRegexCheckContentWithStringMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb"
+	service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb"
 
 	// WHEN RegexCheckContent is called on it with a matching version
 	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3.debsomething", jLog, utils.LogFrom{})
@@ -108,7 +108,7 @@ func TestRegexCheckContentWithStringNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 
 	// WHEN RegexCheckContent is called on it with a non-matching version
 	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", "something1.2.3-beta.debsomething", jLog, utils.LogFrom{})
@@ -124,7 +124,7 @@ func TestRegexCheckContentWithGitHubAssetMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 	githubAsset := []github_types.Asset{
 		{Name: "1.2.2", BrowserDownloadURL: "https://example.com/1.2.2.deb"},
 		{Name: "1.2.3", BrowserDownloadURL: "https://example.com/1.2.3.deb"},
@@ -144,7 +144,7 @@ func TestRegexCheckContentWithGitHubAssetNoMatch(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 	githubAsset := []github_types.Asset{
 		{Name: "1.2.2", BrowserDownloadURL: "https://example.com/1.2.2.deb"},
 		{Name: "1.2.3", BrowserDownloadURL: "https://example.com/1.2.3.exe"},
@@ -164,7 +164,7 @@ func TestRegexCheckContentWithInvalidBodyType(t *testing.T) {
 	// GIVEN a Service with a RegexContent and GitHubAsset
 	jLog = utils.NewJLog("WARN", false)
 	service := testServiceGitHub()
-	*service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
+	service.LatestVersion.Require.RegexContent = "{{ version }}\\.deb$"
 
 	// WHEN RegexCheckContent is called on it with a non-valid body type
 	err := service.LatestVersion.Require.RegexCheckContent("1.2.3", 123, jLog, utils.LogFrom{})

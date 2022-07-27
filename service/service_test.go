@@ -64,7 +64,7 @@ func TestServiceQuery(t *testing.T) {
 			}},
 		LatestVersion: latest_version.Lookup{
 			Require: &filters.Require{
-				RegexVersion: &serviceRegexVersion,
+				RegexVersion: serviceRegexVersion,
 			},
 		},
 		Status: service_status.Status{
