@@ -117,9 +117,9 @@ func (l *JLog) IsLevel(level string) bool {
 //
 // (if otherCondition is true)
 func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
-	msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
 	if otherCondition {
+		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+		// ERROR: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("ERROR: %s\n", msgString)
 		} else {
@@ -132,9 +132,9 @@ func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
 //
 // (if otherCondition is true)
 func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
-	msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
 	if l.Level > 0 && otherCondition {
+		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+		// WARNING: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("WARNING: %s\n", msgString)
 		} else {
@@ -147,9 +147,8 @@ func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
 //
 // (if otherCondition is true)
 func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
-	msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
 	if l.Level > 1 && otherCondition {
+		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 		// INFO: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("INFO: %s\n", msgString)
@@ -163,9 +162,9 @@ func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 //
 // (if otherCondition is true)
 func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
-	msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
 	if l.Level > 2 && otherCondition {
+		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+		// VERBOSE: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("VERBOSE: %s\n", msgString)
 		} else {
@@ -178,9 +177,9 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 //
 // (if otherCondition is true)
 func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
-	msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
 	if l.Level == 4 && otherCondition {
+		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+		// DEBUG: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("DEBUG: %s\n", msgString)
 		} else {
