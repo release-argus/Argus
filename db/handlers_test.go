@@ -31,10 +31,14 @@ func TestUpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
 	tests := map[string]struct {
-		cells []db_types.Cell
+		cells  []db_types.Cell
+		target string
 	}{
-		"update single column of a row": {cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
-		"update multiple columns of a row": {cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+		"update single column of a row": {target: "keep0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a row": {target: "keep0", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
+		"update single column of a non-existing row (new service)": {target: "new0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a non-existing  row (new service)": {target: "new1", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
 			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
 	}
 
@@ -47,12 +51,11 @@ func TestUpdateRow(t *testing.T) {
 			api.convertServiceStatus()
 
 			// WHEN updateRow is called targeting single/multiple cells
-			target := "keep0"
-			api.updateRow(target, tc.cells)
+			api.updateRow(tc.target, tc.cells)
 			time.Sleep(100 * time.Millisecond)
 
 			// THEN those cell(s) are changed in the DB
-			row := queryRow(t, api.db, target)
+			row := queryRow(t, api.db, tc.target)
 			for _, cell := range tc.cells {
 				var got *string
 				switch cell.Column {
