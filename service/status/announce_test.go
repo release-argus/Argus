@@ -23,218 +23,178 @@ import (
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceFirstVersionWithNilAnnounce(t *testing.T) {
-	// GIVEN a Status with a nil Announce
-	status := testStatus()
-	status.AnnounceChannel = nil
-
-	// WHEN AnnounceFirstVersion is called on it
-	status.AnnounceFirstVersion()
-
-	// THEN the function doesn't hang/err
-}
-
-func TestAnnounceFirstVersionWithAnnounce(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceFirstVersion is called on it
-	status.AnnounceFirstVersion()
-
-	// THEN the function announces to the channel
-	got := len(*status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
 func TestAnnounceFirstVersion(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceFirstVersion is called on it
-	status.AnnounceFirstVersion()
-
-	// THEN the message contains the correct data
-	gotData := <-*status.AnnounceChannel
-	var got api_types.WebSocketMessage
-	json.Unmarshal(gotData, &got)
-	wantID := *status.ServiceID
-	wantLatestVersion := status.LatestVersion
-	wantLatestVersionTimestamp := status.LatestVersionTimestamp
-	if got.ServiceData.ID != wantID {
-		t.Errorf("ID - got %q, want %q",
-			got.ServiceData.ID, wantID)
+	// GIVEN a Status
+	tests := map[string]struct {
+		nilChannel bool
+	}{
+		"nil channel doesn't crash":  {nilChannel: true},
+		"non-nil sends correct data": {nilChannel: false},
 	}
-	if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-		t.Errorf("LatestVersion - got %q, want %q",
-			got.ServiceData.Status.LatestVersion, wantLatestVersion)
-	}
-	if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-		t.Errorf("LatestVersionTimestamp - got %q, want %q",
-			got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp)
-	}
-}
 
-func TestAnnounceQueryWithNilAnnounce(t *testing.T) {
-	// GIVEN a Status with a nil Announce
-	status := testStatus()
-	status.AnnounceChannel = nil
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := testStatus()
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			wantID := *status.ServiceID
+			wantLatestVersion := status.LatestVersion
+			wantLatestVersionTimestamp := status.LatestVersionTimestamp
 
-	// WHEN AnnounceQuery is called on it
-	status.AnnounceQuery()
+			// WHEN AnnounceFirstVersion is called on it
+			status.AnnounceFirstVersion()
 
-	// THEN the function doesn't hang/err
-}
-
-func TestAnnounceQueryWithAnnounce(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceQuery is called on it
-	status.AnnounceQuery()
-
-	// THEN the function announces to the channel
-	got := len(*status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+			// THEN the message is received
+			if tc.nilChannel {
+				return
+			}
+			gotData := <-*status.AnnounceChannel
+			var got api_types.WebSocketMessage
+			json.Unmarshal(gotData, &got)
+			if got.ServiceData.ID != wantID {
+				t.Fatalf("ID - got %q, want %q",
+					got.ServiceData.ID, wantID)
+			}
+			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
+				t.Errorf("LatestVersion - got %q, want %q",
+					got.ServiceData.Status.LatestVersion, wantLatestVersion)
+			}
+			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
+				t.Errorf("LatestVersionTimestamp - got %q, want %q",
+					got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp)
+			}
+		})
 	}
 }
 
 func TestAnnounceQuery(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceQuery is called on it
-	status.AnnounceQuery()
-
-	// THEN the message contains the correct data
-	gotData := <-*status.AnnounceChannel
-	var got api_types.WebSocketMessage
-	json.Unmarshal(gotData, &got)
-	wantID := *status.ServiceID
-	wantLastQueried := status.LastQueried
-	if got.ServiceData.ID != wantID {
-		t.Errorf("ID - got %q, want %q",
-			got.ServiceData.ID, wantID)
+	// GIVEN a Status
+	tests := map[string]struct {
+		nilChannel bool
+	}{
+		"nil channel doesn't crash":  {nilChannel: true},
+		"non-nil sends correct data": {nilChannel: false},
 	}
-	if got.ServiceData.Status.LastQueried != wantLastQueried {
-		t.Errorf("LastQueried - got %q, want %q",
-			got.ServiceData.Status.LastQueried, wantLastQueried)
-	}
-}
 
-func TestAnnounceQueryNewVersionWithNilAnnounce(t *testing.T) {
-	// GIVEN a Status with a nil Announce
-	status := testStatus()
-	status.AnnounceChannel = nil
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := testStatus()
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			wantID := *status.ServiceID
+			wantLastQueried := status.LastQueried
 
-	// WHEN AnnounceQueryNewVersion is called on it
-	status.AnnounceQueryNewVersion()
+			// WHEN AnnounceQuery is called on it
+			status.AnnounceQuery()
 
-	// THEN the function doesn't hang/err
-}
-
-func TestAnnounceQueryNewVersionWithAnnounce(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceQueryNewVersion is called on it
-	status.AnnounceQueryNewVersion()
-
-	// THEN the function announces to the channel
-	got := len(*status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+			// THEN the message is received
+			if tc.nilChannel {
+				return
+			}
+			gotData := <-*status.AnnounceChannel
+			var got api_types.WebSocketMessage
+			json.Unmarshal(gotData, &got)
+			if got.ServiceData.ID != wantID {
+				t.Fatalf("ID - got %q, want %q\n%#v",
+					got.ServiceData.ID, wantID, got.ServiceData.Status)
+			}
+			if got.ServiceData.Status.LastQueried != wantLastQueried {
+				t.Errorf("%s:\nLastQueried - got %q, want %q",
+					name, got.ServiceData.Status.LatestVersion, wantLastQueried)
+			}
+		})
 	}
 }
 
 func TestAnnounceQueryNewVersion(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceQueryNewVersion is called on it
-	status.AnnounceQueryNewVersion()
-
-	// THEN the message contains the correct data
-	gotData := <-*status.AnnounceChannel
-	var got api_types.WebSocketMessage
-	json.Unmarshal(gotData, &got)
-	wantID := *status.ServiceID
-	wantLatestVersion := status.LatestVersion
-	wantLatestVersionTimestamp := status.LatestVersionTimestamp
-	if got.ServiceData.ID != wantID {
-		t.Errorf("ID - got %q, want %q",
-			got.ServiceData.ID, wantID)
+	// GIVEN a Status
+	tests := map[string]struct {
+		nilChannel bool
+	}{
+		"nil channel doesn't crash":  {nilChannel: true},
+		"non-nil sends correct data": {nilChannel: false},
 	}
-	if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-		t.Errorf("LatestVersion - got %q, want %q",
-			got.ServiceData.Status.LatestVersion, wantLatestVersion)
-	}
-	if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-		t.Errorf("LatestVersionTimestamp - got %q, want %q",
-			got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp)
-	}
-}
 
-func TestAnnounceUpdateWithNilAnnounce(t *testing.T) {
-	// GIVEN a Status with a nil Announce
-	status := testStatus()
-	status.AnnounceChannel = nil
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := testStatus()
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			wantID := *status.ServiceID
+			wantLatestVersion := status.LatestVersion
+			wantLatestVersionTimestamp := status.LatestVersionTimestamp
 
-	// WHEN AnnounceUpdate is called on it
-	status.AnnounceUpdate()
+			// WHEN AnnounceQueryNewVersion is called on it
+			status.AnnounceQueryNewVersion()
 
-	// THEN the function doesn't hang/err
-}
-
-func TestAnnounceUpdateWithAnnounce(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceUpdate is called on it
-	status.AnnounceUpdate()
-
-	// THEN the function announces to the channel
-	got := len(*status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+			// THEN the message is received
+			if tc.nilChannel {
+				return
+			}
+			gotData := <-*status.AnnounceChannel
+			var got api_types.WebSocketMessage
+			json.Unmarshal(gotData, &got)
+			if got.ServiceData.ID != wantID {
+				t.Fatalf("ID - got %q, want %q\n%#v",
+					got.ServiceData.ID, wantID, got.ServiceData.Status)
+			}
+			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
+				t.Errorf("%s:\nLatestVersion - got %q, want %q",
+					name, got.ServiceData.Status.LatestVersion, wantLatestVersion)
+			}
+			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
+				t.Errorf("%s:\nLatestVersionTimestamp - got %q, want %q\n%#v",
+					name, got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp, got.ServiceData.Status)
+			}
+		})
 	}
 }
 
 func TestAnnounceUpdate(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceUpdate is called on it
-	status.AnnounceUpdate()
-
-	// THEN the message contains the correct data
-	gotData := <-*status.AnnounceChannel
-	var got api_types.WebSocketMessage
-	json.Unmarshal(gotData, &got)
-	wantID := *status.ServiceID
-	wantDeployedVersion := status.DeployedVersion
-	wantDeployedVersionTimestamp := status.DeployedVersionTimestamp
-	if got.ServiceData.ID != wantID {
-		t.Errorf("ID - got %q, want %q",
-			got.ServiceData.ID, wantID)
+	// GIVEN a Status
+	tests := map[string]struct {
+		nilChannel bool
+	}{
+		"nil channel doesn't crash":  {nilChannel: true},
+		"non-nil sends correct data": {nilChannel: false},
 	}
-	if got.ServiceData.Status.DeployedVersion != wantDeployedVersion {
-		t.Errorf("DeployedVersion - got %q, want %q",
-			got.ServiceData.Status.DeployedVersion, wantDeployedVersion)
-	}
-	if got.ServiceData.Status.DeployedVersionTimestamp != wantDeployedVersionTimestamp {
-		t.Errorf("DeployedVersionTimestamp - got %q, want %q",
-			got.ServiceData.Status.DeployedVersionTimestamp, wantDeployedVersionTimestamp)
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := testStatus()
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			wantID := *status.ServiceID
+			wantDeployedVersion := status.DeployedVersion
+			wantDeployedVersionTimestamp := status.DeployedVersionTimestamp
+
+			// WHEN AnnounceUpdate is called on it
+			status.AnnounceUpdate()
+
+			// THEN the message is received
+			if tc.nilChannel {
+				return
+			}
+			gotData := <-*status.AnnounceChannel
+			var got api_types.WebSocketMessage
+			json.Unmarshal(gotData, &got)
+			if got.ServiceData.ID != wantID {
+				t.Fatalf("ID - got %q, want %q\n%#v",
+					got.ServiceData.ID, wantID, got.ServiceData.Status)
+			}
+			if got.ServiceData.Status.DeployedVersion != wantDeployedVersion {
+				t.Errorf("%s:\nDeployedVersion - got %q, want %q",
+					name, got.ServiceData.Status.DeployedVersion, wantDeployedVersion)
+			}
+			if got.ServiceData.Status.DeployedVersionTimestamp != wantDeployedVersionTimestamp {
+				t.Errorf("%s:\nDeployedVersionTimestamp - got %q, want %q\n%#v",
+					name, got.ServiceData.Status.DeployedVersionTimestamp, wantDeployedVersionTimestamp, got.ServiceData.Status)
+			}
+		})
 	}
 }
 
@@ -266,24 +226,41 @@ func TestAnnounceApprovedWithAnnounce(t *testing.T) {
 }
 
 func TestAnnounceApproved(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceApproved is called on it
-	status.AnnounceApproved()
-
-	// THEN the message contains the correct data
-	gotData := <-*status.AnnounceChannel
-	var got api_types.WebSocketMessage
-	json.Unmarshal(gotData, &got)
-	wantID := *status.ServiceID
-	wantApprovedVersion := status.ApprovedVersion
-	if got.ServiceData.ID != wantID {
-		t.Errorf("ID - got %q, want %q",
-			got.ServiceData.ID, wantID)
+	// GIVEN a Status
+	tests := map[string]struct {
+		nilChannel bool
+	}{
+		"nil channel doesn't crash":  {nilChannel: true},
+		"non-nil sends correct data": {nilChannel: false},
 	}
-	if got.ServiceData.Status.ApprovedVersion != wantApprovedVersion {
-		t.Errorf("ApprovedVersion - got %q, want %q",
-			got.ServiceData.Status.ApprovedVersion, wantApprovedVersion)
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := testStatus()
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			wantID := *status.ServiceID
+			wantApprovedVersion := status.ApprovedVersion
+
+			// WHEN AnnounceApproved is called on it
+			status.AnnounceApproved()
+
+			// THEN the message is received
+			if tc.nilChannel {
+				return
+			}
+			gotData := <-*status.AnnounceChannel
+			var got api_types.WebSocketMessage
+			json.Unmarshal(gotData, &got)
+			if got.ServiceData.ID != wantID {
+				t.Fatalf("ID - got %q, want %q\n%#v",
+					got.ServiceData.ID, wantID, got.ServiceData.Status)
+			}
+			if got.ServiceData.Status.ApprovedVersion != wantApprovedVersion {
+				t.Errorf("%s:\nApprovedVersion - got %q, want %q",
+					name, got.ServiceData.Status.LatestVersion, wantApprovedVersion)
+			}
+		})
 	}
 }
