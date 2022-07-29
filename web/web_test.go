@@ -322,7 +322,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			commands: &command.Slice{{"ls", "/root"}, {"ls"}}, commandFails: []*bool{boolPtr(false), boolPtr(true)},
 			webhooks: &webhook.Slice{"would_fail": testWebHookFail("would_fail")}, webhookFails: map[string]*bool{"would_fail": boolPtr(false)},
 			removeDVL: true, upgradesDeployedVersion: true},
-		"target=command_x, service_id=known - service has multiple commands targetted individually (handle broadcast queue)": {serviceID: stringPtr("test"),
+		"target=command_x, service_id=known - service has multiple commands targeted individually (handle broadcast queue)": {serviceID: stringPtr("test"),
 			commands: &command.Slice{{"ls"}, {"false"}, {"true"}}, approveCommandsIndividually: true},
 	}
 
@@ -402,6 +402,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				}
 				time.Sleep(10 * time.Microsecond)
 			}
+			time.Sleep(100 * time.Millisecond)
 
 			// THEN we get the expected response
 			p := seeIfMessage(t, ws)

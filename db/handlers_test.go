@@ -17,54 +17,69 @@
 package db
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	db_types "github.com/release-argus/Argus/db/types"
-	service_status "github.com/release-argus/Argus/service/status"
 	_ "modernc.org/sqlite"
 )
 
 func TestUpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
-	cfg := testConfig()
-	api := api{config: &cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestUpdateRow.db"
-	api.initialise()
-	api.convertServiceStatus()
 	tests := map[string]struct {
-		row   string
-		cells []db_types.Cell
-		want  service_status.Status
+		cells  []db_types.Cell
+		target string
 	}{
-		"single_column": {row: "keep0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}},
-			want: service_status.Status{ApprovedVersion: "0.0.1",
-				DeployedVersion: "0.0.0", DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
-				LatestVersion: "9.9.9", LatestVersionTimestamp: "2022-01-01T01:01:01Z"}},
-		"multiple_columns": {row: "keep1", cells: []db_types.Cell{{Column: "deployed_version", Value: "9.9.9"}, {Column: "deployed_version_timestamp", Value: "2022-02-02T02:02:02Z"}},
-			want: service_status.Status{ApprovedVersion: "0.0.1",
-				DeployedVersion: "9.9.9", DeployedVersionTimestamp: "2022-02-02T02:02:02Z",
-				LatestVersion: "0.0.2", LatestVersionTimestamp: "2022-01-01T01:01:01Z"}},
+		"update single column of a row": {target: "keep0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a row": {target: "keep0", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
+		"update single column of a non-existing row (new service)": {target: "new0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a non-existing  row (new service)": {target: "new1", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			cfg := testConfig()
+			api := api{config: &cfg}
+			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
+			api.initialise()
+			api.convertServiceStatus()
 
-			// WHEN updateRow is called targeting latest_version
-			api.updateRow(tc.row, tc.cells)
+			// WHEN updateRow is called targeting single/multiple cells
+			api.updateRow(tc.target, tc.cells)
+			time.Sleep(100 * time.Millisecond)
 
-			// THEN the row was changed correctly
-			got := queryRow(t, api.db, tc.row)
-			if got != tc.want {
-				t.Errorf("Expected row to be updated with %v\ngot  %v\nwant %v",
-					tc.cells, got, tc.want)
+			// THEN those cell(s) are changed in the DB
+			row := queryRow(t, api.db, tc.target)
+			for _, cell := range tc.cells {
+				var got *string
+				switch cell.Column {
+				case "latest_version":
+					got = &row.LatestVersion
+				case "latest_version_timestamp":
+					got = &row.LatestVersionTimestamp
+				case "deployed_version":
+					got = &row.DeployedVersion
+				case "deployed_version_timestamp":
+					got = &row.DeployedVersionTimestamp
+				case "approved_version":
+					got = &row.ApprovedVersion
+				}
+				if *got != cell.Value {
+					t.Errorf("%s:\nexpecting %s to have been updated to %q. got %q",
+						name, cell.Column, cell.Value, *got)
+				}
 			}
+			api.db.Close()
+			os.Remove(*api.config.Settings.Data.DatabaseFile)
+			time.Sleep(100 * time.Millisecond)
 		})
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
 func TestHandler(t *testing.T) {
@@ -90,9 +105,8 @@ func TestHandler(t *testing.T) {
 
 	// THEN the cell was changed in the DB
 	got := queryRow(t, api.db, target)
-	// t.Fatal(want)
-	if got != want {
-		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
+	if got.LatestVersion != want.LatestVersion {
+		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
 	}
 	api.db.Close()

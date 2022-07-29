@@ -42,9 +42,26 @@ func (api *api) updateRow(serviceID string, cells []db_types.Cell) {
 	}
 	sqlStmt := fmt.Sprintf("UPDATE status SET %s WHERE id = '%s'",
 		replace[:len(replace)-1], serviceID)
-	_, err := api.db.Exec(sqlStmt)
+	res, err := api.db.Exec(sqlStmt)
 	jLog.Error(
-		fmt.Sprintf("updateRow: %s", utils.ErrorToString(err)),
+		fmt.Sprintf("updateRow UPDATE: %q, %s", sqlStmt, utils.ErrorToString(err)),
 		*logFrom,
 		err != nil)
+	count, _ := res.RowsAffected()
+	// If this ServiceID wasn't in the DB
+	if err == nil && count == 0 {
+		var columns string
+		var values string
+		for i := range cells {
+			columns += fmt.Sprintf("'%s',", cells[i].Column)
+			values += fmt.Sprintf("'%s',", cells[i].Value)
+		}
+		sqlStmt = fmt.Sprintf("INSERT INTO status ('id', %s) VALUES ('%s', %s)",
+			columns[:len(columns)-1], serviceID, values[:len(values)-1])
+		_, err = api.db.Exec(sqlStmt)
+		jLog.Error(
+			fmt.Sprintf("updateRow INSERT: %q, %s", sqlStmt, utils.ErrorToString(err)),
+			*logFrom,
+			err != nil)
+	}
 }
