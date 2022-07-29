@@ -32,7 +32,6 @@ func testStatus() Status {
 		announceChannel chan []byte           = make(chan []byte, 2)
 		saveChannel     chan bool             = make(chan bool, 5)
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
-		webURL          *string               = stringPtr("")
 	)
 	return Status{
 		ServiceID:                stringPtr("test"),
@@ -42,7 +41,7 @@ func testStatus() Status {
 		DeployedVersion:          "0.0.0",
 		DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
 		LastQueried:              "2002-02-02T00:00:00Z",
-		WebURL:                   &webURL,
+		WebURL:                   stringPtr(""),
 		AnnounceChannel:          &announceChannel,
 		SaveChannel:              &saveChannel,
 		DatabaseChannel:          &databaseChannel,

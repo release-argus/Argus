@@ -226,7 +226,7 @@ func TestTrack(t *testing.T) {
 					LatestVersion:   tc.startLatestVersion,
 					AnnounceChannel: &announceChannel,
 					DatabaseChannel: &dbChannel,
-					WebURL:          &webURL,
+					WebURL:          webURL,
 				}
 			}
 			didFinish := make(chan bool, 1)

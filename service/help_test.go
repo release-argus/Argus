@@ -17,11 +17,14 @@
 package service
 
 import (
+	"fmt"
+
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -30,6 +33,19 @@ func stringPtr(val string) *string {
 }
 func boolPtr(val bool) *bool {
 	return &val
+}
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
+}
+func testLogging() {
+	jLog = utils.NewJLog("WARN", false)
+	jLog.Testing = true
+	var webhookLogs *webhook.Slice
+	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil, nil)
 }
 
 func testServiceGitHub() Service {
@@ -53,9 +69,9 @@ func testServiceGitHub() Service {
 		},
 		Dashboard: DashboardOptions{
 			AutoApprove: boolPtr(false),
-			Icon:        stringPtr("test"),
-			IconLinkTo:  stringPtr("https://example.com"),
-			WebURL:      stringPtr("https://release-argus.io"),
+			Icon:        "test",
+			IconLinkTo:  "https://example.com",
+			WebURL:      "https://release-argus.io",
 		},
 		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",
@@ -82,7 +98,7 @@ func testServiceGitHub() Service {
 
 func testServiceURL() Service {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 2)
+		announceChannel chan []byte           = make(chan []byte, 5)
 		saveChannel     chan bool             = make(chan bool, 5)
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
@@ -99,12 +115,15 @@ func testServiceURL() Service {
 			UsePreRelease:     boolPtr(false),
 		},
 		Dashboard: DashboardOptions{
-			AutoApprove: boolPtr(false),
-			Icon:        stringPtr("test"),
-			IconLinkTo:  stringPtr("https://release-argus.io"),
-			WebURL:      stringPtr("https://release-argus.io"),
+			AutoApprove:  boolPtr(false),
+			Icon:         "test",
+			IconLinkTo:   "https://release-argus.io",
+			WebURL:       "https://release-argus.io",
+			Defaults:     &DashboardOptions{},
+			HardDefaults: &DashboardOptions{},
 		},
 		Status: service_status.Status{
+			ServiceID:                stringPtr("test"),
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
@@ -127,52 +146,40 @@ func testServiceURL() Service {
 	return svc
 }
 
-func testWebHookSuccessful() webhook.WebHook {
-	whID := "test"
-	whType := "github"
-	whURL := "https://httpbin.org/anything"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
-	whDesiredStatusCode := 0
-	whSilentFails := true
+func testWebHookSuccessful() *webhook.WebHook {
+	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	parentInterval := "12m"
-	return webhook.WebHook{
-		ID:                whID,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		DesiredStatusCode: &whDesiredStatusCode,
-		SilentFails:       &whSilentFails,
+	return &webhook.WebHook{
+		ID:                "test",
+		Type:              stringPtr("github"),
+		URL:               stringPtr("https://valid.release-argus.io/hooks/github-style"),
+		Secret:            stringPtr("argus"),
+		AllowInvalidCerts: boolPtr(false),
+		DesiredStatusCode: &desiredStatusCode,
+		Delay:             stringPtr("0s"),
+		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
+		ParentInterval:    stringPtr("12m"),
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
 	}
 }
 
-func testWebHookFailing() webhook.WebHook {
-	whID := "test"
-	whType := "github"
-	whURL := "https://httpbin.org/hidden-basic-auth/:user/:passwd"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
-	whDesiredStatusCode := 0
-	whSilentFails := true
+func testWebHookFailing() *webhook.WebHook {
+	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	parentInterval := "12m"
-	return webhook.WebHook{
-		ID:                whID,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		DesiredStatusCode: &whDesiredStatusCode,
-		SilentFails:       &whSilentFails,
+	return &webhook.WebHook{
+		ID:                "test",
+		Type:              stringPtr("github"),
+		URL:               stringPtr("https://valid.release-argus.io/hooks/github-style"),
+		Secret:            stringPtr("notArgus"),
+		AllowInvalidCerts: boolPtr(false),
+		DesiredStatusCode: &desiredStatusCode,
+		Delay:             stringPtr("0s"),
+		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
+		ParentInterval:    stringPtr("12m"),
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},

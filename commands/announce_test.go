@@ -128,19 +128,25 @@ func TestFind(t *testing.T) {
 		Failed:        &fails,
 	}
 	tests := map[string]struct {
-		command string
-		want    *int
+		command       string
+		want          *int
+		nilController bool
 	}{
 		"command at first index":      {command: "ls -lah", want: intPtr(0)},
 		"command at second index":     {command: "ls -lah a", want: intPtr(1)},
 		"command with service_status": {command: "bash upgrade.sh 1.2.3", want: intPtr(3)},
-		"unknwon command":             {command: "ls -lah /root", want: nil},
+		"unknown command":             {command: "ls -lah /root", want: nil},
+		"nil controller":              {command: "ls -lah /root", want: nil},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			var target *Controller
+			if !tc.nilController {
+				target = &controller
+			}
 			// WHEN Find is run for a command
-			index := controller.Find(tc.command)
+			index := target.Find(tc.command)
 
 			// THEN the index is returned if it exists
 			got := "nil"
@@ -157,6 +163,7 @@ func TestFind(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestResetFails(t *testing.T) {

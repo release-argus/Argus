@@ -37,7 +37,7 @@ func (c *Controller) Init(
 	if log != nil {
 		jLog = log
 	}
-	if c == nil {
+	if c == nil || len(*command) == 0 {
 		return
 	}
 

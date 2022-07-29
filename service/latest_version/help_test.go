@@ -56,8 +56,7 @@ func testLookupGitHub() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	webURL := stringPtr("")
-	lookup.status.WebURL = &webURL
+	lookup.status.WebURL = stringPtr("")
 	lookup.Require.Status = lookup.status
 	return lookup
 }
@@ -88,8 +87,7 @@ func testLookupURL() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	webURL := stringPtr("")
-	lookup.status.WebURL = &webURL
+	lookup.status.WebURL = stringPtr("")
 	lookup.Require.Status = lookup.status
 	return lookup
 }

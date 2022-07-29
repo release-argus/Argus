@@ -59,7 +59,7 @@ func TestInit(t *testing.T) {
 					name, tc.serviceID, &tc.serviceID, status.ServiceID)
 			}
 			// WebURL
-			if *status.WebURL != &tc.webURL {
+			if status.WebURL != &tc.webURL {
 				t.Errorf("%s:\nWebURL not initialised to address of %s (%v). Got %v",
 					name, tc.webURL, &tc.webURL, status.WebURL)
 			}
@@ -117,7 +117,7 @@ func TestGetWebURL(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			status := Status{LatestVersion: latestVersion, WebURL: &tc.webURL}
+			status := Status{LatestVersion: latestVersion, WebURL: tc.webURL}
 
 			// WHEN GetWebURL is called
 			got := status.GetWebURL()

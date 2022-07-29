@@ -961,9 +961,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					t.Errorf("ConfigData.Service.test.LatestVersion.URL should've been %q, got %q",
 						cfgTestService.LatestVersion.URL, receivedTestService.LatestVersion.URL)
 				}
-				if *receivedTestService.Dashboard.WebURL != *cfgTestService.WebURL {
+				if receivedTestService.Dashboard.WebURL != *cfgTestService.WebURL {
 					t.Errorf("ConfigData.Service.test.Dashboard.WebURL should've been %q, got %q",
-						*cfgTestService.Dashboard.WebURL, *receivedTestService.Dashboard.WebURL)
+						cfgTestService.Dashboard.WebURL, receivedTestService.Dashboard.WebURL)
 				}
 				if receivedTestService.LatestVersion.Require.RegexContent != cfgTestService.LatestVersion.Require.RegexContent {
 					t.Errorf("ConfigData.Service.test.LatestVersion.Require.RegexContent should've been %q, got %q",

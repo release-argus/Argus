@@ -31,7 +31,7 @@ func TestGetAutoApprove(t *testing.T) {
 		"root overrides all": {wantBool: true, autoApproveRoot: boolPtr(true),
 			autoApproveDefault: boolPtr(false), autoApproveHardDefault: boolPtr(false)},
 		"default overrides hardDefault": {wantBool: true, autoApproveRoot: nil,
-			autoApproveDefault: boolPtr(false), autoApproveHardDefault: boolPtr(false)},
+			autoApproveDefault: boolPtr(true), autoApproveHardDefault: boolPtr(false)},
 		"hardDefault is last resort": {wantBool: true, autoApproveRoot: nil, autoApproveDefault: nil,
 			autoApproveHardDefault: boolPtr(true)},
 	}
@@ -40,8 +40,8 @@ func TestGetAutoApprove(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dashboard := DashboardOptions{}
 			dashboard.AutoApprove = tc.autoApproveRoot
-			dashboard.Defaults.AutoApprove = tc.autoApproveDefault
-			dashboard.HardDefaults.AutoApprove = tc.autoApproveHardDefault
+			dashboard.Defaults = &DashboardOptions{AutoApprove: tc.autoApproveDefault}
+			dashboard.HardDefaults = &DashboardOptions{AutoApprove: tc.autoApproveHardDefault}
 
 			// WHEN GetAutoApprove is called
 			got := dashboard.GetAutoApprove()

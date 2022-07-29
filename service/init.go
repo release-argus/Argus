@@ -53,8 +53,8 @@ func (s *Service) GetServiceInfo() utils.ServiceInfo {
 // GetIconURL returns the URL Icon for the Service.
 func (s *Service) GetIconURL() string {
 	// Service.Icon
-	if s.Dashboard.Icon != nil && strings.HasPrefix(*s.Dashboard.Icon, "http") {
-		return *s.Dashboard.Icon
+	if strings.HasPrefix(s.Dashboard.Icon, "http") {
+		return s.Dashboard.Icon
 	}
 
 	if s.Notify != nil {

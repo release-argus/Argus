@@ -121,17 +121,17 @@ func (s *Service) convert() {
 	}
 	if s.Icon != nil {
 		didConvert = true
-		s.Dashboard.Icon = s.Icon
+		s.Dashboard.Icon = *s.Icon
 		s.Icon = nil
 	}
 	if s.IconLinkTo != nil {
 		didConvert = true
-		s.Dashboard.IconLinkTo = s.IconLinkTo
+		s.Dashboard.IconLinkTo = *s.IconLinkTo
 		s.IconLinkTo = nil
 	}
 	if s.WebURL != nil {
 		didConvert = true
-		s.Dashboard.WebURL = s.WebURL
+		s.Dashboard.WebURL = *s.WebURL
 		s.WebURL = nil
 	}
 

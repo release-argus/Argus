@@ -18,21 +18,59 @@ package service
 
 import (
 	"testing"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
+
+func TestGetServiceInfo(t *testing.T) {
+	// GIVEN a Service
+	service := testServiceURL()
+	id := "test_id"
+	service.ID = id
+	url := "https://test_url.com"
+	service.LatestVersion.URL = url
+	webURL := "https://test_webURL.com"
+	service.Dashboard.WebURL = webURL
+	latestVersion := "latest.version"
+	service.Status.LatestVersion = latestVersion
+	time.Sleep(10 * time.Millisecond)
+	time.Sleep(time.Second)
+
+	// When GetServiceInfo is called on it
+	got := service.GetServiceInfo()
+	want := utils.ServiceInfo{
+		ID:            id,
+		URL:           url,
+		WebURL:        webURL,
+		LatestVersion: latestVersion,
+	}
+
+	// THEN we get the correct ServiceInfo
+	if got != want {
+		t.Errorf("GetServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
+			want, got)
+	}
+}
 
 func TestServiceGetIconURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		icon   *string
+		icon   string
 		want   string
 		notify shoutrrr.Slice
 	}{
-		"nil icon":   {want: "", icon: nil},
-		"emoji icon": {want: ":smile:", icon: stringPtr(":smile:")},
-		"web icon":   {want: "https://example.com/icon.png", icon: stringPtr("https://example.com/icon.png")},
+		"no icon": {want: "", icon: ""},
+		"no icon anywhere": {want: "", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+			Main:         &shoutrrr.Shoutrrr{},
+			Defaults:     &shoutrrr.Shoutrrr{},
+			HardDefaults: &shoutrrr.Shoutrrr{},
+		}}},
+		"emoji icon": {want: "", icon: ":smile:"},
+		"web icon":   {want: "https://example.com/icon.png", icon: "https://example.com/icon.png"},
 		"notify icon only": {want: "https://example.com/icon.png", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
 			Params: map[string]string{
 				"icon": "https://example.com/icon.png",
@@ -41,12 +79,16 @@ func TestServiceGetIconURL(t *testing.T) {
 			Defaults:     &shoutrrr.Shoutrrr{},
 			HardDefaults: &shoutrrr.Shoutrrr{},
 		}}},
-		"no icon anywhere": {want: "https://example.com/icon.png", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		}}},
-		"notify icon overriden by icon": {want: ":smile:", icon: stringPtr(":smile:"),
+		"notify icon takes precedence over emoji": {want: "https://example.com/icon.png", icon: ":smile:",
+			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+				Params: map[string]string{
+					"icon": "https://example.com/icon.png",
+				},
+				Main:         &shoutrrr.Shoutrrr{},
+				Defaults:     &shoutrrr.Shoutrrr{},
+				HardDefaults: &shoutrrr.Shoutrrr{},
+			}}},
+		"dashboard icon takes precedence over notify icon": {want: "https://root.com/icon.png", icon: "https://root.com/icon.png",
 			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
 				Params: map[string]string{
 					"icon": "https://example.com/icon.png",
@@ -60,7 +102,7 @@ func TestServiceGetIconURL(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			service := testServiceGitHub()
-			service.Icon = tc.icon
+			service.Dashboard.Icon = tc.icon
 			service.Notify = tc.notify
 
 			// WHEN GetIconURL is called
@@ -75,73 +117,58 @@ func TestServiceGetIconURL(t *testing.T) {
 	}
 }
 
-func TestServiceInitHandsOutDefaults(t *testing.T) {
-	// GIVEN a Service with nil Defaults
-	service := testServiceGitHub()
-	service.Defaults = nil
-	defaults := Service{
-		ID: "test",
-	}
+func TestInit(t *testing.T) {
+	// GIVEN a Service
+	service := testServiceURL()
+	log := utils.NewJLog("WARN", false)
+	var defaults Service
+	var hardDefaults Service
 
 	// WHEN Init is called on it
-	service.Init(nil, &defaults, &Service{})
+	hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	service.Init(log, &defaults, &hardDefaults)
 
-	// THEN ApprovedVersion is reset
-	got := service.Defaults
-	if got != &defaults {
-		t.Errorf("Service should've been given %v Defaults, not %v",
-			defaults, got)
+	// THEN pointers to those vars are handed out to the Lookup
+	// log
+	if jLog != log {
+		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
+			log, jLog)
 	}
-}
-
-func TestServiceInitHandsOutHardDefaults(t *testing.T) {
-	// GIVEN a Service with nil HardDefaults
-	service := testServiceGitHub()
-	service.HardDefaults = nil
-	defaults := Service{ID: "test"}
-	// WHEN Init is called on it
-	service.Init(nil, &Service{}, &defaults)
-
-	// THEN ApprovedVersion is reset
-	got := service.HardDefaults
-	if got != &defaults {
-		t.Errorf("Service should've been given %v HardDefaults, not %v",
-			defaults, got)
+	// defaults
+	if service.Defaults != &defaults {
+		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&defaults, service.Defaults)
 	}
-}
-
-func TestServiceInitWithDeployedVersionLookupHandsOutDefaults(t *testing.T) {
-	// GIVEN a Service with DeployedVersionLookup
-	service := testServiceGitHub()
-	service.DeployedVersionLookup = &deployed_version.Lookup{}
-	defaults := deployed_version.Lookup{Regex: "test"}
-
-	// WHEN Init is called on it
-	service.Init(nil, &Service{DeployedVersionLookup: &defaults}, &Service{DeployedVersionLookup: &deployed_version.Lookup{}})
-
-	// THEN ApprovedVersion is reset
-	got := service.DeployedVersionLookup.Defaults
-	if *got != &defaults {
-		t.Errorf("DeployedVersionLookup should've been given %v Defaults, not %v",
-			defaults, got)
+	// dashboard.defaults
+	if service.Dashboard.Defaults != &defaults.Dashboard {
+		t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&defaults.Dashboard, service.Dashboard.Defaults)
 	}
-}
-
-func TestServiceInitWithDeployedVersionLookupHandsOutHardDefaults(t *testing.T) {
-	// GIVEN a Service with DeployedVersionLookup
-	service := testServiceGitHub()
-	service.DeployedVersionLookup = &deployed_version.Lookup{}
-	defaults := deployed_version.Lookup{
-		Regex: "test",
+	// options.defaults
+	if service.Options.Defaults != &defaults.Options {
+		t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&defaults.Options, service.Options.Defaults)
 	}
-
-	// WHEN Init is called on it
-	service.Init(nil, &Service{DeployedVersionLookup: &deployed_version.Lookup{}}, &Service{DeployedVersionLookup: &defaults})
-
-	// THEN ApprovedVersion is reset
-	got := service.DeployedVersionLookup.HardDefaults
-	if *got != &defaults {
-		t.Errorf("DeployedVersionLookup should've been given %v Defaults, not %v",
-			defaults, got)
+	// hardDefaults
+	if service.HardDefaults != &hardDefaults {
+		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&hardDefaults, service.HardDefaults)
+	}
+	// dashboard.hardDefaults
+	if service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
+		t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&hardDefaults.Dashboard, service.Dashboard.HardDefaults)
+	}
+	// options.hardDefaults
+	if service.Options.HardDefaults != &hardDefaults.Options {
+		t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+			&hardDefaults.Options, service.Options.HardDefaults)
+	}
+	// initMetrics - counters
+	gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+	wantC := 2
+	if (gotC - hadC) != wantC {
+		t.Errorf("%d Counter metrics's were initialised, expecting %d",
+			(gotC - hadC), wantC)
 	}
 }

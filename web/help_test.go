@@ -153,7 +153,7 @@ func testService(id string) service.Service {
 		},
 		Dashboard: service.DashboardOptions{
 			AutoApprove:  boolPtr(false),
-			Icon:         stringPtr("test"),
+			Icon:         "test",
 			Defaults:     &service.DashboardOptions{},
 			HardDefaults: &service.DashboardOptions{},
 		},

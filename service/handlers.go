@@ -26,6 +26,10 @@ import (
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
+	if s.Status.DeployedVersion == s.Status.LatestVersion {
+		return
+	}
+
 	// Check that no WebHook(s) failed
 	for key := range s.WebHook {
 		// Default nil to true = failed
@@ -78,7 +82,7 @@ func (s *Service) HandleUpdateActions() {
 			// Run the Command(s)
 			go func() {
 				err := s.CommandController.Exec(&utils.LogFrom{Primary: "Command", Secondary: s.ID})
-				if err == nil {
+				if err == nil && len(s.Command) != 0 {
 					s.UpdatedVersion()
 				}
 			}()
@@ -86,7 +90,7 @@ func (s *Service) HandleUpdateActions() {
 			// Send the WebHook(s)
 			go func() {
 				err := s.WebHook.Send(s.GetServiceInfo(), true)
-				if err == nil {
+				if err == nil && len(s.WebHook) != 0 {
 					s.UpdatedVersion()
 				}
 			}()
@@ -113,7 +117,7 @@ func (s *Service) HandleFailedActions() {
 
 	potentialErrors := 0
 	// Send the WebHook(s).
-	if s.WebHook != nil {
+	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key := range s.WebHook {
 			if retryAll || utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
@@ -135,7 +139,7 @@ func (s *Service) HandleFailedActions() {
 		}
 	}
 	// Run the Command(s)
-	if s.Command != nil {
+	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
 		logFrom := utils.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
@@ -177,9 +181,6 @@ func (s *Service) HandleFailedActions() {
 // HandleCommand will handle running the Command for this service
 // to the matching Command.
 func (s *Service) HandleCommand(command string) {
-	if s.Command == nil {
-		return
-	}
 	// Find the command
 	index := s.CommandController.Find(command)
 	if index == nil {
@@ -238,7 +239,7 @@ func (s *Service) HandleSkip(version string) {
 func (s *Service) shouldRetryAll() bool {
 	retry := true
 	// retry all only if every WebHook has been sent successfully
-	if s.WebHook != nil {
+	if len(s.WebHook) != 0 {
 		for key := range s.WebHook {
 			if utils.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
 				retry = false
@@ -247,7 +248,7 @@ func (s *Service) shouldRetryAll() bool {
 		}
 	}
 	// AND every Command has been run successfully
-	if retry && s.Command != nil {
+	if retry && len(s.Command) != 0 {
 		for key := range s.Command {
 			if utils.EvalNilPtr(s.Status.Fails.Command[key], true) {
 				retry = false

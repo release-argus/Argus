@@ -41,10 +41,10 @@ func (c *Config) Init() {
 	for serviceID, service := range c.Service {
 		service.Status.Init(len(
 			service.Notify),
-			len(service.WebHook),
 			len(service.Command),
+			len(service.WebHook),
 			&service.ID,
-			service.Dashboard.WebURL)
+			&service.Dashboard.WebURL)
 
 		service.Init(
 			jLog,

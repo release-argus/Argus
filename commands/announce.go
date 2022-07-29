@@ -54,6 +54,10 @@ func (c *Controller) AnnounceCommand(index int) {
 
 // Find `command`.
 func (c *Controller) Find(command string) *int {
+	if c == nil {
+		return nil
+	}
+
 	// Loop through all the Command(s)
 	for key := range *c.Command {
 		formatted := (*c.Command)[key].ApplyTemplate(c.ServiceStatus)
