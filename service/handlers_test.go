@@ -166,9 +166,9 @@ func TestHandleUpdateActions(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, service.Options.Interval)
+			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Options.Interval)
+			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.Dashboard.AutoApprove = &tc.autoApprove
 			service.DeployedVersionLookup = nil
 
@@ -197,7 +197,7 @@ func TestHandleUpdateActions(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("%s:\nfinished running after after %v",
+					t.Logf("%s:\nfinished running after %v",
 						name, time.Duration(i*10)*time.Microsecond)
 					break
 				}
@@ -252,30 +252,42 @@ func TestHandleFailedActions(t *testing.T) {
 	testLogging()
 	tests := map[string]struct {
 		commands              command.Slice
+		commandNextRunnables  []time.Time
 		webhooks              webhook.Slice
+		webhookNextRunnables  map[string]time.Time
 		fails                 service_status.Fails
 		wantFails             service_status.Fails
 		deployedBecomesLatest bool
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
-		"false webhook fails and false command fails retries all": {wantAnnounces: 2,
+		"no webhook fails and no command fails retries all": {wantAnnounces: 2,
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"pass": testWebHookFailing()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(true)}}},
-		"false webhook fails and true command fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false,
+		"no webhook fails and have command fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false,
 			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}}},
-		"false webhook fails and true command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true,
+		"command fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false,
+			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
+			fails:                service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			commandNextRunnables: []time.Time{time.Now().UTC(), time.Now().UTC(), time.Now().UTC().Add(time.Minute), time.Now().UTC().Add(time.Minute)}},
+		"no webhook fails and have command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true,
 			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{nil, nil}, WebHook: map[string]*bool{"pass": nil}}},
-		"true webhook fails and false command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false,
+		"have webhook fails and no command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false,
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHookFailing(), "will_pass": testWebHookSuccessful(), "would_fail": testWebHookFailing()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(true), "would_fail": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(false), "would_fail": boolPtr(false)}}},
-		"true webhook fails and false command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true,
+		"webhook fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false,
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"is_runnable": testWebHookSuccessful(), "not_runnable": testWebHookFailing(), "would_fail": testWebHookFailing()},
+			fails:                service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(true), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
+			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(false), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
+			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)}},
+		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true,
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_pass0": testWebHookSuccessful(), "will_pass1": testWebHookSuccessful(), "would_fail": testWebHookFailing()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_pass0": boolPtr(true), "will_pass1": boolPtr(true), "would_fail": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{nil}, WebHook: map[string]*bool{"will_pass0": nil, "will_pass1": nil, "would_fail": nil}}},
@@ -293,10 +305,16 @@ func TestHandleFailedActions(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, service.Options.Interval)
+			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Options.Interval)
+			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
+			for i := range tc.commandNextRunnables {
+				service.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
+			}
+			for i := range tc.webhookNextRunnables {
+				service.WebHook[i].NextRunnable = tc.webhookNextRunnables[i]
+			}
 
 			// WHEN HandleFailedActions is called on it
 			want := service.Status.LatestVersion
@@ -323,7 +341,7 @@ func TestHandleFailedActions(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("%s:\nfinished running after after %v",
+					t.Logf("%s:\nfinished running after %v",
 						name, time.Duration(i*10)*time.Microsecond)
 					break
 				}
@@ -418,7 +436,7 @@ func TestHandleCommand(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, service.Options.Interval)
+			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
 			for i := range service.Command {
 				service.CommandController.NextRunnable[i] = tc.nextRunnable
@@ -441,7 +459,7 @@ func TestHandleCommand(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("%s:\nfinished running after after %v",
+					t.Logf("%s:\nfinished running after %v",
 						name, time.Duration(i*10)*time.Microsecond)
 					break
 				}
@@ -519,7 +537,7 @@ func TestHandleWebHook(t *testing.T) {
 				service.Status.DeployedVersion = service.Status.LatestVersion
 			}
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Options.Interval)
+			service.WebHook.Init(jLog, &service.ID, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
 			for i := range service.WebHook {
 				service.WebHook[i].NextRunnable = tc.nextRunnable
@@ -542,7 +560,7 @@ func TestHandleWebHook(t *testing.T) {
 					}
 				}
 				if actionsRan {
-					t.Logf("%s:\nfinished running after after %v",
+					t.Logf("%s:\nfinished running after %v",
 						name, time.Duration(i*10)*time.Microsecond)
 					break
 				}

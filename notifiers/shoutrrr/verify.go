@@ -30,7 +30,8 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 		return
 	}
 
-	for key := range *s {
+	keys := utils.SortedKeys(*s)
+	for _, key := range keys {
 		if err := (*s)[key].CheckValues(prefix + "    "); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				utils.ErrorToString(errs), prefix, key, err)
@@ -370,18 +371,27 @@ func (s *Slice) Print(prefix string) bool {
 func (s *Shoutrrr) Print(prefix string) {
 	utils.PrintlnIfNotDefault(s.Type, fmt.Sprintf("%stype: %s", prefix, s.Type))
 
-	fmt.Printf("%soptions:\n", prefix)
-	for key := range s.Options {
-		utils.PrintlnIfNotDefault(s.GetSelfOption(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
+	if len(s.Options) != 0 {
+		fmt.Printf("%soptions:\n", prefix)
+		keys := utils.SortedKeys(s.Options)
+		for _, key := range keys {
+			utils.PrintlnIfNotDefault(s.GetSelfOption(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
+		}
 	}
 
-	fmt.Printf("%surl_fields:\n", prefix)
-	for key := range s.URLFields {
-		utils.PrintlnIfNotDefault(s.GetSelfURLField(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
+	if len(s.URLFields) != 0 {
+		fmt.Printf("%surl_fields:\n", prefix)
+		keys := utils.SortedKeys(s.URLFields)
+		for _, key := range keys {
+			utils.PrintlnIfNotDefault(s.GetSelfURLField(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
+		}
 	}
 
-	fmt.Printf("%sparams:\n", prefix)
-	for key := range s.Params {
-		utils.PrintlnIfNotDefault(s.GetSelfParam(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
+	if len(s.Params) != 0 {
+		fmt.Printf("%sparams:\n", prefix)
+		keys := utils.SortedKeys(s.Params)
+		for _, key := range keys {
+			utils.PrintlnIfNotDefault(s.GetSelfParam(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
+		}
 	}
 }

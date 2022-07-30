@@ -29,6 +29,7 @@ import (
 func TestInitMetrics(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testLookupGitHub()
+	*lookup.status.ServiceID += "TestInitMetrics"
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
@@ -50,6 +51,7 @@ func TestInit(t *testing.T) {
 	log := utils.NewJLog("WARN", false)
 	var defaults Lookup
 	var hardDefaults Lookup
+	*lookup.status.ServiceID += "TestInit"
 	status := service_status.Status{ServiceID: stringPtr("test")}
 	var options options.Options
 
@@ -79,9 +81,9 @@ func TestInit(t *testing.T) {
 			&status, lookup.status)
 	}
 	// options
-	if lookup.options != &options {
+	if lookup.Options != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&options, lookup.options)
+			&options, lookup.Options)
 	}
 	// initMetrics - counters
 	gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)

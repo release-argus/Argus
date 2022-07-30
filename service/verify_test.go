@@ -19,400 +19,236 @@ package service
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestServiceCheckValues(t *testing.T) {
-	// GIVEN a service with valid values
-	service := testServiceGitHub()
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err != nil {
-		t.Errorf("Expect nil err, not\n%s",
-			err.Error())
-	}
-}
-
-func TestServiceCheckValuesWithInvalidInterval(t *testing.T) {
-	// GIVEN a service with an invalid Interval
-	service := testServiceGitHub()
-	*service.Interval = "5x"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from %q being an invalid time.Duration, not %v",
-			*service.Interval, err)
-	}
-}
-
-func TestServiceCheckValuesWithIntInterval(t *testing.T) {
-	// GIVEN a service with an integer Interval
-	service := testServiceGitHub()
-	*service.Interval = "5"
-	want := *service.Interval + "s"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is nil
-	got := service.Options.GetInterval()
-	if got != want {
-		t.Errorf("Want %s, got %s",
-			want, got)
-	}
-	if err != nil {
-		t.Errorf("Expecting %q interval err to be nil, not\n%s",
-			*service.Interval, err.Error())
-	}
-}
-
-func TestServiceCheckValuesWithNoType(t *testing.T) {
-	// GIVEN a service with no Type
-	service := testServiceGitHub()
-	service.Type = ""
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Type being %v",
-			service.Type)
-	}
-}
-
-func TestServiceCheckValuesWithInvalidType(t *testing.T) {
-	// GIVEN a service with no Type
-	service := testServiceGitHub()
-	service.Type = "something"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Type being %q",
-			service.Type)
-	}
-}
-
-func TestServiceCheckValuesWithInvalidRegexContent(t *testing.T) {
-	// GIVEN a service with invalid RegexContent
-	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexContent = "abc[0-"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from RegexContent being %q",
-			service.LatestVersion.Require.RegexContent)
-	}
-}
-
-func TestServiceCheckValuesWithInvalidRegexVersion(t *testing.T) {
-	// GIVEN a service with invalid RegexVersion
-	service := testServiceGitHub()
-	service.LatestVersion.Require.RegexVersion = "abc[0-"
-
-	// WHEN CheckValues is called
-	err := service.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from RegexVersion being %q",
-			service.LatestVersion.Require.RegexVersion)
-	}
-}
-
-func TestServiceSliceCheckValuesWithSuccess(t *testing.T) {
-	// GIVEN a Service with valid values
-	service := testServiceGitHub()
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("%v is valid, unexpected err\n%s",
-			slice, err.Error())
-	}
-}
-
-func TestServiceSliceCheckValuesWithFailingService(t *testing.T) {
-	// GIVEN a Service with an valid Service value
-	service := testServiceGitHub()
-	service.Type = "foo"
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Service.Type being %q",
-			slice["test"].Type)
-	}
-}
-
-func TestServiceSliceCheckValuesWithFailingURLCommands(t *testing.T) {
-	// GIVEN a Service with an invalid URLCommand value
-	service := testServiceGitHub()
-	urlCommand := testURLCommandRegex()
-	urlCommand.Type = "something"
-	service.URLCommands = &filters.URLCommandSlice{urlCommand}
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Service.URLCommands[0].Type being %q",
-			(*slice["test"].URLCommands)[0].Type)
-	}
-}
-
-func TestServiceSliceCheckValuesWithFailingDeployedVersionLookup(t *testing.T) {
-	// GIVEN a Service with an invalid DeployedVersionLookup value
-	service := testServiceGitHub()
-	dvl := testDeployedVersion()
-	dvl.URL = ""
-	service.DeployedVersionLookup = &dvl
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Service.DeployedVersionLookup.URL being %q",
-			slice["test"].DeployedVersionLookup.URL)
-	}
-}
-
-func TestServiceSliceCheckValuesWithFailingNotify(t *testing.T) {
-	// GIVEN a Service with an invalid Notify value
-	service := testServiceGitHub()
-	service.Notify = shoutrrr.Slice{
-		"test": &shoutrrr.Shoutrrr{
-			Type:         "something",
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		},
-	}
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Service.Notify['test'].Type being %q",
-			slice["test"].Notify["test"].Type)
-	}
-}
-
-func TestServiceSliceCheckValuesWithFailingWebHook(t *testing.T) {
-	// GIVEN a Service with an invalid WebHook value
-	service := testServiceGitHub()
-	whType := "something"
-	whID := "test"
-	service.WebHook = webhook.Slice{
-		whID: &webhook.WebHook{
-			ID:           whID,
-			Type:         &whType,
-			Main:         &webhook.WebHook{},
-			Defaults:     &webhook.WebHook{},
-			HardDefaults: &webhook.WebHook{},
-		},
-	}
-	slice := Slice{
-		"test": &service,
-	}
-
-	// WHEN CheckValues is called
-	err := slice.CheckValues("")
-
-	// THEN err is non-nil
-	if err == nil {
-		t.Errorf("Expecting err from Service.WebHook['test'].Type being %q",
-			*slice["test"].WebHook["test"].Type)
-	}
-}
-
-func TestServicePrintWithService(t *testing.T) {
+func TestServicePrint(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceGitHub()
-	service.Status = service_status.Status{}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		service          Service
+		options          options.Options
+		latestVersion    latest_version.Lookup
+		deployedVersion  *deployed_version.Lookup
+		commands         command.Slice
+		webhooks         webhook.Slice
+		notifies         shoutrrr.Slice
+		dashboardOptions DashboardOptions
+		lines            int
+	}{
+		"base fields only": {lines: 3, service: Service{ID: "test", Comment: "foo_comment"}},
+		"base + latest_version": {lines: 4, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}},
+		"base + latest_version + deployed_version": {lines: 6, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"}},
+		"base + latest_version + deployed_version + notifies": {lines: 9, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}}},
+		"base + latest_version + deployed_version + notifies + commands": {lines: 11, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
+			commands:        command.Slice{{"ls", "-la"}}},
+		"base + latest_version + deployed_version + notifies + commands + webhooks": {lines: 14, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
+			commands:        command.Slice{{"ls", "-la"}},
+			webhooks:        webhook.Slice{"bar": &webhook.WebHook{URL: stringPtr("https://example.com")}}},
+		"base + latest_version + deployed_version + notifies + commands + webhooks + dashboard": {lines: 16, service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion:    latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion:  &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			notifies:         shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
+			commands:         command.Slice{{"ls", "-la"}},
+			webhooks:         webhook.Slice{"bar": &webhook.WebHook{URL: stringPtr("https://example.com")}},
+			dashboardOptions: DashboardOptions{Icon: "https://example.com/icon.png"}},
+	}
 
-	// WHEN CheckValues is called
-	service.Print("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			tc.service.LatestVersion = tc.latestVersion
+			tc.service.DeployedVersionLookup = tc.deployedVersion
+			tc.service.Command = tc.commands
+			tc.service.WebHook = tc.webhooks
+			tc.service.Notify = tc.notifies
+			tc.service.Dashboard = tc.dashboardOptions
 
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 13
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
+			// WHEN Print is called
+			tc.service.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+		})
 	}
 }
 
-func TestServicePrintWithFullService(t *testing.T) {
-	// GIVEN a Service with every var defined
-	service := testServiceGitHub()
-	urlCommand := testURLCommandRegex()
-	service.URLCommands = &filters.URLCommandSlice{urlCommand}
-	dvl := testDeployedVersion()
-	service.DeployedVersionLookup = &dvl
-	notify := shoutrrr.Shoutrrr{
-		Type:         "something",
-		Main:         &shoutrrr.Shoutrrr{},
-		Defaults:     &shoutrrr.Shoutrrr{},
-		HardDefaults: &shoutrrr.Shoutrrr{},
+func TestSlicePrint(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice      *Slice
+		ordering   []string
+		lines      int
+		regexMatch string
+	}{
+		"nil slice with no ordering": {lines: 0, slice: nil},
+		"nil slice with ordering":    {lines: 0, ordering: []string{"foo", "bar"}, slice: nil},
+		"respects ordering": {lines: 9, ordering: []string{"zulu", "alpha"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
+			regexMatch: `zulu(.|\s)+alpha`},
+		"respects reversedordering": {lines: 9, ordering: []string{"alpha", "zulu"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
+			regexMatch: `alpha(.|\s)+zulu`},
 	}
-	service.Notify = shoutrrr.Slice{"test": &notify}
-	whID := "test"
-	whURL := "example.com"
-	wh := webhook.WebHook{
-		ID:           whID,
-		URL:          &whURL,
-		Main:         &webhook.WebHook{},
-		Defaults:     &webhook.WebHook{},
-		HardDefaults: &webhook.WebHook{},
-	}
-	service.WebHook = webhook.Slice{"test": &wh}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
 
-	// WHEN CheckValues is called
-	service.Print("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 37
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
-	}
-}
+			// WHEN Print is called
+			tc.slice.Print("", tc.ordering)
 
-func TestSlicePrintWithTwoServices(t *testing.T) {
-	// GIVEN a Slice with two Service's
-	service := testServiceGitHub()
-	service.Status = service_status.Status{}
-	slice := Slice{
-		"one": &service,
-		"two": &service,
-	}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN CheckValues is called
-	slice.Print("", []string{"one", "two"})
-
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 29
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+			// in the right order
+			re := regexp.MustCompile(tc.regexMatch)
+			match := re.MatchString(string(out))
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\nnot: %q",
+					name, tc.regexMatch, string(out))
+			}
+		})
 	}
 }
 
-func TestSlicePrintWithNil(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+func TestServiceCheckValues(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		service          Service
+		options          options.Options
+		latestVersion    latest_version.Lookup
+		deployedVersion  *deployed_version.Lookup
+		commands         command.Slice
+		webhooks         webhook.Slice
+		notifies         shoutrrr.Slice
+		dashboardOptions DashboardOptions
+		errRegex         string
+	}{
+		"options with errs": {service: Service{ID: "test", Comment: "foo_comment"},
+			latestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			options:       options.Options{Interval: "10x"}, errRegex: "interval: .* <invalid>"},
+		"options,latest_version, with errs": {service: Service{ID: "test", Comment: "foo_comment"},
+			options:       options.Options{Interval: "10x"},
+			latestVersion: latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"}, errRegex: "interval: .* <invalid>.*type: .* <invalid>"},
+		"latest_version, deployed_version with errs": {service: Service{ID: "test", Comment: "foo_comment"},
+			options:         options.Options{Interval: "10x"},
+			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{Regex: "[0-"}, errRegex: "interval: .* <invalid>.*type: .* <invalid>.*regex: .* <invalid>"},
+		"latest_version, deployed_version, notify with errs": {service: Service{ID: "test", Comment: "foo_comment"},
+			options:         options.Options{Interval: "10x"},
+			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{Regex: "[0-"},
+			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}}, errRegex: "interval: .* <invalid>.*type: .* <invalid>.*regex: .* <invalid>.*.*token: <required>.*webhookid: <required>"},
+		"latest_version, deployed_version, webhook with errs": {service: Service{ID: "test", Comment: "foo_comment"},
+			options:         options.Options{Interval: "10x"},
+			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployed_version.Lookup{Regex: "[0-"},
+			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
+			webhooks:        webhook.Slice{"wh": &webhook.WebHook{Delay: "0x"}}, errRegex: "interval: .* <invalid>.*type: .* <invalid>.*regex: .* <invalid>.*.*token: <required>.*webhookid: <required>.*delay: .* <invalid>"},
+	}
 
-	// WHEN CheckValues is called
-	slice.Print("", []string{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			tc.service.Options = tc.options
+			tc.service.LatestVersion = tc.latestVersion
+			tc.service.DeployedVersionLookup = tc.deployedVersion
+			tc.service.Command = tc.commands
+			tc.service.WebHook = tc.webhooks
+			tc.service.Notify = tc.notifies
+			for i := range tc.notifies {
+				tc.notifies[i].Main = &shoutrrr.Shoutrrr{}
+				tc.notifies[i].Defaults = &shoutrrr.Shoutrrr{}
+				tc.notifies[i].HardDefaults = &shoutrrr.Shoutrrr{}
+			}
+			tc.service.Dashboard = tc.dashboardOptions
 
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 0
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print with nil should have given %d lines, but gave %d\n%s",
-			want, got, out)
+			// WHEN CheckValues is called
+			err := tc.service.CheckValues("")
+
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Fatalf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+		})
 	}
 }
 
-func TestSlicePrintWithTwoServicesOrdered(t *testing.T) {
-	// GIVEN a Slice with two Service's
-	service := testServiceGitHub()
-	service.Status = service_status.Status{}
-	slice := Slice{
-		"one": &service,
-		"two": &service,
+func TestSliceCheckValues(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice         Slice
+		errRegex      string
+		errRegexOther string
+	}{
+		"single valid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10s"},
+			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: "^$"},
+		"single invalid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10x"},
+			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: "interval: .* <invalid>"},
+		"multiple invalid services": {slice: Slice{"foo": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10x"},
+			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}, "bar": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10y"},
+			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: "interval: .*10x.* <invalid>.*interval: .*10y.* <invalid>", errRegexOther: "interval: .*10y.* <invalid>.*interval: .*10x.* <invalid>"},
 	}
 
-	// WHEN CheckValues is called with two different orderings
-	// 1
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	wantFirst := "one"
-	wantSecond := "two"
-	slice.Print("", []string{wantFirst, wantSecond})
-	w.Close()
-	gotOne, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	// 2
-	stdout = os.Stdout
-	r, w, _ = os.Pipe()
-	os.Stdout = w
-	slice.Print("", []string{wantSecond, wantFirst})
-	w.Close()
-	gotTwo, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called
+			err := tc.slice.CheckValues("")
 
-	// THEN the Services are printed in two different orderings
-	if string(gotOne) == string(gotTwo) {
-		t.Errorf("Print should have used ordering\n%s",
-			gotOne)
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				if tc.errRegexOther != "" {
+					re = regexp.MustCompile(tc.errRegexOther)
+					match = re.MatchString(e)
+				}
+				if !match {
+					t.Fatalf("%s:\nwant match for %q\nnot: %q",
+						name, tc.errRegex, e)
+				}
+			}
+		})
 	}
 }

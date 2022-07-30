@@ -27,7 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestURLCommandSLiceInit(t *testing.T) {
+func TestURLCommandSliceInit(t *testing.T) {
 	// GIVEN URLCommandSlice and a JLog
 	var slice URLCommandSlice
 	newJLog := utils.NewJLog("WARN", false)
@@ -48,8 +48,8 @@ func TestURLCommandSlicePrint(t *testing.T) {
 		lines int
 	}{
 		"regex":     {slice: &URLCommandSlice{testURLCommandRegex()}, lines: 3},
-		"replace":   {slice: &URLCommandSlice{testURLCommandReplace()}, lines: 3},
-		"split":     {slice: &URLCommandSlice{testURLCommandSplit()}, lines: 3},
+		"replace":   {slice: &URLCommandSlice{testURLCommandReplace()}, lines: 4},
+		"split":     {slice: &URLCommandSlice{testURLCommandSplit()}, lines: 4},
 		"all types": {slice: &URLCommandSlice{testURLCommandRegex(), testURLCommandReplace(), testURLCommandSplit()}, lines: 9},
 		"nil slice": {slice: nil, lines: 0},
 	}

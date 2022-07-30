@@ -28,6 +28,50 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+func TestRequireInit(t *testing.T) {
+	// GIVEN a Require, JLog and a Status
+	tests := map[string]struct {
+		req   *Require
+		lines int
+	}{
+		"nil require":     {req: nil},
+		"non-nil require": {req: &Require{}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			status := service_status.Status{DeployedVersion: "1.2.3"}
+			newJLog := utils.NewJLog("WARN", false)
+
+			// WHEN Init is called with it
+			tc.req.Init(newJLog, &status)
+
+			// THEN the global JLog is set to its address
+			if tc.req == nil {
+				if jLog == newJLog {
+					t.Fatalf("%s:\nJLog shouldn't have been initialised to the one we called Init with when Require is %v",
+						name, tc.req)
+				}
+				// THEN the Require is still nil
+				if tc.req != nil {
+					t.Fatalf("%s:\nInit with a nil require shouldn't inititalise it",
+						name)
+				}
+			} else {
+				if jLog != newJLog {
+					t.Fatalf("%s:\nJLog should have been initialised to the one we called Init with",
+						name)
+				}
+				// THEN the status is given to the Require
+				if tc.req.Status != &status {
+					t.Fatalf("%s:\nStatus should be the address of the var given to it %v, not %v",
+						name, &status, tc.req.Status)
+				}
+			}
+		})
+	}
+}
+
 func TestRequirePrint(t *testing.T) {
 	// GIVEN a Require
 	tests := map[string]struct {
@@ -35,9 +79,9 @@ func TestRequirePrint(t *testing.T) {
 		lines   int
 	}{
 		"nil require":        {require: nil, lines: 0},
-		"only regex_content": {require: &Require{RegexContent: "content"}, lines: 1},
-		"only regex_version": {require: &Require{RegexVersion: "version"}, lines: 1},
-		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version"}, lines: 2},
+		"only regex_content": {require: &Require{RegexContent: "content"}, lines: 2},
+		"only regex_version": {require: &Require{RegexVersion: "version"}, lines: 2},
+		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version"}, lines: 3},
 	}
 
 	for name, tc := range tests {

@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -36,22 +37,22 @@ func TestDefaultsSetDefaults(t *testing.T) {
 	// WHEN SetDefaults is called on it
 	defaults.SetDefaults()
 	tests := map[string]struct {
-		got  *string
+		got  string
 		want string
 	}{
 		"Service.Interval": {
-			got: defaults.Service.Interval, want: "10m"},
+			got: defaults.Service.Options.Interval, want: "10m"},
 		"Notify.discord.username": {
-			got: stringPtr(defaults.Notify["discord"].GetSelfParam("username")), want: "Argus"},
+			got: defaults.Notify["discord"].GetSelfParam("username"), want: "Argus"},
 		"WebHook.Delay": {
 			got: defaults.WebHook.Delay, want: "0s"},
 	}
 
 	// THEN the defaults are set correctly
 	for name, tc := range tests {
-		if utils.EvalNilPtr(tc.got, "") != tc.want {
+		if tc.got != tc.want {
 			t.Errorf("%s:\nwant: %s\ngot:  %s",
-				name, tc.want, utils.EvalNilPtr(tc.got, ""))
+				name, tc.want, tc.got)
 		}
 	}
 }
@@ -66,7 +67,8 @@ func TestDefaultsCheckValues(t *testing.T) {
 	}{
 		"Service.Interval": {
 			input: Defaults{Service: service.Service{
-				Interval: stringPtr("10x")}},
+				Options: options.Options{
+					Interval: "10x"}}},
 			errContains: `interval: "10x" <invalid>`},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
@@ -80,7 +82,7 @@ func TestDefaultsCheckValues(t *testing.T) {
 			errContains: `delay: "10x" <invalid>`},
 		"WebHook.x.Delay": {
 			input: Defaults{WebHook: webhook.WebHook{
-				Delay: stringPtr("10x")}},
+				Delay: "10x"}},
 			errContains: `delay: "10x" <invalid>`},
 	}
 
@@ -113,7 +115,7 @@ func TestDefaultsPrint(t *testing.T) {
 	w.Close()
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = stdout
-	want := 142
+	want := 124
 	got := strings.Count(string(out), "\n")
 	if got != want {
 		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)

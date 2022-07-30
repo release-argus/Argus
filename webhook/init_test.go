@@ -111,9 +111,8 @@ func testInitWithNonNilAndVars() (string, Slice, service_status.Status, Slice, W
 		ID:     id0,
 		Secret: &defaultURL,
 	}
-	hardDefaultDelay := "1s"
 	hardDefaults := WebHook{
-		Delay: &hardDefaultDelay,
+		Delay: "1s",
 	}
 
 	return serviceID, slice, serviceStatus, mains, defaults, hardDefaults
@@ -243,9 +242,8 @@ func TestGetDelayDuration(t *testing.T) {
 	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
 
 	// WHEN Delay is "X" and GetDelayDuration is called
-	duration := "1s"
-	slice["0"].Delay = &duration
-	wanted, _ := time.ParseDuration(duration)
+	slice["0"].Delay = "1s"
+	wanted, _ := time.ParseDuration(slice["0"].Delay)
 	got := slice["0"].GetDelayDuration()
 
 	// THEN the function returns the X as a time.Duration
@@ -755,7 +753,7 @@ func TestSetNextRunnableWithDelay(t *testing.T) {
 		CustomHeaders: &map[string]string{
 			"foo": "bar",
 		},
-		Delay:          stringPtr("5m"),
+		Delay:          "5m",
 		Failed:         &map[string]*bool{whID: boolPtr(false)},
 		ServiceStatus:  &service_status.Status{},
 		ParentInterval: stringPtr("1h"),
@@ -767,7 +765,7 @@ func TestSetNextRunnableWithDelay(t *testing.T) {
 	// THEN MextRunnable is set to 15s
 	now := time.Now().UTC()
 	got := wh.NextRunnable
-	wantDelay, _ := time.ParseDuration(*wh.Delay)
+	wantDelay, _ := time.ParseDuration(wh.Delay)
 	wantMin := now.Add(14 * time.Second).Add(wantDelay)
 	wantMax := now.Add(16 * time.Second).Add(wantDelay)
 	if got.Before(wantMin) || got.After(wantMax) {

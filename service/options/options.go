@@ -24,7 +24,7 @@ import (
 
 type Options struct {
 	Active             *bool    `yaml:"active,omitempty"`              // Disable the service.
-	Interval           *string  `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	Interval           string   `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
 	SemanticVersioning *bool    `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
 	Defaults           *Options `yaml:"-"`                             // Defaults
 	HardDefaults       *Options `yaml:"-"`                             // Hard Defaults
@@ -37,7 +37,7 @@ func (o *Options) GetActive() bool {
 
 // GetInterval between queries for this Service's latest version.
 func (o *Options) GetInterval() string {
-	return *utils.GetFirstNonDefault(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
+	return utils.GetFirstNonDefault(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
 }
 
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
@@ -47,7 +47,13 @@ func (o *Options) GetSemanticVersioning() bool {
 
 // GetIntervalPointer returns a pointer to the interval between queries on this Service's version.
 func (o *Options) GetIntervalPointer() *string {
-	return utils.GetFirstNonNilPtr(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
+	if o.Interval != "" {
+		return &o.Interval
+	}
+	if o.Defaults.Interval != "" {
+		return &o.Defaults.Interval
+	}
+	return &o.HardDefaults.Interval
 }
 
 // GetIntervalDuration returns the interval between queries on this Service's version.
@@ -59,14 +65,14 @@ func (o *Options) GetIntervalDuration() time.Duration {
 // CheckValues of the Options.
 func (o *Options) CheckValues(prefix string) (errs error) {
 	// Interval
-	if o.Interval != nil {
+	if o.Interval != "" {
 		// Default to seconds when an integer is provided
-		if _, err := strconv.Atoi(*o.Interval); err == nil {
-			*o.Interval += "s"
+		if _, err := strconv.Atoi(o.Interval); err == nil {
+			o.Interval += "s"
 		}
-		if _, err := time.ParseDuration(*o.Interval); err != nil {
+		if _, err := time.ParseDuration(o.Interval); err != nil {
 			errs = fmt.Errorf("%s%s  interval: %q <invalid> (Use 'AhBmCs' duration format)\\",
-				utils.ErrorToString(errs), prefix, *o.Interval)
+				utils.ErrorToString(errs), prefix, o.Interval)
 		}
 	}
 
@@ -80,12 +86,12 @@ func (o *Options) CheckValues(prefix string) (errs error) {
 
 // Print the struct.
 func (o *Options) Print(prefix string) {
-	if o.Active == nil && o.Interval == nil && o.SemanticVersioning == nil {
+	if o.Active == nil && o.Interval == "" && o.SemanticVersioning == nil {
 		return
 	}
 
 	fmt.Printf("%soptions:\n", prefix)
 	utils.PrintlnIfNotNil(o.Active, fmt.Sprintf("%s  active: %t", prefix, utils.DefaultIfNil(o.Active)))
-	utils.PrintlnIfNotNil(o.Interval, fmt.Sprintf("%s  interval: %s", prefix, utils.DefaultIfNil(o.Interval)))
+	utils.PrintlnIfNotDefault(o.Interval, fmt.Sprintf("%s  interval: %s", prefix, o.Interval))
 	utils.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%s  semantic_versioning: %t", prefix, utils.DefaultIfNil(o.SemanticVersioning)))
 }

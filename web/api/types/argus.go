@@ -217,11 +217,9 @@ type ServiceSlice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	Comment               *string                `json:"comment,omitempty"`          // Comment on the Service
-	Type                  string                 `json:"type,omitempty"`             // "github"/"URL"
+	Comment               string                 `json:"comment,omitempty"`          // Comment on the Service
 	Options               *ServiceOptions        `json:"options,omitempty"`          // Options to give the Service
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty"`   // Latest version lookup for the Service
-	URLCommands           *URLCommandSlice       `json:"url_commands,omitempty"`     // Commands to filter the release from the URL request
 	Command               *CommandSlice          `json:"command,omitempty"`          // OS Commands to run on new release
 	Notify                *NotifySlice           `json:"notify,omitempty"`           // Service-specific Notify vars
 	WebHook               *WebHookSlice          `json:"webhook,omitempty"`          // Service-specific WebHook vars
@@ -231,9 +229,9 @@ type Service struct {
 
 // ServiceOptions.
 type ServiceOptions struct {
-	Active             *bool   `json:"active,omitempty"`              // Active Service?
-	Interval           *string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
-	SemanticVersioning *bool   `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
+	Active             *bool  `json:"active,omitempty"`              // Active Service?
+	Interval           string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
+	SemanticVersioning *bool  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
 }
 
 // DashboardOptions.
@@ -246,11 +244,12 @@ type DashboardOptions struct {
 
 // LatestVersion lookup of the service.
 type LatestVersion struct {
+	Type              string                `json:"type,omitempty"`                // Service Type, github/url
 	URL               string                `json:"url,omitempty"`                 // URL to query
 	AccessToken       string                `json:"access_token,omitempty"`        // GitHub access token to use
 	AllowInvalidCerts *bool                 `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
 	UsePreRelease     *bool                 `json:"use_prerelease,omitempty"`      // Whether GitHub prereleases should be used
-	URLCommands       *URLCommandSlice      `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
+	URLCommands       URLCommandSlice       `json:"url_commands,omitempty"`        // Commands to filter the release from the URL request
 	Require           *LatestVersionRequire `json:"require,omitempty"`             // Requirements for the version to be considered valid
 }
 
@@ -311,7 +310,7 @@ type WebHook struct {
 	Secret            *string            `json:"secret,omitempty"`              // "SECRET"
 	CustomHeaders     *map[string]string `json:"custom_headers,omitempty"`      // Custom Headers for the WebHook
 	DesiredStatusCode *int               `json:"desired_status_code,omitempty"` // e.g. 202
-	Delay             *string            `json:"delay,omitempty"`               // The delay before sending the WebHook
+	Delay             string             `json:"delay,omitempty"`               // The delay before sending the WebHook
 	MaxTries          *uint              `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received
 	SilentFails       *bool              `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times
 }

@@ -28,7 +28,9 @@ import (
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filters"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -46,80 +48,97 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
-					ID:       "argus",
-					Interval: stringPtr("0s"),
+					ID: "argus",
+					Options: options.Options{
+						Interval: "0s"},
 				},
 			}},
 		"unknown service": {flag: "test",
 			panicRegex: stringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			slice: service.Slice{
 				"argus": {
-					ID:       "argus",
-					Interval: stringPtr("0s"),
+					ID: "argus",
+					Options: options.Options{
+						Interval: "0s"},
 				},
 			}},
 		"github service": {flag: "argus",
 			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: "github",
-					ID:   "argus",
-					URL:  stringPtr("release-argus/Argus"),
-					URLCommands: &filters.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+					LatestVersion: latest_version.Lookup{
+						Type: "github",
+						URL:  "release-argus/Argus",
+						URLCommands: filters.URLCommandSlice{
+							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+						},
+						AllowInvalidCerts: boolPtr(false),
+						Options: &options.Options{
+							SemanticVersioning: boolPtr(true),
+							Interval:           "0s",
+						},
 					},
-					AllowInvalidCerts:  boolPtr(false),
-					SemanticVersioning: boolPtr(true),
-					Interval:           stringPtr("0s"),
 				},
 			}},
 		"url service type but github owner/repo url": {flag: "argus",
 			outputRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
 			slice: service.Slice{
 				"argus": {
-					Type: "url",
-					ID:   "argus",
-					URL:  stringPtr("release-argus/Argus"),
-					URLCommands: &filters.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+					ID: "argus",
+					LatestVersion: latest_version.Lookup{
+						Type: "url",
+						URL:  "release-argus/Argus",
+						URLCommands: filters.URLCommandSlice{
+							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
+						},
+						AllowInvalidCerts: boolPtr(false),
 					},
-					AllowInvalidCerts:  boolPtr(false),
-					SemanticVersioning: boolPtr(true),
-					Interval:           stringPtr("0s"),
+					Options: options.Options{
+						Interval:           "0s",
+						SemanticVersioning: boolPtr(true),
+					},
 				},
 			}},
 		"url service": {flag: "argus",
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: "url",
-					ID:   "argus",
-					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
-					URLCommands: &filters.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
+					ID: "argus",
+					LatestVersion: latest_version.Lookup{
+						Type: "url",
+						URL:  "https://github.com/release-argus/Argus/releases",
+						URLCommands: filters.URLCommandSlice{
+							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
+						},
+						AllowInvalidCerts: boolPtr(false),
+						Options: &options.Options{
+							SemanticVersioning: boolPtr(true),
+							Interval:           "0s",
+						},
 					},
-					AllowInvalidCerts:  boolPtr(false),
-					SemanticVersioning: boolPtr(true),
-					Interval:           stringPtr("0s"),
 				},
 			}},
 		"service with deployed version lookup": {flag: "argus",
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					Type: "url",
-					ID:   "argus",
-					URL:  stringPtr("https://github.com/release-argus/Argus/releases"),
-					URLCommands: &filters.URLCommandSlice{
-						{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
+					ID: "argus",
+					LatestVersion: latest_version.Lookup{
+						Type: "url",
+						URL:  "https://github.com/release-argus/Argus/releases",
+						URLCommands: filters.URLCommandSlice{
+							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
+						},
+						AllowInvalidCerts: boolPtr(false),
 					},
-					AllowInvalidCerts:  boolPtr(false),
-					SemanticVersioning: boolPtr(true),
-					Interval:           stringPtr("0s"),
 					DeployedVersionLookup: &deployed_version.Lookup{
 						URL:               "https://release-argus.io/demo/api/v1/version",
 						AllowInvalidCerts: boolPtr(true),
 						JSON:              "version",
+					},
+					Options: options.Options{
+						Interval:           "0s",
+						SemanticVersioning: boolPtr(true),
 					},
 				},
 			}},
@@ -145,15 +164,13 @@ func TestServiceTest(t *testing.T) {
 				}()
 			}
 			if tc.slice[tc.flag] != nil {
-				tc.slice[tc.flag].Init(jLog, &service.Service{}, &service.Service{})
+				tc.slice[tc.flag].Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
 				// will do a call for latest_version* and one for deployed_version*
 				dbChannel := make(chan db_types.Message, 2)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
-				dfltDVL := &deployed_version.Lookup{}
-				hardDfltDVL := &deployed_version.Lookup{}
 				if tc.slice[tc.flag].DeployedVersionLookup != nil {
-					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &dfltDVL
-					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &hardDfltDVL
+					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployed_version.Lookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployed_version.Lookup{}
 				}
 			}
 

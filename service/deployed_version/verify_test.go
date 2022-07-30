@@ -44,10 +44,10 @@ func TestPrint(t *testing.T) {
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
 		"lookup with headers and no basicAuth/options": {lines: 10, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with options and no basicAuth/headers": {lines: 7, options: options.Options{Interval: stringPtr("10m")}, lookup: &Lookup{
+		"lookup with no basicAuth/headers": {lines: 5, options: options.Options{Interval: "10m"}, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with options, basicAuth and headers": {lines: 15, basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
-			options: options.Options{Interval: stringPtr("10m")}, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
+		"lookup with basicAuth and headers": {lines: 13, basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
+			options: options.Options{Interval: "10m"}, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
 				URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
 	}
 
@@ -59,7 +59,7 @@ func TestPrint(t *testing.T) {
 			if tc.lookup != nil {
 				tc.lookup.Headers = tc.headers
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.options = &tc.options
+				tc.lookup.Options = &tc.options
 			}
 
 			// WHEN Print is called
@@ -103,7 +103,7 @@ func TestCheckValues(t *testing.T) {
 			lookup.Regex = tc.regex
 			lookup.Defaults = nil
 			if tc.defaults != nil {
-				lookup.Defaults = &tc.defaults
+				lookup.Defaults = tc.defaults
 			}
 			if tc.nilService {
 				lookup = nil

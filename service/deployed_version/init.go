@@ -24,8 +24,8 @@ import (
 // Init will initialise the Service metrics.
 func (l *Lookup) Init(
 	log *utils.JLog,
-	defaults **Lookup,
-	hardDefaults **Lookup,
+	defaults *Lookup,
+	hardDefaults *Lookup,
 	status *service_status.Status,
 	options *options.Options,
 ) {
@@ -37,7 +37,7 @@ func (l *Lookup) Init(
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
 	l.Status = status
-	l.options = options
+	l.Options = options
 	l.initMetrics()
 }
 

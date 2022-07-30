@@ -55,7 +55,7 @@ func TestInit(t *testing.T) {
 
 	// WHEN Init is called on it
 	hadC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
-	lookup.Init(log, &defaults, &hardDefaults, &status, &options)
+	lookup.Init(log, defaults, hardDefaults, &status, &options)
 
 	// THEN pointers to those vars are handed out to the Lookup
 	// log
@@ -64,14 +64,14 @@ func TestInit(t *testing.T) {
 			log, jLog)
 	}
 	// defaults
-	if lookup.Defaults != &defaults {
+	if lookup.Defaults != defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&defaults, lookup.Defaults)
+			defaults, lookup.Defaults)
 	}
 	// hardDefaults
-	if lookup.HardDefaults != &hardDefaults {
+	if lookup.HardDefaults != hardDefaults {
 		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&hardDefaults, lookup.HardDefaults)
+			hardDefaults, lookup.HardDefaults)
 	}
 	// status
 	if lookup.Status != &status {
@@ -79,9 +79,9 @@ func TestInit(t *testing.T) {
 			&status, lookup.Status)
 	}
 	// options
-	if lookup.options != &options {
+	if lookup.Options != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&options, lookup.options)
+			&options, lookup.Options)
 	}
 	// initMetrics - counters
 	gotC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
@@ -92,7 +92,7 @@ func TestInit(t *testing.T) {
 	}
 
 	var nilLookup *Lookup
-	nilLookup.Init(log, &defaults, &hardDefaults, &status, &options)
+	nilLookup.Init(log, defaults, hardDefaults, &status, &options)
 	if nilLookup != nil {
 		t.Error("Init on nil shouldn't have initialised the Lookup")
 	}

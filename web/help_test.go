@@ -70,7 +70,7 @@ func testConfig() config.Config {
 	svc := testService("test")
 	dvl := testDeployedVersion()
 	svc.DeployedVersionLookup = &dvl
-	svc.URLCommands = &filters.URLCommandSlice{testURLCommandRegex()}
+	svc.LatestVersion.URLCommands = filters.URLCommandSlice{testURLCommandRegex()}
 	emptyNotify := shoutrrr.Shoutrrr{
 		Options:   map[string]string{},
 		Params:    map[string]string{},
@@ -90,8 +90,7 @@ func testConfig() config.Config {
 	}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
-	svcComment := "test service's comment"
-	svc.Comment = &svcComment
+	svc.Comment = "test service's comment"
 	whPass := testWebHookPass("pass")
 	whFail := testWebHookFail("pass")
 	return config.Config{
@@ -132,12 +131,10 @@ func testService(id string) service.Service {
 		sSaveChannel     chan bool             = make(chan bool, 5)
 	)
 	svc := service.Service{
-		ID:          id,
-		Type:        "url",
-		AccessToken: stringPtr("secret"),
-		URL:         stringPtr("https://release-argus.io"),
-		WebURL:      stringPtr("https://release-argus.io"),
+		ID: id,
 		LatestVersion: latest_version.Lookup{
+			URL:               "https://release-argus.io",
+			AccessToken:       stringPtr(""),
 			AllowInvalidCerts: boolPtr(false),
 			UsePreRelease:     boolPtr(false),
 			Require: &filters.Require{
@@ -147,7 +144,7 @@ func testService(id string) service.Service {
 		},
 		Options: options.Options{
 			SemanticVersioning: boolPtr(true),
-			Interval:           stringPtr("10m"),
+			Interval:           "10m",
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
@@ -156,6 +153,7 @@ func testService(id string) service.Service {
 			Icon:         "test",
 			Defaults:     &service.DashboardOptions{},
 			HardDefaults: &service.DashboardOptions{},
+			WebURL:       "https://release-argus.io",
 		},
 		Defaults:          &service.Service{},
 		HardDefaults:      &service.Service{},
@@ -184,26 +182,19 @@ func testWebHookPass(id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
 
-	whType := "github"
-	whURL := "https://httpbin.org/anything"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
 	whDesiredStatusCode := 0
-	whDelay := "0s"
-	whSilentFails := true
 	whMaxTries := uint(1)
-	parentInterval := "11m"
 	return &webhook.WebHook{
 		ID:                id,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
+		Type:              stringPtr("github"),
+		URL:               stringPtr("https://httpbin.org/anything"),
+		Secret:            stringPtr("secret"),
+		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &whDesiredStatusCode,
-		Delay:             &whDelay,
-		SilentFails:       &whSilentFails,
+		Delay:             "0s",
+		SilentFails:       boolPtr(true),
 		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
+		ParentInterval:    stringPtr("11m"),
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
@@ -243,8 +234,6 @@ func testDeployedVersion() deployed_version.Lookup {
 	var (
 		allowInvalidCerts bool = false
 	)
-	dflt := &deployed_version.Lookup{}
-	hardDflt := &deployed_version.Lookup{}
 	return deployed_version.Lookup{
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
@@ -257,8 +246,8 @@ func testDeployedVersion() deployed_version.Lookup {
 			Username: "fizz",
 			Password: "buzz",
 		},
-		Defaults:     &dflt,
-		HardDefaults: &hardDflt,
+		Defaults:     &deployed_version.Lookup{},
+		HardDefaults: &deployed_version.Lookup{},
 	}
 }
 

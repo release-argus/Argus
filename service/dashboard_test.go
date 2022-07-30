@@ -17,6 +17,9 @@
 package service
 
 import (
+	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -50,6 +53,43 @@ func TestGetAutoApprove(t *testing.T) {
 			if got != tc.wantBool {
 				t.Errorf("%s:\nwant: %t\ngot:  %t",
 					name, tc.wantBool, got)
+			}
+		})
+	}
+}
+
+func TestDashboardOptionsPrint(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		dashboardOptions DashboardOptions
+		lines            int
+	}{
+		"default prints nothing": {lines: 0},
+		"print auto_approve":     {lines: 2, dashboardOptions: DashboardOptions{AutoApprove: boolPtr(false)}},
+		"print icon":             {lines: 2, dashboardOptions: DashboardOptions{Icon: "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"}},
+		"print icon_link_to":     {lines: 2, dashboardOptions: DashboardOptions{IconLinkTo: "https://release-argus.io/demo"}},
+		"print web_url":          {lines: 2, dashboardOptions: DashboardOptions{WebURL: "https://release-argus.io"}},
+		"all options defined": {lines: 5, dashboardOptions: DashboardOptions{
+			AutoApprove: boolPtr(false), WebURL: "https://release-argus.io", Icon: "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg", IconLinkTo: "https://release-argus.io/demo"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN Print is called
+			tc.dashboardOptions.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
 			}
 		})
 	}

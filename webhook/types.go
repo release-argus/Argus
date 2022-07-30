@@ -39,7 +39,7 @@ type WebHook struct {
 	CustomHeaders     *map[string]string     `yaml:"custom_headers,omitempty"`      // Custom Headers for the WebHook
 	Secret            *string                `yaml:"secret,omitempty"`              // "SECRET"
 	DesiredStatusCode *int                   `yaml:"desired_status_code,omitempty"` // e.g. 202
-	Delay             *string                `yaml:"delay,omitempty"`               // The delay before sending the WebHook.
+	Delay             string                 `yaml:"delay,omitempty"`               // The delay before sending the WebHook.
 	MaxTries          *uint                  `yaml:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received.
 	SilentFails       *bool                  `yaml:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times.
 	Failed            *map[string]*bool      `yaml:"-"`                             // Whether the last send attempt failed

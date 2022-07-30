@@ -36,13 +36,13 @@ func testDeployedVersion() Lookup {
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
 		Regex:             "([0-9]+) The Argus Developers",
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: boolPtr(true),
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
 		Status:       &service_status.Status{ServiceID: stringPtr("test")},
-		Defaults:     &dflt,
-		HardDefaults: &hardDflt,
+		Defaults:     dflt,
+		HardDefaults: hardDflt,
 	}
 }

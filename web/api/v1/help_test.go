@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
@@ -51,20 +52,17 @@ func testClient() Client {
 }
 
 func testAPI() API {
-	var (
-		serviceID      string = "test"
-		serviceComment string = "foo"
-		serviceType    string = "github"
-		serviceURL     string = "release-argus/Argus"
-	)
+	var serviceID string = "test"
 	return API{
 		Config: &config.Config{
 			Service: service.Slice{
 				serviceID: &service.Service{
 					ID:      serviceID,
-					Comment: &serviceComment,
-					Type:    serviceType,
-					URL:     &serviceURL,
+					Comment: "foo",
+					LatestVersion: latest_version.Lookup{
+						Type: "github",
+						URL:  "release-argus/Argus",
+					},
 				},
 			},
 		},
@@ -73,16 +71,13 @@ func testAPI() API {
 }
 
 func testService(id string) service.Service {
-	var (
-		serviceComment string = "foo"
-		serviceType    string = "github"
-		serviceURL     string = "release-argus/Argus"
-	)
 	return service.Service{
 		ID:      id,
-		Comment: &serviceComment,
-		Type:    serviceType,
-		URL:     &serviceURL,
+		Comment: "foo",
+		LatestVersion: latest_version.Lookup{
+			Type: "github",
+			URL:  "release-argus/Argus",
+		},
 	}
 }
 
@@ -214,11 +209,11 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	got := convertURLCommandSliceToAPITypeURLCommandSlice(&slice)
 
 	// THEN the slice was converted correctly
-	if len(*got) != len(slice) ||
-		slice[0].Regex != (*got)[0].Regex ||
-		slice[0].Index != (*got)[0].Index ||
-		slice[1].Regex != (*got)[1].Regex ||
-		slice[1].Index != (*got)[1].Index {
+	if len(got) != len(slice) ||
+		slice[0].Regex != got[0].Regex ||
+		slice[0].Index != got[0].Index ||
+		slice[1].Regex != got[1].Regex ||
+		slice[1].Index != got[1].Index {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			slice, got)
 	}

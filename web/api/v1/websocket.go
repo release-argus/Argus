@@ -463,7 +463,6 @@ func (api *API) wsConfigService(client *Client) {
 			service := api.Config.Service[key]
 
 			serviceConfig[key] = &api_types.Service{
-				Type:    service.Type,
 				Comment: service.Comment,
 				Options: &api_types.ServiceOptions{
 					Active:             service.Options.Active,
@@ -471,7 +470,9 @@ func (api *API) wsConfigService(client *Client) {
 					SemanticVersioning: service.Options.SemanticVersioning,
 				},
 				LatestVersion: &api_types.LatestVersion{
+					Type:              service.LatestVersion.Type,
 					URL:               service.LatestVersion.URL,
+					URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands),
 					AccessToken:       utils.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 					AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 					UsePreRelease:     service.LatestVersion.UsePreRelease,
@@ -492,8 +493,6 @@ func (api *API) wsConfigService(client *Client) {
 
 			// DeployedVersionLookup
 			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToApiTypeDeployedVersionLookup(service.DeployedVersionLookup)
-			// URL Commands
-			serviceConfig[key].URLCommands = convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands)
 			// Notify
 			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
 			// Command
@@ -549,7 +548,7 @@ func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_ve
 	return &apiDVL
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommandSlice) *api_types.URLCommandSlice {
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommandSlice) api_types.URLCommandSlice {
 	if commands == nil {
 		return nil
 	}
@@ -564,7 +563,7 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommand
 			New:   (*commands)[index].New,
 		}
 	}
-	return &apiSlice
+	return apiSlice
 }
 
 func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_types.NotifySlice {
@@ -612,14 +611,14 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 		return
 	}
 	apiElement = &api_types.WebHook{
-		Type:              (*webhook).Type,
-		URL:               (*webhook).URL,
-		Secret:            utils.ValueIfNotNil((*webhook).Secret, "<secret>"),
-		CustomHeaders:     (*webhook).CustomHeaders,
-		DesiredStatusCode: (*webhook).DesiredStatusCode,
-		Delay:             (*webhook).Delay,
-		MaxTries:          (*webhook).MaxTries,
-		SilentFails:       (*webhook).SilentFails,
+		Type:              webhook.Type,
+		URL:               webhook.URL,
+		Secret:            utils.ValueIfNotNil(webhook.Secret, "<secret>"),
+		CustomHeaders:     webhook.CustomHeaders,
+		DesiredStatusCode: webhook.DesiredStatusCode,
+		Delay:             webhook.Delay,
+		MaxTries:          webhook.MaxTries,
+		SilentFails:       webhook.SilentFails,
 	}
 	return
 }

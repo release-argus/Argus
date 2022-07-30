@@ -117,7 +117,7 @@ func (w *WebHook) GetAllowInvalidCerts() bool {
 
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
-	return *utils.GetFirstNonNilPtr(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
+	return utils.GetFirstNonDefault(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
 }
 
 // GetDelayDuration before auto-approving this WebHook.

@@ -24,6 +24,8 @@ import (
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -39,11 +41,13 @@ func testVerify() Config {
 		"test": &defaults.WebHook,
 	}
 	serviceID := "test"
-	serviceURL := "release-argus/argus"
 	service := service.Slice{
-		"test": &service.Service{
-			ID:  serviceID,
-			URL: &serviceURL,
+		serviceID: &service.Service{
+			ID: serviceID,
+			LatestVersion: latest_version.Lookup{
+				Type: "github",
+				URL:  "release-argus/argus",
+			},
 		},
 	}
 	return Config{
@@ -69,7 +73,8 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				Defaults: Defaults{
 					Service: service.Service{
-						Interval: stringPtr("1x")}}},
+						Options: options.Options{
+							Interval: "1x"}}}},
 			errContains: `interval: "1x" <invalid>`},
 		"invalid Notify": {
 			config: Config{
@@ -83,14 +88,15 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
-						Delay: stringPtr("3x"),
+						Delay: "3x",
 					}}},
 			errContains: `delay: "3x" <invalid>`},
 		"invalid Service": {
 			config: Config{
 				Service: service.Slice{
 					"test": &service.Service{
-						Interval: stringPtr("4x"),
+						Options: options.Options{
+							Interval: "4x"},
 					}}},
 			errContains: `interval: "4x" <invalid>`},
 	}

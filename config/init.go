@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	command "github.com/release-argus/Argus/commands"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/deployed_version"
 	service_status "github.com/release-argus/Argus/service/status"
@@ -34,54 +33,23 @@ func (c *Config) Init() {
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &deployed_version.Lookup{}
 	}
+	c.Defaults.Service.Status.SaveChannel = c.SaveChannel
+	c.Defaults.Service.Convert()
 
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
-	for serviceID, service := range c.Service {
-		service.Status.Init(len(
-			service.Notify),
-			len(service.Command),
-			len(service.WebHook),
-			&service.ID,
-			&service.Dashboard.WebURL)
-
-		service.Init(
+	for i := range c.Service {
+		c.Service[i].Init(
 			jLog,
 			&c.Defaults.Service,
 			&c.HardDefaults.Service,
-		)
-
-		service.Notify.Init(
-			jLog,
-			&serviceID,
-			&service.Status,
 			&c.Notify,
 			&c.Defaults.Notify,
 			&c.HardDefaults.Notify,
-		)
-
-		service.WebHook.Init(
-			jLog,
-			&serviceID,
-			&service.Status,
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
-			&service.Notify,
-			service.Options.GetIntervalPointer(),
-		)
-
-		if service.Command != nil {
-			service.CommandController = &command.Controller{}
-		}
-		service.CommandController.Init(
-			jLog,
-			&serviceID,
-			&service.Status,
-			&service.Command,
-			&service.Notify,
-			service.Options.GetIntervalPointer(),
 		)
 	}
 

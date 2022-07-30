@@ -75,22 +75,22 @@ type Client struct {
 }
 
 func getIP(r *http.Request) string {
-	// Get IP from the CF-Connecting-IP header
-	ip := r.Header.Get("CF-Connecting-IP")
+	// Get IP from the CF-Connecting-Ip header
+	ip := r.Header.Get("CF-Connecting-Ip")
 	netIP := net.ParseIP(ip)
 	if netIP != nil {
 		return ip
 	}
 
-	// Get IP from the X-REAL-IP header
-	ip = r.Header.Get("X-REAL-IP")
+	// Get IP from the X-Real-Ip header
+	ip = r.Header.Get("X-Real-Ip")
 	netIP = net.ParseIP(ip)
 	if netIP != nil {
 		return ip
 	}
 
-	// Get IP from X-FORWARDED-FOR header
-	ips := r.Header.Get("X-FORWARDED-FOR")
+	// Get IP from X-Forwarded-For header
+	ips := r.Header.Get("X-Forwarded-For")
 	splitIps := strings.Split(ips, ",")
 	for _, ip := range splitIps {
 		netIP := net.ParseIP(ip)

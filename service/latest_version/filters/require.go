@@ -30,6 +30,18 @@ type Require struct {
 	RegexVersion string                 `yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
 }
 
+// Init will give the filters package the log and the Service's Status.
+func (r *Require) Init(
+	log *utils.JLog,
+	status *service_status.Status) {
+	if r == nil {
+		return
+	}
+	jLog = log
+
+	r.Status = status
+}
+
 // RegexCheckVersion
 func (r *Require) RegexCheckVersion(
 	version string,
@@ -122,6 +134,7 @@ func (r *Require) Print(prefix string) {
 	if r == nil {
 		return
 	}
+	fmt.Printf("%srequire:\n", prefix)
 	utils.PrintlnIfNotDefault(r.RegexContent, fmt.Sprintf("%s  regex_content: %q", prefix, r.RegexContent))
 	utils.PrintlnIfNotDefault(r.RegexVersion, fmt.Sprintf("%s  regex_version: %q", prefix, r.RegexVersion))
 }

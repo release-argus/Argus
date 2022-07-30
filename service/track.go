@@ -27,9 +27,10 @@ import (
 func (s *Slice) Track(ordering *[]string) {
 	for _, key := range *ordering {
 		// Skip disabled Services
-		if utils.EvalNilPtr((*s)[key].Options.Active, false) {
+		if !(*s)[key].Options.GetActive() {
 			continue
 		}
+		(*s)[key].Options.Active = nil
 
 		jLog.Verbose(
 			fmt.Sprintf("Tracking %s at %s every %s", (*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
@@ -40,7 +41,7 @@ func (s *Slice) Track(ordering *[]string) {
 		go (*s)[key].Track()
 
 		// Space out the tracking of each Service.
-		time.Sleep(time.Duration(2) * time.Second)
+		time.Sleep(time.Second / 2)
 	}
 }
 
@@ -75,11 +76,9 @@ func (s *Service) Track() {
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "regex ") {
 				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 2)
-			} else if strings.HasPrefix(err.Error(), "failed converting") &&
-				strings.Contains(err.Error(), " semantic version.") {
+			} else if strings.HasPrefix(err.Error(), "failed converting") && strings.Contains(err.Error(), " semantic version.") {
 				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 3)
-			} else if strings.HasPrefix(err.Error(), "queried version") &&
-				strings.Contains(err.Error(), " less than ") {
+			} else if strings.HasPrefix(err.Error(), "queried version") && strings.Contains(err.Error(), " less than ") {
 				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 4)
 			} else {
 				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, s.ID, "FAIL")

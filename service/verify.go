@@ -25,42 +25,9 @@ func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
 	for key := range *s {
-		var serviceErrors error
-		service := (*s)[key]
-
-		// Options
-		if err := service.Options.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Latest version / URL commands
-		if err := service.LatestVersion.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Deployed version lookup
-		if err := service.DeployedVersionLookup.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Notify(s)
-		if err := service.Notify.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// WebHook(s)
-		if err := service.WebHook.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		if serviceErrors != nil {
-			errs = fmt.Errorf("%s  %s:\\%w",
-				utils.ErrorToString(errs), key, serviceErrors)
+		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
+			errs = fmt.Errorf("%s%w",
+				utils.ErrorToString(errs), serviceErrs)
 		}
 	}
 	return errs
@@ -68,12 +35,31 @@ func (s *Slice) CheckValues(prefix string) error {
 
 // CheckValues of the Service.
 func (s *Service) CheckValues(prefix string) (errs error) {
-
-	if latestVersionErrs := s.Options.CheckValues(prefix + "  "); latestVersionErrs != nil {
-		errs = fmt.Errorf("%slatest_version:\\%w",
-			prefix, latestVersionErrs)
+	if optionErrs := s.Options.CheckValues(prefix + "  "); optionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), optionErrs)
+	}
+	if latestVersionErrs := s.LatestVersion.CheckValues(prefix + "  "); latestVersionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), latestVersionErrs)
+	}
+	if deployedVersionErrs := s.DeployedVersionLookup.CheckValues(prefix + "  "); deployedVersionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), deployedVersionErrs)
+	}
+	if notifyErrs := s.Notify.CheckValues(prefix + "  "); notifyErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), notifyErrs)
+	}
+	if webhookErrs := s.WebHook.CheckValues(prefix + "  "); webhookErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), webhookErrs)
 	}
 
+	if errs != nil && s.Defaults != nil {
+		errs = fmt.Errorf("%s:\\%w",
+			s.ID, errs)
+	}
 	return
 }
 
@@ -85,14 +71,14 @@ func (s *Slice) Print(prefix string, order []string) {
 
 	fmt.Printf("%sservice:\n", prefix)
 	for _, serviceID := range order {
-		(*s)[serviceID].Print(prefix + "  ")
+		fmt.Printf("%s  %s:\n", prefix, serviceID)
+		(*s)[serviceID].Print(prefix + "    ")
 	}
 }
 
 // Print will print the Service.
 func (s *Service) Print(prefix string) {
-	fmt.Printf("%s%s:\n", prefix, s.ID)
-	prefix += "  "
+	utils.PrintlnIfNotDefault(s.Comment, fmt.Sprintf("%scomment: %q", prefix, s.Comment))
 
 	// Options
 	s.Options.Print(prefix)
@@ -108,6 +94,9 @@ func (s *Service) Print(prefix string) {
 
 	// Notify.
 	s.Notify.Print(prefix)
+
+	// Command.
+	s.Command.Print(prefix)
 
 	// WebHook.
 	s.WebHook.Print(prefix)

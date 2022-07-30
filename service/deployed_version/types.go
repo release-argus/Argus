@@ -32,10 +32,10 @@ type Lookup struct {
 	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
 	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
 	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
-	options           *options.Options       `yaml:"-"`                             // Options for the lookups
+	Options           *options.Options       `yaml:"-"`                             // Options for the lookups
 	Status            *service_status.Status `yaml:"-"`                             // Service Status
-	HardDefaults      **Lookup               `yaml:"-"`                             // Hardcoded default values.
-	Defaults          **Lookup               `yaml:"-"`                             // Default values.
+	HardDefaults      *Lookup                `yaml:"-"`                             // Hardcoded default values.
+	Defaults          *Lookup                `yaml:"-"`                             // Default values.
 }
 
 // BasicAuth to use on the HTTP(s) request.

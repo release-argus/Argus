@@ -18,8 +18,10 @@ package service
 
 import (
 	"fmt"
+	"time"
 
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
@@ -46,19 +48,23 @@ func testLogging() {
 	jLog.Testing = true
 	var webhookLogs *webhook.Slice
 	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil, nil)
+	var latestVersion latest_version.Lookup
+	latestVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
+	var deployedVersion *deployed_version.Lookup
+	deployedVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
 }
 
-func testServiceGitHub() Service {
+func testServiceGitHub() *Service {
 	var (
 		announceChannel chan []byte           = make(chan []byte, 2)
 		saveChannel     chan bool             = make(chan bool, 5)
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	svc := Service{
-		ID:   "test",
-		Type: "github",
+	svc := &Service{
+		ID: "test",
 		LatestVersion: latest_version.Lookup{
-			AccessToken: stringPtr("secret"),
+			Type:        "github",
+			AccessToken: stringPtr(""),
 			URL:         "release-argus/Argus",
 			Require: &filters.Require{
 				RegexContent: "content",
@@ -84,35 +90,46 @@ func testServiceGitHub() Service {
 			SaveChannel:              &saveChannel,
 		},
 		Options: options.Options{
-			Interval:           stringPtr("5s"),
+			Interval:           "5s",
 			SemanticVersioning: boolPtr(true),
 		},
 		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: boolPtr(true),
+			Options: options.Options{
+				Active: boolPtr(true)},
 		},
 	}
+	svc.Init(jLog, &Service{}, &Service{}, nil, nil, nil, nil, nil, nil)
+	svc.Status.ServiceID = &svc.ID
 	svc.Status.WebURL = &svc.Dashboard.WebURL
 	return svc
 }
 
-func testServiceURL() Service {
+func testServiceURL() *Service {
 	var (
 		announceChannel chan []byte           = make(chan []byte, 5)
 		saveChannel     chan bool             = make(chan bool, 5)
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	svc := Service{
-		ID:   "test",
-		Type: "url",
+	svc := &Service{
+		ID: "test",
 		LatestVersion: latest_version.Lookup{
-			URL: "release-argus/Argus",
+			Type: "url",
+			URL:  "https://valid.release-argus.io/plain",
 			Require: &filters.Require{
-				RegexContent: "content",
-				RegexVersion: "version",
+				RegexContent: "{{ version }}-beta",
+				RegexVersion: "[0-9]+",
+			},
+			URLCommands: filters.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
 			},
 			AllowInvalidCerts: boolPtr(true),
 			UsePreRelease:     boolPtr(false),
+		},
+		DeployedVersionLookup: &deployed_version.Lookup{
+			URL:               "https://valid.release-argus.io/json",
+			JSON:              "version",
+			AllowInvalidCerts: boolPtr(false),
 		},
 		Dashboard: DashboardOptions{
 			AutoApprove:  boolPtr(false),
@@ -134,15 +151,23 @@ func testServiceURL() Service {
 			SaveChannel:              &saveChannel,
 		},
 		Options: options.Options{
-			Interval:           stringPtr("5s"),
+			Interval:           "5s",
 			SemanticVersioning: boolPtr(true),
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
 		},
 		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: boolPtr(true),
+			Options: options.Options{
+				Active: boolPtr(true)},
+			DeployedVersionLookup: &deployed_version.Lookup{},
 		},
 	}
+	svc.Status.ServiceID = &svc.ID
+	svc.LatestVersion.Init(jLog, &latest_version.Lookup{}, &latest_version.Lookup{}, &svc.Status, &svc.Options)
+	svc.DeployedVersionLookup.Init(jLog, &deployed_version.Lookup{}, &deployed_version.Lookup{}, &svc.Status, &svc.Options)
 	svc.Status.WebURL = &svc.Dashboard.WebURL
+	time.Sleep(time.Second)
 	return svc
 }
 
@@ -156,7 +181,7 @@ func testWebHookSuccessful() *webhook.WebHook {
 		Secret:            stringPtr("argus"),
 		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &desiredStatusCode,
-		Delay:             stringPtr("0s"),
+		Delay:             "0s",
 		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
 		ParentInterval:    stringPtr("12m"),
@@ -176,7 +201,7 @@ func testWebHookFailing() *webhook.WebHook {
 		Secret:            stringPtr("notArgus"),
 		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &desiredStatusCode,
-		Delay:             stringPtr("0s"),
+		Delay:             "0s",
 		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
 		ParentInterval:    stringPtr("12m"),

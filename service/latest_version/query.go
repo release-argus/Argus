@@ -42,7 +42,7 @@ func (l *Lookup) Query() (bool, error) {
 	}
 
 	l.status.SetLastQueried()
-	wantSemanticVersioning := l.options.GetSemanticVersioning()
+	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 
 	// If this version is different (new).
 	if version != l.status.LatestVersion {
@@ -190,7 +190,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 		return
 	}
 
-	wantSemanticVersioning := l.options.GetSemanticVersioning()
+	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 	for i := range filteredReleases {
 		version = filteredReleases[i].TagName
 		if wantSemanticVersioning && l.Type != "url" {

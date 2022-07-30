@@ -41,7 +41,7 @@ func testWebHookSuccessful() WebHook {
 		Secret:            &whSecret,
 		AllowInvalidCerts: &whAllowInvalidCerts,
 		DesiredStatusCode: &whDesiredStatusCode,
-		Delay:             &whDelay,
+		Delay:             whDelay,
 		SilentFails:       &whSilentFails,
 		MaxTries:          &whMaxTries,
 		Main:              &WebHook{},

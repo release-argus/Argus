@@ -42,7 +42,7 @@ func testLookupGitHub() Lookup {
 		AllowInvalidCerts: boolPtr(true),
 		UsePreRelease:     boolPtr(true),
 		Require:           &filters.Require{},
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: boolPtr(true),
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
@@ -73,7 +73,7 @@ func testLookupURL() Lookup {
 		AllowInvalidCerts: boolPtr(false),
 		URLCommands:       filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
 		Require:           &filters.Require{},
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: boolPtr(true),
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},

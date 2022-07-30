@@ -38,18 +38,17 @@ type Defaults struct {
 func (d *Defaults) SetDefaults() {
 	// Service defaults.
 	serviceActive := true
-	serviceInterval := "10m"
 	serviceSemanticVersioning := true
 	d.Service.Options = options.Options{
 		Active:             &serviceActive,
-		Interval:           &serviceInterval,
+		Interval:           "10m",
 		SemanticVersioning: &serviceSemanticVersioning,
 	}
 	serviceLatestVersionAllowInvalidCerts := false
 	usePreRelease := false
 	d.Service.LatestVersion = latest_version.Lookup{
-		UsePreRelease:     &usePreRelease,
 		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
+		UsePreRelease:     &usePreRelease,
 	}
 	serviceDeployedVersionLookupAllowInvalidCerts := false
 	d.Service.DeployedVersionLookup = &deployed_version.Lookup{
@@ -174,8 +173,7 @@ func (d *Defaults) SetDefaults() {
 	// WebHook defaults.
 	webhookType := "github"
 	d.WebHook.Type = &webhookType
-	webhookDelay := "0s"
-	d.WebHook.Delay = &webhookDelay
+	d.WebHook.Delay = "0s"
 	webhookMaxTries := uint(3)
 	d.WebHook.MaxTries = &webhookMaxTries
 	webhookAllowInvalidCerts := false

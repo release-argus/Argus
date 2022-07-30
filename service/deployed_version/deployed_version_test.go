@@ -131,7 +131,7 @@ func TestQuery(t *testing.T) {
 			dvl.Headers = tc.headers
 			dvl.JSON = tc.json
 			dvl.Regex = tc.regex
-			*dvl.options.SemanticVersioning = !tc.noSemanticVersioning
+			*dvl.Options.SemanticVersioning = !tc.noSemanticVersioning
 
 			// WHEN Query is called on it
 			version, err := dvl.Query(utils.LogFrom{})
@@ -175,32 +175,32 @@ func TestTrack(t *testing.T) {
 		wantDatabaseMesages  int
 	}{
 		"nil Lookup exits immediately": {lookup: nil, wait: 10 * time.Millisecond, expectFinish: true},
-		"track can get semantic version with regex": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get semantic version with regex": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can get semantic version from json": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get semantic version from json": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can get semantic version from multi-level json": {startLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", wait: 500 * time.Millisecond,
+		"get semantic version from multi-level json": {startLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "foo.bar.version"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can reject non-semantic versions": {wantDeployedVersion: "", wait: 500 * time.Millisecond,
+		"reject non-semantic versions": {wantDeployedVersion: "", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
-		"track can allow non-semantic version": {startLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2", wait: 500 * time.Millisecond,
+		"allow non-semantic version": {startLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: false, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can get version behind basic auth": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond, basicAuth: &BasicAuth{Username: "test", Password: "123"},
+		"get version behind basic auth": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond, basicAuth: &BasicAuth{Username: "test", Password: "123"},
 			lookup: &Lookup{URL: "https://valid.release-argus.io/basic-auth", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can get version behind an invalid cert": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get version behind an invalid cert": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: true, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can fail due to an unallowed invalid cert": {startLatestVersion: "", wantDeployedVersion: "", wait: 500 * time.Millisecond,
+		"fail due to an unallowed invalid cert": {startLatestVersion: "", wantDeployedVersion: "", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: false, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
-		"track can update from an older version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.1", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"update from an older version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.1", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track can update from a newer version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"update from a newer version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track that gets a newer deployed version than latest version updates both": {startLatestVersion: "1.2.1", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
-			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 2},
-		"track that gets a older deployed version than latest version only updates deployed": {startLatestVersion: "1.2.3", wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get a newer deployed version than latest version updates both": {startLatestVersion: "1.2.1", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 2, wantAnnounces: 2},
+		"get a older deployed version than latest version only updates deployed": {startLatestVersion: "1.2.3", wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"track that gets a deployed version with no latest version updates both": {startLatestVersion: "", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
-			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 2},
+		"get a deployed version with no latest version updates both": {startLatestVersion: "", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 2, wantAnnounces: 2},
 	}
 
 	for name, tc := range tests {
@@ -212,10 +212,10 @@ func TestTrack(t *testing.T) {
 				webURL := &tc.lookup.URL
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.Defaults = &defaults
-				tc.lookup.HardDefaults = &defaults
-				tc.lookup.options = &options.Options{
-					Interval:           stringPtr("2s"),
+				tc.lookup.Defaults = defaults
+				tc.lookup.HardDefaults = defaults
+				tc.lookup.Options = &options.Options{
+					Interval:           "2s",
 					SemanticVersioning: boolPtr(tc.semanticVersioning),
 					Defaults:           &options.Options{},
 					HardDefaults:       &options.Options{},

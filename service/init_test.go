@@ -21,9 +21,12 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/webhook"
 )
 
 func TestGetServiceInfo(t *testing.T) {
@@ -119,56 +122,98 @@ func TestServiceGetIconURL(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceURL()
-	log := utils.NewJLog("WARN", false)
-	var defaults Service
-	var hardDefaults Service
+	tests := map[string]struct {
+		service Service
+	}{
+		"bare service": {service: Service{ID: "Init", LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}},
+		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+			Notify:  shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{Type: "discord"}},
+			Command: command.Slice{{"ls"}},
+			WebHook: webhook.Slice{"test": testWebHookSuccessful()}}},
+	}
 
-	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
-	service.Init(log, &defaults, &hardDefaults)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			log := utils.NewJLog("WARN", false)
+			var defaults Service
+			var hardDefaults Service
+			tc.service.ID = name
 
-	// THEN pointers to those vars are handed out to the Lookup
-	// log
-	if jLog != log {
-		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-			log, jLog)
-	}
-	// defaults
-	if service.Defaults != &defaults {
-		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&defaults, service.Defaults)
-	}
-	// dashboard.defaults
-	if service.Dashboard.Defaults != &defaults.Dashboard {
-		t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&defaults.Dashboard, service.Dashboard.Defaults)
-	}
-	// options.defaults
-	if service.Options.Defaults != &defaults.Options {
-		t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&defaults.Options, service.Options.Defaults)
-	}
-	// hardDefaults
-	if service.HardDefaults != &hardDefaults {
-		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&hardDefaults, service.HardDefaults)
-	}
-	// dashboard.hardDefaults
-	if service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
-		t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&hardDefaults.Dashboard, service.Dashboard.HardDefaults)
-	}
-	// options.hardDefaults
-	if service.Options.HardDefaults != &hardDefaults.Options {
-		t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-			&hardDefaults.Options, service.Options.HardDefaults)
-	}
-	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
-	wantC := 2
-	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics's were initialised, expecting %d",
-			(gotC - hadC), wantC)
+			// WHEN Init is called on it
+			hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+			tc.service.Init(log, &defaults, &hardDefaults, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+
+			// THEN pointers to those vars are handed out to the Lookup
+			// log
+			if jLog != log {
+				t.Errorf("%s:\nJLog was not initialised from the Init\n want: %v\ngot:  %v",
+					name, log, jLog)
+			}
+			// defaults
+			if tc.service.Defaults != &defaults {
+				t.Errorf("%s:\nDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &defaults, tc.service.Defaults)
+			}
+			// dashboard.defaults
+			if tc.service.Dashboard.Defaults != &defaults.Dashboard {
+				t.Errorf("%s:\nDashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &defaults.Dashboard, tc.service.Dashboard.Defaults)
+			}
+			// options.defaults
+			if tc.service.Options.Defaults != &defaults.Options {
+				t.Errorf("%s:\nOptions defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &defaults.Options, tc.service.Options.Defaults)
+			}
+			// hardDefaults
+			if tc.service.HardDefaults != &hardDefaults {
+				t.Errorf("%s:\nHardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &hardDefaults, tc.service.HardDefaults)
+			}
+			// dashboard.hardDefaults
+			if tc.service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
+				t.Errorf("%s:\nDashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
+			}
+			// options.hardDefaults
+			if tc.service.Options.HardDefaults != &hardDefaults.Options {
+				t.Errorf("%s:\nOptions hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					name, &hardDefaults.Options, tc.service.Options.HardDefaults)
+			}
+			// initMetrics - counters
+			gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+			wantC := 2
+			if (gotC - hadC) != wantC {
+				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
+					name, (gotC - hadC), wantC)
+			}
+			// Notify
+			if len(tc.service.Notify) != 0 {
+				for i := range tc.service.Notify {
+					if tc.service.Notify[i].Main == nil {
+						t.Errorf("%s:\nNotify init didn't initialise the Main",
+							name)
+					}
+				}
+			}
+			// Command
+			if len(tc.service.Command) != 0 {
+				if tc.service.CommandController == nil {
+					t.Errorf("%s:\nCommandController is still nil with %v Commands present",
+						name, tc.service.Command)
+				}
+			} else if tc.service.CommandController != nil {
+				t.Errorf("%s:\nCommandController should be nil with %v Commands present",
+					name, tc.service.Command)
+			}
+			// WebHook
+			if len(tc.service.WebHook) != 0 {
+				for i := range tc.service.WebHook {
+					if tc.service.WebHook[i].Main == nil {
+						t.Errorf("%s:\nWebHook init didn't initialise the Main",
+							name)
+					}
+				}
+			}
+		})
 	}
 }

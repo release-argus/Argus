@@ -58,17 +58,17 @@ func TestGetActive(t *testing.T) {
 func TestGetInterval(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		intervalRoot        *string
-		intervalDefault     *string
-		intervalHardDefault *string
+		intervalRoot        string
+		intervalDefault     string
+		intervalHardDefault string
 		wantString          string
 	}{
-		"root overrides all": {wantString: "10s", intervalRoot: stringPtr("10s"),
-			intervalDefault: stringPtr("1m10s"), intervalHardDefault: stringPtr("1m10s")},
-		"default overrides hardDefault": {wantString: "10s", intervalRoot: nil,
-			intervalDefault: stringPtr("10s"), intervalHardDefault: stringPtr("1m10s")},
-		"hardDefault is last resort": {wantString: "10s", intervalRoot: nil, intervalDefault: nil,
-			intervalHardDefault: stringPtr("10s")},
+		"root overrides all": {wantString: "10s", intervalRoot: "10s",
+			intervalDefault: "1m10s", intervalHardDefault: "1m10s"},
+		"default overrides hardDefault": {wantString: "10s", intervalRoot: "",
+			intervalDefault: "10s", intervalHardDefault: "1m10s"},
+		"hardDefault is last resort": {wantString: "10s", intervalRoot: "", intervalDefault: "",
+			intervalHardDefault: "10s"},
 	}
 
 	for name, tc := range tests {
@@ -128,13 +128,13 @@ func TestGetSemanticVersioning(t *testing.T) {
 func TestGetIntervalPointer(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testOptions()
-	lookup.Interval = stringPtr("10s")
+	lookup.Interval = "10s"
 
 	// WHEN GetIntervalPointer is called
 	got := lookup.GetIntervalPointer()
 
 	// THEN the function returns the correct result
-	if got != lookup.Interval {
+	if got != &lookup.Interval {
 		t.Errorf("want: %v\ngot:  %v",
 			lookup.Interval, got)
 	}
@@ -143,7 +143,7 @@ func TestGetIntervalPointer(t *testing.T) {
 func TestGetIntervalDuration(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testOptions()
-	lookup.Interval = stringPtr("3h2m1s")
+	lookup.Interval = "3h2m1s"
 
 	// WHEN GetInterval is called
 	got := lookup.GetIntervalDuration()
@@ -164,9 +164,9 @@ func TestPrint(t *testing.T) {
 	}{
 		"empty/default Options":    {options: Options{}, lines: 0},
 		"only active":              {options: Options{Active: boolPtr(false)}, lines: 2},
-		"only interval":            {options: Options{Interval: stringPtr("10s")}, lines: 2},
+		"only interval":            {options: Options{Interval: "10s"}, lines: 2},
 		"only semantic_versioning": {options: Options{SemanticVersioning: boolPtr(false)}, lines: 2},
-		"all options defined":      {options: Options{Active: boolPtr(false), Interval: stringPtr("10s"), SemanticVersioning: boolPtr(false)}, lines: 4},
+		"all options defined":      {options: Options{Active: boolPtr(false), Interval: "10s", SemanticVersioning: boolPtr(false)}, lines: 4},
 	}
 
 	for name, tc := range tests {
@@ -199,11 +199,11 @@ func TestCheckValues(t *testing.T) {
 		errRegex     string
 	}{
 		"valid options": {errRegex: `^$`,
-			options: Options{Active: boolPtr(false), Interval: stringPtr("10s"), SemanticVersioning: boolPtr(false)}},
+			options: Options{Active: boolPtr(false), Interval: "10s", SemanticVersioning: boolPtr(false)}},
 		"invalid interval": {errRegex: `interval: .* <invalid>`,
-			options: Options{Active: boolPtr(false), Interval: stringPtr("10x"), SemanticVersioning: boolPtr(false)}},
+			options: Options{Active: boolPtr(false), Interval: "10x", SemanticVersioning: boolPtr(false)}},
 		"seconds get appended to pure decimal interval": {errRegex: `^$`, wantInterval: "10s",
-			options: Options{Active: boolPtr(false), Interval: stringPtr("10"), SemanticVersioning: boolPtr(false)}},
+			options: Options{Active: boolPtr(false), Interval: "10", SemanticVersioning: boolPtr(false)}},
 	}
 
 	for name, tc := range tests {

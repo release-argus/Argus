@@ -31,7 +31,7 @@ func (l *Lookup) filterGitHubReleases(
 	releases []github_types.Release,
 	logFrom utils.LogFrom,
 ) (filteredReleases []github_types.Release) {
-	semanticVerioning := l.options.GetSemanticVersioning()
+	semanticVerioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.GetUsePreRelease()
 	for i := range releases {
 		// If it isn't a prerelease, or it is and they're wanted

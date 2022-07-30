@@ -12,23 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+package command
 
-package options
+import (
+	"fmt"
+)
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
+// Print will print the Slice.
+func (s *Slice) Print(prefix string) {
+	if s == nil || len(*s) == 0 {
+		return
+	}
 
-func testOptions() Options {
-	return Options{
-		Active:             boolPtr(true),
-		Interval:           "10m",
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &Options{},
-		HardDefaults:       &Options{},
+	fmt.Printf("%scommand:\n", prefix)
+
+	for i := range *s {
+		fmt.Printf("%s  - %s\n", prefix, (*s)[i].FormattedString())
 	}
 }

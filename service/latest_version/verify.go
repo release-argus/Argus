@@ -23,27 +23,31 @@ import (
 
 // Print the struct.
 func (l *Lookup) Print(prefix string) {
-	fmt.Printf("%stype: %s\n", prefix, l.Type)
+	fmt.Printf("%slatest_version:\n", prefix)
+	prefix += "  "
+	utils.PrintlnIfNotDefault(l.Type, fmt.Sprintf("%stype: %s", prefix, l.Type))
 	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
 	utils.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, utils.DefaultIfNil(l.AccessToken)))
 	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
 	utils.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(l.UsePreRelease)))
-	if len(l.URLCommands) != 0 {
-		fmt.Printf("%surl_commands:\n", prefix)
-		l.URLCommands.Print(prefix)
-	}
-	if l.Require != nil {
-		fmt.Printf("%srequire:\n", prefix)
-		l.Require.Print(prefix)
-	}
-	l.options.Print(prefix)
+	l.URLCommands.Print(prefix)
+	l.Require.Print(prefix)
 }
 
 // CheckValues of the Lookup struct
 func (l *Lookup) CheckValues(prefix string) (errs error) {
 	if l.URL == "" {
-		errs = fmt.Errorf("%s%s  url: <required> e.g. github:'release-argus/Argus' or url:'https://example.com'\\",
-			utils.ErrorToString(errs), prefix)
+		if l.Defaults != nil {
+			errs = fmt.Errorf("%s%s  url: <required> e.g. github:'release-argus/Argus' or url:'https://example.com'\\",
+				utils.ErrorToString(errs), prefix)
+		}
+	} else if l.Type != "url" && l.Type != "github" {
+		errType := "<required>"
+		if l.Type != "" {
+			errType = fmt.Sprintf("%q <invalid>", l.Type)
+		}
+		errs = fmt.Errorf("%s%s  type: %s e.g. github or url\\",
+			utils.ErrorToString(errs), prefix, errType)
 	}
 	if l.Type == "github" && strings.Count(l.URL, "/") > 1 {
 		parts := strings.Split(l.URL, "/")

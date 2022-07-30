@@ -36,9 +36,13 @@ func (d *DashboardOptions) GetAutoApprove() bool {
 
 // Print the struct.
 func (d *DashboardOptions) Print(prefix string) {
+	if d.AutoApprove == nil && d.Icon == "" && d.IconLinkTo == "" && d.WebURL == "" {
+		return
+	}
+
 	fmt.Printf("%sdashboard:\n", prefix)
-	utils.PrintlnIfNotNil(d.AutoApprove, fmt.Sprintf("%sauto_approve: %t", prefix, utils.DefaultIfNil(d.AutoApprove)))
-	utils.PrintlnIfNotDefault(d.WebURL, fmt.Sprintf("%sweb_url: %q", prefix, d.WebURL))
-	utils.PrintlnIfNotDefault(d.Icon, fmt.Sprintf("%sicon: %q", prefix, d.Icon))
-	utils.PrintlnIfNotDefault(d.IconLinkTo, fmt.Sprintf("%sicon_link_to: %q", prefix, d.IconLinkTo))
+	utils.PrintlnIfNotNil(d.AutoApprove, fmt.Sprintf("%s  auto_approve: %t", prefix, utils.DefaultIfNil(d.AutoApprove)))
+	utils.PrintlnIfNotDefault(d.Icon, fmt.Sprintf("%s  icon: %q", prefix, d.Icon))
+	utils.PrintlnIfNotDefault(d.IconLinkTo, fmt.Sprintf("%s  icon_link_to: %q", prefix, d.IconLinkTo))
+	utils.PrintlnIfNotDefault(d.WebURL, fmt.Sprintf("%s  web_url: %q", prefix, d.WebURL))
 }

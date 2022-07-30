@@ -120,7 +120,7 @@ func TestQuery(t *testing.T) {
 				}
 				lookup.URLCommands[0].Regex = tc.regex
 			}
-			*lookup.options.SemanticVersioning = !tc.nonSemanticVersioning
+			*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
 			lookup.status.LatestVersion = tc.latestVersion
 			lookup.Require.RegexContent = tc.requireRegexContent
 			lookup.Require.RegexVersion = tc.requireRegexVersion

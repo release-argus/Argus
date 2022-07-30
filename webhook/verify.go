@@ -45,14 +45,14 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 // CheckValues are valid for this WebHook recipient.
 func (w *WebHook) CheckValues(prefix string) (errs error) {
 	// Delay
-	if w.Delay != nil {
+	if w.Delay != "" {
 		// Default to seconds when an integer is provided
-		if _, err := strconv.Atoi(*w.Delay); err == nil {
-			*w.Delay += "s"
+		if _, err := strconv.Atoi(w.Delay); err == nil {
+			w.Delay += "s"
 		}
-		if _, err := time.ParseDuration(*w.Delay); err != nil {
+		if _, err := time.ParseDuration(w.Delay); err != nil {
 			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
-				utils.ErrorToString(errs), prefix, *w.Delay)
+				utils.ErrorToString(errs), prefix, w.Delay)
 		}
 	}
 
@@ -81,9 +81,10 @@ func (w *Slice) Print(prefix string) {
 	}
 
 	fmt.Printf("%swebhook:\n", prefix)
-	for webhookID, webhook := range *w {
+	keys := utils.SortedKeys(*w)
+	for _, webhookID := range keys {
 		fmt.Printf("%s  %s:\n", prefix, webhookID)
-		webhook.Print(prefix + "    ")
+		(*w)[webhookID].Print(prefix + "    ")
 	}
 }
 
@@ -94,7 +95,7 @@ func (w *WebHook) Print(prefix string) {
 	utils.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(w.AllowInvalidCerts)))
 	utils.PrintlnIfNotNil(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, utils.DefaultIfNil(w.Secret)))
 	utils.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, utils.DefaultIfNil(w.DesiredStatusCode)))
-	utils.PrintlnIfNotNil(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, utils.DefaultIfNil(w.Delay)))
+	utils.PrintlnIfNotDefault(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, w.Delay))
 	utils.PrintlnIfNotNil(w.MaxTries, fmt.Sprintf("%smax_tries: %d", prefix, utils.DefaultIfNil(w.MaxTries)))
 	utils.PrintlnIfNotNil(w.SilentFails, fmt.Sprintf("%ssilent_fails: %t", prefix, utils.DefaultIfNil(w.SilentFails)))
 }

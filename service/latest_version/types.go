@@ -33,7 +33,7 @@ type Lookup struct {
 	UsePreRelease     *bool                   `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default)
 	URLCommands       filters.URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request
 	Require           *filters.Require        `yaml:"require,omitempty"`             // Options to require before a release is considered valid
-	options           *options.Options        `yaml:"-"`                             // Options
+	Options           *options.Options        `yaml:"-"`                             // Options
 	status            *service_status.Status  `yaml:"-"`                             // Service Status
 	Defaults          *Lookup                 `yaml:"-"`                             // Defaults
 	HardDefaults      *Lookup                 `yaml:"-"`                             // Hard Defaults

@@ -34,9 +34,10 @@ func (l *Lookup) Init(
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
 	l.status = status
-	l.options = options
+	l.Options = options
 	l.initMetrics()
 	l.URLCommands.Init(jLog)
+	l.Require.Init(log, status)
 }
 
 // initMetrics will initialise the Prometheus metrics.

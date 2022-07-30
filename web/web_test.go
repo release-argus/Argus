@@ -330,7 +330,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			svcForLog := service.Service{}
-			svcForLog.Init(jLog, &service.Service{}, &service.Service{})
+			svcForLog.Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
@@ -357,7 +357,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					}
 				}
 				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, cfg.Service[tc.serviceID].Interval)
+				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
 				if len(tc.webhookFails) != 0 {
 					for key := range tc.webhookFails {
 						(*cfg.Service[tc.serviceID].WebHook[key].Failed)[key] = tc.webhookFails[key]
@@ -583,7 +583,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 				}
 				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
 				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, cfg.Service[tc.serviceID].Interval)
+				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
 				defer func() {
 					cfg.Service[tc.serviceID].Status = hadStatus
 					cfg.Service[tc.serviceID].Command = hadCommandSlice
@@ -780,9 +780,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					hadService[i].DeployedVersionLookup = &dvl
 				}
 				if tc.nilServiceURLC {
-					urlc := *cfg.Service[i].URLCommands
-					cfg.Service[i].URLCommands = nil
-					hadService[i].URLCommands = &urlc
+					urlc := cfg.Service[i].LatestVersion.URLCommands
+					cfg.Service[i].LatestVersion.URLCommands = nil
+					hadService[i].LatestVersion.URLCommands = urlc
 				}
 				if tc.nilServiceNotify {
 					notify := cfg.Service[i].Notify
@@ -877,12 +877,12 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				} else {
 					if receivedMsg.ConfigData == nil ||
 						receivedMsg.ConfigData.Defaults == nil ||
-						receivedMsg.ConfigData.Defaults.Service.Options.Interval == nil {
+						receivedMsg.ConfigData.Defaults.Service.Options.Interval == "" {
 						t.Errorf("Didn't receive ConfigData.Defaults.Service.Interval from\n%#v",
 							receivedMsg)
-					} else if *receivedMsg.ConfigData.Defaults.Service.Options.Interval != *cfg.Defaults.Service.Interval {
+					} else if receivedMsg.ConfigData.Defaults.Service.Options.Interval != cfg.Defaults.Service.Options.Interval {
 						t.Errorf("Expected ConfigData.Defaults.Service.Options.Interval to be %q, got %q\n%#v",
-							*cfg.Defaults.Service.Interval, *receivedMsg.ConfigData.Defaults.Service.Options.Interval, receivedMsg)
+							cfg.Defaults.Service.Options.Interval, receivedMsg.ConfigData.Defaults.Service.Options.Interval, receivedMsg)
 					}
 				}
 			}
@@ -953,15 +953,15 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				receivedTestService := (*receivedMsg.ConfigData.Service)["test"]
 				cfgTestService := cfg.Service["test"]
 				// service
-				if *receivedTestService.Comment != *cfgTestService.Comment {
+				if receivedTestService.Comment != cfgTestService.Comment {
 					t.Errorf("ConfigData.Service.test.Comment should've been %q, got %q",
-						*cfgTestService.Comment, *receivedTestService.Comment)
+						cfgTestService.Comment, receivedTestService.Comment)
 				}
 				if receivedTestService.LatestVersion.URL != cfgTestService.LatestVersion.URL {
 					t.Errorf("ConfigData.Service.test.LatestVersion.URL should've been %q, got %q",
 						cfgTestService.LatestVersion.URL, receivedTestService.LatestVersion.URL)
 				}
-				if receivedTestService.Dashboard.WebURL != *cfgTestService.WebURL {
+				if receivedTestService.Dashboard.WebURL != cfgTestService.Dashboard.WebURL {
 					t.Errorf("ConfigData.Service.test.Dashboard.WebURL should've been %q, got %q",
 						cfgTestService.Dashboard.WebURL, receivedTestService.Dashboard.WebURL)
 				}
@@ -1014,19 +1014,17 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// url commands
 				if tc.nilServiceURLC {
-					if receivedTestService.URLCommands != nil {
-						if receivedTestService.URLCommands != nil {
-							t.Errorf("%s\n:expecting URLCommands to be nil, not \n%#v",
-								name, receivedTestService.URLCommands)
-						}
+					if len(receivedTestService.LatestVersion.URLCommands) != 0 && len(receivedTestService.LatestVersion.URLCommands) != 0 {
+						t.Errorf("%s\n:expecting URLCommands to be nil, not \n%#v",
+							name, receivedTestService.LatestVersion.URLCommands)
 					}
 				} else {
-					if receivedTestService.URLCommands == nil {
+					if receivedTestService.LatestVersion.URLCommands == nil {
 						t.Errorf("ConfigData.Service.test.URLCommands should've been %#v, got %#v",
-							*cfgTestService.URLCommands, receivedTestService.URLCommands)
-					} else if *(*receivedTestService.URLCommands)[0].Regex != *(*cfgTestService.URLCommands)[0].Regex {
+							cfgTestService.LatestVersion.URLCommands, receivedTestService.LatestVersion.URLCommands)
+					} else if utils.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex) != utils.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
 						t.Errorf("ConfigData.Service.test.URLCommands[0].Regex should've been %q, got %q",
-							*(*cfgTestService.URLCommands)[0].Regex, *(*receivedTestService.URLCommands)[0].Regex)
+							utils.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), utils.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex))
 					}
 				}
 				// notify

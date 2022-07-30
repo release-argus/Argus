@@ -45,7 +45,6 @@ func (l *Lookup) Print(prefix string) {
 	}
 	utils.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
 	utils.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
-	l.options.Print(prefix)
 }
 
 // CheckValues of the Lookup.

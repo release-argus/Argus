@@ -237,7 +237,7 @@ func TestWebHookSendSuccessWithDelay(t *testing.T) {
 	// GIVEN a WebHook with 5s Delay
 	jLog = utils.NewJLog("WARN", false)
 	webhook := testWebHookSuccessful()
-	*webhook.Delay = "5s"
+	webhook.Delay = "5s"
 
 	// WHEN Send is called on this WebHook with useDelay
 	start := time.Now().UTC()

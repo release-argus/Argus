@@ -195,7 +195,7 @@ func TestFilterGitHubReleasesDoesFilterPreReleases(t *testing.T) {
 	)
 	lv := Lookup{
 		URL: url,
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
@@ -233,7 +233,7 @@ func TestFilterGitHubReleasesDoesntFilterPreReleases(t *testing.T) {
 	)
 	lv := Lookup{
 		URL: url,
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
@@ -270,7 +270,7 @@ func TestFilterGitHubReleasesWithNotCareSemantic(t *testing.T) {
 	)
 	lv := Lookup{
 		URL: url,
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
@@ -307,7 +307,7 @@ func TestFilterGitHubReleasesWithSomeNonSemantic(t *testing.T) {
 	)
 	lv := Lookup{
 		URL: url,
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
@@ -346,7 +346,7 @@ func TestFilterGitHubReleasesWithSomeNonSemanticDidSort(t *testing.T) {
 	)
 	lv := Lookup{
 		URL: url,
-		options: &options.Options{
+		Options: &options.Options{
 			SemanticVersioning: &semanticVersioning,
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},

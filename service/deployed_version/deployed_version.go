@@ -31,7 +31,7 @@ import (
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, (*l.Defaults).AllowInvalidCerts, (*l.HardDefaults).AllowInvalidCerts)
+	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
@@ -54,7 +54,7 @@ func (l *Lookup) Track() {
 
 				// If this new deployedVersion isn't LatestVersion
 				// Check that it's not a later version than LatestVersion
-				if deployedVersion != l.Status.LatestVersion && l.options.GetSemanticVersioning() && l.Status.LatestVersion != "" {
+				if deployedVersion != l.Status.LatestVersion && l.Options.GetSemanticVersioning() && l.Status.LatestVersion != "" {
 					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
 					//nolint:errcheck // ^
 					deployedVersionSV, _ := semver.NewVersion(deployedVersion)
@@ -64,12 +64,12 @@ func (l *Lookup) Track() {
 
 					// Update LatestVersion to DeployedVersion if it's newer
 					if latestVersionSV.LessThan(*deployedVersionSV) {
-						l.Status.LatestVersion = l.Status.DeployedVersion
+						l.Status.SetLatestVersion(l.Status.DeployedVersion)
 						l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
 						l.Status.AnnounceQueryNewVersion()
 					}
 				} else if l.Status.LatestVersion == "" {
-					l.Status.LatestVersion = l.Status.DeployedVersion
+					l.Status.SetLatestVersion(l.Status.DeployedVersion)
 					l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
 					l.Status.AnnounceQueryNewVersion()
 				}
@@ -86,7 +86,7 @@ func (l *Lookup) Track() {
 			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *l.Status.ServiceID, 0)
 		}
 		// Sleep interval between queries.
-		time.Sleep(l.options.GetIntervalDuration())
+		time.Sleep(l.Options.GetIntervalDuration())
 	}
 }
 
@@ -151,7 +151,7 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 		version = texts[index]
 	}
 
-	if l.options.GetSemanticVersioning() {
+	if l.Options.GetSemanticVersioning() {
 		_, err = semver.NewVersion(version)
 		if err != nil {
 			err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding json/regex to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
