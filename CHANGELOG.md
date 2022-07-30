@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.8.2](https://github.com/release-argus/Argus/compare/0.8.1...0.8.2) (2022-07-30)
+
+
+### Bug Fixes
+
+* **db:** can't insert new rows with an `UPDATE` ([#133](https://github.com/release-argus/Argus/issues/133)) ([934a845](https://github.com/release-argus/Argus/commits/934a845c400f6d6ca44190ffdf949523c1167919))
+
 ### [0.8.1](https://github.com/release-argus/Argus/compare/0.8.0...0.8.1) (2022-07-22)
 
 
