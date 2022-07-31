@@ -45,7 +45,7 @@ func TestServicePrint(t *testing.T) {
 		dashboardOptions DashboardOptions
 		lines            int
 	}{
-		"base fields only": {lines: 3, service: Service{ID: "test", Comment: "foo_comment"}},
+		"base fields only": {lines: 2, service: Service{ID: "test", Comment: "foo_comment"}},
 		"base + latest_version": {lines: 4, service: Service{ID: "test", Comment: "foo_comment"},
 			latestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}},
 		"base + latest_version + deployed_version": {lines: 6, service: Service{ID: "test", Comment: "foo_comment"},
@@ -113,9 +113,9 @@ func TestSlicePrint(t *testing.T) {
 	}{
 		"nil slice with no ordering": {lines: 0, slice: nil},
 		"nil slice with ordering":    {lines: 0, ordering: []string{"foo", "bar"}, slice: nil},
-		"respects ordering": {lines: 9, ordering: []string{"zulu", "alpha"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
+		"respects ordering": {lines: 7, ordering: []string{"zulu", "alpha"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
 			regexMatch: `zulu(.|\s)+alpha`},
-		"respects reversedordering": {lines: 9, ordering: []string{"alpha", "zulu"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
+		"respects reversedordering": {lines: 7, ordering: []string{"alpha", "zulu"}, slice: &Slice{"zulu": &Service{ID: "zulu", Comment: "a"}, "alpha": &Service{ID: "alpha", Comment: "b"}},
 			regexMatch: `alpha(.|\s)+zulu`},
 	}
 

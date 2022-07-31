@@ -57,7 +57,7 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 	}
 
 	if errs != nil && s.Defaults != nil {
-		errs = fmt.Errorf("%s:\\%w",
+		errs = fmt.Errorf("  %s:\\%w",
 			s.ID, errs)
 	}
 	return

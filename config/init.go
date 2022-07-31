@@ -90,7 +90,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 	databaseChannel := make(chan db_types.Message, 8)
 	c.DatabaseChannel = &databaseChannel
 
-	saveChannel := make(chan bool, 4)
+	saveChannel := make(chan bool, 8)
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {

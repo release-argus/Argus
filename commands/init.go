@@ -44,6 +44,9 @@ func (c *Controller) Init(
 	c.ServiceStatus = serviceStatus
 	c.Command = command
 	c.Failed = &serviceStatus.Fails.Command
+	if len(*c.Failed) == 0 {
+		*c.Failed = make([]*bool, len(*c.Command))
+	}
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 
 	parentID := *serviceID

@@ -67,7 +67,7 @@ func CommandTest(
 		service.CommandController == nil)
 
 	//nolint:errcheck
-	(*service.CommandController).Exec(&logFrom)
+	service.CommandController.Exec(&logFrom)
 	if !log.Testing {
 		os.Exit(0)
 	}

@@ -63,11 +63,16 @@ func ServiceTest(
 		//nolint:staticcheck // log.Fatal if nil above. this ignore doesn't seem to work though
 		_, err := service.LatestVersion.Query()
 		if err != nil {
+			helpMsg := ""
+			if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
+				helpMsg = "This URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type.\n"
+			}
 			log.Error(
 				fmt.Sprintf(
-					"No version matching the conditions specified could be found for %q at %q",
+					"No version matching the conditions specified could be found for %q at %q\n%s",
 					*flag,
 					service.LatestVersion.GetServiceURL(true),
+					helpMsg,
 				),
 				logFrom,
 				true,

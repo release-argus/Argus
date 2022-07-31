@@ -29,17 +29,24 @@ func TestHTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
 	jLog = utils.NewJLog("WARN", false)
 	tests := map[string]struct {
-		url      string
-		errRegex string
+		url         string
+		githubType  bool
+		accessToken string
+		errRegex    string
 	}{
 		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
-		"unknown url": {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
-		"valid url":   {url: "https://release-argus.io", errRegex: "^$"},
+		"unknown url":  {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
+		"valid url":    {url: "https://release-argus.io", errRegex: "^$"},
+		"github token": {url: "release-argus/Argus", accessToken: "foo", errRegex: "^$", githubType: true},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			lookup := testLookupURL()
+			if tc.githubType {
+				lookup = testLookupGitHub()
+				lookup.AccessToken = &tc.accessToken
+			}
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it

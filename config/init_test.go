@@ -41,10 +41,12 @@ func TestLoad(t *testing.T) {
 
 	// THEN they match the config file
 	for name, tc := range tests {
-		if tc.got != tc.want {
-			t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
-				name, tc.want, tc.got)
-		}
+		t.Run(name, func(t *testing.T) {
+			if tc.got != tc.want {
+				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
+					name, tc.want, tc.got)
+			}
+		})
 	}
 }
 

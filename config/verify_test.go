@@ -139,6 +139,7 @@ func TestConfigCheckValues(t *testing.T) {
 		})
 	}
 }
+
 func TestConfigPrint(t *testing.T) {
 	// GIVEN a Config and print flags of true and false
 	jLog = utils.NewJLog("WARN", false)
@@ -148,7 +149,7 @@ func TestConfigPrint(t *testing.T) {
 		flag        bool
 		wantedLines int
 	}{
-		"flag on":  {flag: true, wantedLines: 165},
+		"flag on":  {flag: true, wantedLines: 148},
 		"flag off": {flag: false},
 	}
 
@@ -167,8 +168,8 @@ func TestConfigPrint(t *testing.T) {
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.wantedLines {
-				t.Errorf("Print with %s wants %d lines but got %d",
-					name, tc.wantedLines, got)
+				t.Errorf("Print with %s wants %d lines but got %d\n%s",
+					name, tc.wantedLines, got, string(out))
 			}
 		})
 	}

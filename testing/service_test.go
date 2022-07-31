@@ -26,12 +26,14 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
@@ -72,11 +74,11 @@ func TestServiceTest(t *testing.T) {
 						URLCommands: filters.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
 						},
+						AccessToken:       stringPtr(os.Getenv("GITHUB_TOKEN")),
 						AllowInvalidCerts: boolPtr(false),
-						Options: &options.Options{
-							SemanticVersioning: boolPtr(true),
-							Interval:           "0s",
-						},
+					},
+					Options: options.Options{
+						Interval: "0s",
 					},
 				},
 			}},
@@ -94,8 +96,7 @@ func TestServiceTest(t *testing.T) {
 						AllowInvalidCerts: boolPtr(false),
 					},
 					Options: options.Options{
-						Interval:           "0s",
-						SemanticVersioning: boolPtr(true),
+						Interval: "0s",
 					},
 				},
 			}},
@@ -112,8 +113,7 @@ func TestServiceTest(t *testing.T) {
 						},
 						AllowInvalidCerts: boolPtr(false),
 						Options: &options.Options{
-							SemanticVersioning: boolPtr(true),
-							Interval:           "0s",
+							Interval: "0s",
 						},
 					},
 				},
@@ -164,7 +164,12 @@ func TestServiceTest(t *testing.T) {
 				}()
 			}
 			if tc.slice[tc.flag] != nil {
-				tc.slice[tc.flag].Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
+				defaults := config.Defaults{}
+				defaults.SetDefaults()
+				tc.slice[tc.flag].ID = tc.flag
+				tc.slice[tc.flag].Init(jLog, &service.Service{}, &defaults.Service,
+					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
+					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
 				dbChannel := make(chan db_types.Message, 2)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
@@ -189,7 +194,7 @@ func TestServiceTest(t *testing.T) {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nwant match on %q\ngot: %q",
+					t.Errorf("%s:\nwant match on %q\ngot:\n%s",
 						name, *tc.outputRegex, output)
 				}
 			}

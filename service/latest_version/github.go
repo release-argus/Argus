@@ -99,7 +99,7 @@ func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (r
 		}
 		if !strings.Contains(string(*body), `"tag_name"`) {
 			err = errors.New("github access token is invalid")
-			jLog.Fatal(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
+			jLog.Error(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
 
 			err = fmt.Errorf("tag_name not found at %s\n%s",
 				l.URL, string(*body))

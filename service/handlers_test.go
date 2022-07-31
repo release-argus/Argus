@@ -261,33 +261,33 @@ func TestHandleFailedActions(t *testing.T) {
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
-		"no webhook fails and no command fails retries all": {wantAnnounces: 2,
-			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"pass": testWebHookFailing()},
-			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
-			wantFails: service_status.Fails{Command: []*bool{boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(true)}}},
-		"no webhook fails and have command fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false,
+		"no command or webhooks fails retries all": {wantAnnounces: 2, // 2 = 1 command fail, 1 webhook fail
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHookFailing()},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{boolPtr(true)}, WebHook: map[string]*bool{"will_fail": boolPtr(true)}}},
+		"have command fails and no webhook fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false, // 2 = 2 command runs
 			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}}},
-		"command fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false,
+		"command fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 = no runs
 			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
 			fails:                service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			commandNextRunnables: []time.Time{time.Now().UTC(), time.Now().UTC(), time.Now().UTC().Add(time.Minute), time.Now().UTC().Add(time.Minute)}},
-		"no webhook fails and have command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true,
+		"have command fails no webhook fails and retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true, // 2 = 1 command, 1 deployed
 			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHookSuccessful()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{nil, nil}, WebHook: map[string]*bool{"pass": nil}}},
-		"have webhook fails and no command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false,
+		"have webhook fails and no command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false, // 2 = 2 webhook runs
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHookFailing(), "will_pass": testWebHookSuccessful(), "would_fail": testWebHookFailing()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(true), "would_fail": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(false), "would_fail": boolPtr(false)}}},
-		"webhook fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false,
+		"webhook fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 runs
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"is_runnable": testWebHookSuccessful(), "not_runnable": testWebHookFailing(), "would_fail": testWebHookFailing()},
 			fails:                service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(true), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
 			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(false), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
 			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)}},
-		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true,
+		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true, // 2 webhook runs
 			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_pass0": testWebHookSuccessful(), "will_pass1": testWebHookSuccessful(), "would_fail": testWebHookFailing()},
 			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_pass0": boolPtr(true), "will_pass1": boolPtr(true), "would_fail": boolPtr(false)}},
 			wantFails: service_status.Fails{Command: []*bool{nil}, WebHook: map[string]*bool{"will_pass0": nil, "will_pass1": nil, "would_fail": nil}}},
@@ -365,7 +365,7 @@ func TestHandleFailedActions(t *testing.T) {
 				fails := ""
 				if len(service.Status.Fails.Command) != 0 {
 					for i := range service.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%t, ", i, *service.Status.Fails.Command[i])
+						fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(service.Status.Fails.Command[i]))
 					}
 					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
 				}

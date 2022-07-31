@@ -245,7 +245,7 @@ func TestInit(t *testing.T) {
 	tests := map[string]struct {
 		nilController     bool
 		log               *utils.JLog
-		serviceStatus     *service_status.Status
+		serviceStatus     service_status.Status
 		command           *Slice
 		shoutrrrNotifiers *shoutrrr.Slice
 		parentInterval    *string
@@ -271,7 +271,7 @@ func TestInit(t *testing.T) {
 			if !tc.nilController {
 				controller = &Controller{}
 			}
-			controller.Init(tc.log, stringPtr("TestInit"), tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
+			controller.Init(tc.log, stringPtr("TestInit"), &tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
 
 			// THEN the result is expected
 			// log
@@ -288,9 +288,9 @@ func TestInit(t *testing.T) {
 				return
 			}
 			// serviceStatus
-			if controller.ServiceStatus != tc.serviceStatus {
+			if controller.ServiceStatus != &tc.serviceStatus {
 				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, controller.ServiceStatus, tc.serviceStatus)
+					name, controller.ServiceStatus, &tc.serviceStatus)
 			}
 			// command
 			if controller.Command != tc.command {

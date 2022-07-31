@@ -5,9 +5,11 @@ settings:
     database_file: 'test-ordering_0.db'
 defaults:
   service:
-    interval: 123
-    access_token: ghp_default
-    semantic_versioning: n
+    latest_version:
+      access_token: ghp_default
+    options:
+      interval: 123
+      semantic_versioning: n
 
 notify:
   default:
@@ -17,18 +19,24 @@ notify:
 
 service:
   NoDefaults:
-    type: github
-    url: release-argus/argus
+    latest_version:
+      type: github
+      url: release-argus/argus
+      access_token: ghp_other
   WantDefaults:
-    type: github
-    url: release-argus/argus
+    latest_version:
+      type: github
+      url: release-argus/argus
   Disabled:
-    active: false
-    type: github
-    url: release-argus/argus
+    options:
+      active: false
+    latest_version:
+      type: github
+      url: release-argus/argus
   Gitea:
-    id: go-gitea/gitea
-    type: github
+    latest_version:
+      type: github
+      url: go-gitea/gitea
 
 webhook:
   default:
