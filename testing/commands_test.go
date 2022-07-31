@@ -124,8 +124,13 @@ func TestCommandTest(t *testing.T) {
 				tc.slice[tc.flag].CommandController.Init(jLog, &tc.flag, &tc.slice[tc.flag].Status,
 					&tc.slice[tc.flag].Command, nil, &tc.slice[tc.flag].Options.Interval)
 			}
+			order := []string{}
+			for i := range tc.slice {
+				order = append(order, i)
+			}
 			cfg := config.Config{
 				Service: tc.slice,
+				Order:   &order,
 			}
 			CommandTest(&tc.flag, &cfg, jLog)
 

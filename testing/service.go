@@ -43,16 +43,10 @@ func ServiceTest(
 	service := cfg.Service[*flag]
 
 	if service == nil {
-		var allService []string
-		for key := range cfg.Service {
-			if !utils.Contains(allService, key) {
-				allService = append(allService, key)
-			}
-		}
 		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(allService, "\n  - "),
+				*flag, strings.Join(*cfg.Order, "\n  - "),
 			),
 			logFrom,
 			true,

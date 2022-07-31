@@ -126,6 +126,7 @@ func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 			all = append(all, key)
 		}
 	}
+	sort.Strings(all)
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
 			for key := range svc.Notify {

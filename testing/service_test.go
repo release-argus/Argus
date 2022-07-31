@@ -171,7 +171,7 @@ func TestServiceTest(t *testing.T) {
 					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
 					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
-				dbChannel := make(chan db_types.Message, 2)
+				dbChannel := make(chan db_types.Message, 4)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
 				if tc.slice[tc.flag].DeployedVersionLookup != nil {
 					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployed_version.Lookup{}
@@ -180,8 +180,13 @@ func TestServiceTest(t *testing.T) {
 			}
 
 			// WHEN ServiceTest is called with the test Config
+			order := []string{}
+			for i := range tc.slice {
+				order = append(order, i)
+			}
 			cfg := config.Config{
 				Service: tc.slice,
+				Order:   &order,
 			}
 			ServiceTest(&tc.flag, &cfg, jLog)
 
