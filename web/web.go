@@ -59,12 +59,6 @@ func newWebUI(cfg *config.Config) *mux.Router {
 	// Hand out the broadcast channel
 	for sKey := range cfg.Service {
 		cfg.Service[sKey].Status.AnnounceChannel = &hub.Broadcast
-		if cfg.Service[sKey].WebHook != nil {
-			for whKey := range cfg.Service[sKey].WebHook {
-				cfg.Service[sKey].WebHook[whKey].ServiceID = &cfg.Service[sKey].ID
-			}
-		}
-		cfg.Service[sKey].Status.AnnounceChannel = &hub.Broadcast
 	}
 
 	return router

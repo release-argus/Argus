@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -37,6 +38,13 @@ func boolPtr(val bool) *bool {
 }
 func stringPtr(val string) *string {
 	return &val
+}
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
 }
 
 func testClient() Client {
@@ -387,18 +395,15 @@ func TestConvertWebHookToAPITypeWebHookWithNil(t *testing.T) {
 
 func TestConvertWebHookToAPITypeWebHook(t *testing.T) {
 	// GIVEN a WebHook
-	var (
-		url = "https://example.com"
-	)
 	wh := webhook.WebHook{
-		URL: &url,
+		URL: "https://example.com",
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
 	got := convertWebHookToAPITypeWebHook(&wh)
 
 	// THEN the slice was converted correctly
-	if wh.URL != got.URL {
+	if wh.URL != *got.URL {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			wh, got)
 	}
@@ -406,13 +411,9 @@ func TestConvertWebHookToAPITypeWebHook(t *testing.T) {
 
 func TestConvertWebHookToAPITypeWebHookDidCensorSecret(t *testing.T) {
 	// GIVEN a WebHook
-	var (
-		url    = "https://example.com"
-		secret = "shazam"
-	)
 	wh := webhook.WebHook{
-		URL:    &url,
-		Secret: &secret,
+		URL:    "https://example.com",
+		Secret: "shazam",
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
@@ -429,21 +430,20 @@ func TestConvertWebHookToAPITypeWebHookDidCensorSecret(t *testing.T) {
 func TestConvertWebHookToAPITypeWebHookDidCopyHeaders(t *testing.T) {
 	// GIVEN a WebHook
 	var (
-		url     = "https://example.com"
 		headers = map[string]string{
 			"X-Something": "foo",
 		}
 	)
 	wh := webhook.WebHook{
-		URL:           &url,
-		CustomHeaders: &headers,
+		URL:           "https://example.com",
+		CustomHeaders: headers,
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
 	got := convertWebHookToAPITypeWebHook(&wh)
 
 	// THEN the slice was converted correctly
-	if (*got.CustomHeaders)["X-Something"] != (*wh.CustomHeaders)["X-Something"] {
+	if (*got.CustomHeaders)["X-Something"] != wh.CustomHeaders["X-Something"] {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			wh, got)
 	}
@@ -465,13 +465,9 @@ func TestConvertWebHookSliceToAPITypeWebHookSliceWithNil(t *testing.T) {
 
 func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
 	// GIVEN a WebHook slice
-	var (
-		url0 = "https://example.com"
-		url1 = "https://release-argus.io"
-	)
 	slice := webhook.Slice{
-		"test":  {URL: &url0},
-		"other": {URL: &url1},
+		"test":  {URL: "https://example.com"},
+		"other": {URL: "https://release-argus.io"},
 	}
 
 	// WHEN convertWebHookSliceToAPITypeWebHookSlice is called on it
@@ -483,7 +479,7 @@ func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
 			slice, got)
 	} else {
 		for i := range *got {
-			if (*got)[i].URL != slice[i].URL {
+			if stringifyPointer((*got)[i].URL) != slice[i].URL {
 				t.Fatalf("converted incorrectly\nfrom: %v\nto:   %v",
 					slice, got)
 			}

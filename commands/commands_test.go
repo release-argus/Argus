@@ -105,14 +105,13 @@ func TestExecIndex(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{
-		ServiceID: stringPtr("service_id"),
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &service_status.Status{AnnounceChannel: &announce},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		index       int
@@ -169,11 +168,10 @@ func TestControllerExec(t *testing.T) {
 	jLog = utils.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{
-		ServiceID:      stringPtr("service_id"),
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &service_status.Status{AnnounceChannel: &announce},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		nilController bool

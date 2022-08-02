@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -43,7 +44,7 @@ func TestInitMetricsOfNonMaster(t *testing.T) {
 	shoutrrr := Shoutrrr{}
 
 	// WHEN initMetrics is called on this
-	shoutrrr.initMetrics(nil)
+	shoutrrr.initMetrics()
 
 	// THEN the function doesn't create the metrics (would have crashed on *nil)
 }
@@ -51,10 +52,10 @@ func TestInitMetricsOfNonMaster(t *testing.T) {
 func TestInitMetrics(t *testing.T) {
 	// GIVEN a Shoutrrr with a Main
 	id := ""
-	shoutrrr := Shoutrrr{ID: &id, Main: &Shoutrrr{}}
+	shoutrrr := Shoutrrr{ID: id, Main: &Shoutrrr{}}
 
 	// WHEN initMetrics is called on this
-	shoutrrr.initMetrics(&id)
+	shoutrrr.initMetrics()
 
 	// THEN the Prometheus metrics are created
 }
@@ -232,10 +233,9 @@ func TestInitMapsUppercasesParams(t *testing.T) {
 func TestShoutrrrInitWithNilShoutrrr(t *testing.T) {
 	// GIVEN a nil Shoutrrr and an ID string
 	var shoutrrr *Shoutrrr
-	id := "test"
 
 	// WHEN Init is called on it
-	shoutrrr.Init(&id, &Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
+	shoutrrr.Init(&service_status.Status{}, &Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
 
 	// THEN it is still nil
 	if shoutrrr != nil {
@@ -248,10 +248,9 @@ func TestShoutrrrInitWithNilMain(t *testing.T) {
 	// GIVEN a nil Shoutrrr and an ID string
 	// vars := testGet()
 	var shoutrrr Shoutrrr
-	id := "test"
 
 	// WHEN Init is called on it with nil main
-	shoutrrr.Init(&id, nil, &Shoutrrr{}, &Shoutrrr{})
+	shoutrrr.Init(&service_status.Status{}, nil, &Shoutrrr{}, &Shoutrrr{})
 
 	// THEN it is no longer nil
 	if shoutrrr.Main == nil {
@@ -264,10 +263,9 @@ func TestShoutrrrInitGivesMain(t *testing.T) {
 	// GIVEN a Shoutrrr with a nil Main
 	vars := testGet()
 	var shoutrrr Shoutrrr
-	id := "test"
 
 	// WHEN Init is called on it with a nil Main
-	shoutrrr.Init(&id, vars.Main, &Shoutrrr{}, &Shoutrrr{})
+	shoutrrr.Init(&service_status.Status{}, vars.Main, &Shoutrrr{}, &Shoutrrr{})
 
 	// THEN it is given vars.Main
 	if shoutrrr.Main != vars.Main {
@@ -280,10 +278,9 @@ func TestShoutrrrInitGivesDefaults(t *testing.T) {
 	// GIVEN a Shoutrrr with a nil Defaults
 	vars := testGet()
 	var shoutrrr Shoutrrr
-	id := "test"
 
 	// WHEN Init is called on it with a non-nil Defaults
-	shoutrrr.Init(&id, &Shoutrrr{}, vars.Defaults, &Shoutrrr{})
+	shoutrrr.Init(&service_status.Status{}, &Shoutrrr{}, vars.Defaults, &Shoutrrr{})
 
 	// THEN it is given vars.Defaults
 	if shoutrrr.Defaults != vars.Defaults {
@@ -296,10 +293,9 @@ func TestShoutrrrInitGivesHardDefaults(t *testing.T) {
 	// GIVEN a Shoutrrr with a nil HardDefaults
 	vars := testGet()
 	var shoutrrr Shoutrrr
-	id := "test"
 
 	// WHEN Init is called on it with a non-nil HardDefaults
-	shoutrrr.Init(&id, &shoutrrr, &Shoutrrr{}, vars.HardDefaults)
+	shoutrrr.Init(&service_status.Status{}, &shoutrrr, &Shoutrrr{}, vars.HardDefaults)
 
 	// THEN it is given vars.HardDefaults
 	if shoutrrr.HardDefaults != vars.HardDefaults {
@@ -314,15 +310,15 @@ func testSlice() Slice {
 	id2 := "two"
 	return Slice{
 		"0": &Shoutrrr{
-			ID:   &id0,
+			ID:   id0,
 			Type: "discord",
 		},
 		"1": &Shoutrrr{
-			ID:   &id1,
+			ID:   id1,
 			Type: "telegram",
 		},
 		"2": &Shoutrrr{
-			ID:   &id2,
+			ID:   id2,
 			Type: "telegram",
 		},
 	}
@@ -333,7 +329,7 @@ func TestSliceInitWithNil(t *testing.T) {
 	var slice *Slice
 
 	// WHEN Init is called on it
-	slice.Init(nil, nil, nil, nil, nil, nil)
+	slice.Init(nil, nil, nil, nil, nil)
 
 	// THEN it is still nil
 	if slice != nil {
@@ -346,15 +342,14 @@ func TestSliceInitWithMatchingMain(t *testing.T) {
 	// GIVEN a Slice and a Slice with a Main for "1"
 	slice := testSlice()
 	mainID := "main"
-	serviceID := "test"
 	mains := Slice{
 		"1": &Shoutrrr{
-			ID: &mainID,
+			ID: mainID,
 		},
 	}
 
 	// WHEN Init is called on it with a main for "1"
-	slice.Init(nil, &serviceID, nil, &mains, &Slice{}, &Slice{})
+	slice.Init(nil, nil, &mains, &Slice{}, &Slice{})
 
 	// THEN "1" has that main
 	if slice["1"].Main != mains["1"] {
@@ -367,31 +362,29 @@ func TestSliceInitWithNonMatchingMain(t *testing.T) {
 	// GIVEN a Slice and a Slice with a Main for "1"
 	slice := testSlice()
 	mainID := "main"
-	serviceID := "test"
 	mains := Slice{
 		"1": &Shoutrrr{
-			ID: &mainID,
+			ID: mainID,
 		},
 	}
 
 	// WHEN Init is called on it with a main for "1"
-	slice.Init(nil, &serviceID, nil, &mains, &Slice{}, &Slice{})
+	slice.Init(nil, &service_status.Status{}, &mains, &Slice{}, &Slice{})
 
 	// THEN "1" has that main
-	if slice["0"].Main.ID != nil {
+	if slice["0"].Main.ID != "" {
 		t.Errorf("Slice['0'] was given id=%q, not a fresh Main (id=%v)",
-			*slice["0"].Main.ID, Shoutrrr{}.ID)
+			slice["0"].Main.ID, Shoutrrr{}.ID)
 	}
 }
 
 func TestSliceInitWithNilElement(t *testing.T) {
 	// GIVEN a Slice with a nil Shoutrrr element
 	slice := testSlice()
-	serviceID := "test"
 	slice["1"] = nil
 
 	// WHEN Init is called on it
-	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &Slice{})
+	slice.Init(nil, &service_status.Status{}, &Slice{}, &Slice{}, &Slice{})
 
 	// THEN that element is no longer nil
 	if slice["1"] == nil {
@@ -403,10 +396,9 @@ func TestSliceInitWithNilElement(t *testing.T) {
 func TestSliceInitWithDefaultMain(t *testing.T) {
 	// GIVEN a Slice and a Slice
 	slice := testSlice()
-	serviceID := "test"
 
 	// WHEN Init is called on it with no mains defined (default Slice)
-	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &Slice{})
+	slice.Init(nil, nil, &Slice{}, &Slice{}, &Slice{})
 
 	// THEN "1" gets an empty main
 	if slice["1"].Main.Type != "" ||
@@ -421,11 +413,10 @@ func TestSliceInitWithDefaultMain(t *testing.T) {
 func TestSliceInitWithNilMains(t *testing.T) {
 	// GIVEN a Slice with nil Shoutrrr mains
 	slice := testSlice()
-	serviceID := "test"
 	slice["1"] = nil
 
 	// WHEN Init is called on it
-	slice.Init(nil, &serviceID, nil, nil, &Slice{}, &Slice{})
+	slice.Init(nil, nil, nil, &Slice{}, &Slice{})
 
 	// THEN the elements get non-nil mains
 	if slice["1"].Main == nil {
@@ -438,7 +429,6 @@ func TestSliceInitWithDefaults(t *testing.T) {
 	// GIVEN a Slice and defaults for "discord"
 	slice := testSlice()
 	slice["1"] = nil
-	serviceID := "test"
 	defaults := Slice{
 		"discord": &Shoutrrr{
 			Params: map[string]string{
@@ -448,7 +438,7 @@ func TestSliceInitWithDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil defaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, nil, &Slice{}, &defaults, &Slice{})
+	slice.Init(nil, nil, &Slice{}, &defaults, &Slice{})
 
 	// THEN all "discord" types have the default
 	for i := range slice {
@@ -463,7 +453,6 @@ func TestSliceInitWithNoDefaults(t *testing.T) {
 	// GIVEN a Slice and defaults for "discord"
 	slice := testSlice()
 	slice["1"] = nil
-	serviceID := "test"
 	defaults := Slice{
 		"discord": &Shoutrrr{
 			Params: map[string]string{
@@ -473,7 +462,7 @@ func TestSliceInitWithNoDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil defaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, nil, &Slice{}, &defaults, &Slice{})
+	slice.Init(nil, nil, &Slice{}, &defaults, &Slice{})
 
 	// THEN no non "discord" types are given this default
 	for i := range slice {
@@ -488,7 +477,6 @@ func TestSliceInitWithHardDefaults(t *testing.T) {
 	// GIVEN a Slice and hardDefaults for "discord"
 	slice := testSlice()
 	slice["1"] = nil
-	serviceID := "test"
 	hardDefaults := Slice{
 		"discord": &Shoutrrr{
 			Params: map[string]string{
@@ -498,7 +486,7 @@ func TestSliceInitWithHardDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil hardDefaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &hardDefaults)
+	slice.Init(nil, nil, &Slice{}, &Slice{}, &hardDefaults)
 
 	// THEN all "discord" types have the default
 	for i := range slice {
@@ -513,7 +501,6 @@ func TestSliceInitWithNoHardDefaults(t *testing.T) {
 	// GIVEN a Slice and hardDefaults for "discord"
 	slice := testSlice()
 	slice["1"] = nil
-	serviceID := "test"
 	hardDefaults := Slice{
 		"discord": &Shoutrrr{
 			Params: map[string]string{
@@ -523,7 +510,7 @@ func TestSliceInitWithNoHardDefaults(t *testing.T) {
 	}
 
 	// WHEN Init is called on it with nil hardDefaults for the "discord" Shoutrrr type
-	slice.Init(nil, &serviceID, nil, &Slice{}, &Slice{}, &hardDefaults)
+	slice.Init(nil, nil, &Slice{}, &Slice{}, &hardDefaults)
 
 	// THEN no non "discord" types are given this default
 	for i := range slice {

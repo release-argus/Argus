@@ -46,14 +46,14 @@ func (s *Service) Init(
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
-	s.Notify.Init(jLog, &s.ID, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+	s.Notify.Init(jLog, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
 
 	if s.Command != nil {
 		s.CommandController = &command.Controller{}
-		s.CommandController.Init(jLog, &s.ID, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
+		s.CommandController.Init(jLog, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
 	}
 
-	s.WebHook.Init(jLog, &s.ID, &s.Status, rootWebHookConfig, webhookDefaults, webhookHardDefaults, &s.Notify, s.Options.GetIntervalPointer())
+	s.WebHook.Init(jLog, &s.Status, rootWebHookConfig, webhookDefaults, webhookHardDefaults, &s.Notify, s.Options.GetIntervalPointer())
 
 	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
 	if s.Defaults.DeployedVersionLookup == nil {

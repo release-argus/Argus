@@ -32,7 +32,6 @@ type Slice []Command
 type Command []string
 
 type Controller struct {
-	ServiceID      *string                `yaml:"-"` // ID of the service this Controller is attached to
 	Command        *Slice                 `yaml:"-"` // command to run (with args)
 	NextRunnable   []time.Time            `yaml:"-"` // Time the Commands can next be run (for staggering)
 	Failed         *[]*bool               `yaml:"-"` // Whether the last execution attempt failed

@@ -30,7 +30,6 @@ import (
 // Init the Slice metrics and hand out the defaults/notifiers.
 func (w *Slice) Init(
 	log *utils.JLog,
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *WebHook,
@@ -53,7 +52,6 @@ func (w *Slice) Init(
 		(*w)[id].ID = id
 		(*w)[id].Failed = &serviceStatus.Fails.WebHook
 		(*w)[id].Init(
-			serviceID,
 			serviceStatus,
 			(*mains)[id],
 			defaults,
@@ -66,7 +64,6 @@ func (w *Slice) Init(
 
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	main *WebHook,
 	defaults *WebHook,
@@ -75,10 +72,8 @@ func (w *WebHook) Init(
 	parentInterval *string,
 ) {
 	w.ParentInterval = parentInterval
-	w.initMetrics(*serviceID)
-	if serviceStatus != nil {
-		w.ServiceStatus = serviceStatus
-	}
+	w.ServiceStatus = serviceStatus
+	w.initMetrics()
 
 	// Give the matching main
 	(*w).Main = main
@@ -97,17 +92,17 @@ func (w *WebHook) Init(
 }
 
 // initMetrics, giving them all a starting value.
-func (w *WebHook) initMetrics(serviceID string) {
+func (w *WebHook) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceID, "", "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceID, "", "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "FAIL")
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, serviceID, float64(0))
+	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *w.ServiceStatus.ServiceID, float64(0))
 }
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
@@ -154,34 +149,34 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 			After:  utils.RandAlphaNumericLower(40),
 		})
 
-		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), bytes.NewReader(payload))
+		req, err = http.NewRequest(http.MethodPost, w.GetURL(), bytes.NewReader(payload))
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		w.SetCustomHeaders(req)
-		SetGitHubHeaders(req, payload, *w.GetSecret())
+		SetGitHubHeaders(req, payload, w.GetSecret())
 	case "gitlab":
-		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), nil)
+		req, err = http.NewRequest(http.MethodPost, w.GetURL(), nil)
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		SetGitLabParameter(req, *w.GetSecret())
+		SetGitLabParameter(req, w.GetSecret())
 	}
+	w.SetCustomHeaders(req)
 	return
 }
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
+	return utils.GetFirstNonDefault(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
 }
 
 // GetSecret for the WebHook.
-func (w *WebHook) GetSecret() *string {
-	return utils.GetFirstNonNilPtr(w.Secret, w.Main.Secret, w.Defaults.Secret)
+func (w *WebHook) GetSecret() string {
+	return utils.GetFirstNonDefault(w.Secret, w.Main.Secret, w.Defaults.Secret)
 }
 
 // GetSilentFails returns the flag for whether WebHooks should fail silently or notify.
@@ -190,22 +185,22 @@ func (w *WebHook) GetSilentFails() bool {
 }
 
 // GetURL of the WebHook.
-func (w *WebHook) GetURL() *string {
-	url := utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
-	if w.ServiceStatus != nil && url != nil && strings.Contains(*url, "{") {
-		*url = strings.Clone(utils.TemplateString(*url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
+func (w *WebHook) GetURL() string {
+	url := utils.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL)
+	if w.ServiceStatus != nil && url != "" && strings.Contains(url, "{") {
+		url = strings.Clone(utils.TemplateString(url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
 	}
 	return url
-}
-
-// SetFailStatus of this WebHook.
-func (w *WebHook) SetFailStatus(status *bool) {
-	(*w.Failed)[w.ID] = status
 }
 
 // IsRunnable will return whether the current time is before NextRunnable
 func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable)
+}
+
+// SetFailStatus of this WebHook.
+func (w *WebHook) SetFailStatus(status *bool) {
+	(*w.Failed)[w.ID] = status
 }
 
 // SetNextRunnable time that the WebHook can be re-run.
@@ -227,6 +222,7 @@ func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	}
 	// Block reruns whilst sending
 	if sending {
+		w.NextRunnable = w.NextRunnable.Add(time.Hour)
 		w.NextRunnable = w.NextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
 	}
 }

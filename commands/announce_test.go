@@ -35,17 +35,17 @@ func TestAnnounceCommand(t *testing.T) {
 		timeDifference time.Duration
 	}{
 		"no channel": {nilChannel: true},
-		"failed nil does delay by 15s": {
+		"not tried does delay by 15s": {
 			index:          2,
 			timeDifference: 15 * time.Second,
 			failed:         nil,
 		},
-		"failed true does delay by 15s": {
+		"failed does delay by 15s": {
 			index:          0,
 			timeDifference: 15 * time.Second,
 			failed:         boolPtr(true),
 		},
-		"failed false does delay by 2*Interval": {
+		"success does delay by 2*Interval": {
 			index:          1,
 			timeDifference: 22 * time.Minute,
 			failed:         boolPtr(false),
@@ -55,7 +55,6 @@ func TestAnnounceCommand(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			controller := Controller{
-				ServiceID: stringPtr("some_service_id"),
 				Command: &Slice{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
@@ -64,7 +63,7 @@ func TestAnnounceCommand(t *testing.T) {
 				Failed:         &fails,
 				NextRunnable:   make([]time.Time, 3),
 				ParentInterval: stringPtr("11m"),
-				ServiceStatus:  &service_status.Status{AnnounceChannel: nil}}
+				ServiceStatus:  &service_status.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
 				controller.ServiceStatus.AnnounceChannel = &announceChannel
@@ -113,14 +112,13 @@ func TestFind(t *testing.T) {
 	// GIVEN we have a Controller with Command's
 	fails := make([]*bool, 3)
 	controller := Controller{
-		ServiceID: stringPtr("some_service_id"),
 		Command: &Slice{
 			Command{"ls", "-lah"},
 			Command{"ls", "-lah", "a"},
 			Command{"ls", "-lah", "b"},
 			Command{"bash", "upgrade.sh", "{{ version }}"},
 		},
-		ServiceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+		ServiceStatus: &service_status.Status{ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
 		Failed:        &fails,
 	}
 	tests := map[string]struct {

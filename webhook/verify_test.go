@@ -19,431 +19,180 @@ package webhook
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/utils"
 )
 
-func TestSliceCheckValuesWithNil(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
+func TestWebHookPrint(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		webhook WebHook
+		lines   int
+	}{
+		"all fields":     {lines: 8, webhook: *testWebHook(true, true, false)},
+		"partial fields": {lines: 2, webhook: WebHook{Type: "github", URL: "https://release-argus.io"}},
+	}
 
-	// WHEN CheckValues is called on it
-	err := slice.CheckValues("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v returned an err - %s",
-			slice, err.Error())
+			// WHEN Print is called
+			tc.webhook.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+		})
 	}
 }
 
-func TestSliceCheckValuesWithInvalid(t *testing.T) {
-	// GIVEN a Slice with an invalid var
-	wType := "INVALID"
-	url := "example.com"
-	secret := "secret"
-	slice := Slice{
-		"test": &WebHook{
-			Type:         &wType,
-			URL:          &url,
-			Secret:       &secret,
-			Main:         &WebHook{},
-			Defaults:     &WebHook{},
-			HardDefaults: &WebHook{},
-		},
+func TestSlicePrint(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		slice        *Slice
+		lines        int
+		regexMatches []string
+	}{
+		"nil slice": {lines: 0, slice: nil},
+		"single element slice": {lines: 4, slice: &Slice{"single": &WebHook{Type: "github", URL: "https://release-argus.io"}},
+			regexMatches: []string{"^webhook:$", "^  single:$", "^    type: "}},
+		"multiple element slice": {lines: 13, slice: &Slice{"first": &WebHook{Type: "github", URL: "https://release-argus.io"}, "second": testWebHook(true, true, false)},
+			regexMatches: []string{"^webhook:$", "^  first:$", "^    type: ", "^  second:$", "^    delay"}},
 	}
 
-	// WHEN CheckValues is called on it
-	err := slice.CheckValues("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN err is not nil
-	if err == nil {
-		t.Errorf("CheckValues on %v should have err'd. Got %v",
-			slice, err)
-	}
-}
+			// WHEN Print is called
+			tc.slice.Print("")
 
-func TestSliceCheckValuesWithValid(t *testing.T) {
-	// GIVEN a Slice with a valid var
-	wType := "github"
-	slice := Slice{
-		"test": &WebHook{Type: &wType},
-	}
-
-	// WHEN CheckValues is called on it
-	err := slice.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
-			slice, err.Error())
-	}
-}
-
-func TestWebHookCheckValuesWithNil(t *testing.T) {
-	// GIVEN a nil WebHook
-	var webhook WebHook
-
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
-			webhook, err.Error())
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			strOut := string(out)
+			got := strings.Count(strOut, "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+			lines := strings.Split(strOut, "\n")
+			for _, regex := range tc.regexMatches {
+				foundMatch := false
+				re := regexp.MustCompile(regex)
+				for _, line := range lines {
+					match := re.MatchString(line)
+					if match {
+						foundMatch = true
+						break
+					}
+				}
+				if !foundMatch {
+					t.Errorf("%s:\nmatch on %q not found in\n%q",
+						name, regex, strOut)
+				}
+			}
+		})
 	}
 }
 
-func TestWebHookCheckValuesWithNilDelay(t *testing.T) {
-	// GIVEN a WebHook with nil Delay
-	wType := "github"
-	url := "example.com"
-	secret := "secret"
-	webhook := WebHook{
-		Type:         &wType,
-		URL:          &url,
-		Secret:       &secret,
-		Delay:        "",
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
+func TestWebHookCheckValues(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		delay     string
+		wantDelay string
+		noMain    bool
+		whType    string
+		url       *string
+		secret    *string
+		errRegex  string
+	}{
+		"valid WebHook": {errRegex: "^$"},
+		"invalid delay": {errRegex: "delay: .* <invalid>", delay: "5x"},
+		"fix int delay": {errRegex: "^$", delay: "5", wantDelay: "5s"},
+		"invalid type":  {errRegex: "type: .* <invalid>", whType: "foo"},
+		"no url":        {errRegex: "url: <required>", url: stringPtr("")},
+		"no secret":     {errRegex: "secret: <required>", secret: stringPtr("")},
+		"all errs":      {errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>", delay: "5x", whType: "foo", url: stringPtr(""), secret: stringPtr("")},
 	}
 
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, !tc.noMain, false)
+			if tc.delay != "" {
+				webhook.Delay = tc.delay
+			}
+			if tc.whType != "" {
+				webhook.Type = tc.whType
+			}
+			if tc.url != nil {
+				webhook.URL = *tc.url
+			}
+			if tc.secret != nil {
+				webhook.Secret = *tc.secret
+			}
 
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
-			webhook, err.Error())
-	}
-}
+			// WHEN CheckValues is called
+			err := webhook.CheckValues("")
 
-func TestWebHookCheckValuesWithIntDelay(t *testing.T) {
-	// GIVEN a WebHook with int Delay
-	wType := "github"
-	url := "example.com"
-	secret := "secret"
-	declaredDelay := "5"
-	delay := declaredDelay
-	webhook := WebHook{
-		Type:         &wType,
-		URL:          &url,
-		Secret:       &secret,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN CheckValues is called on it
-	webhook.CheckValues("")
-
-	// THEN Delay is converted to seconds
-	got := webhook.GetDelay()
-	want := declaredDelay + "s"
-	if got != want {
-		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s",
-			webhook, delay, got, want)
-	}
-}
-
-func TestWebHookCheckValuesWithDurationDelay(t *testing.T) {
-	// GIVEN a WebHook with duration Delay
-	wType := "github"
-	url := "example.com"
-	secret := "secret"
-	declaredDelay := "5s"
-	delay := declaredDelay
-	webhook := WebHook{
-		Type:         &wType,
-		URL:          &url,
-		Secret:       &secret,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN CheckValues is called on it
-	webhook.CheckValues("")
-
-	// THEN Delay is converted to seconds
-	got := webhook.GetDelay()
-	want := declaredDelay
-	if got != want {
-		t.Errorf("CheckValues on %v should have converted %s to seconds. Got %s, want %s",
-			webhook, delay, got, want)
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+			if tc.wantDelay != "" && webhook.Delay != tc.wantDelay {
+				t.Errorf("%s:\nwant delay=%q\ngot  delay=%q",
+					name, tc.wantDelay, webhook.Delay)
+			}
+		})
 	}
 }
 
-func TestWebHookCheckValuesWithInvalidDurationDelay(t *testing.T) {
-	// GIVEN a WebHook with invalid duration Delay
-	wType := "github"
-	url := "example.com"
-	secret := "secret"
-	declaredDelay := "5x"
-	delay := declaredDelay
-	webhook := WebHook{
-		Type:         &wType,
-		URL:          &url,
-		Secret:       &secret,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
+func TestServiceCheckValues(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice    *Slice
+		errRegex string
+	}{
+		"nil slice":                    {errRegex: "^$"},
+		"valid single element slice":   {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false)}},
+		"invalid single element slice": {errRegex: "delay: .* <invalid>", slice: &Slice{"a": &WebHook{Delay: "5x"}}},
+		"valid multi element slice":    {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false), "b": testWebHook(false, true, false)}},
+		"invalid multi element slice": {errRegex: "delay: .* <invalid>.*type: .* <invalid>",
+			slice: &Slice{"a": &WebHook{Delay: "5x"}, "b": &WebHook{Type: "foo", Main: &WebHook{}, Defaults: &WebHook{}, HardDefaults: &WebHook{}}}},
 	}
 
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called
+			err := tc.slice.CheckValues("")
 
-	// THEN Delay is converted to seconds
-	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing %s. Got %s err",
-			webhook, declaredDelay, err)
-	}
-}
-
-func TestWebHookCheckValuesWithInvalidType(t *testing.T) {
-	// GIVEN a WebHook with invalid duration Delay
-	wType := "INVALID"
-	url := "example.com"
-	secret := "secret"
-	declaredDelay := "5s"
-	delay := declaredDelay
-	webhook := WebHook{
-		Type:         &wType,
-		URL:          &url,
-		Secret:       &secret,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
-
-	// THEN Delay is converted to seconds
-	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing %s Type. Got %s err",
-			webhook, wType, err)
-	}
-}
-
-func TestWebHookCheckValuesWithNilURL(t *testing.T) {
-	// GIVEN a WebHook with invalid duration Delay
-	id := "test"
-	wType := "github"
-	secret := "secret"
-	declaredDelay := "5s"
-	delay := declaredDelay
-	webhook := WebHook{
-		ID:           id,
-		Type:         &wType,
-		URL:          nil,
-		Secret:       &secret,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
-
-	// THEN Delay is converted to seconds
-	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing nil URL. Got %s err",
-			webhook, err)
-	}
-}
-
-func TestWebHookCheckValuesWithNilSecret(t *testing.T) {
-	// GIVEN a WebHook with invalid duration Delay
-	id := "test"
-	wType := "github"
-	url := "example.com"
-	declaredDelay := "5s"
-	delay := declaredDelay
-	webhook := WebHook{
-		ID:           id,
-		Type:         &wType,
-		URL:          &url,
-		Secret:       nil,
-		Delay:        delay,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
-
-	// THEN Delay is converted to seconds
-	if err == nil {
-		t.Errorf("CheckValues on %v should have failed parsing nil Secret. Got %s err",
-			webhook, err)
-	}
-}
-
-func TestWebHookCheckValuesWithNilMain(t *testing.T) {
-	// GIVEN a WebHook with nil Main
-	wType := "github"
-	url := "example.com"
-	secret := "secret"
-	delay := "0s"
-	webhook := WebHook{
-		Type:   &wType,
-		URL:    &url,
-		Secret: &secret,
-		Delay:  delay,
-	}
-
-	// WHEN CheckValues is called on it
-	err := webhook.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
-			webhook, err.Error())
-	}
-}
-
-func TestWebHookCheckValuesWithValid(t *testing.T) {
-	// GIVEN a Slice with a valid var
-	wType := "github"
-	slice := Slice{
-		"test": &WebHook{Type: &wType},
-	}
-
-	// WHEN CheckValues is called on it
-	err := slice.CheckValues("")
-
-	// THEN the program returns an err
-	if err != nil {
-		t.Errorf("CheckValues on %v shouldn't have err'd. Got %s",
-			slice, err.Error())
-	}
-}
-
-func TestSlicePrintWithFreshWebHook(t *testing.T) {
-	// GIVEN a fresh WebHook
-	var webhook WebHook
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called on it
-	webhook.Print("")
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Print had output %q with %v WebHook",
-			string(out), webhook)
-	}
-}
-
-func TestSlicePrintWithFullWebHook(t *testing.T) {
-	// GIVEN a WebHook that has every var filled
-	id := "test"
-	wType := "github"
-	url := "example.com"
-	allowInvalidCerts := false
-	secret := "secret"
-	desiredStatusCode := 201
-	declaredDelay := "5s"
-	delay := declaredDelay
-	maxTries := uint(1)
-	silentFails := false
-	webhook := WebHook{
-		ID:                id,
-		Type:              &wType,
-		URL:               &url,
-		AllowInvalidCerts: &allowInvalidCerts,
-		Secret:            &secret,
-		DesiredStatusCode: &desiredStatusCode,
-		Delay:             delay,
-		MaxTries:          &maxTries,
-		SilentFails:       &silentFails,
-		Main:              &WebHook{},
-		Defaults:          &WebHook{},
-		HardDefaults:      &WebHook{},
-	}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called on it
-	webhook.Print("")
-
-	// THEN the WebHook was logged
-	want := "type: github\nurl: example.com\nallow_invalid_certs: false\nsecret: \"secret\"\ndesired_status_code: 201\ndelay: 5s\nmax_tries: 1\nsilent_fails: false\n"
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want {
-		t.Errorf("Print had output %q with %v Slice. Wanted %q",
-			string(out), webhook, want)
-	}
-}
-
-func TestSlicePrintWithNilSlice(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called on it
-	slice.Print("")
-
-	// THEN nothing was logged
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != "" {
-		t.Errorf("Print had output %q with %v Slice",
-			string(out), slice)
-	}
-}
-
-func TestSlicePrintWithNonNilSlice(t *testing.T) {
-	// GIVEN a Slice with a WebHook
-	id := "test"
-	wType0 := "github"
-	url0 := "example.com"
-	wType1 := "gitlab"
-	url1 := "other.com"
-	slice := Slice{
-		"test": &WebHook{
-			ID:   id,
-			Type: &wType0,
-			URL:  &url0,
-		},
-		"other": &WebHook{
-			ID:   id,
-			Type: &wType1,
-			URL:  &url1,
-		},
-	}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called on it
-	slice.Print("")
-
-	// THEN the WebHook was logged
-	want := "webhook:\n  other:\n    type: gitlab\n    url: other.com\n  test:\n    type: github\n    url: example.com\n"
-	wantOther := "webhook:\n  test:\n    type: github\n    url: example.com\n  other:\n    type: gitlab\n    url: other.com\n"
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	if string(out) != want && string(out) != wantOther {
-		t.Errorf("Print had output %q with %v Slice. Wanted %q",
-			string(out), slice, want)
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+		})
 	}
 }

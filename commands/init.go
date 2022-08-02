@@ -28,7 +28,6 @@ import (
 // Init the Command Controller.
 func (c *Controller) Init(
 	log *utils.JLog,
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
@@ -49,8 +48,6 @@ func (c *Controller) Init(
 	}
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 
-	parentID := *serviceID
-	c.ServiceID = &parentID
 	c.ParentInterval = parentInterval
 	c.initMetrics()
 
@@ -67,14 +64,14 @@ func (c *Controller) initMetrics() {
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "SUCCESS")
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "FAIL")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceID, float64(0))
+	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'

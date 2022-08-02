@@ -47,7 +47,7 @@ func testLogging() {
 	jLog = utils.NewJLog("WARN", false)
 	jLog.Testing = true
 	var webhookLogs *webhook.Slice
-	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil, nil)
+	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil)
 	var latestVersion latest_version.Lookup
 	latestVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
 	var deployedVersion *deployed_version.Lookup
@@ -176,9 +176,9 @@ func testWebHookSuccessful() *webhook.WebHook {
 	whMaxTries := uint(1)
 	return &webhook.WebHook{
 		ID:                "test",
-		Type:              stringPtr("github"),
-		URL:               stringPtr("https://valid.release-argus.io/hooks/github-style"),
-		Secret:            stringPtr("argus"),
+		Type:              "github",
+		URL:               "https://valid.release-argus.io/hooks/github-style",
+		Secret:            "argus",
 		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &desiredStatusCode,
 		Delay:             "0s",
@@ -196,9 +196,9 @@ func testWebHookFailing() *webhook.WebHook {
 	whMaxTries := uint(1)
 	return &webhook.WebHook{
 		ID:                "test",
-		Type:              stringPtr("github"),
-		URL:               stringPtr("https://valid.release-argus.io/hooks/github-style"),
-		Secret:            stringPtr("notArgus"),
+		Type:              "github",
+		URL:               "https://valid.release-argus.io/hooks/github-style",
+		Secret:            "notArgus",
 		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &desiredStatusCode,
 		Delay:             "0s",

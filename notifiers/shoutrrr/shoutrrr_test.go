@@ -784,7 +784,7 @@ func TestSendWithNilServiceInfo(t *testing.T) {
 	id := "test"
 	slice := Slice{
 		"test": &Shoutrrr{
-			ID:   &id,
+			ID:   id,
 			Type: "shoutrrr",
 			Options: map[string]string{
 				"max_tries": "1",
@@ -816,7 +816,7 @@ func TestSendWithFail(t *testing.T) {
 	id := "test"
 	slice := Slice{
 		"test": &Shoutrrr{
-			ID:   &id,
+			ID:   id,
 			Type: "slack",
 			Options: map[string]string{
 				"max_tries": "2",
@@ -849,7 +849,7 @@ func TestSendWithDelay(t *testing.T) {
 	id := "test"
 	slice := Slice{
 		"test": &Shoutrrr{
-			ID:   &id,
+			ID:   id,
 			Type: "slack",
 			Options: map[string]string{
 				"max_tries": "1",
@@ -882,7 +882,7 @@ func TestSendWithNoDelay(t *testing.T) {
 	id := "test"
 	slice := Slice{
 		"test": &Shoutrrr{
-			ID:   &id,
+			ID:   id,
 			Type: "slack",
 			Options: map[string]string{
 				"max_tries": "1",
@@ -914,7 +914,7 @@ func TestSendWithMultipleFails(t *testing.T) {
 	jLog = utils.NewJLog("WARN", false)
 	id := "test"
 	failingShoutrrr := &Shoutrrr{
-		ID:   &id,
+		ID:   id,
 		Type: "slack",
 		Options: map[string]string{
 			"max_tries": "2",

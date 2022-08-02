@@ -274,9 +274,9 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 func TestWebSocketApprovalsVERSION(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
 	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil, nil)
+	logInitCommands.Init(jLog, nil, nil, nil, nil)
 	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil, nil)
+	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
 	tests := map[string]struct {
 		serviceID                   string
 		target                      *string
@@ -344,7 +344,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				}
 				hadCommandSlice = cfg.Service[tc.serviceID].Command
 				cfg.Service[tc.serviceID].Command = tc.commands
-				cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+				cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
 				if len(tc.commandFails) != 0 {
 					for i := range tc.commandFails {
 						(*cfg.Service[tc.serviceID].CommandController.Failed)[i] = tc.commandFails[i]
@@ -357,7 +357,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					}
 				}
 				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
 				if len(tc.webhookFails) != 0 {
 					for key := range tc.webhookFails {
 						(*cfg.Service[tc.serviceID].WebHook[key].Failed)[key] = tc.webhookFails[key]
@@ -368,7 +368,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					cfg.Service[tc.serviceID].Status = hadStatus
 					cfg.Service[tc.serviceID].DeployedVersionLookup = &hadDVL
 					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
 					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
 				}()
 			}
@@ -544,9 +544,9 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 func TestWebSocketApprovalsACTIONS(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
 	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil, nil)
+	logInitCommands.Init(jLog, nil, nil, nil, nil)
 	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil, nil)
+	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
 	tests := map[string]struct {
 		serviceID   string
 		stdoutRegex string
@@ -579,15 +579,15 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 					cfg.Service[tc.serviceID].CommandController = nil
 				} else {
 					cfg.Service[tc.serviceID].CommandController = &command.Controller{}
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
 				}
 				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
 				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
 				defer func() {
 					cfg.Service[tc.serviceID].Status = hadStatus
 					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].ID, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
 					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
 				}()
 			}
@@ -800,7 +800,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					hadService[i].Command = command
 					cfg.Service[i].CommandController = nil
 				} else {
-					cfg.Service[i].CommandController.Init(jLog, &i, &svc.Status, &svc.Command, nil, nil)
+					cfg.Service[i].CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
 				}
 				// restore possible changes
 				defer func() {
@@ -930,9 +930,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 						(*receivedMsg.ConfigData.WebHook)["pass"] == nil {
 						t.Errorf("Didn't receive ConfigData.WebHook.pass from\n%#v",
 							receivedMsg)
-					} else if *(*receivedMsg.ConfigData.WebHook)["pass"].URL != *cfg.WebHook["pass"].URL {
+					} else if *(*receivedMsg.ConfigData.WebHook)["pass"].URL != cfg.WebHook["pass"].URL {
 						t.Errorf("Expected ConfigData.WebHook.pass.URL to be %q, got %q\n%#v",
-							*cfg.WebHook["pass"].URL, *(*receivedMsg.ConfigData.WebHook)["pass"].URL, receivedMsg)
+							cfg.WebHook["pass"].URL, *(*receivedMsg.ConfigData.WebHook)["pass"].URL, receivedMsg)
 					}
 				}
 			}
@@ -1056,9 +1056,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					if receivedTestService.WebHook == nil {
 						t.Errorf("ConfigData.Service.test.WebHook should've been %#v, got %#v",
 							cfgTestService.WebHook, receivedTestService.WebHook)
-					} else if *(*receivedTestService.WebHook)["test"].URL != *cfgTestService.WebHook["test"].URL {
+					} else if *(*receivedTestService.WebHook)["test"].URL != cfgTestService.WebHook["test"].URL {
 						t.Errorf("ConfigData.Service.test.WebHook.test.URL should've been %q, got %q",
-							*cfgTestService.WebHook["test"].URL, *(*receivedTestService.WebHook)["test"].URL)
+							cfgTestService.WebHook["test"].URL, *(*receivedTestService.WebHook)["test"].URL)
 					}
 				}
 				// command

@@ -165,7 +165,8 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	}
 
 	return fmt.Errorf(
-		"%sWebHook didn't %s:\n%s\n%s", utils.FormatMessageSource(logFrom),
+		"%sWebHook gave %d, not %s:\n%s\n%s", utils.FormatMessageSource(logFrom),
+		resp.StatusCode,
 		prettyStatusCode,
 		resp.Status,
 		string(body),
@@ -182,7 +183,6 @@ func (n *Notifiers) Send(title string, message string, serviceInfo *utils.Servic
 
 func checkWebHookBody(body string) (okay bool) {
 	okay = true
-	fmt.Printf("body = %q\n", body)
 	if body == "" {
 		return
 	}

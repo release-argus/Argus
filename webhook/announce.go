@@ -40,7 +40,7 @@ func (w *WebHook) AnnounceSend() {
 		Type:    &wsType,
 		SubType: &wsSubType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: utils.DefaultIfNil(w.ServiceID),
+			ID: utils.DefaultIfNil(w.ServiceStatus.ServiceID),
 		},
 		WebHookData: webhookSummary,
 	})

@@ -65,13 +65,13 @@ func TestServicePrint(t *testing.T) {
 			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			commands:        command.Slice{{"ls", "-la"}},
-			webhooks:        webhook.Slice{"bar": &webhook.WebHook{URL: stringPtr("https://example.com")}}},
+			webhooks:        webhook.Slice{"bar": &webhook.WebHook{URL: "https://example.com"}}},
 		"base + latest_version + deployed_version + notifies + commands + webhooks + dashboard": {lines: 16, service: Service{ID: "test", Comment: "foo_comment"},
 			latestVersion:    latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
 			deployedVersion:  &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:         shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			commands:         command.Slice{{"ls", "-la"}},
-			webhooks:         webhook.Slice{"bar": &webhook.WebHook{URL: stringPtr("https://example.com")}},
+			webhooks:         webhook.Slice{"bar": &webhook.WebHook{URL: "https://example.com"}},
 			dashboardOptions: DashboardOptions{Icon: "https://example.com/icon.png"}},
 	}
 

@@ -67,7 +67,7 @@ func testGet() Shoutrrr {
 	}
 
 	return Shoutrrr{
-		ID:     &sID,
+		ID:     sID,
 		Type:   "discord",
 		Failed: &failed,
 		Options: map[string]string{

@@ -77,12 +77,12 @@ func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
 		//#nosec G104 -- Errors will be logged to CL
 		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(
-			"Command failed for "+*c.ServiceID,
+			"Command failed for "+*c.ServiceStatus.ServiceID,
 			(*c.Command)[index].String()+"\n"+err.Error(),
 			nil,
 			true)
 	}
-	metrics.IncreasePrometheusCounterActions(metrics.CommandMetric, (*c.Command)[index].String(), *c.ServiceID, "", metricResult)
+	metrics.IncreasePrometheusCounterActions(metrics.CommandMetric, (*c.Command)[index].String(), *c.ServiceStatus.ServiceID, "", metricResult)
 
 	return err
 }

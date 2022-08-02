@@ -26,26 +26,6 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-// GitHub is the WebHook payload to emulate GitHub.
-type GitHub struct {
-	Ref    string `json:"ref"`    // "refs/heads/master"
-	Before string `json:"before"` // "RandAlphaNumericLower(40)"
-	After  string `json:"after"`  // "RandAlphaNumericLower(40)"
-}
-
-// SetCustomHeaders of the req.
-func (w *WebHook) SetCustomHeaders(req *http.Request) {
-	if w.CustomHeaders == nil {
-		return
-	}
-
-	serviceInfo := utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}
-	for key, value := range *w.CustomHeaders {
-		value = utils.TemplateString(value, serviceInfo)
-		req.Header[key] = []string{value}
-	}
-}
-
 // SetGitHubHeaders of the req based on the payload and secret.
 func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	req.Header.Set("X-Github-Event", "push")

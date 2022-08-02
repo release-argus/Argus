@@ -42,7 +42,7 @@ func (c *Controller) AnnounceCommand(index int) {
 		Type:    &wsType,
 		SubType: &wsSubType,
 		ServiceData: &api_types.ServiceSummary{
-			ID: utils.DefaultIfNil(c.ServiceID),
+			ID: utils.DefaultIfNil(c.ServiceStatus.ServiceID),
 		},
 		CommandData: commandSummary,
 	})

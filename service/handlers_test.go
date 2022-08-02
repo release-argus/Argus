@@ -166,9 +166,9 @@ func TestHandleUpdateActions(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.Dashboard.AutoApprove = &tc.autoApprove
 			service.DeployedVersionLookup = nil
 
@@ -305,9 +305,9 @@ func TestHandleFailedActions(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
 			for i := range tc.commandNextRunnables {
 				service.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
@@ -436,7 +436,7 @@ func TestHandleCommand(t *testing.T) {
 			if len(tc.commands) != 0 {
 				service.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.ID, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
 			for i := range service.Command {
 				service.CommandController.NextRunnable[i] = tc.nextRunnable
@@ -537,7 +537,7 @@ func TestHandleWebHook(t *testing.T) {
 				service.Status.DeployedVersion = service.Status.LatestVersion
 			}
 			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.ID, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.WebHook.Init(jLog, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
 			service.DeployedVersionLookup = nil
 			for i := range service.WebHook {
 				service.WebHook[i].NextRunnable = tc.nextRunnable

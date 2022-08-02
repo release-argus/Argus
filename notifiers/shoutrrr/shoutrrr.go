@@ -262,12 +262,12 @@ func (s *Shoutrrr) Send(
 	serviceInfo *utils.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
-	logFrom := utils.LogFrom{Primary: *s.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := s.GetMaxTries()                                        // Number of times to send Shoutrrr (until 200 received).
+	logFrom := utils.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
+	triesLeft := s.GetMaxTries()                                       // Number of times to send Shoutrrr (until 200 received).
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
-		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", *s.ID, s.GetDelay())
+		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", s.ID, s.GetDelay())
 		jLog.Info(msg, logFrom, s.GetDelay() != "0s")
 		time.Sleep(s.GetDelayDuration())
 	}
@@ -304,14 +304,14 @@ func (s *Shoutrrr) Send(
 
 		// SUCCESS!
 		if !failed {
-			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
+			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
 			failed := false
-			(*s.Failed)[*s.ID] = &failed
+			(*s.Failed)[s.ID] = &failed
 			return
 		}
 
 		// FAIL
-		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "FAIL")
+		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "FAIL")
 		triesLeft--
 
 		// Give up after MaxTries.
@@ -319,7 +319,7 @@ func (s *Shoutrrr) Send(
 			msg = fmt.Sprintf("failed %d times to send a %s message to %s", s.GetMaxTries(), s.GetType(), s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
-			(*s.Failed)[*s.ID] = &failed
+			(*s.Failed)[s.ID] = &failed
 			for key := range combinedErrs {
 				errs = fmt.Errorf("%s%s x %d",
 					utils.ErrorToString(errs), key, combinedErrs[key])

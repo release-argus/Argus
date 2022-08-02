@@ -611,10 +611,10 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 		return
 	}
 	apiElement = &api_types.WebHook{
-		Type:              webhook.Type,
-		URL:               webhook.URL,
-		Secret:            utils.ValueIfNotNil(webhook.Secret, "<secret>"),
-		CustomHeaders:     webhook.CustomHeaders,
+		Type:              &webhook.Type,
+		URL:               &webhook.URL,
+		Secret:            utils.ValueIfNotNil(&webhook.Secret, "<secret>"),
+		CustomHeaders:     &webhook.CustomHeaders,
 		DesiredStatusCode: webhook.DesiredStatusCode,
 		Delay:             webhook.Delay,
 		MaxTries:          webhook.MaxTries,

@@ -420,7 +420,7 @@ func TestNotifyTest(t *testing.T) {
 					Notify: shoutrrr.Slice{
 						"foo": {},
 						"bar": {
-							ID:   stringPtr("bar"),
+							ID:   "bar",
 							Type: "gotify",
 							Options: map[string]string{
 								"max_tries": "1",
@@ -442,7 +442,7 @@ func TestNotifyTest(t *testing.T) {
 					Notify: shoutrrr.Slice{
 						"foo": {},
 						"bar": {
-							ID:   stringPtr("bar"),
+							ID:   "bar",
 							Type: "gotify",
 							Options: map[string]string{
 								"max_tries": "1",

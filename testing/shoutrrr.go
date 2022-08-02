@@ -36,7 +36,7 @@ func NotifyTest(
 		return
 	}
 	var logSlice *shoutrrr.Slice
-	logSlice.Init(log, nil, nil, nil, nil, nil)
+	logSlice.Init(log, nil, nil, nil, nil)
 	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
@@ -90,7 +90,7 @@ func findShoutrrr(
 			emptyShoutrrs := shoutrrr.Shoutrrr{}
 			emptyShoutrrs.InitMaps()
 			slice["test"] = cfg.Notify[name]
-			slice["test"].ID = &name
+			slice["test"].ID = name
 			slice["test"].Main = cfg.Notify[name]
 			slice["test"].Defaults = &emptyShoutrrs
 			slice["test"].HardDefaults = &emptyShoutrrs

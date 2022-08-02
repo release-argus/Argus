@@ -159,14 +159,14 @@ func testService(id string) service.Service {
 		HardDefaults:      &service.Service{},
 		Command:           command.Slice{command.Command{"ls", "-lah"}},
 		CommandController: &command.Controller{},
-		WebHook:           webhook.Slice{"test": &webhook.WebHook{URL: stringPtr("example.com")}},
+		WebHook:           webhook.Slice{"test": &webhook.WebHook{URL: "example.com"}},
 		Status: service_status.Status{
 			AnnounceChannel: &sAnnounceChannel,
 			DatabaseChannel: &sDatabaseChannel,
 			SaveChannel:     &sSaveChannel,
 		},
 	}
-	svc.CommandController.Init(jLog, &id, &svc.Status, &svc.Command, nil, nil)
+	svc.CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
 	return svc
 }
 
@@ -180,21 +180,22 @@ func testCommandFail() command.Command {
 
 func testWebHookPass(id string) *webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
+	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
 
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
 	return &webhook.WebHook{
-		ID:                id,
-		Type:              stringPtr("github"),
-		URL:               stringPtr("https://httpbin.org/anything"),
-		Secret:            stringPtr("secret"),
+		Type:              "github",
+		URL:               "https://valid.release-argus.io/hooks/github-style",
+		Secret:            "argus",
 		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &whDesiredStatusCode,
 		Delay:             "0s",
-		SilentFails:       boolPtr(true),
+		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
+		ID:                "test",
 		ParentInterval:    stringPtr("11m"),
+		ServiceStatus:     &service_status.Status{},
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
@@ -203,30 +204,25 @@ func testWebHookPass(id string) *webhook.WebHook {
 
 func testWebHookFail(id string) *webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
+	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
 
-	whType := "github"
-	whURL := "https://httpbin.org/hidden-basic-auth/:user/:passwd"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
 	whDesiredStatusCode := 0
-	whSilentFails := true
 	whMaxTries := uint(1)
-	parentInterval := "11m"
 	return &webhook.WebHook{
-		ID:                id,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
+		Type:              "github",
+		URL:               "https://valid.release-argus.io/hooks/github-style",
+		Secret:            "notArgus",
+		AllowInvalidCerts: boolPtr(false),
 		DesiredStatusCode: &whDesiredStatusCode,
-		SilentFails:       &whSilentFails,
+		Delay:             "0s",
+		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
+		ID:                "test",
+		ParentInterval:    stringPtr("11m"),
+		ServiceStatus:     &service_status.Status{},
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
-		Notifiers:         &webhook.Notifiers{},
 	}
 }
 

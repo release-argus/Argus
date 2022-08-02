@@ -17,836 +17,832 @@
 package webhook
 
 import (
-	"fmt"
+	"encoding/json"
+	"io/ioutil"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
 
-func TestSliceInitWithNilSlice(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice Slice
+func TestInitMetrics(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		forService bool
+	}{
+		"for service": {forService: true},
+	}
 
-	// WHEN Init is called
-	slice.Init(nil, nil, nil, nil, nil, nil, nil, nil)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, tc.forService, false)
+			if tc.forService {
+				webhook.ID = name + "TestInitMetrics"
+				webhook.ServiceStatus.ServiceID = stringPtr(name + "TestInitMetrics")
+			}
 
-	// THEN the function exits without defining any of the vars
-	got := len(slice)
-	want := 0
-	if got != want {
-		t.Errorf("Got len %d, when expecting %d",
-			got, want)
+			// WHEN the Prometheus metrics are initialised with initMetrics
+			hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+			webhook.initMetrics()
+
+			// THEN it can be collected
+			// counters
+			gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+			wantC := 0
+			if tc.forService {
+				wantC = 2
+			}
+			if (gotC - hadC) != wantC {
+				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+					(gotC - hadC), wantC)
+			}
+		})
 	}
 }
 
-func TestSliceInitWithNilWebHook(t *testing.T) {
-	// GIVEN a non-nil Slice with a nil WebHook
-	slice := Slice{
-		"0": nil,
+func TestInit(t *testing.T) {
+	// GIVEN a WebHook and vars for the Init
+	webhook := testWebHook(true, true, false)
+	var notifiers shoutrrr.Slice
+	var main WebHook
+	var defaults WebHook
+	var hardDefaults WebHook
+	status := service_status.Status{ServiceID: stringPtr("TestInit")}
+
+	// WHEN Init is called on it
+	hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+	webhook.Init(&status, &main, &defaults, &hardDefaults, &notifiers, webhook.ParentInterval)
+	webhook.ID = "TestInit"
+
+	// THEN pointers to those vars are handed out to the WebHook
+	// main
+	if webhook.Main != &main {
+		t.Errorf("Main was not handed to the WebHook correctly\n want: %v\ngot:  %v",
+			&main, webhook.Main)
 	}
-	serviceID := "test"
-
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil, nil)
-
-	// THEN the function initialises the nil WebHook
-	if slice["0"] == nil {
-		t.Errorf("Slice['0'] shouldn't be %v still",
-			slice["0"])
+	// defaults
+	if webhook.Defaults != &defaults {
+		t.Errorf("Defaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+			&defaults, webhook.Defaults)
 	}
-}
-
-func TestSliceInitWithNonNil(t *testing.T) {
-	// GIVEN a non-nil Slice with everything else nil
-	id0 := "0"
-	slice := Slice{
-		"0": &WebHook{
-			ID: id0,
-		},
+	// hardDefaults
+	if webhook.HardDefaults != &hardDefaults {
+		t.Errorf("HardDefaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+			&hardDefaults, webhook.HardDefaults)
 	}
-	// Won't ever be nil, so don't make it nil in tests
-	serviceID := ""
-
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, nil, nil, nil, nil, nil, nil)
-
-	// THEN the function exits without defining any of the vars
-	got := len(slice)
-	want := 1
-	if got != want {
-		t.Errorf("Got len %d, when expecting %d",
-			got, want)
+	// status
+	if webhook.ServiceStatus != &status {
+		t.Errorf("Status was not handed to the WebHook correctly\n want: %v\ngot:  %v",
+			&status, webhook.ServiceStatus)
 	}
-}
-
-func testInitWithNonNilAndVars() (string, Slice, service_status.Status, Slice, WebHook, WebHook) {
-	id0 := "0"
-	id1 := "1"
-	slice := Slice{
-		id0: &WebHook{
-			ID: id0,
-		},
-		id1: &WebHook{
-			ID: id1,
-		},
+	// options
+	if webhook.Notifiers.Shoutrrr != &notifiers {
+		t.Errorf("Notifiers were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+			&notifiers, webhook.Notifiers.Shoutrrr)
 	}
-	serviceID := "id_test"
-	serviceStatus := service_status.Status{LatestVersion: "status test"}
-	mainSecret0 := "main0"
-	mainSecret1 := "main1"
-	mains := Slice{
-		id0: &WebHook{
-			ID:     id0,
-			Secret: &mainSecret0,
-		},
-		id1: &WebHook{
-			ID:     id1,
-			Secret: &mainSecret1,
-		},
-	}
-	defaultURL := "default"
-	defaults := WebHook{
-		ID:     id0,
-		Secret: &defaultURL,
-	}
-	hardDefaults := WebHook{
-		Delay: "1s",
-	}
-
-	return serviceID, slice, serviceStatus, mains, defaults, hardDefaults
-}
-
-func TestSliceInitMainsHandedOut(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// THEN the mains are handed out correctly
-	for key := range slice {
-		if slice[key].Main != mains[key] {
-			t.Errorf("Main not handed to %s",
-				key)
-		}
+	// initMetrics - counters
+	gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+	wantC := 2
+	if (gotC - hadC) != wantC {
+		t.Errorf("%d Counter metrics's were initialised, expecting %d",
+			(gotC - hadC), wantC)
 	}
 }
 
-func TestSliceInitDefaultsHandedOut(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// THEN the defaults are handed out correctly
-	for key := range slice {
-		if *slice[key].Defaults != defaults {
-			t.Errorf("Defaults not handed to %s",
-				key)
-		}
-	}
-}
-
-func TestSliceInitHardDefaultsHandedOut(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// THEN the hard defaults are handed out correctly
-	for key := range slice {
-		if *slice[key].HardDefaults != hardDefaults {
-			t.Errorf("HardDefaults not handed to %s",
-				key)
-		}
-	}
-}
-
-func TestSliceInitNotifiersHandedOut(t *testing.T) {
-	// GIVEN a non-nil Slice with notifiers
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	notifiers := shoutrrr.Slice{
-		"test": &shoutrrr.Shoutrrr{},
+func TestSliceInit(t *testing.T) {
+	// GIVEN a Slice and vars for the Init
+	var notifiers shoutrrr.Slice
+	tests := map[string]struct {
+		slice        *Slice
+		nilSlice     bool
+		mains        *Slice
+		defaults     WebHook
+		hardDefaults WebHook
+	}{
+		"nil slice":   {slice: nil, nilSlice: true},
+		"empty slice": {slice: &Slice{}},
+		"no mains":    {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)}},
+		"slice with nil element and matching main": {slice: &Slice{"fail": nil},
+			mains: &Slice{"fail": testWebHook(false, true, false)}},
+		"have matching mains": {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)},
+			mains: &Slice{"fail": testWebHook(false, true, false), "pass": testWebHook(true, true, false)}},
+		"some matching mains": {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)},
+			mains: &Slice{"other": testWebHook(false, true, false), "pass": testWebHook(true, true, false)}},
 	}
 
-	// WHEN Init is called
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, &notifiers, nil)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			log := utils.NewJLog("WARN", false)
+			status := service_status.Status{ServiceID: &name}
+			if !tc.nilSlice {
+				for i := range *tc.slice {
+					if (*tc.slice)[i] != nil {
+						(*tc.slice)[i].ID = name + i
+					}
+				}
+			}
+			if tc.mains != nil {
+				for i := range *tc.mains {
+					(*tc.mains)[i].ID = ""
+					(*tc.mains)[i].Main = nil
+					(*tc.mains)[i].Defaults = nil
+					(*tc.mains)[i].HardDefaults = nil
+				}
+			}
+			parentInterval := "10s"
 
-	// THEN the notifiers are handed out correctly
-	for key := range slice {
-		if slice[key].Notifiers.Shoutrrr == nil {
-			t.Errorf("Notifiers %v weren't handed to %s",
-				notifiers, key)
-		}
+			// WHEN Init is called on it
+			hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+			tc.slice.Init(log, &status, tc.mains, &tc.defaults, &tc.hardDefaults, &notifiers, &parentInterval)
+
+			// THEN pointers to those vars are handed out to the WebHook
+			// initMetrics - counters
+			gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+			wantC := 0
+			if !tc.nilSlice {
+				wantC = 2 * len(*tc.slice)
+			}
+			if (gotC - hadC) != wantC {
+				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
+					name, (gotC - hadC), wantC)
+			}
+			if jLog != log {
+				t.Errorf("%s:\nwant: jLog=%v\ngot:  jLog=%v",
+					name, log, jLog)
+			}
+			if tc.nilSlice {
+				if tc.slice != nil {
+					t.Fatalf("%s:\nexpecting the Slice to be nil, not %v",
+						name, *tc.slice)
+				}
+				return
+			}
+			for _, webhook := range *tc.slice {
+				// main
+				if webhook.Main == nil {
+					t.Errorf("%s:\nMain of the WebHook was not initialised. got: %v",
+						name, webhook.Main)
+				} else if tc.mains != nil && (*tc.mains)[webhook.ID] != nil && webhook.Main != (*tc.mains)[webhook.ID] {
+					t.Errorf("Main were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+						(*tc.mains)[webhook.ID], webhook.Main)
+				}
+				// defaults
+				if webhook.Defaults != &tc.defaults {
+					t.Errorf("Defaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+						&tc.defaults, webhook.Defaults)
+				}
+				// hardDefaults
+				if webhook.HardDefaults != &tc.hardDefaults {
+					t.Errorf("HardDefaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+						&tc.hardDefaults, webhook.HardDefaults)
+				}
+				// status
+				if webhook.ServiceStatus != &status {
+					t.Errorf("Status was not handed to the WebHook correctly\n want: %v\ngot:  %v",
+						&status, webhook.ServiceStatus)
+				}
+				// notifiers
+				if webhook.Notifiers.Shoutrrr != &notifiers {
+					t.Errorf("Notifiers were not handed to the WebHook correctly\n want: %v\ngot:  %v",
+						&notifiers, webhook.Notifiers.Shoutrrr)
+				}
+			}
+		})
 	}
-}
-
-func TestSliceInitMetrics(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN initMetrics is called
-	slice["0"].initMetrics("foo")
-
-	// THEN the function runs without error
 }
 
 func TestGetAllowInvalidCerts(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	// GIVEN a WebHook
 	tests := map[string]struct {
 		allowInvalidCertsRoot        *bool
 		allowInvalidCertsMain        *bool
 		allowInvalidCertsDefault     *bool
 		allowInvalidCertsHardDefault *bool
-		wantBool                     bool
+		want                         bool
 	}{
-		"root overrides all": {wantBool: true, allowInvalidCertsRoot: boolPtr(true),
+		"root overrides all": {want: true, allowInvalidCertsRoot: boolPtr(true),
 			allowInvalidCertsMain: boolPtr(false), allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"main overrides default+hardDefault": {wantBool: true, allowInvalidCertsRoot: nil,
+		"main overrides default+hardDefault": {want: true, allowInvalidCertsRoot: nil,
 			allowInvalidCertsMain: boolPtr(true), allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil,
-			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil, allowInvalidCertsDefault: nil,
+		"default overrides hardDefault": {want: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil,
+			allowInvalidCertsDefault: boolPtr(true), allowInvalidCertsHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {want: true, allowInvalidCertsRoot: nil, allowInvalidCertsMain: nil, allowInvalidCertsDefault: nil,
 			allowInvalidCertsHardDefault: boolPtr(true)},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			slice["0"].AllowInvalidCerts = tc.allowInvalidCertsRoot
-			slice["0"].Main.AllowInvalidCerts = tc.allowInvalidCertsMain
-			slice["0"].Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
-			slice["0"].HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
+			webhook := testWebHook(true, true, false)
+			webhook.AllowInvalidCerts = tc.allowInvalidCertsRoot
+			webhook.Main.AllowInvalidCerts = tc.allowInvalidCertsMain
+			webhook.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
+			webhook.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
 
 			// WHEN GetAllowInvalidCerts is called
-			got := slice["0"].GetAllowInvalidCerts()
+			got := webhook.GetAllowInvalidCerts()
 
 			// THEN the function returns the correct result
-			if got != tc.wantBool {
+			if got != tc.want {
 				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetDelay(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		delayRoot        string
+		delayMain        string
+		delayDefault     string
+		delayHardDefault string
+		want             string
+	}{
+		"root overrides all": {want: "1s", delayRoot: "1s",
+			delayMain: "2s", delayDefault: "2s", delayHardDefault: "2s"},
+		"main overrides default+hardDefault": {want: "1s", delayRoot: "",
+			delayMain: "1s", delayDefault: "2s", delayHardDefault: "2s"},
+		"default overrides hardDefault": {want: "1s", delayRoot: "", delayMain: "",
+			delayDefault: "1s", delayHardDefault: "2s"},
+		"hardDefault is last resort": {want: "1s", delayRoot: "", delayMain: "", delayDefault: "",
+			delayHardDefault: "1s"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.Delay = tc.delayRoot
+			webhook.Main.Delay = tc.delayMain
+			webhook.Defaults.Delay = tc.delayDefault
+			webhook.HardDefaults.Delay = tc.delayHardDefault
+
+			// WHEN GetDelay is called
+			got := webhook.GetDelay()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, tc.want, got)
 			}
 		})
 	}
 }
 
 func TestGetDelayDuration(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN Delay is "X" and GetDelayDuration is called
-	slice["0"].Delay = "1s"
-	wanted, _ := time.ParseDuration(slice["0"].Delay)
-	got := slice["0"].GetDelayDuration()
-
-	// THEN the function returns the X as a time.Duration
-	if got != wanted {
-		t.Errorf("GetDelayDuration - wanted %s, got %s",
-			wanted, got)
-	}
-}
-
-func TestGetDesiredStatusCode(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN DesiredStatusCode is 1 and GetDesiredStatusCode is called
-	wanted := 1
-	hardDefaults.DesiredStatusCode = &wanted
-	got := slice["0"].GetDesiredStatusCode()
-
-	// THEN the function returns the hardDefault
-	if got != wanted {
-		t.Errorf("GetDesiredStatusCode - wanted %d, got %d",
-			wanted, got)
-	}
-}
-
-func TestGetFailStatus(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	// GIVEN a WebHook
 	tests := map[string]struct {
-		status *bool
+		delayRoot        string
+		delayMain        string
+		delayDefault     string
+		delayHardDefault string
+		want             time.Duration
 	}{
-		"nil":   {status: nil},
-		"false": {status: boolPtr(false)},
-		"true":  {status: boolPtr(true)},
+		"root overrides all": {want: 1 * time.Second, delayRoot: "1s",
+			delayMain: "2s", delayDefault: "2s", delayHardDefault: "2s"},
+		"main overrides default+hardDefault": {want: 1 * time.Second, delayRoot: "",
+			delayMain: "1s", delayDefault: "2s", delayHardDefault: "2s"},
+		"default overrides hardDefault": {want: 1 * time.Second, delayRoot: "", delayMain: "",
+			delayDefault: "1s", delayHardDefault: "2s"},
+		"hardDefault is last resort": {want: 1 * time.Second, delayRoot: "", delayMain: "", delayDefault: "",
+			delayHardDefault: "1s"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			(*slice["0"].Failed)["0"] = tc.status
+			webhook := testWebHook(true, true, false)
+			webhook.Delay = tc.delayRoot
+			webhook.Main.Delay = tc.delayMain
+			webhook.Defaults.Delay = tc.delayDefault
+			webhook.HardDefaults.Delay = tc.delayHardDefault
 
-			// WHEN GetFailStatus is called
-			got := slice["0"].GetFailStatus()
+			// WHEN GetDelayDuration is called
+			got := webhook.GetDelayDuration()
 
 			// THEN the function returns the correct result
-			g := "<nil>"
-			if got != nil {
-				g = fmt.Sprint(got)
-			}
-			want := "<nil>"
-			if tc.status != nil {
-				want = fmt.Sprint(tc.status)
-			}
-			if g != want {
+			if got != tc.want {
 				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, want, g)
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetDesiredStatusCode(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		desiredStatusCodeRoot        *int
+		desiredStatusCodeMain        *int
+		desiredStatusCodeDefault     *int
+		desiredStatusCodeHardDefault *int
+		want                         int
+	}{
+		"root overrides all": {want: 1, desiredStatusCodeRoot: intPtr(1),
+			desiredStatusCodeMain: intPtr(2), desiredStatusCodeDefault: intPtr(2), desiredStatusCodeHardDefault: intPtr(2)},
+		"main overrides default+hardDefault": {want: 1, desiredStatusCodeRoot: nil,
+			desiredStatusCodeMain: intPtr(1), desiredStatusCodeDefault: intPtr(2), desiredStatusCodeHardDefault: intPtr(2)},
+		"default overrides hardDefault": {want: 1, desiredStatusCodeRoot: nil, desiredStatusCodeMain: nil,
+			desiredStatusCodeDefault: intPtr(1), desiredStatusCodeHardDefault: intPtr(2)},
+		"hardDefault is last resort": {want: 1, desiredStatusCodeRoot: nil, desiredStatusCodeMain: nil, desiredStatusCodeDefault: nil,
+			desiredStatusCodeHardDefault: intPtr(1)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.DesiredStatusCode = tc.desiredStatusCodeRoot
+			webhook.Main.DesiredStatusCode = tc.desiredStatusCodeMain
+			webhook.Defaults.DesiredStatusCode = tc.desiredStatusCodeDefault
+			webhook.HardDefaults.DesiredStatusCode = tc.desiredStatusCodeHardDefault
+
+			// WHEN GetDesiredStatusCode is called
+			got := webhook.GetDesiredStatusCode()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %d\ngot:  %d",
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetFailStatus(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		failed *bool
+	}{
+		"failed=true":  {failed: boolPtr(true)},
+		"failed=false": {failed: boolPtr(false)},
+		"failed=nil":   {failed: nil},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			want := stringifyPointer(tc.failed)
+			(*webhook.Failed)[webhook.ID] = tc.failed
+
+			// WHEN GetFailStatus is called
+			got := stringifyPointer(webhook.GetFailStatus())
+
+			// THEN the function returns the correct result
+			if got != want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, want, got)
 			}
 		})
 	}
 }
 
 func TestGetMaxTries(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN MaxTries is X and GetMaxTries is called
-	wanted := uint(4)
-	slice["0"].MaxTries = &wanted
-	got := slice["0"].GetMaxTries()
-
-	// THEN the function returns X
-	if got != wanted {
-		t.Errorf("GetMaxTries - wanted %d, got %d",
-			wanted, got)
-	}
-}
-
-func TestGetType(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN Type is "X" and GetType is called
-	wanted := "gitlab"
-	slice["0"].Type = &wanted
-	got := slice["0"].GetType()
-
-	// THEN the function returns "X"
-	if got != wanted {
-		t.Errorf("GetType - wanted %s, got %s",
-			wanted, got)
-	}
-}
-
-func TestGetSecret(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN Secret is "X" and GetSecret is called
-	wanted := "secret"
-	slice["0"].Secret = &wanted
-	got := slice["0"].GetSecret()
-
-	// THEN the function returns "X"
-	if *got != wanted {
-		t.Errorf("GetSecret - wanted %s, got %s",
-			wanted, *got)
-	}
-}
-
-func TestGetSilentFailsWhenTrue(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults with SilentFails true
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN GetSilentFails is called
-	wanted := true
-	slice["0"].SilentFails = &wanted
-	got := slice["0"].GetSilentFails()
-
-	// THEN the function returns true
-	if got != wanted {
-		t.Errorf("GetSilentFails - wanted %t, got %t",
-			wanted, got)
-	}
-}
-
-func TestGetSilentFailsWhenFalse(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults with SilentFails false
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN SilentFails is false and GetSilentFails is called
-	wanted := false
-	slice["0"].SilentFails = &wanted
-	got := slice["0"].GetSilentFails()
-
-	// THEN the function returns false
-	if got != wanted {
-		t.Errorf("GetSilentFails - wanted %t, got %t",
-			wanted, got)
-	}
-}
-
-func TestGetURLWithNoTemplating(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN URL requires no Jinja templating and GetURL is called
-	wanted := "https://example.com"
-	slice["0"].URL = &wanted
-	got := slice["0"].GetURL()
-
-	// THEN the function returns the hardDefault
-	if *got != wanted {
-		t.Errorf("GetURL - wanted %s, got %s",
-			wanted, *got)
-	}
-}
-
-func TestGetURLWithTemplatingWorks(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN URL requires Jinja templating and GetURL is called
-	template := "https://example.com{% if 'a' == 'a' %}/{{ version }}{% endif %}{% if 'a' == 'b' %}foo{% endif %}"
-	slice["0"].URL = &template
-	got := slice["0"].GetURL()
-	wanted := "https://example.com/status test"
-
-	// THEN the function returns the default
-	if *got != wanted {
-		t.Errorf("GetURL - wanted %s, got %s",
-			wanted, *got)
-	}
-}
-func TestGetURLWithTemplatingUnchangesTemplate(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
-
-	// WHEN URL requires Jinja templating and GetURL is called
-	template := "https://example.com{% if 'a' == 'a' %}/{{ version }}{% endif %}{% if 'a' == 'b' %}foo{% endif %}"
-	slice["0"].URL = &template
-	got := slice["0"].GetURL()
-	wanted := "https://example.com/status test"
-
-	// THEN the template stays intact
-	if *got != wanted {
-		t.Errorf("GetURL modified the template - wanted %s, got %s",
-			wanted, *got)
-	}
-}
-
-func TestGetRequestGitHubInvalidURL(t *testing.T) {
-	// GIVEN type github and an invalid URL
-	whType := "github"
-	whURL := "invalid://	test"
-	whSecret := "secret"
-	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN GetRequest is called
-	req := wh.GetRequest()
-
-	// THEN req is nil
-	if req != nil {
-		t.Error("Invalid URL produced a non-nil http.Request")
-	}
-}
-
-func TestGetRequestGitHubValidURL(t *testing.T) {
-	// GIVEN type github and a valid URL
-	whType := "github"
-	whURL := "https://test"
-	whSecret := "secret"
-	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
-		},
-		ServiceStatus: &service_status.Status{},
-	}
-
-	// WHEN GetRequest is called
-	req := wh.GetRequest()
-
-	// THEN req is valid
-	if req == nil {
-		t.Error("Invalid URL produced a non-nil http.Request")
-	}
-	key := "Content-Type"
-	want := "application/json"
-	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s",
-			key, want, req.Header[key][0])
-	}
-	key = "foo"
-	want = "bar"
-	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s",
-			key, want, req.Header[key][0])
-	}
-	key = "X-Github-Event"
-	want = "push"
-	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s",
-			key, want, req.Header[key][0])
-	}
-}
-
-func TestGetRequestGitLabInvalidURL(t *testing.T) {
-	// GIVEN type gitlab and an invalid URL
-	whType := "gitlab"
-	whURL := "invalid://	test"
-	whSecret := "secret"
-	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-	}
-
-	// WHEN GetRequest is called
-	req := wh.GetRequest()
-
-	// THEN req is nil
-	if req != nil {
-		t.Error("Invalid URL produced a non-nil http.Request")
-	}
-}
-
-func TestGetRequestGitLabValidURL(t *testing.T) {
-	// GIVEN type gitlab and a valid URL
-	whType := "gitlab"
-	whURL := "https://test"
-	whSecret := "secret"
-	wh := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
-		},
-		ServiceStatus: &service_status.Status{},
-	}
-
-	// WHEN GetRequest is called
-	req := wh.GetRequest()
-
-	// THEN req is valid
-	if req == nil {
-		t.Error("Invalid URL produced a non-nil http.Request")
-	}
-	key := "Content-Type"
-	want := "application/x-www-form-urlencoded"
-	if req.Header[key][0] != want {
-		t.Errorf("%s should have been %s, got %s",
-			key, want, req.Header[key][0])
-	}
-	if req.URL.RawQuery == "" {
-		t.Error("RawQuery was empty when it should have been encoded data")
-	}
-}
-
-func TestSetFailStatus(t *testing.T) {
-	// GIVEN a non-nil Slice, matching mains, defaults and hardDefaults
-	serviceID, slice, serviceStatus, mains, defaults, hardDefaults := testInitWithNonNilAndVars()
-	slice.Init(nil, &serviceID, &serviceStatus, &mains, &defaults, &hardDefaults, nil, nil)
+	// GIVEN a WebHook
 	tests := map[string]struct {
-		status *bool
+		maxTriesRoot        *uint
+		maxTriesMain        *uint
+		maxTriesDefault     *uint
+		maxTriesHardDefault *uint
+		want                uint
 	}{
-		"nil":   {status: nil},
-		"false": {status: boolPtr(false)},
-		"true":  {status: boolPtr(true)},
+		"root overrides all": {want: uint(1), maxTriesRoot: uintPtr(1),
+			maxTriesMain: uintPtr(2), maxTriesDefault: uintPtr(2), maxTriesHardDefault: uintPtr(2)},
+		"main overrides default+hardDefault": {want: uint(1), maxTriesRoot: nil,
+			maxTriesMain: uintPtr(1), maxTriesDefault: uintPtr(2), maxTriesHardDefault: uintPtr(2)},
+		"default overrides hardDefault": {want: uint(1), maxTriesRoot: nil, maxTriesMain: nil,
+			maxTriesDefault: uintPtr(1), maxTriesHardDefault: uintPtr(2)},
+		"hardDefault is last resort": {want: uint(1), maxTriesRoot: nil, maxTriesMain: nil, maxTriesDefault: nil,
+			maxTriesHardDefault: uintPtr(1)},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// WHEN SetFailStatus is called
-			slice["0"].SetFailStatus(tc.status)
+			webhook := testWebHook(true, true, false)
+			webhook.MaxTries = tc.maxTriesRoot
+			webhook.Main.MaxTries = tc.maxTriesMain
+			webhook.Defaults.MaxTries = tc.maxTriesDefault
+			webhook.HardDefaults.MaxTries = tc.maxTriesHardDefault
 
-			// THEN the fail status is correctly set for the WebHook
-			got := (*slice["0"].Failed)["0"]
-			g := "<nil>"
-			if got != nil {
-				g = fmt.Sprint(got)
-			}
-			want := "<nil>"
-			if tc.status != nil {
-				want = fmt.Sprint(tc.status)
-			}
-			if g != want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, want, g)
+			// WHEN GetMaxTries is called
+			got := webhook.GetMaxTries()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %d\ngot:  %d",
+					name, tc.want, got)
 			}
 		})
 	}
 }
 
-func TestIsRunnableTrue(t *testing.T) {
-	// GIVEN a WebHook with NextRunnable before the current time
-	wh := WebHook{
-		NextRunnable: time.Now().UTC().Add(-time.Minute),
+func TestGetRequest(t *testing.T) {
+	// GIVEN a WebHook and a HTTP Request
+	tests := map[string]struct {
+		webhookType   string
+		url           string
+		customHeaders map[string]string
+		wantNil       bool
+	}{
+		"valid github type": {webhookType: "github", url: "release-argus/Argus"},
+		"catch invalid github request": {webhookType: "github", url: "release-argus	/	Argus", wantNil: true},
+		"valid gitlab type": {webhookType: "gitlab", url: "https://release-argus.io"},
+		"catch invalid gitlab request": {webhookType: "gitlab", url: "release-argus	/	Argus", wantNil: true},
+		"sets custom headers for github": {webhookType: "github", url: "release-argus/Argus",
+			customHeaders: map[string]string{"X-Foo": "bar"}},
+		"sets custom headers for gitlab": {webhookType: "gitlab", url: "https://release-argus.io",
+			customHeaders: map[string]string{"X-Foo": "bar"}},
 	}
 
-	// WHEN IsRunnable is called on it
-	ranAt := time.Now().UTC()
-	got := wh.IsRunnable()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.Type = tc.webhookType
+			webhook.URL = tc.url
+			webhook.CustomHeaders = tc.customHeaders
 
-	// THEN true was returned
-	want := true
-	if got != want {
-		t.Fatalf("IsRunnable was ran at\n%s with NextRunnable\n%s. Expected %t, got %t",
-			ranAt, wh.NextRunnable, want, got)
+			// WHEN GetRequest is called
+			req := webhook.GetRequest()
+
+			// THEN the function returns the correct result
+			if tc.wantNil {
+				if req != nil {
+					t.Fatalf("%s:\nexpected request to fail with url %q",
+						name, tc.url)
+				}
+				return
+			}
+			switch tc.webhookType {
+			case "github":
+				// Payload
+				body, _ := ioutil.ReadAll(req.Body)
+				var payload GitHub
+				json.Unmarshal(body, &payload)
+				want := "refs/heads/master"
+				if payload.Ref != want {
+					t.Errorf("%s:\ndidn't get %q in the payload\n%v",
+						name, want, payload)
+				}
+				// Content-Type
+				want = "application/json"
+				if req.Header["Content-Type"][0] != want {
+					t.Errorf("%s:\ndidn't get %q in the Content-Type\n%v",
+						name, want, req.Header["Content-Type"])
+				}
+				// X-Github-Event
+				want = "push"
+				if req.Header["X-Github-Event"][0] != want {
+					t.Errorf("%s:\nGitHub headers weren't set? Didn't get %q in the X-Github-Event\n%v",
+						name, want, req.Header["X-Github-Event"])
+				}
+			case "gitlab":
+				// Content-Type
+				want := "application/x-www-form-urlencoded"
+				if req.Header["Content-Type"][0] != want {
+					t.Errorf("%s:\ndidn't get %q in the Content-Type\n%v",
+						name, want, req.Header["Content-Type"])
+				}
+			}
+			// Custom Headers
+			for header, value := range tc.customHeaders {
+				if len(req.Header[header]) == 0 {
+					t.Fatalf("%s:\nCustom Headers not set\n%v",
+						name, req.Header)
+				}
+				if req.Header[header][0] != value {
+					t.Fatalf("%s:\nCustom Headers not set correctly\nwant %q to be %q, not %q\n%v",
+						name, header, value, req.Header[header][0], req.Header)
+				}
+			}
+		})
 	}
 }
 
-func TestIsRunnableFalse(t *testing.T) {
-	// GIVEN a WebHook with NextRunnable after the current time
-	wh := WebHook{
-		NextRunnable: time.Now().UTC().Add(time.Minute),
+func TestGetType(t *testing.T) {
+	// GIVEN a WebHook with Type in various locations
+	tests := map[string]struct {
+		typeRoot        string
+		typeMain        string
+		typeDefault     string
+		typeHardDefault string
+		want            string
+	}{
+		"root overrides all": {want: "github", typeRoot: "github",
+			typeMain: "url", typeDefault: "url", typeHardDefault: "url"},
+		"main overrides default+hardDefault": {want: "github", typeRoot: "",
+			typeMain: "github", typeDefault: "url", typeHardDefault: "url"},
+		"default overrides hardDefault": {want: "github", typeRoot: "", typeMain: "",
+			typeDefault: "github", typeHardDefault: "url"},
+		"hardDefault is last resort": {want: "github", typeRoot: "", typeMain: "", typeDefault: "",
+			typeHardDefault: "github"},
 	}
 
-	// WHEN IsRunnable is called on it
-	ranAt := time.Now().UTC()
-	got := wh.IsRunnable()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.Type = tc.typeRoot
+			webhook.Main.Type = tc.typeMain
+			webhook.Defaults.Type = tc.typeDefault
+			webhook.HardDefaults.Type = tc.typeHardDefault
 
-	// THEN false was returned
-	want := false
-	if got != want {
-		t.Fatalf("IsRunnable was ran at\n%s with NextRunnable\n%s. Expected %t, got %t",
-			ranAt, wh.NextRunnable, want, got)
+			// WHEN GetType is called
+			got := webhook.GetType()
+
+			// THEN the function returns the correct type
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
-func TestSetNextRunnableOfPass(t *testing.T) {
-	// GIVEN a WebHook that passed
-	whID := "test"
-	wh := WebHook{
-		ID:           whID,
-		Type:         stringPtr("gitlab"),
-		URL:          stringPtr("https://test"),
-		Secret:       stringPtr("secret"),
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
+func TestGetSecret(t *testing.T) {
+	// GIVEN a WebHook with Secret in various locations
+	tests := map[string]struct {
+		secretRoot        string
+		secretMain        string
+		secretDefault     string
+		secretHardDefault string
+		want              string
+	}{
+		"root overrides all": {want: "argus-secret", secretRoot: "argus-secret",
+			secretMain: "unused", secretDefault: "unused", secretHardDefault: "unused"},
+		"main overrides default+hardDefault": {want: "argus-secret", secretRoot: "",
+			secretMain: "argus-secret", secretDefault: "unused", secretHardDefault: "unused"},
+		"default overrides hardDefault": {want: "argus-secret", secretRoot: "", secretMain: "",
+			secretDefault: "argus-secret", secretHardDefault: "unused"},
+		"hardDefault isn't used": {want: "", secretRoot: "", secretMain: "", secretDefault: "",
+			secretHardDefault: "argus-secret"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.Secret = tc.secretRoot
+			webhook.Main.Secret = tc.secretMain
+			webhook.Defaults.Secret = tc.secretDefault
+			webhook.HardDefaults.Secret = tc.secretHardDefault
+
+			// WHEN GetSecret is called
+			got := webhook.GetSecret()
+
+			// THEN the function returns the correct secret
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetSilentFails(t *testing.T) {
+	// GIVEN a WebHook with SilentFails in various locations
+	tests := map[string]struct {
+		silentFailsRoot        *bool
+		silentFailsMain        *bool
+		silentFailsDefault     *bool
+		silentFailsHardDefault *bool
+		want                   bool
+	}{
+		"root overrides all": {want: true, silentFailsRoot: boolPtr(true),
+			silentFailsMain: boolPtr(false), silentFailsDefault: boolPtr(false), silentFailsHardDefault: boolPtr(false)},
+		"main overrides default+hardDefault": {want: true, silentFailsRoot: nil,
+			silentFailsMain: boolPtr(true), silentFailsDefault: boolPtr(false), silentFailsHardDefault: boolPtr(false)},
+		"default overrides hardDefault": {want: true, silentFailsRoot: nil, silentFailsMain: nil,
+			silentFailsDefault: boolPtr(true), silentFailsHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {want: true, silentFailsRoot: nil, silentFailsMain: nil, silentFailsDefault: nil,
+			silentFailsHardDefault: boolPtr(true)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.SilentFails = tc.silentFailsRoot
+			webhook.Main.SilentFails = tc.silentFailsMain
+			webhook.Defaults.SilentFails = tc.silentFailsDefault
+			webhook.HardDefaults.SilentFails = tc.silentFailsHardDefault
+
+			// WHEN GetSilentFails is called
+			got := webhook.GetSilentFails()
+
+			// THEN the function returns the correct boolean
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetURL(t *testing.T) {
+	// GIVEN a WebHook with urls in various locations
+	tests := map[string]struct {
+		urlRoot        string
+		urlMain        string
+		urlDefault     string
+		urlHardDefault string
+		want           string
+		latestVersion  string
+	}{
+		"root overrides all": {want: "https://release-argus.io", urlRoot: "https://release-argus.io",
+			urlMain: "https://somewhere.com", urlDefault: "https://somewhere.com", urlHardDefault: "https://somewhere.com"},
+		"main overrides default+hardDefault": {want: "https://release-argus.io", urlRoot: "",
+			urlMain: "https://release-argus.io", urlDefault: "https://somewhere.com", urlHardDefault: "https://somewhere.com"},
+		"default is last resort": {want: "https://release-argus.io", urlRoot: "", urlMain: "",
+			urlDefault: "https://release-argus.io", urlHardDefault: "https://somewhere.com"},
+		"hardDefault isn't used": {want: "", urlRoot: "", urlMain: "", urlDefault: "",
+			urlHardDefault: "https://release-argus.io"},
+		"uses latest_version": {want: "https://release-argus.io/1.2.3", urlRoot: "https://release-argus.io/{{ version }}", urlMain: "", urlDefault: "",
+			urlHardDefault: "", latestVersion: "1.2.3"},
+		"empty version when unfound": {want: "https://release-argus.io/", urlRoot: "https://release-argus.io/{{ version }}", urlMain: "", urlDefault: "",
+			urlHardDefault: ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.URL = tc.urlRoot
+			webhook.Main.URL = tc.urlMain
+			webhook.Defaults.URL = tc.urlDefault
+			webhook.HardDefaults.URL = tc.urlHardDefault
+			webhook.ServiceStatus.LatestVersion = tc.latestVersion
+
+			// WHEN GetURL is called
+			got := webhook.GetURL()
+
+			// THEN the function returns the url
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGetIsRunnable(t *testing.T) {
+	// GIVEN a WebHook with a NextRunnable time
+	tests := map[string]struct {
+		nextRunnable time.Time
+		want         bool
+	}{
+		"default time is runnable":                  {want: true},
+		"nextRunnable now is runnable":              {want: true, nextRunnable: time.Now().UTC()},
+		"nextRunnable in the future isn't runnable": {want: false, nextRunnable: time.Now().UTC().Add(time.Minute)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.NextRunnable = tc.nextRunnable
+			time.Sleep(time.Nanosecond)
+
+			// WHEN GetIsRunnable is called
+			got := webhook.IsRunnable()
+
+			// THEN the function returns whether the webhook is runnable now
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %t\ngot:  %t",
+					name, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestSetFailStatus(t *testing.T) {
+	// GIVEN a WebHook in a fail state
+	tests := map[string]struct {
+		failed *bool
+	}{
+		"failed=true":  {failed: boolPtr(true)},
+		"failed=false": {failed: boolPtr(false)},
+		"failed=nil":   {failed: nil},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			want := stringifyPointer(tc.failed)
+			webhook.SetFailStatus(tc.failed)
+
+			// WHEN GetFailStatus is called
+			got := stringifyPointer(webhook.GetFailStatus())
+
+			// THEN the function returns whether the WebHook failed the last send
+			if got != want {
+				t.Errorf("%s:\nwant: %s\ngot:  %s",
+					name, want, got)
+			}
+		})
+	}
+}
+
+func TestSetNextRunnable(t *testing.T) {
+	// GIVEN a WebHook in different fail states
+	tests := map[string]struct {
+		failed         *bool
+		timeDifference time.Duration
+		addDelay       bool
+		delay          string
+		sending        bool
+		maxTries       int
+	}{
+		"sending does delay by 1h15s": {
+			timeDifference: time.Hour + 15*time.Second,
+			failed:         nil,
+			sending:        true,
 		},
-		Failed:         &map[string]*bool{whID: boolPtr(false)},
-		ServiceStatus:  &service_status.Status{},
-		ParentInterval: stringPtr("11m"),
-	}
-
-	// WHEN SetNextRunnable is called on it
-	wh.SetNextRunnable(false, false)
-
-	// THEN MextRunnable is set to ~2*ParentInterval
-	now := time.Now().UTC()
-	got := wh.NextRunnable
-	parentInterval, _ := time.ParseDuration(*wh.ParentInterval)
-	wantMin := now.Add(2 * parentInterval).Add(-1 * time.Second)
-	wantMax := now.Add(2 * parentInterval).Add(1 * time.Second)
-	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between\n%s and\n%s, not\n%s",
-			wantMin, wantMax, got)
-	}
-}
-
-func TestSetNextRunnableOfFail(t *testing.T) {
-	// GIVEN a WebHook that failed
-	whID := "test"
-	wh := WebHook{
-		ID:           whID,
-		Type:         stringPtr("gitlab"),
-		URL:          stringPtr("https://test"),
-		Secret:       stringPtr("secret"),
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
+		"sending with delay does delay by delay+1h15s": {
+			timeDifference: time.Hour + 30*time.Minute + 15*time.Second,
+			failed:         nil,
+			sending:        true,
+			addDelay:       true,
+			delay:          "30m",
 		},
-		Failed:        &map[string]*bool{whID: boolPtr(false)},
-		ServiceStatus: &service_status.Status{},
-	}
-
-	// WHEN SetNextRunnable is called on it
-	wh.SetNextRunnable(false, false)
-
-	// THEN MextRunnable is set to 15s
-	now := time.Now().UTC()
-	got := wh.NextRunnable
-	wantMin := now.Add(14 * time.Second)
-	wantMax := now.Add(16 * time.Second)
-	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between\n%s and\n%s, not\n%s",
-			wantMin, wantMax, got)
-	}
-}
-
-func TestSetNextRunnableOfNotRun(t *testing.T) {
-	// GIVEN a WebHook that hasn't been sent
-	whID := "test"
-	wh := WebHook{
-		ID:           whID,
-		Type:         stringPtr("gitlab"),
-		URL:          stringPtr("https://test"),
-		Secret:       stringPtr("secret"),
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
+		"sending with maxTries 10 and delay does delay by 3*maxTries+delay+1h": {
+			timeDifference: time.Hour + 30*time.Minute + 30*time.Second + 15*time.Second,
+			failed:         nil,
+			sending:        true,
+			addDelay:       true,
+			delay:          "30m",
+			maxTries:       10,
 		},
-		Failed:        &map[string]*bool{whID: boolPtr(false)},
-		ServiceStatus: &service_status.Status{},
-	}
-
-	// WHEN SetNextRunnable is called on it
-	wh.SetNextRunnable(false, false)
-
-	// THEN MextRunnable is set to 15s
-	now := time.Now().UTC()
-	got := wh.NextRunnable
-	wantMin := now.Add(14 * time.Second)
-	wantMax := now.Add(16 * time.Second)
-	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between\n%s and\n%s, not\n%s",
-			wantMin, wantMax, got)
-	}
-}
-
-func TestSetNextRunnableWithDelay(t *testing.T) {
-	// GIVEN a WebHook that hasn't been sent
-	whID := "test"
-	wh := WebHook{
-		ID:           whID,
-		Type:         stringPtr("gitlab"),
-		URL:          stringPtr("https://test"),
-		Secret:       stringPtr("secret"),
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
+		"not tried (failed=nil) does delay by 15s": {
+			timeDifference: 15 * time.Second,
+			failed:         nil,
 		},
-		Delay:          "5m",
-		Failed:         &map[string]*bool{whID: boolPtr(false)},
-		ServiceStatus:  &service_status.Status{},
-		ParentInterval: stringPtr("1h"),
-	}
-
-	// WHEN SetNextRunnable is called on a webhook that hasn't been run
-	wh.SetNextRunnable(true, false)
-
-	// THEN MextRunnable is set to 15s
-	now := time.Now().UTC()
-	got := wh.NextRunnable
-	wantDelay, _ := time.ParseDuration(wh.Delay)
-	wantMin := now.Add(14 * time.Second).Add(wantDelay)
-	wantMax := now.Add(16 * time.Second).Add(wantDelay)
-	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between\n%s and\n%s, not\n%s",
-			wantMin, wantMax, got)
-	}
-}
-
-func TestSetNextRunnableOfSending(t *testing.T) {
-	// GIVEN a WebHook that hasn't been sent
-	whMaxTries := uint(2)
-	whID := "test"
-	wh := WebHook{
-		ID:           whID,
-		Type:         stringPtr("gitlab"),
-		URL:          stringPtr("https://test"),
-		Secret:       stringPtr("secret"),
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
-		CustomHeaders: &map[string]string{
-			"foo": "bar",
+		"failed (failed=true) does delay by 15s": {
+			timeDifference: 15 * time.Second,
+			failed:         boolPtr(true),
 		},
-		Failed:         &map[string]*bool{whID: boolPtr(false)},
-		MaxTries:       &whMaxTries,
-		ServiceStatus:  &service_status.Status{},
-		ParentInterval: stringPtr("11m"),
+		"success (failed=false) does delay by 2*Interval": {
+			timeDifference: 24 * time.Minute,
+			failed:         boolPtr(false),
+		},
 	}
 
-	// WHEN SetNextRunnable is called on a webhook that's sending
-	wh.SetNextRunnable(false, true)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			webhook.SetFailStatus(tc.failed)
+			webhook.Delay = tc.delay
+			maxTries := uint(tc.maxTries)
+			webhook.MaxTries = &maxTries
 
-	// THEN MextRunnable is set to 15s+3*MaxTries
-	now := time.Now().UTC()
-	got := wh.NextRunnable
-	maxTriesIncrement := uint(3)
-	wantDelay := time.Duration(wh.GetMaxTries()*maxTriesIncrement) * time.Second
-	wantMin := now.Add(14 * time.Second).Add(wantDelay)
-	wantMax := now.Add(16 * time.Second).Add(wantDelay)
-	if got.Before(wantMin) || got.After(wantMax) {
-		t.Errorf("Expected between\n%s and\n%s, not\n%s",
-			wantMin, wantMax, got)
+			// WHEN SetNextRunnable is run
+			webhook.SetNextRunnable(tc.addDelay, tc.sending)
+
+			// THEN the correct response is received
+			// next runnable is within expectred range
+			now := time.Now().UTC()
+			minTime := now.Add(tc.timeDifference - time.Second)
+			maxTime := now.Add(tc.timeDifference + time.Second)
+			gotTime := webhook.NextRunnable
+			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
+				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					name, now, minTime, maxTime, gotTime)
+			}
+		})
 	}
 }
 
-func TestResetFailsWithNilSlice(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-	// WHEN ResetFails is run
-	// THEN it exits successfully
-	slice.ResetFails()
-}
-
-func TestResetFailsWithSlice(t *testing.T) {
-	// GIVEN a Slice with WebHooks that have failed
-	slice := Slice{
-		"0": &WebHook{},
-		"1": &WebHook{},
-		"2": &WebHook{},
-		"3": &WebHook{},
-		"4": &WebHook{},
+func TestGetResetFails(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice *Slice
+		fails map[string]*bool
+	}{
+		"nil slice does nothing": {slice: nil},
+		"slice with nil fails": {slice: &Slice{"0": &WebHook{}, "1": &WebHook{}, "2": &WebHook{}},
+			fails: map[string]*bool{"0": nil, "1": nil, "2": nil}},
+		"slice with all fail states": {slice: &Slice{"0": &WebHook{}, "1": &WebHook{}, "2": &WebHook{}},
+			fails: map[string]*bool{"0": nil, "1": boolPtr(true), "2": boolPtr(false)}},
 	}
-	failed0 := true
-	(*(*slice["0"]).Failed)["0"] = &failed0
-	failed1 := true
-	(*(*slice["1"]).Failed)["1"] = &failed1
-	failed2 := true
-	(*(*slice["2"]).Failed)["2"] = &failed2
-	failed3 := true
-	(*(*slice["3"]).Failed)["3"] = &failed3
-	failed4 := true
-	(*(*slice["4"]).Failed)["4"] = &failed4
 
-	// WHEN ResetFails is called
-	slice.ResetFails()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.slice != nil {
+				for i := range *tc.slice {
+					(*tc.slice)[i].Failed = &tc.fails
+				}
+			}
 
-	// THEN all the fails become nil and the count stays the same
-	for i := range slice {
-		if (*(*slice[i]).Failed)[i] != nil {
-			t.Errorf("Reset failed, got %t",
-				*(*(*slice[i]).Failed)[i])
-		}
+			// WHEN ResetFails is called
+			tc.slice.ResetFails()
+
+			// THEN the all the fails have been reset to nil
+			if tc.slice == nil {
+				return
+			}
+			for id := range *tc.slice {
+				got := (*tc.slice)[id].GetFailStatus()
+				if got != nil {
+					t.Fatalf("%s:\nfail status wasn't reset for %q. got %t",
+						name, id, *got)
+				}
+			}
+		})
 	}
 }

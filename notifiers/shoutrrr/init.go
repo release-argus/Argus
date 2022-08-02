@@ -23,7 +23,6 @@ import (
 // Init the Slice metrics.
 func (s *Slice) Init(
 	log *utils.JLog,
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *Slice,
@@ -42,7 +41,7 @@ func (s *Slice) Init(
 		if (*s)[key] == nil {
 			(*s)[key] = &Shoutrrr{}
 		}
-		(*s)[key].ID = &id
+		(*s)[key].ID = id
 		(*s)[key].Failed = &serviceStatus.Fails.Shoutrrr
 
 		if len(*mains) == 0 {
@@ -69,13 +68,13 @@ func (s *Slice) Init(
 			(*hardDefaults)[notifyType] = &Shoutrrr{}
 		}
 
-		(*s)[key].Init(serviceID, (*mains)[key], (*defaults)[notifyType], (*hardDefaults)[notifyType])
+		(*s)[key].Init(serviceStatus, (*mains)[key], (*defaults)[notifyType], (*hardDefaults)[notifyType])
 	}
 }
 
 // Init the Shoutrrr metrics and hand out the defaults.
 func (s *Shoutrrr) Init(
-	serviceID *string,
+	serviceStatus *service_status.Status,
 	main *Shoutrrr,
 	defaults *Shoutrrr,
 	hardDefaults *Shoutrrr,
@@ -85,10 +84,11 @@ func (s *Shoutrrr) Init(
 	}
 
 	s.InitMaps()
+	s.ServiceStatus = serviceStatus
 
 	// Give the matching main
 	(*s).Main = main
-	if main == nil && utils.DefaultIfNil(serviceID) != "" {
+	if main == nil && s.ServiceStatus == nil {
 		s.Main = &Shoutrrr{}
 	}
 	s.Main.InitMaps()
@@ -101,7 +101,7 @@ func (s *Shoutrrr) Init(
 	(*s).HardDefaults = hardDefaults
 	s.HardDefaults.InitMaps()
 
-	s.initMetrics(serviceID)
+	s.initMetrics()
 }
 
 // initOptions mapping, converting all keys to lowercase.
@@ -131,7 +131,7 @@ func (s *Shoutrrr) InitMaps() {
 }
 
 // initMetrics, giving them all a starting value.
-func (s *Shoutrrr) initMetrics(serviceID *string) {
+func (s *Shoutrrr) initMetrics() {
 	// Only record metrics for Shoutrrrs attached to a Service
 	if s.Main == nil || s.GetType() == "" {
 		return
@@ -140,8 +140,8 @@ func (s *Shoutrrr) initMetrics(serviceID *string) {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *(*s).ID, *serviceID, s.GetType(), "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
 }
 
 // SetLog will set the logger for the package

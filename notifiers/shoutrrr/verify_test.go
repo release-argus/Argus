@@ -42,7 +42,7 @@ func TestSliceCheckValuesOfNil(t *testing.T) {
 func testShoutrrr() Shoutrrr {
 	id := "test"
 	return Shoutrrr{
-		ID:   &id,
+		ID:   id,
 		Type: "discord",
 		URLFields: map[string]string{
 			"token":     "token",
