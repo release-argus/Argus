@@ -205,7 +205,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 				utils.ErrorToString(*errsURLFields), prefix)
 		}
 		if s.GetParam("events") == "" {
-			*errsParams = fmt.Errorf("%s%s  ebets: <required> e.g. 'event1,event2'\\",
+			*errsParams = fmt.Errorf("%s%s  events: <required> e.g. 'event1,event2'\\",
 				utils.ErrorToString(*errsParams), prefix)
 		}
 	case "join":

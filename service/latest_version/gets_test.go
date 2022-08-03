@@ -126,7 +126,7 @@ func TestGetServiceURL(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			status := service_status.Status{LatestVersion: tc.latestVersion, WebURL: &tc.webURL}
-			lookup := Lookup{Type: tc.serviceType, URL: tc.url, status: &status}
+			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetServiceURL(tc.ignoreWebURL)

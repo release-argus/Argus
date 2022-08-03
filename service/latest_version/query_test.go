@@ -117,7 +117,7 @@ func TestQuery(t *testing.T) {
 				lookup = testLookupURL()
 			}
 			lookup.AllowInvalidCerts = &tc.allowInvalidCerts
-			lookup.status.ServiceID = &name
+			lookup.Status.ServiceID = &name
 			if tc.url != "" {
 				lookup.URL = tc.url
 			}
@@ -128,7 +128,7 @@ func TestQuery(t *testing.T) {
 				lookup.URLCommands[0].Regex = tc.regex
 			}
 			*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
-			lookup.status.LatestVersion = tc.latestVersion
+			lookup.Status.LatestVersion = tc.latestVersion
 			lookup.Require.RegexContent = tc.requireRegexContent
 			lookup.Require.RegexVersion = tc.requireRegexVersion
 
@@ -143,9 +143,9 @@ func TestQuery(t *testing.T) {
 				t.Fatalf("%s:\nwant match for %q\nnot: %q",
 					name, tc.errRegex, e)
 			}
-			if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.status.LatestVersion {
+			if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
 				t.Fatalf("%s:\nwanted LatestVersion to become %q, not %q",
-					name, *tc.wantLatestVersion, lookup.status.LatestVersion)
+					name, *tc.wantLatestVersion, lookup.Status.LatestVersion)
 			}
 		})
 	}

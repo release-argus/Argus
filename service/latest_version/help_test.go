@@ -47,7 +47,7 @@ func testLookupGitHub() Lookup {
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
-		status: &service_status.Status{
+		Status: &service_status.Status{
 			ServiceID:       stringPtr("test"),
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel,
@@ -56,8 +56,8 @@ func testLookupGitHub() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	lookup.status.WebURL = stringPtr("")
-	lookup.Require.Status = lookup.status
+	lookup.Status.WebURL = stringPtr("")
+	lookup.Require.Status = lookup.Status
 	return lookup
 }
 
@@ -78,7 +78,7 @@ func testLookupURL() Lookup {
 			Defaults:           &options.Options{},
 			HardDefaults:       &options.Options{},
 		},
-		status: &service_status.Status{
+		Status: &service_status.Status{
 			ServiceID:       stringPtr("test"),
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel,
@@ -87,7 +87,7 @@ func testLookupURL() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	lookup.status.WebURL = stringPtr("")
-	lookup.Require.Status = lookup.status
+	lookup.Status.WebURL = stringPtr("")
+	lookup.Require.Status = lookup.Status
 	return lookup
 }

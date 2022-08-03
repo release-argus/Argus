@@ -30,7 +30,7 @@ import (
 // and returning true if it has changed (is a new release),
 // otherwise returns false.
 func (l *Lookup) Query() (bool, error) {
-	logFrom := utils.LogFrom{Primary: *l.status.ServiceID}
+	logFrom := utils.LogFrom{Primary: *l.Status.ServiceID}
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -41,11 +41,11 @@ func (l *Lookup) Query() (bool, error) {
 		return false, err
 	}
 
-	l.status.SetLastQueried()
+	l.Status.SetLastQueried()
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 
 	// If this version is different (new).
-	if version != l.status.LatestVersion {
+	if version != l.Status.LatestVersion {
 		if wantSemanticVersioning {
 			// Check it's a valid smenatic version
 			newVersion, err := semver.NewVersion(version)
@@ -57,11 +57,11 @@ func (l *Lookup) Query() (bool, error) {
 			}
 
 			// Check for a progressive change in version.
-			if l.status.LatestVersion != "" {
-				oldVersion, err := semver.NewVersion(l.status.LatestVersion)
+			if l.Status.LatestVersion != "" {
+				oldVersion, err := semver.NewVersion(l.Status.LatestVersion)
 				if err != nil {
 					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)",
-						l.status.LatestVersion)
+						l.Status.LatestVersion)
 					jLog.Error(err, logFrom, true)
 					return false, err
 				}
@@ -72,7 +72,7 @@ func (l *Lookup) Query() (bool, error) {
 				// return false (don't notify anything. Stay on oldVersion)
 				if newVersion.LessThan(*oldVersion) {
 					err := fmt.Errorf("queried version %q is less than the deployed version %q",
-						version, l.status.LatestVersion)
+						version, l.Status.LatestVersion)
 					jLog.Warn(err, logFrom, true)
 					return false, err
 				}
@@ -80,33 +80,33 @@ func (l *Lookup) Query() (bool, error) {
 		}
 
 		// Found new version, so reset regex misses.
-		l.status.RegexMissesContent = 0
-		l.status.RegexMissesVersion = 0
+		l.Status.RegexMissesContent = 0
+		l.Status.RegexMissesVersion = 0
 
 		// First version found.
-		if l.status.LatestVersion == "" {
-			l.status.SetLatestVersion(version)
-			if l.status.DeployedVersion == "" {
-				l.status.SetDeployedVersion(version)
+		if l.Status.LatestVersion == "" {
+			l.Status.SetLatestVersion(version)
+			if l.Status.DeployedVersion == "" {
+				l.Status.SetDeployedVersion(version)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)
 
-			l.status.AnnounceFirstVersion()
+			l.Status.AnnounceFirstVersion()
 
 			// Don't notify on first version.
 			return false, nil
 		}
 
 		// New version found.
-		l.status.SetLatestVersion(version)
+		l.Status.SetLatestVersion(version)
 		msg := fmt.Sprintf("New Release - %q", version)
 		jLog.Info(msg, logFrom, true)
 		return true, nil
 	}
 
 	// Announce `LastQueried`
-	l.status.AnnounceQuery()
+	l.Status.AnnounceQuery()
 	// No version change.
 	return false, nil
 }
@@ -204,7 +204,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 			logFrom,
 		); err == nil {
 			// regexCheckContent if it's a newer version
-			if version != l.status.LatestVersion {
+			if version != l.Status.LatestVersion {
 				var body interface{}
 				if l.Type == "github" {
 					// GitHub service

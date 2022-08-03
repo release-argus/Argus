@@ -17,325 +17,516 @@
 package shoutrrr
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/utils"
 )
 
-func testGet() Shoutrrr {
-	sID := "test"
-	failed := make(map[string]*bool)
-	failed[sID] = nil
-
-	hardDefaults := Shoutrrr{
-		Options: map[string]string{
-			"delay": "3s",
-		},
-		URLFields: map[string]string{
-			"token":     "harddefaults token",
-			"webhookid": "harddefaults webhookid",
-		},
-		Params: map[string]string{
-			"title": "harddefaults",
-		},
-	}
-	defaults := Shoutrrr{
-		Options: map[string]string{
-			"delay": "2s",
-		},
-		URLFields: map[string]string{
-			"token":     "harddefaults token",
-			"webhookid": "harddefaults webhookid",
-		},
-		Params: map[string]string{
-			"title": "harddefaults",
-		},
-	}
-	main := Shoutrrr{
-		Options: map[string]string{
-			"delay": "1s",
-		},
-		URLFields: map[string]string{
-			"token":     "main token",
-			"webhookid": "main webhookid",
-		},
-		Params: map[string]string{
-			"title": "main",
-		},
+func TestOption(t *testing.T) {
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		optionRoot        *string
+		optionMain        *string
+		optionDefault     *string
+		optionHardDefault *string
+		wantString        string
+	}{
+		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
+			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
+			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
+			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
+		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
+			optionHardDefault: stringPtr("this")},
 	}
 
-	return Shoutrrr{
-		ID:     sID,
-		Type:   "discord",
-		Failed: &failed,
-		Options: map[string]string{
-			"delay":     "0s",
-			"message":   "{% if 'a' == 'a' %}{{ version }}-foo{% endif %}",
-			"max_tries": "4",
-		},
-		URLFields: map[string]string{
-			"token":     "master token",
-			"webhookid": "master webhookid",
-		},
-		Params: map[string]string{
-			"avatar": "argus.png",
-			"title":  "{% if 'a' == 'a' %}{{ version }}-master{% endif %}",
-		},
-		HardDefaults: &hardDefaults,
-		Defaults:     &defaults,
-		Main:         &main,
-	}
-}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "test"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.optionRoot != nil {
+				shoutrrr.Options[key] = *tc.optionRoot
+			}
+			if tc.optionMain != nil {
+				shoutrrr.Main.Options[key] = *tc.optionMain
+			}
+			if tc.optionDefault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.optionDefault
+			}
+			if tc.optionHardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.optionHardDefault
+			}
 
-func TestGetOption(t *testing.T) {
-	// GIVEN a Shoutrrr with the closest Options.delay in Main
-	shoutrrr := testGet()
-	shoutrrr.Options = map[string]string{}
+			// WHEN GetOption is called
+			got := shoutrrr.GetOption(key)
 
-	// WHEN GetOption is called with "delay"
-	got := shoutrrr.GetOption("delay")
+			// THEN the function returns the correct result
+			if got != tc.wantString {
+				t.Fatalf("%s - GetOption:\nwant: %q\ngot:  %q",
+					name, tc.wantString, got)
+			}
 
-	// THEN we get the delay of the master Shoutrrr
-	want := shoutrrr.Main.Options["delay"]
-	if got != want {
-		t.Errorf("Should have got %q delay from the main, not %s",
-			want, got)
+			// WHEN GetSelfOption is called
+			got = shoutrrr.GetSelfOption(key)
+
+			// THEN the function returns the Option in itself
+			if got != utils.DefaultIfNil(tc.optionRoot) {
+				t.Fatalf("%s - GetSelfOption:\nwant: %q\ngot:  %q",
+					name, utils.DefaultIfNil(tc.optionRoot), got)
+			}
+
+			// WHEN SetOption is called
+			want := got + "-set-test"
+			shoutrrr.SetOption(key, want)
+
+			// THEN the Option is set and can be retrieved with a Get
+			got = shoutrrr.GetSelfOption(key)
+			if got != want {
+				t.Fatalf("%s - SetOption:\nwant: %q\ngot:  %q",
+					name, want, got)
+			}
+		})
 	}
 }
 
-func TestGetSelfOption(t *testing.T) {
-	// GIVEN a Shoutrrr with Options.delay
-	shoutrrr := testGet()
+func TestURLField(t *testing.T) {
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		optionRoot        *string
+		optionMain        *string
+		optionDefault     *string
+		optionHardDefault *string
+		wantString        string
+	}{
+		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
+			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
+			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
+			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
+		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
+			optionHardDefault: stringPtr("this")},
+	}
 
-	// WHEN GetSelfOption is called with "delay"
-	got := shoutrrr.GetSelfOption("delay")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "test"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.optionRoot != nil {
+				shoutrrr.URLFields[key] = *tc.optionRoot
+			}
+			if tc.optionMain != nil {
+				shoutrrr.Main.URLFields[key] = *tc.optionMain
+			}
+			if tc.optionDefault != nil {
+				shoutrrr.Defaults.URLFields[key] = *tc.optionDefault
+			}
+			if tc.optionHardDefault != nil {
+				shoutrrr.HardDefaults.URLFields[key] = *tc.optionHardDefault
+			}
 
-	// THEN we get the delay of the master Shoutrrr
-	want := shoutrrr.Options["delay"]
-	if got != want {
-		t.Errorf("Should have got %q delay from the master, not %s",
-			want, got)
+			// WHEN GetURLField is called
+			got := shoutrrr.GetURLField(key)
+
+			// THEN the function returns the correct result
+			if got != tc.wantString {
+				t.Fatalf("%s - GetURLField:\nwant: %q\ngot:  %q",
+					name, tc.wantString, got)
+			}
+
+			// WHEN GetSelfURLField is called
+			got = shoutrrr.GetSelfURLField(key)
+
+			// THEN the function returns the URLField in itself
+			if got != utils.DefaultIfNil(tc.optionRoot) {
+				t.Fatalf("%s - GetSelfURLField:\nwant: %q\ngot:  %q",
+					name, utils.DefaultIfNil(tc.optionRoot), got)
+			}
+
+			// WHEN SetURLField is called
+			want := got + "-set-test"
+			shoutrrr.SetURLField(key, want)
+
+			// THEN the URLField is set and can be retrieved with a Get
+			got = shoutrrr.GetSelfURLField(key)
+			if got != want {
+				t.Fatalf("%s - SetURLField:\nwant: %q\ngot:  %q",
+					name, want, got)
+			}
+		})
 	}
 }
 
-func TestSetOption(t *testing.T) {
-	// GIVEN a Shoutrrr with Options.delay
-	shoutrrr := testGet()
+func TestParam(t *testing.T) {
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		optionRoot        *string
+		optionMain        *string
+		optionDefault     *string
+		optionHardDefault *string
+		wantString        string
+	}{
+		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
+			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
+			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
+		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
+			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
+		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
+			optionHardDefault: stringPtr("this")},
+	}
 
-	// WHEN SetOption is called with "delay" to override the previous value
-	want := "new"
-	shoutrrr.SetOption("delay", want)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "test"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.optionRoot != nil {
+				shoutrrr.Params[key] = *tc.optionRoot
+			}
+			if tc.optionMain != nil {
+				shoutrrr.Main.Params[key] = *tc.optionMain
+			}
+			if tc.optionDefault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.optionDefault
+			}
+			if tc.optionHardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.optionHardDefault
+			}
 
-	// THEN we get this value with we GetSelfOption
-	got := shoutrrr.GetSelfOption("delay")
-	if got != want {
-		t.Errorf("Should have got %q delay from the main, not %s",
-			want, got)
+			// WHEN GetParam is called
+			got := shoutrrr.GetParam(key)
+
+			// THEN the function returns the correct result
+			if got != tc.wantString {
+				t.Fatalf("%s - GetParam:\nwant: %q\ngot:  %q",
+					name, tc.wantString, got)
+			}
+
+			// WHEN GetSelfParam is called
+			got = shoutrrr.GetSelfParam(key)
+
+			// THEN the function returns the Param in itself
+			if got != utils.DefaultIfNil(tc.optionRoot) {
+				t.Fatalf("%s - GetSelfParam:\nwant: %q\ngot:  %q",
+					name, utils.DefaultIfNil(tc.optionRoot), got)
+			}
+
+			// WHEN SetParam is called
+			want := got + "-set-test"
+			shoutrrr.SetParam(key, want)
+
+			// THEN the Param is set and can be retrieved with a Get
+			got = shoutrrr.GetSelfParam(key)
+			if got != want {
+				t.Fatalf("%s - SetParam:\nwant: %q\ngot:  %q",
+					name, want, got)
+			}
+		})
 	}
 }
 
-func TestGetURLField(t *testing.T) {
-	// GIVEN a Shoutrrr with the closest URLFields.token in Main
-	shoutrrr := testGet()
-	shoutrrr.URLFields = map[string]string{}
-
-	// WHEN GetURLField is called with "token"
-	got := shoutrrr.GetURLField("token")
-
-	// THEN we get the token of the master Shoutrrr
-	want := shoutrrr.Main.URLFields["token"]
-	if got != want {
-		t.Errorf("Should have got %q token from the main, not %s",
-			want, got)
-	}
-}
-
-func TestGetSelfURLField(t *testing.T) {
-	// GIVEN a Shoutrrr with URLFields.token
-	shoutrrr := testGet()
-
-	// WHEN GetSelfURLField is called with "token"
-	got := shoutrrr.GetSelfURLField("token")
-
-	// THEN we get the token of the master Shoutrrr
-	want := shoutrrr.URLFields["token"]
-	if got != want {
-		t.Errorf("Should have got %q token from the master, not %s",
-			want, got)
-	}
-}
-
-func TestSetURLField(t *testing.T) {
-	// GIVEN a Shoutrrr with URLFields.token
-	shoutrrr := testGet()
-
-	// WHEN SetURLField is called with "token" to override the previous value
-	want := "new"
-	shoutrrr.SetURLField("token", want)
-
-	// THEN we get this value with we GetSelfURLField
-	got := shoutrrr.GetSelfURLField("token")
-	if got != want {
-		t.Errorf("Should have got %q token from the main, not %s",
-			want, got)
-	}
-}
-
-func TestGetParam(t *testing.T) {
-	// GIVEN a Shoutrrr with the closest Params.avatar in Main
-	shoutrrr := testGet()
-	shoutrrr.Params = map[string]string{}
-
-	// WHEN GetParam is called with "avatar"
-	got := shoutrrr.GetParam("avatar")
-
-	// THEN we get the avatar of the master Shoutrrr
-	want := shoutrrr.Main.Params["avatar"]
-	if got != want {
-		t.Errorf("Should have got %q avatar from the main, not %s",
-			want, got)
-	}
-}
-
-func TestGetSelfParam(t *testing.T) {
-	// GIVEN a Shoutrrr with Params.avatar
-	shoutrrr := testGet()
-
-	// WHEN GetSelfParam is called with "avatar"
-	got := shoutrrr.GetSelfParam("avatar")
-
-	// THEN we get the avatar of the master Shoutrrr
-	want := shoutrrr.Params["avatar"]
-	if got != want {
-		t.Errorf("Should have got %q avatar from the master, not %s",
-			want, got)
-	}
-}
-
-func TestSetParam(t *testing.T) {
-	// GIVEN a Shoutrrr with Params.avatar
-	shoutrrr := testGet()
-
-	// WHEN SetParam is called with "avatar" to override the previous value
-	want := "new"
-	shoutrrr.SetParam("avatar", want)
-
-	// THEN we get this value with we GetSelfParam
-	got := shoutrrr.GetSelfParam("avatar")
-	if got != want {
-		t.Errorf("Should have got %q avatar from the main, not %s",
-			want, got)
-	}
-}
 func TestGetDelay(t *testing.T) {
-	// GIVEN a shoutrrr with no Options.delay
-	shoutrrr := testGet()
-
-	// WHEN GetDelay is called
-	got := shoutrrr.GetDelay()
-
-	// THEN the function returns the closest Options.delay as a time.Duration
-	want := shoutrrr.GetSelfOption("delay")
-	if got != want {
-		t.Errorf("Want %s, got %s",
-			want, got)
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		delayRoot        *string
+		delayMain        *string
+		delayDefault     *string
+		delayHardDefault *string
+		wantString       string
+	}{
+		"root overrides all": {wantString: "1s", delayRoot: stringPtr("1s"),
+			delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
+		"main overrides default and hardDefault": {wantString: "1s", delayRoot: nil,
+			delayMain: stringPtr("1s"), delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
+		"default overrides hardDefault": {wantString: "1s", delayRoot: nil,
+			delayDefault: stringPtr("1s"), delayHardDefault: stringPtr("2s")},
+		"hardDefault is last resort": {wantString: "1s", delayRoot: nil, delayDefault: nil,
+			delayHardDefault: stringPtr("1s")},
+		"no delay anywhere defaults to 0s": {wantString: "0s", delayRoot: nil,
+			delayDefault: nil, delayHardDefault: nil},
 	}
-}
 
-func TestGetDelayWithNoDelaySet(t *testing.T) {
-	// GIVEN a shoutrrr with no Options.delay
-	shoutrrr := testGet()
-	shoutrrr.Options = map[string]string{}
-	shoutrrr.Main.Options = map[string]string{}
-	shoutrrr.Defaults.Options = map[string]string{}
-	shoutrrr.HardDefaults.Options = map[string]string{}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "delay"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.delayRoot != nil {
+				shoutrrr.Options[key] = *tc.delayRoot
+			}
+			if tc.delayMain != nil {
+				shoutrrr.Main.Options[key] = *tc.delayMain
+			}
+			if tc.delayDefault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.delayDefault
+			}
+			if tc.delayHardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.delayHardDefault
+			}
 
-	// WHEN GetDelay is called
-	got := shoutrrr.GetDelay()
+			// WHEN GetDelay is called
+			got := shoutrrr.GetDelay()
 
-	// THEN the function returns the closest Options.delay as a time.Duration
-	want := "0s"
-	if got != want {
-		t.Errorf("Want %s, got %s",
-			want, got)
+			// THEN the function returns the correct result
+			if got != tc.wantString {
+				t.Fatalf("%s:\nwant: %q\ngot:  %q",
+					name, tc.wantString, got)
+			}
+		})
 	}
 }
 
 func TestGetDelayDuration(t *testing.T) {
-	// GIVEN a shoutrrr with Options.delay
-	shoutrrr := testGet()
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		delayRoot        *string
+		delayMain        *string
+		delayDefault     *string
+		delayHardDefault *string
+		want             time.Duration
+	}{
+		"root overrides all": {want: 1 * time.Second, delayRoot: stringPtr("1s"),
+			delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
+		"main overrides default and hardDefault": {want: 1 * time.Second, delayRoot: nil,
+			delayMain: stringPtr("1s"), delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
+		"default overrides hardDefault": {want: 1 * time.Second, delayRoot: nil,
+			delayDefault: stringPtr("1s"), delayHardDefault: stringPtr("2s")},
+		"hardDefault is last resort": {want: 1 * time.Second, delayRoot: nil, delayDefault: nil,
+			delayHardDefault: stringPtr("1s")},
+	}
 
-	// WHEN GetDelayDuration is called
-	got := shoutrrr.GetDelayDuration()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "delay"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.delayRoot != nil {
+				shoutrrr.Options[key] = *tc.delayRoot
+			}
+			if tc.delayMain != nil {
+				shoutrrr.Main.Options[key] = *tc.delayMain
+			}
+			if tc.delayDefault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.delayDefault
+			}
+			if tc.delayHardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.delayHardDefault
+			}
 
-	// THEN the function returns the closest Options.delay as a time.Duration
-	want, _ := time.ParseDuration(shoutrrr.GetOption("delay"))
-	if got != want {
-		t.Errorf("Want %s, got %s",
-			want, got)
+			// WHEN GetDelay is called
+			got := shoutrrr.GetDelayDuration()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Fatalf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestGetMaxTries(t *testing.T) {
-	// GIVEN a shoutrrr with Options.max_tries
-	shoutrrr := testGet()
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		maxTriesRoot        *string
+		maxTriesMain        *string
+		maxTriesDefault     *string
+		maxTriesHardDefault *string
+		want                int
+	}{
+		"root overrides all": {want: 1, maxTriesRoot: stringPtr("1"),
+			maxTriesDefault: stringPtr("2"), maxTriesHardDefault: stringPtr("2")},
+		"main overrides default and hardDefault": {want: 1, maxTriesRoot: nil,
+			maxTriesMain: stringPtr("1"), maxTriesDefault: stringPtr("2"), maxTriesHardDefault: stringPtr("2")},
+		"default overrides hardDefault": {want: 1, maxTriesRoot: nil,
+			maxTriesDefault: stringPtr("1"), maxTriesHardDefault: stringPtr("2")},
+		"hardDefault is last resort": {want: 1, maxTriesRoot: nil, maxTriesDefault: nil,
+			maxTriesHardDefault: stringPtr("1")},
+	}
 
-	// WHEN GetDelayDuration is called
-	got := shoutrrr.GetMaxTries()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "max_tries"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.maxTriesRoot != nil {
+				shoutrrr.Options[key] = *tc.maxTriesRoot
+			}
+			if tc.maxTriesMain != nil {
+				shoutrrr.Main.Options[key] = *tc.maxTriesMain
+			}
+			if tc.maxTriesDefault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.maxTriesDefault
+			}
+			if tc.maxTriesHardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.maxTriesHardDefault
+			}
 
-	// THEN the function returns the closest Options.delay as a time.Duration
-	want, _ := strconv.ParseUint(shoutrrr.GetSelfOption("max_tries"), 10, 32)
-	if got != uint(want) {
-		t.Errorf("Want %d, got %d",
-			want, got)
+			// WHEN GetMaxTries is called
+			got := shoutrrr.GetMaxTries()
+
+			// THEN the function returns the correct result
+			if int(got) != tc.want {
+				t.Fatalf("%s:\nwant: %d\ngot:  %d",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestGetMessage(t *testing.T) {
-	// GIVEN a shoutrrr with Options.message and ServiceInfo context
-	shoutrrr := testGet()
-	context := utils.ServiceInfo{LatestVersion: "1.2.3"}
+	// GIVEN a Shoutrrr
+	serviceInfo := &utils.ServiceInfo{
+		ID:            "release-argus/Argus",
+		URL:           "https://github.com",
+		WebURL:        "https://release-argus.io/demo",
+		LatestVersion: "0.9.0",
+	}
+	tests := map[string]struct {
+		messageRoot        *string
+		messageMain        *string
+		messageDefault     *string
+		messageHardDefault *string
+		want               string
+	}{
+		"root overrides all": {want: "New version!", messageRoot: stringPtr("New version!"),
+			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
+		"main overrides default and hardDefault": {want: "New version!", messageRoot: nil,
+			messageMain: stringPtr("New version!"), messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
+		"default overrides hardDefault": {want: "New version!", messageRoot: nil,
+			messageDefault: stringPtr("New version!"), messageHardDefault: stringPtr("something")},
+		"hardDefault is last resort": {want: "New version!", messageRoot: nil, messageDefault: nil,
+			messageHardDefault: stringPtr("New version!")},
+		"jinja templating": {want: "New version!", messageRoot: stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
+		"jinja vars": {want: fmt.Sprintf("%s or %s/%s/releases/tag/%s", serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+			messageRoot:    stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
+	}
 
-	// WHEN GetMessage is called
-	got := shoutrrr.GetMessage(&context)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "message"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.messageRoot != nil {
+				shoutrrr.Options[key] = *tc.messageRoot
+			}
+			if tc.messageMain != nil {
+				shoutrrr.Main.Options[key] = *tc.messageMain
+			}
+			if tc.messageDefault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.messageDefault
+			}
+			if tc.messageHardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.messageHardDefault
+			}
 
-	// THEN the message is formatted with that context
-	want := "1.2.3-foo"
-	if got != want {
-		t.Errorf("Not templated correctly. Want %q, got %q",
-			want, got)
+			// WHEN GetMessage is called
+			got := shoutrrr.GetMessage(serviceInfo)
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Fatalf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestGetTitle(t *testing.T) {
-	// GIVEN a shoutrrr with Params.Title and ServiceInfo context
-	shoutrrr := testGet()
-	context := utils.ServiceInfo{LatestVersion: "1.2.3"}
+	// GIVEN a Shoutrrr
+	serviceInfo := &utils.ServiceInfo{
+		ID:            "release-argus/Argus",
+		URL:           "https://github.com",
+		WebURL:        "https://release-argus.io/demo",
+		LatestVersion: "0.9.0",
+	}
+	tests := map[string]struct {
+		titleRoot        *string
+		titleMain        *string
+		titleDefault     *string
+		titleHardDefault *string
+		want             string
+	}{
+		"root overrides all": {want: "New version!", titleRoot: stringPtr("New version!"),
+			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
+		"main overrides default and hardDefault": {want: "New version!", titleRoot: nil,
+			titleMain: stringPtr("New version!"), titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
+		"default overrides hardDefault": {want: "New version!", titleRoot: nil,
+			titleDefault: stringPtr("New version!"), titleHardDefault: stringPtr("something")},
+		"hardDefault is last resort": {want: "New version!", titleRoot: nil, titleDefault: nil,
+			titleHardDefault: stringPtr("New version!")},
+		"jinja templating": {want: "New version!", titleRoot: stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
+		"jinja vars": {want: fmt.Sprintf("%s or %s/%s/releases/tag/%s", serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+			titleRoot:    stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
+	}
 
-	// WHEN GetTitle is called
-	got := shoutrrr.GetTitle(&context)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "title"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.titleRoot != nil {
+				shoutrrr.Params[key] = *tc.titleRoot
+			}
+			if tc.titleMain != nil {
+				shoutrrr.Main.Params[key] = *tc.titleMain
+			}
+			if tc.titleDefault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.titleDefault
+			}
+			if tc.titleHardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.titleHardDefault
+			}
 
-	// THEN the Title is formatted with that context
-	want := "1.2.3-master"
-	if got != want {
-		t.Errorf("Not templated correctly. Want %q, got %q",
-			want, got)
+			// WHEN GetTitle is called
+			got := shoutrrr.GetTitle(serviceInfo)
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Fatalf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }
 
 func TestGetType(t *testing.T) {
-	// GIVEN a shoutrrr with Type and ServiceInfo context
-	shoutrrr := testGet()
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		typeRoot        string
+		typeMain        string
+		typeDefault     string
+		typeHardDefault string
+		want            string
+	}{
+		"root overrides all": {want: "smtp", typeRoot: "smtp",
+			typeDefault: "other", typeHardDefault: "other"},
+		"main overrides default and hardDefault": {want: "smtp", typeRoot: "",
+			typeMain: "smtp", typeDefault: "other", typeHardDefault: "other"},
+		"default is ignored": {want: "", typeRoot: "",
+			typeDefault: "smtp", typeHardDefault: ""},
+		"hardDefault is ignored": {want: "", typeRoot: "", typeDefault: "",
+			typeHardDefault: "smtp"},
+	}
 
-	// WHEN GetType is called
-	got := shoutrrr.GetType()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr.Type = tc.typeRoot
+			shoutrrr.Main.Type = tc.typeMain
+			shoutrrr.Defaults.Type = tc.typeDefault
+			shoutrrr.HardDefaults.Type = tc.typeHardDefault
 
-	// THEN the Type is formatted with that context
-	want := shoutrrr.Type
-	if got != want {
-		t.Errorf("Want %q, got %q",
-			want, got)
+			// WHEN GetType is called
+			got := shoutrrr.GetType()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Fatalf("%s:\nwant: %q\ngot:  %q",
+					name, tc.want, got)
+			}
+		})
 	}
 }

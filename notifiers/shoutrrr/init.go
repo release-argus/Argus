@@ -88,7 +88,7 @@ func (s *Shoutrrr) Init(
 
 	// Give the matching main
 	(*s).Main = main
-	if main == nil && s.ServiceStatus == nil {
+	if main == nil && s.ServiceStatus != nil {
 		s.Main = &Shoutrrr{}
 	}
 	s.Main.InitMaps()
@@ -142,9 +142,4 @@ func (s *Shoutrrr) initMetrics() {
 	// ############
 	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
 	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
-}
-
-// SetLog will set the logger for the package
-func SetLog(log *utils.JLog) {
-	jLog = log
 }
