@@ -85,13 +85,13 @@ func TestSlicePrint(t *testing.T) {
 			w.Close()
 			out, _ := ioutil.ReadAll(r)
 			os.Stdout = stdout
-			strOut := string(out)
-			got := strings.Count(strOut, "\n")
+			output := string(out)
+			got := strings.Count(output, "\n")
 			if got != tc.lines {
 				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
 					name, tc.lines, got, out)
 			}
-			lines := strings.Split(strOut, "\n")
+			lines := strings.Split(output, "\n")
 			for _, regex := range tc.regexMatches {
 				foundMatch := false
 				re := regexp.MustCompile(regex)
@@ -104,7 +104,7 @@ func TestSlicePrint(t *testing.T) {
 				}
 				if !foundMatch {
 					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, regex, strOut)
+						name, regex, output)
 				}
 			}
 		})

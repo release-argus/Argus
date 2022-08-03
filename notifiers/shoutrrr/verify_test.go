@@ -19,1397 +19,571 @@ package shoutrrr
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestSliceCheckValuesOfNil(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-
-	// WHEN CheckValues is called on this Slice
-	err := slice.CheckValues("")
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("CheckValues on %v should have been nil, not %q",
-			slice, err.Error())
-	}
-}
-
-func testShoutrrr() Shoutrrr {
-	id := "test"
-	return Shoutrrr{
-		ID:   id,
-		Type: "discord",
-		URLFields: map[string]string{
-			"token":     "token",
-			"webhookid": "webhookid",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-}
-
-func TestShoutrrrCheckValues(t *testing.T) {
-	// GIVEN a Slice containing a valid Shoutrrr
-	shoutrrr := testShoutrrr()
-	slice := Slice{"test": &shoutrrr}
-
-	// WHEN CheckValues is called on the Slice
-	err := slice.CheckValues("")
-
-	// THEN err will be nil
-	if err != nil {
-		t.Errorf("%v is valid, CheckValues shouldn't err - %v",
-			shoutrrr, err.Error())
-	}
-}
-
-func TestSliceCheckValuesOfInvalid(t *testing.T) {
-	// GIVEN a Slice containing an invalid Shoutrrr
-	shoutrrr := testShoutrrr()
-	shoutrrr.URLFields = map[string]string{}
-	slice := Slice{"test": &shoutrrr}
-
-	// WHEN CheckValues is called on the Slice
-	err := slice.CheckValues("")
-
-	// THEN err will be non-nil
-	if err == nil {
-		t.Errorf("%v is invalid, CheckValues should err not %v",
-			shoutrrr, err.Error())
-	}
-}
-
-func TestCorrectSelfPort(t *testing.T) {
-	// GIVEN a Shoutrrr with URLFields.port
-	shoutrrr := Shoutrrr{
-		URLFields: map[string]string{
-			"port": ":123",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN leading : is trimmed from port
-	got := shoutrrr.GetSelfURLField("port")
-	want := "123"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfPath(t *testing.T) {
-	// GIVEN a Shoutrrr with URLFields.path
-	shoutrrr := Shoutrrr{
-		URLFields: map[string]string{
-			"path": "/test",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN the leading / is trimmed from path
-	got := shoutrrr.GetSelfURLField("path")
-	want := "test"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfMattermostChannel(t *testing.T) {
-	// GIVEN a Mattermost Shoutrrr with channel
-	shoutrrr := Shoutrrr{
-		Type: "mattermost",
-		URLFields: map[string]string{
-			"channel": "/test",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN leading slashes in channel are removed
-	got := shoutrrr.GetSelfURLField("channel")
-	want := "test"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfSlackColor(t *testing.T) {
-	// GIVEN a Slack Shoutrrr with color
-	shoutrrr := Shoutrrr{
-		Type: "slack",
-		Params: map[string]string{
-			"color": "#ffffff",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN # in color is replaced by %23
-	got := shoutrrr.GetSelfParam("color")
-	want := "%23ffffff"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfTeamsAltID(t *testing.T) {
-	// GIVEN a teams Shoutrrr with altid
-	shoutrrr := Shoutrrr{
-		Type: "teams",
-		URLFields: map[string]string{
-			"altid": "/foo",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN the leading / is trimmed from altid
-	got := shoutrrr.GetSelfURLField("altid")
-	want := "foo"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfTeamsGroupOwner(t *testing.T) {
-	// GIVEN a teams Shoutrrr with groupowner
-	shoutrrr := Shoutrrr{
-		Type: "teams",
-		URLFields: map[string]string{
-			"groupowner": "/bar",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN the leading / is trimmed from groupowner
-	got := shoutrrr.GetSelfURLField("groupowner")
-	want := "bar"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCorrectSelfZulipChatBotMail(t *testing.T) {
-	// GIVEN a zulip_chat Shoutrrr with botmail
-	shoutrrr := Shoutrrr{
-		Type: "zulip_chat",
-		URLFields: map[string]string{
-			"botmail": "x@y.com",
-		},
-	}
-
-	// WHEN correctSelf is called on it
-	shoutrrr.correctSelf()
-
-	// THEN the @ is replaced with %40 in botmail
-	got := shoutrrr.GetSelfURLField("botmail")
-	want := "x%40y.com"
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestCheckValuesMasterWithValidDiscord(t *testing.T) {
-	// GIVEN a valid Discord Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "discord",
-		URLFields: map[string]string{
-			"token":     "foo",
-			"webhookid": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidDiscord(t *testing.T) {
-	// GIVEN an invalid Discord Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "discord",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidSMTP(t *testing.T) {
-	// GIVEN a valid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		URLFields: map[string]string{
-			"username": "bar",
-			"password": "foo",
-			"host":     "example.com",
-			"port":     "123",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "you@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidSMTP(t *testing.T) {
-	// GIVEN an invalid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "smtp",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 3 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 3
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidGotify(t *testing.T) {
-	// GIVEN a valid Gotify Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "gotify",
-		URLFields: map[string]string{
-			"token": "foo",
-			"host":  "example.com",
-			"port":  "123",
-			"path":  "test",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidGotify(t *testing.T) {
-	// GIVEN an invalid Gotify Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "gotify",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidGoogleChat(t *testing.T) {
-	// GIVEN a valid GoogleChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "googlechat",
-		URLFields: map[string]string{
-			"raw": "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidGoogleChat(t *testing.T) {
-	// GIVEN an invalid GoogleChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "googlechat",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 1 error was produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidIFTTT(t *testing.T) {
-	// GIVEN a valid IFTTT Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "ifttt",
-		URLFields: map[string]string{
-			"webhookid": "foo",
-		},
-		Params: map[string]string{
-			"events": "event1,event2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidIFTTT(t *testing.T) {
-	// GIVEN an invalid IFTTT Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "ifttt",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidJoin(t *testing.T) {
-	// GIVEN a valid Join Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "join",
-		URLFields: map[string]string{
-			"apikey": "foo",
-		},
-		Params: map[string]string{
-			"devices": "device1,device2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidJoin(t *testing.T) {
-	// GIVEN an invalid Join Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "join",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidMattermost(t *testing.T) {
-	// GIVEN a valid Mattermost Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "mattermost",
-		URLFields: map[string]string{
-			"username": "bar",
-			"host":     "example.com",
-			"port":     "123",
-			"path":     "test",
-			"token":    "bish",
-			"channel":  "bash",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidMattermost(t *testing.T) {
-	// GIVEN an invalid Mattermost Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "mattermost",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidMatrix(t *testing.T) {
-	// GIVEN a valid Matrix Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "matrix",
-		URLFields: map[string]string{
-			"user":     "foo",
-			"password": "bar",
-			"host":     "example.com",
-			"port":     "123",
-			"path":     "test",
-		},
-		Params: map[string]string{
-			"rooms":      "!roomID1,roomAlias2",
-			"disabletls": "yes",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidMatrix(t *testing.T) {
-	// GIVEN an invalid Matrix Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "matrix",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidOpsGenie(t *testing.T) {
-	// GIVEN a valid OpsGenie Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "opsgenie",
-		URLFields: map[string]string{
-			"host":   "example.com",
-			"port":   "123",
-			"apikey": "foo",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidOpsGenie(t *testing.T) {
-	// GIVEN an invalid OpsGenie Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "opsgenie",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 1 error was produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidPushbullet(t *testing.T) {
-	// GIVEN a valid Pushbullet Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "pushbullet",
-		URLFields: map[string]string{
-			"token":   "foo",
-			"targets": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidPushbullet(t *testing.T) {
-	// GIVEN an invalid Pushbullet Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "pushbullet",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidPushover(t *testing.T) {
-	// GIVEN a valid Pushover Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "pushover",
-		URLFields: map[string]string{
-			"token": "foo",
-			"user":  "bar",
-		},
-		Params: map[string]string{
-			"devices": "device1",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidPushover(t *testing.T) {
-	// GIVEN an invalid Pushover Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "pushover",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidRocketChat(t *testing.T) {
-	// GIVEN a valid RocketChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "rocketchat",
-		URLFields: map[string]string{
-			"username": "foo",
-			"host":     "example.com",
-			"port":     "123",
-			"tokena":   "bish",
-			"tokenb":   "bash",
-			"channel":  "bosh",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidRocketChat(t *testing.T) {
-	// GIVEN an invalid RocketChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "rocketchat",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 4 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 4
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidSlack(t *testing.T) {
-	// GIVEN a valid Slack Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "slack",
-		URLFields: map[string]string{
-			"token":   "hook-foo",
-			"channel": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidSlack(t *testing.T) {
-	// GIVEN an invalid Slack Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "slack",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidTeams(t *testing.T) {
-	// GIVEN a valid Teams Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "teams",
-		URLFields: map[string]string{
-			"group":      "foo",
-			"tenant":     "bish",
-			"altid":      "bash",
-			"groupowner": "bosh",
-		},
-		Params: map[string]string{
-			"host": "example.webhook.office.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidTeams(t *testing.T) {
-	// GIVEN an invalid Teams Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "teams",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 5 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 5
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidTelegram(t *testing.T) {
-	// GIVEN a valid Telegram Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "telegram",
-		URLFields: map[string]string{
-			"token": "foo",
-		},
-		Params: map[string]string{
-			"chats": "channel1,channel2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidTelegram(t *testing.T) {
-	// GIVEN an invalid Telegram Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "telegram",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 2 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidZulipChat(t *testing.T) {
-	// GIVEN a valid ZulipChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "zulip_chat",
-		URLFields: map[string]string{
-			"botmail": "bish",
-			"botkey":  "bash",
-			"host":    "bosh",
-			"port":    "123",
-			"path":    "test",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidZulipChat(t *testing.T) {
-	// GIVEN an invalid ZulipChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "zulip_chat",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 3 errors were produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 3
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithValidShoutrrr(t *testing.T) {
-	// GIVEN a valid Raw Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "shoutrrr",
-		URLFields: map[string]string{
-			"raw": "something",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN no errors were produced
-	if errs != nil {
-		t.Errorf("%v is valid, so shouldn't err!\nGot %s",
-			shoutrrr, errs.Error())
-	}
-}
-
-func TestCheckValuesMasterWithInvalidShoutrrr(t *testing.T) {
-	// GIVEN an invalid Raw Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "shoutrrr",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 1 error was produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithInvalidType(t *testing.T) {
-	// GIVEN an invalid Raw Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type:         "something",
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 1 error was produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesMasterWithNoType(t *testing.T) {
-	// GIVEN an invalid Raw Shoutrrr
-	shoutrrr := Shoutrrr{
-		URLFields:    map[string]string{},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN checkValuesMaster is called on this Shoutrrr
-	var errs error
-	shoutrrr.checkValuesMaster("", &errs, &errs, &errs, &errs)
-
-	// THEN 1 error was produced
-	e := utils.ErrorToString(errs)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesWithNil(t *testing.T) {
-	// GIVEN a nil Shoutrrr
-	var shoutrrr *Shoutrrr
-
-	// WHEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN no error was produced
-	var want error
-	if err != want {
-		t.Errorf("CheckValues on %v should be %v errs, not %q",
-			shoutrrr, want, err.Error())
-	}
-}
-
-func TestCheckValuesWithValid(t *testing.T) {
-	// GIVEN a valid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		Options: map[string]string{
-			"delay": "5s",
-		},
-		URLFields: map[string]string{
-			"host": "stmp.example.com",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "1@you.com.2@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN no error was produced
-	if err != nil {
-		t.Errorf("Err should not have been found on %v.\nGot %s",
-			shoutrrr, err.Error())
-	}
-}
-
-func TestCheckValuesWithInvalidOptions(t *testing.T) {
-	// GIVEN an invalid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		Options: map[string]string{
-			"delay": "5x",
-		},
-		URLFields: map[string]string{
-			"host": "stmp.example.com",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "1@you.com.2@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN 1 error is produced
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesWithIntDelay(t *testing.T) {
-	// GIVEN an invalid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		Options: map[string]string{
-			"delay": "5",
-		},
-		URLFields: map[string]string{
-			"host": "stmp.example.com",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "1@you.com.2@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN 1 error is produced
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 0
-	if errCount != wantCount {
-		t.Errorf("%v is valid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesWithInvalidURLFields(t *testing.T) {
-	// GIVEN an invalid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		Options: map[string]string{
-			"delay": "5s",
-		},
-		URLFields: map[string]string{},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "1@you.com.2@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN 1 error is produced
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesWithInvalidParams(t *testing.T) {
-	// GIVEN an invalid SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		Options: map[string]string{
-			"delay": "5s",
-		},
-		URLFields: map[string]string{
-			"host": "stmp.example.com",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN 1 error is produced
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 2
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestCheckValuesWithInvalidLocate(t *testing.T) {
-	// GIVEN an invalid Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "shoutrrr",
-		URLFields: map[string]string{
-			"raw": "teams://foo@bish/bash/bosh?host=example.webhook.office.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// THEN CheckValues is called on this Shoutrrr
-	err := shoutrrr.CheckValues("")
-
-	// THEN 1 error is produced
-	e := utils.ErrorToString(err)
-	errCount := strings.Count(e, "\\")
-	wantCount := 1
-	if errCount != wantCount {
-		t.Errorf("%v is invalid, so should have %d errs, not %d!\nGot %s",
-			shoutrrr, wantCount, errCount, e)
-	}
-}
-
-func TestSlicePrintNil(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN Print is called on it
-	slice.Print("")
-
-	// THEN no lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	got := string(out)
-	want := ""
-	if got != want {
-		t.Errorf("Print on %v should have produced %s, not %q",
-			slice, want, got)
-	}
-}
-
-func testPrintShoutrrr() Shoutrrr {
-	return Shoutrrr{
-		Type: "zulip_chat",
-		Options: map[string]string{
-			"message": "release",
-		},
-		URLFields: map[string]string{
-			"botmail": "mail",
-		},
-		Params: map[string]string{
-			"title": "something",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
+func TestShoutrrrPrint(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		sType     string
+		options   map[string]string
+		urlFields map[string]string
+		params    map[string]string
+		lines     int
+	}{
+		"all empty": {lines: 0},
+		"only type": {lines: 1, sType: "gotify"},
+		"type and options": {lines: 3, sType: "gotify",
+			options: map[string]string{"foo": "bar"}},
+		"type,options and urlFields": {lines: 5, sType: "gotify",
+			options:   map[string]string{"foo": "bar"},
+			urlFields: map[string]string{"foo": "bar"}},
+		"type,options,urlFields and params": {lines: 7, sType: "gotify",
+			options:   map[string]string{"foo": "bar"},
+			urlFields: map[string]string{"foo": "bar"},
+			params:    map[string]string{"foo": "bar"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			shoutrrr := Shoutrrr{
+				Type:      tc.sType,
+				Options:   tc.options,
+				URLFields: tc.urlFields,
+				Params:    tc.params,
+			}
+
+			// WHEN Print is called
+			shoutrrr.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+		})
 	}
 }
 
 func TestSlicePrint(t *testing.T) {
-	// GIVEN a Slice with 2+ Shoutrrr's
-	validShoutrrr := testPrintShoutrrr()
-	slice := Slice{
-		"first":  &validShoutrrr,
-		"second": &validShoutrrr,
+	// GIVEN a Service
+	tests := map[string]struct {
+		slice        *Slice
+		lines        int
+		regexMatches []string
+	}{
+		"nil slice": {lines: 0, slice: nil},
+		"single element slice": {lines: 9, slice: &Slice{"single": testShoutrrr(false, false, false)},
+			regexMatches: []string{"^notify:$", "^  single:$", "^    type: ", "^    options:$", "^      max_tries: ", "^    url_fields:$", "^      token: "}},
+		"multiple element slice": {lines: 17, slice: &Slice{"first": testShoutrrr(false, false, false), "second": testShoutrrr(true, true, true)},
+			regexMatches: []string{"^notify:$", "^  first:$", "^    type: ", "^    options:$", "^      max_tries: ", "^    url_fields:$", "^      token: ", "^  second:$"}},
 	}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
 
-	// WHEN Print is called on it
-	slice.Print("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 17
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
+			// WHEN Print is called
+			tc.slice.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := ioutil.ReadAll(r)
+			os.Stdout = stdout
+			strOut := string(out)
+			got := strings.Count(strOut, "\n")
+			if got != tc.lines {
+				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
+					name, tc.lines, got, out)
+			}
+			lines := strings.Split(strOut, "\n")
+			for _, regex := range tc.regexMatches {
+				foundMatch := false
+				re := regexp.MustCompile(regex)
+				for _, line := range lines {
+					match := re.MatchString(line)
+					if match {
+						foundMatch = true
+						break
+					}
+				}
+				if !foundMatch {
+					t.Errorf("%s:\nmatch on %q not found in\n%q",
+						name, regex, strOut)
+				}
+			}
+		})
 	}
 }
 
-func TestShoutrrrPrint(t *testing.T) {
+func TestCheckValuesMaster(t *testing.T) {
 	// GIVEN a Shoutrrr
-	shoutrrr := testPrintShoutrrr()
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	tests := map[string]struct {
+		sType              *string
+		options            map[string]string
+		urlFields          map[string]string
+		params             map[string]string
+		main               Shoutrrr
+		errsRegex          string
+		errsOptionsRegex   string
+		errsURLFieldsRegex string
+		errsParamsRegex    string
+	}{
+		"no type":           {errsRegex: "type: <required>", sType: stringPtr("")},
+		"invalid type":      {errsRegex: "type: .* <invalid>", sType: stringPtr("argus")},
+		"discord - invalid": {sType: stringPtr("discord"), errsURLFieldsRegex: "token: <required>.*webhookid: <required>"},
+		"discord - no token": {sType: stringPtr("discord"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"webhookid": "bash"}},
+		"discord - no webhookid": {sType: stringPtr("discord"), errsURLFieldsRegex: "webhookid: <required>",
+			urlFields: map[string]string{"token": "bish"}},
+		"discord - valid": {sType: stringPtr("discord"),
+			urlFields: map[string]string{"token": "bish", "webhookid": "webhookid"}},
+		"discord - valid with main": {sType: stringPtr("discord"),
+			main: Shoutrrr{URLFields: map[string]string{"token": "bish", "webhookid": "bash"}}},
+		"smtp - invalid": {sType: stringPtr("smtp"), errsURLFieldsRegex: "host: <required>.*", errsParamsRegex: "fromaddress: <required>.*toaddresses: <required>"},
+		"smtp - no host": {sType: stringPtr("smtp"), errsURLFieldsRegex: "host: <required>",
+			params: map[string]string{"fromaddress": "bash", "toaddresses": "bosh"}},
+		"smtp - no fromaddress": {sType: stringPtr("smtp"), errsParamsRegex: "fromaddress: <required>",
+			urlFields: map[string]string{"host": "bish"},
+			params:    map[string]string{"toaddresses": "bosh"}},
+		"smtp - no toaddresses": {sType: stringPtr("smtp"), errsParamsRegex: "toaddresses: <required>",
+			urlFields: map[string]string{"host": "bish"},
+			params:    map[string]string{"fromaddress": "bash"}},
+		"smtp - valid": {sType: stringPtr("smtp"),
+			urlFields: map[string]string{"host": "bish"},
+			params:    map[string]string{"fromaddress": "bash", "toaddresses": "bosh"}},
+		"smtp - valid with main": {sType: stringPtr("smtp"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish"},
+				Params: map[string]string{"fromaddress": "bash", "toaddresses": "bosh"}}},
+		"gotify - invalid": {sType: stringPtr("gotify"), errsURLFieldsRegex: "host: <required>.*token: <required>"},
+		"gotify - no host": {sType: stringPtr("gotify"), errsURLFieldsRegex: "host: <required>",
+			urlFields: map[string]string{"token": "bash"}},
+		"gotify - no token": {sType: stringPtr("gotify"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"host": "bish"}},
+		"gotify - valid": {sType: stringPtr("gotify"),
+			urlFields: map[string]string{"host": "bish", "token": "bash"}},
+		"gotify - valid with main": {sType: stringPtr("gotify"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish", "token": "bash"}}},
+		"googlechat - invalid": {sType: stringPtr("googlechat"), errsURLFieldsRegex: "raw: <required>"},
+		"googlechat - valid": {sType: stringPtr("googlechat"),
+			urlFields: map[string]string{"raw": "bish"}},
+		"googlechat - valid with main": {sType: stringPtr("googlechat"),
+			main: Shoutrrr{URLFields: map[string]string{"raw": "bish"}}},
+		"ifttt - invalid": {sType: stringPtr("ifttt"), errsURLFieldsRegex: "webhookid: <required>", errsParamsRegex: "events: <required>"},
+		"ifttt - no webhookid": {sType: stringPtr("ifttt"), errsURLFieldsRegex: "webhookid: <required>",
+			urlFields: map[string]string{},
+			params:    map[string]string{"events": "bash"}},
+		"ifttt - no events": {sType: stringPtr("ifttt"), errsParamsRegex: "events: <required>",
+			urlFields: map[string]string{"webhookid": "bish"}},
+		"ifttt - valid": {sType: stringPtr("ifttt"),
+			urlFields: map[string]string{"webhookid": "bish"},
+			params:    map[string]string{"events": "events"}},
+		"ifttt - valid with main": {sType: stringPtr("ifttt"),
+			main: Shoutrrr{URLFields: map[string]string{"webhookid": "webhookid"}, Params: map[string]string{"events": "events"}}},
+		"join - invalid": {sType: stringPtr("join"), errsURLFieldsRegex: "apikey: <required>", errsParamsRegex: "devices: <required>"},
+		"join - no apikey": {sType: stringPtr("join"), errsURLFieldsRegex: "apikey: <required>",
+			urlFields: map[string]string{},
+			params:    map[string]string{"devices": "bash"}},
+		"join - no devices": {sType: stringPtr("join"), errsParamsRegex: "devices: <required>",
+			urlFields: map[string]string{"apikey": "bish"}},
+		"join - valid": {sType: stringPtr("join"),
+			urlFields: map[string]string{"apikey": "bish"},
+			params:    map[string]string{"devices": "devices"}},
+		"join - valid with main": {sType: stringPtr("join"),
+			main: Shoutrrr{URLFields: map[string]string{"apikey": "apikey"}, Params: map[string]string{"devices": "devices"}}},
+		"mattermost - invalid": {sType: stringPtr("mattermost"), errsURLFieldsRegex: "host: <required>.*token: <required>"},
+		"mattermost - no host": {sType: stringPtr("mattermost"), errsURLFieldsRegex: "host: <required>",
+			urlFields: map[string]string{"token": "bash"}},
+		"mattermost - no token": {sType: stringPtr("mattermost"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"host": "bish"}},
+		"mattermost - valid": {sType: stringPtr("mattermost"),
+			urlFields: map[string]string{"host": "bish", "token": "bash"}},
+		"mattermost - valid with main": {sType: stringPtr("mattermost"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish", "token": "bash"}}},
+		"matrix - invalid": {sType: stringPtr("matrix"), errsURLFieldsRegex: "host: <required>.*password: <required>"},
+		"matrix - no host": {sType: stringPtr("matrix"), errsURLFieldsRegex: "host: <required>",
+			urlFields: map[string]string{"password": "bash"}},
+		"matrix - no password": {sType: stringPtr("matrix"), errsURLFieldsRegex: "password: <required>",
+			urlFields: map[string]string{"host": "bish"}},
+		"matrix - valid": {sType: stringPtr("matrix"),
+			urlFields: map[string]string{"host": "bish", "password": "password"}},
+		"matrix - valid with main": {sType: stringPtr("matrix"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish", "password": "bash"}}},
+		"opsgenie - invalid": {sType: stringPtr("opsgenie"), errsURLFieldsRegex: "apikey: <required>"},
+		"opsgenie - valid": {sType: stringPtr("opsgenie"),
+			urlFields: map[string]string{"apikey": "apikey"}},
+		"opsgenie - valid with main": {sType: stringPtr("opsgenie"),
+			main: Shoutrrr{URLFields: map[string]string{"apikey": "apikey"}}},
+		"pushbullet - invalid": {sType: stringPtr("pushbullet"), errsURLFieldsRegex: "token: <required>.*targets: <required>"},
+		"pushbullet - no token": {sType: stringPtr("pushbullet"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"targets": "bash"}},
+		"pushbullet - no targets": {sType: stringPtr("pushbullet"), errsURLFieldsRegex: "targets: <required>",
+			urlFields: map[string]string{"token": "bish"}},
+		"pushbullet - valid": {sType: stringPtr("pushbullet"),
+			urlFields: map[string]string{"token": "bish", "targets": "targets"}},
+		"pushbullet - valid with main": {sType: stringPtr("pushbullet"),
+			main: Shoutrrr{URLFields: map[string]string{"token": "bish", "targets": "bash"}}},
+		"pushover - invalid": {sType: stringPtr("pushover"), errsURLFieldsRegex: "token: <required>.*user: <required>"},
+		"pushover - no token": {sType: stringPtr("pushover"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"user": "bash"}},
+		"pushover - no user": {sType: stringPtr("pushover"), errsURLFieldsRegex: "user: <required>",
+			urlFields: map[string]string{"token": "bish"}},
+		"pushover - valid": {sType: stringPtr("pushover"),
+			urlFields: map[string]string{"token": "bish", "user": "user"}},
+		"pushover - valid with main": {sType: stringPtr("pushover"),
+			main: Shoutrrr{URLFields: map[string]string{"token": "bish", "user": "bash"}}},
+		"rocketchat - invalid": {sType: stringPtr("rocketchat"), errsURLFieldsRegex: "host: <required>.*tokena: <required>.*tokenb: <required>.*channel: <required>"},
+		"rocketchat - no host": {sType: stringPtr("rocketchat"), errsURLFieldsRegex: "host: <required>",
+			urlFields: map[string]string{"tokena": "bash", "tokenb": "bosh", "channel": "bing"}},
+		"rocketchat - no tokena": {sType: stringPtr("rocketchat"), errsURLFieldsRegex: "tokena: <required>",
+			urlFields: map[string]string{"host": "bish", "tokenb": "bash", "channel": "bing"}},
+		"rocketchat - no tokenb": {sType: stringPtr("rocketchat"), errsURLFieldsRegex: "tokenb: <required>",
+			urlFields: map[string]string{"host": "bish", "tokena": "bash", "channel": "bing"}},
+		"rocketchat - no channel": {sType: stringPtr("rocketchat"), errsURLFieldsRegex: "channel: <required>",
+			urlFields: map[string]string{"host": "bish", "tokena": "bash", "tokenb": "bosh"}},
+		"rocketchat - valid": {sType: stringPtr("rocketchat"),
+			urlFields: map[string]string{"host": "bish", "tokena": "bash", "tokenb": "bosh", "channel": "bing"}},
+		"rocketchat - valid with main": {sType: stringPtr("rocketchat"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish", "tokena": "bash", "tokenb": "bosh", "channel": "bing"}}},
+		"slack - invalid": {sType: stringPtr("slack"), errsURLFieldsRegex: "token: <required>.*channel: <required>"},
+		"slack - no token": {sType: stringPtr("slack"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{"channel": "bash"}},
+		"slack - no channel": {sType: stringPtr("slack"), errsURLFieldsRegex: "channel: <required>",
+			urlFields: map[string]string{"token": "bish"}},
+		"slack - valid": {sType: stringPtr("slack"),
+			urlFields: map[string]string{"token": "bish", "channel": "channel"}},
+		"slack - valid with main": {sType: stringPtr("slack"),
+			main: Shoutrrr{URLFields: map[string]string{"token": "bish", "channel": "bash"}}},
+		"teams - invalid": {sType: stringPtr("teams"), errsURLFieldsRegex: "group: <required>.*tenant: <required>.*altid: <required>.*groupowner: <required>", errsParamsRegex: "host: <required>"},
+		"teams - no group": {sType: stringPtr("teams"), errsURLFieldsRegex: "group: <required>",
+			urlFields: map[string]string{"tenant": "bash", "altid": "bosh", "groupowner": "bing"},
+			params:    map[string]string{"host": "https://release-argus.io"}},
+		"teams - no tenant": {sType: stringPtr("teams"), errsURLFieldsRegex: "tenant: <required>",
+			urlFields: map[string]string{"group": "bish", "altid": "bash", "groupowner": "bing"},
+			params:    map[string]string{"host": "https://release-argus.io"}},
+		"teams - no altid": {sType: stringPtr("teams"), errsURLFieldsRegex: "altid: <required>",
+			urlFields: map[string]string{"group": "bish", "tenant": "bash", "groupowner": "bing"},
+			params:    map[string]string{"host": "https://release-argus.io"}},
+		"teams - no groupowner": {sType: stringPtr("teams"), errsURLFieldsRegex: "groupowner: <required>",
+			urlFields: map[string]string{"group": "bish", "tenant": "bash", "altid": "bosh"},
+			params:    map[string]string{"host": "https://release-argus.io"}},
+		"teams - no host": {sType: stringPtr("teams"), errsParamsRegex: "host: <required>",
+			urlFields: map[string]string{"group": "bish", "tenant": "bash", "altid": "bosh", "groupowner": "bing"}},
+		"teams - valid": {sType: stringPtr("teams"),
+			urlFields: map[string]string{"group": "bish", "tenant": "bash", "altid": "bosh", "groupowner": "bing"},
+			params:    map[string]string{"host": "https://release-argus.io"}},
+		"teams - valid with main": {sType: stringPtr("teams"),
+			main: Shoutrrr{URLFields: map[string]string{"group": "bish", "tenant": "bash", "altid": "bosh", "groupowner": "bing"},
+				Params: map[string]string{"host": "https://release-argus.io"}}},
+		"telegram - invalid": {sType: stringPtr("telegram"), errsURLFieldsRegex: "token: <required>", errsParamsRegex: "chats: <required>"},
+		"telegram - no token": {sType: stringPtr("telegram"), errsURLFieldsRegex: "token: <required>",
+			urlFields: map[string]string{},
+			params:    map[string]string{"chats": "bash"}},
+		"telegram - no chats": {sType: stringPtr("telegram"), errsParamsRegex: "chats: <required>",
+			urlFields: map[string]string{"token": "bish"}},
+		"telegram - valid": {sType: stringPtr("telegram"),
+			urlFields: map[string]string{"token": "bish"},
+			params:    map[string]string{"chats": "chats"}},
+		"telegram - valid with main": {sType: stringPtr("telegram"),
+			main: Shoutrrr{URLFields: map[string]string{"token": "bish"}, Params: map[string]string{"chats": "chats"}}},
+		"zulip_chat - invalid": {sType: stringPtr("zulip_chat"), errsURLFieldsRegex: "host: <required>.*botmail: <required>.*botkey: <required>"},
+		"zulip_chat - no host": {sType: stringPtr("zulip_chat"), errsURLFieldsRegex: "host: <required>",
+			urlFields: map[string]string{"botmail": "bash", "botkey": "bosh"}},
+		"zulip_chat - no botmail": {sType: stringPtr("zulip_chat"), errsURLFieldsRegex: "botmail: <required>",
+			urlFields: map[string]string{"host": "bish", "botkey": "bash"}},
+		"zulip_chat - no botkey": {sType: stringPtr("zulip_chat"), errsURLFieldsRegex: "botkey: <required>",
+			urlFields: map[string]string{"host": "bish", "botmail": "bash"}},
+		"zulip_chat - valid": {sType: stringPtr("zulip_chat"),
+			urlFields: map[string]string{"host": "bish", "botmail": "bash", "botkey": "bosh"}},
+		"zulip_chat - valid with main": {sType: stringPtr("zulip_chat"),
+			main: Shoutrrr{URLFields: map[string]string{"host": "bish", "botmail": "bash", "botkey": "bosh"}}},
+		"shoutrrr - invalid": {sType: stringPtr("shoutrrr"), errsURLFieldsRegex: "raw: <required>"},
+		"shoutrrr - valid": {sType: stringPtr("shoutrrr"),
+			urlFields: map[string]string{"raw": "bish"}},
+		"shoutrrr - valid with main": {sType: stringPtr("shoutrrr"),
+			main: Shoutrrr{URLFields: map[string]string{"raw": "bish"}}},
+	}
 
-	// WHEN Print is called on it
-	shoutrrr.Print("")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.sType != nil {
+				shoutrrr.Type = *tc.sType
+			}
+			shoutrrr.Main = &tc.main
+			shoutrrr.Main.InitMaps()
+			shoutrrr.Options = tc.options
+			shoutrrr.URLFields = tc.urlFields
+			shoutrrr.Params = tc.params
 
-	// THEN the expected number of lines are printed
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = stdout
-	want := 7
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
+			// WHEN CheckValues is called
+			var (
+				errs          error
+				errsOptions   error
+				errsURLFields error
+				errsParams    error
+			)
+			shoutrrr.checkValuesMaster("", &errs, &errsOptions, &errsURLFields, &errsParams)
+
+			// THEN it err's when expected
+			// errs
+			if tc.errsRegex == "" {
+				tc.errsRegex = "^$"
+			}
+			e := utils.ErrorToString(errs)
+			re := regexp.MustCompile(tc.errsRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errsRegex, e)
+			}
+			// errsOptions
+			if tc.errsOptionsRegex == "" {
+				tc.errsOptionsRegex = "^$"
+			}
+			e = utils.ErrorToString(errsOptions)
+			re = regexp.MustCompile(tc.errsOptionsRegex)
+			match = re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errsOptionsRegex, e)
+			}
+			// errsURLFields
+			if tc.errsURLFieldsRegex == "" {
+				tc.errsURLFieldsRegex = "^$"
+			}
+			e = utils.ErrorToString(errsURLFields)
+			re = regexp.MustCompile(tc.errsURLFieldsRegex)
+			match = re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errsURLFieldsRegex, e)
+			}
+			// errsParams
+			if tc.errsParamsRegex == "" {
+				tc.errsParamsRegex = "^$"
+			}
+			e = utils.ErrorToString(errsParams)
+			re = regexp.MustCompile(tc.errsParamsRegex)
+			match = re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errsParamsRegex, e)
+			}
+		})
 	}
 }
+
+func TestCorrectSelf(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		sType     string
+		mapTarget string
+		key       string
+		startAs   string
+		want      string
+	}{
+		"port - leading colon":                   {mapTarget: "url_fields", key: "port", startAs: ":8080", want: "8080"},
+		"port - valid":                           {mapTarget: "url_fields", key: "port", startAs: "8080", want: "8080"},
+		"path - leading slash":                   {mapTarget: "url_fields", key: "path", startAs: "/argus", want: "argus"},
+		"path - valid":                           {mapTarget: "url_fields", key: "path", startAs: "argus", want: "argus"},
+		"mattermost - channel, leading slash":    {sType: "mattermost", mapTarget: "url_fields", key: "channel", startAs: "/argus", want: "argus"},
+		"mattermost - channel, valid":            {sType: "mattermost", mapTarget: "url_fields", key: "channel", startAs: "argus", want: "argus"},
+		"slack - color, # instead of %23":        {sType: "slack", mapTarget: "params", key: "color", startAs: "#ffffff", want: "%23ffffff"},
+		"slack - color, valid":                   {sType: "slack", mapTarget: "params", key: "color", startAs: "%23ffffff", want: "%23ffffff"},
+		"teams - altid, leading slash":           {sType: "teams", mapTarget: "url_fields", key: "altid", startAs: "/argus", want: "argus"},
+		"teams - altid, valid":                   {sType: "teams", mapTarget: "url_fields", key: "altid", startAs: "argus", want: "argus"},
+		"teams - groupowner, leading slash":      {sType: "teams", mapTarget: "url_fields", key: "groupowner", startAs: "/argus", want: "argus"},
+		"teams - groupowner, valid":              {sType: "teams", mapTarget: "url_fields", key: "groupowner", startAs: "argus", want: "argus"},
+		"zulip_chat - botmail, @ instead of %40": {sType: "zulip_chat", mapTarget: "url_fields", key: "botmail", startAs: "foo@bar.com", want: "foo%40bar.com"},
+		"zulip_chat - botmail, valid":            {sType: "zulip_chat", mapTarget: "url_fields", key: "botmail", startAs: "foo%40bar.com", want: "foo%40bar.com"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := Shoutrrr{Type: tc.sType}
+			shoutrrr.InitMaps()
+			if tc.mapTarget == "url_fields" {
+				shoutrrr.SetURLField(tc.key, tc.startAs)
+			} else {
+				shoutrrr.SetParam(tc.key, tc.startAs)
+			}
+
+			// WHEN correctSelf is called
+			shoutrrr.correctSelf()
+
+			// THEN the field is corrected when necessary
+			got := shoutrrr.GetSelfURLField(tc.key)
+			if tc.mapTarget != "url_fields" {
+				got = shoutrrr.GetSelfParam(tc.key)
+			}
+			if got != tc.want {
+				t.Errorf("%s:\nwant: %s:%q\ngot:  %s:%q",
+					name, tc.key, tc.want, tc.key, got)
+			}
+		})
+	}
+}
+
+func TestShoutrrrCheckValues(t *testing.T) {
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		nilShoutrrr     bool
+		serviceShoutrrr bool
+		sType           string
+		options         map[string]string
+		wantDelay       string
+		urlFields       map[string]string
+		wantURLFields   map[string]string
+		params          map[string]string
+		main            *Shoutrrr
+		errRegex        string
+	}{
+		"nil shoutrrr": {nilShoutrrr: true, errRegex: "^$"},
+		"invalid delay": {errRegex: "delay: .* <invalid>",
+			options: map[string]string{"delay": "5x"}},
+		"fixes delay": {errRegex: "^$", wantDelay: "5s",
+			options: map[string]string{"delay": "5"}},
+		"runs correctSelf": {errRegex: "^$", urlFields: map[string]string{"port": ":8080", "path": "/test"},
+			wantURLFields: map[string]string{"port": "8080", "path": "test"}},
+		"doesn't check non-service url_fields/params": {errRegex: "^$", urlFields: map[string]string{}, params: map[string]string{}},
+		"does field check service shoutrrrs - valid": {errRegex: "^$", serviceShoutrrr: true, urlFields: map[string]string{},
+			main: testShoutrrr(false, false, false)},
+		"does field check service shoutrrrs - valid with self and main": {errRegex: "^$", serviceShoutrrr: true, urlFields: map[string]string{"host": "foo"},
+			main: &Shoutrrr{URLFields: map[string]string{"token": "bar"}}},
+		"does field check service shoutrrrs - invalid urlfields": {errRegex: "host: <required>.*token: <required>", serviceShoutrrr: true,
+			main: &Shoutrrr{}, sType: "gotify"},
+		"does field check service shoutrrrs - invalid params + locate fail": {errRegex: "fromaddress: <required>.*toaddresses: <required>", serviceShoutrrr: true,
+			urlFields: map[string]string{"host": "https://release-argus.io"}, main: &Shoutrrr{}, sType: "smtp"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := testShoutrrr(false, tc.serviceShoutrrr, false)
+			if tc.sType != "" {
+				shoutrrr.Type = tc.sType
+			}
+			shoutrrr.Main = tc.main
+			shoutrrr.Main.InitMaps()
+			shoutrrr.Options = tc.options
+			shoutrrr.URLFields = tc.urlFields
+			shoutrrr.Params = tc.params
+			if tc.nilShoutrrr {
+				shoutrrr = nil
+			}
+
+			// WHEN CheckValues is called
+			eer := shoutrrr.CheckValues("")
+
+			// THEN it err's when expected
+			e := utils.ErrorToString(eer)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("%s:\nwant match for %q\nnot: %q",
+					name, tc.errRegex, e)
+			}
+			if tc.nilShoutrrr {
+				return
+			}
+			if tc.wantDelay != "" && shoutrrr.GetSelfOption("delay") != tc.wantDelay {
+				t.Errorf("%s:\ndelay not set/corrected. want match for %q\nnot: %q",
+					name, tc.wantDelay, shoutrrr.GetSelfOption("delay"))
+			}
+			for key := range tc.wantURLFields {
+				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {
+					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
+						name, key, tc.wantURLFields[key], key, shoutrrr.URLFields[key], tc.wantURLFields, shoutrrr.URLFields)
+				}
+			}
+		})
+	}
+}
+
+// func TestSliceCheckValues(t *testing.T) {
+// 	// GIVEN a Slice
+// 	tests := map[string]struct {
+// 		nilShoutrrr     bool
+// 		serviceShoutrrr bool
+// 		sType           string
+// 		options         map[string]string
+// 		wantDelay       string
+// 		urlFields       map[string]string
+// 		wantURLFields   map[string]string
+// 		params          map[string]string
+// 		main            *Shoutrrr
+// 		errRegex        string
+// 	}{
+// 		"nil shoutrrr": {nilShoutrrr: true, errRegex: "^$"},
+// 		"invalid delay": {errRegex: "delay: .* <invalid>",
+// 			options: map[string]string{"delay": "5x"}},
+// 		"fixes delay": {errRegex: "^$", wantDelay: "5s",
+// 			options: map[string]string{"delay": "5"}},
+// 		"runs correctSelf": {errRegex: "^$", urlFields: map[string]string{"port": ":8080", "path": "/test"},
+// 			wantURLFields: map[string]string{"port": "8080", "path": "test"}},
+// 		"doesn't check non-service url_fields/params": {errRegex: "^$", urlFields: map[string]string{}, params: map[string]string{}},
+// 		"does field check service shoutrrrs - valid": {errRegex: "^$", serviceShoutrrr: true, urlFields: map[string]string{},
+// 			main: testShoutrrr(false, false, false)},
+// 		"does field check service shoutrrrs - valid with self and main": {errRegex: "^$", serviceShoutrrr: true, urlFields: map[string]string{"host": "foo"},
+// 			main: &Shoutrrr{URLFields: map[string]string{"token": "bar"}}},
+// 		"does field check service shoutrrrs - invalid urlfields": {errRegex: "host: <required>.*token: <required>", serviceShoutrrr: true,
+// 			main: &Shoutrrr{}, sType: "gotify"},
+// 		"does field check service shoutrrrs - invalid params + locate fail": {errRegex: "fromaddress: <required>.*toaddresses: <required>", serviceShoutrrr: true,
+// 			urlFields: map[string]string{"host": "https://release-argus.io"}, main: &Shoutrrr{}, sType: "smtp"},
+// 	}
+
+// 	for name, tc := range tests {
+// 		t.Run(name, func(t *testing.T) {
+// 			shoutrrr := testShoutrrr(false, tc.serviceShoutrrr, false)
+// 			if tc.sType != "" {
+// 				shoutrrr.Type = tc.sType
+// 			}
+// 			shoutrrr.Main = tc.main
+// 			shoutrrr.Main.InitMaps()
+// 			shoutrrr.Options = tc.options
+// 			shoutrrr.URLFields = tc.urlFields
+// 			shoutrrr.Params = tc.params
+// 			if tc.nilShoutrrr {
+// 				shoutrrr = nil
+// 			}
+
+// 			// WHEN CheckValues is called
+// 			eer := shoutrrr.CheckValues("")
+
+// 			// THEN it err's when expected
+// 			e := utils.ErrorToString(eer)
+// 			re := regexp.MustCompile(tc.errRegex)
+// 			match := re.MatchString(e)
+// 			if !match {
+// 				t.Errorf("%s:\nwant match for %q\nnot: %q",
+// 					name, tc.errRegex, e)
+// 			}
+// 			if tc.nilShoutrrr {
+// 				return
+// 			}
+// 			if tc.wantDelay != "" && shoutrrr.GetSelfOption("delay") != tc.wantDelay {
+// 				t.Errorf("%s:\ndelay not set/corrected. want match for %q\nnot: %q",
+// 					name, tc.wantDelay, shoutrrr.GetSelfOption("delay"))
+// 			}
+// 			for key := range tc.wantURLFields {
+// 				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {
+// 					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
+// 						name, key, tc.wantURLFields[key], key, shoutrrr.URLFields[key], tc.wantURLFields, shoutrrr.URLFields)
+// 				}
+// 			}
+// 		})
+// 	}
+// }
