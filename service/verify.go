@@ -24,7 +24,8 @@ import (
 func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
-	for key := range *s {
+	keys := utils.SortedKeys(*s)
+	for _, key := range keys {
 		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
 			errs = fmt.Errorf("%s%w",
 				utils.ErrorToString(errs), serviceErrs)

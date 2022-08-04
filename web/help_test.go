@@ -44,6 +44,16 @@ func stringPtr(val string) *string {
 	return &val
 }
 
+func testLogging(level string) {
+	jLog = utils.NewJLog(level, false)
+	var logInitCommands *command.Controller
+	logInitCommands.Init(jLog, nil, nil, nil, nil)
+	var logInitWebHooks *webhook.Slice
+	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
+	svcForLog := service.Service{}
+	svcForLog.Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
+}
+
 func testConfig() config.Config {
 	port, err := getFreePort()
 	if err != nil {
@@ -166,6 +176,8 @@ func testService(id string) service.Service {
 			SaveChannel:     &sSaveChannel,
 		},
 	}
+	svc.Status.Init(len(svc.Notify), len(svc.Command), len(svc.WebHook), &svc.ID, &svc.Dashboard.WebURL)
+	svc.LatestVersion.Init(jLog, &latest_version.Lookup{}, &latest_version.Lookup{}, &svc.Status, &svc.Options)
 	svc.CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
 	return svc
 }

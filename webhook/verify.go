@@ -28,7 +28,8 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 		return
 	}
 
-	for key := range *w {
+	keys := utils.SortedKeys(*w)
+	for _, key := range keys {
 		if err := (*w)[key].CheckValues(prefix + "    "); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				utils.ErrorToString(errs), prefix, key, err)

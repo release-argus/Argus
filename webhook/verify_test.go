@@ -166,7 +166,7 @@ func TestWebHookCheckValues(t *testing.T) {
 	}
 }
 
-func TestServiceCheckValues(t *testing.T) {
+func TestSliceCheckValues(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		slice    *Slice

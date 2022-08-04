@@ -273,10 +273,7 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 
 func TestWebSocketApprovalsVERSION(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
-	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil)
-	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
+	testLogging("WARN")
 	tests := map[string]struct {
 		serviceID                   string
 		target                      *string
@@ -329,8 +326,6 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			svcForLog := service.Service{}
-			svcForLog.Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
@@ -543,10 +538,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 
 func TestWebSocketApprovalsACTIONS(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
-	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil)
-	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
+	testLogging("WARN")
 	tests := map[string]struct {
 		serviceID   string
 		stdoutRegex string
