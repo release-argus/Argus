@@ -17,7 +17,7 @@
 package options
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -48,8 +48,8 @@ func TestGetActive(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
 			}
 		})
 	}
@@ -83,8 +83,8 @@ func TestGetInterval(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 		})
 	}
@@ -118,8 +118,8 @@ func TestGetSemanticVersioning(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.wantBool, got)
 			}
 		})
 	}
@@ -180,12 +180,12 @@ func TestPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -216,8 +216,8 @@ func TestCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

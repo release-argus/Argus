@@ -17,7 +17,7 @@
 package latest_version
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -37,19 +37,20 @@ func TestPrint(t *testing.T) {
 		options     options.Options
 		lines       int
 	}{
-		"github type with no urlCommands/require": {lookup: testLookupGitHub(), lines: 5},
-		"url type with no urlCommands/require":    {lookup: testLookupURL(), lines: 4},
-		"url type with urlCommands and no require": {lookup: testLookupURL(), lines: 7,
+		"minimal github type with no urlCommands/require":       {lookup: Lookup{Type: "github", URL: "release-argus/Argus"}, lines: 3},
+		"fully defined github type with no urlCommands/require": {lookup: testLookup(false, false), lines: 6},
+		"url type with no urlCommands/require":                  {lookup: testLookup(true, false), lines: 4},
+		"url type with urlCommands and no require": {lookup: testLookup(true, false), lines: 7,
 			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
-		"github type with urlCommands and no require": {lookup: testLookupGitHub(), lines: 8,
+		"github type with urlCommands and no require": {lookup: testLookup(false, false), lines: 9,
 			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
-		"url type with require and no urlCommands": {lookup: testLookupURL(), lines: 6,
+		"url type with require and no urlCommands": {lookup: testLookup(true, false), lines: 6,
 			require: &filters.Require{RegexContent: "foo"}},
-		"github type with require and no urlCommands": {lookup: testLookupGitHub(), lines: 7,
+		"github type with require and no urlCommands": {lookup: testLookup(false, false), lines: 8,
 			require: &filters.Require{RegexContent: "foo"}},
-		"url type with urlCommands and require": {lookup: testLookupURL(), lines: 9,
+		"url type with urlCommands and require": {lookup: testLookup(true, false), lines: 9,
 			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filters.Require{RegexContent: "foo"}, options: options.Options{Active: boolPtr(false)}},
-		"github type with urlCommands and require": {lookup: testLookupGitHub(), lines: 10,
+		"github type with urlCommands and require": {lookup: testLookup(false, false), lines: 11,
 			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filters.Require{RegexContent: "foo"}, options: options.Options{Active: boolPtr(false)}},
 	}
 
@@ -67,12 +68,12 @@ func TestPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -102,7 +103,7 @@ func TestCheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
+			lookup := testLookup(false, false)
 			if tc.lType != nil {
 				lookup.Type = *tc.lType
 			}
@@ -124,8 +125,8 @@ func TestCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

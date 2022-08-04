@@ -17,6 +17,8 @@
 package latest_version
 
 import (
+	"os"
+
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
@@ -30,7 +32,7 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func testLookupGitHub() Lookup {
+func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	var (
 		announceChannel chan []byte           = make(chan []byte, 2)
 		saveChannel     chan bool             = make(chan bool, 5)
@@ -39,8 +41,7 @@ func testLookupGitHub() Lookup {
 	lookup := Lookup{
 		Type:              "github",
 		URL:               "release-argus/Argus",
-		AllowInvalidCerts: boolPtr(true),
-		UsePreRelease:     boolPtr(true),
+		AllowInvalidCerts: boolPtr(allowInvalidCerts),
 		Require:           &filters.Require{},
 		Options: &options.Options{
 			SemanticVersioning: boolPtr(true),
@@ -56,36 +57,14 @@ func testLookupGitHub() Lookup {
 		Defaults:     &Lookup{},
 		HardDefaults: &Lookup{},
 	}
-	lookup.Status.WebURL = stringPtr("")
-	lookup.Require.Status = lookup.Status
-	return lookup
-}
-
-func testLookupURL() Lookup {
-	var (
-		announceChannel chan []byte           = make(chan []byte, 2)
-		saveChannel     chan bool             = make(chan bool, 5)
-		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
-	)
-	lookup := Lookup{
-		Type:              "url",
-		URL:               "https://valid.release-argus.io/plain",
-		AllowInvalidCerts: boolPtr(false),
-		URLCommands:       filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-		Require:           &filters.Require{},
-		Options: &options.Options{
-			SemanticVersioning: boolPtr(true),
-			Defaults:           &options.Options{},
-			HardDefaults:       &options.Options{},
-		},
-		Status: &service_status.Status{
-			ServiceID:       stringPtr("test"),
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel,
-			SaveChannel:     &saveChannel,
-		},
-		Defaults:     &Lookup{},
-		HardDefaults: &Lookup{},
+	if urlType {
+		lookup.Type = "url"
+		lookup.URL = "https://valid.release-argus.io/plain"
+		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
+	} else {
+		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
+		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
+		lookup.UsePreRelease = boolPtr(false)
 	}
 	lookup.Status.WebURL = stringPtr("")
 	lookup.Require.Status = lookup.Status

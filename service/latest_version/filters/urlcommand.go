@@ -148,7 +148,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	}
 
 	if len(texts) == 0 {
-		err := fmt.Errorf("%s (%s) didn't return any matches",
+		err := fmt.Errorf("%s %q didn't return any matches",
 			c.Type, *c.Regex)
 		jLog.Warn(err, logFrom, true)
 

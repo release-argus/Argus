@@ -113,8 +113,8 @@ func TestServiceGetIconURL(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func TestInit(t *testing.T) {
 		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
 			Notify:  shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{Type: "discord"}},
 			Command: command.Slice{{"ls"}},
-			WebHook: webhook.Slice{"test": testWebHookSuccessful()}}},
+			WebHook: webhook.Slice{"test": testWebHook(false)}}},
 	}
 
 	for name, tc := range tests {
@@ -146,71 +146,69 @@ func TestInit(t *testing.T) {
 			// THEN pointers to those vars are handed out to the Lookup
 			// log
 			if jLog != log {
-				t.Errorf("%s:\nJLog was not initialised from the Init\n want: %v\ngot:  %v",
-					name, log, jLog)
+				t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
+					log, jLog)
 			}
 			// defaults
 			if tc.service.Defaults != &defaults {
-				t.Errorf("%s:\nDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &defaults, tc.service.Defaults)
+				t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&defaults, tc.service.Defaults)
 			}
 			// dashboard.defaults
 			if tc.service.Dashboard.Defaults != &defaults.Dashboard {
-				t.Errorf("%s:\nDashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &defaults.Dashboard, tc.service.Dashboard.Defaults)
+				t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&defaults.Dashboard, tc.service.Dashboard.Defaults)
 			}
 			// options.defaults
 			if tc.service.Options.Defaults != &defaults.Options {
-				t.Errorf("%s:\nOptions defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &defaults.Options, tc.service.Options.Defaults)
+				t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&defaults.Options, tc.service.Options.Defaults)
 			}
 			// hardDefaults
 			if tc.service.HardDefaults != &hardDefaults {
-				t.Errorf("%s:\nHardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &hardDefaults, tc.service.HardDefaults)
+				t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&hardDefaults, tc.service.HardDefaults)
 			}
 			// dashboard.hardDefaults
 			if tc.service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
-				t.Errorf("%s:\nDashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
+				t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
 			}
 			// options.hardDefaults
 			if tc.service.Options.HardDefaults != &hardDefaults.Options {
-				t.Errorf("%s:\nOptions hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					name, &hardDefaults.Options, tc.service.Options.HardDefaults)
+				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
+					&hardDefaults.Options, tc.service.Options.HardDefaults)
 			}
 			// initMetrics - counters
 			gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
 			wantC := 2
 			if (gotC - hadC) != wantC {
-				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
-					name, (gotC - hadC), wantC)
+				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+					(gotC - hadC), wantC)
 			}
 			// Notify
 			if len(tc.service.Notify) != 0 {
 				for i := range tc.service.Notify {
 					if tc.service.Notify[i].Main == nil {
-						t.Errorf("%s:\nNotify init didn't initialise the Main",
-							name)
+						t.Error("Notify init didn't initialise the Main")
 					}
 				}
 			}
 			// Command
 			if len(tc.service.Command) != 0 {
 				if tc.service.CommandController == nil {
-					t.Errorf("%s:\nCommandController is still nil with %v Commands present",
-						name, tc.service.Command)
+					t.Errorf("CommandController is still nil with %v Commands present",
+						tc.service.Command)
 				}
 			} else if tc.service.CommandController != nil {
-				t.Errorf("%s:\nCommandController should be nil with %v Commands present",
-					name, tc.service.Command)
+				t.Errorf("CommandController should be nil with %v Commands present",
+					tc.service.Command)
 			}
 			// WebHook
 			if len(tc.service.WebHook) != 0 {
 				for i := range tc.service.WebHook {
 					if tc.service.WebHook[i].Main == nil {
-						t.Errorf("%s:\nWebHook init didn't initialise the Main",
-							name)
+						t.Error("WebHook init didn't initialise the Main")
 					}
 				}
 			}

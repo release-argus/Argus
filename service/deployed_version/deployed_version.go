@@ -18,7 +18,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -203,7 +203,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	}
 
 	// Read the response body.
-	rawBody, err = ioutil.ReadAll(resp.Body)
+	rawBody, err = io.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
 	return
 }

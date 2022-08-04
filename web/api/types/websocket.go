@@ -17,9 +17,9 @@ package types
 // WebSocketMessage is the message format to send/receive/forward.
 type WebSocketMessage struct {
 	Version     *int                       `json:"version,omitempty"`
-	Page        *string                    `json:"page"`
-	Type        *string                    `json:"type"`
-	SubType     *string                    `json:"sub_type,omitempty"`
+	Page        string                     `json:"page"`
+	Type        string                     `json:"type"`
+	SubType     string                     `json:"sub_type,omitempty"`
 	Target      *string                    `json:"target,omitempty"`
 	Order       *[]string                  `json:"order,omitempty"`
 	ServiceData *ServiceSummary            `json:"service_data,omitempty"`

@@ -39,8 +39,11 @@ func (c *Config) Init() {
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
-	for i := range c.Service {
-		c.Service[i].Init(
+	i := 0
+	for key := range c.Service {
+		i++
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), utils.LogFrom{}, true)
+		c.Service[key].Init(
 			jLog,
 			&c.Defaults.Service,
 			&c.HardDefaults.Service,
@@ -87,10 +90,10 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	c.GetOrder(data)
 
-	databaseChannel := make(chan db_types.Message, 8)
+	databaseChannel := make(chan db_types.Message, 32)
 	c.DatabaseChannel = &databaseChannel
 
-	saveChannel := make(chan bool, 8)
+	saveChannel := make(chan bool, 32)
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {

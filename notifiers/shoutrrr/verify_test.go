@@ -17,7 +17,7 @@
 package shoutrrr
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -65,12 +65,12 @@ func TestShoutrrrPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -101,13 +101,13 @@ func TestSlicePrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			strOut := string(out)
 			got := strings.Count(strOut, "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 			lines := strings.Split(strOut, "\n")
 			for _, regex := range tc.regexMatches {
@@ -121,8 +121,8 @@ func TestSlicePrint(t *testing.T) {
 					}
 				}
 				if !foundMatch {
-					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, regex, strOut)
+					t.Errorf("match on %q not found in\n%q",
+						regex, strOut)
 				}
 			}
 		})
@@ -347,8 +347,8 @@ func TestCheckValuesMaster(t *testing.T) {
 			re := regexp.MustCompile(tc.errsRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errsRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errsRegex, e)
 			}
 			// errsOptions
 			if tc.errsOptionsRegex == "" {
@@ -358,8 +358,8 @@ func TestCheckValuesMaster(t *testing.T) {
 			re = regexp.MustCompile(tc.errsOptionsRegex)
 			match = re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errsOptionsRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errsOptionsRegex, e)
 			}
 			// errsURLFields
 			if tc.errsURLFieldsRegex == "" {
@@ -369,8 +369,8 @@ func TestCheckValuesMaster(t *testing.T) {
 			re = regexp.MustCompile(tc.errsURLFieldsRegex)
 			match = re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errsURLFieldsRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errsURLFieldsRegex, e)
 			}
 			// errsParams
 			if tc.errsParamsRegex == "" {
@@ -380,8 +380,8 @@ func TestCheckValuesMaster(t *testing.T) {
 			re = regexp.MustCompile(tc.errsParamsRegex)
 			match = re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errsParamsRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errsParamsRegex, e)
 			}
 		})
 	}
@@ -431,8 +431,8 @@ func TestCorrectSelf(t *testing.T) {
 				got = shoutrrr.GetSelfParam(tc.key)
 			}
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s:%q\ngot:  %s:%q",
-					name, tc.key, tc.want, tc.key, got)
+				t.Errorf("want: %s:%q\ngot:  %s:%q",
+					tc.key, tc.want, tc.key, got)
 			}
 		})
 	}
@@ -493,20 +493,20 @@ func TestShoutrrrCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 			if tc.nilShoutrrr {
 				return
 			}
 			if tc.wantDelay != "" && shoutrrr.GetSelfOption("delay") != tc.wantDelay {
-				t.Errorf("%s:\ndelay not set/corrected. want match for %q\nnot: %q",
-					name, tc.wantDelay, shoutrrr.GetSelfOption("delay"))
+				t.Errorf("delay not set/corrected. want match for %q\nnot: %q",
+					tc.wantDelay, shoutrrr.GetSelfOption("delay"))
 			}
 			for key := range tc.wantURLFields {
 				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {
-					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.wantURLFields[key], key, shoutrrr.URLFields[key], tc.wantURLFields, shoutrrr.URLFields)
+					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.wantURLFields[key], key, shoutrrr.URLFields[key], tc.wantURLFields, shoutrrr.URLFields)
 				}
 			}
 		})
@@ -538,8 +538,8 @@ func TestSliceCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

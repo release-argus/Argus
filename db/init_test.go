@@ -18,7 +18,6 @@ package db
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -56,15 +55,15 @@ func TestCheckFile(t *testing.T) {
 			if tc.createDirBefore != "" {
 				err := os.Mkdir(tc.createDirBefore, os.ModeDir|0755)
 				if err != nil {
-					t.Fatalf("%s:\n%s",
-						name, err)
+					t.Fatalf("%s",
+						err)
 				}
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
 				if err != nil {
-					t.Fatalf("%s:\n%s",
-						name, err)
+					t.Fatalf("%s",
+						err)
 				}
 				file.Close()
 			}
@@ -75,8 +74,8 @@ func TestCheckFile(t *testing.T) {
 					os.RemoveAll(tc.createDirBefore)
 					os.RemoveAll(tc.createFileBefore)
 					if !strings.Contains(r.(string), tc.panicContains) {
-						t.Errorf("%s:\nshould have panic'd with:\n%q, not:\n%q",
-							name, tc.panicContains, rStr)
+						t.Errorf("should have panic'd with:\n%q, not:\n%q",
+							tc.panicContains, rStr)
 					}
 				}()
 			}
@@ -86,8 +85,8 @@ func TestCheckFile(t *testing.T) {
 
 			// THEN we get here only when we should
 			if tc.panicContains != "" {
-				t.Fatalf("%s:\nExpected panic with %q",
-					name, tc.panicContains)
+				t.Fatalf("Expected panic with %q",
+					tc.panicContains)
 			}
 		})
 	}
@@ -355,11 +354,11 @@ func TestRun(t *testing.T) {
 	// THEN the cell was changed in the DB
 	otherCfg := testConfig()
 	*otherCfg.Settings.Data.DatabaseFile = "TestRun-copy.db"
-	bytesRead, err := ioutil.ReadFile(*cfg.Settings.Data.DatabaseFile)
+	bytesRead, err := os.ReadFile(*cfg.Settings.Data.DatabaseFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
+	err = os.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
 		t.Fatal(err)
 	}

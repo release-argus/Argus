@@ -18,7 +18,7 @@ package webhook
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -167,25 +167,25 @@ func TestSliceInit(t *testing.T) {
 				wantC = 2 * len(*tc.slice)
 			}
 			if (gotC - hadC) != wantC {
-				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
-					name, (gotC - hadC), wantC)
+				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+					(gotC - hadC), wantC)
 			}
 			if jLog != log {
-				t.Errorf("%s:\nwant: jLog=%v\ngot:  jLog=%v",
-					name, log, jLog)
+				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
+					log, jLog)
 			}
 			if tc.nilSlice {
 				if tc.slice != nil {
-					t.Fatalf("%s:\nexpecting the Slice to be nil, not %v",
-						name, *tc.slice)
+					t.Fatalf("expecting the Slice to be nil, not %v",
+						*tc.slice)
 				}
 				return
 			}
 			for _, webhook := range *tc.slice {
 				// main
 				if webhook.Main == nil {
-					t.Errorf("%s:\nMain of the WebHook was not initialised. got: %v",
-						name, webhook.Main)
+					t.Errorf("Main of the WebHook was not initialised. got: %v",
+						webhook.Main)
 				} else if tc.mains != nil && (*tc.mains)[webhook.ID] != nil && webhook.Main != (*tc.mains)[webhook.ID] {
 					t.Errorf("Main were not handed to the WebHook correctly\n want: %v\ngot:  %v",
 						(*tc.mains)[webhook.ID], webhook.Main)
@@ -247,8 +247,8 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
 			}
 		})
 	}
@@ -286,8 +286,8 @@ func TestGetDelay(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, tc.want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					tc.want, got)
 			}
 		})
 	}
@@ -325,8 +325,8 @@ func TestGetDelayDuration(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, tc.want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					tc.want, got)
 			}
 		})
 	}
@@ -364,8 +364,8 @@ func TestGetDesiredStatusCode(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %d\ngot:  %d",
-					name, tc.want, got)
+				t.Errorf("want: %d\ngot:  %d",
+					tc.want, got)
 			}
 		})
 	}
@@ -392,8 +392,8 @@ func TestGetFailStatus(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					want, got)
 			}
 		})
 	}
@@ -431,8 +431,8 @@ func TestGetMaxTries(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %d\ngot:  %d",
-					name, tc.want, got)
+				t.Errorf("want: %d\ngot:  %d",
+					tc.want, got)
 			}
 		})
 	}
@@ -446,9 +446,9 @@ func TestGetRequest(t *testing.T) {
 		customHeaders map[string]string
 		wantNil       bool
 	}{
-		"valid github type": {webhookType: "github", url: "release-argus/Argus"},
+		"valid github type":            {webhookType: "github", url: "release-argus/Argus"},
 		"catch invalid github request": {webhookType: "github", url: "release-argus	/	Argus", wantNil: true},
-		"valid gitlab type": {webhookType: "gitlab", url: "https://release-argus.io"},
+		"valid gitlab type":            {webhookType: "gitlab", url: "https://release-argus.io"},
 		"catch invalid gitlab request": {webhookType: "gitlab", url: "release-argus	/	Argus", wantNil: true},
 		"sets custom headers for github": {webhookType: "github", url: "release-argus/Argus",
 			customHeaders: map[string]string{"X-Foo": "bar"}},
@@ -469,51 +469,51 @@ func TestGetRequest(t *testing.T) {
 			// THEN the function returns the correct result
 			if tc.wantNil {
 				if req != nil {
-					t.Fatalf("%s:\nexpected request to fail with url %q",
-						name, tc.url)
+					t.Fatalf("expected request to fail with url %q",
+						tc.url)
 				}
 				return
 			}
 			switch tc.webhookType {
 			case "github":
 				// Payload
-				body, _ := ioutil.ReadAll(req.Body)
+				body, _ := io.ReadAll(req.Body)
 				var payload GitHub
 				json.Unmarshal(body, &payload)
 				want := "refs/heads/master"
 				if payload.Ref != want {
-					t.Errorf("%s:\ndidn't get %q in the payload\n%v",
-						name, want, payload)
+					t.Errorf("didn't get %q in the payload\n%v",
+						want, payload)
 				}
 				// Content-Type
 				want = "application/json"
 				if req.Header["Content-Type"][0] != want {
-					t.Errorf("%s:\ndidn't get %q in the Content-Type\n%v",
-						name, want, req.Header["Content-Type"])
+					t.Errorf("didn't get %q in the Content-Type\n%v",
+						want, req.Header["Content-Type"])
 				}
 				// X-Github-Event
 				want = "push"
 				if req.Header["X-Github-Event"][0] != want {
-					t.Errorf("%s:\nGitHub headers weren't set? Didn't get %q in the X-Github-Event\n%v",
-						name, want, req.Header["X-Github-Event"])
+					t.Errorf("GitHub headers weren't set? Didn't get %q in the X-Github-Event\n%v",
+						want, req.Header["X-Github-Event"])
 				}
 			case "gitlab":
 				// Content-Type
 				want := "application/x-www-form-urlencoded"
 				if req.Header["Content-Type"][0] != want {
-					t.Errorf("%s:\ndidn't get %q in the Content-Type\n%v",
-						name, want, req.Header["Content-Type"])
+					t.Errorf("didn't get %q in the Content-Type\n%v",
+						want, req.Header["Content-Type"])
 				}
 			}
 			// Custom Headers
 			for header, value := range tc.customHeaders {
 				if len(req.Header[header]) == 0 {
-					t.Fatalf("%s:\nCustom Headers not set\n%v",
-						name, req.Header)
+					t.Fatalf("Custom Headers not set\n%v",
+						req.Header)
 				}
 				if req.Header[header][0] != value {
-					t.Fatalf("%s:\nCustom Headers not set correctly\nwant %q to be %q, not %q\n%v",
-						name, header, value, req.Header[header][0], req.Header)
+					t.Fatalf("Custom Headers not set correctly\nwant %q to be %q, not %q\n%v",
+						header, value, req.Header[header][0], req.Header)
 				}
 			}
 		})
@@ -552,8 +552,8 @@ func TestGetType(t *testing.T) {
 
 			// THEN the function returns the correct type
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -591,8 +591,8 @@ func TestGetSecret(t *testing.T) {
 
 			// THEN the function returns the correct secret
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -630,8 +630,8 @@ func TestGetSilentFails(t *testing.T) {
 
 			// THEN the function returns the correct boolean
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
 			}
 		})
 	}
@@ -675,8 +675,8 @@ func TestGetURL(t *testing.T) {
 
 			// THEN the function returns the url
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -704,8 +704,8 @@ func TestGetIsRunnable(t *testing.T) {
 
 			// THEN the function returns whether the webhook is runnable now
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
 			}
 		})
 	}
@@ -732,8 +732,8 @@ func TestSetFailStatus(t *testing.T) {
 
 			// THEN the function returns whether the WebHook failed the last send
 			if got != want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					want, got)
 			}
 		})
 	}
@@ -801,8 +801,8 @@ func TestSetNextRunnable(t *testing.T) {
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := webhook.NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					name, now, minTime, maxTime, gotTime)
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					now, minTime, maxTime, gotTime)
 			}
 		})
 	}
@@ -839,8 +839,8 @@ func TestGetResetFails(t *testing.T) {
 			for id := range *tc.slice {
 				got := (*tc.slice)[id].GetFailStatus()
 				if got != nil {
-					t.Fatalf("%s:\nfail status wasn't reset for %q. got %t",
-						name, id, *got)
+					t.Fatalf("fail status wasn't reset for %q. got %t",
+						id, *got)
 				}
 			}
 		})

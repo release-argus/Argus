@@ -28,7 +28,7 @@ import (
 
 func TestInitMetrics(t *testing.T) {
 	// GIVEN a Lookup
-	lookup := testLookupGitHub()
+	lookup := testLookup(false, false)
 	*lookup.Status.ServiceID += "TestInitMetrics"
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
@@ -47,7 +47,7 @@ func TestInitMetrics(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
-	lookup := testLookupGitHub()
+	lookup := testLookup(false, false)
 	log := utils.NewJLog("WARN", false)
 	var defaults Lookup
 	var hardDefaults Lookup

@@ -39,8 +39,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {
-				t.Errorf("%s:\nhaven't initialised yet but got %d metrics, expecting %d",
-					name, got, want)
+				t.Errorf("haven't initialised yet but got %d metrics, expecting %d",
+					got, want)
 			}
 
 			// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
@@ -54,8 +54,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			got = testutil.CollectAndCount(tc.metric)
 			want = 1
 			if got != want {
-				t.Errorf("%s:\nhas been initialised but got %d metrics, expecting %d",
-					name, got, want)
+				t.Errorf("has been initialised but got %d metrics, expecting %d",
+					got, want)
 			}
 			var wantValue float64
 			var gotValue float64
@@ -67,8 +67,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2], tc.args[3]))
 			}
 			if gotValue != wantValue {
-				t.Errorf("%s:\nhas been initialised but got %f, expecting %f",
-					name, gotValue, wantValue)
+				t.Errorf("has been initialised but got %f, expecting %f",
+					gotValue, wantValue)
 			}
 
 			// THEN it can be increased
@@ -88,8 +88,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			}
 			wantValue++
 			if gotValue != wantValue {
-				t.Errorf("%s:\nhas been changed but got %f, expecting %f",
-					name, gotValue, wantValue)
+				t.Errorf("has been changed but got %f, expecting %f",
+					gotValue, wantValue)
 			}
 		})
 	}
@@ -113,8 +113,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {
-				t.Errorf("%s:\nhaven't initialised yet but got %d metrics, expecting %d",
-					name, got, want)
+				t.Errorf("haven't initialised yet but got %d metrics, expecting %d",
+					got, want)
 			}
 
 			// WHEN it's initialised with SetPrometheusGaugeWithID
@@ -123,13 +123,13 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			got = testutil.CollectAndCount(tc.metric)
 			want = 1
 			if got != want {
-				t.Errorf("%s:\nhas been initialised but got %d metrics, expecting %d",
-					name, got, want)
+				t.Errorf("has been initialised but got %d metrics, expecting %d",
+					got, want)
 			}
 			gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0]))
 			if gotValue != wantValue {
-				t.Errorf("%s:\nhas been initialised but got %f, expecting %f",
-					name, gotValue, wantValue)
+				t.Errorf("has been initialised but got %f, expecting %f",
+					gotValue, wantValue)
 			}
 
 			// THEN changes can be noticed
@@ -137,8 +137,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			SetPrometheusGaugeWithID(tc.metric, tc.args[0], wantValue)
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0]))
 			if gotValue != wantValue {
-				t.Errorf("%s:\nhas been changed but got %f, expecting %f",
-					name, gotValue, wantValue)
+				t.Errorf("has been changed but got %f, expecting %f",
+					gotValue, wantValue)
 			}
 		})
 	}

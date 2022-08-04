@@ -194,8 +194,8 @@ func TestGetParams(t *testing.T) {
 
 			// THEN the function returns the params to use
 			if (*got)[key] != tc.wantString {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 		})
 	}
@@ -220,7 +220,7 @@ func TestShoutrrrSend(t *testing.T) {
 		retries     int
 	}{
 		"invalid host": {host: "	test", errRegex: "error initializing router services"},
-		"selfsigned cert":             {invalidCert: true, errRegex: "x509.* certificate signed by unknown authority"},
+		"selfsigned cert":             {invalidCert: true, errRegex: " x509:"},
 		"has default title":           {title: stringPtr(""), errRegex: "^$"},
 		"has default message":         {message: stringPtr(""), errRegex: "message.*required"},
 		"does delay":                  {errRegex: "^$", delay: "2s", useDelay: true},
@@ -255,17 +255,18 @@ func TestShoutrrrSend(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 			elapsed := time.Since(start)
 			delay, _ := time.ParseDuration(shoutrrr.GetDelay())
 			if tc.wouldFail {
 				delay = time.Duration(5*tc.retries) * time.Second
 			}
-			if elapsed < delay || elapsed > delay+time.Second {
-				t.Errorf("%s:\ndelay not applied? Delay of %s, but sent in %s",
-					name, delay, elapsed)
+			// Allow 15s extra delay that may be incurred in tests
+			if elapsed < delay || elapsed > delay+(15*time.Second) {
+				t.Errorf("delay not applied? Delay of %s, but sent in %s",
+					delay, elapsed)
 			}
 		})
 	}
@@ -310,8 +311,8 @@ func TestSliceSend(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 			// elapsed := time.Since(start)
 			// delay, _ := time.ParseDuration(shoutrrr.GetDelay())
@@ -319,7 +320,7 @@ func TestSliceSend(t *testing.T) {
 			// 	delay = time.Duration(5*tc.retries) * time.Second
 			// }
 			// if elapsed < delay || elapsed > delay+time.Second {
-			// 	t.Errorf("%s:\ndelay not applied? Delay of %s, but sent in %s",
+			// 	t.Errorf("delay not applied? Delay of %s, but sent in %s",
 			// 		name, delay, elapsed)
 			// }
 		})

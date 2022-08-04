@@ -71,8 +71,8 @@ func TestUpdateRow(t *testing.T) {
 					got = &row.ApprovedVersion
 				}
 				if *got != cell.Value {
-					t.Errorf("%s:\nexpecting %s to have been updated to %q. got %q",
-						name, cell.Column, cell.Value, *got)
+					t.Errorf("expecting %s to have been updated to %q. got %q",
+						cell.Column, cell.Value, *got)
 				}
 			}
 			api.db.Close()

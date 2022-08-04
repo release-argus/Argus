@@ -43,9 +43,16 @@ func intPtr(val int) *int {
 func stringPtr(val string) *string {
 	return &val
 }
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
+}
 
-func testLogging(level string) {
-	jLog = utils.NewJLog(level, false)
+func testLogging(level string, timestamps bool) {
+	jLog = utils.NewJLog(level, timestamps)
 	var logInitCommands *command.Controller
 	logInitCommands.Init(jLog, nil, nil, nil, nil)
 	var logInitWebHooks *webhook.Slice
@@ -101,8 +108,8 @@ func testConfig() config.Config {
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
 	svc.Comment = "test service's comment"
-	whPass := testWebHookPass("pass")
-	whFail := testWebHookFail("pass")
+	whPass := testWebHook(false, "pass")
+	whFail := testWebHook(true, "pass")
 	return config.Config{
 		Settings: config.Settings{
 			Web: webSettings,
@@ -182,21 +189,20 @@ func testService(id string) service.Service {
 	return svc
 }
 
-func testCommandPass() command.Command {
+func testCommand(failing bool) command.Command {
+	if failing {
+		return command.Command{"ls", "-lah", "/root"}
+	}
 	return command.Command{"ls", "-lah"}
 }
 
-func testCommandFail() command.Command {
-	return command.Command{"ls", "-lah", "/root"}
-}
-
-func testWebHookPass(id string) *webhook.WebHook {
+func testWebHook(failing bool, id string) *webhook.WebHook {
 	var slice *webhook.Slice
 	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
 
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
-	return &webhook.WebHook{
+	wh := &webhook.WebHook{
 		Type:              "github",
 		URL:               "https://valid.release-argus.io/hooks/github-style",
 		Secret:            "argus",
@@ -212,30 +218,10 @@ func testWebHookPass(id string) *webhook.WebHook {
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
 	}
-}
-
-func testWebHookFail(id string) *webhook.WebHook {
-	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
-
-	whDesiredStatusCode := 0
-	whMaxTries := uint(1)
-	return &webhook.WebHook{
-		Type:              "github",
-		URL:               "https://valid.release-argus.io/hooks/github-style",
-		Secret:            "notArgus",
-		AllowInvalidCerts: boolPtr(false),
-		DesiredStatusCode: &whDesiredStatusCode,
-		Delay:             "0s",
-		SilentFails:       boolPtr(false),
-		MaxTries:          &whMaxTries,
-		ID:                "test",
-		ParentInterval:    stringPtr("11m"),
-		ServiceStatus:     &service_status.Status{},
-		Main:              &webhook.WebHook{},
-		Defaults:          &webhook.WebHook{},
-		HardDefaults:      &webhook.WebHook{},
+	if failing {
+		wh.Secret = "notArgus"
 	}
+	return wh
 }
 
 func testDeployedVersion() deployed_version.Lookup {

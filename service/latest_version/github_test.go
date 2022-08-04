@@ -91,8 +91,8 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -162,13 +162,13 @@ func TestFilterGitHubReleases(t *testing.T) {
 
 			// THEN only the expected releases are kept
 			if len(tc.want) != len(filteredReleases) {
-				t.Fatalf("%s:\nLength not the same\nwant: %v\ngot:  %v",
-					name, tc.want, filteredReleases)
+				t.Fatalf("Length not the same\nwant: %v\ngot:  %v",
+					tc.want, filteredReleases)
 			}
 			for i := range tc.want {
 				if tc.want[i] != filteredReleases[i].TagName {
-					t.Fatalf("%s:\ngot unexpected release %v\nwant: %v\ngot:  %v",
-						name, filteredReleases[i], tc.want, filteredReleases)
+					t.Fatalf("got unexpected release %v\nwant: %v\ngot:  %v",
+						filteredReleases[i], tc.want, filteredReleases)
 				}
 			}
 		})

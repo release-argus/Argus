@@ -70,17 +70,17 @@ func TestSliceTrack(t *testing.T) {
 			for i := range *slice {
 				if !utils.Contains(tc.ordering, i) {
 					if (*slice)[i].Status.LatestVersion != "" {
-						t.Fatalf("%s:\ndidn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
-							name, i, tc.ordering, (*slice)[i].Status)
+						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
+							i, tc.ordering, (*slice)[i].Status)
 					}
 				} else if utils.EvalNilPtr((*slice)[i].Options.Active, true) {
 					if (*slice)[i].Status.LatestVersion == "" {
-						t.Fatalf("%s:\nexpected Query to have found a LatestVersion\n%#v",
-							name, (*slice)[i].Status)
+						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
+							(*slice)[i].Status)
 					}
 				} else if (*slice)[i].Status.LatestVersion != "" {
-					t.Fatalf("%s:\ndidn't expect Query to have done anything for %s\n%#v",
-						name, i, (*slice)[i].Status)
+					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
+						i, (*slice)[i].Status)
 				}
 			}
 		})
@@ -119,12 +119,12 @@ func TestServiceTrack(t *testing.T) {
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", // db: 1 for latest, 1 for deployed
 			wantAnnounces: 1, wantDatabaseMesages: 2}, // announce: 1 for latest query
 		"query finds a newer version and updates LatestVersion and not DeployedVersion": {urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook:            testWebHookSuccessful(),
+			webhook:            testWebHook(false),
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.1", // db: 1 for latest
 			wantAnnounces: 1, wantDatabaseMesages: 1}, // announce: 1 for latest query
 		"query finds a newer version does send webhooks if autoApprove enabled": {urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook: testWebHookSuccessful(), autoApprove: true,
+			webhook: testWebHook(false), autoApprove: true,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", // db: 1 for latest, 1 for deployed
 			wantAnnounces: 2, wantDatabaseMesages: 2}, // announce: 1 for latest query, 1 for deployed
@@ -161,7 +161,7 @@ func TestServiceTrack(t *testing.T) {
 		"track gets DeployedVersion that's newer updates LatestVersion too": {keepDeployedLookup: true, deployedVersionJSON: "foo.bar.version", ignoreLivenessMetric: true, // ignore as deployed lookup may be done before
 			startLatestVersion: "1.2.2", startDeployedVersion: "0.0.0",
 			wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", // db: 1 for latest change, 1 for deployed change
-			wantAnnounces: 2, wantDatabaseMesages: 2}, // announce: 0 for latest query (as <latestVersion), 1 for latest change, 1 for deployed change
+			wantAnnounces: 3, wantDatabaseMesages: 2}, // announce: 1 for latest query (as <latestVersion), 1 for latest change, 1 for deployed change
 	}
 
 	for name, tc := range tests {
@@ -198,33 +198,49 @@ func TestServiceTrack(t *testing.T) {
 				service.Track()
 				didFinish <- true
 			}()
-			time.Sleep(time.Second)
+			haveQueried := false
+			for haveQueried != false {
+				passQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
+				failQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
+				if passQ != float64(0) && failQ != float64(0) {
+					haveQueried = true
+					if tc.keepDeployedLookup {
+						passQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
+						failQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
+						// if deployedVersionLookup hasn't queried, reset haveQueried
+						if passQ == float64(0) && failQ == float64(0) {
+							haveQueried = false
+						}
+					}
+				}
+				time.Sleep(time.Second)
+			}
+			time.Sleep(5 * time.Second)
 
 			// THEN the scrape updates the Status correctly
 			if tc.wantLatestVersion != service.Status.LatestVersion || tc.wantDeployedVersion != service.Status.DeployedVersion {
-				t.Fatalf("%s:\nLatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
-					name, tc.wantLatestVersion, service.Status.LatestVersion, tc.wantDeployedVersion, service.Status.DeployedVersion)
+				t.Fatalf("LatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
+					tc.wantLatestVersion, service.Status.LatestVersion, tc.wantDeployedVersion, service.Status.DeployedVersion)
 			}
 			// LatestVersionQueryMetric
 			gotMetric := testutil.ToFloat64(metrics.LatestVersionQueryLiveness.WithLabelValues(service.ID))
 			if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
-				t.Errorf("%s:\nLatestVersionQueryLiveness should be %d, not %f",
-					name, tc.livenessMetric, gotMetric)
+				t.Errorf("LatestVersionQueryLiveness should be %d, not %f",
+					tc.livenessMetric, gotMetric)
 			}
 			// AnnounceChannel
 			if tc.wantAnnounces != len(*service.Status.AnnounceChannel) {
-				t.Errorf("%s:\nexpected AnnounceChannel to have %d messages in queue, not %d",
-					name, tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
 			}
 			// DatabaseChannel
 			if tc.wantDatabaseMesages != len(*service.Status.DatabaseChannel) {
-				t.Errorf("%s:\nexpected DatabaseChannel to have %d messages in queue, not %d",
-					name, tc.wantDatabaseMesages, len(*service.Status.DatabaseChannel))
+				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
+					tc.wantDatabaseMesages, len(*service.Status.DatabaseChannel))
 			}
 			// Track should never finish
 			if len(didFinish) != 0 {
-				t.Fatalf("%s:\ndidn't expect Track to finish",
-					name)
+				t.Fatal("didn't expect Track to finish")
 			}
 		})
 	}

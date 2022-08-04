@@ -17,7 +17,6 @@ package command
 import (
 	"encoding/json"
 
-	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -34,15 +33,12 @@ func (c *Controller) AnnounceCommand(index int) {
 
 	// Command success/fail
 	var payloadData []byte
-	wsPage := "APPROVALS"
-	wsType := "COMMAND"
-	wsSubType := "EVENT"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "COMMAND",
+		SubType: "EVENT",
 		ServiceData: &api_types.ServiceSummary{
-			ID: utils.DefaultIfNil(c.ServiceStatus.ServiceID),
+			ID: *c.ServiceStatus.ServiceID,
 		},
 		CommandData: commandSummary,
 	})

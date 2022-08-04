@@ -15,14 +15,18 @@
 package deployed_version
 
 import (
+	"io"
+	"os"
 	"regexp"
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/web/metrics"
 )
 
 func TestGetAllowInvalidCerts(t *testing.T) {
@@ -53,8 +57,8 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.wantBool, got)
 			}
 		})
 	}
@@ -85,8 +89,8 @@ func TestHTTPRequest(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -141,16 +145,16 @@ func TestQuery(t *testing.T) {
 				re := regexp.MustCompile(tc.wantVersion)
 				match := re.MatchString(version)
 				if !match {
-					t.Errorf("%s:\nwant version=%q\ngot  version=%q",
-						name, tc.wantVersion, version)
+					t.Errorf("want version=%q\ngot  version=%q",
+						tc.wantVersion, version)
 				}
 			}
 			e := utils.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -175,36 +179,39 @@ func TestTrack(t *testing.T) {
 		wantDatabaseMesages  int
 	}{
 		"nil Lookup exits immediately": {lookup: nil, wait: 10 * time.Millisecond, expectFinish: true},
-		"get semantic version with regex": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get semantic version with regex": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get semantic version from json": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get semantic version from json": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get semantic version from multi-level json": {startLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", wait: 500 * time.Millisecond,
+		"get semantic version from multi-level json": {startLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "foo.bar.version"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"reject non-semantic versions": {wantDeployedVersion: "", wait: 500 * time.Millisecond,
+		"reject non-semantic versions": {wantDeployedVersion: "",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
-		"allow non-semantic version": {startLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2", wait: 500 * time.Millisecond,
+		"allow non-semantic version": {startLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "([^"]+)`}, semanticVersioning: false, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get version behind basic auth": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond, basicAuth: &BasicAuth{Username: "test", Password: "123"},
+		"get version behind basic auth": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", basicAuth: &BasicAuth{Username: "test", Password: "123"},
 			lookup: &Lookup{URL: "https://valid.release-argus.io/basic-auth", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get version behind an invalid cert": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get version behind an invalid cert": {startLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: true, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"fail due to an unallowed invalid cert": {startLatestVersion: "", wantDeployedVersion: "", wait: 500 * time.Millisecond,
+		"fail due to an unallowed invalid cert": {startLatestVersion: "", wantDeployedVersion: "",
 			lookup: &Lookup{URL: "https://invalid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, allowInvalidCerts: false, semanticVersioning: true, wantDatabaseMesages: 0, wantAnnounces: 0},
-		"update from an older version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.1", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"update from an older version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.1", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"update from a newer version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"update from a newer version": {startLatestVersion: "1.2.2", startDeployedVersion: "1.2.3", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/plain", Regex: `non-semantic: "v([^"]+)`}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get a newer deployed version than latest version updates both": {startLatestVersion: "1.2.1", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get a newer deployed version than latest version updates both": {startLatestVersion: "1.2.1", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 2, wantAnnounces: 2},
-		"get a older deployed version than latest version only updates deployed": {startLatestVersion: "1.2.3", wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get a older deployed version than latest version only updates deployed": {startLatestVersion: "1.2.3", wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 1, wantAnnounces: 1},
-		"get a deployed version with no latest version updates both": {startLatestVersion: "", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2", wait: 500 * time.Millisecond,
+		"get a deployed version with no latest version updates both": {startLatestVersion: "", wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			lookup: &Lookup{URL: "https://valid.release-argus.io/json", JSON: "bar"}, semanticVersioning: true, wantDatabaseMesages: 2, wantAnnounces: 2},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 			if tc.lookup != nil {
 				defaults := &Lookup{}
 				dbChannel := make(chan db_types.Message, 4)
@@ -228,6 +235,8 @@ func TestTrack(t *testing.T) {
 					DatabaseChannel: &dbChannel,
 					WebURL:          webURL,
 				}
+				metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "SUCCESS")
+				metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "FAIL")
 			}
 			didFinish := make(chan bool, 1)
 
@@ -241,29 +250,43 @@ func TestTrack(t *testing.T) {
 			time.Sleep(tc.wait)
 			if tc.expectFinish {
 				if len(didFinish) == 0 {
-					t.Fatalf("%s:\nexpected Track to finish in %s, but it didn't",
-						name, tc.wait)
+					t.Fatalf("expected Track to finish in %s, but it didn't",
+						tc.wait)
 				}
 				return
 			}
+			haveQueried := false
+			for haveQueried != false {
+				passQ := testutil.ToFloat64(metrics.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "SUCCESS"))
+				failQ := testutil.ToFloat64(metrics.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "FAIL"))
+				if passQ != float64(0) && failQ != float64(0) {
+					haveQueried = true
+				}
+				time.Sleep(time.Second)
+			}
+			time.Sleep(5 * time.Second)
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = stdout
+			t.Log(string(out))
 			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion {
-				t.Errorf("%s:\nexpected DeployedVersion to be %q after query, not %q",
-					name, tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion)
+				t.Errorf("expected DeployedVersion to be %q after query, not %q",
+					tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion)
 			}
 			if tc.wantLatestVersion == "" {
 				tc.wantLatestVersion = tc.wantDeployedVersion
 			}
 			if tc.wantLatestVersion != tc.lookup.Status.LatestVersion {
-				t.Errorf("%s:\nexpected LatestVersion to be %q after query, not %q",
-					name, tc.wantLatestVersion, tc.lookup.Status.LatestVersion)
+				t.Errorf("expected LatestVersion to be %q after query, not %q",
+					tc.wantLatestVersion, tc.lookup.Status.LatestVersion)
 			}
 			if tc.wantAnnounces != len(*tc.lookup.Status.AnnounceChannel) {
-				t.Errorf("%s:\nexpected AnnounceChannel to have %d messages in queue, not %d",
-					name, tc.wantAnnounces, len(*tc.lookup.Status.AnnounceChannel))
+				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
+					tc.wantAnnounces, len(*tc.lookup.Status.AnnounceChannel))
 			}
 			if tc.wantDatabaseMesages != len(*tc.lookup.Status.DatabaseChannel) {
-				t.Errorf("%s:\nexpected DatabaseChannel to have %d messages in queue, not %d",
-					name, tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
+				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
+					tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
 			}
 		})
 	}

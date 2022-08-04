@@ -37,11 +37,10 @@ func (api *API) wsService(client *Client) {
 	responseType := "SERVICE"
 
 	// Send the ordering
-	responseSubType := "ORDERING"
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    responsePage,
+		Type:    responseType,
+		SubType: "ORDERING",
 		Order:   api.Config.Order,
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
@@ -50,7 +49,6 @@ func (api *API) wsService(client *Client) {
 	}
 
 	// Initialise the services
-	responseSubType = "INIT"
 	for _, key := range *api.Config.Order {
 		// Check Service still exists in this ordering
 		if api.Config.Service[key] == nil {
@@ -83,9 +81,9 @@ func (api *API) wsService(client *Client) {
 
 		// Create and send ServiceSummary
 		msg := api_types.WebSocketMessage{
-			Page:        &responsePage,
-			Type:        &responseType,
-			SubType:     &responseSubType,
+			Page:        responsePage,
+			Type:        responseType,
+			SubType:     "INIT",
 			ServiceData: &serviceSummary,
 		}
 		if err := client.conn.WriteJSON(msg); err != nil {
@@ -178,15 +176,9 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	// Create and send commandSummary
-	responsePage := "APPROVALS"
-	responseType := "COMMAND"
-	responseSubType := "SUMMARY"
-
 	commandSummary := make(map[string]*api_types.CommandSummary, len(api.Config.Service[id].Command))
 	for key := range *api.Config.Service[id].CommandController.Command {
 		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(&api.Config.Service[id].Status)
-		fmt.Printf("%d - %v\n", key, api.Config.Service[id].Status.Fails.Command)
-		fmt.Printf("%d - %v\n", key, api.Config.Service[id].CommandController.NextRunnable)
 		commandSummary[command.String()] = &api_types.CommandSummary{
 			Failed:       api.Config.Service[id].Status.Fails.Command[key],
 			NextRunnable: api.Config.Service[id].CommandController.NextRunnable[key],
@@ -194,9 +186,9 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "APPROVALS",
+		Type:    "COMMAND",
+		SubType: "SUMMARY",
 		ServiceData: &api_types.ServiceSummary{
 			ID: id,
 		},
@@ -230,9 +222,6 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	// Create and send webhookSummary
-	responsePage := "APPROVALS"
-	responseType := "WEBHOOK"
-	responseSubType := "SUMMARY"
 	webhookSummary := make(map[string]*api_types.WebHookSummary, len(api.Config.Service[id].WebHook))
 
 	for key := range api.Config.Service[id].WebHook {
@@ -243,9 +232,9 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "APPROVALS",
+		Type:    "WEBHOOK",
+		SubType: "SUMMARY",
 		ServiceData: &api_types.ServiceSummary{
 			ID: id,
 		},
@@ -262,8 +251,6 @@ func (api *API) wsStatus(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "RUNTIME_BUILD"
-	responseType := "INIT"
 	info := api_types.Info{
 		Build: api_types.BuildInfo{
 			Version:   utils.Version,
@@ -281,8 +268,8 @@ func (api *API) wsStatus(client *Client) {
 	}
 
 	msg := api_types.WebSocketMessage{
-		Page:     &responsePage,
-		Type:     &responseType,
+		Page:     "RUNTIME_BUILD",
+		Type:     "INIT",
 		InfoData: &info,
 	}
 	if err := client.conn.WriteJSON(msg); err != nil {
@@ -296,11 +283,9 @@ func (api *API) wsFlags(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "FLAGS"
-	responseType := "INIT"
 	msg := api_types.WebSocketMessage{
-		Page: &responsePage,
-		Type: &responseType,
+		Page: "FLAGS",
+		Type: "INIT",
 		FlagsData: &api_types.Flags{
 			ConfigFile:       &api.Config.File,
 			LogLevel:         api.Config.Settings.GetLogLevel(),
@@ -324,14 +309,10 @@ func (api *API) wsConfigSettings(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "SETTINGS"
-	responseSubType := "INIT"
-
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "CONFIG",
+		Type:    "SETTINGS",
+		SubType: "INIT",
 		ConfigData: &api_types.Config{
 			Settings: &api_types.Settings{
 				Log: api_types.LogSettings{
@@ -359,17 +340,13 @@ func (api *API) wsConfigDefaults(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "DEFAULTS"
-	responseSubType := "INIT"
-
 	notifyDefaults := convertNotifySliceToAPITypeNotifySlice(&api.Config.Defaults.Notify)
 	webhookDefaults := convertWebHookToAPITypeWebHook(&api.Config.Defaults.WebHook)
 
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "CONFIG",
+		Type:    "DEFAULTS",
+		SubType: "INIT",
 		ConfigData: &api_types.Config{
 			Defaults: &api_types.Defaults{
 				Service: api_types.Service{
@@ -407,14 +384,10 @@ func (api *API) wsConfigNotify(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "NOTIFY"
-	responseSubType := "INIT"
-
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "CONFIG",
+		Type:    "NOTIFY",
+		SubType: "INIT",
 		ConfigData: &api_types.Config{
 			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify),
 		},
@@ -430,14 +403,10 @@ func (api *API) wsConfigWebHook(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "WEBHOOK"
-	responseSubType := "INIT"
-
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "CONFIG",
+		Type:    "WEBHOOK",
+		SubType: "INIT",
 		ConfigData: &api_types.Config{
 			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook),
 		},
@@ -453,10 +422,6 @@ func (api *API) wsConfigService(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	responsePage := "CONFIG"
-	responseType := "SERVICE"
-	responseSubType := "INIT"
-
 	serviceConfig := make(api_types.ServiceSlice)
 	if api.Config.Service != nil {
 		for _, key := range api.Config.All {
@@ -503,9 +468,9 @@ func (api *API) wsConfigService(client *Client) {
 	}
 
 	msg := api_types.WebSocketMessage{
-		Page:    &responsePage,
-		Type:    &responseType,
-		SubType: &responseSubType,
+		Page:    "CONFIG",
+		Type:    "SERVICE",
+		SubType: "INIT",
 		ConfigData: &api_types.Config{
 			Service: &serviceConfig,
 			Order:   api.Config.All,

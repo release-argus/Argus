@@ -40,7 +40,7 @@ func TestGetAccessToken(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
+			lookup := testLookup(false, false)
 			lookup.AccessToken = tc.accessTokenRoot
 			(*lookup.Defaults).AccessToken = tc.accessTokenDefault
 			(*lookup.HardDefaults).AccessToken = tc.accessTokenHardDefault
@@ -50,11 +50,11 @@ func TestGetAccessToken(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got == nil {
-				t.Errorf("%s:\nwant: %q\ngot:  %v",
-					name, tc.wantString, got)
+				t.Errorf("want: %q\ngot:  %v",
+					tc.wantString, got)
 			} else if *got != tc.wantString {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.wantString, *got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.wantString, *got)
 			}
 		})
 	}
@@ -78,7 +78,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
+			lookup := testLookup(false, false)
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			(*lookup.Defaults).AllowInvalidCerts = tc.allowInvalidCertsDefault
 			(*lookup.HardDefaults).AllowInvalidCerts = tc.allowInvalidCertsHardDefault
@@ -88,8 +88,8 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.wantBool, got)
 			}
 		})
 	}
@@ -133,8 +133,8 @@ func TestGetServiceURL(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -158,7 +158,7 @@ func TestGetUsePreRelease(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			lookup := testLookupGitHub()
+			lookup := testLookup(false, false)
 			lookup.UsePreRelease = tc.usePreReleaseRoot
 			(*lookup.Defaults).UsePreRelease = tc.usePreReleaseDefault
 			(*lookup.HardDefaults).UsePreRelease = tc.usePreReleaseHardDefault
@@ -168,8 +168,8 @@ func TestGetUsePreRelease(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.wantBool, got)
 			}
 		})
 	}

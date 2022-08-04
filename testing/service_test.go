@@ -18,7 +18,7 @@ package testing
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"testing"
@@ -158,8 +158,8 @@ func TestServiceTest(t *testing.T) {
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
 					if !match {
-						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
-							name, *tc.panicRegex, rStr)
+						t.Errorf("expected a panic that matched %q\ngot: %q",
+							*tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -192,15 +192,15 @@ func TestServiceTest(t *testing.T) {
 
 			// THEN we get the expected output
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			if tc.outputRegex != nil {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nwant match on %q\ngot:\n%s",
-						name, *tc.outputRegex, output)
+					t.Errorf("want match on %q\ngot:\n%s",
+						*tc.outputRegex, output)
 				}
 			}
 		})

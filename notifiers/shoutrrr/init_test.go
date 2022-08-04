@@ -87,13 +87,13 @@ func TestInitOptions(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase
 			if len(tc.want) != len(shoutrrr.Options) {
-				t.Fatalf("%s - Options:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.Options)
+				t.Fatalf("want: %v\ngot: %v",
+					tc.want, shoutrrr.Options)
 			}
 			for key := range tc.want {
 				if tc.want[key] != shoutrrr.Options[key] {
-					t.Fatalf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
+					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
 				}
 			}
 		})
@@ -123,13 +123,13 @@ func TestInitURLFields(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase
 			if len(tc.want) != len(shoutrrr.URLFields) {
-				t.Fatalf("%s - URLFields:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.URLFields)
+				t.Fatalf("want: %v\ngot: %v",
+					tc.want, shoutrrr.URLFields)
 			}
 			for key := range tc.want {
 				if tc.want[key] != shoutrrr.URLFields[key] {
-					t.Fatalf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
+					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
 				}
 			}
 		})
@@ -159,13 +159,13 @@ func TestInitParams(t *testing.T) {
 
 			// THEN the keys in the map will have been converted to lowercase
 			if len(tc.want) != len(shoutrrr.Params) {
-				t.Fatalf("%s - Params:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.Params)
+				t.Fatalf("want: %v\ngot: %v",
+					tc.want, shoutrrr.Params)
 			}
 			for key := range tc.want {
 				if tc.want[key] != shoutrrr.Params[key] {
-					t.Fatalf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
+					t.Fatalf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
 				}
 			}
 		})
@@ -203,35 +203,35 @@ func TestInitMaps(t *testing.T) {
 			// THEN the keys in the options/urlfields/params maps will have been converted to lowercase
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
-					t.Fatalf("%s:\nnil shoutrrr should still be nil, not %v",
-						name, shoutrrr)
+					t.Fatalf("nil shoutrrr should still be nil, not %v",
+						shoutrrr)
 				}
 				return
 			}
 			if len(tc.want) != len(shoutrrr.Options) {
-				t.Fatalf("%s - Options:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.Options)
+				t.Fatalf("Options:\nwant: %v\ngot: %v",
+					tc.want, shoutrrr.Options)
 			}
 			if len(tc.want) != len(shoutrrr.URLFields) {
-				t.Fatalf("%s - URLFields:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.URLFields)
+				t.Fatalf("URLFields:\nwant: %v\ngot: %v",
+					tc.want, shoutrrr.URLFields)
 			}
 			if len(tc.want) != len(shoutrrr.Params) {
-				t.Fatalf("%s - Params:\nwant: %v\ngot: %v",
-					name, tc.want, shoutrrr.Params)
+				t.Fatalf("Params:\nwant: %v\ngot: %v",
+					tc.want, shoutrrr.Params)
 			}
 			for key := range tc.want {
 				if tc.want[key] != shoutrrr.Options[key] {
-					t.Fatalf("%s - Options:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
+					t.Fatalf("Options:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
 				}
 				if tc.want[key] != shoutrrr.URLFields[key] {
-					t.Fatalf("%s - URLFields:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
+					t.Fatalf("URLFields:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.URLFields[key], tc.want, shoutrrr.URLFields)
 				}
 				if tc.want[key] != shoutrrr.Params[key] {
-					t.Fatalf("%s - Params:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
+					t.Fatalf("Params:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Params[key], tc.want, shoutrrr.Params)
 				}
 			}
 		})
@@ -289,13 +289,13 @@ func TestShoutrrrInit(t *testing.T) {
 			// initMetrics - counters
 			gotC := testutil.CollectAndCount(metrics.NotifyMetric)
 			if (gotC - hadC) != tc.metricCount {
-				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
-					name, (gotC - hadC), tc.metricCount)
+				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+					(gotC - hadC), tc.metricCount)
 			}
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
-					t.Fatalf("%s:\nnil shoutrrr should still be nil, not %v",
-						name, shoutrrr)
+					t.Fatalf("nil shoutrrr should still be nil, not %v",
+						shoutrrr)
 				}
 				return
 			}
@@ -323,16 +323,16 @@ func TestShoutrrrInit(t *testing.T) {
 			}
 			for key := range tc.want {
 				if tc.want[key] != shoutrrr.Options[key] {
-					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
+					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Options[key], tc.want, shoutrrr.Options)
 				}
 				if tc.want[key] != shoutrrr.Defaults.URLFields[key] {
-					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.Defaults.URLFields[key], tc.want, shoutrrr.Defaults.URLFields)
+					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.Defaults.URLFields[key], tc.want, shoutrrr.Defaults.URLFields)
 				}
 				if tc.want[key] != shoutrrr.HardDefaults.Params[key] {
-					t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-						name, key, tc.want[key], key, shoutrrr.HardDefaults.Params[key], tc.want, shoutrrr.HardDefaults.Params)
+					t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+						key, tc.want[key], key, shoutrrr.HardDefaults.Params[key], tc.want, shoutrrr.HardDefaults.Params)
 				}
 			}
 		})
@@ -404,13 +404,13 @@ func TestSliceInit(t *testing.T) {
 				wantMetrics = 2 * len(*tc.slice)
 			}
 			if (gotC - hadC) != wantMetrics {
-				t.Errorf("%s:\n%d Counter metrics's were initialised, expecting %d",
-					name, (gotC - hadC), wantMetrics)
+				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+					(gotC - hadC), wantMetrics)
 			}
 			if tc.nilSlice {
 				if tc.slice != nil {
-					t.Fatalf("%s:\nnil shoutrrr should still be nil, not %v",
-						name, tc.slice)
+					t.Fatalf("nil shoutrrr should still be nil, not %v",
+						tc.slice)
 				}
 				return
 			}
@@ -442,16 +442,16 @@ func TestSliceInit(t *testing.T) {
 				}
 				for key := range tc.want {
 					if tc.want[key] != (*tc.slice)[id].Options[key] {
-						t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-							name, key, tc.want[key], key, (*tc.slice)[id].Options[key], tc.want, (*tc.slice)[id].Options)
+						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+							key, tc.want[key], key, (*tc.slice)[id].Options[key], tc.want, (*tc.slice)[id].Options)
 					}
 					if tc.want[key] != (*tc.slice)[id].Defaults.URLFields[key] {
-						t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-							name, key, tc.want[key], key, (*tc.slice)[id].Defaults.URLFields[key], tc.want, (*tc.slice)[id].Defaults.URLFields)
+						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+							key, tc.want[key], key, (*tc.slice)[id].Defaults.URLFields[key], tc.want, (*tc.slice)[id].Defaults.URLFields)
 					}
 					if tc.want[key] != (*tc.slice)[id].HardDefaults.Params[key] {
-						t.Errorf("%s:\nwant: %q:%q\ngot:  %q:%q\n%v\n%v",
-							name, key, tc.want[key], key, (*tc.slice)[id].HardDefaults.Params[key], tc.want, (*tc.slice)[id].HardDefaults.Params)
+						t.Errorf("want: %q:%q\ngot:  %q:%q\n%v\n%v",
+							key, tc.want[key], key, (*tc.slice)[id].HardDefaults.Params[key], tc.want, (*tc.slice)[id].HardDefaults.Params)
 					}
 				}
 			}

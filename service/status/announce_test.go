@@ -101,8 +101,8 @@ func TestAnnounceQuery(t *testing.T) {
 					got.ServiceData.ID, wantID, got.ServiceData.Status)
 			}
 			if got.ServiceData.Status.LastQueried != wantLastQueried {
-				t.Errorf("%s:\nLastQueried - got %q, want %q",
-					name, got.ServiceData.Status.LatestVersion, wantLastQueried)
+				t.Errorf("LastQueried - got %q, want %q",
+					got.ServiceData.Status.LatestVersion, wantLastQueried)
 			}
 		})
 	}
@@ -142,12 +142,12 @@ func TestAnnounceQueryNewVersion(t *testing.T) {
 					got.ServiceData.ID, wantID, got.ServiceData.Status)
 			}
 			if got.ServiceData.Status.LatestVersion != wantLatestVersion {
-				t.Errorf("%s:\nLatestVersion - got %q, want %q",
-					name, got.ServiceData.Status.LatestVersion, wantLatestVersion)
+				t.Errorf("LatestVersion - got %q, want %q",
+					got.ServiceData.Status.LatestVersion, wantLatestVersion)
 			}
 			if got.ServiceData.Status.LatestVersionTimestamp != wantLatestVersionTimestamp {
-				t.Errorf("%s:\nLatestVersionTimestamp - got %q, want %q\n%#v",
-					name, got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp, got.ServiceData.Status)
+				t.Errorf("LatestVersionTimestamp - got %q, want %q\n%#v",
+					got.ServiceData.Status.LatestVersionTimestamp, wantLatestVersionTimestamp, got.ServiceData.Status)
 			}
 		})
 	}
@@ -187,12 +187,12 @@ func TestAnnounceUpdate(t *testing.T) {
 					got.ServiceData.ID, wantID, got.ServiceData.Status)
 			}
 			if got.ServiceData.Status.DeployedVersion != wantDeployedVersion {
-				t.Errorf("%s:\nDeployedVersion - got %q, want %q",
-					name, got.ServiceData.Status.DeployedVersion, wantDeployedVersion)
+				t.Errorf("DeployedVersion - got %q, want %q",
+					got.ServiceData.Status.DeployedVersion, wantDeployedVersion)
 			}
 			if got.ServiceData.Status.DeployedVersionTimestamp != wantDeployedVersionTimestamp {
-				t.Errorf("%s:\nDeployedVersionTimestamp - got %q, want %q\n%#v",
-					name, got.ServiceData.Status.DeployedVersionTimestamp, wantDeployedVersionTimestamp, got.ServiceData.Status)
+				t.Errorf("DeployedVersionTimestamp - got %q, want %q\n%#v",
+					got.ServiceData.Status.DeployedVersionTimestamp, wantDeployedVersionTimestamp, got.ServiceData.Status)
 			}
 		})
 	}
@@ -258,8 +258,8 @@ func TestAnnounceApproved(t *testing.T) {
 					got.ServiceData.ID, wantID, got.ServiceData.Status)
 			}
 			if got.ServiceData.Status.ApprovedVersion != wantApprovedVersion {
-				t.Errorf("%s:\nApprovedVersion - got %q, want %q",
-					name, got.ServiceData.Status.LatestVersion, wantApprovedVersion)
+				t.Errorf("ApprovedVersion - got %q, want %q",
+					got.ServiceData.Status.LatestVersion, wantApprovedVersion)
 			}
 		})
 	}

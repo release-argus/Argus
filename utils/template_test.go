@@ -49,8 +49,8 @@ func TestTemplateString(t *testing.T) {
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
 					if !match {
-						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
-							name, *tc.panicRegex, rStr)
+						t.Errorf("expected a panic that matched %q\ngot: %q",
+							*tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -60,8 +60,8 @@ func TestTemplateString(t *testing.T) {
 
 			// THEN the string stays the same
 			if got != tc.want {
-				t.Errorf("%s:want: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}

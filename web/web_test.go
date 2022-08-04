@@ -19,7 +19,7 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -99,16 +99,16 @@ func TestWebAccessible(t *testing.T) {
 
 			// THEN we get a Status OK
 			if response.Code != http.StatusOK {
-				t.Errorf("%s:\nExpected a 200, got %d",
-					name, response.Code)
+				t.Errorf("Expected a 200, got %d",
+					response.Code)
 			}
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				re := regexp.MustCompile(tc.bodyRegex)
 				match := re.MatchString(body)
 				if !match {
-					t.Errorf("%s:\nexpected %q in body\ngot: %q",
-						name, tc.bodyRegex, response.Body.String())
+					t.Errorf("expected %q in body\ngot: %q",
+						tc.bodyRegex, response.Body.String())
 				}
 			}
 		})
@@ -132,28 +132,40 @@ func connectToWebSocket(t *testing.T) *websocket.Conn {
 		t.Errorf("%v",
 			err)
 	}
+	time.Sleep(10 * time.Millisecond)
 	return ws
 }
 
 // seeIfMessage will try and get a message from the WebSocket
 // if it receives no message withing 100ms, it will give up and return nil
-func seeIfMessage(t *testing.T, ws *websocket.Conn) *[]byte {
-	receiver := make(chan []byte, 4)
+func seeIfMessage(t *testing.T, ws *websocket.Conn) *api_types.WebSocketMessage {
+	var message api_types.WebSocketMessage
+	msgChan := make(chan api_types.WebSocketMessage, 1)
+	errChan := make(chan error, 1)
 	go func() {
-		_, p, _ := ws.ReadMessage()
-		receiver <- p
+		_, p, err := ws.ReadMessage()
+		json.Unmarshal(p, &message)
+		errChan <- err
+		msgChan <- message
 	}()
-	for i := 0; i < 50; i++ {
-		time.Sleep(10 * time.Millisecond)
-		if len(receiver) != 0 {
+	for i := 0; i < 120; i++ {
+		time.Sleep(50 * time.Millisecond)
+		if len(errChan) != 0 {
 			break
 		}
 	}
-	if len(receiver) == 0 {
+	if len(errChan) == 0 {
+		t.Logf("No messages received after %s", time.Duration(50*120)*time.Millisecond)
 		return nil
 	}
-	got := <-receiver
-	return &got
+	time.Sleep(time.Millisecond)
+	err := <-errChan
+	if err != nil {
+		t.Logf("err - %s", err.Error())
+		return nil
+	}
+	msg := <-msgChan
+	return &msg
 }
 
 func TestWebSocket(t *testing.T) {
@@ -165,7 +177,7 @@ func TestWebSocket(t *testing.T) {
 	}{
 		"no version":                   {msg: `{"key": "value"}`, stdoutRegex: "^$"},
 		"invalid JSON":                 {msg: `{"version": 1, "key": "value"`, stdoutRegex: "missing/invalid version key"},
-		"unknown page":                 {msg: `{"version": 1, "page": "", "type": "value"}`, stdoutRegex: "Unknown PAGE"},
+		"unknown page":                 {msg: `{"version": 1, "page": "foo", "type": "value"}`, stdoutRegex: "Unknown PAGE"},
 		"APPROVALS - unknown type":     {msg: `{"version": 1, "page": "APPROVALS", "type": "value"}`, stdoutRegex: "Unknown APPROVALS Type"},
 		"RUNTIME_BUILD - unknown type": {msg: `{"version": 1, "page": "RUNTIME_BUILD", "type": "value"}`, stdoutRegex: "Unknown RUNTIME_BUILD Type"},
 		"FLAGS - unknown type":         {msg: `{"version": 1, "page": "FLAGS", "type": "value"}`, stdoutRegex: "Unknown FLAGS Type"},
@@ -189,14 +201,14 @@ func TestWebSocket(t *testing.T) {
 
 			// THEN we receive the expected response
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			re := regexp.MustCompile(tc.stdoutRegex)
 			match := re.MatchString(output)
 			if !match {
-				t.Errorf("%s:\nmatch on %q not found in\n%q",
-					name, tc.stdoutRegex, output)
+				t.Errorf("match on %q not found in\n%q",
+					tc.stdoutRegex, output)
 			}
 		})
 	}
@@ -219,53 +231,46 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 			defer ws.Close()
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: stringPtr("APPROVALS"), Type: stringPtr("INIT")}
+			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "INIT"}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-				t.Fatalf("%s:\nerror sending message\n%s",
-					name, err.Error())
+				t.Fatalf("error sending message\n%s",
+					err.Error())
 			}
 
 			// THEN we get the expected responses
 			// ORDERING
-			p := seeIfMessage(t, ws)
+			message := seeIfMessage(t, ws)
 			cfg.Order = order
-			var receivedMsg api_types.WebSocketMessage
-			json.Unmarshal(*p, &receivedMsg)
-			if receivedMsg.Order == nil || len(*receivedMsg.Order) != len(tc.order) {
-				t.Fatalf("%s:\nwant order=%#v\ngot  order=%#v",
-					name, tc.order, *receivedMsg.Order)
+			if message.Order == nil || len(*message.Order) != len(tc.order) {
+				t.Fatalf("want order=%#v\ngot  order=%#v",
+					tc.order, *message.Order)
 			}
 			for i := range tc.order {
-				if tc.order[i] != (*receivedMsg.Order)[i] {
-					t.Fatalf("%s:\nwant order=%#v\ngot  order=%#v",
-						name, tc.order, *receivedMsg.Order)
+				if tc.order[i] != (*message.Order)[i] {
+					t.Fatalf("want order=%#v\ngot  order=%#v",
+						tc.order, *message.Order)
 				}
 			}
 			// SERVICE
-			receivedOrder := *receivedMsg.Order
+			receivedOrder := *message.Order
 			for _, key := range receivedOrder {
 				if cfg.Service[key] == nil {
 					continue
 				}
-				p := seeIfMessage(t, ws)
-				if p == nil {
-					t.Fatalf("%s:\nexpecting another message but didn't get one",
-						name)
+				message = seeIfMessage(t, ws)
+				if message == nil {
+					t.Fatal("expecting another message but didn't get one")
 				}
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				if receivedMsg.ServiceData == nil {
-					t.Errorf("%s:\nbad message, didn't contain ServiceData for %q",
-						name, key)
+				if message.ServiceData == nil {
+					t.Errorf("bad message, didn't contain ServiceData for %q",
+						key)
 				}
 			}
-			p = seeIfMessage(t, ws)
-			if p != nil {
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				t.Fatalf("%s:\nwasn't expecting another message but got one\n%#v",
-					name, receivedMsg)
+			message = seeIfMessage(t, ws)
+			if message != nil {
+				t.Fatalf("wasn't expecting another message but got one\n%#v",
+					message)
 			}
 		})
 	}
@@ -273,10 +278,11 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 
 func TestWebSocketApprovalsVERSION(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
-	testLogging("WARN")
+	testLogging("VERBOSE", true)
 	tests := map[string]struct {
 		serviceID                   string
 		target                      *string
+		wantSkipMessage             bool
 		stdoutRegex                 string
 		bodyRegex                   string
 		commands                    command.Slice
@@ -284,44 +290,55 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 		webhooks                    webhook.Slice
 		webhookFails                map[string]*bool
 		removeDVL                   bool
+		latestVersion               string
+		latestVersionIsApproved     bool
 		upgradesApprovedVersion     bool
 		upgradesDeployedVersion     bool
 		approveCommandsIndividually bool
 	}{
-		"target=ARGUS_SKIP service_id=known": {serviceID: "test", target: stringPtr("ARGUS_SKIP")},
-		"target=ARGUS_SKIP service_id=unknown": {serviceID: "unknown?", target: stringPtr("ARGUS_SKIP"),
+		"ARGUS_SKIP known service_id": {serviceID: "test", target: stringPtr("ARGUS_SKIP"), wantSkipMessage: true},
+		"ARGUS_SKIP unknown service_id": {serviceID: "unknown?", target: stringPtr("ARGUS_SKIP"),
 			stdoutRegex: "service not found"},
-		"target=ARGUS_SKIP service_id=''": {serviceID: "", target: stringPtr("ARGUS_SKIP"),
+		"ARGUS_SKIP empty service_id": {serviceID: "", target: stringPtr("ARGUS_SKIP"),
 			stdoutRegex: "service_data.id not provided"},
-		"target=nil, service_id=known": {serviceID: "test", target: nil,
+		"target=nil, known service_id": {serviceID: "test", target: nil,
 			stdoutRegex: "target for command/webhook not provided"},
-		"target=ARGUS_ALL, service_id=known - service has no commands/webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"), stdoutRegex: "does not have any commands/webhooks to approve"},
-		"target=ARGUS_ALL, service_id=known - service has command": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"false"}}},
-		"target=ARGUS_ALL, service_id=known - service has webhook": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"0": testWebHookFail("0")}},
-		"target=ARGUS_ALL, service_id=known - service has multiple webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"0": testWebHookFail("0"), "1": testWebHookFail("1")}},
-		"target=ARGUS_ALL, service_id=known - service has multiple commands": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls"}, {"false"}}},
-		"target=ARGUS_ALL, service_id=known - service with dvl and command and webhook that pass upgrades approved_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls"}}, webhooks: webhook.Slice{"0": testWebHookPass("0")}, upgradesApprovedVersion: true},
-		"target=ARGUS_ALL, service_id=known - service with command and webhook that pass upgrades deployed_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls"}}, webhooks: webhook.Slice{"0": testWebHookPass("0")}, removeDVL: true, upgradesDeployedVersion: true},
-		"target=ARGUS_ALL, service_id=known - service with passing command and failing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls"}}, webhooks: webhook.Slice{"0": testWebHookFail("0")}},
-		"target=ARGUS_ALL, service_id=known - service with failing command and passing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"fail"}}, webhooks: webhook.Slice{"0": testWebHookPass("0")}},
-		"target=webhook_only_failed, service_id=known - service with 1 webhook left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("webhook_only_failed"),
-			commands: command.Slice{{"ls"}}, commandFails: []*bool{boolPtr(false)},
-			webhooks: webhook.Slice{"only_failed": testWebHookPass("only_failed"), "would_fail": testWebHookFail("would_fail")}, webhookFails: map[string]*bool{"only_failed": boolPtr(true), "would_fail": boolPtr(false)},
-			removeDVL: true, upgradesDeployedVersion: true},
-		"target=command_ls, service_id=known - service with 1 command left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("command_ls"),
-			commands: command.Slice{{"ls", "/root"}, {"ls"}}, commandFails: []*bool{boolPtr(false), boolPtr(true)},
-			webhooks: webhook.Slice{"would_fail": testWebHookFail("would_fail")}, webhookFails: map[string]*bool{"would_fail": boolPtr(false)},
-			removeDVL: true, upgradesDeployedVersion: true},
-		"target=command_x, service_id=known - service has multiple commands targeted individually (handle broadcast queue)": {serviceID: "test",
-			commands: command.Slice{{"ls"}, {"false"}, {"true"}}, approveCommandsIndividually: true},
+		"ARGUS_ALL, known service_id with no commands/webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"), stdoutRegex: "does not have any commands/webhooks to approve"},
+		"ARGUS_ALL, known service_id with command": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands: command.Slice{{"false", "0"}}},
+		"ARGUS_ALL, known service_id with webhook": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")}},
+		"ARGUS_ALL, known service_id with multiple webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"), "known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")}},
+		"ARGUS_ALL, known service_id with multiple commands": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands: command.Slice{{"ls", "-a"}, {"false", "1"}}},
+		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands:                command.Slice{{"ls", "-b"}},
+			webhooks:                webhook.Slice{"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
+			upgradesApprovedVersion: true, latestVersion: "0.9.0"},
+		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands:  command.Slice{{"ls", "-c"}},
+			webhooks:  webhook.Slice{"known-service-upgrade-deployed-version-webhook-0": testWebHook(false, "known-service-upgrade-deployed-version-webhook-0")},
+			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
+		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands:                command.Slice{{"ls", "-d"}},
+			webhooks:                webhook.Slice{"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
+			latestVersionIsApproved: true},
+		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
+			commands:                command.Slice{{"fail"}},
+			webhooks:                webhook.Slice{"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
+			latestVersionIsApproved: true},
+		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("webhook_will_pass"),
+			commands: command.Slice{{"ls", "-f"}}, commandFails: []*bool{boolPtr(false)},
+			webhooks:     webhook.Slice{"will_pass": testWebHook(false, "will_pass"), "would_fail": testWebHook(true, "would_fail")},
+			webhookFails: map[string]*bool{"will_pass": boolPtr(true), "would_fail": boolPtr(false)},
+			removeDVL:    true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
+		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("command_ls -g"),
+			commands: command.Slice{{"ls", "/root"}, {"ls", "-g"}}, commandFails: []*bool{boolPtr(false), boolPtr(true)},
+			webhooks: webhook.Slice{"would_fail": testWebHook(true, "would_fail")}, webhookFails: map[string]*bool{"would_fail": boolPtr(false)},
+			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
+		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {serviceID: "test",
+			commands: command.Slice{{"ls", "-h"}, {"false", "2"}, {"true"}}, approveCommandsIndividually: true},
 	}
 
 	for name, tc := range tests {
@@ -333,6 +350,9 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			var hadStatus service_status.Status
 			if cfg.Service[tc.serviceID] != nil {
 				hadStatus = cfg.Service[tc.serviceID].Status
+				cfg.Service[tc.serviceID].Status.Fails.Command = make([]*bool, len(tc.commands))
+				cfg.Service[tc.serviceID].Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
+				cfg.Service[tc.serviceID].Status.LatestVersion = tc.latestVersion
 				hadDVL = *cfg.Service[tc.serviceID].DeployedVersionLookup
 				if tc.removeDVL {
 					cfg.Service[tc.serviceID].DeployedVersionLookup = nil
@@ -367,7 +387,6 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
 				}()
 			}
-			var receivedMsg api_types.WebSocketMessage
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 			stdout := os.Stdout
@@ -375,7 +394,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: stringPtr("APPROVALS"), Type: stringPtr("VERSION"),
+			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
 				Target: tc.target, ServiceData: &api_types.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
 				msg.ServiceData.Status = &api_types.Status{
@@ -392,18 +411,76 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					msg.Target = stringPtr(fmt.Sprintf("command_%s", tc.commands[sends].String()))
 				}
 				data, _ := json.Marshal(msg)
+				t.Log(string(data))
 				if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-					t.Errorf("%s:\nerror sending message\n%s",
-						name, err.Error())
+					t.Fatalf("error sending message\n%s",
+						err.Error())
 				}
 				time.Sleep(10 * time.Microsecond)
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration((len(tc.commands)+len(tc.webhooks))*500) * time.Millisecond)
 
 			// THEN we get the expected response
-			p := seeIfMessage(t, ws)
+			expecting := 0
+			if tc.commands != nil {
+				expecting += len(tc.commands)
+				if tc.commandFails != nil {
+					for i := range tc.commandFails {
+						if utils.EvalNilPtr(tc.commandFails[i], true) == false {
+							expecting--
+						}
+					}
+				}
+			}
+			if tc.webhooks != nil {
+				expecting += len(tc.webhooks)
+				if tc.webhookFails != nil {
+					for i := range tc.webhookFails {
+						if tc.webhookFails[i] != nil && *tc.webhookFails[i] == false {
+							expecting--
+						}
+					}
+				}
+			}
+			if tc.upgradesApprovedVersion {
+				expecting++
+			}
+			if tc.upgradesDeployedVersion {
+				expecting++
+			}
+			if tc.wantSkipMessage {
+				expecting++
+			}
+			messages := make([]api_types.WebSocketMessage, expecting)
+			t.Logf("expecting %d messages", expecting)
+			got := 0
+			for expecting != 0 {
+				message := seeIfMessage(t, ws)
+				if message == nil {
+					w.Close()
+					out, _ := io.ReadAll(r)
+					os.Stdout = stdout
+					output := string(out)
+					t.Log(output)
+					t.Log(time.Now())
+					t.Fatalf("expecting %d more messages but got %v",
+						expecting, message)
+				}
+				messages[got] = *message
+				raw, _ := json.Marshal(*message)
+				t.Logf("\n%s\n", string(raw))
+				got++
+				expecting--
+			}
+			// extra message check
+			message := seeIfMessage(t, ws)
+			if message != nil {
+				raw, _ := json.Marshal(*message)
+				t.Fatalf("wasn't expecting another message but got one\n%#v\n%s",
+					message, string(raw))
+			}
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			// stdout finishes
@@ -411,32 +488,17 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				re := regexp.MustCompile(tc.stdoutRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, tc.stdoutRegex, output)
-				}
-				// don't want a message
-				if p != nil {
-					receivedMsg = api_types.WebSocketMessage{}
-					json.Unmarshal(*p, &receivedMsg)
-					t.Errorf("%s:\nwasn't expecting another message but got one\n%#v",
-						name, receivedMsg)
+					t.Errorf("match on %q not found in\n%q",
+						tc.stdoutRegex, output)
 				}
 				return
 			}
-			// didn't get a message
-			if p == nil {
-				t.Fatalf("%s:\nexpecting message but got %#v",
-					name, p)
-			} else {
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-			}
-
+			t.Log(output)
 			// Check version was skipped
 			if utils.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
-				if receivedMsg.ServiceData.Status.ApprovedVersion != "SKIP_"+cfg.Service[tc.serviceID].Status.LatestVersion {
-					t.Errorf("%s:\nLatestVersion %q wasn't skipped. approved is %q\ngot=%q",
-						name, cfg.Service[tc.serviceID].Status.LatestVersion, cfg.Service[tc.serviceID].Status.ApprovedVersion, receivedMsg.ServiceData.Status.ApprovedVersion)
+				if tc.wantSkipMessage && messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+cfg.Service[tc.serviceID].Status.LatestVersion {
+					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
+						cfg.Service[tc.serviceID].Status.LatestVersion, cfg.Service[tc.serviceID].Status.ApprovedVersion, messages[0].ServiceData.Status.ApprovedVersion)
 				}
 			} else {
 				// expecting = commands + webhooks that have not failed=false
@@ -450,6 +512,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 							}
 						}
 					}
+
 				}
 				if tc.webhooks != nil {
 					expecting += len(tc.webhooks)
@@ -461,76 +524,55 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 						}
 					}
 				}
-				// until we've receieved all the messages we're expecting
-				for expecting != 0 {
+				if tc.upgradesApprovedVersion {
+					expecting++
+				}
+				var received []string
+				for i, message := range messages {
+					t.Logf("message %d",
+						i)
 					receivedForAnAction := false
-					if tc.commands != nil {
-						for i := range tc.commands {
-							if receivedMsg.CommandData[tc.commands[i].String()] != nil {
-								receivedForAnAction = true
-								break
-							}
+					for _, command := range tc.commands {
+						if message.CommandData[command.String()] != nil {
+							receivedForAnAction = true
+							received = append(received, command.String())
+							t.Logf("FOUND COMMAND %q - failed=%s", command.String(), stringifyPointer(message.CommandData[command.String()].Failed))
+							break
 						}
 					}
-					if !receivedForAnAction && tc.webhooks != nil {
+					if !receivedForAnAction {
 						for i := range tc.webhooks {
-							if receivedMsg.WebHookData[i] != nil {
+							if message.WebHookData[i] != nil {
 								receivedForAnAction = true
+								received = append(received, i)
+								t.Logf("FOUND WEBHOOK %q - failed=%s", i, stringifyPointer(message.WebHookData[i].Failed))
 								break
 							}
 						}
 					}
 					if !receivedForAnAction {
-						t.Fatalf("%s:\n%d remaining and message for an unknown action received\n%#v",
-							name, expecting, receivedMsg)
-					}
-					expecting--
-					if expecting != 0 {
-						p := seeIfMessage(t, ws)
-						if p == nil {
-							t.Fatalf("%s:\nexpecting %d more messages but got %#v",
-								name, expecting, p)
+						//  IF we're expecting a message about approvedVersion
+						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
+							if message.ServiceData.Status.ApprovedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+								t.Fatalf("expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
+									message, message.ServiceData.Status.ApprovedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+							}
+							continue
 						}
-						receivedMsg = api_types.WebSocketMessage{}
-						json.Unmarshal(*p, &receivedMsg)
+						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
+							if message.ServiceData.Status.DeployedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+								t.Fatalf("expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
+									message, message.ServiceData.Status.DeployedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+							}
+							continue
+						}
+						raw, _ := json.Marshal(message)
+						if string(raw) != `{"page":"","type":""}` {
+							t.Fatalf("Unexpected message\n%#v\n%s",
+								message, raw)
+						}
 					}
 				}
-			}
-
-			if tc.upgradesApprovedVersion {
-				p = seeIfMessage(t, ws)
-				receivedMsg = api_types.WebSocketMessage{}
-				if p == nil {
-					t.Fatalf("%s:\nexpecting message announcing approved version change but got %#v",
-						name, p)
-				}
-				json.Unmarshal(*p, &receivedMsg)
-				if receivedMsg.ServiceData.Status.ApprovedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
-					t.Fatalf("%s:\nexpected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-						name, receivedMsg, receivedMsg.ServiceData.Status.ApprovedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
-				}
-			}
-			if tc.upgradesDeployedVersion {
-				p = seeIfMessage(t, ws)
-				receivedMsg = api_types.WebSocketMessage{}
-				if p == nil {
-					t.Fatalf("%s:\nexpecting message announcing deployed version change but got %#v",
-						name, p)
-				}
-				json.Unmarshal(*p, &receivedMsg)
-				if receivedMsg.ServiceData.Status.DeployedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
-					t.Fatalf("%s:\nexpected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-						name, receivedMsg, receivedMsg.ServiceData.Status.DeployedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
-				}
-			}
-
-			// extra message check
-			p = seeIfMessage(t, ws)
-			if p != nil {
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				t.Fatalf("%s:\nwasn't expecting another message but got one\n%#v",
-					name, receivedMsg)
 			}
 		})
 	}
@@ -538,7 +580,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 
 func TestWebSocketApprovalsACTIONS(t *testing.T) {
 	// GIVEN WebSocket server is running and we're connected to it
-	testLogging("WARN")
+	testLogging("WARN", true)
 	tests := map[string]struct {
 		serviceID   string
 		stdoutRegex string
@@ -546,15 +588,15 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 		commands    command.Slice
 		webhooks    webhook.Slice
 	}{
-		"service_id=unknown": {serviceID: "unknown?", stdoutRegex: "service not found"},
-		"service_id=nil":     {serviceID: "", stdoutRegex: "service_data.id not provided"},
-		"service_id=known, commands=[], webhooks=[],":  {serviceID: "test", stdoutRegex: "^$"},
-		"service_id=known, commands=[1], webhooks=[],": {serviceID: "test", commands: command.Slice{testCommandFail()}},
-		"service_id=known, commands=[2], webhooks=[],": {serviceID: "test", commands: command.Slice{testCommandFail(), testCommandPass()}},
-		"service_id=known, commands=[], webhooks=[1],": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHookFail("fail0")}},
-		"service_id=known, commands=[], webhooks=[2],": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHookFail("fail0"), "pass0": testWebHookPass("pass0")}},
-		"service_id=known, commands=[2], webhooks=[2],": {serviceID: "test", commands: command.Slice{testCommandFail(), testCommandPass()},
-			webhooks: webhook.Slice{"fail0": testWebHookFail("fail0"), "pass0": testWebHookPass("pass0")}},
+		"service_id=unknown":                       {serviceID: "unknown?", stdoutRegex: "service not found"},
+		"service_id=nil":                           {serviceID: "", stdoutRegex: "service_data.id not provided"},
+		"known service_id, 0 command, 0 webhooks,": {serviceID: "test", stdoutRegex: "^$"},
+		"known service_id, 1 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true)}},
+		"known service_id, 2 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)}},
+		"known service_id, 0 command, 1 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0")}},
+		"known service_id, 0 command, 2 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
+		"known service_id, 2 command, 2 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)},
+			webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
 	}
 
 	for name, tc := range tests {
@@ -563,6 +605,8 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
 			var hadStatus service_status.Status
+			ws := connectToWebSocket(t)
+			defer ws.Close()
 			if cfg.Service[tc.serviceID] != nil {
 				hadStatus = cfg.Service[tc.serviceID].Status
 				hadCommandSlice = cfg.Service[tc.serviceID].Command
@@ -583,15 +627,12 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
 				}()
 			}
-			var receivedMsg api_types.WebSocketMessage
-			ws := connectToWebSocket(t)
-			defer ws.Close()
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: stringPtr("APPROVALS"), Type: stringPtr("ACTIONS"),
+			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
 				ServiceData: &api_types.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
 				msg.ServiceData.Status = &api_types.Status{
@@ -600,14 +641,16 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
-				t.Errorf("%s:\nerror sending message\n%s",
-					name, err.Error())
+				t.Errorf("error sending message\n%s",
+					err.Error())
 			}
 
 			// THEN we get the expected response
-			p := seeIfMessage(t, ws)
+			message := seeIfMessage(t, ws)
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
+			// fmt.Println(r)
+			// out := []byte{}
 			os.Stdout = stdout
 			output := string(out)
 			// stdout finishes
@@ -615,42 +658,38 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 				re := regexp.MustCompile(tc.stdoutRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, tc.stdoutRegex, output)
+					t.Errorf("match on %q not found in\n%q",
+						tc.stdoutRegex, output)
 				}
 				// don't want a message
-				if p != nil {
-					receivedMsg = api_types.WebSocketMessage{}
-					json.Unmarshal(*p, &receivedMsg)
-					t.Errorf("%s:\nwasn't expecting another message but got one\n%#v",
-						name, receivedMsg)
+				if message != nil {
+					raw, _ := json.Marshal(*message)
+					t.Errorf("wasn't expecting another message but got one\n%#v",
+						raw)
 				}
 				return
 			}
-			expectingC := tc.commands != nil
-			expectingWH := tc.webhooks != nil
+			expectingC := len(tc.commands) != 0
+			expectingWH := len(tc.webhooks) != 0
 			for expectingC || expectingWH {
 				// didn't get a message
-				if p == nil {
-					t.Fatalf("%s:\nexpecting message but got %#v\nexpecting commands=%t, expecting webhook=%t",
-						name, p, expectingC, expectingWH)
+				if message == nil {
+					t.Fatalf("expecting message but got %#v\nexpecting commands=%t, expecting webhook=%t",
+						message, expectingC, expectingWH)
 				}
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				if receivedMsg.CommandData != nil {
+				if message.CommandData != nil {
 					expectingC = false
-				} else if receivedMsg.WebHookData != nil {
+				} else if message.WebHookData != nil {
 					expectingWH = false
 				}
-				p = seeIfMessage(t, ws)
+				message = seeIfMessage(t, ws)
 			}
 
 			// extra message check
-			if p != nil {
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				t.Fatalf("%s:\nwasn't expecting another message but got one\n%#v",
-					name, receivedMsg)
+			if message != nil {
+				raw, _ := json.Marshal(*message)
+				t.Fatalf("wasn't expecting another message but got one\n%#v",
+					raw)
 			}
 		})
 	}
@@ -669,8 +708,8 @@ func TestWebSocketRuntimeBuildINIT(t *testing.T) {
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
-		Page:    &msgPage,
-		Type:    &msgType,
+		Page:    msgPage,
+		Type:    msgType,
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -679,23 +718,22 @@ func TestWebSocketRuntimeBuildINIT(t *testing.T) {
 	}
 
 	// THEN it passes and we only receive a response with the WebHooks
-	p := seeIfMessage(t, ws)
-	if p == nil {
+	message := seeIfMessage(t, ws)
+	if message == nil {
 		t.Fatal("expecting another message but didn't get one")
 	}
-	var receivedMsg api_types.WebSocketMessage
-	json.Unmarshal(*p, &receivedMsg)
-	if *receivedMsg.Page != msgPage {
+	raw, _ := json.Marshal(*message)
+	if message.Page != msgPage {
 		t.Fatalf("Received a response for Page %q. Expected %q",
-			*receivedMsg.Page, msgPage)
+			message.Page, msgPage)
 	}
-	if receivedMsg.InfoData == nil {
+	if message.InfoData == nil {
 		t.Fatalf("Didn't get any InfoData in the message\n%#v",
-			receivedMsg)
+			message)
 	}
-	if receivedMsg.InfoData.Build.GoVersion != utils.GoVersion {
-		t.Errorf("Expected Info.Build.GoVersion to be %q, got %q\n%#v",
-			utils.GoVersion, receivedMsg.InfoData.Build.GoVersion, receivedMsg)
+	if message.InfoData.Build.GoVersion != utils.GoVersion {
+		t.Errorf("Expected Info.Build.GoVersion to be %q, got %q\n%s",
+			utils.GoVersion, message.InfoData.Build.GoVersion, raw)
 	}
 }
 
@@ -712,8 +750,8 @@ func TestWebSocketFlagsINIT(t *testing.T) {
 	)
 	msg := api_types.WebSocketMessage{
 		Version: &msgVersion,
-		Page:    &msgPage,
-		Type:    &msgType,
+		Page:    msgPage,
+		Type:    msgType,
 	}
 	data, _ := json.Marshal(msg)
 	if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -722,23 +760,22 @@ func TestWebSocketFlagsINIT(t *testing.T) {
 	}
 
 	// THEN it passes and we only receive a response with the WebHooks
-	p := seeIfMessage(t, ws)
-	if p == nil {
+	message := seeIfMessage(t, ws)
+	if message == nil {
 		t.Fatal("expecting another message but didn't get one")
 	}
-	var receivedMsg api_types.WebSocketMessage
-	json.Unmarshal(*p, &receivedMsg)
-	if *receivedMsg.Page != msgPage {
+	raw, _ := json.Marshal(*message)
+	if message.Page != msgPage {
 		t.Fatalf("Received a response for Page %q. Expected %q",
-			*receivedMsg.Page, msgPage)
+			message.Page, msgPage)
 	}
-	if receivedMsg.FlagsData == nil {
+	if message.FlagsData == nil {
 		t.Fatalf("Didn't get any FlagsData in the message\n%#v",
-			receivedMsg)
+			message)
 	}
-	if receivedMsg.FlagsData.LogLevel != cfg.Settings.GetLogLevel() {
-		t.Errorf("Expected FlagsData.LogLevel to be %q, got %q\n%#v",
-			cfg.Settings.GetLogLevel(), receivedMsg.FlagsData.LogLevel, receivedMsg)
+	if message.FlagsData.LogLevel != cfg.Settings.GetLogLevel() {
+		t.Errorf("Expected FlagsData.LogLevel to be %q, got %q\n%s",
+			cfg.Settings.GetLogLevel(), message.FlagsData.LogLevel, raw)
 	}
 }
 
@@ -813,8 +850,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 			)
 			msg := api_types.WebSocketMessage{
 				Version: &msgVersion,
-				Page:    &msgPage,
-				Type:    &msgType,
+				Page:    msgPage,
+				Type:    msgType,
 			}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -823,126 +860,116 @@ func TestWebSocketConfigINIT(t *testing.T) {
 			}
 
 			// THEN it passes and we only receive a response with the WebHooks
-			p := seeIfMessage(t, ws)
-			if p == nil {
-				t.Errorf("%s:\nSETTINGS - expecting another message but didn't get one",
-					name)
+			message := seeIfMessage(t, ws)
+			if message == nil {
+				t.Error("SETTINGS - expecting another message but didn't get one")
 			}
-			var receivedMsg api_types.WebSocketMessage
-			json.Unmarshal(*p, &receivedMsg)
+			raw, _ := json.Marshal(*message)
 			{ // SETTINGS
 				wantedType := "SETTINGS"
-				if *receivedMsg.Page != msgPage ||
-					*receivedMsg.Type != wantedType {
+				if message.Page != msgPage ||
+					message.Type != wantedType {
 					t.Errorf("Received a response for Page %s-%s. Expected %s-%s",
-						*receivedMsg.Page, *receivedMsg.Type, msgPage, wantedType)
+						message.Page, message.Type, msgPage, wantedType)
 				} else {
-					if receivedMsg.ConfigData == nil {
+					if message.ConfigData == nil {
 						t.Errorf("Didn't get any ConfigData in the message\n%#v",
-							receivedMsg)
+							message)
 					} else {
-						if receivedMsg.ConfigData == nil ||
-							receivedMsg.ConfigData.Settings == nil ||
-							receivedMsg.ConfigData.Settings.Log.Level == nil {
-							t.Errorf("Didn't receive ConfigData.Settings.Log.Level from\n%#v",
-								receivedMsg)
-						} else if *receivedMsg.ConfigData.Settings.Log.Level != cfg.Settings.GetLogLevel() {
-							t.Errorf("Expected ConfigData.Settings.Log.Level to be %q, got %q\n%#v",
-								cfg.Settings.GetLogLevel(), *receivedMsg.ConfigData.Settings.Log.Level, receivedMsg)
+						if message.ConfigData == nil ||
+							message.ConfigData.Settings == nil ||
+							message.ConfigData.Settings.Log.Level == nil {
+							t.Errorf("Didn't receive ConfigData.Settings.Log.Level from\n%s",
+								raw)
+						} else if *message.ConfigData.Settings.Log.Level != cfg.Settings.GetLogLevel() {
+							t.Errorf("Expected ConfigData.Settings.Log.Level to be %q, got %q\n%s",
+								cfg.Settings.GetLogLevel(), *message.ConfigData.Settings.Log.Level, raw)
 						}
 					}
 				}
 			}
-			p = seeIfMessage(t, ws)
-			if p == nil {
-				t.Errorf("%s:\nDEFAULTS - expecting another message but didn't get one",
-					name)
+			message = seeIfMessage(t, ws)
+			if message == nil {
+				t.Error("DEFAULTS - expecting another message but didn't get one")
 			}
-			receivedMsg = api_types.WebSocketMessage{}
-			json.Unmarshal(*p, &receivedMsg)
+			raw, _ = json.Marshal(*message)
 			{ // DEFAULTS
 				wantedType := "DEFAULTS"
-				if *receivedMsg.Page != msgPage ||
-					*receivedMsg.Type != wantedType {
+				if message.Page != msgPage ||
+					message.Type != wantedType {
 					t.Errorf("Received a response for Page %s-%s. Expected %s-%s",
-						*receivedMsg.Page, *receivedMsg.Type, msgPage, wantedType)
+						message.Page, message.Type, msgPage, wantedType)
 				} else {
-					if receivedMsg.ConfigData == nil ||
-						receivedMsg.ConfigData.Defaults == nil ||
-						receivedMsg.ConfigData.Defaults.Service.Options.Interval == "" {
+					if message.ConfigData == nil ||
+						message.ConfigData.Defaults == nil ||
+						message.ConfigData.Defaults.Service.Options.Interval == "" {
 						t.Errorf("Didn't receive ConfigData.Defaults.Service.Interval from\n%#v",
-							receivedMsg)
-					} else if receivedMsg.ConfigData.Defaults.Service.Options.Interval != cfg.Defaults.Service.Options.Interval {
-						t.Errorf("Expected ConfigData.Defaults.Service.Options.Interval to be %q, got %q\n%#v",
-							cfg.Defaults.Service.Options.Interval, receivedMsg.ConfigData.Defaults.Service.Options.Interval, receivedMsg)
+							message)
+					} else if message.ConfigData.Defaults.Service.Options.Interval != cfg.Defaults.Service.Options.Interval {
+						t.Errorf("Expected ConfigData.Defaults.Service.Options.Interval to be %q, got %q\n%s",
+							cfg.Defaults.Service.Options.Interval, message.ConfigData.Defaults.Service.Options.Interval, raw)
 					}
 				}
 			}
-			p = seeIfMessage(t, ws)
-			if p == nil {
-				t.Errorf("%s:\nNOTIFY - expecting another message but didn't get one",
-					name)
+			message = seeIfMessage(t, ws)
+			if message == nil {
+				t.Error("NOTIFY - expecting another message but didn't get one")
 			}
-			receivedMsg = api_types.WebSocketMessage{}
-			json.Unmarshal(*p, &receivedMsg)
+			raw, _ = json.Marshal(*message)
 			{ // NOTIFY
 				wantedType := "NOTIFY"
-				if *receivedMsg.Page != msgPage ||
-					*receivedMsg.Type != wantedType {
+				if message.Page != msgPage ||
+					message.Type != wantedType {
 					t.Errorf("Received a response for Page %s-%s. Expected %s-%s",
-						*receivedMsg.Page, *receivedMsg.Type, msgPage, wantedType)
+						message.Page, message.Type, msgPage, wantedType)
 				} else {
-					if receivedMsg.ConfigData == nil ||
-						receivedMsg.ConfigData.Notify == nil ||
-						(*receivedMsg.ConfigData.Notify)["discord"] == nil {
+					if message.ConfigData == nil ||
+						message.ConfigData.Notify == nil ||
+						(*message.ConfigData.Notify)["discord"] == nil {
 						t.Errorf("Didn't receive ConfigData.Notify.discord from\n%#v",
-							receivedMsg)
-					} else if (*receivedMsg.ConfigData.Notify)["discord"].Options["message"] != cfg.Notify["discord"].Options["message"] {
-						t.Errorf("Expected ConfigData.Notify.discord.Options.message to be %q, got %q\n%#v",
-							cfg.Notify["discord"].Options["message"], (*receivedMsg.ConfigData.Notify)["discord"].Options["message"], receivedMsg)
+							message)
+					} else if (*message.ConfigData.Notify)["discord"].Options["message"] != cfg.Notify["discord"].Options["message"] {
+						t.Errorf("Expected ConfigData.Notify.discord.Options.message to be %q, got %q\n%s",
+							cfg.Notify["discord"].Options["message"], (*message.ConfigData.Notify)["discord"].Options["message"], raw)
 					}
 				}
 			}
-			p = seeIfMessage(t, ws)
-			if p == nil {
-				t.Errorf("%s:\nWEBHOOK - expecting another message but didn't get one",
-					name)
+			message = seeIfMessage(t, ws)
+			if message == nil {
+				t.Error("WEBHOOK - expecting another message but didn't get one")
 			}
-			receivedMsg = api_types.WebSocketMessage{}
-			json.Unmarshal(*p, &receivedMsg)
+			raw, _ = json.Marshal(*message)
 			{ // WEBHOOK
 				wantedType := "WEBHOOK"
-				if *receivedMsg.Page != msgPage ||
-					*receivedMsg.Type != wantedType {
+				if message.Page != msgPage ||
+					message.Type != wantedType {
 					t.Errorf("Received a response for Page %s-%s. Expected %s-%s",
-						*receivedMsg.Page, *receivedMsg.Type, msgPage, wantedType)
+						message.Page, message.Type, msgPage, wantedType)
 				} else {
-					if receivedMsg.ConfigData == nil ||
-						receivedMsg.ConfigData.WebHook == nil ||
-						(*receivedMsg.ConfigData.WebHook)["pass"] == nil {
-						t.Errorf("Didn't receive ConfigData.WebHook.pass from\n%#v",
-							receivedMsg)
-					} else if *(*receivedMsg.ConfigData.WebHook)["pass"].URL != cfg.WebHook["pass"].URL {
-						t.Errorf("Expected ConfigData.WebHook.pass.URL to be %q, got %q\n%#v",
-							cfg.WebHook["pass"].URL, *(*receivedMsg.ConfigData.WebHook)["pass"].URL, receivedMsg)
+					if message.ConfigData == nil ||
+						message.ConfigData.WebHook == nil ||
+						(*message.ConfigData.WebHook)["test"] == nil {
+						t.Errorf("Didn't receive ConfigData.WebHook.test from\n%#v",
+							message)
+					} else if *(*message.ConfigData.WebHook)["test"].URL != cfg.WebHook["test"].URL {
+						t.Errorf("Expected ConfigData.WebHook.test.URL to be %q, got %q\n%s",
+							cfg.WebHook["test"].URL, *(*message.ConfigData.WebHook)["test"].URL, raw)
 					}
 				}
 			}
 			// SERVICE
-			p = seeIfMessage(t, ws)
-			if p == nil {
-				t.Errorf("%s:\nSERVICE - expecting another message but didn't get one",
-					name)
+			message = seeIfMessage(t, ws)
+			if message == nil {
+				t.Error("SERVICE - expecting another message but didn't get one")
 			}
-			receivedMsg = api_types.WebSocketMessage{}
-			json.Unmarshal(*p, &receivedMsg)
+			raw, _ = json.Marshal(*message)
 			if tc.nilService {
-				if receivedMsg.ServiceData != nil {
-					t.Errorf("%s\n:expecting ServiceData to be nil, not \n%#v",
-						name, receivedMsg.ServiceData)
+				if message.ServiceData != nil {
+					t.Errorf("expecting ServiceData to be nil, not \n%#v",
+						message.ServiceData)
 				}
 			} else {
-				receivedTestService := (*receivedMsg.ConfigData.Service)["test"]
+				receivedTestService := (*message.ConfigData.Service)["test"]
 				cfgTestService := cfg.Service["test"]
 				// service
 				if receivedTestService.Comment != cfgTestService.Comment {
@@ -973,8 +1000,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				if tc.nilServiceDVL {
 					if receivedTestService.DeployedVersionLookup != nil {
 						if receivedTestService.DeployedVersionLookup != nil {
-							t.Errorf("%s\n:expecting DeployedVersionLookup to be nil, not \n%#v",
-								name, receivedTestService.DeployedVersionLookup)
+							t.Errorf("expecting DeployedVersionLookup to be nil, not \n%#v",
+								receivedTestService.DeployedVersionLookup)
 						}
 					}
 				} else {
@@ -1007,8 +1034,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// url commands
 				if tc.nilServiceURLC {
 					if len(receivedTestService.LatestVersion.URLCommands) != 0 && len(receivedTestService.LatestVersion.URLCommands) != 0 {
-						t.Errorf("%s\n:expecting URLCommands to be nil, not \n%#v",
-							name, receivedTestService.LatestVersion.URLCommands)
+						t.Errorf("expecting URLCommands to be nil, not \n%#v",
+							receivedTestService.LatestVersion.URLCommands)
 					}
 				} else {
 					if receivedTestService.LatestVersion.URLCommands == nil {
@@ -1022,9 +1049,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// notify
 				if tc.nilServiceNotify {
 					if receivedTestService.Notify != nil {
-						if receivedTestService.Notify != nil {
-							t.Errorf("%s\n:expecting Notify to be nil, not \n%#v",
-								name, receivedTestService.Notify)
+						if receivedTestService.Notify != nil && len(*receivedTestService.Notify) != 0 {
+							t.Errorf("expecting Notify to be nil, not \n%#v",
+								receivedTestService.Notify)
 						}
 					}
 				} else {
@@ -1039,9 +1066,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// webhook
 				if tc.nilServiceWH {
 					if receivedTestService.WebHook != nil {
-						if receivedTestService.WebHook != nil {
-							t.Errorf("%s\n:expecting WebHook to be nil, not \n%#v",
-								name, receivedTestService.WebHook)
+						if receivedTestService.WebHook != nil && len(*receivedTestService.WebHook) != 0 {
+							t.Errorf("expecting WebHook to be nil, not \n%#v",
+								receivedTestService.WebHook)
 						}
 					}
 				} else {
@@ -1056,9 +1083,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// command
 				if tc.nilServiceC {
 					if receivedTestService.Command != nil {
-						if receivedTestService.Command != nil {
-							t.Errorf("%s\n:expecting Command to be nil, not \n%#v",
-								name, receivedTestService.Command)
+						if receivedTestService.Command != nil && len(*receivedTestService.Command) != 0 {
+							t.Errorf("expecting Command to be nil, not \n%#v",
+								receivedTestService.Command)
 						}
 					}
 				} else {
@@ -1074,12 +1101,11 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					}
 				}
 			}
-			p = seeIfMessage(t, ws)
-			if p != nil {
-				receivedMsg = api_types.WebSocketMessage{}
-				json.Unmarshal(*p, &receivedMsg)
-				t.Errorf("%s:\nwasn't expecting another message but got one\n%#v",
-					name, receivedMsg)
+			message = seeIfMessage(t, ws)
+			if message != nil {
+				raw, _ := json.Marshal(*message)
+				t.Errorf("wasn't expecting another message but got one\n%s",
+					raw)
 			}
 		})
 	}

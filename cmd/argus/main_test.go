@@ -18,7 +18,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -80,29 +80,29 @@ func TestTheMain(t *testing.T) {
 					rStr := fmt.Sprint(r)
 					if tc.panicShouldContain != nil {
 						if !strings.Contains(rStr, *tc.panicShouldContain) {
-							t.Errorf("%s:\nshould have panic'd with:\n%q, not:\n%q",
-								name, *tc.panicShouldContain, r)
+							t.Errorf("should have panic'd with:\n%q, not:\n%q",
+								*tc.panicShouldContain, r)
 						}
 					} else if r != nil {
-						t.Errorf("%s:\nwasn't expecting a panic - %q",
-							name, rStr)
+						t.Errorf("wasn't expecting a panic - %q",
+							rStr)
 					}
 				}()
 				main()
 			}()
-			time.Sleep(time.Second)
+			time.Sleep(2 * time.Second)
 
 			// THEN the program will have printed everything expected
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			os.Remove(tc.db)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(output, text) {
-						t.Errorf("%s:\n%q couldn't be found in the output:\n%s",
-							name, text, output)
+						t.Errorf("%q couldn't be found in the output:\n%s",
+							text, output)
 					}
 				}
 			}

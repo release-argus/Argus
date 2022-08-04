@@ -17,7 +17,7 @@
 package webhook
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -47,12 +47,12 @@ func TestWebHookPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -83,13 +83,13 @@ func TestSlicePrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			got := strings.Count(output, "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 			lines := strings.Split(output, "\n")
 			for _, regex := range tc.regexMatches {
@@ -103,8 +103,8 @@ func TestSlicePrint(t *testing.T) {
 					}
 				}
 				if !foundMatch {
-					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, regex, output)
+					t.Errorf("match on %q not found in\n%q",
+						regex, output)
 				}
 			}
 		})
@@ -155,12 +155,12 @@ func TestWebHookCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 			if tc.wantDelay != "" && webhook.Delay != tc.wantDelay {
-				t.Errorf("%s:\nwant delay=%q\ngot  delay=%q",
-					name, tc.wantDelay, webhook.Delay)
+				t.Errorf("want delay=%q\ngot  delay=%q",
+					tc.wantDelay, webhook.Delay)
 			}
 		})
 	}
@@ -190,8 +190,8 @@ func TestSliceCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

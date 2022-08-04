@@ -42,29 +42,43 @@ export interface ServiceListType {
 }
 
 export interface ServiceType {
-  active?: boolean;
   comment?: string;
-  type: string;
-  url?: string;
-  allow_invalid_certs?: boolean;
-  access_token?: string;
-  semantic_versioning?: boolean;
-  interval?: string;
-  url_commands?: URLCommandsType[];
-  regex_content?: string;
-  regex_version?: string;
-  use_prerelease?: string;
-  web_url?: string;
-  auto_approve?: boolean;
-  ignore_misses?: string;
-  icon?: string;
-  icon_link_to?: string;
+  options?: ServiceOptionsType;
+  latest_version?: LatestVersionLookupType;
+  deployed_version?: DeployedVersionLookupType;
   command?: string[];
   webhook?: ServiceDict<WebHookType>;
   notify?: ServiceDict<NotifyType>;
-  deployed_version?: DeployedVersionLookupType;
+  dashboard?: ServiceDashboardOptionsType;
 }
 
+export interface ServiceOptionsType {
+  active?: boolean;
+  interval?: string;
+  semantic_versioning?: boolean;
+}
+
+export interface ServiceDashboardOptionsType {
+  auto_approve?: boolean;
+  icon?: string;
+  icon_link_to?: string;
+  web_url?: string;
+}
+
+export interface LatestVersionFilters {
+  regex_content?: string;
+  regex_version?: string;
+}
+
+export interface LatestVersionLookupType {
+  type: string;
+  url?: string;
+  access_token?: string;
+  allow_invalid_certs?: boolean;
+  use_prerelease?: string;
+  url_commands?: URLCommandsType[];
+  require?: LatestVersionFilters;
+}
 export interface DeployedVersionLookupType {
   url?: string;
   allow_invalid_certs?: boolean;
@@ -91,7 +105,6 @@ export interface URLCommandsType {
   text?: string;
   old?: string;
   new?: string;
-  ignore_misses?: string;
 }
 
 export interface NotifyType {

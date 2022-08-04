@@ -27,7 +27,7 @@ func (l *Lookup) Print(prefix string) {
 	prefix += "  "
 	utils.PrintlnIfNotDefault(l.Type, fmt.Sprintf("%stype: %s", prefix, l.Type))
 	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	utils.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, utils.DefaultIfNil(l.AccessToken)))
+	utils.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %q", prefix, utils.DefaultIfNil(l.AccessToken)))
 	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
 	utils.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(l.UsePreRelease)))
 	l.URLCommands.Print(prefix)

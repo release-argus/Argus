@@ -68,16 +68,16 @@ func TestAnnounceSend(t *testing.T) {
 			json.Unmarshal(m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {
-				t.Fatalf("%s:\nmessage wasn't for %q\ngot %v",
-					name, webhook.ID, parsed.WebHookData)
+				t.Fatalf("message wasn't for %q\ngot %v",
+					webhook.ID, parsed.WebHookData)
 			}
 
 			// if they failed status matches
 			got := stringifyPointer(parsed.WebHookData[webhook.ID].Failed)
 			want := stringifyPointer((*webhook.Failed)[webhook.ID])
 			if got != want {
-				t.Errorf("%s:\nwant failed=%s\ngot  failed=%s",
-					name, want, got)
+				t.Errorf("want failed=%s\ngot  failed=%s",
+					want, got)
 			}
 
 			// next runnable is within expectred range
@@ -86,8 +86,8 @@ func TestAnnounceSend(t *testing.T) {
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.WebHookData[webhook.ID].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					name, now, minTime, maxTime, gotTime)
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					now, minTime, maxTime, gotTime)
 			}
 		})
 	}

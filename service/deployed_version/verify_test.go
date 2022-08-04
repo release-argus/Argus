@@ -17,7 +17,7 @@
 package deployed_version
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -67,12 +67,12 @@ func TestPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -117,8 +117,8 @@ func TestCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

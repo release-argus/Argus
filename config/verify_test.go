@@ -17,7 +17,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -113,11 +113,11 @@ func TestConfigCheckValues(t *testing.T) {
 					_ = recover()
 
 					w.Close()
-					out, _ := ioutil.ReadAll(r)
+					out, _ := io.ReadAll(r)
 					os.Stdout = stdout
 					output := string(out)
 					if !strings.Contains(output, tc.errContains) {
-						t.Fatalf("%s: should have panic'd with %q, not:\n%s",
+						t.Fatalf("%s should have panic'd with %q, not:\n%s",
 							name, tc.errContains, output)
 					}
 
@@ -129,11 +129,11 @@ func TestConfigCheckValues(t *testing.T) {
 
 			// THEN this call will/wont crash the program
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			if !strings.Contains(output, tc.errContains) {
-				t.Fatalf("%s: should have panic'd with %q. stdout:\n%s",
+				t.Fatalf("%s should have panic'd with %q. stdout:\n%s",
 					name, tc.errContains, output)
 			}
 		})
@@ -164,7 +164,7 @@ func TestConfigPrint(t *testing.T) {
 
 			// THEN config is printed onlt when the flag is true
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.wantedLines {

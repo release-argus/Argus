@@ -18,7 +18,7 @@ package command
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 	"regexp"
@@ -53,8 +53,8 @@ func TestApplyTemplate(t *testing.T) {
 
 			// THEN the result is expected
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Fatalf("%s:\nwant: %v\ngot:  %v",
-					name, tc.want, got)
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, got)
 			}
 		})
 	}
@@ -83,18 +83,18 @@ func TestCommandExec(t *testing.T) {
 
 			// THEN the output is expected
 			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
-				t.Fatalf("%s:\nerr's differ\nwant: %s\ngot:  %s",
-					name, tc.err, err)
+				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
+					tc.err, err)
 			}
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			re := regexp.MustCompile(tc.outputRegex)
 			match := re.MatchString(output)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.outputRegex, output)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.outputRegex, output)
 			}
 		})
 	}
@@ -137,27 +137,27 @@ func TestExecIndex(t *testing.T) {
 			// THEN the output is expected
 			// err
 			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
-				t.Fatalf("%s:\nerr's differ\nwant: %s\ngot:  %s",
-					name, tc.err, err)
+				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
+					tc.err, err)
 			}
 			// output
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			re := regexp.MustCompile(tc.outputRegex)
 			match := re.MatchString(output)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.outputRegex, output)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.outputRegex, output)
 			}
 			// announced
 			if !tc.noAnnounce {
 				runNumber++
 			}
 			if len(announce) != runNumber {
-				t.Fatalf("%s:\nCommand run not announced\nat %d, want %d",
-					name, len(announce), runNumber)
+				t.Fatalf("Command run not announced\nat %d, want %d",
+					len(announce), runNumber)
 			}
 		})
 	}
@@ -211,27 +211,27 @@ func TestControllerExec(t *testing.T) {
 			// THEN the output is expected
 			// err
 			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
-				t.Fatalf("%s:\nerr's differ\nwant: %q\ngot:  %q",
-					name, utils.ErrorToString(tc.err), utils.ErrorToString(err))
+				t.Fatalf("err's differ\nwant: %q\ngot:  %q",
+					utils.ErrorToString(tc.err), utils.ErrorToString(err))
 			}
 			// output
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			re := regexp.MustCompile(tc.outputRegex)
 			match := re.MatchString(output)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.outputRegex, output)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.outputRegex, output)
 			}
 			// announced
 			if !tc.noAnnounce {
 				runNumber += len(*controller.Command)
 			}
 			if len(announce) != runNumber {
-				t.Fatalf("%s:\nCommand run not announced\nat %d, want %d",
-					name, len(announce), runNumber)
+				t.Fatalf("Command run not announced\nat %d, want %d",
+					len(announce), runNumber)
 			}
 		})
 	}

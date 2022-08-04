@@ -17,7 +17,7 @@
 package service
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -51,8 +51,8 @@ func TestGetAutoApprove(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.wantBool, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.wantBool, got)
 			}
 		})
 	}
@@ -84,12 +84,12 @@ func TestDashboardOptionsPrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}

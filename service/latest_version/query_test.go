@@ -17,9 +17,10 @@
 package latest_version
 
 import (
-	"os"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
@@ -42,9 +43,8 @@ func TestHTTPRequest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			lookup := testLookupURL()
-			if tc.githubType {
-				lookup = testLookupGitHub()
+			lookup := testLookup(!tc.githubType, false)
+			if tc.githubType && utils.DefaultIfNil(lookup.AccessToken) == "" {
 				lookup.AccessToken = &tc.accessToken
 			}
 			lookup.URL = tc.url
@@ -57,8 +57,8 @@ func TestHTTPRequest(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -106,46 +106,52 @@ func TestQuery(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var lookup Lookup
-			if tc.githubService {
-				lookup = testLookupGitHub()
-				if !tc.noAccessToken {
-					accessToken := os.Getenv("GITHUB_TOKEN")
-					lookup.AccessToken = &accessToken
+			try := 0
+			temporaryFailureInNameResolution := true
+			for temporaryFailureInNameResolution != false {
+				try++
+				temporaryFailureInNameResolution = false
+				lookup := testLookup(!tc.githubService, tc.allowInvalidCerts)
+				if tc.githubService && tc.noAccessToken {
+					lookup.AccessToken = nil
 				}
-			} else {
-				lookup = testLookupURL()
-			}
-			lookup.AllowInvalidCerts = &tc.allowInvalidCerts
-			lookup.Status.ServiceID = &name
-			if tc.url != "" {
-				lookup.URL = tc.url
-			}
-			if tc.regex != nil {
-				if lookup.URLCommands == nil {
-					lookup.URLCommands = filters.URLCommandSlice{{Type: "regex"}}
+				lookup.Status.ServiceID = &name
+				if tc.url != "" {
+					lookup.URL = tc.url
 				}
-				lookup.URLCommands[0].Regex = tc.regex
-			}
-			*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
-			lookup.Status.LatestVersion = tc.latestVersion
-			lookup.Require.RegexContent = tc.requireRegexContent
-			lookup.Require.RegexVersion = tc.requireRegexVersion
+				if tc.regex != nil {
+					if lookup.URLCommands == nil {
+						lookup.URLCommands = filters.URLCommandSlice{{Type: "regex"}}
+					}
+					lookup.URLCommands[0].Regex = tc.regex
+				}
+				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
+				lookup.Status.LatestVersion = tc.latestVersion
+				lookup.Require.RegexContent = tc.requireRegexContent
+				lookup.Require.RegexVersion = tc.requireRegexVersion
 
-			// WHEN Query is called on it
-			_, err := lookup.Query()
+				// WHEN Query is called on it
+				_, err := lookup.Query()
 
-			// THEN any err is expected
-			e := utils.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
-			}
-			if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
-				t.Fatalf("%s:\nwanted LatestVersion to become %q, not %q",
-					name, *tc.wantLatestVersion, lookup.Status.LatestVersion)
+				// THEN any err is expected
+				e := utils.ErrorToString(err)
+				re := regexp.MustCompile(tc.errRegex)
+				match := re.MatchString(e)
+				if !match {
+					if strings.Contains(e, "context deadline exceeded") {
+						temporaryFailureInNameResolution = true
+						if try != 3 {
+							time.Sleep(time.Second)
+							continue
+						}
+					}
+					t.Fatalf("want match for %q\nnot: %q",
+						tc.errRegex, e)
+				}
+				if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
+					t.Fatalf("wanted LatestVersion to become %q, not %q",
+						*tc.wantLatestVersion, lookup.Status.LatestVersion)
+				}
 			}
 		})
 	}

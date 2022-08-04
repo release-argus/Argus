@@ -17,8 +17,9 @@
 package config
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -51,8 +52,9 @@ func TestDefaultsSetDefaults(t *testing.T) {
 	// THEN the defaults are set correctly
 	for name, tc := range tests {
 		if tc.got != tc.want {
-			t.Errorf("%s:\nwant: %s\ngot:  %s",
-				name, tc.want, tc.got)
+			t.Log(name)
+			t.Errorf("want: %s\ngot:  %s",
+				tc.want, tc.got)
 		}
 	}
 }
@@ -63,27 +65,34 @@ func TestDefaultsCheckValues(t *testing.T) {
 	defaults.SetDefaults()
 	tests := map[string]struct {
 		input       Defaults
-		errContains string
+		errContains []string
 	}{
 		"Service.Interval": {
 			input: Defaults{Service: service.Service{
 				Options: options.Options{
 					Interval: "10x"}}},
-			errContains: `interval: "10x" <invalid>`},
+			errContains: []string{`^  service:$`, `^      interval: "10x" <invalid>`}},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
 				DeployedVersionLookup: &deployed_version.Lookup{
-					Regex: "^something[0-"}}},
-			errContains: `regex: "^something[0-" <invalid>`},
+					Regex: `^something[0-`}}},
+			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
+		"Service.Interval + Service.DeployedVersionLookup.Regex": {
+			input: Defaults{Service: service.Service{
+				Options: options.Options{
+					Interval: "10x"},
+				DeployedVersionLookup: &deployed_version.Lookup{
+					Regex: `^something[0-`}}},
+			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
 		"Notify.x.Delay": {
 			input: Defaults{Notify: shoutrrr.Slice{
 				"slack": &shoutrrr.Shoutrrr{
 					Options: map[string]string{"delay": "10x"}}}},
-			errContains: `delay: "10x" <invalid>`},
-		"WebHook.x.Delay": {
+			errContains: []string{`^  notify:$`, `^    slack:$`, `^      options:`, `^        delay: "10x" <invalid>`}},
+		"WebHook.Delay": {
 			input: Defaults{WebHook: webhook.WebHook{
 				Delay: "10x"}},
-			errContains: `delay: "10x" <invalid>`},
+			errContains: []string{`^  webhook:$`, `^  delay: "10x" <invalid>`}},
 	}
 
 	for name, tc := range tests {
@@ -92,9 +101,21 @@ func TestDefaultsCheckValues(t *testing.T) {
 			err := utils.ErrorToString(tc.input.CheckValues())
 
 			// THEN err matches expected
-			if !strings.Contains(err, tc.errContains) {
-				t.Errorf("invalid %s should have errored:\nwant: %s\ngot:  %s",
-					name, tc.errContains, err)
+			lines := strings.Split(err, "\\")
+			for i := range tc.errContains {
+				re := regexp.MustCompile(tc.errContains[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("invalid %s should have errored:\nwant: %q\ngot:  %q",
+						name, tc.errContains[i], strings.ReplaceAll(err, `\`, "\n"))
+				}
 			}
 		})
 	}
@@ -113,7 +134,7 @@ func TestDefaultsPrint(t *testing.T) {
 
 	// THEN the expected number of lines are printed
 	w.Close()
-	out, _ := ioutil.ReadAll(r)
+	out, _ := io.ReadAll(r)
 	os.Stdout = stdout
 	want := 124
 	got := strings.Count(string(out), "\n")

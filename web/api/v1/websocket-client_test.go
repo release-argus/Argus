@@ -22,18 +22,19 @@ import (
 	"testing"
 )
 
-func TestGetAccessToken(t *testing.T) {
+func TestGetIP(t *testing.T) {
 	// GIVEN a request
 	tests := map[string]struct {
 		headers    map[string]string
 		remoteAddr string
 		want       string
 	}{
-		"CF-Connecting-Ip":   {want: "1.1.1.1", headers: map[string]string{"CF-Connecting-IP": "1.1.1.1", "X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
-		"X-Real-Ip":          {want: "2.2.2.2", headers: map[string]string{"X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
-		"X-Forwarded-For":    {want: "3.3.3.3", headers: map[string]string{"X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
-		"RemoteAddr":         {want: "4.4.4.4", remoteAddr: "4.4.4.4:123"},
-		"Invalid RemoteAddr": {remoteAddr: "1111:123", want: ""},
+		"CF-Connecting-Ip": {want: "1.1.1.1", headers: map[string]string{"CF-Connecting-IP": "1.1.1.1", "X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"X-Real-Ip":        {want: "2.2.2.2", headers: map[string]string{"X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"X-Forwarded-For":  {want: "3.3.3.3", headers: map[string]string{"X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"RemoteAddr":       {want: "4.4.4.4", remoteAddr: "4.4.4.4:123"},
+		"Invalid RemoteAddr (SplitHostPort fail)": {remoteAddr: "1111", want: ""},
+		"Invalid RemoteAddr (ParseIP fail)":       {remoteAddr: "1111:123", want: ""},
 	}
 
 	for name, tc := range tests {
@@ -49,8 +50,8 @@ func TestGetAccessToken(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %v",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %v",
+					tc.want, got)
 			}
 		})
 	}

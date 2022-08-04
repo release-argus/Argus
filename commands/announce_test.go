@@ -83,16 +83,16 @@ func TestAnnounceCommand(t *testing.T) {
 			json.Unmarshal(m, &parsed)
 
 			if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
-				t.Fatalf("%s:\nmessage wasn't for %q\ngot %v",
-					name, (*controller.Command)[tc.index].String(), parsed.CommandData)
+				t.Fatalf("message wasn't for %q\ngot %v",
+					(*controller.Command)[tc.index].String(), parsed.CommandData)
 			}
 
 			// if they failed status matches
 			got := stringifyPointer(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
 			want := stringifyPointer((*controller.Failed)[tc.index])
 			if got != want {
-				t.Errorf("%s:\nwant failed=%s\ngot  failed=%s",
-					name, want, got)
+				t.Errorf("want failed=%s\ngot  failed=%s",
+					want, got)
 			}
 
 			// next runnable is within expectred range
@@ -101,8 +101,8 @@ func TestAnnounceCommand(t *testing.T) {
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.CommandData[(*controller.Command)[tc.index].String()].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
-				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
-					name, now, minTime, maxTime, gotTime)
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					now, minTime, maxTime, gotTime)
 			}
 		})
 	}
@@ -146,8 +146,8 @@ func TestFind(t *testing.T) {
 			got := stringifyPointer(index)
 			want := stringifyPointer(tc.want)
 			if got != want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					want, got)
 			}
 		})
 	}
@@ -180,8 +180,8 @@ func TestResetFails(t *testing.T) {
 			}
 			for i := range *tc.controller.Failed {
 				if (*tc.controller.Failed)[i] != nil {
-					t.Errorf("%s:\nfails weren't reset to nil. got %v",
-						name, tc.controller.Failed)
+					t.Errorf("fails weren't reset to nil. got %v",
+						tc.controller.Failed)
 				}
 			}
 		})

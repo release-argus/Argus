@@ -25,14 +25,11 @@ import (
 func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "INIT"
 	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "INIT",
 		ServiceData: &api_types.ServiceSummary{
 			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
@@ -53,13 +50,10 @@ func (s *Status) AnnounceFirstVersion() {
 func (s *Status) AnnounceQuery() {
 	var payloadData []byte
 
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "QUERY"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "QUERY",
 		ServiceData: &api_types.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_types.Status{
@@ -79,14 +73,11 @@ func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "NEW"
 	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "NEW",
 		ServiceData: &api_types.ServiceSummary{
 			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
@@ -108,13 +99,10 @@ func (s *Status) AnnounceUpdate() {
 	var payloadData []byte
 
 	// DeployedVersion update
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "UPDATED"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "UPDATED",
 		ServiceData: &api_types.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_types.Status{
@@ -135,13 +123,10 @@ func (s *Status) AnnounceApproved() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "ACTION"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "ACTION",
 		ServiceData: &api_types.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_types.Status{

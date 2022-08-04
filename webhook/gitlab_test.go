@@ -46,8 +46,8 @@ func TestSetGitLabParameter(t *testing.T) {
 			// THEN the function correctly encodes URL.RawQuery
 			got := req.URL.RawQuery
 			if got != tc.want {
-				t.Errorf("%s:\nSetGitLabParameter failed. Want %s, got %s",
-					name, tc.want, got)
+				t.Errorf("SetGitLabParameter failed. Want %s, got %s",
+					tc.want, got)
 			}
 		})
 	}

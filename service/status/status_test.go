@@ -18,7 +18,7 @@ package service_status
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -55,48 +55,48 @@ func TestInit(t *testing.T) {
 			// THEN the Status is initialised as expected
 			// ServiceID
 			if status.ServiceID != &tc.serviceID {
-				t.Errorf("%s:\nServiceID not initialised to address of %s (%v). Got %v",
-					name, tc.serviceID, &tc.serviceID, status.ServiceID)
+				t.Errorf("ServiceID not initialised to address of %s (%v). Got %v",
+					tc.serviceID, &tc.serviceID, status.ServiceID)
 			}
 			// WebURL
 			if status.WebURL != &tc.webURL {
-				t.Errorf("%s:\nWebURL not initialised to address of %s (%v). Got %v",
-					name, tc.webURL, &tc.webURL, status.WebURL)
+				t.Errorf("WebURL not initialised to address of %s (%v). Got %v",
+					tc.webURL, &tc.webURL, status.WebURL)
 			}
 			// Shoutrrr
 			got := len(status.Fails.Shoutrrr)
 			if got != 0 {
-				t.Errorf("%s:\nFails.Shoutrrr was initialised to %d. Want %d",
-					name, got, 0)
+				t.Errorf("Fails.Shoutrrr was initialised to %d. Want %d",
+					got, 0)
 			} else {
 				for i := 0; i < tc.shoutrrrs; i++ {
 					status.Fails.Shoutrrr[fmt.Sprint(i)] = boolPtr(false)
 				}
 				got := len(status.Fails.Shoutrrr)
 				if got != tc.shoutrrrs {
-					t.Errorf("%s:\nFails.Shoutrrr wanted capacity for %d, but only got to %d",
-						name, tc.shoutrrrs, got)
+					t.Errorf("Fails.Shoutrrr wanted capacity for %d, but only got to %d",
+						tc.shoutrrrs, got)
 				}
 			}
 			// Command
 			got = len(status.Fails.Command)
 			if got != tc.commands {
-				t.Errorf("%s:\nFails.Command was initialised to %d. Want %d",
-					name, got, tc.commands)
+				t.Errorf("Fails.Command was initialised to %d. Want %d",
+					got, tc.commands)
 			}
 			// WebHook
 			got = len(status.Fails.WebHook)
 			if got != 0 {
-				t.Errorf("%s:\nFails.WebHook was initialised to %d. Want %d",
-					name, got, 0)
+				t.Errorf("Fails.WebHook was initialised to %d. Want %d",
+					got, 0)
 			} else {
 				for i := 0; i < tc.webhooks; i++ {
 					status.Fails.WebHook[fmt.Sprint(i)] = boolPtr(false)
 				}
 				got := len(status.Fails.WebHook)
 				if got != tc.webhooks {
-					t.Errorf("%s:\nFails.WebHook wanted capacity for %d, but only got to %d",
-						name, tc.webhooks, got)
+					t.Errorf("Fails.WebHook wanted capacity for %d, but only got to %d",
+						tc.webhooks, got)
 				}
 			}
 		})
@@ -124,8 +124,8 @@ func TestGetWebURL(t *testing.T) {
 
 			// THEN the returned WebURL is as expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -303,7 +303,7 @@ func TestPrintFull(t *testing.T) {
 
 	// THEN a line would have been printed for each var
 	w.Close()
-	out, _ := ioutil.ReadAll(r)
+	out, _ := io.ReadAll(r)
 	os.Stdout = stdout
 	want := 5
 	got := strings.Count(string(out), "\n")
@@ -325,7 +325,7 @@ func TestPrintEmpty(t *testing.T) {
 
 	// THEN no lines would have been printed
 	w.Close()
-	out, _ := ioutil.ReadAll(r)
+	out, _ := io.ReadAll(r)
 	os.Stdout = stdout
 	want := 0
 	got := strings.Count(string(out), "\n")

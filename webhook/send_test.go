@@ -17,7 +17,7 @@
 package webhook
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -41,7 +41,7 @@ func TestTry(t *testing.T) {
 	}{
 		"invalid url": {url: stringPtr("invalid://	test"), errRegex: "failed to get .?http.request"},
 		"fail due to invalid secret":              {wouldFail: true, errRegex: "WebHook gave [0-9]+, not "},
-		"fail due to invalid cert":                {selfSignedCert: true, errRegex: "certificate signed by unknown authority"},
+		"fail due to invalid cert":                {selfSignedCert: true, errRegex: " x509:"},
 		"pass with invalid certs allowed":         {selfSignedCert: true, errRegex: "^$", allowInvalidCerts: true},
 		"pass with valid certs":                   {errRegex: "^$", allowInvalidCerts: true},
 		"fail by not getting desired status code": {desiredStatusCode: 1, errRegex: "WebHook gave [0-9]+, not ", allowInvalidCerts: true},
@@ -50,26 +50,39 @@ func TestTry(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(false, true, tc.selfSignedCert)
-			if tc.wouldFail {
-				webhook = testWebHook(true, true, tc.selfSignedCert)
-			}
-			if tc.url != nil {
-				webhook.URL = *tc.url
-			}
-			webhook.AllowInvalidCerts = &tc.allowInvalidCerts
-			webhook.DesiredStatusCode = &tc.desiredStatusCode
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				webhook := testWebHook(false, true, tc.selfSignedCert)
+				if tc.wouldFail {
+					webhook = testWebHook(true, true, tc.selfSignedCert)
+				}
+				if tc.url != nil {
+					webhook.URL = *tc.url
+				}
+				webhook.AllowInvalidCerts = &tc.allowInvalidCerts
+				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
-			// WHEN try is called with it
-			err := webhook.try(utils.LogFrom{})
+				// WHEN try is called with it
+				err := webhook.try(utils.LogFrom{})
 
-			// THEN any err is expected
-			e := utils.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
-				t.Errorf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				// THEN any err is expected
+				e := utils.ErrorToString(err)
+				re := regexp.MustCompile(tc.errRegex)
+				match := re.MatchString(e)
+				if !match {
+					if strings.Contains(e, "context deadline exceeded") {
+						contextDeadlineExceeded = true
+						if try != 3 {
+							time.Sleep(time.Second)
+							continue
+						}
+					}
+					t.Errorf("want match for %q\nnot: %q",
+						tc.errRegex, e)
+				}
 			}
 		})
 	}
@@ -97,39 +110,52 @@ func TestWebHookSend(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			webhook := testWebHook(false, true, false)
-			if tc.wouldFail {
-				webhook = testWebHook(true, true, false)
-			}
-			webhook.Delay = tc.delay
-			maxTries := uint(tc.tries + 1)
-			webhook.MaxTries = &maxTries
-			webhook.SilentFails = &tc.silentFails
-			webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
-			if tc.tries > 0 {
-				go func() {
-					time.Sleep(time.Duration(11*(tc.tries-1)) * time.Second)
-					webhook.Secret = "argus"
-				}()
-			}
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				stdout := os.Stdout
+				r, w, _ := os.Pipe()
+				os.Stdout = w
+				webhook := testWebHook(false, true, false)
+				if tc.wouldFail {
+					webhook = testWebHook(true, true, false)
+				}
+				webhook.Delay = tc.delay
+				maxTries := uint(tc.tries + 1)
+				webhook.MaxTries = &maxTries
+				webhook.SilentFails = &tc.silentFails
+				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
+				if tc.tries > 0 {
+					go func() {
+						time.Sleep(time.Duration(6*(tc.tries-1))*time.Second + time.Second)
+						webhook.Secret = "argus"
+					}()
+				}
 
-			// WHEN try is called with it
-			webhook.Send(utils.ServiceInfo{}, tc.useDelay)
+				// WHEN try is called with it
+				webhook.Send(utils.ServiceInfo{}, tc.useDelay)
 
-			// THEN the logs are expected
-			w.Close()
-			out, _ := ioutil.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			re := regexp.MustCompile(tc.stdoutRegex)
-			output = strings.ReplaceAll(output, "\n", "-n")
-			match := re.MatchString(output)
-			if !match {
-				t.Errorf("%s:\nmatch on %q not found in\n%q",
-					name, tc.stdoutRegex, output)
+				// THEN the logs are expected
+				w.Close()
+				out, _ := io.ReadAll(r)
+				os.Stdout = stdout
+				output := string(out)
+				re := regexp.MustCompile(tc.stdoutRegex)
+				output = strings.ReplaceAll(output, "\n", "-n")
+				match := re.MatchString(output)
+				if !match {
+					if strings.Contains(output, "context deadline exceeded") {
+						contextDeadlineExceeded = true
+						if try != 3 {
+							time.Sleep(time.Second)
+							continue
+						}
+					}
+					t.Errorf("match on %q not found in\n%q",
+						tc.stdoutRegex, output)
+				}
 			}
 		})
 	}
@@ -157,45 +183,58 @@ func TestSliceSend(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			tc.repeat++ // repeat to check delay usage as map order is random
-			for tc.repeat != 0 {
-				stdout := os.Stdout
-				r, w, _ := os.Pipe()
-				os.Stdout = w
-				if tc.slice != nil {
-					for id := range *tc.slice {
-						(*tc.slice)[id].ID = id
-					}
-					for id := range tc.delays {
-						(*tc.slice)[id].Delay = tc.delays[id]
-					}
-				}
-
-				// WHEN try is called with it
-				tc.slice.Send(utils.ServiceInfo{}, tc.useDelay)
-
-				// THEN the logs are expected
-				w.Close()
-				out, _ := ioutil.ReadAll(r)
-				os.Stdout = stdout
-				output := string(out)
-				output = strings.ReplaceAll(output, "\n", "-n")
-				re := regexp.MustCompile(tc.stdoutRegex)
-				match := re.MatchString(output)
-				if !match {
-					if tc.stdoutRegexAlt != "" {
-						re = regexp.MustCompile(tc.stdoutRegexAlt)
-						match = re.MatchString(output)
-						if !match {
-							t.Errorf("%s:\nmatch on %q not found in\n%q",
-								name, tc.stdoutRegexAlt, output)
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				tc.repeat++ // repeat to check delay usage as map order is random
+				for tc.repeat != 0 {
+					stdout := os.Stdout
+					r, w, _ := os.Pipe()
+					os.Stdout = w
+					if tc.slice != nil {
+						for id := range *tc.slice {
+							(*tc.slice)[id].ID = id
 						}
-						return
+						for id := range tc.delays {
+							(*tc.slice)[id].Delay = tc.delays[id]
+						}
 					}
-					t.Errorf("%s:\nmatch on %q not found in\n%q",
-						name, tc.stdoutRegex, output)
+
+					// WHEN try is called with it
+					tc.slice.Send(utils.ServiceInfo{}, tc.useDelay)
+
+					// THEN the logs are expected
+					w.Close()
+					out, _ := io.ReadAll(r)
+					os.Stdout = stdout
+					output := string(out)
+					output = strings.ReplaceAll(output, "\n", "-n")
+					re := regexp.MustCompile(tc.stdoutRegex)
+					match := re.MatchString(output)
+					if !match {
+						if strings.Contains(output, "context deadline exceeded") {
+							contextDeadlineExceeded = true
+							if try != 3 {
+								time.Sleep(time.Second)
+								continue
+							}
+						}
+						if tc.stdoutRegexAlt != "" {
+							re = regexp.MustCompile(tc.stdoutRegexAlt)
+							match = re.MatchString(output)
+							if !match {
+								t.Errorf("match on %q not found in\n%q",
+									tc.stdoutRegexAlt, output)
+							}
+							return
+						}
+						t.Errorf("match on %q not found in\n%q",
+							tc.stdoutRegex, output)
+					}
+					tc.repeat--
 				}
-				tc.repeat--
 			}
 		})
 	}
@@ -225,8 +264,8 @@ func TestNotifiersSendWithNotifier(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Errorf("%s:\nmatch on %q not found in\n%q",
-					name, tc.errRegex, e)
+				t.Errorf("match on %q not found in\n%q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -251,8 +290,8 @@ func TestCheckWebHookBody(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:  %t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
 			}
 		})
 	}

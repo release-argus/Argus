@@ -36,9 +36,9 @@ func (w *WebHook) AnnounceSend() {
 	wsType := "WEBHOOK"
 	wsSubType := "EVENT"
 	payloadData, _ := json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    wsPage,
+		Type:    wsType,
+		SubType: wsSubType,
 		ServiceData: &api_types.ServiceSummary{
 			ID: utils.DefaultIfNil(w.ServiceStatus.ServiceID),
 		},

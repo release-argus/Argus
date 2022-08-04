@@ -76,13 +76,13 @@ func TestSwap(t *testing.T) {
 			// THEN the Swap is successful
 			// int
 			if len(tc.had) != len(tc.want) {
-				t.Fatalf("%s:\nSwap added/removed elements!\nwant:%v\ngot:  %v",
-					name, tc.want, tc.had)
+				t.Fatalf("Swap added/removed elements!\nwant:%v\ngot:  %v",
+					tc.want, tc.had)
 			}
 			for i := range tc.had {
 				if tc.had[i] != tc.want[i] {
-					t.Fatalf("%s:\nwant: %v\ngot:  %v",
-						name, tc.want, tc.had)
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, tc.had)
 				}
 			}
 		})
@@ -127,13 +127,13 @@ func TestRemoveIndex(t *testing.T) {
 			// THEN the Removal is successful
 			// int
 			if len(tc.had) != len(tc.want) {
-				t.Fatalf("%s:\nRemove index failed\nwant:%v\ngot:  %v",
-					name, tc.want, tc.had)
+				t.Fatalf("Remove index failed\nwant:%v\ngot:  %v",
+					tc.want, tc.had)
 			}
 			for i := range tc.had {
 				if tc.had[i] != tc.want[i] {
-					t.Fatalf("%s:\nwant: %v\ngot:  %v",
-						name, tc.want, tc.had)
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, tc.had)
 				}
 			}
 		})
@@ -176,8 +176,8 @@ func TestGetIndentation(t *testing.T) {
 
 			// THEN the expected indentation is returned
 			if got != tc.want {
-				t.Fatalf("%s:\nwant:%q\ngot:  %q",
-					name, tc.want, got)
+				t.Fatalf("want:%q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}

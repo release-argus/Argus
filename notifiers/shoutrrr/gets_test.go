@@ -65,8 +65,8 @@ func TestOption(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
-				t.Fatalf("%s - GetOption:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Fatalf("GetOption:\nwant: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 
 			// WHEN GetSelfOption is called
@@ -74,8 +74,8 @@ func TestOption(t *testing.T) {
 
 			// THEN the function returns the Option in itself
 			if got != utils.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("%s - GetSelfOption:\nwant: %q\ngot:  %q",
-					name, utils.DefaultIfNil(tc.optionRoot), got)
+				t.Fatalf("GetSelfOption:\nwant: %q\ngot:  %q",
+					utils.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetOption is called
@@ -85,8 +85,8 @@ func TestOption(t *testing.T) {
 			// THEN the Option is set and can be retrieved with a Get
 			got = shoutrrr.GetSelfOption(key)
 			if got != want {
-				t.Fatalf("%s - SetOption:\nwant: %q\ngot:  %q",
-					name, want, got)
+				t.Fatalf("SetOption:\nwant: %q\ngot:  %q",
+					want, got)
 			}
 		})
 	}
@@ -133,8 +133,8 @@ func TestURLField(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
-				t.Fatalf("%s - GetURLField:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Fatalf("GetURLField:\nwant: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 
 			// WHEN GetSelfURLField is called
@@ -142,8 +142,8 @@ func TestURLField(t *testing.T) {
 
 			// THEN the function returns the URLField in itself
 			if got != utils.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("%s - GetSelfURLField:\nwant: %q\ngot:  %q",
-					name, utils.DefaultIfNil(tc.optionRoot), got)
+				t.Fatalf("GetSelfURLField:\nwant: %q\ngot:  %q",
+					utils.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetURLField is called
@@ -153,8 +153,8 @@ func TestURLField(t *testing.T) {
 			// THEN the URLField is set and can be retrieved with a Get
 			got = shoutrrr.GetSelfURLField(key)
 			if got != want {
-				t.Fatalf("%s - SetURLField:\nwant: %q\ngot:  %q",
-					name, want, got)
+				t.Fatalf("SetURLField:\nwant: %q\ngot:  %q",
+					want, got)
 			}
 		})
 	}
@@ -201,8 +201,8 @@ func TestParam(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
-				t.Fatalf("%s - GetParam:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Fatalf("GetParam:\nwant: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 
 			// WHEN GetSelfParam is called
@@ -210,8 +210,8 @@ func TestParam(t *testing.T) {
 
 			// THEN the function returns the Param in itself
 			if got != utils.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("%s - GetSelfParam:\nwant: %q\ngot:  %q",
-					name, utils.DefaultIfNil(tc.optionRoot), got)
+				t.Fatalf("GetSelfParam:\nwant: %q\ngot:  %q",
+					utils.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetParam is called
@@ -221,8 +221,8 @@ func TestParam(t *testing.T) {
 			// THEN the Param is set and can be retrieved with a Get
 			got = shoutrrr.GetSelfParam(key)
 			if got != want {
-				t.Fatalf("%s - SetParam:\nwant: %q\ngot:  %q",
-					name, want, got)
+				t.Fatalf("SetParam:\nwant: %q\ngot:  %q",
+					want, got)
 			}
 		})
 	}
@@ -271,8 +271,8 @@ func TestGetDelay(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.wantString, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.wantString, got)
 			}
 		})
 	}
@@ -319,8 +319,8 @@ func TestGetDelayDuration(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -367,8 +367,8 @@ func TestGetMaxTries(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if int(got) != tc.want {
-				t.Fatalf("%s:\nwant: %d\ngot:  %d",
-					name, tc.want, got)
+				t.Fatalf("want: %d\ngot:  %d",
+					tc.want, got)
 			}
 		})
 	}
@@ -426,8 +426,8 @@ func TestGetMessage(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -485,8 +485,8 @@ func TestGetTitle(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -524,8 +524,8 @@ func TestGetType(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Fatalf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}

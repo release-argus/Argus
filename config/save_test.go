@@ -134,6 +134,7 @@ func TestSave(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		t.Log(name)
 		config := Config{File: tc.file}
 		originalData, err := os.ReadFile(config.File)
 		had := string(originalData)
@@ -156,8 +157,8 @@ func TestSave(t *testing.T) {
 		}
 		if string(newData) != had {
 			failed = true
-			t.Errorf("%s:\n%q is different after Save. Got \n%s\nexpecting:\n%s",
-				name, tc.file, string(newData), had)
+			t.Errorf("%q is different after Save. Got \n%s\nexpecting:\n%s",
+				tc.file, string(newData), had)
 		}
 		err = os.Remove(config.File)
 		if err != nil {

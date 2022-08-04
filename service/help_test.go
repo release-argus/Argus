@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build testing
 
 package service
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	db_types "github.com/release-argus/Argus/db/types"
@@ -64,7 +65,7 @@ func testServiceGitHub() *Service {
 		ID: "test",
 		LatestVersion: latest_version.Lookup{
 			Type:        "github",
-			AccessToken: stringPtr(""),
+			AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
 			URL:         "release-argus/Argus",
 			Require: &filters.Require{
 				RegexContent: "content",
@@ -171,10 +172,10 @@ func testServiceURL() *Service {
 	return svc
 }
 
-func testWebHookSuccessful() *webhook.WebHook {
+func testWebHook(failing bool) *webhook.WebHook {
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	return &webhook.WebHook{
+	wh := &webhook.WebHook{
 		ID:                "test",
 		Type:              "github",
 		URL:               "https://valid.release-argus.io/hooks/github-style",
@@ -189,24 +190,8 @@ func testWebHookSuccessful() *webhook.WebHook {
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
 	}
-}
-
-func testWebHookFailing() *webhook.WebHook {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
-	return &webhook.WebHook{
-		ID:                "test",
-		Type:              "github",
-		URL:               "https://valid.release-argus.io/hooks/github-style",
-		Secret:            "notArgus",
-		AllowInvalidCerts: boolPtr(false),
-		DesiredStatusCode: &desiredStatusCode,
-		Delay:             "0s",
-		SilentFails:       boolPtr(false),
-		MaxTries:          &whMaxTries,
-		ParentInterval:    stringPtr("12m"),
-		Main:              &webhook.WebHook{},
-		Defaults:          &webhook.WebHook{},
-		HardDefaults:      &webhook.WebHook{},
+	if failing {
+		wh.Secret = "notArgus"
 	}
+	return wh
 }

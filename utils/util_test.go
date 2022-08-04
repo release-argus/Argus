@@ -18,7 +18,7 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
@@ -42,8 +42,8 @@ func TestContains(t *testing.T) {
 
 			// THEN true is returned if it does contain the item
 			if found != tc.doesContain {
-				t.Errorf("%s:\nwant Contains=%t, got Contains=%t",
-					name, found, tc.doesContain)
+				t.Errorf("want Contains=%t, got Contains=%t",
+					found, tc.doesContain)
 			}
 		})
 	}
@@ -67,8 +67,8 @@ func TestEvalNilPtr(t *testing.T) {
 
 			// THEN the correct value is returned
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, tc.want, got)
+				t.Errorf("want: %s\ngot:  %s",
+					tc.want, got)
 			}
 		})
 	}
@@ -92,8 +92,8 @@ func TestPtrOrValueToPtr(t *testing.T) {
 
 			// THEN the correct value is returned
 			if *got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %s",
-					name, tc.want, *got)
+				t.Errorf("want: %s\ngot:  %s",
+					tc.want, *got)
 			}
 		})
 	}
@@ -118,18 +118,18 @@ func TestValueIfNotNil(t *testing.T) {
 			// THEN the correct value is returned
 			if tc.want == nil {
 				if got != nil {
-					t.Errorf("%s:\nwant: %v\ngot:  &%q",
-						name, tc.want, *got)
+					t.Errorf("want: %v\ngot:  &%q",
+						tc.want, *got)
 				}
 				return
 			}
 			if got == nil {
-				t.Errorf("%s:\nwant: %q\ngot:  &%v",
-					name, *tc.want, got)
+				t.Errorf("want: %q\ngot:  &%v",
+					*tc.want, got)
 			}
 			if *got != *tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, *tc.want, *got)
+				t.Errorf("want: %q\ngot:  %q",
+					*tc.want, *got)
 			}
 		})
 	}
@@ -153,8 +153,8 @@ func TestValueIfNotDefault(t *testing.T) {
 
 			// THEN the correct value is returned
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -178,8 +178,8 @@ func TestDefaultIfNil(t *testing.T) {
 
 			// THEN the correct value is returned
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -206,14 +206,14 @@ func TestGetFirstNonNilPtr(t *testing.T) {
 			// THEN the correct pointer (or nil) is returned
 			if tc.allNil {
 				if got != nil {
-					t.Fatalf("%s:\ngot:  %v\nfrom: %v",
-						name, got, tc.pointers)
+					t.Fatalf("got:  %v\nfrom: %v",
+						got, tc.pointers)
 				}
 				return
 			}
 			if got != tc.pointers[tc.wantIndex] {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, tc.pointers[tc.wantIndex], got)
+				t.Errorf("want: %v\ngot:  %v",
+					tc.pointers[tc.wantIndex], got)
 			}
 		})
 	}
@@ -240,14 +240,14 @@ func TestGetFirstNonDefault(t *testing.T) {
 			// THEN the correct var (or "") is returned
 			if tc.allDefault {
 				if got != "" {
-					t.Fatalf("%s:\ngot:  %v\nfrom: %v",
-						name, got, tc.slice)
+					t.Fatalf("got:  %v\nfrom: %v",
+						got, tc.slice)
 				}
 				return
 			}
 			if got != tc.slice[tc.wantIndex] {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, tc.slice[tc.wantIndex], got)
+				t.Errorf("want: %v\ngot:  %v",
+					tc.slice[tc.wantIndex], got)
 			}
 		})
 	}
@@ -275,19 +275,19 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 
 			// THEN the var is printed when it should be
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			if !tc.didPrint {
 				if got != "" {
-					t.Fatalf("%s:\nprinted %q",
-						name, got)
+					t.Fatalf("printed %q",
+						got)
 				}
 				return
 			}
 			if got != msg+"\n" {
-				t.Errorf("%s:\nunexpected print %q",
-					name, got)
+				t.Errorf("unexpected print %q",
+					got)
 			}
 		})
 	}
@@ -315,19 +315,19 @@ func TestPrintlnIfNotNil(t *testing.T) {
 
 			// THEN the var is printed when it should be
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			if !tc.didPrint {
 				if got != "" {
-					t.Fatalf("%s:\nprinted %q",
-						name, got)
+					t.Fatalf("printed %q",
+						got)
 				}
 				return
 			}
 			if got != msg+"\n" {
-				t.Errorf("%s:\nunexpected print %q",
-					name, got)
+				t.Errorf("unexpected print %q",
+					got)
 			}
 		})
 	}
@@ -355,19 +355,19 @@ func TestPrintlnIfNil(t *testing.T) {
 
 			// THEN the var is printed when it should be
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			if !tc.didPrint {
 				if got != "" {
-					t.Fatalf("%s:\nprinted %q",
-						name, got)
+					t.Fatalf("printed %q",
+						got)
 				}
 				return
 			}
 			if got != msg+"\n" {
-				t.Errorf("%s:\nunexpected print %q",
-					name, got)
+				t.Errorf("unexpected print %q",
+					got)
 			}
 		})
 	}
@@ -391,8 +391,8 @@ func TestDefaultOrValue(t *testing.T) {
 
 			// THEN the var is printed when it should be
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -415,8 +415,8 @@ func TestErrorToString(t *testing.T) {
 
 			// THEN the var is printed when it should be
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -443,8 +443,8 @@ func TestRandString(t *testing.T) {
 
 			// THEN we get a random alphabet string of the specified length
 			if len(got) != tc.wanted {
-				t.Errorf("%s:\ngot length %d. wanted %d",
-					name, tc.wanted, len(got))
+				t.Errorf("got length %d. wanted %d",
+					tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {
@@ -484,8 +484,8 @@ func TestRandAlphaNumericLower(t *testing.T) {
 
 			// THEN we get a random alphanumeric string of the specified length
 			if len(got) != tc.wanted {
-				t.Errorf("%s:\ngot length %d. wanted %d",
-					name, tc.wanted, len(got))
+				t.Errorf("got length %d. wanted %d",
+					tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {
@@ -525,8 +525,8 @@ func TestRandNumeric(t *testing.T) {
 
 			// THEN we get a random numeric string of the specified length
 			if len(got) != tc.wanted {
-				t.Errorf("%s:\ngot length %d. wanted %d",
-					name, tc.wanted, len(got))
+				t.Errorf("got length %d. wanted %d",
+					tc.wanted, len(got))
 			}
 			charactersVerified := 0
 			for charactersVerified != tc.wanted {
@@ -572,8 +572,8 @@ func TestNormaliseNewlines(t *testing.T) {
 
 			// THEN the newlines are normalised correctly
 			if string(got) != string(tc.want) {
-				t.Errorf("%s:want: %q\ngot:  %q",
-					name, string(tc.want), string(got))
+				t.Errorf("want: %q\ngot:  %q",
+					string(tc.want), string(got))
 			}
 		})
 	}
@@ -600,17 +600,16 @@ func TestCopyMap(t *testing.T) {
 
 			// THEN the map is copied correctly
 			if &got == &tc.want {
-				t.Errorf("%s:\nmap wasn't copied, they have the same addresses",
-					name)
+				t.Error("map wasn't copied, they have the same addresses")
 			}
 			if len(got) != len(tc.want) {
-				t.Fatalf("%s:\nwant: %v\ngot:  %v",
-					name, tc.want, got)
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("%s:\nwant: %v\ngot:  %v",
-						name, tc.want, got)
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, got)
 				}
 			}
 		})
@@ -640,8 +639,8 @@ func TestGetPortFromURL(t *testing.T) {
 
 			// THEN the port is extracted/defaulted correctly
 			if got != tc.want {
-				t.Errorf("%s:\nport not extracted from %q correctly\nwant: %q\ngot:  %q",
-					name, tc.url, tc.want, got)
+				t.Errorf("port not extracted from %q correctly\nwant: %q\ngot:  %q",
+					tc.url, tc.want, got)
 			}
 		})
 	}
@@ -674,13 +673,13 @@ func TestLowercaseStringStringMap(t *testing.T) {
 
 			// THEN the map keys are lower-cased correctly
 			if len(got) != len(tc.want) {
-				t.Fatalf("%s:\nwant: %v\ngot:  %v",
-					name, tc.want, got)
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, got)
 			}
 			for i := range got {
 				if got[i] != tc.want[i] {
-					t.Fatalf("%s:\nwant: %v\ngot:  %v",
-						name, tc.want, got)
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, got)
 				}
 			}
 		})

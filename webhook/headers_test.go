@@ -48,14 +48,14 @@ func TestSetCustomHeaders(t *testing.T) {
 			webhook := WebHook{CustomHeaders: tc.customHeaders,
 				ServiceStatus: &service_status.Status{ServiceID: &serviceID, LatestVersion: latestVersion}}
 
-			// WHEN getIP is called on this request
+			// WHEN SetCustomHeaders is called on this request
 			webhook.SetCustomHeaders(req)
 
 			// THEN the function returns the correct result
 			if tc.customHeaders == nil {
 				if len(req.Header) != 0 {
-					t.Fatalf("%s:\ncustom headers was nil but Headers are %v",
-						name, req.Header)
+					t.Fatalf("custom headers was nil but Headers are %v",
+						req.Header)
 				}
 				return
 			}
@@ -64,12 +64,12 @@ func TestSetCustomHeaders(t *testing.T) {
 			}
 			for header, val := range tc.wantHeaders {
 				if req.Header[header] == nil {
-					t.Fatalf("%s:\n%s: %s was not given to the request, got\n%v",
-						name, header, val, req.Header)
+					t.Fatalf("%s: %s was not given to the request, got\n%v",
+						header, val, req.Header)
 				}
 				if req.Header[header][0] != val {
-					t.Fatalf("%s:\n%s: %s was not given to the request, got\n%v\n%v",
-						name, header, val, req.Header[header][0], req.Header)
+					t.Fatalf("%s: %s was not given to the request, got\n%v\n%v",
+						header, val, req.Header[header][0], req.Header)
 				}
 			}
 		})

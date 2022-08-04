@@ -188,19 +188,9 @@ func (d *Defaults) CheckValues() (errs error) {
 	prefix := "  "
 
 	// Service
-	serviceErrs := false
 	if err := d.Service.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%sservice:\\%w",
 			utils.ErrorToString(errs), prefix, err)
-		serviceErrs = true
-	}
-	if err := d.Service.DeployedVersionLookup.CheckValues(prefix); err != nil {
-		customPrefix := ""
-		if !serviceErrs {
-			customPrefix = fmt.Sprintf("%s%sservice:\\", utils.ErrorToString(errs), prefix)
-		}
-		errs = fmt.Errorf("%s%s%s  deployed_version:\\%w",
-			utils.ErrorToString(errs), customPrefix, prefix, err)
 	}
 
 	// Notify
@@ -215,8 +205,8 @@ func (d *Defaults) CheckValues() (errs error) {
 
 	// WebHook
 	if err := d.WebHook.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%swebhook:\\%w",
+			utils.ErrorToString(errs), prefix, err)
 	}
 
 	return errs

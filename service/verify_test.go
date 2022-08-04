@@ -17,7 +17,7 @@
 package service
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -92,12 +92,12 @@ func TestServicePrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -130,19 +130,19 @@ func TestSlicePrint(t *testing.T) {
 
 			// THEN it prints the expected number of lines
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 			// in the right order
 			re := regexp.MustCompile(tc.regexMatch)
 			match := re.MatchString(string(out))
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.regexMatch, string(out))
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.regexMatch, string(out))
 			}
 		})
 	}
@@ -207,8 +207,8 @@ func TestServiceCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -245,8 +245,8 @@ func TestSliceCheckValues(t *testing.T) {
 					match = re.MatchString(e)
 				}
 				if !match {
-					t.Fatalf("%s:\nwant match for %q\nnot: %q",
-						name, tc.errRegex, e)
+					t.Fatalf("want match for %q\nnot: %q",
+						tc.errRegex, e)
 				}
 			}
 		})

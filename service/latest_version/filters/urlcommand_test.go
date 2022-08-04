@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:built unit
+//go:build unit
 
 package filters
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -65,12 +65,12 @@ func TestURLCommandSlicePrint(t *testing.T) {
 
 			// THEN the expected number of lines are printed
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -118,8 +118,8 @@ func TestURLCommandSliceRun(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -154,8 +154,8 @@ func TestURLCommandCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -190,37 +190,37 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 			if len(slice) != len(tc.slice) {
-				t.Fatalf("%s:\ngot a slice of length %d. want %d\n%#v",
-					name, len(slice), len(tc.slice), slice)
+				t.Fatalf("got a slice of length %d. want %d\n%#v",
+					len(slice), len(tc.slice), slice)
 			}
 			for i := range tc.slice {
 				if slice[i].Type != tc.slice[i].Type {
-					t.Errorf("%s, wrong Type:\nwant: %q\ngot:  %q\n",
-						name, tc.slice[i].Type, slice[i].Type)
+					t.Errorf("wrong Type:\nwant: %q\ngot:  %q\n",
+						tc.slice[i].Type, slice[i].Type)
 				}
 				if utils.DefaultIfNil(slice[i].Regex) != utils.DefaultIfNil(tc.slice[i].Regex) {
-					t.Errorf("%s, wrong Regex:\nwant: %q\ngot:  %q\n",
-						name, utils.DefaultIfNil(tc.slice[i].Regex), utils.DefaultIfNil(slice[i].Regex))
+					t.Errorf("wrong Regex:\nwant: %q\ngot:  %q\n",
+						utils.DefaultIfNil(tc.slice[i].Regex), utils.DefaultIfNil(slice[i].Regex))
 				}
 				if slice[i].Index != tc.slice[i].Index {
-					t.Errorf("%s, wrong Index:\nwant: %q\ngot:  %q\n",
-						name, tc.slice[i].Index, slice[i].Index)
+					t.Errorf("wrong Index:\nwant: %q\ngot:  %q\n",
+						tc.slice[i].Index, slice[i].Index)
 				}
 				if utils.DefaultIfNil(slice[i].Text) != utils.DefaultIfNil(tc.slice[i].Text) {
-					t.Errorf("%s, wrong Text:\nwant: %q\ngot:  %q\n",
-						name, utils.DefaultIfNil(tc.slice[i].Text), utils.DefaultIfNil(slice[i].Text))
+					t.Errorf("wrong Text:\nwant: %q\ngot:  %q\n",
+						utils.DefaultIfNil(tc.slice[i].Text), utils.DefaultIfNil(slice[i].Text))
 				}
 				if utils.DefaultIfNil(slice[i].Old) != utils.DefaultIfNil(tc.slice[i].Old) {
-					t.Errorf("%s, wrong Old:\nwant: %q\ngot:  %q\n",
-						name, utils.DefaultIfNil(tc.slice[i].Old), utils.DefaultIfNil(slice[i].Old))
+					t.Errorf("wrong Old:\nwant: %q\ngot:  %q\n",
+						utils.DefaultIfNil(tc.slice[i].Old), utils.DefaultIfNil(slice[i].Old))
 				}
 				if utils.DefaultIfNil(slice[i].New) != utils.DefaultIfNil(tc.slice[i].New) {
-					t.Errorf("%s, wrong New:\nwant: %q\ngot:  %q\n",
-						name, utils.DefaultIfNil(tc.slice[i].New), utils.DefaultIfNil(slice[i].New))
+					t.Errorf("wrong New:\nwant: %q\ngot:  %q\n",
+						utils.DefaultIfNil(tc.slice[i].New), utils.DefaultIfNil(slice[i].New))
 				}
 			}
 		})

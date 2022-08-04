@@ -17,7 +17,7 @@ package latest_version
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -145,7 +145,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	}
 
 	// Read the response body.
-	rawBody, err = ioutil.ReadAll(resp.Body)
+	rawBody, err = io.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
 	return
 }

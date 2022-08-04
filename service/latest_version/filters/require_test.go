@@ -17,7 +17,7 @@
 package filters
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -49,23 +49,21 @@ func TestRequireInit(t *testing.T) {
 			// THEN the global JLog is set to its address
 			if tc.req == nil {
 				if jLog == newJLog {
-					t.Fatalf("%s:\nJLog shouldn't have been initialised to the one we called Init with when Require is %v",
-						name, tc.req)
+					t.Fatalf("JLog shouldn't have been initialised to the one we called Init with when Require is %v",
+						tc.req)
 				}
 				// THEN the Require is still nil
 				if tc.req != nil {
-					t.Fatalf("%s:\nInit with a nil require shouldn't inititalise it",
-						name)
+					t.Fatal("Init with a nil require shouldn't inititalise it")
 				}
 			} else {
 				if jLog != newJLog {
-					t.Fatalf("%s:\nJLog should have been initialised to the one we called Init with",
-						name)
+					t.Fatal("JLog should have been initialised to the one we called Init with")
 				}
 				// THEN the status is given to the Require
 				if tc.req.Status != &status {
-					t.Fatalf("%s:\nStatus should be the address of the var given to it %v, not %v",
-						name, &status, tc.req.Status)
+					t.Fatalf("Status should be the address of the var given to it %v, not %v",
+						&status, tc.req.Status)
 				}
 			}
 		})
@@ -95,12 +93,12 @@ func TestRequirePrint(t *testing.T) {
 
 			// THEN the expected number of lines are printed
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.lines {
-				t.Errorf("%s:\nPrint should have given %d lines, but gave %d\n%s",
-					name, tc.lines, got, out)
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, out)
 			}
 		})
 	}
@@ -133,8 +131,8 @@ func TestRequireRegexCheckVersion(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -176,8 +174,8 @@ func TestRequireRegexCheckContent(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}
@@ -205,8 +203,8 @@ func TestRequireCheckValues(t *testing.T) {
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
-				t.Fatalf("%s:\nwant match for %q\nnot: %q",
-					name, tc.errRegex, e)
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
 			}
 		})
 	}

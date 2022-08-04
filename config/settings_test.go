@@ -113,8 +113,8 @@ func TestSettingsGetString(t *testing.T) {
 				got = utils.EvalNilPtr(tc.getFuncPtr(), "<nil>")
 			}
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %v",
-					name, tc.want, got)
+				t.Errorf("want: %s\ngot:  %v",
+					tc.want, got)
 			}
 		})
 	}
@@ -162,8 +162,8 @@ func TestSettingsGetBool(t *testing.T) {
 				}
 			}
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %s\ngot:  %v",
-					name, tc.want, got)
+				t.Errorf("want: %s\ngot:  %v",
+					tc.want, got)
 			}
 		})
 	}
@@ -211,8 +211,8 @@ func TestGetWebWebFileNotExist(t *testing.T) {
 
 			// THEN this call will crash the program if a file is wanted
 			if got != nil && *got != tc.file {
-				t.Errorf("%s:\n%q shouldn't exist, so this call should have been Fatal",
-					name, tc.file)
+				t.Errorf("%q shouldn't exist, so this call should have been Fatal",
+					tc.file)
 			}
 		})
 	}

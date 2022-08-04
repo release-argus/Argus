@@ -17,10 +17,10 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"strings"
 
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -111,7 +111,7 @@ func (w *WebHook) Send(
 			return
 		}
 		// Space out retries.
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -146,7 +146,7 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	bodyOkay := checkWebHookBody(string(body))
 
 	// SUCCESS

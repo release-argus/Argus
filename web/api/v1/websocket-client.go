@@ -224,79 +224,76 @@ func (c *Client) writePump() {
 				continue
 			}
 
+			if msg.Page == "" || msg.Type == "" {
+				continue
+			}
 			// If message is from the server (doesn't use version)
 			if msg.Version == nil {
-				if msg.Page == nil || msg.Type == nil {
-					continue
-				}
-				switch *msg.Type {
+				switch msg.Type {
 				case "VERSION", "WEBHOOK", "COMMAND":
 					err := c.conn.WriteJSON(msg)
 					c.api.Log.Error(
-						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", *msg.Type, utils.ErrorToString(err)),
+						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, utils.ErrorToString(err)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						err != nil,
 					)
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", *msg.Type, string(message)),
+						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Type, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
 					continue
 				}
 			} else {
-				if msg.Page == nil || msg.Type == nil {
-					continue
-				}
 				// Message is from client (`msg.Version` specified)
-				switch *msg.Page {
+				switch msg.Page {
 				case "APPROVALS":
-					switch *msg.Type {
+					switch msg.Type {
 					case "VERSION":
 						// Approval/Skip
-						c.api.wsServiceAction(c, msg)
+						go c.api.wsServiceAction(c, msg)
 					case "ACTIONS":
-						// Get WebHook data for a service
-						c.api.wsWebHook(c, msg)
 						// Get Command data for a service
 						c.api.wsCommand(c, msg)
+						// Get WebHook data for a service
+						c.api.wsWebHook(c, msg)
 					case "INIT":
 						// Get all Service data
-						c.api.wsService(c)
+						go c.api.wsService(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 						continue
 					}
 				case "RUNTIME_BUILD":
-					switch *msg.Type {
+					switch msg.Type {
 					case "INIT":
 						c.api.wsStatus(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("Unknown RUNTIME_BUILD Type %q\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown RUNTIME_BUILD Type %q\nFull message: %s", msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 					}
 				case "FLAGS":
-					switch *msg.Type {
+					switch msg.Type {
 					case "INIT":
 						c.api.wsFlags(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("Unknown FLAGS Type %q\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown FLAGS Type %q\nFull message: %s", msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 						continue
 					}
 				case "CONFIG":
-					switch *msg.Type {
+					switch msg.Type {
 					case "INIT":
 						c.api.wsConfigSettings(c)
 						c.api.wsConfigDefaults(c)
@@ -305,7 +302,7 @@ func (c *Client) writePump() {
 						c.api.wsConfigService(c)
 					default:
 						c.api.Log.Error(
-							fmt.Sprintf("Unknown CONFIG Type %q\nFull message: %s", *msg.Type, string(message)),
+							fmt.Sprintf("Unknown CONFIG Type %q\nFull message: %s", msg.Type, string(message)),
 							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
@@ -313,7 +310,7 @@ func (c *Client) writePump() {
 					}
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", *msg.Type, string(message)),
+						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Type, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)

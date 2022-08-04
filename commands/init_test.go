@@ -68,8 +68,8 @@ func TestSetNextRunnable(t *testing.T) {
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
 			if !(minTime.Before(got)) || !(maxTime.After(got)) {
-				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
-					name, ranAt, minTime, maxTime, got)
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
+					ranAt, minTime, maxTime, got)
 			}
 		})
 	}
@@ -104,8 +104,8 @@ func TestIsRunnable(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:\n%t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:\n%t",
+					tc.want, got)
 			}
 		})
 	}
@@ -144,12 +144,12 @@ func TestGetNextRunnable(t *testing.T) {
 			if tc.outOfRange {
 				var defaultTime time.Time
 				if got != defaultTime {
-					t.Fatalf("%s:\nwant: %s\ngot:\n%s",
-						name, defaultTime, got)
+					t.Fatalf("want: %s\ngot:\n%s",
+						defaultTime, got)
 				}
 			} else if got != controller.NextRunnable[tc.index] {
-				t.Fatalf("%s:\nwant: %s\ngot:\n%s",
-					name, controller.NextRunnable[tc.index], got)
+				t.Fatalf("want: %s\ngot:\n%s",
+					controller.NextRunnable[tc.index], got)
 			}
 		})
 	}
@@ -173,8 +173,8 @@ func TestString(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:\n%q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:\n%q",
+					tc.want, got)
 			}
 		})
 	}
@@ -198,8 +198,8 @@ func TestFormattedString(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:\n%q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:\n%q",
+					tc.want, got)
 			}
 		})
 	}
@@ -271,41 +271,43 @@ func TestInit(t *testing.T) {
 			if !tc.nilController {
 				controller = &Controller{}
 			}
+			logBefore := jLog
+			tc.serviceStatus.ServiceID = stringPtr("TestInit")
 			controller.Init(tc.log, &tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
 
 			// THEN the result is expected
 			// log
-			if (jLog == nil && tc.log == nil) && jLog != tc.log {
-				t.Errorf("%s:\nwant: jLog=%v\ngot:  jLog=%v",
-					name, tc.log, jLog)
+			if (tc.log == nil && jLog != logBefore) && jLog != tc.log {
+				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
+					tc.log, jLog)
 			}
 			// nilController
 			if tc.nilController {
 				if controller != nil {
-					t.Fatalf("%s:\nInit of nil Controller gave %v",
-						name, controller)
+					t.Fatalf("Init of nil Controller gave %v",
+						controller)
 				}
 				return
 			}
 			// serviceStatus
 			if controller.ServiceStatus != &tc.serviceStatus {
-				t.Errorf("%s:\nwant: ServiceStatus=%v\ngot:  ServiceStatus=%v",
-					name, controller.ServiceStatus, &tc.serviceStatus)
+				t.Errorf("want: ServiceStatus=%v\ngot:  ServiceStatus=%v",
+					controller.ServiceStatus, &tc.serviceStatus)
 			}
 			// command
 			if controller.Command != tc.command {
-				t.Errorf("%s:\nwant: Command=%v\ngot:  Command=%v",
-					name, controller.Command, tc.command)
+				t.Errorf("want: Command=%v\ngot:  Command=%v",
+					controller.Command, tc.command)
 			}
 			// shoutrrrNotifiers
 			if controller.Notifiers.Shoutrrr != tc.shoutrrrNotifiers {
-				t.Errorf("%s:\nwant: Notifiers.Shoutrrr=%v\ngot:  Notifiers.Shoutrrr=%v",
-					name, controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
+				t.Errorf("want: Notifiers.Shoutrrr=%v\ngot:  Notifiers.Shoutrrr=%v",
+					controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
 			}
 			// parentInterval
 			if controller.ParentInterval != tc.parentInterval {
-				t.Errorf("%s:\nwant: ParentInterval=%v\ngot:  ParentInterval=%v",
-					name, controller.ParentInterval, tc.parentInterval)
+				t.Errorf("want: ParentInterval=%v\ngot:  ParentInterval=%v",
+					controller.ParentInterval, tc.parentInterval)
 			}
 		})
 	}
