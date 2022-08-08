@@ -90,7 +90,7 @@ func TestTheMain(t *testing.T) {
 				}()
 				main()
 			}()
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 
 			// THEN the program will have printed everything expected
 			w.Close()
