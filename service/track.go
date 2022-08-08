@@ -55,6 +55,7 @@ func (s *Service) Track() {
 	go s.DeployedVersionLookup.Track()
 
 	// Track forever.
+	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first
 	for {
 		// If new release found by this query.
 		newVersion, err := s.LatestVersion.Query()

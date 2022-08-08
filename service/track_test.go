@@ -161,7 +161,7 @@ func TestServiceTrack(t *testing.T) {
 		"track gets DeployedVersion that's newer updates LatestVersion too": {keepDeployedLookup: true, deployedVersionJSON: "foo.bar.version", ignoreLivenessMetric: true, // ignore as deployed lookup may be done before
 			startLatestVersion: "1.2.2", startDeployedVersion: "0.0.0",
 			wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1", // db: 1 for latest change, 1 for deployed change
-			wantAnnounces: 3, wantDatabaseMesages: 2}, // announce: 1 for latest query (as <latestVersion), 1 for latest change, 1 for deployed change
+			wantAnnounces: 2, wantDatabaseMesages: 2}, // announce: 0 for latest query (as it'll give <latestVersion), 1 for latest change, 1 for deployed change
 	}
 
 	for name, tc := range tests {
