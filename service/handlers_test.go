@@ -176,13 +176,17 @@ func TestHandleUpdateActions(t *testing.T) {
 			want := service.Status.LatestVersion
 			service.HandleUpdateActions()
 			// wait until all commands/webhooks have run
+			if tc.deployedBecomesLatest {
+				time.Sleep(2 * time.Second)
+			}
 			var actionsRan bool
 			for i := 1; i < 500; i++ {
 				actionsRan = true
 				time.Sleep(10 * time.Millisecond)
 				if service.Command != nil {
 					for j := range service.Command {
-						if service.Status.Fails.Command[j] == nil {
+						if (tc.deployedBecomesLatest && service.Status.Fails.Command[j] != nil) ||
+							(!tc.deployedBecomesLatest && service.Status.Fails.Command[j] == nil) {
 							actionsRan = false
 							break
 						}
@@ -190,7 +194,8 @@ func TestHandleUpdateActions(t *testing.T) {
 				}
 				if service.WebHook != nil {
 					for j := range service.WebHook {
-						if service.Status.Fails.WebHook[j] == nil {
+						if (tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] != nil) ||
+							(!tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] == nil) {
 							actionsRan = false
 							break
 						}
