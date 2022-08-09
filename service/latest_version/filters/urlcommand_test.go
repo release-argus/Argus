@@ -129,19 +129,20 @@ func TestURLCommandCheckValues(t *testing.T) {
 	// GIVEN a URLCommandSlice
 	tests := map[string]struct {
 		slice    *URLCommandSlice
-		errRegex string
+		errRegex []string
 	}{
-		"nil slice":       {slice: nil, errRegex: "^$"},
-		"valid regex":     {slice: &URLCommandSlice{testURLCommandRegex()}, errRegex: "^$"},
-		"invalid regex":   {slice: &URLCommandSlice{{Type: "regex"}}, errRegex: "regex: <required>"},
-		"valid replace":   {slice: &URLCommandSlice{testURLCommandReplace()}, errRegex: "^$"},
-		"invalid replace": {slice: &URLCommandSlice{{Type: "replace"}}, errRegex: `new: <required>.*\s *old: <required>`},
-		"valid split":     {slice: &URLCommandSlice{testURLCommandSplit()}, errRegex: "^$"},
-		"invalid split":   {slice: &URLCommandSlice{{Type: "split"}}, errRegex: `text: <required>`},
-		"invalid type":    {slice: &URLCommandSlice{{Type: "something"}}, errRegex: `type: .* <invalid>`},
-		"valid all types": {slice: &URLCommandSlice{testURLCommandRegex(), testURLCommandReplace(), testURLCommandSplit()}, errRegex: "^$"},
+		"nil slice":       {slice: nil, errRegex: []string{`^$`}},
+		"valid regex":     {slice: &URLCommandSlice{testURLCommandRegex()}, errRegex: []string{`^$`}},
+		"undefined regex": {slice: &URLCommandSlice{{Type: "regex"}}, errRegex: []string{`^url_commands:$`, `^  item_0:$`, `^    regex: <required>`}},
+		"invalid regex":   {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("[0-")}}, errRegex: []string{`^    regex: .* <invalid>`}},
+		"valid replace":   {slice: &URLCommandSlice{testURLCommandReplace()}, errRegex: []string{`^$`}},
+		"invalid replace": {slice: &URLCommandSlice{{Type: "replace"}}, errRegex: []string{`^    new: <required>`, `^    old: <required>`}},
+		"valid split":     {slice: &URLCommandSlice{testURLCommandSplit()}, errRegex: []string{`^$`}},
+		"invalid split":   {slice: &URLCommandSlice{{Type: "split"}}, errRegex: []string{`^    text: <required>`}},
+		"invalid type":    {slice: &URLCommandSlice{{Type: "something"}}, errRegex: []string{`^    type: .* <invalid>`}},
+		"valid all types": {slice: &URLCommandSlice{testURLCommandRegex(), testURLCommandReplace(), testURLCommandSplit()}, errRegex: []string{`^$`}},
 		"all possible errors": {slice: &URLCommandSlice{{Type: "regex"}, {Type: "replace"}, {Type: "split"}, {Type: "something"}},
-			errRegex: `regex: <required>\s.*\s *new: <required>.*\s *old: <required>\s.*\s *text: <required>\s.*\s *type: .* <invalid>`},
+			errRegex: []string{`^url_commands:$`, `^  item_0:$`, `^    regex: <required>`, `^    new: <required>`, `^    old: <required>`, `^    text: <required>`, `^    type: .* <invalid>`}},
 	}
 
 	for name, tc := range tests {
@@ -151,11 +152,21 @@ func TestURLCommandCheckValues(t *testing.T) {
 
 			// THEN err is expected
 			e := utils.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+			lines := strings.Split(e, `\`)
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
 			}
 		})
 	}

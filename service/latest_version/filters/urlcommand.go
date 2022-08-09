@@ -224,6 +224,12 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 		if c.Regex == nil {
 			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
 				utils.ErrorToString(errs), prefix)
+		} else {
+			_, err := regexp.Compile(*c.Regex)
+			if err != nil {
+				errs = fmt.Errorf("%s%sregex: %q <invalid> (Invalid RegEx)\\",
+					utils.ErrorToString(errs), prefix, *c.Regex)
+			}
 		}
 	case "replace":
 		if c.New == nil {
