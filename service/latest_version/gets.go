@@ -22,11 +22,11 @@ import (
 )
 
 func (l *Lookup) GetAccessToken() *string {
-	return utils.GetFirstNonNilPtr(l.AccessToken, (*l.Defaults).AccessToken, (*l.HardDefaults).AccessToken)
+	return utils.GetFirstNonNilPtr(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
 }
 
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, (*l.Defaults).AllowInvalidCerts, (*l.HardDefaults).AllowInvalidCerts)
+	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
 }
 
 // GetServiceURL returns the service's URL (handles the github type where the URL
@@ -52,7 +52,7 @@ func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
 
 // Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
 func (l *Lookup) GetUsePreRelease() bool {
-	return *utils.GetFirstNonDefault(l.UsePreRelease, (*l.Defaults).UsePreRelease, (*l.HardDefaults).UsePreRelease)
+	return *utils.GetFirstNonDefault(l.UsePreRelease, l.Defaults.UsePreRelease, l.HardDefaults.UsePreRelease)
 }
 
 // GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'

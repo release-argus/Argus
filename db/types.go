@@ -17,8 +17,8 @@ package db
 import (
 	"database/sql"
 
-	_ "modernc.org/sqlite"
 	"github.com/release-argus/Argus/config"
+	_ "modernc.org/sqlite"
 )
 
 type api struct {

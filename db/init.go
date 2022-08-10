@@ -167,22 +167,22 @@ func (api *api) convertServiceStatus() {
 		VALUES`
 	servicesToConvert := 0
 	for _, id := range api.config.All {
-		if (*api.config.Service[id]).OldStatus != nil {
+		if api.config.Service[id].OldStatus != nil {
 			servicesToConvert++
 			sqlStmt += fmt.Sprintf(" ('%s', '%s', '%s', '%s', '%s', '%s'),",
 				id,
-				(*api.config.Service[id]).OldStatus.LatestVersion,
-				(*api.config.Service[id]).OldStatus.LatestVersionTimestamp,
-				(*api.config.Service[id]).OldStatus.DeployedVersion,
-				(*api.config.Service[id]).OldStatus.DeployedVersionTimestamp,
-				(*api.config.Service[id]).OldStatus.ApprovedVersion,
+				api.config.Service[id].OldStatus.LatestVersion,
+				api.config.Service[id].OldStatus.LatestVersionTimestamp,
+				api.config.Service[id].OldStatus.DeployedVersion,
+				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
+				api.config.Service[id].OldStatus.ApprovedVersion,
 			)
-			(*api.config.Service[id]).Status = service_status.Status{
-				LatestVersion:            (*api.config.Service[id]).OldStatus.LatestVersion,
-				LatestVersionTimestamp:   (*api.config.Service[id]).OldStatus.LatestVersionTimestamp,
-				DeployedVersion:          (*api.config.Service[id]).OldStatus.DeployedVersion,
-				DeployedVersionTimestamp: (*api.config.Service[id]).OldStatus.DeployedVersionTimestamp,
-				ApprovedVersion:          (*api.config.Service[id]).OldStatus.ApprovedVersion,
+			api.config.Service[id].Status = service_status.Status{
+				LatestVersion:            api.config.Service[id].OldStatus.LatestVersion,
+				LatestVersionTimestamp:   api.config.Service[id].OldStatus.LatestVersionTimestamp,
+				DeployedVersion:          api.config.Service[id].OldStatus.DeployedVersion,
+				DeployedVersionTimestamp: api.config.Service[id].OldStatus.DeployedVersionTimestamp,
+				ApprovedVersion:          api.config.Service[id].OldStatus.ApprovedVersion,
 			}
 		}
 	}
@@ -195,7 +195,7 @@ func (api *api) convertServiceStatus() {
 			*logFrom,
 			err != nil)
 		for _, id := range api.config.All {
-			(*api.config.Service[id]).OldStatus = nil
+			api.config.Service[id].OldStatus = nil
 		}
 	}
 }

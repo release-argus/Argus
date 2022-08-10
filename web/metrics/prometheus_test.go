@@ -44,11 +44,12 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			}
 
 			// WHEN it's initialised with InitPrometheusCounterWithIDAndResult
-			if len(tc.args) == 2 {
+			switch args := len(tc.args); {
+			case args == 2:
 				InitPrometheusCounterWithIDAndResult(tc.metric, tc.args[0], tc.args[1])
-			} else if len(tc.args) == 3 {
+			case args == 3:
 				InitPrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], "", tc.args[1])
-			} else {
+			default:
 				InitPrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], tc.args[3], tc.args[1])
 			}
 			got = testutil.CollectAndCount(tc.metric)
@@ -59,11 +60,12 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			}
 			var wantValue float64
 			var gotValue float64
-			if len(tc.args) == 2 {
+			switch args := len(tc.args); {
+			case args == 2:
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1]))
-			} else if len(tc.args) == 3 {
+			case args == 3:
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2]))
-			} else {
+			default:
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2], tc.args[3]))
 			}
 			if gotValue != wantValue {
@@ -72,18 +74,15 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 			}
 
 			// THEN it can be increased
-			if len(tc.args) == 2 {
+			switch args := len(tc.args); {
+			case args == 2:
 				IncreasePrometheusCounterWithIDAndResult(tc.metric, tc.args[0], tc.args[1])
-			} else if len(tc.args) == 3 {
-				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], "", tc.args[1])
-			} else {
-				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], tc.args[3], tc.args[1])
-			}
-			if len(tc.args) == 2 {
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1]))
-			} else if len(tc.args) == 3 {
+			case args == 3:
+				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], "", tc.args[1])
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2]))
-			} else {
+			default:
+				IncreasePrometheusCounterActions(tc.metric, tc.args[0], tc.args[2], tc.args[3], tc.args[1])
 				gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(tc.args[0], tc.args[1], tc.args[2], tc.args[3]))
 			}
 			wantValue++

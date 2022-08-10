@@ -42,8 +42,8 @@ func TestGetAccessToken(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			lookup := testLookup(false, false)
 			lookup.AccessToken = tc.accessTokenRoot
-			(*lookup.Defaults).AccessToken = tc.accessTokenDefault
-			(*lookup.HardDefaults).AccessToken = tc.accessTokenHardDefault
+			lookup.Defaults.AccessToken = tc.accessTokenDefault
+			lookup.HardDefaults.AccessToken = tc.accessTokenHardDefault
 
 			// WHEN GetAccessToken is called
 			got := lookup.GetAccessToken()
@@ -80,8 +80,8 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			lookup := testLookup(false, false)
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
-			(*lookup.Defaults).AllowInvalidCerts = tc.allowInvalidCertsDefault
-			(*lookup.HardDefaults).AllowInvalidCerts = tc.allowInvalidCertsHardDefault
+			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
+			lookup.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetAllowInvalidCerts()
@@ -160,8 +160,8 @@ func TestGetUsePreRelease(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			lookup := testLookup(false, false)
 			lookup.UsePreRelease = tc.usePreReleaseRoot
-			(*lookup.Defaults).UsePreRelease = tc.usePreReleaseDefault
-			(*lookup.HardDefaults).UsePreRelease = tc.usePreReleaseHardDefault
+			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault
+			lookup.HardDefaults.UsePreRelease = tc.usePreReleaseHardDefault
 
 			// WHEN GetUsePreRelease is called
 			got := lookup.GetUsePreRelease()

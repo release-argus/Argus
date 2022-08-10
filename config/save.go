@@ -100,10 +100,6 @@ func (c *Config) Save() {
 
 		configType string // section of the config we're in, e.g. 'service'
 
-		orderIndexStart int
-		orderIndexEnd   int
-		foundOrder      bool
-
 		currentServiceNumber   int
 		currentOrder           []string = make([]string, serviceCount)
 		currentOrderIndexStart []int    = make([]int, serviceCount+1)
@@ -124,40 +120,29 @@ func (c *Config) Save() {
 		}
 		if !strings.HasPrefix(lines[index], " ") {
 			configType = strings.TrimRight(lines[index], ":")
-
-			// Remove ordering var.
-			if configType == "order" {
-				foundOrder = true
-				orderIndexStart = index
-			} else if foundOrder {
-				orderIndexEnd = index
-				lines = append(lines[:orderIndexStart], lines[orderIndexEnd:]...)
-				// Only remove once.
-				foundOrder = false
-			}
 		}
 
-		switch configType {
-		case "service":
-			if strings.HasSuffix(lines[index], ":") && strings.HasPrefix(lines[index], indentation) && !strings.HasPrefix(lines[index], indentation+" ") {
-				// First service will be on 1 because we remove items and decrement
-				// currentOrderIndexEnd[currentServiceNumber]. So we want to know when the service
-				// has started so that the decrements are direct to the service
-				currentServiceNumber++
+		if configType == "service" &&
+			strings.HasSuffix(lines[index], ":") &&
+			strings.HasPrefix(lines[index], indentation) &&
+			!strings.HasPrefix(lines[index], indentation+" ") {
+			// First service will be on 1 because we remove items and decrement
+			// currentOrderIndexEnd[currentServiceNumber]. So we want to know when the service
+			// has started so that the decrements are direct to the service
+			currentServiceNumber++
 
-				// Service's ID
-				currentOrder[currentServiceNumber-1] = strings.TrimSpace(strings.TrimRight(lines[index], ":"))
-				currentOrderIndexStart[currentServiceNumber] = index
+			// Service's ID
+			currentOrder[currentServiceNumber-1] = strings.TrimSpace(strings.TrimRight(lines[index], ":"))
+			currentOrderIndexStart[currentServiceNumber] = index
 
-				// Get the index that this service ends on
-				currentOrderIndexEnd[currentServiceNumber] = len(lines)
-				// notifyStartIndex := 0
-				for i := index + 1; i <= len(lines); i++ {
-					if !strings.HasPrefix(lines[i], indentation+" ") && strings.HasPrefix(lines[i], indentation) ||
-						!strings.HasPrefix(lines[i], " ") {
-						currentOrderIndexEnd[currentServiceNumber] = i - 1
-						break
-					}
+			// Get the index that this service ends on
+			currentOrderIndexEnd[currentServiceNumber] = len(lines)
+			// notifyStartIndex := 0
+			for i := index + 1; i <= len(lines); i++ {
+				if !strings.HasPrefix(lines[i], indentation+" ") && strings.HasPrefix(lines[i], indentation) ||
+					!strings.HasPrefix(lines[i], " ") {
+					currentOrderIndexEnd[currentServiceNumber] = i - 1
+					break
 				}
 			}
 		}
@@ -252,9 +237,7 @@ func (c *Config) Save() {
 				changed = true
 
 				// Update the current ordering values
-				tmpStr := currentOrder[i-2]
-				currentOrder[i-2] = currentOrder[i-1]
-				currentOrder[i-1] = tmpStr
+				currentOrder[i-2], currentOrder[i-1] = currentOrder[i-1], currentOrder[i-2]
 				lengthCurrent := currentOrderIndexEnd[i] - currentOrderIndexStart[i]
 				currentOrderIndexEnd[i-1] = currentOrderIndexStart[i-1] + lengthCurrent
 				currentOrderIndexStart[i] = currentOrderIndexEnd[i-1] + 1

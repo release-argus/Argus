@@ -22,12 +22,8 @@ import (
 func Swap[T comparable](list *[]T, aStart int, aEnd int, bStart int, bEnd int) {
 	// Always have the lower index as a
 	if aStart > bStart {
-		tmp := aStart
-		aStart = bStart
-		bStart = tmp
-		tmp = aEnd
-		aEnd = bEnd
-		bEnd = tmp
+		aStart, bStart = bStart, aStart
+		aEnd, bEnd = bEnd, aEnd
 	}
 
 	aLen := aEnd - aStart + 1

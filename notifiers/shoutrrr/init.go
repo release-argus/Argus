@@ -87,18 +87,18 @@ func (s *Shoutrrr) Init(
 	s.ServiceStatus = serviceStatus
 
 	// Give the matching main
-	(*s).Main = main
+	s.Main = main
 	if main == nil && s.ServiceStatus != nil {
 		s.Main = &Shoutrrr{}
 	}
 	s.Main.InitMaps()
 
 	// Give Defaults
-	(*s).Defaults = defaults
+	s.Defaults = defaults
 	s.Defaults.InitMaps()
 
 	// Give Hard Defaults
-	(*s).HardDefaults = hardDefaults
+	s.HardDefaults = hardDefaults
 	s.HardDefaults.InitMaps()
 
 	s.initMetrics()
