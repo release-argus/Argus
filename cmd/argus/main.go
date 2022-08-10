@@ -78,9 +78,6 @@ func main() {
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(config.Order)
 
-	// SaveHandler that listens for calls to save config changes.
-	go (&config).SaveHandler()
-
 	// Web server
 	web.Run(&config, &jLog)
 }
