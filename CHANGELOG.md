@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.9.0](https://github.com/release-argus/Argus/compare/0.8.2...0.9.0) (2022-08-10)
+
+
+### Features
+
+* **config:** non-breaking style reformat ([#135](https://github.com/release-argus/Argus/issues/135)) ([5830e1a](https://github.com/release-argus/Argus/commits/5830e1ad5d829863fc30368b396ce4e671bfd278))
+* **web:** basic auth ([#140](https://github.com/release-argus/Argus/issues/140)) ([85fd943](https://github.com/release-argus/Argus/commits/85fd94338db158a648cf72f045ccb8dd72047bad))
+
+
+### Bug Fixes
+
+* **errors:** include service name in webhook/notify error messages ([#138](https://github.com/release-argus/Argus/issues/138)) ([a8e303f](https://github.com/release-argus/Argus/commits/a8e303f6613e4de377b802490759ef25690acedb))
+
 ### [0.8.2](https://github.com/release-argus/Argus/compare/0.8.1...0.8.2) (2022-07-30)
 
 
