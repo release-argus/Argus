@@ -15,17 +15,47 @@
 package v1
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"io/fs"
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/ui"
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
 )
+
+func (api *API) basicAuth() mux.MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			username, password, ok := r.BasicAuth()
+			if ok {
+				// Hash purely to prevent ConstantTimeCompare leaking lengths
+				usernameHash := sha256.Sum256([]byte(username))
+				passwordHash := sha256.Sum256([]byte(password))
+				expectedUsernameHash := sha256.Sum256([]byte(api.Config.Settings.Web.BasicAuth.Username))
+				expectedPasswordHash := sha256.Sum256([]byte(api.Config.Settings.Web.BasicAuth.Password))
+
+				// Protect from possible timing attacks
+				usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
+				passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+
+				if usernameMatch && passwordMatch {
+					h.ServeHTTP(w, r)
+					return
+				}
+			}
+
+			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		})
+	}
+}
 
 // SetupRoutesAPI will setup the HTTP API routes.
 func (api *API) SetupRoutesAPI() {

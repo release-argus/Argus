@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
@@ -57,5 +58,61 @@ func TestHTTPVersion(t *testing.T) {
 	if got != want {
 		t.Errorf("Version HTTP should have returned %v, not %v",
 			want, got)
+	}
+}
+
+func TestBasicAuth(t *testing.T) {
+	// GIVEN an API with/without Basic Auth credentials
+	tests := map[string]struct {
+		basicAuth *config.WebSettingsBasicAuth
+		fail      bool
+		noHeader  bool
+	}{
+		"No basic auth":                           {basicAuth: nil, fail: false},
+		"basic auth fail invalid creds":           {basicAuth: &config.WebSettingsBasicAuth{Username: "test", Password: "1234"}, fail: true},
+		"basic auth fail no Authorization header": {basicAuth: &config.WebSettingsBasicAuth{Username: "test", Password: "1234"}, noHeader: true, fail: true},
+		"basic auth pass":                         {basicAuth: &config.WebSettingsBasicAuth{Username: "test", Password: "123"}, fail: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := config.Config{}
+			cfg.Settings.Web.BasicAuth = tc.basicAuth
+			cfg.Settings.Web.RoutePrefix = stringPtr("")
+			api := NewAPI(&cfg, utils.NewJLog("WARN", false))
+			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
+				return
+			})
+			ts := httptest.NewServer(api.BaseRouter)
+			defer ts.Close()
+
+			// WHEN a HTTP request is made to this router
+			client := http.Client{}
+			req, err := http.NewRequest("GET", ts.URL+"/test", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !tc.noHeader {
+				req.Header = http.Header{
+					// test:123
+					"Authorization": {"Basic dGVzdDoxMjM="},
+				}
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// THEN the request passes only when expected
+			got := resp.StatusCode
+			want := 200
+			if tc.fail {
+				want = http.StatusUnauthorized
+			}
+			if got != want {
+				t.Errorf("Expected a %d, not a %d",
+					want, got)
+			}
+		})
 	}
 }
