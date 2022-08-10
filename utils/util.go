@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 )
 
@@ -213,4 +214,16 @@ func LowercaseStringStringMap(change *map[string]string) map[string]string {
 		new[strings.ToLower(i)] = (*change)[i]
 	}
 	return new
+}
+
+// Sorted keys will return a sorted list of the keys in a map.
+func SortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	return keys
 }

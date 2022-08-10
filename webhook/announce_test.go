@@ -19,44 +19,76 @@ package webhook
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceSendWithNilChannel(t *testing.T) {
-	// GIVEN a WebHook with a nil Announce channel
-	whID := "test"
-	webhook := WebHook{
-		ID:     &whID,
-		Failed: nil,
+func TestAnnounceSend(t *testing.T) {
+	// GIVEN a WebHook
+	tests := map[string]struct {
+		nilChannel     bool
+		failed         *bool
+		timeDifference time.Duration
+	}{
+		"no channel": {nilChannel: true},
+		"not tried (failed=nil) does delay by 15s": {
+			timeDifference: 15 * time.Second,
+			failed:         nil,
+		},
+		"failed (failed=true) does delay by 15s": {
+			timeDifference: 15 * time.Second,
+			failed:         boolPtr(true),
+		},
+		"success (failed=false) does delay by 2*Interval": {
+			timeDifference: 24 * time.Minute,
+			failed:         boolPtr(false),
+		},
 	}
 
-	// WHEN AnnounceSend is called
-	webhook.AnnounceSend()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			webhook := testWebHook(true, true, false)
+			(*webhook.Failed)[webhook.ID] = tc.failed
+			webhook.ServiceStatus.AnnounceChannel = nil
+			if !tc.nilChannel {
+				announceChannel := make(chan []byte, 4)
+				webhook.ServiceStatus.AnnounceChannel = &announceChannel
+			}
 
-	// THEN the function returns without hanging
-}
+			// WH AnnounceCommand is run
+			go webhook.AnnounceSend()
 
-func TestAnnounceSendWithChannel(t *testing.T) {
-	// GIVEN a WebHook with an Announce channel
-	whID := "test"
-	whFailed := true
-	channel := make(chan []byte, 5)
-	webhook := WebHook{
-		ID:       &whID,
-		Failed:   &whFailed,
-		Announce: &channel,
-	}
+			// THEN the correct response is received
+			if webhook.ServiceStatus.AnnounceChannel == nil {
+				return
+			}
+			m := <-*webhook.ServiceStatus.AnnounceChannel
+			var parsed api_types.WebSocketMessage
+			json.Unmarshal(m, &parsed)
 
-	// WHEN AnnounceSend is called
-	go webhook.AnnounceSend()
+			if parsed.WebHookData[webhook.ID] == nil {
+				t.Fatalf("message wasn't for %q\ngot %v",
+					webhook.ID, parsed.WebHookData)
+			}
 
-	// THEN the WebHook status is announce to the channel
-	msg := <-channel
-	var unmarshalled api_types.WebSocketMessage
-	json.Unmarshal(msg, &unmarshalled)
-	if *unmarshalled.WebHookData["test"].Failed != whFailed {
-		t.Errorf("AnnounceSend should have given %v Failed, but got \n%v",
-			whFailed, unmarshalled)
+			// if they failed status matches
+			got := stringifyPointer(parsed.WebHookData[webhook.ID].Failed)
+			want := stringifyPointer((*webhook.Failed)[webhook.ID])
+			if got != want {
+				t.Errorf("want failed=%s\ngot  failed=%s",
+					want, got)
+			}
+
+			// next runnable is within expectred range
+			now := time.Now().UTC()
+			minTime := now.Add(tc.timeDifference - time.Second)
+			maxTime := now.Add(tc.timeDifference + time.Second)
+			gotTime := parsed.WebHookData[webhook.ID].NextRunnable
+			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
+					now, minTime, maxTime, gotTime)
+			}
+		})
 	}
 }

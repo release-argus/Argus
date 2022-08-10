@@ -19,7 +19,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -49,12 +49,12 @@ func TestNewJLog(t *testing.T) {
 
 			// THEN the correct JLog is returned
 			if jLog.Level != levelMap[tc.level] {
-				t.Errorf("%s:\nwant level=%d\ngot  level=%d",
-					name, levelMap[tc.level], jLog.Level)
+				t.Errorf("want level=%d\ngot  level=%d",
+					levelMap[tc.level], jLog.Level)
 			}
 			if jLog.Timestamps != tc.timestamps {
-				t.Errorf("%s:\nwant timestamps=%t\ngot  timestamps=%t",
-					name, tc.timestamps, jLog.Timestamps)
+				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
+					tc.timestamps, jLog.Timestamps)
 			}
 		})
 	}
@@ -88,8 +88,8 @@ func TestSetLevel(t *testing.T) {
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
 					if !match {
-						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
-							name, *tc.panicRegex, rStr)
+						t.Errorf("expected a panic that matched %q\ngot: %q",
+							*tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -99,8 +99,8 @@ func TestSetLevel(t *testing.T) {
 
 			// THEN the correct JLog is returned
 			if jLog.Level != levelMap[strings.ToUpper(tc.level)] {
-				t.Errorf("%s:\nwant level=%d\ngot  level=%d",
-					name, levelMap[strings.ToUpper(tc.level)], jLog.Level)
+				t.Errorf("want level=%d\ngot  level=%d",
+					levelMap[strings.ToUpper(tc.level)], jLog.Level)
 			}
 		})
 	}
@@ -127,8 +127,8 @@ func TestSetTimestamps(t *testing.T) {
 
 			// THEN the timestamps are set correctly
 			if jLog.Timestamps != tc.changeTo {
-				t.Errorf("%s:\nwant timestamps=%t\ngot  timestamps=%t",
-					name, tc.changeTo, jLog.Timestamps)
+				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
+					tc.changeTo, jLog.Timestamps)
 			}
 		})
 	}
@@ -153,14 +153,14 @@ func TestFormatMessageSource(t *testing.T) {
 
 			// THEN an empty string is returned
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:  %q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}
 }
 
-func TestIsLevelPass(t *testing.T) {
+func TestIsLevel(t *testing.T) {
 	// GIVEN you have a valid JLog
 	tests := map[string]struct {
 		startLevel string
@@ -204,8 +204,8 @@ func TestIsLevelPass(t *testing.T) {
 
 			// THEN the correct response is returned
 			if got != tc.want {
-				t.Errorf("%s:\nlevel is %s, check of whether it's %s got %t. expected %t",
-					name, tc.startLevel, tc.testLevel, got, tc.want)
+				t.Errorf("level is %s, check of whether it's %s got %t. expected %t",
+					tc.startLevel, tc.testLevel, got, tc.want)
 			}
 		})
 	}
@@ -251,7 +251,7 @@ func TestError(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
@@ -313,7 +313,7 @@ func TestWarn(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
@@ -375,7 +375,7 @@ func TestInfo(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
@@ -437,7 +437,7 @@ func TestVerbose(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
@@ -499,7 +499,7 @@ func TestDebug(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
@@ -561,7 +561,7 @@ func TestFatal(t *testing.T) {
 					_ = recover()
 					regex := fmt.Sprintf("^ERROR: %s\n$", msg)
 					w.Close()
-					out, _ := ioutil.ReadAll(r)
+					out, _ := io.ReadAll(r)
 					got := string(out)
 					if tc.timestamps {
 						got = logOut.String()
@@ -581,7 +581,7 @@ func TestFatal(t *testing.T) {
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			got := string(out)
 			os.Stdout = stdout
 			regex := "^$"

@@ -17,12 +17,14 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/options"
 )
 
-func TestOrderingWithServices(t *testing.T) {
+func TestOrdering(t *testing.T) {
 	// GIVEN we have configs to load
 	tests := map[string]struct {
 		file  string
@@ -52,24 +54,11 @@ func TestOrderingWithServices(t *testing.T) {
 			gotOrder := *config.Order
 			for i := range gotOrder {
 				if i >= len(gotOrder) || tc.order[i] != (gotOrder)[i] {
-					t.Fatalf("%q %s - order:\nwant:%v\ngot:  %v", tc.file, name, tc.order, gotOrder)
+					t.Fatalf("%q %s - order:\nwant: %v\ngot:  %v", tc.file, name, tc.order, gotOrder)
 				}
 			}
+			os.Remove(*config.Settings.GetDataDatabaseFile())
 		})
-	}
-}
-
-func TestOrderingWithService(t *testing.T) {
-	// GIVEN Load is ran on a config.yml
-	config := testLoad("../test/ordering_1.yml")
-
-	// WHEN the Default Service Interval is looked at
-	got := config.Defaults.Service.Interval
-
-	// THEN it matches the config.yml
-	want := "123s"
-	if !(want == *got) {
-		t.Errorf(`config.Defaults.Service.Interval = %v, want %s`, *got, want)
 	}
 }
 
@@ -112,7 +101,7 @@ func TestFilterInactive(t *testing.T) {
 	config := Config{
 		Service: service.Slice{
 			"1": &service.Service{},
-			"2": &service.Service{Active: &active},
+			"2": &service.Service{Options: options.Options{Active: &active}},
 			"3": &service.Service{},
 		},
 		All:   allServices,

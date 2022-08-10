@@ -16,6 +16,8 @@
 
 package command
 
+import "fmt"
+
 func boolPtr(val bool) *bool {
 	return &val
 }
@@ -24,4 +26,11 @@ func intPtr(val int) *int {
 }
 func stringPtr(val string) *string {
 	return &val
+}
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
 }

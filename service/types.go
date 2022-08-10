@@ -15,13 +15,19 @@
 package service
 
 import (
-	"github.com/coreos/go-semver/semver"
-
 	command "github.com/release-argus/Argus/commands"
-	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
+	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
+)
+
+var (
+	jLog *utils.JLog
 )
 
 // Slice is a slice mapping of Service.
@@ -30,119 +36,106 @@ type Slice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	ID                    *string                `yaml:"-"`                             // service_name.
-	Active                *bool                  `yaml:"active,omitempty"`              // Disable the service.
-	Comment               *string                `yaml:"comment,omitempty"`             // Comment on the Service.
-	Type                  *string                `yaml:"type,omitempty"`                // "github"/"URL"
-	URL                   *string                `yaml:"url,omitempty"`                 // type:URL - "https://example.com", type:github - "owner/repo" or "https://github.com/owner/repo".
-	AllowInvalidCerts     *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	AccessToken           *string                `yaml:"access_token,omitempty"`        // GitHub access token to use.
-	SemanticVersioning    *bool                  `yaml:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
-	Interval              *string                `yaml:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	URLCommands           *URLCommandSlice       `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request.
-	RegexContent          *string                `yaml:"regex_content,omitempty"`       // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions.
-	RegexVersion          *string                `yaml:"regex_version,omitempty"`       // "v*[0-9.]+" The version found must match this release to trigger new version actions.
-	UsePreRelease         *bool                  `yaml:"use_prerelease,omitempty"`      // Whether the prerelease tag should be used (prereleases are ignored by default).
-	WebURL                *string                `yaml:"web_url,omitempty"`             // URL to provide on the Web UI.
-	AutoApprove           *bool                  `yaml:"auto_approve,omitempty"`        // default - true = Requre approval before sending WebHook(s) for new releases.
-	IgnoreMisses          *bool                  `yaml:"ignore_misses,omitempty"`       // Ignore URLCommands that fail (e.g. split on text that doesn't exist).
-	Icon                  string                 `yaml:"icon,omitempty"`                // Icon URL to use for messages/Web UI.
-	IconLinkTo            *string                `yaml:"icon_link_to,omitempty"`        // URL to redirect Icon clicks to.
-	CommandController     *command.Controller    `yaml:"-"`                             // The controller for the OS Commands that tracks fails and has the announce channel.
-	Command               *command.Slice         `yaml:"command,omitempty"`             // OS Commands to run on new release.
-	WebHook               *webhook.Slice         `yaml:"webhook,omitempty"`             // Service-specific WebHook vars.
-	Notify                *shoutrrr.Slice        `yaml:"notify,omitempty"`              // Service-specific Shoutrrr vars.
-	DeployedVersionLookup *DeployedVersionLookup `yaml:"deployed_version,omitempty"`    // Var to scrape the Service's current deployed version.
-	Status                *service_status.Status `yaml:"-"`                             // Track the Status of this source (version and regex misses).
-	HardDefaults          *Service               `yaml:"-"`                             // Hardcoded default values.
-	Defaults              *Service               `yaml:"-"`                             // Default values.
-	Announce              *chan []byte           `yaml:"-"`                             // Announce to the WebSocket.
-	DatabaseChannel       *chan db_types.Message `yaml:"-"`                             // Channel for broadcasts to the Database
-	SaveChannel           *chan bool             `yaml:"-"`                             // Channel for triggering a save of the config.
+	ID                    string                   `yaml:"-"`                          // service_name
+	Comment               string                   `yaml:"comment,omitempty"`          // Comment on the Service
+	Options               options.Options          `yaml:"options,omitempty"`          // Options to give the Service
+	LatestVersion         latest_version.Lookup    `yaml:"latest_version,omitempty"`   // Vars to getting the latest version of the Service
+	DeployedVersionLookup *deployed_version.Lookup `yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
+	CommandController     *command.Controller      `yaml:"-"`                          // The controller for the OS Commands that tracks fails and has the announce channel
+	Notify                shoutrrr.Slice           `yaml:"notify,omitempty"`           // Service-specific Shoutrrr vars
+	Command               command.Slice            `yaml:"command,omitempty"`          // OS Commands to run on new release
+	WebHook               webhook.Slice            `yaml:"webhook,omitempty"`          // Service-specific WebHook vars
+	Dashboard             DashboardOptions         `yaml:"dashboard,omitempty"`        // Options for the dashboard
+	Status                service_status.Status    `yaml:"-"`                          // Track the Status of this source (version and regex misses)
+	HardDefaults          *Service                 `yaml:"-"`                          // Hardcoded default values
+	Defaults              *Service                 `yaml:"-"`                          // Default values
 
 	// TODO: Deprecate
-	OldStatus *service_status.OldStatus `yaml:"status,omitempty"` // For moving version info to argus.db
+	OldStatus          *service_status.OldStatus `yaml:"status,omitempty"`              // For moving version info to argus.db
+	Type               string                    `yaml:"type,omitempty"`                // service_name
+	Active             *bool                     `yaml:"active,omitempty"`              // options.active
+	Interval           *string                   `yaml:"interval,omitempty"`            // options.interval
+	SemanticVersioning *bool                     `yaml:"semantic_versioning,omitempty"` // options.semantic_versioning
+	URL                *string                   `yaml:"url,omitempty"`                 // latest_version.url
+	AllowInvalidCerts  *bool                     `yaml:"allow_invalid_certs,omitempty"` // latest_version.allow_invalid_certs
+	AccessToken        *string                   `yaml:"access_token,omitempty"`        // latest_version.access_token
+	UsePreRelease      *bool                     `yaml:"use_prerelease,omitempty"`      // latest_version.use_prerelease
+	URLCommands        *filters.URLCommandSlice  `yaml:"url_commands,omitempty"`        // latest_version.url_commands
+	AutoApprove        *bool                     `yaml:"auto_approve,omitempty"`        // dashboard.auto_approve
+	Icon               *string                   `yaml:"icon,omitempty"`                // dashboard.icon
+	IconLinkTo         *string                   `yaml:"icon_link_to,omitempty"`        // dashboard.icon_link_to
+	WebURL             *string                   `yaml:"web_url,omitempty"`             // dashboard.web_url
 }
 
-// GitHubRelease is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
-type GitHubRelease struct {
-	URL             string          `json:"url"`
-	AssetsURL       string          `json:"assets_url"`
-	UploadURL       string          `json:"upload_url"`
-	HTMLURL         string          `json:"html_url"`
-	ID              uint            `json:"id"`
-	Author          GitHubAuthor    `json:"author"`
-	NodeID          string          `json:"node_id"`
-	SemanticVersion *semver.Version `json:"-"`
-	TagName         string          `json:"tag_name"`
-	TargetCommitish string          `json:"target_commitish"`
-	Name            string          `json:"name"`
-	Draft           bool            `json:"draft"`
-	PreRelease      bool            `json:"prerelease"`
-	CreatedAt       string          `json:"created_at"`
-	PublishedAt     string          `json:"published_at"`
-	Assets          []GitHubAsset   `json:"assets"`
-}
+func (s *Service) Convert() {
+	didConvert := false
+	if s.Type != "" {
+		didConvert = true
+		s.LatestVersion.Type = s.Type
+		s.Type = ""
+	}
+	if s.Active != nil {
+		didConvert = true
+		s.Options.Active = s.Active
+		s.Active = nil
+	}
+	if s.Interval != nil {
+		didConvert = true
+		s.Options.Interval = *s.Interval
+		s.Interval = nil
+	}
+	if s.SemanticVersioning != nil {
+		didConvert = true
+		s.Options.SemanticVersioning = s.SemanticVersioning
+		s.SemanticVersioning = nil
+	}
+	if s.URL != nil {
+		didConvert = true
+		s.LatestVersion.URL = *s.URL
+		s.URL = nil
+	}
+	if s.AllowInvalidCerts != nil {
+		didConvert = true
+		s.LatestVersion.AllowInvalidCerts = s.AllowInvalidCerts
+		s.AllowInvalidCerts = nil
+	}
+	if s.AccessToken != nil {
+		didConvert = true
+		s.LatestVersion.AccessToken = s.AccessToken
+		s.AccessToken = nil
+	}
+	if s.UsePreRelease != nil {
+		didConvert = true
+		s.LatestVersion.UsePreRelease = s.UsePreRelease
+		s.UsePreRelease = nil
+	}
+	if s.URLCommands != nil {
+		didConvert = true
+		s.LatestVersion.URLCommands = *s.URLCommands
+		s.URLCommands = nil
+	}
+	if s.AutoApprove != nil {
+		didConvert = true
+		s.Dashboard.AutoApprove = s.AutoApprove
+		s.AutoApprove = nil
+	}
+	if s.Icon != nil {
+		didConvert = true
+		s.Dashboard.Icon = *s.Icon
+		s.Icon = nil
+	}
+	if s.IconLinkTo != nil {
+		didConvert = true
+		s.Dashboard.IconLinkTo = *s.IconLinkTo
+		s.IconLinkTo = nil
+	}
+	if s.WebURL != nil {
+		didConvert = true
+		s.Dashboard.WebURL = *s.WebURL
+		s.WebURL = nil
+	}
 
-// GitHubAuthor is the format of an Author on api.github.com/repos/OWNER/REPO/releases.
-type GitHubAuthor struct {
-	Login             string `json:"login"`
-	ID                uint   `json:"id"`
-	NodeID            string `json:"node_id"`
-	AvatarURL         string `json:"avatar_url"`
-	GravatarID        string `json:"gravatar_id"`
-	URL               string `json:"url"`
-	HTMLURL           string `json:"html_url"`
-	FollowersURL      string `json:"followers_url"`
-	FollowingURL      string `json:"following_url"`
-	GistsURL          string `json:"gists_url"`
-	StarredURL        string `json:"starred_url"`
-	SubscriptionsURL  string `json:"subscriptions_url"`
-	OrganizationsURL  string `json:"organizations_url"`
-	ReposURL          string `json:"repos_url"`
-	EventsURL         string `json:"events_url"`
-	ReceivedEventsURL string `json:"received__events_url"`
-	Type              string `json:"type"`
-	SiteAdmin         bool   `json:"site_admin"`
-}
-
-// GitHubAsset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
-type GitHubAsset struct {
-	URL                string       `json:"url"`
-	ID                 uint         `json:"id"`
-	NodeID             string       `json:"node_id"`
-	Name               string       `json:"name"`
-	Label              string       `json:"label"`
-	Uploader           GitHubAuthor `json:"uploader"`
-	ContentType        string       `json:"content_type"`
-	State              string       `json:"state"`
-	Size               uint         `json:"size"`
-	DownloadCount      uint         `json:"download_count"`
-	CreatedAt          string       `json:"created_at"`
-	UpdatedAt          string       `json:"updated_at"`
-	BrowserDownloadURL string       `json:"browser_download_url"`
-}
-
-// DeployedVersionLookup of the service.
-type DeployedVersionLookup struct {
-	URL               string                 `yaml:"url,omitempty"`                 // URL to query.
-	AllowInvalidCerts *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
-	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
-	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
-	HardDefaults      *DeployedVersionLookup `yaml:"-"`                             // Hardcoded default values.
-	Defaults          *DeployedVersionLookup `yaml:"-"`                             // Default values.
-}
-
-// BasicAuth to use on the HTTP(s) request.
-type BasicAuth struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
-
-// Header to use in the HTTP request.
-type Header struct {
-	Key   string `yaml:"key"`   // Header key, e.g. X-Sig
-	Value string `yaml:"value"` // Value to give the key
+	if didConvert {
+		*s.Status.SaveChannel <- true
+	}
 }

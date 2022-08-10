@@ -30,7 +30,6 @@ import (
 // Init the Slice metrics and hand out the defaults/notifiers.
 func (w *Slice) Init(
 	log *utils.JLog,
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	mains *Slice,
 	defaults *WebHook,
@@ -46,16 +45,15 @@ func (w *Slice) Init(
 		mains = &Slice{}
 	}
 
-	for key := range *w {
-		id := key
-		if (*w)[key] == nil {
-			(*w)[key] = &WebHook{}
+	for id := range *w {
+		if (*w)[id] == nil {
+			(*w)[id] = &WebHook{}
 		}
-		(*w)[key].ID = &id
-		(*w)[key].Init(
-			serviceID,
+		(*w)[id].ID = id
+		(*w)[id].Failed = &serviceStatus.Fails.WebHook
+		(*w)[id].Init(
 			serviceStatus,
-			(*mains)[key],
+			(*mains)[id],
 			defaults,
 			hardDefaults,
 			shoutrrrNotifiers,
@@ -66,7 +64,6 @@ func (w *Slice) Init(
 
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	main *WebHook,
 	defaults *WebHook,
@@ -75,10 +72,8 @@ func (w *WebHook) Init(
 	parentInterval *string,
 ) {
 	w.ParentInterval = parentInterval
-	w.initMetrics(*serviceID)
-	if serviceStatus != nil {
-		w.ServiceStatus = serviceStatus
-	}
+	w.ServiceStatus = serviceStatus
+	w.initMetrics()
 
 	// Give the matching main
 	(*w).Main = main
@@ -97,17 +92,17 @@ func (w *WebHook) Init(
 }
 
 // initMetrics, giving them all a starting value.
-func (w *WebHook) initMetrics(serviceID string) {
+func (w *WebHook) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, *(*w).ID, serviceID, "", "FAIL")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "SUCCESS")
+	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "FAIL")
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, serviceID, float64(0))
+	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *w.ServiceStatus.ServiceID, float64(0))
 }
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
@@ -117,7 +112,7 @@ func (w *WebHook) GetAllowInvalidCerts() bool {
 
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
-	return *utils.GetFirstNonNilPtr(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
+	return utils.GetFirstNonDefault(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
 }
 
 // GetDelayDuration before auto-approving this WebHook.
@@ -129,6 +124,11 @@ func (w *WebHook) GetDelayDuration() time.Duration {
 // GetDesiredStatusCode of the WebHook.
 func (w *WebHook) GetDesiredStatusCode() int {
 	return *utils.GetFirstNonNilPtr(w.DesiredStatusCode, w.Main.DesiredStatusCode, w.Defaults.DesiredStatusCode, w.HardDefaults.DesiredStatusCode)
+}
+
+// GetFailStatus of this WebHook.
+func (w *WebHook) GetFailStatus() *bool {
+	return (*w.Failed)[w.ID]
 }
 
 // GetMaxTries allowed for the WebHook.
@@ -149,34 +149,34 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 			After:  utils.RandAlphaNumericLower(40),
 		})
 
-		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), bytes.NewReader(payload))
+		req, err = http.NewRequest(http.MethodPost, w.GetURL(), bytes.NewReader(payload))
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		w.SetCustomHeaders(req)
-		SetGitHubHeaders(req, payload, *w.GetSecret())
+		SetGitHubHeaders(req, payload, w.GetSecret())
 	case "gitlab":
-		req, err = http.NewRequest(http.MethodPost, *w.GetURL(), nil)
+		req, err = http.NewRequest(http.MethodPost, w.GetURL(), nil)
 		if err != nil {
 			return nil
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		SetGitLabParameter(req, *w.GetSecret())
+		SetGitLabParameter(req, w.GetSecret())
 	}
+	w.SetCustomHeaders(req)
 	return
 }
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return *utils.GetFirstNonNilPtr(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
+	return utils.GetFirstNonDefault(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
 }
 
 // GetSecret for the WebHook.
-func (w *WebHook) GetSecret() *string {
-	return utils.GetFirstNonNilPtr(w.Secret, w.Main.Secret, w.Defaults.Secret)
+func (w *WebHook) GetSecret() string {
+	return utils.GetFirstNonDefault(w.Secret, w.Main.Secret, w.Defaults.Secret)
 }
 
 // GetSilentFails returns the flag for whether WebHooks should fail silently or notify.
@@ -185,10 +185,10 @@ func (w *WebHook) GetSilentFails() bool {
 }
 
 // GetURL of the WebHook.
-func (w *WebHook) GetURL() *string {
-	url := utils.GetFirstNonNilPtr(w.URL, w.Main.URL, w.Defaults.URL)
-	if w.ServiceStatus != nil && url != nil && strings.Contains(*url, "{") {
-		*url = strings.Clone(utils.TemplateString(*url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
+func (w *WebHook) GetURL() string {
+	url := utils.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL)
+	if w.ServiceStatus != nil && url != "" && strings.Contains(url, "{") {
+		url = strings.Clone(utils.TemplateString(url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
 	}
 	return url
 }
@@ -198,13 +198,18 @@ func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable)
 }
 
+// SetFailStatus of this WebHook.
+func (w *WebHook) SetFailStatus(status *bool) {
+	(*w.Failed)[w.ID] = status
+}
+
 // SetNextRunnable time that the WebHook can be re-run.
 //
 // addDelay - only used on auto_approved releases
 func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
 	// pass
-	if !utils.EvalNilPtr(w.Failed, true) {
+	if !utils.EvalNilPtr(w.GetFailStatus(), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil
@@ -217,6 +222,7 @@ func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	}
 	// Block reruns whilst sending
 	if sending {
+		w.NextRunnable = w.NextRunnable.Add(time.Hour)
 		w.NextRunnable = w.NextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
 	}
 }
@@ -227,6 +233,6 @@ func (w *Slice) ResetFails() {
 		return
 	}
 	for i := range *w {
-		(*w)[i].Failed = nil
+		(*w)[i].SetFailStatus(nil)
 	}
 }

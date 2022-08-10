@@ -16,11 +16,7 @@ package service
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
-	"time"
 
-	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -28,43 +24,11 @@ import (
 func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
-	for key := range *s {
-		var serviceErrors error
-		service := (*s)[key]
-
-		// Check Service
-		if err := service.CheckValues(prefix); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// URL Commands
-		if err := service.URLCommands.CheckValues(prefix + "  "); err != nil {
+	keys := utils.SortedKeys(*s)
+	for _, key := range keys {
+		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
 			errs = fmt.Errorf("%s%w",
-				utils.ErrorToString(errs), err)
-		}
-
-		// Check DeployedVersionLookup
-		if err := service.DeployedVersionLookup.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Check Notify(s)
-		if err := service.Notify.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		// Check WebHook(s)
-		if err := service.WebHook.CheckValues(prefix + "  "); err != nil {
-			serviceErrors = fmt.Errorf("%s%w",
-				utils.ErrorToString(serviceErrors), err)
-		}
-
-		if serviceErrors != nil {
-			errs = fmt.Errorf("%s  %s:\\%w",
-				utils.ErrorToString(errs), key, serviceErrors)
+				utils.ErrorToString(errs), serviceErrs)
 		}
 	}
 	return errs
@@ -72,45 +36,31 @@ func (s *Slice) CheckValues(prefix string) error {
 
 // CheckValues of the Service.
 func (s *Service) CheckValues(prefix string) (errs error) {
-	// Interval
-	if s.Interval != nil {
-		// Default to seconds when an integer is provided
-		if _, err := strconv.Atoi(*s.Interval); err == nil {
-			*s.Interval += "s"
-		}
-		if _, err := time.ParseDuration(*s.Interval); err != nil {
-			errs = fmt.Errorf("%s%s  interval: %q <invalid> (Use 'AhBmCs' duration format)\\",
-				utils.ErrorToString(errs), prefix, *s.Interval)
-		}
+	if optionErrs := s.Options.CheckValues(prefix + "  "); optionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), optionErrs)
+	}
+	if latestVersionErrs := s.LatestVersion.CheckValues(prefix + "  "); latestVersionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), latestVersionErrs)
+	}
+	if deployedVersionErrs := s.DeployedVersionLookup.CheckValues(prefix + "  "); deployedVersionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), deployedVersionErrs)
+	}
+	if notifyErrs := s.Notify.CheckValues(prefix + "  "); notifyErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), notifyErrs)
+	}
+	if webhookErrs := s.WebHook.CheckValues(prefix + "  "); webhookErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), webhookErrs)
 	}
 
-	// Type
-	if s.Defaults != nil {
-		if s.Type == nil {
-			errs = fmt.Errorf("%s%s  type: <missing> (Services require a type)\\",
-				utils.ErrorToString(errs), prefix)
-		} else if *s.Type != "github" && *s.Type != "url" {
-			errs = fmt.Errorf("%s%s  type: %q <invalid> (Should be either 'github' or 'url')\\",
-				utils.ErrorToString(errs), prefix, *s.Type)
-		}
+	if errs != nil && s.Defaults != nil {
+		errs = fmt.Errorf("  %s:\\%w",
+			s.ID, errs)
 	}
-
-	// RegEx
-	if s.RegexContent != nil {
-		_, err := regexp.Compile(*s.RegexContent)
-		if err != nil {
-			errs = fmt.Errorf("%s%s  regex_content: %q <invalid> (Invalid RegEx)\\",
-				utils.ErrorToString(errs), prefix, *s.RegexContent)
-		}
-	}
-	if s.RegexVersion != nil {
-		_, err := regexp.Compile(*s.RegexVersion)
-		if err != nil {
-			errs = fmt.Errorf("%s%s  regex_version: %q <invalid> (Invalid RegEx)\\",
-				utils.ErrorToString(errs), prefix, *s.RegexVersion)
-		}
-	}
-
 	return
 }
 
@@ -129,35 +79,26 @@ func (s *Slice) Print(prefix string, order []string) {
 
 // Print will print the Service.
 func (s *Service) Print(prefix string) {
-	// Service.
-	utils.PrintlnIfNotNil(s.Type, fmt.Sprintf("%stype: %s", prefix, utils.DefaultIfNil(s.Type)))
-	utils.PrintlnIfNotNil(s.URL, fmt.Sprintf("%surl: %s", prefix, utils.DefaultIfNil(s.URL)))
-	utils.PrintlnIfNotNil(s.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(s.AllowInvalidCerts)))
-	utils.PrintlnIfNotNil(s.AccessToken, fmt.Sprintf("%saccess_token: %s", prefix, utils.DefaultIfNil(s.AccessToken)))
-	utils.PrintlnIfNotNil(s.SemanticVersioning, fmt.Sprintf("%ssemantic_versioning: %t", prefix, utils.DefaultIfNil(s.SemanticVersioning)))
-	utils.PrintlnIfNotNil(s.Interval, fmt.Sprintf("%sinterval: %s", prefix, utils.DefaultIfNil(s.Interval)))
-	if s.URLCommands != nil {
-		fmt.Printf("%surl_commands:\n", prefix)
-		s.URLCommands.Print(prefix)
-	}
-	utils.PrintlnIfNotNil(s.RegexContent, fmt.Sprintf("%sregex_content: %s", prefix, utils.DefaultIfNil(s.RegexContent)))
-	utils.PrintlnIfNotNil(s.RegexVersion, fmt.Sprintf("%sregex_version: %s", prefix, utils.DefaultIfNil(s.RegexVersion)))
-	utils.PrintlnIfNotNil(s.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(s.UsePreRelease)))
-	utils.PrintlnIfNotNil(s.WebURL, fmt.Sprintf("%sweb_url: %s", prefix, utils.DefaultIfNil(s.WebURL)))
-	utils.PrintlnIfNotNil(s.AutoApprove, fmt.Sprintf("%sauto_approve: %t", prefix, utils.DefaultIfNil(s.AutoApprove)))
-	utils.PrintlnIfNotNil(s.IgnoreMisses, fmt.Sprintf("%signore_misses: %t", prefix, utils.DefaultIfNil(s.IgnoreMisses)))
-	utils.PrintlnIfNotDefault(s.Icon, fmt.Sprintf("%sicon: %s", prefix, s.Icon))
+	utils.PrintlnIfNotDefault(s.Comment, fmt.Sprintf("%scomment: %q", prefix, s.Comment))
 
+	// Options
+	s.Options.Print(prefix)
+
+	// Latest Version
+	s.LatestVersion.Print(prefix)
+
+	// Dashboard
+	s.Dashboard.Print(prefix)
+
+	// Deployed Version
 	s.DeployedVersionLookup.Print(prefix)
 
 	// Notify.
 	s.Notify.Print(prefix)
 
+	// Command.
+	s.Command.Print(prefix)
+
 	// WebHook.
 	s.WebHook.Print(prefix)
-
-	if s.Status != nil && *s.Status != (service_status.Status{}) {
-		fmt.Printf("%sstatus:\n", prefix)
-		s.Status.Print(prefix + "  ")
-	}
 }

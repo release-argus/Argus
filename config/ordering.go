@@ -75,7 +75,7 @@ func getIndentation(line string) (indentation string) {
 func (c *Config) filterInactive() {
 	removed := 0
 	for index, id := range c.All {
-		if !utils.EvalNilPtr(c.Service[id].Active, true) {
+		if !utils.EvalNilPtr(c.Service[id].Options.Active, true) {
 			if removed == 0 {
 				order := make([]string, len(c.All))
 				copy(order, c.All)

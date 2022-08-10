@@ -25,7 +25,11 @@ func SetGitLabParameter(req *http.Request, secret string) {
 	if req.URL.Query() != nil && len(req.URL.Query()) != 0 {
 		q = req.URL.Query()
 	}
-	q.Add("token", secret)
-	q.Add("ref", "master")
+	if q["token"] == nil {
+		q.Add("token", secret)
+	}
+	if q["ref"] == nil {
+		q.Add("ref", "master")
+	}
 	req.URL.RawQuery = q.Encode()
 }

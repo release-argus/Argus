@@ -38,8 +38,8 @@ func TestRegexCheck(t *testing.T) {
 
 			// THEN the regex matches when expected
 			if got != tc.match {
-				t.Errorf("%s:wanted match=%t, not %t\n%q on %q",
-					name, tc.match, got, tc.regex, str)
+				t.Errorf("wanted match=%t, not %t\n%q on %q",
+					tc.match, got, tc.regex, str)
 			}
 		})
 	}
@@ -64,8 +64,8 @@ func TestRegexCheckWithParams(t *testing.T) {
 
 			// THEN the regex matches when expected
 			if got != tc.match {
-				t.Errorf("%s:wanted match=%t, not %t\n%q on %q",
-					name, tc.match, got, tc.regex, str)
+				t.Errorf("wanted match=%t, not %t\n%q on %q",
+					tc.match, got, tc.regex, str)
 			}
 		})
 	}

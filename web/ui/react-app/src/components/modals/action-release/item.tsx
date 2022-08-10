@@ -106,7 +106,6 @@ export const Item = ({
                 display: "flex",
                 justifyContent: "flex-end",
                 width: "auto",
-                paddingRight: modalType === "SKIP" ? "0px" : "",
               }}
             >
               <FontAwesomeIcon

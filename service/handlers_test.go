@@ -17,871 +17,688 @@
 package service
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/service/deployed_version"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestUpdateLatestApprovedDidUpdateApprovedVersion(t *testing.T) {
-	// GIVEN a Service whos ApprovedVersion != LatestVersion
-	service := testServiceGitHub()
-
-	// WHEN UpdateLatestApproved is called on it
-	want := service.Status.LatestVersion
-	service.UpdateLatestApproved()
-
-	// THEN ApprovedVersion becomes LatestVersion
-	got := service.Status.ApprovedVersion
-	if got != want {
-		t.Errorf("LatestVersion should have changed to %q. Got %q",
-			want, got)
-	}
-}
-
-func TestUpdateLatestApprovedDidAnnounce(t *testing.T) {
-	// GIVEN a Service whos ApprovedVersion != LatestVersion
-	service := testServiceGitHub()
-
-	// WHEN UpdateLatestApproved is called on it
-	service.UpdateLatestApproved()
-
-	// THEN the approval appears in Announce
-	got := len(*service.Announce)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestUpdateLatestApprovedDidntAnnounceIfAlreadyApproved(t *testing.T) {
-	// GIVEN a Service whos ApprovedVersion == LatestVersion
-	service := testServiceGitHub()
-	service.Status.ApprovedVersion = service.Status.LatestVersion
-
-	// WHEN UpdateLatestApproved is called on it
-	service.UpdateLatestApproved()
-
-	// THEN nothing is sent to Announce
-	got := len(*service.Announce)
-	want := 0
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestUpdatedVersionDidAnnounce(t *testing.T) {
+func TestUpdateLatestApproved(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceGitHub()
+	tests := map[string]struct {
+		latestVersion        string
+		startApprovedVersion string
+		wantAnnounces        int
+	}{
+		"empty ApprovedVersion does announce":   {startApprovedVersion: "", latestVersion: "1.2.3", wantAnnounces: 1},
+		"same ApprovedVersion doesn't announce": {startApprovedVersion: "1.2.3", latestVersion: "1.2.3", wantAnnounces: 0},
+	}
 
-	// WHEN UpdatedVersion is called on it
-	service.UpdatedVersion()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.ApprovedVersion = tc.startApprovedVersion
+			service.Status.LatestVersion = tc.latestVersion
 
-	// THEN the update appears in Announce
-	got := len(*service.Announce)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+			// WHEN UpdateLatestApproved is called on it
+			want := service.Status.LatestVersion
+			service.UpdateLatestApproved()
+
+			// THEN ApprovedVersion becomes LatestVersion
+			got := service.Status.ApprovedVersion
+			if got != want {
+				t.Errorf("LatestVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+			}
+		})
 	}
 }
 
-func TestUpdatedVersionDidCheckWebHookFails(t *testing.T) {
-	// GIVEN a Service with a WebHook that failed
-	service := testServiceGitHub()
-	failed := true
-	service.WebHook = &webhook.Slice{
-		"test": &webhook.WebHook{
-			Failed: &failed,
-		},
-	}
-
-	// WHEN UpdatedVersion is called on it
-	service.UpdatedVersion()
-
-	// THEN no update appears in Announce
-	got := len(*service.Announce)
-	want := 0
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestUpdatedVersionDidCheckCommandFails(t *testing.T) {
-	// GIVEN a Service with a Command that failed
-	service := testServiceGitHub()
-	failed := true
-	service.Command = &command.Slice{
-		command.Command{},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
-	service.CommandController.Failed[0] = &failed
-
-	// WHEN UpdatedVersion is called on it
-	service.UpdatedVersion()
-
-	// THEN no update appears in Announce
-	got := len(*service.Announce)
-	want := 0
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestUpdatedVersionDidUpdateDeployedVersion(t *testing.T) {
-	// GIVEN a Service with no command/webhook fails and no DeployedVersionLookup
-	service := testServiceGitHub()
-
-	// WHEN UpdatedVersion is called on it
-	want := service.Status.LatestVersion
-	service.UpdatedVersion()
-
-	// THEN the DeployedVersion is updated to LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestUpdatedVersionDidntUpdateDeployedVersion(t *testing.T) {
-	// GIVEN a Service with a DeployedVersionLookup
-	service := testServiceGitHub()
-	service.DeployedVersionLookup = &DeployedVersionLookup{}
-
-	// WHEN UpdatedVersion is called on it
-	want := service.Status.DeployedVersion
-	service.UpdatedVersion()
-
-	// THEN the DeployedVersion stays the same
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestUpdatedVersionDidUpdateApprovedVersionIfActionsPassed(t *testing.T) {
-	// GIVEN a Service with a DeployedVersionLookup
-	service := testServiceGitHub()
-	service.DeployedVersionLookup = &DeployedVersionLookup{}
-	service.WebHook = &webhook.Slice{
-		"test": &webhook.WebHook{},
-	}
-	failed := false
-	(*service.WebHook)["test"].Failed = &failed
-	service.Command = &command.Slice{
-		command.Command{},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
-	service.CommandController.Failed[0] = &failed
-
-	// WHEN UpdatedVersion is called on it
-	want := service.Status.DeployedVersion
-	service.UpdatedVersion()
-
-	// THEN the DeployedVersion stays the same
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestHandleUpdateActionsWithNothing(t *testing.T) {
-	// GIVEN a Service with no Commands or WebHooks
-	service := testServiceGitHub()
-	service.Command = nil
-	service.WebHook = nil
-
-	// WHEN HandleUpdateActions is called on it
-	want := service.Status.LatestVersion
-	service.HandleUpdateActions()
-	time.Sleep(time.Second)
-
-	// THEN DeployedVersion is now LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have been updated to %q, not %q",
-			want, got)
-	}
-}
-
-func TestHandleUpdateActionsWithSuccessfulCommandAndNoAutoApprove(t *testing.T) {
-	// GIVEN a Service with a Command that'll pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-
-	// WHEN HandleUpdateActions is called on it
-	want := service.Status.DeployedVersion
-	service.HandleUpdateActions()
-	time.Sleep(time.Second)
-
-	// THEN DeployedVersion is unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
-			want, got)
-	}
-}
-
-func TestHandleUpdateActionsWithSuccessfulCommandAndAutoApprove(t *testing.T) {
-	// GIVEN a Service with a Command that'll pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	*service.AutoApprove = true
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(
-		jLog,
-		&serviceID,
-		nil,
-		service.Command,
-		nil,
-		service.Interval,
-	)
-
-	// WHEN HandleUpdateActions is called on it
-	want := service.Status.LatestVersion
-	service.HandleUpdateActions()
-	time.Sleep(time.Second)
-
-	// THEN DeployedVersion is now LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have been updated to %q, not %q",
-			want, got)
-	}
-}
-
-func TestHandleUpdateActionsWithFailingCommandAndAutoApprove(t *testing.T) {
-	// GIVEN a Service with a Command that'll fail
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	*service.AutoApprove = true
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la", "/root"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-
-	// WHEN HandleUpdateActions is called on it
-	want := service.Status.DeployedVersion
-	service.HandleUpdateActions()
-	time.Sleep(time.Second)
-
-	// THEN DeployedVersion is unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
-			want, got)
-	}
-}
-
-func TestHandleFailedActionsWithNothing(t *testing.T) {
-	// GIVEN a Service with no Commands or WebHooks
-	service := testServiceGitHub()
-	service.Command = nil
-	service.WebHook = nil
-
-	// WHEN HandleFailedActions is called on it
-	want := service.Status.LatestVersion
-	service.HandleFailedActions()
-
-	// THEN DeployedVersion is now LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have been updated to %q, not %q",
-			want, got)
-	}
-}
-
-func TestHandleFailedActionsWithSuccessfulCommand(t *testing.T) {
-	// GIVEN a Service with all Commands that'll pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-
-	// WHEN HandleFailedActions is called on it
-	want := service.Status.LatestVersion
-	service.HandleFailedActions()
-
-	// THEN DeployedVersion is now LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
-			want, got)
-	}
-}
-
-func TestHandleFailedActionsWithCommandBeforeNextRunnable(t *testing.T) {
-	// GIVEN a Service with all Commands that'll pass
-	// and they all failed last time
-	// and one of the NextRunnable's hasn't been reached
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-	failed0 := true
-	service.CommandController.Failed[0] = &failed0
-	failed1 := true
-	service.CommandController.Failed[1] = &failed1
-	nextRunnable0 := time.Now().UTC().Add(-time.Hour)
-	service.CommandController.NextRunnable[0] = nextRunnable0
-	nextRunnable1 := time.Now().UTC().Add(time.Hour)
-	service.CommandController.NextRunnable[1] = nextRunnable1
-
-	// WHEN HandleFailedActions is called on it
-	ranAt := time.Now().UTC()
-	service.HandleFailedActions()
-
-	// THEN only the Command that's past its NextRunnable will have ran
-	if utils.EvalNilPtr(service.CommandController.Failed[0], true) != false {
-		got := "true"
-		if service.CommandController.Failed[0] == nil {
-			got = "nil"
-		}
-		t.Errorf("Command 0 %q should have ran and got failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
-			(*service.CommandController.Command)[0].String(), got, nextRunnable0, ranAt)
-	}
-	if utils.EvalNilPtr(service.CommandController.Failed[1], false) != true {
-		got := "false"
-		if service.CommandController.Failed[1] == nil {
-			got = "nil"
-		}
-		t.Errorf("Command 1 %q shouldn't have ran and stayed failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
-			(*service.CommandController.Command)[1].String(), got, nextRunnable1, ranAt)
-	}
-}
-
-func TestHandleFailedActionsWithFailingCommand(t *testing.T) {
-	// GIVEN a Service with a Command that did fail and will now pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-	didFail := false
-	fail := true
-	service.CommandController.Failed[0] = &didFail
-	service.CommandController.Failed[1] = &fail
-	service.CommandController.Failed[2] = &fail
-	service.CommandController.Failed[3] = &didFail
-
-	// WHEN HandleFailedActions is called on it
-	want := service.Status.DeployedVersion
-	service.HandleFailedActions()
-
-	// THEN DeployedVersion is unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
-			want, got)
-	}
-}
-
-func TestHandleFailedActionsWithFailingWebHook(t *testing.T) {
-	// GIVEN a Service with a WebHook that did fail and will now pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	whPass := testWebHookSuccessful()
-	whFail := testWebHookFailing()
-	service.WebHook = &webhook.Slice{
-		"fail1": &whFail,
-		"pass1": &whPass,
-	}
-	didFail := false
-	fail := true
-	(*service.WebHook)["fail1"].Failed = &fail
-	(*service.WebHook)["pass1"].Failed = &didFail
-	service.WebHook.Init(jLog, service.ID, service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Interval)
-
-	// WHEN HandleFailedActions is called on it
-	want := service.Status.DeployedVersion
-	service.HandleFailedActions()
-
-	// THEN DeployedVersion is unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have been updated from %q to %q",
-			want, got)
-	}
-}
-
-func TestHandleFailedActionsWithWebHookBeforeNextRunnable(t *testing.T) {
-	// GIVEN a Service with all WebHooks that'll pass
-	// and they all failed last time
-	// and one of the NextRunnable's hasn't been reached
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	whPass0 := testWebHookSuccessful()
-	whPass1 := testWebHookSuccessful()
-	service.WebHook = &webhook.Slice{
-		"pass0": &whPass0,
-		"pass1": &whPass1,
-	}
-	service.WebHook.Init(jLog, service.ID, service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, service.Interval)
-	fail0 := true
-	(*service.WebHook)["pass0"].Failed = &fail0
-	fail1 := true
-	(*service.WebHook)["pass1"].Failed = &fail1
-	nextRunnable0 := time.Now().UTC().Add(-time.Hour)
-	(*service.WebHook)["pass0"].NextRunnable = nextRunnable0
-	nextRunnable1 := time.Now().UTC().Add(time.Hour)
-	(*service.WebHook)["pass1"].NextRunnable = nextRunnable1
-
-	// WHEN HandleFailedActions is called on it
-	ranAt := time.Now().UTC()
-	service.HandleFailedActions()
-
-	// THEN only the WebHook that's past its NextRunnable will have ran
-	if utils.EvalNilPtr((*service.WebHook)["pass0"].Failed, true) != false {
-		got := "true"
-		if (*service.WebHook)["pass0"].Failed == nil {
-			got = "nil"
-		}
-		t.Errorf("WebHook 0 should have ran and got failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
-			got, nextRunnable0, ranAt)
-	}
-	if utils.EvalNilPtr((*service.WebHook)["pass1"].Failed, false) != true {
-		got := "true"
-		if (*service.WebHook)["pass1"].Failed == nil {
-			got = "nil"
-		}
-		t.Errorf("WebHook 1 shouldn't have ran and stayed failed=false, not %s as it's NextRunnable was %s and it was ran at %s",
-			got, nextRunnable1, ranAt)
-	}
-}
-
-func TestHandleFailedActionsDidOnlyRedoFailed(t *testing.T) {
-	// GIVEN a Service with a Command that failed that'll pass and the ones that passed will fail
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la", "/root"},
-		command.Command{"ls", "-la"},
-		command.Command{"ls", "-la", "/root"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-	passes := false
-	service.CommandController.Failed[0] = &passes
-	service.CommandController.Failed[2] = &passes
-	failed := true
-	service.CommandController.Failed[1] = &failed
-
-	// WHEN HandleFailedActions is called on it
-	want := service.Status.LatestVersion
-	service.HandleFailedActions()
-
-	// THEN DeployedVersion is unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have been updated from %q to %q",
-			got, want)
-	}
-}
-
-func TestHandleCommandWithNilCommands(t *testing.T) {
-	// GIVEN a Service with no Commands
-	service := testServiceGitHub()
-	service.Command = nil
-
-	// WHEN HandleCommand is called
-	want := service.Status.DeployedVersion
-	service.HandleCommand("")
-
-	// THEN the DeployedVersion will be unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleCommandWithUnknownCommand(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-la"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, service.Interval)
-
-	// WHEN HandleCommand is called for an unknown command
-	want := service.Status.DeployedVersion
-	service.HandleCommand("ls -la /root")
-
-	// THEN the DeployedVersion will be unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleCommandWithNextRunnableFail(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	// and time is before NextRunnable
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-lah"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-	nextRunnable := time.Now().UTC().Add(time.Minute)
-	service.CommandController.NextRunnable[0] = nextRunnable
-
-	// WHEN HandleCommand is called
-	want := service.Status.DeployedVersion
-	service.HandleCommand((*service.Command)[0].String())
-
-	// THEN the DeployedVersion will be unchanged (Command shouldn't run)
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleCommandWithNextRunnablePass(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	// and time is after NextRunnable
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-lah"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-	service.CommandController.NextRunnable[0] = time.Now().UTC()
-
-	// WHEN HandleCommand is called
-	want := service.Status.LatestVersion
-	service.HandleCommand((*service.Command)[0].String())
-
-	// THEN the DeployedVersion will now be LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have changed from %s to %s",
-			got, want)
-	}
-}
-
-func TestHandleCommandWithFailingCommand(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll fail
-	jLog = utils.NewJLog("WARN", false)
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		command.Command{"ls", "-lah", "/root"},
-	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(jLog, &serviceID, nil, service.Command, nil, service.Interval)
-
-	// WHEN HandleCommand is called
-	want := service.Status.LatestVersion
-	service.HandleCommand((*service.Command)[0].String())
-
-	// THEN the DeployedVersion will now be LatestVersion
-	got := service.Status.DeployedVersion
-	if got == want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleWebHookWithUnknownWebHook(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	service := testServiceGitHub()
-	wh := testWebHookSuccessful()
-	service.WebHook = &webhook.Slice{
-		"test": &wh,
-	}
-
-	// WHEN HandleWebHook is called for WebHook that doesn't exist
-	want := service.Status.DeployedVersion
-	service.HandleWebHook("something")
-
-	// THEN the DeployedVersion will be unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed to %s, want %s",
-			got, want)
-	}
-}
-
-func TestHandleWebHookWithSuccessfulWebHook(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	service := testServiceGitHub()
-	wh := testWebHookSuccessful()
-	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, nil)
-	service.WebHook = &webhook.Slice{
-		"test": &wh,
-	}
-
-	// WHEN HandleWebHook is called for WebHook that doesn't exist
-	want := service.Status.LatestVersion
-	service.HandleWebHook("test")
-
-	// THEN the DeployedVersion will now be LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have changed to %s, not %s",
-			want, got)
-	}
-}
-
-func TestHandleWebHookWithNextRunnablePass(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	// and time is after NextRunnable
-	service := testServiceGitHub()
-	wh := testWebHookSuccessful()
-	wh.NextRunnable = time.Now().UTC()
-	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
-	service.WebHook = &webhook.Slice{
-		"test": &wh,
-	}
-
-	// WHEN HandleWebHook is called for WebHook that doesn't exist
-	want := service.Status.LatestVersion
-	service.HandleWebHook("test")
-
-	// THEN the DeployedVersion will now be LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion should have changed to %s, not %s",
-			want, got)
-	}
-}
-
-func TestHandleWebHookWithNextRunnableFail(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll pass
-	// and time is before NextRunnable
-	service := testServiceGitHub()
-	wh := testWebHookSuccessful()
-	wh.NextRunnable = time.Now().UTC().Add(time.Minute)
-	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
-	service.WebHook = &webhook.Slice{
-		"test": &wh,
-	}
-
-	// WHEN HandleWebHook is called for WebHook that doesn't exist
-	want := service.Status.DeployedVersion
-	service.HandleWebHook("test")
-
-	// THEN the DeployedVersion will now be LatestVersion
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleWebHookWithFailingWebHook(t *testing.T) {
-	// GIVEN a Service with a WebHook that'll fail
-	service := testServiceGitHub()
-	wh := testWebHookFailing()
-	var logInitSlice webhook.Slice
-	logInitSlice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil, service.Interval)
-	service.WebHook = &webhook.Slice{
-		"test": &wh,
-	}
-
-	// WHEN HandleWebHook is called for WebHook that doesn't exist
-	want := service.Status.DeployedVersion
-	service.HandleWebHook("test")
-
-	// THEN the DeployedVersion will be unchanged
-	got := service.Status.DeployedVersion
-	if got != want {
-		t.Errorf("DeployedVersion shouldn't have changed from %s to %s",
-			want, got)
-	}
-}
-
-func TestHandleSkipWithNotLatestVersion(t *testing.T) {
+func TestUpdatedVersion(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceGitHub()
+	tests := map[string]struct {
+		commands              command.Slice
+		webhooks              webhook.Slice
+		fails                 service_status.Fails
+		latestIsDeployed      bool
+		deployedVersion       *deployed_version.Lookup
+		approvedBecomesLatest bool
+		deployedBecomesLatest bool
+		wantAnnounces         int
+	}{
+		"doesn't do anything if DeployedVersion == LatestVersion":                             {latestIsDeployed: true, wantAnnounces: 0, deployedBecomesLatest: true},
+		"no webhooks/command/deployedVersionLookup does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true},
+		"commands that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
+			commands: command.Slice{{"true"}, {"false"}}, fails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}}},
+		"commands that haven't run fails doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
+			commands: command.Slice{{"true"}, {"false"}}, fails: service_status.Fails{Command: []*bool{boolPtr(false), nil}}},
+		"commands that have failed doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
+			commands: command.Slice{{"true"}, {"false"}}, fails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(true)}}},
+		"webhooks that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
+			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: service_status.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
+		"webhooks that haven't run fails doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
+			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: service_status.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": nil}}},
+		"webhooks that have failed doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
+			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: service_status.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(true)}}},
+		"commands and webhooks that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
+			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"0": {}, "1": {}},
+			fails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
+		"commands and webhooks that have no fails with deployedVersionLookup does announce and only update approved_version": {wantAnnounces: 1, deployedBecomesLatest: false, approvedBecomesLatest: true,
+			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"0": {}, "1": {}}, deployedVersion: &deployed_version.Lookup{},
+			fails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
+		"deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version": {wantAnnounces: 0, deployedBecomesLatest: false, deployedVersion: &deployed_version.Lookup{},
+			fails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
+	}
 
-	// WHEN HandleSkip is called without LatestVersion
-	want := service.Status.ApprovedVersion
-	service.HandleSkip("something")
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Command = tc.commands
+			service.WebHook = tc.webhooks
+			service.DeployedVersionLookup = tc.deployedVersion
+			service.Status.Fails = tc.fails
+			if tc.latestIsDeployed {
+				service.Status.DeployedVersion = service.Status.LatestVersion
+			}
 
-	// THEN ApprovedVersion will be unchanged
-	got := service.Status.ApprovedVersion
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
+			// WHEN UpdatedVersion is called on it
+			want := service.Status.LatestVersion
+			service.UpdatedVersion()
+
+			// THEN ApprovedVersion becomes LatestVersion if there's a dvl and commands/webhooks
+			got := service.Status.ApprovedVersion
+			if (tc.approvedBecomesLatest && got != want) || (!tc.approvedBecomesLatest && got == want) {
+				t.Errorf("ApprovedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN DeployedVersion becomes LatestVersion if there's no dvl
+			got = service.Status.DeployedVersion
+			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
+				t.Errorf("DeployedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+			}
+		})
 	}
 }
 
-func TestHandleSkipDidSkip(t *testing.T) {
+func TestHandleUpdateActions(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceGitHub()
+	testLogging()
+	tests := map[string]struct {
+		commands              command.Slice
+		webhooks              webhook.Slice
+		autoApprove           bool
+		deployedBecomesLatest bool
+		wantAnnounces         int
+	}{
+		"no auto_approve and no webhooks/command does announce and update deployed_version": {autoApprove: false, wantAnnounces: 1, deployedBecomesLatest: true},
+		"no auto_approve but do have webhooks only announces the new version": {autoApprove: false, wantAnnounces: 1, deployedBecomesLatest: false,
+			webhooks: webhook.Slice{"fail": testWebHook(true)}},
+		"auto_approve and webhook that fails only announces the fail and doesn't update deployed_version": {autoApprove: true, wantAnnounces: 1, deployedBecomesLatest: false,
+			webhooks: webhook.Slice{"fail": testWebHook(true)}},
+		"auto_approve and webhook that passes announces the pass and version change and updates deployed_version": {autoApprove: true, wantAnnounces: 2, deployedBecomesLatest: true,
+			webhooks: webhook.Slice{"pass": testWebHook(false)}},
+		"auto_approve and command that fails only announces the fail and doesn't update deployed_version": {autoApprove: true, wantAnnounces: 2, deployedBecomesLatest: false,
+			commands: command.Slice{{"true"}, {"false"}}},
+		"auto_approve and command that passes announces the pass and version change and updates deployed_version": {autoApprove: true, wantAnnounces: 3, deployedBecomesLatest: true,
+			commands: command.Slice{{"true"}, {"ls"}}},
+	}
 
-	// WHEN HandleSkip is called with LatestVersion
-	want := "SKIP_" + service.Status.LatestVersion
-	service.HandleSkip(service.Status.LatestVersion)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.Init(len(service.Notify), len(tc.commands), len(tc.webhooks), &service.ID, &service.Dashboard.WebURL)
+			service.Command = tc.commands
+			if len(tc.commands) != 0 {
+				service.CommandController = &command.Controller{}
+			}
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.WebHook = tc.webhooks
+			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.Dashboard.AutoApprove = &tc.autoApprove
+			service.DeployedVersionLookup = nil
 
-	// THEN ApprovedVersion is set to SKIP_LatestVersion
-	got := service.Status.ApprovedVersion
-	if got != want {
-		t.Errorf("Got %s, want %s",
-			got, want)
+			// WHEN HandleUpdateActions is called on it
+			want := service.Status.LatestVersion
+			service.HandleUpdateActions()
+			// wait until all commands/webhooks have run
+			if tc.deployedBecomesLatest {
+				time.Sleep(2 * time.Second)
+			}
+			var actionsRan bool
+			for i := 1; i < 500; i++ {
+				actionsRan = true
+				time.Sleep(10 * time.Millisecond)
+				if service.Command != nil {
+					for j := range service.Command {
+						if (tc.deployedBecomesLatest && service.Status.Fails.Command[j] != nil) ||
+							(!tc.deployedBecomesLatest && service.Status.Fails.Command[j] == nil) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if service.WebHook != nil {
+					for j := range service.WebHook {
+						if (tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] != nil) ||
+							(!tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] == nil) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if actionsRan {
+					t.Logf("finished running after %v",
+						time.Duration(i*10)*time.Microsecond)
+					break
+				}
+			}
+			if !tc.autoApprove {
+				if actionsRan && (len(service.Status.Fails.Command) != 0 || len(service.Status.Fails.WebHook) != 0) {
+					t.Fatalf("no actions should have run as auto_approve is %t\n%#v",
+						tc.autoApprove, service.Status.Fails)
+				}
+			} else if !actionsRan {
+				t.Fatal("actions didn't finish running")
+			}
+			time.Sleep(500 * time.Millisecond)
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			got := service.Status.DeployedVersion
+			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
+				t.Errorf("DeployedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+				fails := ""
+				if len(service.Status.Fails.Command) != 0 {
+					for i := range service.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%t, ", i, *service.Status.Fails.Command[i])
+					}
+					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
+				}
+				fails = ""
+				if len(service.Status.Fails.WebHook) != 0 {
+					for i := range service.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+					}
+					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
+				}
+				for len(*service.Status.AnnounceChannel) != 0 {
+					msg := <-*service.Status.AnnounceChannel
+					t.Logf("%#v",
+						string(msg))
+				}
+			}
+		})
 	}
 }
 
-func TestHandleSkipDidAnnounce(t *testing.T) {
+func TestHandleFailedActions(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceGitHub()
+	testLogging()
+	tests := map[string]struct {
+		commands              command.Slice
+		commandNextRunnables  []time.Time
+		webhooks              webhook.Slice
+		webhookNextRunnables  map[string]time.Time
+		fails                 service_status.Fails
+		wantFails             service_status.Fails
+		deployedBecomesLatest bool
+		deployedLatest        bool
+		wantAnnounces         int
+	}{
+		"no command or webhooks fails retries all": {wantAnnounces: 2, // 2 = 1 command fail, 1 webhook fail
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHook(true)},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{boolPtr(true)}, WebHook: map[string]*bool{"will_fail": boolPtr(true)}}},
+		"have command fails and no webhook fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false, // 2 = 2 command runs
+			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}}},
+		"command fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 = no runs
+			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
+			fails:                service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			commandNextRunnables: []time.Time{time.Now().UTC(), time.Now().UTC(), time.Now().UTC().Add(time.Minute), time.Now().UTC().Add(time.Minute)}},
+		"have command fails no webhook fails and retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true, // 2 = 1 command, 1 deployed
+			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(true), boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{nil, nil}, WebHook: map[string]*bool{"pass": nil}}},
+		"have webhook fails and no command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false, // 2 = 2 webhook runs
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHook(true), "will_pass": testWebHook(false), "would_fail": testWebHook(true)},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(true), "would_fail": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(false), "would_fail": boolPtr(false)}}},
+		"webhook fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 runs
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"is_runnable": testWebHook(false), "not_runnable": testWebHook(true), "would_fail": testWebHook(true)},
+			fails:                service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(true), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
+			wantFails:            service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(false), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
+			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)}},
+		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true, // 2 webhook runs
+			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_pass0": testWebHook(false), "will_pass1": testWebHook(false), "would_fail": testWebHook(true)},
+			fails:     service_status.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_pass0": boolPtr(true), "will_pass1": boolPtr(true), "would_fail": boolPtr(false)}},
+			wantFails: service_status.Fails{Command: []*bool{nil}, WebHook: map[string]*bool{"will_pass0": nil, "will_pass1": nil, "would_fail": nil}}},
+	}
 
-	// WHEN HandleSkip is called with LatestVersion
-	service.HandleSkip(service.Status.LatestVersion)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.Init(len(service.Notify), len(tc.commands), len(tc.webhooks), &service.ID, &service.Dashboard.WebURL)
+			service.Status.Fails = tc.fails
+			if tc.deployedLatest {
+				service.Status.DeployedVersion = service.Status.LatestVersion
+			}
+			service.Command = tc.commands
+			if len(tc.commands) != 0 {
+				service.CommandController = &command.Controller{}
+			}
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.WebHook = tc.webhooks
+			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.DeployedVersionLookup = nil
+			for i := range tc.commandNextRunnables {
+				service.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
+			}
+			for i := range tc.webhookNextRunnables {
+				service.WebHook[i].NextRunnable = tc.webhookNextRunnables[i]
+			}
 
-	// THEN this skip is sent to Announce
-	got := len(*service.Announce)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
+			// WHEN HandleFailedActions is called on it
+			want := service.Status.LatestVersion
+			service.HandleFailedActions()
+			// wait until all commands/webhooks have run
+			var actionsRan bool
+			for i := 1; i < 500; i++ {
+				actionsRan = true
+				time.Sleep(10 * time.Millisecond)
+				if service.Command != nil {
+					for j := range service.Command {
+						if stringifyPointer(service.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails.Command[j]) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if service.WebHook != nil {
+					for j := range service.WebHook {
+						if stringifyPointer(service.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails.WebHook[j]) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if actionsRan {
+					t.Logf("finished running after %v",
+						time.Duration(i*10)*time.Microsecond)
+					break
+				}
+			}
+			if !actionsRan {
+				t.Error("actions didn't finish running or gave unexpected results")
+			}
+			time.Sleep(500 * time.Millisecond)
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			got := service.Status.DeployedVersion
+			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
+				t.Errorf("DeployedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+				fails := ""
+				if len(service.Status.Fails.Command) != 0 {
+					for i := range service.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(service.Status.Fails.Command[i]))
+					}
+					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
+				}
+				fails = ""
+				if len(service.Status.Fails.WebHook) != 0 {
+					for i := range service.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+					}
+					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
+				}
+				for len(*service.Status.AnnounceChannel) != 0 {
+					msg := <-*service.Status.AnnounceChannel
+					t.Logf("%#v",
+						string(msg))
+				}
+			}
+			// THEN the Command fails are as expected
+			for i := range tc.wantFails.Command {
+				if stringifyPointer(service.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails.Command[i]) {
+					t.Errorf("got, command[%d]=%s, want %s",
+						i, stringifyPointer(service.Status.Fails.Command[i]), stringifyPointer(tc.wantFails.Command[i]))
+				}
+			}
+			// THEN the WebHook fails are as expected
+			for i := range tc.wantFails.WebHook {
+				if stringifyPointer(service.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails.WebHook[i]) {
+					t.Errorf("got, webhook[%s]=%s, want %s",
+						i, stringifyPointer(service.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails.WebHook[i]))
+				}
+			}
+		})
 	}
 }
 
-func TestShouldRetryAllWithWebHooksPassed(t *testing.T) {
-	// GIVEN a Service with WebHooks at failed=false
-	failed := false
-	service := testServiceGitHub()
-	service.WebHook = &webhook.Slice{
-		"test":  {Failed: &failed},
-		"other": {Failed: &failed},
+func TestHandleCommand(t *testing.T) {
+	// GIVEN a Service
+	testLogging()
+	tests := map[string]struct {
+		command               string
+		commands              command.Slice
+		nextRunnable          time.Time
+		fails                 []*bool
+		wantFails             []*bool
+		deployedBecomesLatest bool
+		deployedLatest        bool
+		wantAnnounces         int
+	}{
+		"empty Command slice does nothing": {commands: command.Slice{}, wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false},
+		"Command that failed passes": {commands: command.Slice{{"ls", "-lah"}}, command: "ls -lah", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: []*bool{boolPtr(true)}, wantFails: []*bool{boolPtr(false)}},
+		"Command that passed fails": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(true)}},
+		"Command that's not runnable doesn't run": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false,
+			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(false)}, nextRunnable: time.Now().UTC().Add(time.Minute)},
+		"Command that's runnable does run": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(true)}, nextRunnable: time.Now().UTC().Add(-time.Second)},
 	}
 
-	// WHEN shouldRetryAll is called on this Service
-	got := service.shouldRetryAll()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.Init(len(service.Notify), len(tc.commands), 0, &service.ID, &service.Dashboard.WebURL)
+			service.Status.Fails.Command = tc.fails
+			if tc.deployedLatest {
+				service.Status.DeployedVersion = service.Status.LatestVersion
+			}
+			service.Command = tc.commands
+			if len(tc.commands) != 0 {
+				service.CommandController = &command.Controller{}
+			}
+			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
+			service.DeployedVersionLookup = nil
+			for i := range service.Command {
+				service.CommandController.NextRunnable[i] = tc.nextRunnable
+			}
 
-	// THEN we got true
-	want := true
-	if got != want {
-		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
-			want, got, failed)
+			// WHEN HandleCommand is called on it
+			want := service.Status.LatestVersion
+			service.HandleCommand(tc.command)
+			// wait until all commands have run
+			var actionsRan bool
+			for i := 1; i < 500; i++ {
+				actionsRan = true
+				time.Sleep(10 * time.Millisecond)
+				if service.Command != nil {
+					for j := range service.Command {
+						if stringifyPointer(service.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails[j]) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if actionsRan {
+					t.Logf("finished running after %v",
+						time.Duration(i*10)*time.Microsecond)
+					break
+				}
+			}
+			if !actionsRan {
+				t.Error("actions didn't finish running or gave unexpected results")
+			}
+			time.Sleep(500 * time.Millisecond)
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			got := service.Status.DeployedVersion
+			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
+				t.Errorf("DeployedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+				fails := ""
+				if len(service.Status.Fails.Command) != 0 {
+					for i := range service.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%t, ", i, *service.Status.Fails.Command[i])
+					}
+					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
+				}
+				for len(*service.Status.AnnounceChannel) != 0 {
+					msg := <-*service.Status.AnnounceChannel
+					t.Logf("%#v",
+						string(msg))
+				}
+			}
+			// THEN the Command fails are as expected
+			for i := range tc.wantFails {
+				if stringifyPointer(service.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails[i]) {
+					t.Errorf("got, command[%d]=%s, want %s",
+						i, stringifyPointer(service.Status.Fails.Command[i]), stringifyPointer(tc.wantFails[i]))
+				}
+			}
+		})
 	}
 }
 
-func TestShouldRetryAllWithAWebHookFail(t *testing.T) {
-	// GIVEN a Service with a WebHook that failed
-	failed0 := false
-	failed1 := true
-	service := testServiceGitHub()
-	service.WebHook = &webhook.Slice{
-		"test":  {Failed: &failed0},
-		"other": {Failed: &failed1},
+func TestHandleWebHook(t *testing.T) {
+	// GIVEN a Service
+	testLogging()
+	tests := map[string]struct {
+		webhook               string
+		webhooks              webhook.Slice
+		nextRunnable          time.Time
+		fails                 map[string]*bool
+		wantFails             map[string]*bool
+		deployedBecomesLatest bool
+		deployedLatest        bool
+		wantAnnounces         int
+	}{
+		"empty WebHook slice does nothing": {webhooks: webhook.Slice{}, wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false},
+		"WebHook that failed passes": {webhooks: webhook.Slice{"pass": testWebHook(false)}, webhook: "pass", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: map[string]*bool{"pass": boolPtr(true)}, wantFails: map[string]*bool{"pass": boolPtr(false)}},
+		"WebHook that passed fails": {webhooks: webhook.Slice{"fail": testWebHook(true)}, webhook: "fail", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: map[string]*bool{"fail": boolPtr(false)}, wantFails: map[string]*bool{"fail": boolPtr(true)}},
+		"WebHook that's not runnable doesn't run": {webhooks: webhook.Slice{"pass": testWebHook(true)}, webhook: "pass", wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false,
+			fails: map[string]*bool{"pass": boolPtr(false)}, wantFails: map[string]*bool{"pass": boolPtr(false)}, nextRunnable: time.Now().UTC().Add(time.Minute)},
+		"WebHook that's runnable does run": {webhooks: webhook.Slice{"pass": testWebHook(false)}, webhook: "pass", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
+			fails: map[string]*bool{"pass": boolPtr(true)}, wantFails: map[string]*bool{"pass": boolPtr(false)}, nextRunnable: time.Now().UTC().Add(-time.Second)},
 	}
 
-	// WHEN shouldRetryAll is called on this Service
-	got := service.shouldRetryAll()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.Init(len(service.Notify), len(tc.webhooks), 0, &service.ID, &service.Dashboard.WebURL)
+			service.Status.Fails.WebHook = tc.fails
+			if tc.deployedLatest {
+				service.Status.DeployedVersion = service.Status.LatestVersion
+			}
+			service.WebHook = tc.webhooks
+			service.WebHook.Init(jLog, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
+			service.DeployedVersionLookup = nil
+			for i := range service.WebHook {
+				service.WebHook[i].NextRunnable = tc.nextRunnable
+			}
 
-	// THEN we got false
-	want := false
-	if got != want {
-		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
-			want, got, failed1)
+			// WHEN HandleWebHook is called on it
+			want := service.Status.LatestVersion
+			service.HandleWebHook(tc.webhook)
+			// wait until all webhooks have run
+			var actionsRan bool
+			for i := 1; i < 500; i++ {
+				actionsRan = true
+				time.Sleep(10 * time.Millisecond)
+				if service.WebHook != nil {
+					for j := range service.WebHook {
+						if stringifyPointer(service.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails[j]) {
+							actionsRan = false
+							break
+						}
+					}
+				}
+				if actionsRan {
+					t.Logf("finished running after %v",
+						time.Duration(i*10)*time.Microsecond)
+					break
+				}
+			}
+			if !actionsRan {
+				t.Error("actions didn't finish running or gave unexpected results")
+			}
+			time.Sleep(500 * time.Millisecond)
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			got := service.Status.DeployedVersion
+			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
+				t.Errorf("DeployedVersion should have changed to %q not %q",
+					want, got)
+			}
+			// THEN the correct number of changes are announced to the channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+				fails := ""
+				if len(service.Status.Fails.WebHook) != 0 {
+					for i := range service.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+					}
+					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
+				}
+				for len(*service.Status.AnnounceChannel) != 0 {
+					msg := <-*service.Status.AnnounceChannel
+					t.Logf("%#v",
+						string(msg))
+				}
+			}
+			// THEN the WebHook fails are as expected
+			for i := range tc.wantFails {
+				if stringifyPointer(service.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails[i]) {
+					t.Errorf("got, webhook[%s]=%s, want %s",
+						i, stringifyPointer(service.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails[i]))
+				}
+			}
+		})
 	}
 }
 
-func TestShouldRetryAllWithCommandsPassed(t *testing.T) {
-	// GIVEN a Service with Commands at failed=false
-	failed := false
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		{"test"},
-		{"other"},
+func TestHandleSkip(t *testing.T) {
+	// GIVEN a Service
+	testLogging()
+	latestVersion := "1.2.3"
+	tests := map[string]struct {
+		skipVersion          string
+		approvedVersion      string
+		wantAnnounces        int
+		wantDatabaseMessages int
+	}{
+		"skip of not latest version does nothing": {skipVersion: latestVersion + "-beta"},
+		"skip of latest version skips version and announces to announce and database channels": {
+			skipVersion: latestVersion, approvedVersion: "SKIP_" + latestVersion, wantAnnounces: 1, wantDatabaseMessages: 1},
 	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
-	service.CommandController.Failed[0] = &failed
-	service.CommandController.Failed[1] = &failed
 
-	// WHEN shouldRetryAll is called on this Service
-	got := service.shouldRetryAll()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			service.Status.ApprovedVersion = ""
+			service.Status.LatestVersion = latestVersion
 
-	// THEN we got true
-	want := true
-	if got != want {
-		t.Errorf("Expected retry to be %t, not %t as all webhooks were failed=%t",
-			want, got, failed)
+			// WHEN HandleSkip is called on it
+			service.HandleSkip(tc.skipVersion)
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			got := service.Status.ApprovedVersion
+			if tc.approvedVersion != got {
+				t.Errorf("ApprovedVersion should have changed to %q not %q",
+					tc.approvedVersion, got)
+			}
+			// THEN the correct number of changes are announced to the announce channel
+			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+			}
+			// THEN the correct number of messages are announced to the database channel
+			if len(*service.Status.DatabaseChannel) != tc.wantDatabaseMessages {
+				t.Errorf("Expecting %d announce message but got %d",
+					tc.wantDatabaseMessages, len(*service.Status.DatabaseChannel))
+			}
+		})
 	}
 }
 
-func TestShouldRetryAllWithACommandFail(t *testing.T) {
-	// GIVEN a Service with a Command that failed
-	failed0 := false
-	failed1 := true
-	service := testServiceGitHub()
-	service.Command = &command.Slice{
-		{"test"},
-		{"other"},
+func TestShouldRetryAll(t *testing.T) {
+	// GIVEN a Service
+	testLogging()
+	tests := map[string]struct {
+		command []*bool
+		webhook map[string]*bool
+		want    bool
+	}{
+		"no commands or webhooks":                    {want: true},
+		"commands that haven't run":                  {command: []*bool{nil, nil}, want: false},
+		"commands that have failed":                  {command: []*bool{boolPtr(true), boolPtr(true)}, want: false},
+		"commands that have failed/haven't run":      {command: []*bool{boolPtr(true), nil}, want: false},
+		"commands that haven't failed":               {command: []*bool{boolPtr(false), boolPtr(false)}, want: true},
+		"mix of all command fail states":             {command: []*bool{boolPtr(true), boolPtr(false), nil}, want: false},
+		"webhooks that haven't run":                  {webhook: map[string]*bool{"1": nil, "2": nil}, want: false},
+		"webhooks that have failed":                  {webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(true)}, want: false},
+		"webhooks that have failed/haven't run":      {webhook: map[string]*bool{"1": boolPtr(true), "2": nil}, want: false},
+		"webhooks that haven't failed":               {webhook: map[string]*bool{"1": boolPtr(false), "2": boolPtr(false)}, want: true},
+		"mix of all webhook fail states":             {webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(false), "3": nil}, want: false},
+		"mix of all webhook and command fail states": {command: []*bool{boolPtr(true), boolPtr(false), nil}, webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(false), "3": nil}, want: false},
+		"mix of all webhook and command no fails":    {command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false)}, webhook: map[string]*bool{"1": boolPtr(false), "2": boolPtr(false), "3": boolPtr(false)}, want: true},
 	}
-	service.CommandController = &command.Controller{}
-	serviceID := "test"
-	service.CommandController.Init(nil, &serviceID, nil, service.Command, nil, nil)
-	service.CommandController.Failed[0] = &failed0
-	service.CommandController.Failed[1] = &failed1
 
-	// WHEN shouldRetryAll is called on this Service
-	got := service.shouldRetryAll()
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			service := testServiceURL()
+			commands := len(tc.command)
+			service.Command = command.Slice{}
+			for commands != 0 {
+				service.Command = append(service.Command, command.Command{})
+				commands--
+			}
+			webhooks := len(tc.webhook)
+			service.WebHook = webhook.Slice{}
+			for webhooks != 0 {
+				service.WebHook[fmt.Sprint(webhooks)] = &webhook.WebHook{}
+				webhooks--
+			}
+			service.Status.Fails.Command = tc.command
+			service.Status.Fails.WebHook = tc.webhook
 
-	// THEN we got false
-	want := false
-	if got != want {
-		t.Errorf("Expected retry to be %t, not %t as a webhook had failed=%t",
-			want, got, failed1)
+			// WHEN shouldRetryAll is called on it
+			got := service.shouldRetryAll()
+
+			// THEN DeployedVersion becomes LatestVersion as there's no dvl
+			if tc.want != got {
+				t.Errorf("want %t not %t",
+					tc.want, got)
+			}
+		})
 	}
 }

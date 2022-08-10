@@ -18,7 +18,7 @@ package testing
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 	"testing"
@@ -26,6 +26,7 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -43,12 +44,12 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
-					Interval:          stringPtr("0s"),
+					Options:           options.Options{Interval: "0s"},
 				},
 			}},
 		"unknown service in flag": {flag: "something",
@@ -56,36 +57,36 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
-					Interval:          stringPtr("0s"),
+					Options:           options.Options{Interval: "0s"},
 				},
 			}},
 		"known service in flag successful command": {flag: "argus",
 			outputRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"echo", "command did run"},
 					},
 					CommandController: &command.Controller{},
-					Interval:          stringPtr("0s"),
+					Options:           options.Options{Interval: "0s"},
 				},
 			}},
 		"known service in flag failing command": {flag: "argus",
 			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status 2\s+`),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
-					Command: &command.Slice{
+					ID: "argus",
+					Command: command.Slice{
 						command.Command{"ls", "/root"},
 					},
 					CommandController: &command.Controller{},
-					Interval:          stringPtr("0s"),
+					Options:           options.Options{Interval: "0s"},
 				},
 			}},
 		"service with no commands": {flag: "argus",
@@ -93,7 +94,7 @@ func TestCommandTest(t *testing.T) {
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
-					ID: stringPtr("argus"),
+					ID: "argus",
 				},
 			}},
 	}
@@ -112,32 +113,41 @@ func TestCommandTest(t *testing.T) {
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
 					if !match {
-						t.Errorf("%s:\nexpected a panic that matched %q\ngot: %q",
-							name, *tc.panicRegex, rStr)
+						t.Errorf("expected a panic that matched %q\ngot: %q",
+							*tc.panicRegex, rStr)
 					}
 				}()
+			}
+			for i := range tc.slice {
+				tc.slice[i].Status.ServiceID = &tc.slice[i].ID
 			}
 
 			// WHEN CommandTest is called with the test Config
 			if tc.slice[tc.flag] != nil && tc.slice[tc.flag].CommandController != nil {
-				tc.slice[tc.flag].CommandController.Init(jLog, &tc.flag, nil, tc.slice[tc.flag].Command, nil, tc.slice[tc.flag].Interval)
+				tc.slice[tc.flag].CommandController.Init(jLog, &tc.slice[tc.flag].Status,
+					&tc.slice[tc.flag].Command, nil, &tc.slice[tc.flag].Options.Interval)
+			}
+			order := []string{}
+			for i := range tc.slice {
+				order = append(order, i)
 			}
 			cfg := config.Config{
 				Service: tc.slice,
+				Order:   &order,
 			}
 			CommandTest(&tc.flag, &cfg, jLog)
 
 			// THEN we get the expected output
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			if tc.outputRegex != nil {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("%s:\nwant match for %q\non: %q",
-						name, *tc.outputRegex, output)
+					t.Errorf("want match for %q\nnot: %q",
+						*tc.outputRegex, output)
 				}
 			}
 		})

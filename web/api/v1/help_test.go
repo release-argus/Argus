@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -24,10 +25,27 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/utils"
 	api_types "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
+
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
+}
 
 func testClient() Client {
 	hub := NewHub()
@@ -42,20 +60,17 @@ func testClient() Client {
 }
 
 func testAPI() API {
-	var (
-		serviceID      string = "test"
-		serviceComment string = "foo"
-		serviceType    string = "github"
-		serviceURL     string = "release-argus/Argus"
-	)
+	var serviceID string = "test"
 	return API{
 		Config: &config.Config{
 			Service: service.Slice{
 				serviceID: &service.Service{
-					ID:      &serviceID,
-					Comment: &serviceComment,
-					Type:    &serviceType,
-					URL:     &serviceURL,
+					ID:      serviceID,
+					Comment: "foo",
+					LatestVersion: latest_version.Lookup{
+						Type: "github",
+						URL:  "release-argus/Argus",
+					},
 				},
 			},
 		},
@@ -64,22 +79,19 @@ func testAPI() API {
 }
 
 func testService(id string) service.Service {
-	var (
-		serviceComment string = "foo"
-		serviceType    string = "github"
-		serviceURL     string = "release-argus/Argus"
-	)
 	return service.Service{
-		ID:      &id,
-		Comment: &serviceComment,
-		Type:    &serviceType,
-		URL:     &serviceURL,
+		ID:      id,
+		Comment: "foo",
+		LatestVersion: latest_version.Lookup{
+			Type: "github",
+			URL:  "release-argus/Argus",
+		},
 	}
 }
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *testing.T) {
 	// GIVEN a nil DeployedVersionLookup
-	var dvl *service.DeployedVersionLookup
+	var dvl *deployed_version.Lookup
 
 	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
 	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl)
@@ -93,11 +105,11 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *te
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNasicAuthPassword(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
-	basicAuth := service.BasicAuth{
+	basicAuth := deployed_version.BasicAuth{
 		Username: "username",
 		Password: "pass123",
 	}
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version.Lookup{
 		URL:       "https://example.com",
 		BasicAuth: &basicAuth,
 	}
@@ -119,9 +131,9 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNas
 
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHeaderKeys(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with headers
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version.Lookup{
 		URL: "https://example.com",
-		Headers: []service.Header{
+		Headers: []deployed_version.Header{
 			{Key: "X-Test-0", Value: "foo"},
 			{Key: "X-Test-1", Value: "foo"},
 		},
@@ -146,7 +158,7 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHea
 func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
 	allowInvalidCerts := true
-	dvl := service.DeployedVersionLookup{
+	dvl := deployed_version.Lookup{
 		URL:               "https://example.com",
 		AllowInvalidCerts: &allowInvalidCerts,
 		JSON:              "foo",
@@ -168,7 +180,7 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 	// GIVEN a nil URL Command slice
-	var slice *service.URLCommandSlice
+	var slice *filters.URLCommandSlice
 
 	// WHEN convertURLCommandSliceToAPITypeURLCommandSlice is called on it
 	got := convertURLCommandSliceToAPITypeURLCommandSlice(slice)
@@ -182,35 +194,22 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	// GIVEN a URL Command slice
-	uType0 := "0something"
-	regex0 := "0foo"
-	text0 := "0bish"
-	old0 := "0bash"
-	uNew0 := "0bosh"
-	uType1 := "1something"
-	regex1 := "1foo"
-	text1 := "1bish"
-	old1 := "1bash"
-	uNew1 := "1bosh"
-	ignoreMisses := true
-	slice := service.URLCommandSlice{
+	slice := filters.URLCommandSlice{
 		{
-			Type:         uType0,
-			Regex:        &regex0,
-			Index:        0,
-			Text:         &text0,
-			Old:          &old0,
-			New:          &uNew0,
-			IgnoreMisses: &ignoreMisses,
+			Type:  "something",
+			Regex: stringPtr("foo"),
+			Index: 0,
+			Text:  stringPtr("bish"),
+			Old:   stringPtr("bash"),
+			New:   stringPtr("bosh"),
 		},
 		{
-			Type:         uType1,
-			Regex:        &regex1,
-			Index:        1,
-			Text:         &text1,
-			Old:          &old1,
-			New:          &uNew1,
-			IgnoreMisses: &ignoreMisses,
+			Type:  "another",
+			Regex: stringPtr("bar"),
+			Index: 1,
+			Text:  stringPtr("bosh"),
+			Old:   stringPtr("bish"),
+			New:   stringPtr("bash"),
 		},
 	}
 
@@ -218,13 +217,11 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	got := convertURLCommandSliceToAPITypeURLCommandSlice(&slice)
 
 	// THEN the slice was converted correctly
-	if len(*got) != len(slice) ||
-		slice[0].Regex != (*got)[0].Regex ||
-		slice[0].Index != (*got)[0].Index ||
-		slice[0].IgnoreMisses != (*got)[0].IgnoreMisses ||
-		slice[1].Regex != (*got)[1].Regex ||
-		slice[1].Index != (*got)[1].Index ||
-		slice[1].IgnoreMisses != (*got)[1].IgnoreMisses {
+	if len(got) != len(slice) ||
+		slice[0].Regex != got[0].Regex ||
+		slice[0].Index != got[0].Index ||
+		slice[1].Regex != got[1].Regex ||
+		slice[1].Index != got[1].Index {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			slice, got)
 	}
@@ -398,18 +395,15 @@ func TestConvertWebHookToAPITypeWebHookWithNil(t *testing.T) {
 
 func TestConvertWebHookToAPITypeWebHook(t *testing.T) {
 	// GIVEN a WebHook
-	var (
-		url = "https://example.com"
-	)
 	wh := webhook.WebHook{
-		URL: &url,
+		URL: "https://example.com",
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
 	got := convertWebHookToAPITypeWebHook(&wh)
 
 	// THEN the slice was converted correctly
-	if wh.URL != got.URL {
+	if wh.URL != *got.URL {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			wh, got)
 	}
@@ -417,13 +411,9 @@ func TestConvertWebHookToAPITypeWebHook(t *testing.T) {
 
 func TestConvertWebHookToAPITypeWebHookDidCensorSecret(t *testing.T) {
 	// GIVEN a WebHook
-	var (
-		url    = "https://example.com"
-		secret = "shazam"
-	)
 	wh := webhook.WebHook{
-		URL:    &url,
-		Secret: &secret,
+		URL:    "https://example.com",
+		Secret: "shazam",
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
@@ -440,21 +430,20 @@ func TestConvertWebHookToAPITypeWebHookDidCensorSecret(t *testing.T) {
 func TestConvertWebHookToAPITypeWebHookDidCopyHeaders(t *testing.T) {
 	// GIVEN a WebHook
 	var (
-		url     = "https://example.com"
 		headers = map[string]string{
 			"X-Something": "foo",
 		}
 	)
 	wh := webhook.WebHook{
-		URL:           &url,
-		CustomHeaders: &headers,
+		URL:           "https://example.com",
+		CustomHeaders: headers,
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
 	got := convertWebHookToAPITypeWebHook(&wh)
 
 	// THEN the slice was converted correctly
-	if (*got.CustomHeaders)["X-Something"] != (*wh.CustomHeaders)["X-Something"] {
+	if (*got.CustomHeaders)["X-Something"] != wh.CustomHeaders["X-Something"] {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			wh, got)
 	}
@@ -476,13 +465,9 @@ func TestConvertWebHookSliceToAPITypeWebHookSliceWithNil(t *testing.T) {
 
 func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
 	// GIVEN a WebHook slice
-	var (
-		url0 = "https://example.com"
-		url1 = "https://release-argus.io"
-	)
 	slice := webhook.Slice{
-		"test":  {URL: &url0},
-		"other": {URL: &url1},
+		"test":  {URL: "https://example.com"},
+		"other": {URL: "https://release-argus.io"},
 	}
 
 	// WHEN convertWebHookSliceToAPITypeWebHookSlice is called on it
@@ -494,7 +479,7 @@ func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
 			slice, got)
 	} else {
 		for i := range *got {
-			if (*got)[i].URL != slice[i].URL {
+			if stringifyPointer((*got)[i].URL) != slice[i].URL {
 				t.Fatalf("converted incorrectly\nfrom: %v\nto:   %v",
 					slice, got)
 			}

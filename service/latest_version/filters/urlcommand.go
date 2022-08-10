@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package filters
 
 import (
 	"fmt"
@@ -22,19 +22,21 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-// URLCommandSlice is a slice of URLCommand to be used to filter version from the URL Content.
+var (
+	jLog *utils.JLog
+)
+
+// URLCommandSlice to be used to filter version from the URL Content.
 type URLCommandSlice []URLCommand
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type               string  `yaml:"type"`                    // regex/replace/split
-	Regex              *string `yaml:"regex,omitempty"`         // regex: regexp.MustCompile(Regex)
-	Index              int     `yaml:"index,omitempty"`         // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text               *string `yaml:"text,omitempty"`          // split:                strings.Split(tgtString, "Text")
-	New                *string `yaml:"new,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	Old                *string `yaml:"old,omitempty"`           // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	IgnoreMisses       *bool   `yaml:"ignore_misses,omitempty"` // Ignore this command failing (e.g. split on text that doesn't exist)
-	ParentIgnoreMisses *bool   `yaml:"-"`                       // IgnoreMisses, but from the parent Service (used as default)
+	Type  string  `yaml:"type"`            // regex/replace/split
+	Regex *string `yaml:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
+	Index int     `yaml:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Text  *string `yaml:"text,omitempty"`  // split:                strings.Split(tgtString, "Text")
+	New   *string `yaml:"new,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
+	Old   *string `yaml:"old,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 // UnmarshalYAML allows handling of a dict as well as a list of dicts.
@@ -60,12 +62,17 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
+// Init will give the filters package this log.
+func (c *URLCommandSlice) Init(log *utils.JLog) {
+	jLog = log
+}
+
 // Print will print the URLCommand's in the URLCommandSlice.
 func (c *URLCommandSlice) Print(prefix string) {
-	if c == nil {
-		fmt.Printf("%s[]\n", prefix)
+	if c == nil || len(*c) == 0 {
 		return
 	}
+	fmt.Printf("%surl_commands:\n", prefix)
 
 	for _, command := range *c {
 		command.Print(prefix + "  ")
@@ -78,36 +85,18 @@ func (c *URLCommand) Print(prefix string) {
 	switch c.Type {
 	case "regex":
 		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
-		fmt.Printf("%s  index: %d\n", prefix, c.Index)
+		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
 	case "replace":
 		fmt.Printf("%s  new: %q\n", prefix, *c.New)
 		fmt.Printf("%s  old: %q\n", prefix, *c.Old)
 	case "split":
 		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
-		fmt.Printf("%s  index: %d\n", prefix, c.Index)
-		utils.PrintlnIfNotNil(c.GetIgnoreMisses(), fmt.Sprintf("%s  ignore_misses: %t", prefix, *c.GetIgnoreMisses()))
+		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
 	}
 }
 
-// SetParentIgnoreMisses will set ParentIgnoreMisses of each URLCommand in the Slice to ignore if it's nil in the slice.
-func (c *URLCommandSlice) SetParentIgnoreMisses(ignore *bool) {
-	if c == nil {
-		return
-	}
-
-	for commandIndex := range *c {
-		(*c)[commandIndex].ParentIgnoreMisses = ignore
-	}
-}
-
-// GetIgnoreMisses will get the IgnoreMisses of this URLCommand, or ParentIgnoreMisses if that's nil.
-func (c *URLCommand) GetIgnoreMisses() *bool {
-	return utils.GetFirstNonNilPtr(c.IgnoreMisses, c.ParentIgnoreMisses)
-}
-
-// run will run all of the URLCommand(s) in this URLCommandSlice.
-func (c *URLCommandSlice) run(text string, logFrom utils.LogFrom) (string, error) {
+// Run will run all of the URLCommand(s) in this URLCommandSlice.
+func (c *URLCommandSlice) Run(text string, logFrom utils.LogFrom) (string, error) {
 	if c == nil {
 		return text, nil
 	}
@@ -159,9 +148,9 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	}
 
 	if len(texts) == 0 {
-		err := fmt.Errorf("%s (%s) didn't return any matches",
+		err := fmt.Errorf("%s %q didn't return any matches",
 			c.Type, *c.Regex)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -169,7 +158,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
 			c.Type, *c.Regex, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -183,7 +172,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	if len(texts) == 1 {
 		err := fmt.Errorf("%s didn't find any %q to split on",
 			c.Type, *c.Text)
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -197,7 +186,7 @@ func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements but the index wants element number %d",
 			c.Type, *c.Text, len(texts), (index + 1))
-		jLog.Warn(err, logFrom, !utils.EvalNilPtr(c.GetIgnoreMisses(), false))
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -231,10 +220,16 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	validType := true
 
 	switch c.Type {
-	case "split":
-		if c.Text == nil {
-			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
+	case "regex":
+		if c.Regex == nil {
+			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
 				utils.ErrorToString(errs), prefix)
+		} else {
+			_, err := regexp.Compile(*c.Regex)
+			if err != nil {
+				errs = fmt.Errorf("%s%sregex: %q <invalid> (Invalid RegEx)\\",
+					utils.ErrorToString(errs), prefix, *c.Regex)
+			}
 		}
 	case "replace":
 		if c.New == nil {
@@ -245,9 +240,9 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\",
 				utils.ErrorToString(errs), prefix)
 		}
-	case "regex":
-		if c.Regex == nil {
-			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
+	case "split":
+		if c.Text == nil {
+			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
 				utils.ErrorToString(errs), prefix)
 		}
 	default:

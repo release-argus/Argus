@@ -15,17 +15,13 @@
 package service
 
 import (
-	"fmt"
 	"strings"
-	"time"
 
-	service_status "github.com/release-argus/Argus/service/status"
+	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
-)
-
-var (
-	jLog *utils.JLog
+	"github.com/release-argus/Argus/webhook"
 )
 
 // Init will initialise the Service metrics.
@@ -33,111 +29,61 @@ func (s *Service) Init(
 	log *utils.JLog,
 	defaults *Service,
 	hardDefaults *Service,
+	rootNotifyConfig *shoutrrr.Slice,
+	notifyDefaults *shoutrrr.Slice,
+	notifyHardDefaults *shoutrrr.Slice,
+	rootWebHookConfig *webhook.Slice,
+	webhookDefaults *webhook.WebHook,
+	webhookHardDefaults *webhook.WebHook,
 ) {
 	jLog = log
-	s.initMetrics()
-	if s.Status == nil {
-		s.Status = &service_status.Status{}
-	}
-	if s.Status.Fails == nil {
-		s.Status.Fails = &service_status.Fails{}
-	}
 
+	s.Status.Init(len(s.Notify), len(s.Command), len(s.WebHook), &s.ID, &s.Dashboard.WebURL)
 	s.Defaults = defaults
+	s.Dashboard.Defaults = &s.Defaults.Dashboard
+	s.Options.Defaults = &s.Defaults.Options
 	s.HardDefaults = hardDefaults
-	if s.DeployedVersionLookup != nil {
-		s.DeployedVersionLookup.Defaults = defaults.DeployedVersionLookup
-		s.DeployedVersionLookup.HardDefaults = hardDefaults.DeployedVersionLookup
+	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
+	s.Options.HardDefaults = &s.HardDefaults.Options
+
+	s.Notify.Init(jLog, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+
+	if s.Command != nil {
+		s.CommandController = &command.Controller{}
+		s.CommandController.Init(jLog, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
 	}
 
-	ignoreMisses := s.GetIgnoreMisses()
-	if ignoreMisses != nil {
-		s.URLCommands.SetParentIgnoreMisses(ignoreMisses)
+	s.WebHook.Init(jLog, &s.Status, rootWebHookConfig, webhookDefaults, webhookHardDefaults, &s.Notify, s.Options.GetIntervalPointer())
+
+	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
+	if s.Defaults.DeployedVersionLookup == nil {
+		s.Defaults.DeployedVersionLookup = &deployed_version.Lookup{}
 	}
-}
-
-// initMetrics will initialise the Prometheus metrics.
-func (s *Service) initMetrics() {
-	// ############
-	// # Counters #
-	// ############
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.QueryMetric, *(*s).ID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.QueryMetric, *(*s).ID, "FAIL")
-}
-
-// GetAccessToken will return the GitHub access token to use.
-//
-// `Service.AccessToken` > `Service.Defaults.Service.AccessToken`
-func (s *Service) GetAccessToken() string {
-	return utils.DefaultIfNil(utils.GetFirstNonNilPtr(s.AccessToken, s.Defaults.AccessToken, s.HardDefaults.AccessToken))
-}
-
-// GetActive will return whether the Service is Active or not (default = true)
-func (s *Service) GetActive() bool {
-	return utils.EvalNilPtr(s.Active, true)
-}
-
-// GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
-func (s *Service) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(s.AllowInvalidCerts, s.Defaults.AllowInvalidCerts, s.HardDefaults.AllowInvalidCerts)
-}
-
-// GetAutoApprove returns whether new releases of this service should be auto-approved.
-func (s *Service) GetAutoApprove() bool {
-	return *utils.GetFirstNonNilPtr(s.AutoApprove, s.Defaults.AutoApprove, s.HardDefaults.AutoApprove)
-}
-
-// GetIgnoreMisses returns whether URL Command misses should be logged.
-func (s *Service) GetIgnoreMisses() *bool {
-	return utils.GetFirstNonNilPtr(s.IgnoreMisses, s.Defaults.IgnoreMisses, s.HardDefaults.IgnoreMisses)
+	s.DeployedVersionLookup.Init(jLog, s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
+	s.Convert()
 }
 
 // GetServiceInfo returns info about the service.
 func (s *Service) GetServiceInfo() utils.ServiceInfo {
 	return utils.ServiceInfo{
-		ID:            *s.ID,
-		URL:           s.GetServiceURL(true),
-		WebURL:        s.GetWebURL(),
+		ID:            s.ID,
+		URL:           s.LatestVersion.GetServiceURL(true),
+		WebURL:        s.Status.GetWebURL(),
 		LatestVersion: s.Status.LatestVersion,
 	}
-}
-
-// GetServiceURL returns the service's URL (handles the github type where the URL
-// may be `owner/repo`, adding the github.com prefix in that case).
-func (s *Service) GetServiceURL(ignoreWebURL bool) string {
-	if !ignoreWebURL && utils.GetFirstNonNilPtr(s.WebURL, s.Defaults.WebURL) != nil {
-		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		if s.Status.LatestVersion == "" {
-			if !strings.Contains(*s.WebURL, "version") {
-				return s.GetWebURL()
-			}
-		} else {
-			return s.GetWebURL()
-		}
-	}
-
-	serviceURL := *s.URL
-	// GitHub service. Get the non-API URL.
-	if *s.Type == "github" {
-		// If it's "owner/repo" rather than a full path.
-		if strings.Count(serviceURL, "/") == 1 {
-			serviceURL = fmt.Sprintf("https://github.com/%s", serviceURL)
-		}
-	}
-	return serviceURL
 }
 
 // GetIconURL returns the URL Icon for the Service.
 func (s *Service) GetIconURL() string {
 	// Service.Icon
-	if strings.HasPrefix(s.Icon, "http") {
-		return s.Icon
+	if strings.HasPrefix(s.Dashboard.Icon, "http") {
+		return s.Dashboard.Icon
 	}
 
 	if s.Notify != nil {
-		for key := range *s.Notify {
+		for key := range s.Notify {
 			// `Params.Icon`
-			icon := (*s.Notify)[key].GetParam("icon")
+			icon := s.Notify[key].GetParam("icon")
 			if icon != "" && strings.HasPrefix(icon, "http") {
 				return icon
 			}
@@ -145,61 +91,4 @@ func (s *Service) GetIconURL() string {
 	}
 
 	return ""
-}
-
-// GetInterval returns the interval between queries on this Service's version.
-func (s *Service) GetInterval() string {
-	return *utils.GetFirstNonNilPtr(s.Interval, s.Defaults.Interval, s.HardDefaults.Interval)
-}
-
-// GetIntervalPointer returns a pointer to the interval between queries on this Service's version.
-func (s *Service) GetIntervalPointer() *string {
-	return utils.GetFirstNonNilPtr(s.Interval, s.Defaults.Interval, s.HardDefaults.Interval)
-}
-
-// GetIntervalDuration returns the interval between queries on this Service's version.
-func (s *Service) GetIntervalDuration() time.Duration {
-	d, _ := time.ParseDuration(s.GetInterval())
-	return d
-}
-
-// GetUsePreRelease returns whether to use GitHub PreReleases.
-func (s *Service) GetUsePreRelease() bool {
-	return *utils.GetFirstNonNilPtr(s.UsePreRelease, s.Defaults.UsePreRelease, s.HardDefaults.UsePreRelease)
-}
-
-// GetSemanticVersioning returns whether semantic versioning is enabled for this Service.
-func (s *Service) GetSemanticVersioning() bool {
-	return *utils.GetFirstNonNilPtr(s.SemanticVersioning, s.Defaults.SemanticVersioning, s.HardDefaults.SemanticVersioning)
-}
-
-// GetRegexContent returns the wanted query body content regex.
-func (s *Service) GetRegexContent() *string {
-	return utils.GetFirstNonNilPtr(s.RegexContent, s.Defaults.RegexContent, s.HardDefaults.RegexContent)
-}
-
-// GetRegexVersion returns the wanted query version regex.
-func (s *Service) GetRegexVersion() *string {
-	return utils.GetFirstNonNilPtr(s.RegexVersion, s.Defaults.RegexVersion, s.HardDefaults.RegexVersion)
-}
-
-// GetWebURL returns the Web URL.
-func (s *Service) GetWebURL() string {
-	template := utils.GetFirstNonNilPtr(s.WebURL, s.Defaults.WebURL)
-	if template == nil {
-		return ""
-	}
-
-	return utils.TemplateString(*template, utils.ServiceInfo{LatestVersion: s.Status.LatestVersion})
-}
-
-// GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
-func GetURL(url string, urlType string) string {
-	if urlType == "github" {
-		// Convert "owner/repo" to the API path.
-		if strings.Count(url, "/") == 1 {
-			url = fmt.Sprintf("https://api.github.com/repos/%s/releases", url)
-		}
-	}
-	return url
 }

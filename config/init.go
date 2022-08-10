@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"os"
 
-	command "github.com/release-argus/Argus/commands"
 	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -31,48 +31,28 @@ func (c *Config) Init() {
 	c.Settings.SetDefaults()
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
-		c.Defaults.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
+		c.Defaults.Service.DeployedVersionLookup = &deployed_version.Lookup{}
 	}
+	c.Defaults.Service.Status.SaveChannel = c.SaveChannel
+	c.Defaults.Service.Convert()
 
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
-	for serviceID, service := range c.Service {
-		c.Service[serviceID].Init(
+	i := 0
+	for key := range c.Service {
+		i++
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), utils.LogFrom{}, true)
+		c.Service[key].Init(
 			jLog,
 			&c.Defaults.Service,
 			&c.HardDefaults.Service,
-		)
-
-		c.Service[serviceID].Notify.Init(
-			jLog,
-			&serviceID,
 			&c.Notify,
 			&c.Defaults.Notify,
 			&c.HardDefaults.Notify,
-		)
-
-		c.Service[serviceID].WebHook.Init(
-			jLog,
-			&serviceID,
-			service.Status,
 			&c.WebHook,
 			&c.Defaults.WebHook,
 			&c.HardDefaults.WebHook,
-			c.Service[serviceID].Notify,
-			c.Service[serviceID].GetIntervalPointer(),
-		)
-
-		if c.Service[serviceID].Command != nil {
-			c.Service[serviceID].CommandController = &command.Controller{}
-		}
-		c.Service[serviceID].CommandController.Init(
-			jLog,
-			&serviceID,
-			service.Status,
-			c.Service[serviceID].Command,
-			c.Service[serviceID].Notify,
-			c.Service[serviceID].GetIntervalPointer(),
 		)
 	}
 
@@ -110,17 +90,18 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	c.GetOrder(data)
 
-	databaseChannel := make(chan db_types.Message, 8)
+	databaseChannel := make(chan db_types.Message, 32)
 	c.DatabaseChannel = &databaseChannel
 
-	saveChannel := make(chan bool, 4)
+	saveChannel := make(chan bool, 32)
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {
-		id := key
-		c.Service[key].ID = &id
-		c.Service[key].DatabaseChannel = c.DatabaseChannel
-		c.Service[key].SaveChannel = c.SaveChannel
+		c.Service[key].ID = key
+		c.Service[key].Status = service_status.Status{
+			DatabaseChannel: c.DatabaseChannel,
+			SaveChannel:     c.SaveChannel,
+		}
 	}
 	c.Init()
 	c.CheckValues()

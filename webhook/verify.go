@@ -28,7 +28,8 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 		return
 	}
 
-	for key := range *w {
+	keys := utils.SortedKeys(*w)
+	for _, key := range keys {
 		if err := (*w)[key].CheckValues(prefix + "    "); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				utils.ErrorToString(errs), prefix, key, err)
@@ -45,14 +46,14 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 // CheckValues are valid for this WebHook recipient.
 func (w *WebHook) CheckValues(prefix string) (errs error) {
 	// Delay
-	if w.Delay != nil {
+	if w.Delay != "" {
 		// Default to seconds when an integer is provided
-		if _, err := strconv.Atoi(*w.Delay); err == nil {
-			*w.Delay += "s"
+		if _, err := strconv.Atoi(w.Delay); err == nil {
+			w.Delay += "s"
 		}
-		if _, err := time.ParseDuration(*w.Delay); err != nil {
+		if _, err := time.ParseDuration(w.Delay); err != nil {
 			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
-				utils.ErrorToString(errs), prefix, *w.Delay)
+				utils.ErrorToString(errs), prefix, w.Delay)
 		}
 	}
 
@@ -62,13 +63,13 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
 				utils.ErrorToString(errs), prefix, w.GetType(), types)
 		}
-		if w.GetURL() == nil {
+		if w.GetURL() == "" {
 			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\",
-				utils.ErrorToString(errs), prefix, *w.ID)
+				utils.ErrorToString(errs), prefix, w.ID)
 		}
-		if w.GetSecret() == nil {
+		if w.GetSecret() == "" {
 			errs = fmt.Errorf("%s%ssecret: <required> (here, or in webhook.%s)\\",
-				utils.ErrorToString(errs), prefix, *w.ID)
+				utils.ErrorToString(errs), prefix, w.ID)
 		}
 	}
 	return
@@ -81,20 +82,21 @@ func (w *Slice) Print(prefix string) {
 	}
 
 	fmt.Printf("%swebhook:\n", prefix)
-	for webhookID, webhook := range *w {
+	keys := utils.SortedKeys(*w)
+	for _, webhookID := range keys {
 		fmt.Printf("%s  %s:\n", prefix, webhookID)
-		webhook.Print(prefix + "    ")
+		(*w)[webhookID].Print(prefix + "    ")
 	}
 }
 
 // Print the WebHook Struct.
 func (w *WebHook) Print(prefix string) {
-	utils.PrintlnIfNotNil(w.Type, fmt.Sprintf("%stype: %s", prefix, utils.DefaultIfNil(w.Type)))
-	utils.PrintlnIfNotNil(w.URL, fmt.Sprintf("%surl: %s", prefix, utils.DefaultIfNil(w.URL)))
+	utils.PrintlnIfNotDefault(w.Type, fmt.Sprintf("%stype: %s", prefix, w.Type))
+	utils.PrintlnIfNotDefault(w.URL, fmt.Sprintf("%surl: %s", prefix, w.URL))
 	utils.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(w.AllowInvalidCerts)))
-	utils.PrintlnIfNotNil(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, utils.DefaultIfNil(w.Secret)))
+	utils.PrintlnIfNotDefault(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, w.Secret))
 	utils.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, utils.DefaultIfNil(w.DesiredStatusCode)))
-	utils.PrintlnIfNotNil(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, utils.DefaultIfNil(w.Delay)))
+	utils.PrintlnIfNotDefault(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, w.Delay))
 	utils.PrintlnIfNotNil(w.MaxTries, fmt.Sprintf("%smax_tries: %d", prefix, utils.DefaultIfNil(w.MaxTries)))
 	utils.PrintlnIfNotNil(w.SilentFails, fmt.Sprintf("%ssilent_fails: %t", prefix, utils.DefaultIfNil(w.SilentFails)))
 }

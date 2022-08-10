@@ -27,32 +27,33 @@ func (c *Controller) AnnounceCommand(index int) {
 	commandSummary := make(map[string]*api_types.CommandSummary)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_types.CommandSummary{
-		Failed:       c.Failed[index],
+		Failed:       (*c.Failed)[index],
 		NextRunnable: c.NextRunnable[index],
 	}
 
 	// Command success/fail
 	var payloadData []byte
-	wsPage := "APPROVALS"
-	wsType := "COMMAND"
-	wsSubType := "EVENT"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "COMMAND",
+		SubType: "EVENT",
 		ServiceData: &api_types.ServiceSummary{
-			ID: c.ServiceID,
+			ID: *c.ServiceStatus.ServiceID,
 		},
 		CommandData: commandSummary,
 	})
 
-	if c.Announce != nil {
-		*c.Announce <- payloadData
+	if c.ServiceStatus.AnnounceChannel != nil {
+		*c.ServiceStatus.AnnounceChannel <- payloadData
 	}
 }
 
 // Find `command`.
 func (c *Controller) Find(command string) *int {
+	if c == nil {
+		return nil
+	}
+
 	// Loop through all the Command(s)
 	for key := range *c.Command {
 		formatted := (*c.Command)[key].ApplyTemplate(c.ServiceStatus)
@@ -69,7 +70,7 @@ func (c *Controller) ResetFails() {
 	if c == nil {
 		return
 	}
-	for i := range c.Failed {
-		c.Failed[i] = nil
+	for i := range *c.Failed {
+		(*c.Failed)[i] = nil
 	}
 }

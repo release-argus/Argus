@@ -28,7 +28,6 @@ import (
 // Init the Command Controller.
 func (c *Controller) Init(
 	log *utils.JLog,
-	serviceID *string,
 	serviceStatus *service_status.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
@@ -37,19 +36,18 @@ func (c *Controller) Init(
 	if log != nil {
 		jLog = log
 	}
-	if c == nil {
+	if c == nil || len(*command) == 0 {
 		return
 	}
 
 	c.ServiceStatus = serviceStatus
-	if command != nil {
-		c.Command = command
+	c.Command = command
+	c.Failed = &serviceStatus.Fails.Command
+	if len(*c.Failed) != len(*c.Command) {
+		*c.Failed = make([]*bool, len(*c.Command))
 	}
-	c.Failed = make(Fails, len(*c.Command))
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 
-	parentID := *serviceID
-	c.ServiceID = &parentID
 	c.ParentInterval = parentInterval
 	c.initMetrics()
 
@@ -66,14 +64,14 @@ func (c *Controller) initMetrics() {
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "SUCCESS")
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceID, "", "FAIL")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
+		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceID, float64(0))
+	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'
@@ -112,7 +110,7 @@ func (c *Controller) SetNextRunnable(index int, executing bool) {
 	}
 
 	// Different times depending on pass/fail
-	if !utils.EvalNilPtr(c.Failed[index], true) {
+	if !utils.EvalNilPtr((*c.Failed)[index], true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
 		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {

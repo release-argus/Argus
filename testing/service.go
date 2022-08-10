@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -44,49 +43,40 @@ func ServiceTest(
 	service := cfg.Service[*flag]
 
 	if service == nil {
-		var allService []string
-		for key := range cfg.Service {
-			if !utils.Contains(allService, key) {
-				allService = append(allService, key)
-			}
-		}
 		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(allService, "\n  - "),
+				*flag, strings.Join(*cfg.Order, "\n  - "),
 			),
 			logFrom,
 			true,
 		)
 	}
 
-	// shouldn't need this as the fatal above prevents it getting here if it is nil, but staticcheck gives a SA5011
 	if service != nil {
-		service.Status = &service_status.Status{}
-	}
-	_, err := service.Query()
-	if err != nil {
-		helpMsg := ""
-		if *service.Type == "url" && strings.Count(*service.URL, "/") == 1 && !strings.HasPrefix(*service.URL, "http") {
-			helpMsg = "\nThis URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type."
+		//nolint:staticcheck // log.Fatal if nil above. this ignore doesn't seem to work though
+		_, err := service.LatestVersion.Query()
+		if err != nil {
+			helpMsg := ""
+			if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
+				helpMsg = "This URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type.\n"
+			}
+			log.Error(
+				fmt.Sprintf(
+					"No version matching the conditions specified could be found for %q at %q\n%s",
+					*flag,
+					service.LatestVersion.GetServiceURL(true),
+					helpMsg,
+				),
+				logFrom,
+				true,
+			)
 		}
-		log.Error(
-			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q%s",
-				*flag,
-				service.GetServiceURL(true),
-				helpMsg,
-			),
-			logFrom,
-			true,
-		)
 	}
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(
-			logFrom,
-			service.GetSemanticVersioning())
+		version, err := service.DeployedVersionLookup.Query(logFrom)
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",

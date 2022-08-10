@@ -12,215 +12,186 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build testing
 
 package service
 
 import (
+	"fmt"
+	"os"
+	"time"
+
 	db_types "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filters"
+	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func testServiceGitHub() Service {
+func stringPtr(val string) *string {
+	return &val
+}
+func boolPtr(val bool) *bool {
+	return &val
+}
+func stringifyPointer[T comparable](ptr *T) string {
+	str := "nil"
+	if ptr != nil {
+		str = fmt.Sprint(*ptr)
+	}
+	return str
+}
+func testLogging() {
+	jLog = utils.NewJLog("WARN", false)
+	jLog.Testing = true
+	var webhookLogs *webhook.Slice
+	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil)
+	var latestVersion latest_version.Lookup
+	latestVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
+	var deployedVersion *deployed_version.Lookup
+	deployedVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
+}
+
+func testServiceGitHub() *Service {
 	var (
-		sID                 string                = "test"
-		sType               string                = "github"
-		sAccessToken        string                = "secret"
-		sURL                string                = "release-argus/Argus"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sActive             bool                  = true
-		sInterval           string                = "1s"
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte           = make(chan []byte, 2)
+		saveChannel     chan bool             = make(chan bool, 5)
+		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	return Service{
-		ID:           &sID,
-		Type:         &sType,
-		AccessToken:  &sAccessToken,
-		URL:          &sURL,
-		WebURL:       &sWebURL,
-		RegexContent: &sRegexContent,
-		RegexVersion: &sRegexVersion,
-		Status: &service_status.Status{
+	svc := &Service{
+		ID: "test",
+		LatestVersion: latest_version.Lookup{
+			Type:        "github",
+			AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
+			URL:         "release-argus/Argus",
+			Require: &filters.Require{
+				RegexContent: "content",
+				RegexVersion: "version",
+			},
+			AllowInvalidCerts: boolPtr(true),
+			UsePreRelease:     boolPtr(false),
+		},
+		Dashboard: DashboardOptions{
+			AutoApprove: boolPtr(false),
+			Icon:        "test",
+			IconLinkTo:  "https://example.com",
+			WebURL:      "https://release-argus.io",
+		},
+		Status: service_status.Status{
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
 			DeployedVersion:          "0.0.0",
 			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
+			AnnounceChannel:          &announceChannel,
+			DatabaseChannel:          &databaseChannel,
+			SaveChannel:              &saveChannel,
 		},
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
-		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
-		Announce:           &sAnnounceChannel,
-		DatabaseChannel:    &sDatabaseChannel,
-		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
-		Defaults:           &Service{},
+		Options: options.Options{
+			Interval:           "5s",
+			SemanticVersioning: boolPtr(true),
+		},
+		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: &sActive,
+			Options: options.Options{
+				Active: boolPtr(true)},
 		},
 	}
+	svc.Init(jLog, &Service{}, &Service{}, nil, nil, nil, nil, nil, nil)
+	svc.Status.ServiceID = &svc.ID
+	svc.Status.WebURL = &svc.Dashboard.WebURL
+	return svc
 }
 
-func testServiceURL() Service {
+func testServiceURL() *Service {
 	var (
-		sID                 string                = "test"
-		sType               string                = "url"
-		sAccessToken        string                = "secret"
-		sURL                string                = "https://release-argus.io"
-		sWebURL             string                = "https://release-argus.io"
-		sRegexContent       string                = "content"
-		sRegexVersion       string                = "version"
-		sAnnounceChannel    chan []byte           = make(chan []byte, 2)
-		sAllowInvalidCerts  bool                  = false
-		sSemanticVersioning bool                  = true
-		sAutoApprove        bool                  = false
-		sIgnoreMisses       bool                  = false
-		sUsePreRelease      bool                  = false
-		sActive             bool                  = true
-		sInterval           string                = "10s"
-		sSaveChannel        chan bool             = make(chan bool, 5)
-		sDatabaseChannel    chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte           = make(chan []byte, 5)
+		saveChannel     chan bool             = make(chan bool, 5)
+		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
-	return Service{
-		ID:           &sID,
-		Type:         &sType,
-		AccessToken:  &sAccessToken,
-		URL:          &sURL,
-		WebURL:       &sWebURL,
-		RegexContent: &sRegexContent,
-		RegexVersion: &sRegexVersion,
-		Status: &service_status.Status{
+	svc := &Service{
+		ID: "test",
+		LatestVersion: latest_version.Lookup{
+			Type: "url",
+			URL:  "https://valid.release-argus.io/plain",
+			Require: &filters.Require{
+				RegexContent: "{{ version }}-beta",
+				RegexVersion: "[0-9]+",
+			},
+			URLCommands: filters.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
+			},
+			AllowInvalidCerts: boolPtr(true),
+			UsePreRelease:     boolPtr(false),
+		},
+		DeployedVersionLookup: &deployed_version.Lookup{
+			URL:               "https://valid.release-argus.io/json",
+			JSON:              "version",
+			AllowInvalidCerts: boolPtr(false),
+		},
+		Dashboard: DashboardOptions{
+			AutoApprove:  boolPtr(false),
+			Icon:         "test",
+			IconLinkTo:   "https://release-argus.io",
+			WebURL:       "https://release-argus.io",
+			Defaults:     &DashboardOptions{},
+			HardDefaults: &DashboardOptions{},
+		},
+		Status: service_status.Status{
+			ServiceID:                stringPtr("test"),
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
 			DeployedVersion:          "0.0.0",
 			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
+			AnnounceChannel:          &announceChannel,
+			DatabaseChannel:          &databaseChannel,
+			SaveChannel:              &saveChannel,
 		},
-		SemanticVersioning: &sSemanticVersioning,
-		AllowInvalidCerts:  &sAllowInvalidCerts,
-		AutoApprove:        &sAutoApprove,
-		IgnoreMisses:       &sIgnoreMisses,
-		Icon:               "test",
-		UsePreRelease:      &sUsePreRelease,
-		Announce:           &sAnnounceChannel,
-		DatabaseChannel:    &sDatabaseChannel,
-		SaveChannel:        &sSaveChannel,
-		Interval:           &sInterval,
-		Defaults:           &Service{},
+		Options: options.Options{
+			Interval:           "5s",
+			SemanticVersioning: boolPtr(true),
+			Defaults:           &options.Options{},
+			HardDefaults:       &options.Options{},
+		},
+		Defaults: &Service{},
 		HardDefaults: &Service{
-			Active: &sActive,
+			Options: options.Options{
+				Active: boolPtr(true)},
+			DeployedVersionLookup: &deployed_version.Lookup{},
 		},
 	}
+	svc.Status.ServiceID = &svc.ID
+	svc.LatestVersion.Init(jLog, &latest_version.Lookup{}, &latest_version.Lookup{}, &svc.Status, &svc.Options)
+	svc.DeployedVersionLookup.Init(jLog, &deployed_version.Lookup{}, &deployed_version.Lookup{}, &svc.Status, &svc.Options)
+	svc.Status.WebURL = &svc.Dashboard.WebURL
+	time.Sleep(time.Second)
+	return svc
 }
 
-func testDeployedVersion() DeployedVersionLookup {
-	var (
-		allowInvalidCerts bool = false
-	)
-	return DeployedVersionLookup{
-		URL:               "https://release-argus.io",
-		AllowInvalidCerts: &allowInvalidCerts,
-		Regex:             "([0-9]+) The Argus Developers",
-		Defaults:          &DeployedVersionLookup{},
-		HardDefaults:      &DeployedVersionLookup{},
-	}
-}
-
-func testWebHookSuccessful() webhook.WebHook {
-	whID := "test"
-	whType := "github"
-	whURL := "https://httpbin.org/anything"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
-	whDesiredStatusCode := 0
-	whSilentFails := true
+func testWebHook(failing bool) *webhook.WebHook {
+	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	parentInterval := "12m"
-	return webhook.WebHook{
-		ID:                &whID,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		DesiredStatusCode: &whDesiredStatusCode,
-		SilentFails:       &whSilentFails,
+	wh := &webhook.WebHook{
+		ID:                "test",
+		Type:              "github",
+		URL:               "https://valid.release-argus.io/hooks/github-style",
+		Secret:            "argus",
+		AllowInvalidCerts: boolPtr(false),
+		DesiredStatusCode: &desiredStatusCode,
+		Delay:             "0s",
+		SilentFails:       boolPtr(false),
 		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
+		ParentInterval:    stringPtr("12m"),
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
 	}
-}
-
-func testWebHookFailing() webhook.WebHook {
-	whID := "test"
-	whType := "github"
-	whURL := "https://httpbin.org/hidden-basic-auth/:user/:passwd"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
-	whDesiredStatusCode := 0
-	whSilentFails := true
-	whMaxTries := uint(1)
-	parentInterval := "12m"
-	return webhook.WebHook{
-		ID:                &whID,
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		DesiredStatusCode: &whDesiredStatusCode,
-		SilentFails:       &whSilentFails,
-		MaxTries:          &whMaxTries,
-		ParentInterval:    &parentInterval,
-		Main:              &webhook.WebHook{},
-		Defaults:          &webhook.WebHook{},
-		HardDefaults:      &webhook.WebHook{},
+	if failing {
+		wh.Secret = "notArgus"
 	}
-}
-
-func testURLCommandRegex() URLCommand {
-	regex := "-([0-9.]+)-"
-	index := 0
-	ignoreMisses := false
-	return URLCommand{
-		Type:         "regex",
-		Regex:        &regex,
-		IgnoreMisses: &ignoreMisses,
-		Index:        index,
-	}
-}
-
-func testURLCommandReplace() URLCommand {
-	old := "foo"
-	new := "bar"
-	return URLCommand{
-		Type: "replace",
-		Old:  &old,
-		New:  &new,
-	}
-}
-
-func testURLCommandSplit() URLCommand {
-	text := "this"
-	index := 1
-	ignoreMisses := false
-	return URLCommand{
-		Type:         "split",
-		Text:         &text,
-		Index:        index,
-		IgnoreMisses: &ignoreMisses,
-	}
+	return wh
 }

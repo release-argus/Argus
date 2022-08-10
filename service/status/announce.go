@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package service_status
 
 import (
 	"encoding/json"
@@ -20,137 +20,122 @@ import (
 	api_types "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceFirstVersion of a Service to the `s.Announce` channel
+// AnnounceFirstVersion of a Service to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceFirstVersion() {
+func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "INIT"
 	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "INIT",
 		ServiceData: &api_types.ServiceSummary{
-			ID:  s.ID,
+			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
 			Status: &api_types.Status{
-				LatestVersion:          s.Status.LatestVersion,
-				LatestVersionTimestamp: s.Status.LatestVersionTimestamp,
+				LatestVersion:          s.LatestVersion,
+				LatestVersionTimestamp: s.LatestVersionTimestamp,
 			},
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceQuery to the `s.Announce` channel
+// AnnounceQuery to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceQuery() {
+func (s *Status) AnnounceQuery() {
 	var payloadData []byte
 
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "QUERY"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "QUERY",
 		ServiceData: &api_types.ServiceSummary{
-			ID: s.ID,
+			ID: *s.ServiceID,
 			Status: &api_types.Status{
-				LastQueried: s.Status.LastQueried,
+				LastQueried: s.LastQueried,
 			},
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceQueryNewVersion to the `s.Announce` channel
+// AnnounceQueryNewVersion to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceQueryNewVersion() {
+func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "NEW"
 	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "NEW",
 		ServiceData: &api_types.ServiceSummary{
-			ID:  s.ID,
+			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
 			Status: &api_types.Status{
-				LatestVersion:          s.Status.LatestVersion,
-				LatestVersionTimestamp: s.Status.LatestVersionTimestamp,
+				LatestVersion:          s.LatestVersion,
+				LatestVersionTimestamp: s.LatestVersionTimestamp,
 			},
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceUpdate being applied to the `s.Announce` channel
+// AnnounceUpdate being applied to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceUpdate() {
+func (s *Status) AnnounceUpdate() {
 	var payloadData []byte
 
 	// DeployedVersion update
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "UPDATED"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "UPDATED",
 		ServiceData: &api_types.ServiceSummary{
-			ID: s.ID,
+			ID: *s.ServiceID,
 			Status: &api_types.Status{
-				DeployedVersion:          s.Status.DeployedVersion,
-				DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp,
+				DeployedVersion:          s.DeployedVersion,
+				DeployedVersionTimestamp: s.DeployedVersionTimestamp,
 			},
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }
 
-// AnnounceAction on an update (skip/approve) to the `s.Announce` channel
+// AnnounceAction on an update (skip/approve) to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Service) AnnounceApproved() {
+func (s *Status) AnnounceApproved() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	wsPage := "APPROVALS"
-	wsType := "VERSION"
-	wsSubType := "ACTION"
 	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
-		Page:    &wsPage,
-		Type:    &wsType,
-		SubType: &wsSubType,
+		Page:    "APPROVALS",
+		Type:    "VERSION",
+		SubType: "ACTION",
 		ServiceData: &api_types.ServiceSummary{
-			ID: s.ID,
+			ID: *s.ServiceID,
 			Status: &api_types.Status{
-				ApprovedVersion: s.Status.ApprovedVersion,
+				ApprovedVersion: s.ApprovedVersion,
 			},
 		},
 	})
 
-	if s.Announce != nil {
-		*s.Announce <- payloadData
+	if s.AnnounceChannel != nil {
+		*s.AnnounceChannel <- payloadData
 	}
 }

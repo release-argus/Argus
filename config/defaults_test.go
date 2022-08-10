@@ -17,13 +17,16 @@
 package config
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -35,22 +38,23 @@ func TestDefaultsSetDefaults(t *testing.T) {
 	// WHEN SetDefaults is called on it
 	defaults.SetDefaults()
 	tests := map[string]struct {
-		got  *string
+		got  string
 		want string
 	}{
 		"Service.Interval": {
-			got: defaults.Service.Interval, want: "10m"},
+			got: defaults.Service.Options.Interval, want: "10m"},
 		"Notify.discord.username": {
-			got: stringPtr(defaults.Notify["discord"].GetSelfParam("username")), want: "Argus"},
+			got: defaults.Notify["discord"].GetSelfParam("username"), want: "Argus"},
 		"WebHook.Delay": {
 			got: defaults.WebHook.Delay, want: "0s"},
 	}
 
 	// THEN the defaults are set correctly
 	for name, tc := range tests {
-		if utils.EvalNilPtr(tc.got, "") != tc.want {
-			t.Errorf("%s:\nwant: %s\ngot:  %s",
-				name, tc.want, utils.EvalNilPtr(tc.got, ""))
+		if tc.got != tc.want {
+			t.Log(name)
+			t.Errorf("want: %s\ngot:  %s",
+				tc.want, tc.got)
 		}
 	}
 }
@@ -61,26 +65,34 @@ func TestDefaultsCheckValues(t *testing.T) {
 	defaults.SetDefaults()
 	tests := map[string]struct {
 		input       Defaults
-		errContains string
+		errContains []string
 	}{
 		"Service.Interval": {
 			input: Defaults{Service: service.Service{
-				Interval: stringPtr("10x")}},
-			errContains: `interval: "10x" <invalid>`},
+				Options: options.Options{
+					Interval: "10x"}}},
+			errContains: []string{`^  service:$`, `^      interval: "10x" <invalid>`}},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
-				DeployedVersionLookup: &service.DeployedVersionLookup{
-					Regex: "^something[0-"}}},
-			errContains: `regex: "^something[0-" <invalid>`},
+				DeployedVersionLookup: &deployed_version.Lookup{
+					Regex: `^something[0-`}}},
+			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
+		"Service.Interval + Service.DeployedVersionLookup.Regex": {
+			input: Defaults{Service: service.Service{
+				Options: options.Options{
+					Interval: "10x"},
+				DeployedVersionLookup: &deployed_version.Lookup{
+					Regex: `^something[0-`}}},
+			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
 		"Notify.x.Delay": {
 			input: Defaults{Notify: shoutrrr.Slice{
 				"slack": &shoutrrr.Shoutrrr{
 					Options: map[string]string{"delay": "10x"}}}},
-			errContains: `delay: "10x" <invalid>`},
-		"WebHook.x.Delay": {
+			errContains: []string{`^  notify:$`, `^    slack:$`, `^      options:`, `^        delay: "10x" <invalid>`}},
+		"WebHook.Delay": {
 			input: Defaults{WebHook: webhook.WebHook{
-				Delay: stringPtr("10x")}},
-			errContains: `delay: "10x" <invalid>`},
+				Delay: "10x"}},
+			errContains: []string{`^  webhook:$`, `^  delay: "10x" <invalid>`}},
 	}
 
 	for name, tc := range tests {
@@ -89,9 +101,21 @@ func TestDefaultsCheckValues(t *testing.T) {
 			err := utils.ErrorToString(tc.input.CheckValues())
 
 			// THEN err matches expected
-			if !strings.Contains(err, tc.errContains) {
-				t.Errorf("invalid %s should have errored:\nwant: %s\ngot:  %s",
-					name, tc.errContains, err)
+			lines := strings.Split(err, "\\")
+			for i := range tc.errContains {
+				re := regexp.MustCompile(tc.errContains[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("invalid %s should have errored:\nwant: %q\ngot:  %q",
+						name, tc.errContains[i], strings.ReplaceAll(err, `\`, "\n"))
+				}
 			}
 		})
 	}
@@ -110,9 +134,9 @@ func TestDefaultsPrint(t *testing.T) {
 
 	// THEN the expected number of lines are printed
 	w.Close()
-	out, _ := ioutil.ReadAll(r)
+	out, _ := io.ReadAll(r)
 	os.Stdout = stdout
-	want := 142
+	want := 124
 	got := strings.Count(string(out), "\n")
 	if got != want {
 		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)

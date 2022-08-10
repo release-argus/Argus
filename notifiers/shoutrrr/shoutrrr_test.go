@@ -17,929 +17,312 @@
 package shoutrrr
 
 import (
-	"strings"
+	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
-	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestShoutrrr(t *testing.T) {
-	// Test one Params
-	defaultShoutrr := Shoutrrr{
-		Options:   map[string]string{},
-		URLFields: map[string]string{},
-		Params:    shoutrrr_types.Params{},
-	}
-	test := Shoutrrr{
-		Main:         &defaultShoutrr,
-		Defaults:     &defaultShoutrr,
-		HardDefaults: &defaultShoutrr,
-		Params: shoutrrr_types.Params{
-			"BotName": "Test",
-		}}
-	wantedParams := map[string]string{
-		"botname": "Test",
-	}
-
-	test.initParams()
-	gotParams := test.GetParams(&utils.ServiceInfo{})
-	for key := range *gotParams {
-		if (*gotParams)[key] != wantedParams[key] {
-			t.Errorf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
-		}
-	}
-	for key := range wantedParams {
-		if (*gotParams)[key] != wantedParams[key] {
-			t.Errorf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
-		}
-	}
-
-	// Test multiple Params
-	test = Shoutrrr{
-		Main:         &defaultShoutrr,
-		Defaults:     &defaultShoutrr,
-		HardDefaults: &defaultShoutrr,
-		Params: shoutrrr_types.Params{
-			"BotName": "OtherTest",
-			"Icon":    "github",
-		}}
-	wantedParams = map[string]string{
-		"botname": "OtherTest",
-		"icon":    "github",
-	}
-	test.initParams()
-	gotParams = test.GetParams(&utils.ServiceInfo{})
-	for key := range *gotParams {
-		if (*gotParams)[key] != wantedParams[key] {
-			t.Errorf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
-		}
-	}
-	for key := range wantedParams {
-		if (*gotParams)[key] != wantedParams[key] {
-			t.Errorf(`Shoutrrr, GetParams - Got %v, want match for %q`, (*gotParams)[key], wantedParams[key])
-		}
-	}
-
-	// Test GetURL with one Params
-	testType := "discord"
-	testURLFields := map[string]string{
-		"Token":     "bar",
-		"WebhookID": "foo",
-	}
-	test = Shoutrrr{
-		Main:         &defaultShoutrr,
-		Defaults:     &defaultShoutrr,
-		HardDefaults: &defaultShoutrr,
-		Type:         testType,
-		URLFields:    testURLFields,
-		Params:       test.Params,
-	}
-	wantedURL := "discord://bar@foo"
-	test.initURLFields()
-	gotURL := test.GetURL()
-	if gotURL != wantedURL {
-		t.Errorf(`Shoutrrr, GetURL - Got %v, want match for %q`, gotURL, wantedURL)
-	}
-
-	// Test GetURL with multiple Params
-	testType = "teams"
-	testURLFields = map[string]string{
-		"Group":      "something",
-		"Tenant":     "foo",
-		"AltID":      "bar",
-		"GroupOwner": "fez",
-	}
-	testParams := shoutrrr_types.Params{
-		"Host":  "mockhost",
-		"Title": "test",
-	}
-	test = Shoutrrr{
-		Main:         &defaultShoutrr,
-		Defaults:     &defaultShoutrr,
-		HardDefaults: &defaultShoutrr,
-		Type:         testType,
-		URLFields:    testURLFields,
-		Params:       testParams,
-	}
-	wantedURL = "teams://something@foo/bar/fez?host=mockhost"
-	test.initParams()
-	test.initURLFields()
-	gotURL = test.GetURL()
-	if gotURL != wantedURL {
-		t.Errorf(`Shoutrrr, GetURL - Got %v, want match for %q`, gotURL, wantedURL)
-	}
-
-	// Test Defaults
-	testType = "teams"
-	testServiceURLFields := map[string]string{
-		"Group": "something",
-	}
-	testMainURLFields := map[string]string{
-		"Group":  "main",
-		"Tenant": "foo",
-	}
-	testDefaultsURLFields := map[string]string{
-		"Group":  "default",
-		"Tenant": "default",
-		"AltID":  "bar",
-	}
-	testHardDefaultsURLFields := map[string]string{
-		"Group":      "hardDefault",
-		"Tenant":     "hardDefault",
-		"AltID":      "hardDefault",
-		"GroupOwner": "fez",
-	}
-	test = Shoutrrr{
-		Main:         &Shoutrrr{URLFields: testMainURLFields},
-		Defaults:     &Shoutrrr{URLFields: testDefaultsURLFields},
-		HardDefaults: &Shoutrrr{URLFields: testHardDefaultsURLFields},
-		Type:         testType,
-		URLFields:    testServiceURLFields,
-		Params:       testParams,
-	}
-	wantedURL = "teams://something@foo/bar/fez?host=mockhost"
-	test.initParams()
-	test.initURLFields()
-	test.Main.initURLFields()
-	test.Defaults.initURLFields()
-	test.HardDefaults.initURLFields()
-	gotURL = test.GetURL()
-	if gotURL != wantedURL {
-		t.Errorf(`Shoutrrr, GetURL - Got %v, want match for %q`, gotURL, wantedURL)
-	}
-}
-
-func testGetParams() Shoutrrr {
-	main := Shoutrrr{
-		Params: map[string]string{
-			"main": "main-val",
-		},
-	}
-	defaults := Shoutrrr{
-		Params: map[string]string{
-			"main":    "default-not-main",
-			"default": "default-val",
-		},
-	}
-	hardDefaults := Shoutrrr{
-		Params: map[string]string{
-			"main":        "harddefault-not-main",
-			"default":     "harddefault-not-default",
-			"harddefault": "harddefault-val",
-		},
-	}
-	return Shoutrrr{
-		Params: map[string]string{
-			"master":   "master-val",
-			"template": "{% if 'a' == 'a' %}{{ version }}-yes{% endif %}",
-		},
-		Main:         &main,
-		Defaults:     &defaults,
-		HardDefaults: &hardDefaults,
-	}
-}
-
-func TestGetParamsMaster(t *testing.T) {
+func TestGetURL(t *testing.T) {
 	// GIVEN a Shoutrrr
-	shoutrrr := testGetParams()
+	tests := map[string]struct {
+		sType     string
+		options   map[string]string
+		urlFields map[string]string
+		params    map[string]string
+		want      string
+	}{
+		"discord - base": {sType: "discord", want: "discord://TOKEN@WEBHOOKID",
+			urlFields: map[string]string{"token": "TOKEN", "webhookid": "WEBHOOKID"}},
+		"smtp - base": {sType: "smtp", want: "smtp://HOST/?fromaddress=FROMADDRESS&toaddresses=TOADDRESS1,TOADDRESS2",
+			urlFields: map[string]string{"host": "HOST"},
+			params:    map[string]string{"fromaddress": "FROMADDRESS", "toaddresses": "TOADDRESS1,TOADDRESS2"}},
+		"smtp - base + login": {sType: "smtp", want: "smtp://USERNAME:PASSWORD@HOST/?fromaddress=FROMADDRESS&toaddresses=TOADDRESS1,TOADDRESS2",
+			urlFields: map[string]string{"host": "HOST", "username": "USERNAME", "password": "PASSWORD"},
+			params:    map[string]string{"fromaddress": "FROMADDRESS", "toaddresses": "TOADDRESS1,TOADDRESS2"}},
+		"smtp - base + login + port": {sType: "smtp", want: "smtp://USERNAME:PASSWORD@HOST:587/?fromaddress=FROMADDRESS&toaddresses=TOADDRESS1,TOADDRESS2",
+			urlFields: map[string]string{"host": "HOST", "username": "USERNAME", "password": "PASSWORD", "port": "587"},
+			params:    map[string]string{"fromaddress": "FROMADDRESS", "toaddresses": "TOADDRESS1,TOADDRESS2"}},
+		"gotify - base": {sType: "gotify", want: "gotify://HOST/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN"}},
+		"gotify - base + port": {sType: "gotify", want: "gotify://HOST:8443/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "port": "8443"}},
+		"gotify - base + port + path": {sType: "gotify", want: "gotify://HOST:8443/PATH/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "path": "PATH", "port": "8443"}},
+		"googlechat - base": {sType: "googlechat", want: "googlechat://RAW",
+			urlFields: map[string]string{"raw": "RAW"}},
+		"ifttt - base": {sType: "ifttt", want: "ifttt://WEBHOOKID/?events=EVENT1,EVENT2",
+			urlFields: map[string]string{"webhookid": "WEBHOOKID"},
+			params:    map[string]string{"events": "EVENT1,EVENT2"}},
+		"join - base": {sType: "join", want: "join://shoutrrr:APIKEY@join/?devices=DEVICE1,DEVICE2",
+			urlFields: map[string]string{"apikey": "APIKEY"},
+			params:    map[string]string{"devices": "DEVICE1,DEVICE2"}},
+		"mattermost - base": {sType: "mattermost", want: "mattermost://HOST/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN"}},
+		"mattermost - base + username": {sType: "mattermost", want: "mattermost://USERNAME@HOST/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "username": "USERNAME"}},
+		"mattermost - base + port": {sType: "mattermost", want: "mattermost://USERNAME@HOST:8443/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "username": "USERNAME", "port": "8443"}},
+		"mattermost - base + port + path": {sType: "mattermost", want: "mattermost://USERNAME@HOST:8443/PATH/TOKEN",
+			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "username": "USERNAME", "path": "PATH", "port": "8443"}},
+		"matrix - base": {sType: "matrix", want: "matrix://PASSWORD@HOST/",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD"}},
+		"matrix - base + user": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST/",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER"}},
+		"matrix - base + user + port": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST:8443/",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER", "port": "8443"}},
+		"matrix - base + user + port + path": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST:8443/PATH/",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER", "port": "8443", "path": "PATH"}},
+		"matrix - base + user + port + path + rooms": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST:8443/PATH/?rooms=ROOMS",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER", "port": "8443", "path": "PATH"},
+			params:    map[string]string{"rooms": "ROOMS"}},
+		"matrix - base + user + port + path + disabletls": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST:8443/PATH/?disableTLS=yes",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER", "port": "8443", "path": "PATH"},
+			params:    map[string]string{"disabletls": "yes"}},
+		"matrix - base + user + port + path + rooms + disabletls": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST:8443/PATH/?rooms=ROOMS&disableTLS=yes",
+			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER", "port": "8443", "path": "PATH"},
+			params:    map[string]string{"rooms": "ROOMS", "disabletls": "yes"}},
+		"opsgenie - base": {sType: "opsgenie", want: "opsgenie://DEFAULT_HOST/APIKEY",
+			urlFields: map[string]string{"host": "DEFAULT_HOST", "apikey": "APIKEY"}},
+		"opsgenie - base + port": {sType: "opsgenie", want: "opsgenie://DEFAULT_HOST:8443/APIKEY",
+			urlFields: map[string]string{"host": "DEFAULT_HOST", "apikey": "APIKEY", "port": "8443"}},
+		"opsgenie - base + port + path": {sType: "opsgenie", want: "opsgenie://DEFAULT_HOST:8443/PATH/APIKEY",
+			urlFields: map[string]string{"host": "DEFAULT_HOST", "apikey": "APIKEY", "port": "8443", "path": "PATH"}},
+		"pushbullet - base": {sType: "pushbullet", want: "pushbullet://TOKEN/TARGETS",
+			urlFields: map[string]string{"token": "TOKEN", "targets": "TARGETS"}},
+		"pushover - base": {sType: "pushover", want: "pushover://shoutrrr:TOKEN@USER/",
+			urlFields: map[string]string{"token": "TOKEN", "user": "USER"}},
+		"pushover - base + devices": {sType: "pushover", want: "pushover://shoutrrr:TOKEN@USER/?devices=DEVICES",
+			urlFields: map[string]string{"token": "TOKEN", "user": "USER"},
+			params:    map[string]string{"devices": "DEVICES"}},
+		"rocketchat - base": {sType: "rocketchat", want: "rocketchat://HOST/TOKENA/TOKENB/CHANNEL",
+			urlFields: map[string]string{"host": "HOST", "tokena": "TOKENA", "tokenb": "TOKENB", "channel": "CHANNEL"}},
+		"rocketchat - base + port": {sType: "rocketchat", want: "rocketchat://HOST:8443/TOKENA/TOKENB/CHANNEL",
+			urlFields: map[string]string{"host": "HOST", "tokena": "TOKENA", "tokenb": "TOKENB", "channel": "CHANNEL", "port": "8443"}},
+		"rocketchat - base + port + path": {sType: "rocketchat", want: "rocketchat://HOST:8443/PATH/TOKENA/TOKENB/CHANNEL",
+			urlFields: map[string]string{"host": "HOST", "tokena": "TOKENA", "tokenb": "TOKENB", "channel": "CHANNEL", "port": "8443", "path": "PATH"}},
+		"slack - base": {sType: "slack", want: "slack://TOKEN@CHANNEL",
+			urlFields: map[string]string{"token": "TOKEN", "channel": "CHANNEL"}},
+		"teams - base": {sType: "teams", want: "teams://GROUP@TENANT/ALTID/GROUPOWNER?host=HOST",
+			urlFields: map[string]string{"group": "GROUP", "tenant": "TENANT", "altid": "ALTID", "groupowner": "GROUPOWNER"},
+			params:    map[string]string{"host": "HOST"}},
+		"telegram - base": {sType: "telegram", want: "telegram://TOKEN@telegram?chats=CHATS",
+			urlFields: map[string]string{"token": "TOKEN"},
+			params:    map[string]string{"chats": "CHATS"}},
+		"zulip_chat - base": {sType: "zulip_chat", want: "zulip://BOTMAIL:BOTKEY@HOST",
+			urlFields: map[string]string{"host": "HOST", "botmail": "BOTMAIL", "botkey": "BOTKEY"}},
+		"zulip_chat - base + token": {sType: "zulip_chat", want: "zulip://BOTMAIL:BOTKEY@HOST?topic=TOPIC",
+			urlFields: map[string]string{"host": "HOST", "botmail": "BOTMAIL", "botkey": "BOTKEY"},
+			params:    map[string]string{"topic": "TOPIC"}},
+		"zulip_chat - base + stream": {sType: "zulip_chat", want: "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM",
+			urlFields: map[string]string{"host": "HOST", "botmail": "BOTMAIL", "botkey": "BOTKEY"},
+			params:    map[string]string{"stream": "STREAM"}},
+		"zulip_chat - base + token + stream": {sType: "zulip_chat", want: "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM&topic=TOPIC",
+			urlFields: map[string]string{"host": "HOST", "botmail": "BOTMAIL", "botkey": "BOTKEY"},
+			params:    map[string]string{"topic": "TOPIC", "stream": "STREAM"}},
+		"shoutrrr - base": {sType: "shoutrrr", want: "RAW",
+			urlFields: map[string]string{"raw": "RAW"}},
+	}
 
-	// WHEN GetParams is called
-	params := shoutrrr.GetParams(&utils.ServiceInfo{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr.Type = tc.sType
+			shoutrrr.URLFields = tc.urlFields
+			shoutrrr.Params = tc.params
 
-	// THEN it'll find keys only defined in master correctly
-	key := "master"
-	got := (*params)[key]
-	want := key + "-val"
-	if got != want {
-		t.Errorf("%s key not looked up correctly from master. Got %s, want %s",
-			key, got, want)
+			// WHEN GetURL is called
+			got := shoutrrr.GetURL()
+
+			// THEN the expected URL is returned
+			if got != tc.want {
+				t.Errorf("\nwant: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
 	}
 }
 
-func TestGetParamsMain(t *testing.T) {
-	// GIVEN a Shoutrrr
-	shoutrrr := testGetParams()
+func TestGetParams(t *testing.T) {
+	// GIVEN a Shoutrrr and ServiceInfo
+	serviceInfo := utils.ServiceInfo{
+		ID:            "service_id",
+		LatestVersion: "1.2.3",
+	}
+	tests := map[string]struct {
+		paramsRoot        *string
+		paramsMain        *string
+		paramsDefault     *string
+		paramsHardDefault *string
+		wantString        string
+	}{
+		"root overrides all": {wantString: "this", paramsRoot: stringPtr("this"),
+			paramsDefault: stringPtr("not_this"), paramsHardDefault: stringPtr("not_this")},
+		"main overrides default and hardDefault": {wantString: "this", paramsRoot: nil,
+			paramsMain: stringPtr("this"), paramsDefault: stringPtr("not_this"), paramsHardDefault: stringPtr("not_this")},
+		"default overrides hardDefault": {wantString: "this", paramsRoot: nil,
+			paramsDefault: stringPtr("this"), paramsHardDefault: stringPtr("not_this")},
+		"hardDefault is last resort": {wantString: "this", paramsRoot: nil, paramsDefault: nil,
+			paramsHardDefault: stringPtr("this")},
+		"jinja templating": {wantString: "this", paramsRoot: stringPtr("{% if 'a' == 'a' %}this{% endif %}"),
+			paramsDefault: stringPtr("not_this"), paramsHardDefault: stringPtr("not_this")},
+		"jinja vars": {wantString: fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion), paramsRoot: stringPtr("foo{{ service_id }}-{{ version }}"),
+			paramsDefault: stringPtr("not_this"), paramsHardDefault: stringPtr("not_this")},
+	}
 
-	// WHEN GetParams is called
-	params := shoutrrr.GetParams(&utils.ServiceInfo{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			key := "test"
+			shoutrrr := testShoutrrr(false, true, false)
+			if tc.paramsRoot != nil {
+				shoutrrr.Params[key] = *tc.paramsRoot
+			}
+			if tc.paramsMain != nil {
+				shoutrrr.Main.Params[key] = *tc.paramsMain
+			}
+			if tc.paramsDefault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.paramsDefault
+			}
+			if tc.paramsHardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.paramsHardDefault
+			}
 
-	// THEN it'll find keys only defined in Main correctly
-	key := "main"
-	got := (*params)[key]
-	want := key + "-val"
-	if got != want {
-		t.Errorf("%s key not looked up correctly from main. Got %s, want %s",
-			key, got, want)
+			// WHEN GetParams is called
+			got := shoutrrr.GetParams(&serviceInfo)
+
+			// THEN the function returns the params to use
+			if (*got)[key] != tc.wantString {
+				t.Fatalf("want: %q\ngot:  %q",
+					tc.wantString, got)
+			}
+		})
 	}
 }
 
-func TestGetParamsDefault(t *testing.T) {
-	// GIVEN a Shoutrrr
-	shoutrrr := testGetParams()
+func TestShoutrrrSend(t *testing.T) {
+	// GIVEN a Shoutrrr and ServiceInfo
+	testLogging("INFO")
+	serviceInfo := utils.ServiceInfo{
+		ID:            "service_id",
+		LatestVersion: "1.2.3",
+	}
+	tests := map[string]struct {
+		wouldFail   bool
+		useDelay    bool
+		delay       string
+		invalidCert bool
+		host        string
+		title       *string
+		message     *string
+		errRegex    string
+		retries     int
+	}{
+		"invalid host": {host: "	test", errRegex: "error initializing router services"},
+		"selfsigned cert":             {invalidCert: true, errRegex: " x509:"},
+		"has default title":           {title: stringPtr(""), errRegex: "^$"},
+		"has default message":         {message: stringPtr(""), errRegex: "message.*required"},
+		"does delay":                  {errRegex: "^$", delay: "2s", useDelay: true},
+		"pass":                        {errRegex: "^$"},
+		"fail":                        {errRegex: "invalid gotify token.*x 1", wouldFail: true},
+		"does repeat until max_tries": {errRegex: "invalid gotify token.*x 3", wouldFail: true, retries: 2},
+	}
 
-	// WHEN GetParams is called
-	params := shoutrrr.GetParams(&utils.ServiceInfo{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			shoutrrr := testShoutrrr(tc.wouldFail, true, tc.invalidCert)
+			shoutrrr.SetOption("max_tries", fmt.Sprint(tc.retries+1))
+			shoutrrr.SetOption("delay", tc.delay)
+			if tc.host != "" {
+				shoutrrr.URLFields["host"] = tc.host
+			}
+			title := "TestShoutrrrSend"
+			if tc.title != nil {
+				title = *tc.title
+			}
+			message := name
+			if tc.message != nil {
+				message = *tc.message
+			}
 
-	// THEN it'll find keys only defined in Default correctly
-	key := "default"
-	got := (*params)[key]
-	want := key + "-val"
-	if got != want {
-		t.Errorf("%s key not looked up correctly from default. Got %s, want %s",
-			key, got, want)
+			// WHEN Send is called
+			start := time.Now().UTC()
+			err := shoutrrr.Send(title, message, &serviceInfo, tc.useDelay)
+
+			// THEN the logs are expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
+			}
+			elapsed := time.Since(start)
+			delay, _ := time.ParseDuration(shoutrrr.GetDelay())
+			if tc.wouldFail {
+				delay = time.Duration(5*tc.retries) * time.Second
+			}
+			// Allow 15s extra delay that may be incurred in tests
+			if elapsed < delay || elapsed > delay+(15*time.Second) {
+				t.Errorf("delay not applied? Delay of %s, but sent in %s",
+					delay, elapsed)
+			}
+		})
 	}
 }
 
-func TestGetParamsHardDefault(t *testing.T) {
-	// GIVEN a Shoutrrr
-	shoutrrr := testGetParams()
-
-	// WHEN GetParams is called
-	params := shoutrrr.GetParams(&utils.ServiceInfo{})
-
-	// THEN it'll find keys only defined in HardDefault correctly
-	key := "harddefault"
-	got := (*params)[key]
-	want := key + "-val"
-	if got != want {
-		t.Errorf("%s key not looked up correctly from harddefault. Got %s, want %s",
-			key, got, want)
+func TestSliceSend(t *testing.T) {
+	// GIVEN a Slice and ServiceInfo
+	testLogging("INFO")
+	serviceInfo := utils.ServiceInfo{
+		ID:            "service_id",
+		LatestVersion: "1.2.3",
 	}
-}
-
-func TestGetParamsTemplating(t *testing.T) {
-	// GIVEN a Shoutrrr and Service.Info context
-	shoutrrr := testGetParams()
-	context := utils.ServiceInfo{LatestVersion: "1.2.3"}
-
-	// WHEN GetParams is called
-	params := shoutrrr.GetParams(&context)
-
-	// THEN it'll find keys only defined in HardDefault correctly
-	got := (*params)["template"]
-	want := "1.2.3-yes"
-	if got != want {
-		t.Errorf("Param templating not applied as expected. Got %s, want %s",
-			got, want)
-	}
-}
-
-func TestGetURLForDiscord(t *testing.T) {
-	// GIVEN a Discord Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "discord",
-		URLFields: map[string]string{
-			"token":     "foo",
-			"webhookid": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
+	tests := map[string]struct {
+		slice          *Slice
+		nilServiceInfo bool
+		useDelay       bool
+		errRegex       string
+		retries        int
+	}{
+		"nil slice": {errRegex: "^$", slice: nil},
+		"passing slice, nil serviceInfo": {errRegex: "^$", nilServiceInfo: true,
+			slice: &Slice{"0": testShoutrrr(false, true, false), "1": testShoutrrr(false, true, false)}},
+		"passing slice": {errRegex: "^$",
+			slice: &Slice{"0": testShoutrrr(false, true, false), "1": testShoutrrr(false, true, false)}},
+		"failing slice": {errRegex: "invalid gotify token",
+			slice: &Slice{"0": testShoutrrr(false, true, false), "1": testShoutrrr(true, true, false)}},
 	}
 
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "discord://foo@bar"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForSMTP(t *testing.T) {
-	// GIVEN a SMTP Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "smtp",
-		URLFields: map[string]string{
-			"username": "bar",
-			"password": "foo",
-			"host":     "example.com",
-			"port":     "123",
-		},
-		Params: map[string]string{
-			"fromaddress": "me@me.com",
-			"toaddresses": "you@you.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "smtp://bar:foo@example.com:123/?fromaddress=me@me.com&toaddresses=you@you.com"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForGotify(t *testing.T) {
-	// GIVEN a Gotify Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "gotify",
-		URLFields: map[string]string{
-			"token": "foo",
-			"host":  "example.com",
-			"port":  "123",
-			"path":  "test",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "gotify://example.com:123/test/foo"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForGoogleChat(t *testing.T) {
-	// GIVEN a GoogleChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "googlechat",
-		URLFields: map[string]string{
-			"raw": "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "googlechat://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForIFTTT(t *testing.T) {
-	// GIVEN a IFTTT Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "ifttt",
-		URLFields: map[string]string{
-			"webhookid": "foo",
-		},
-		Params: map[string]string{
-			"events": "event1,event2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "ifttt://foo/?events=event1,event2"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForJoin(t *testing.T) {
-	// GIVEN a Join Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "join",
-		URLFields: map[string]string{
-			"apikey": "foo",
-		},
-		Params: map[string]string{
-			"devices": "device1,device2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "join://shoutrrr:foo@join/?devices=device1,device2"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForMattermost(t *testing.T) {
-	// GIVEN a Mattermost Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "mattermost",
-		URLFields: map[string]string{
-			"username": "bar",
-			"host":     "example.com",
-			"port":     "123",
-			"path":     "test",
-			"token":    "bish",
-			"channel":  "bash",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "mattermost://bar@example.com:123/test/bish/bash"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForMatrix(t *testing.T) {
-	// GIVEN a Matrix Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "matrix",
-		URLFields: map[string]string{
-			"user":     "foo",
-			"password": "bar",
-			"host":     "example.com",
-			"port":     "123",
-			"path":     "test",
-		},
-		Params: map[string]string{
-			"rooms":      "!roomID1,roomAlias2",
-			"disabletls": "yes",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "matrix://foo:bar@example.com:123/test/?rooms=!roomID1,roomAlias2&disableTLS=yes"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForMatrixNoRooms(t *testing.T) {
-	// GIVEN a Matrix Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "matrix",
-		URLFields: map[string]string{
-			"user":     "foo",
-			"password": "bar",
-			"host":     "example.com",
-			"port":     "123",
-			"path":     "test",
-		},
-		Params: map[string]string{
-			"disabletls": "yes",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "matrix://foo:bar@example.com:123/test/?disableTLS=yes"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForOpsGenie(t *testing.T) {
-	// GIVEN a OpsGenie Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "opsgenie",
-		URLFields: map[string]string{
-			"host":   "example.com",
-			"port":   "123",
-			"apikey": "foo",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "opsgenie://example.com:123/foo"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForPushbullet(t *testing.T) {
-	// GIVEN a Pushbullet Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "pushbullet",
-		URLFields: map[string]string{
-			"token":   "foo",
-			"targets": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "pushbullet://foo/bar"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForPushover(t *testing.T) {
-	// GIVEN a Pushover Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "pushover",
-		URLFields: map[string]string{
-			"token": "foo",
-			"user":  "bar",
-		},
-		Params: map[string]string{
-			"devices": "device1",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "pushover://shoutrrr:foo@bar/?devices=device1"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForRocketChat(t *testing.T) {
-	// GIVEN a RocketChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "rocketchat",
-		URLFields: map[string]string{
-			"username": "foo",
-			"host":     "example.com",
-			"port":     "123",
-			"tokena":   "bish",
-			"tokenb":   "bash",
-			"channel":  "bosh",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "rocketchat://foo@example.com:123/bish/bish/bosh"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForSlack(t *testing.T) {
-	// GIVEN a Slack Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "slack",
-		URLFields: map[string]string{
-			"token":   "hook-foo",
-			"channel": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "slack://hook-foo@bar"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForTeams(t *testing.T) {
-	// GIVEN a Teams Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "teams",
-		URLFields: map[string]string{
-			"group":      "foo",
-			"tenant":     "bish",
-			"altid":      "bash",
-			"groupowner": "bosh",
-		},
-		Params: map[string]string{
-			"host": "example.webhook.office.com",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "teams://foo@bish/bash/bosh?host=example.webhook.office.com"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForTelegram(t *testing.T) {
-	// GIVEN a Telegram Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "telegram",
-		URLFields: map[string]string{
-			"token": "foo",
-		},
-		Params: map[string]string{
-			"chats": "channel1,channel2",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "telegram://foo@telegram?chats=channel1,channel2"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForZulipChat(t *testing.T) {
-	// GIVEN a ZulipChat Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "zulipchat",
-		URLFields: map[string]string{
-			"botmail": "bish",
-			"botkey":  "bash",
-			"host":    "bosh",
-			"port":    "123",
-			"path":    "test",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "zulip://bish:bash@bosh:123/test"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestGetURLForShoutrrr(t *testing.T) {
-	// GIVEN an invalid raw Shoutrrr
-	shoutrrr := Shoutrrr{
-		Type: "shoutrrr",
-		URLFields: map[string]string{
-			"raw": "something://bish:bash:bosh",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-
-	// WHEN GetURL is called on this Shoutrrr
-	got := shoutrrr.GetURL()
-
-	// THEN the Shoutrrr URL is correctly formatted
-	want := "something://bish:bash:bosh"
-	if got != want {
-		t.Errorf("Unexpected URL returned. Got %q, want %q",
-			got, want)
-	}
-}
-
-func TestSendWithNil(t *testing.T) {
-	// GIVEN a nil slice
-	var slice *Slice
-
-	// WHEN Send is called on it
-	err := slice.Send("", "", nil, true)
-
-	// THEN err is nil
-	var want error
-	if err != want {
-		t.Errorf("Send on %v should have produced %v err, not\n%v",
-			slice, want, err)
-	}
-}
-
-func TestSendWithNilServiceInfo(t *testing.T) {
-	// GIVEN a Slice with an invalid Shoutrrr
-	jLog = utils.NewJLog("WARN", false)
-	id := "test"
-	slice := Slice{
-		"test": &Shoutrrr{
-			ID:   &id,
-			Type: "shoutrrr",
-			Options: map[string]string{
-				"max_tries": "1",
-				"delay":     "0s",
-			},
-			URLFields: map[string]string{
-				"raw": "something://bish:bash:bosh",
-			},
-			Main:         &Shoutrrr{},
-			Defaults:     &Shoutrrr{},
-			HardDefaults: &Shoutrrr{},
-		},
-	}
-	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil, true)
-
-	// THEN the Send errors related to the Shoutrrr being invalid
-	contain := " invalid port "
-	e := utils.ErrorToString(err)
-	if !strings.Contains(e, contain) {
-		t.Errorf("Send should err about the %q, not\n%v",
-			contain, e)
-	}
-}
-
-func TestSendWithFail(t *testing.T) {
-	// GIVEN a Slice with an invalid Shoutrrr
-	jLog = utils.NewJLog("WARN", false)
-	id := "test"
-	slice := Slice{
-		"test": &Shoutrrr{
-			ID:   &id,
-			Type: "slack",
-			Options: map[string]string{
-				"max_tries": "2",
-				"delay":     "0s",
-			},
-			URLFields: map[string]string{
-				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
-				"channel": "bar",
-			},
-			Main:         &Shoutrrr{},
-			Defaults:     &Shoutrrr{},
-			HardDefaults: &Shoutrrr{},
-		},
-	}
-	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil, true)
-
-	// THEN the Send errors related to the Shoutrrr being invalid
-	contain := "failed to send slack notification:"
-	e := utils.ErrorToString(err)
-	if !strings.Contains(e, contain) {
-		t.Errorf("Send should err about %q, not\n%v",
-			contain, e)
-	}
-}
-
-func TestSendWithDelay(t *testing.T) {
-	// GIVEN a Slice with an invalid Shoutrrr
-	jLog = utils.NewJLog("WARN", false)
-	id := "test"
-	slice := Slice{
-		"test": &Shoutrrr{
-			ID:   &id,
-			Type: "slack",
-			Options: map[string]string{
-				"max_tries": "1",
-				"delay":     "15s",
-			},
-			URLFields: map[string]string{
-				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
-				"channel": "bar",
-			},
-			Main:         &Shoutrrr{},
-			Defaults:     &Shoutrrr{},
-			HardDefaults: &Shoutrrr{},
-		},
-	}
-	// WHEN Send is called with delay to be used
-	start := time.Now().UTC()
-	slice.Send("title", "message", nil, true)
-
-	// THEN the Send returns after using Delay
-	elapsed := time.Since(start)
-	if elapsed < 15*time.Second {
-		t.Errorf("Send should have delayed %s and not returned afte r%s",
-			slice["test"].Options["delay"], elapsed)
-	}
-}
-
-func TestSendWithNoDelay(t *testing.T) {
-	// GIVEN a Slice with an invalid Shoutrrr
-	jLog = utils.NewJLog("WARN", false)
-	id := "test"
-	slice := Slice{
-		"test": &Shoutrrr{
-			ID:   &id,
-			Type: "slack",
-			Options: map[string]string{
-				"max_tries": "1",
-				"delay":     "15s",
-			},
-			URLFields: map[string]string{
-				"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
-				"channel": "bar",
-			},
-			Main:         &Shoutrrr{},
-			Defaults:     &Shoutrrr{},
-			HardDefaults: &Shoutrrr{},
-		},
-	}
-	// WHEN Send is called with no delay to be used
-	start := time.Now().UTC()
-	slice.Send("title", "message", nil, false)
-
-	// THEN the Send returns without using Delay
-	elapsed := time.Since(start)
-	if elapsed > 15*time.Second {
-		t.Errorf("Send shouldn't have used delay and so should have taken less than %s, not %s",
-			slice["test"].Options["delay"], elapsed)
-	}
-}
-
-func TestSendWithMultipleFails(t *testing.T) {
-	// GIVEN a Slice with an invalid Shoutrrr
-	jLog = utils.NewJLog("WARN", false)
-	id := "test"
-	failingShoutrrr := &Shoutrrr{
-		ID:   &id,
-		Type: "slack",
-		Options: map[string]string{
-			"max_tries": "2",
-			"delay":     "1s",
-		},
-		URLFields: map[string]string{
-			"token":   "hook:WNA3PBYV6-F20DUQND3RQ-Webc4MAvoacrpPakR8phF0zi",
-			"channel": "bar",
-		},
-		Main:         &Shoutrrr{},
-		Defaults:     &Shoutrrr{},
-		HardDefaults: &Shoutrrr{},
-	}
-	slice := Slice{
-		"test":  failingShoutrrr,
-		"other": failingShoutrrr,
-	}
-	// WHEN Send is called on this Shoutrrr with a nil serviceInfo
-	err := slice.Send("title", "message", nil, true)
-
-	// THEN the Send errors related to the Shoutrrr being invalid
-	contain := "failed to send slack notification:"
-	e := utils.ErrorToString(err)
-	if strings.Count(e, contain) != len(slice) {
-		t.Errorf("Send should err about %q %d times, not\n%v",
-			contain, len(slice), e)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN Send is called
+			// start := time.Now().UTC()
+			copyServiceInfo := serviceInfo
+			sInfo := &copyServiceInfo
+			if tc.nilServiceInfo {
+				sInfo = nil
+			}
+			err := tc.slice.Send("TestSliceSend", name, sInfo, tc.useDelay)
+
+			// THEN the logs are expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
+			}
+			// elapsed := time.Since(start)
+			// delay, _ := time.ParseDuration(shoutrrr.GetDelay())
+			// if tc.wouldFail {
+			// 	delay = time.Duration(5*tc.retries) * time.Second
+			// }
+			// if elapsed < delay || elapsed > delay+time.Second {
+			// 	t.Errorf("delay not applied? Delay of %s, but sent in %s",
+			// 		name, delay, elapsed)
+			// }
+		})
 	}
 }

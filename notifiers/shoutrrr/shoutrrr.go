@@ -82,10 +82,11 @@ func (s *Shoutrrr) GetURL() (url string) {
 		// smtp://username:password@host:port/?fromaddress=X&toaddresses=Y
 		login := s.GetURLField("password")
 		login = s.GetURLField("username") + utils.ValueIfNotDefault(login, ":"+login)
-		url = fmt.Sprintf("smtp://%s%s:%s/?fromaddress=%s&toaddresses=%s",
+		port := s.GetURLField("port")
+		url = fmt.Sprintf("smtp://%s%s%s/?fromaddress=%s&toaddresses=%s",
 			utils.ValueIfNotDefault(login, login+"@"),
 			s.GetURLField("host"),
-			s.GetURLField("port"),
+			utils.ValueIfNotDefault(port, ":"+port),
 			s.GetParam("fromaddress"),
 			s.GetParam("toaddresses"))
 	case "gotify":
@@ -129,6 +130,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 		// matrix://user:password@host[:port][/port]/[?rooms=!roomID1[,roomAlias2]][&disableTLS=yes]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
+		user := s.GetURLField("user")
 		rooms := s.GetParam("rooms")
 		rooms = utils.ValueIfNotDefault(rooms, "?rooms="+rooms)
 		disableTLS := s.GetParam("disabletls")
@@ -140,8 +142,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 				disableTLS = "?" + disableTLS
 			}
 		}
-		url = fmt.Sprintf("matrix://%s:%s@%s%s%s/%s%s",
-			s.GetURLField("user"),
+		url = fmt.Sprintf("matrix://%s%s@%s%s%s/%s%s",
+			utils.ValueIfNotDefault(user, user+":"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
@@ -156,7 +158,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("opsgenie://%s%s%s/%s",
 			s.GetURLField("host"),
 			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, ""+path),
+			utils.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("apikey"))
 	case "pushbullet":
 		// pushbullet://token/targets
@@ -181,7 +183,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 			utils.ValueIfNotDefault(port, ":"+port),
 			utils.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("tokena"),
-			s.GetURLField("tokena"),
+			s.GetURLField("tokenb"),
 			s.GetURLField("channel"))
 	case "slack":
 		// slack://token:token@channel
@@ -205,16 +207,21 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("telegram://%s@telegram?chats=%s",
 			s.GetURLField("token"),
 			s.GetParam("chats"))
-	case "zulipchat":
-		// zulip://botMail:botKey@host:port
-		port := s.GetURLField("port")
-		path := s.GetURLField("path")
+	case "zulip_chat":
+		// zulip://botMail:botKey@host?stream=STREAM&topic=TOPIC
+		stream := s.GetParam("stream")
+		stream = utils.ValueIfNotDefault(stream, "?stream="+stream)
+		topic := s.GetParam("topic")
+		topic = utils.ValueIfNotDefault(topic, "&topic="+topic)
+		if stream == "" {
+			topic = strings.Replace(topic, "&", "?", 1)
+		}
 		url = fmt.Sprintf("zulip://%s:%s@%s%s%s",
 			s.GetURLField("botmail"),
 			s.GetURLField("botkey"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path))
+			stream,
+			topic)
 	case "shoutrrr":
 		// Raw
 		url = s.GetURLField("raw")
@@ -262,12 +269,12 @@ func (s *Shoutrrr) Send(
 	serviceInfo *utils.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
-	logFrom := utils.LogFrom{Primary: *s.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := s.GetMaxTries()                                        // Number of times to send Shoutrrr (until 200 received).
+	logFrom := utils.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
+	triesLeft := s.GetMaxTries()                                       // Number of times to send Shoutrrr (until 200 received).
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
-		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", *s.ID, s.GetDelay())
+		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", s.ID, s.GetDelay())
 		jLog.Info(msg, logFrom, s.GetDelay() != "0s")
 		time.Sleep(s.GetDelayDuration())
 	}
@@ -304,14 +311,14 @@ func (s *Shoutrrr) Send(
 
 		// SUCCESS!
 		if !failed {
-			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
+			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
 			failed := false
-			s.Failed = &failed
+			(*s.Failed)[s.ID] = &failed
 			return
 		}
 
 		// FAIL
-		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, *s.ID, serviceInfo.ID, s.GetType(), "FAIL")
+		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "FAIL")
 		triesLeft--
 
 		// Give up after MaxTries.
@@ -319,7 +326,7 @@ func (s *Shoutrrr) Send(
 			msg = fmt.Sprintf("failed %d times to send a %s message to %s", s.GetMaxTries(), s.GetType(), s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
-			s.Failed = &failed
+			(*s.Failed)[s.ID] = &failed
 			for key := range combinedErrs {
 				errs = fmt.Errorf("%s%s x %d",
 					utils.ErrorToString(errs), key, combinedErrs[key])
@@ -328,6 +335,6 @@ func (s *Shoutrrr) Send(
 		}
 
 		// Space out retries.
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }

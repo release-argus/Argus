@@ -18,7 +18,7 @@ package v1
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,7 +42,7 @@ func TestHTTPVersion(t *testing.T) {
 	defer res.Body.Close()
 
 	// THEN the version is returned in JSON format
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf("expected error to be nil got %v",
 			err)

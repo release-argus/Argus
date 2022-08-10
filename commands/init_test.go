@@ -30,12 +30,12 @@ import (
 func TestSetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{
-		ServiceID: stringPtr("service_id"),
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   make([]time.Time, 3),
 		ParentInterval: stringPtr("11m"),
 	}
@@ -45,13 +45,13 @@ func TestSetNextRunnable(t *testing.T) {
 		timeDifferenceMin time.Duration
 		timeDifferenceMax time.Duration
 	}{
-		"index out of range":           {index: 3, timeDifferenceMin: -time.Second, timeDifferenceMax: time.Second},
-		"failed=nil executing=false":   {index: 0, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
-		"failed=nil executing=true":    {index: 0, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
-		"failed=false executing=false": {index: 1, timeDifferenceMin: 22*time.Minute - time.Second, timeDifferenceMax: 22*time.Minute + time.Second},
-		"failed=false executing=true":  {index: 1, executing: true, timeDifferenceMin: time.Hour + (22*time.Minute - time.Second), timeDifferenceMax: time.Hour + (22*time.Minute + time.Second)},
-		"failed=true executing=false":  {index: 2, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
-		"failed=true executing=true":   {index: 2, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
+		"index out of range": {index: 3, timeDifferenceMin: -time.Second, timeDifferenceMax: time.Second},
+		"command that hasn't been run and isn't currently running": {index: 0, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
+		"command that hasn't been run and is currently running":    {index: 0, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
+		"command that didn't fail and isn't currently running":     {index: 1, timeDifferenceMin: 22*time.Minute - time.Second, timeDifferenceMax: 22*time.Minute + time.Second},
+		"command that didn't fail and is currently running":        {index: 1, executing: true, timeDifferenceMin: time.Hour + (22*time.Minute - time.Second), timeDifferenceMax: time.Hour + (22*time.Minute + time.Second)},
+		"command that did fail and isn't currently running":        {index: 2, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
+		"command that did fail and is currently running":           {index: 2, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
 	}
 
 	for name, tc := range tests {
@@ -68,8 +68,8 @@ func TestSetNextRunnable(t *testing.T) {
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
 			if !(minTime.Before(got)) || !(maxTime.After(got)) {
-				t.Fatalf("%s:\nran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
-					name, ranAt, minTime, maxTime, got)
+				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot:\n%s",
+					ranAt, minTime, maxTime, got)
 			}
 		})
 	}
@@ -78,12 +78,12 @@ func TestSetNextRunnable(t *testing.T) {
 func TestIsRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{
-		ServiceID: stringPtr("service_id"),
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
@@ -104,8 +104,8 @@ func TestIsRunnable(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %t\ngot:\n%t",
-					name, tc.want, got)
+				t.Errorf("want: %t\ngot:\n%t",
+					tc.want, got)
 			}
 		})
 	}
@@ -114,12 +114,12 @@ func TestIsRunnable(t *testing.T) {
 func TestGetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{
-		ServiceID: stringPtr("service_id"),
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
@@ -144,12 +144,12 @@ func TestGetNextRunnable(t *testing.T) {
 			if tc.outOfRange {
 				var defaultTime time.Time
 				if got != defaultTime {
-					t.Fatalf("%s:\nwant: %s\ngot:\n%s",
-						name, defaultTime, got)
+					t.Fatalf("want: %s\ngot:\n%s",
+						defaultTime, got)
 				}
 			} else if got != controller.NextRunnable[tc.index] {
-				t.Fatalf("%s:\nwant: %s\ngot:\n%s",
-					name, controller.NextRunnable[tc.index], got)
+				t.Fatalf("want: %s\ngot:\n%s",
+					controller.NextRunnable[tc.index], got)
 			}
 		})
 	}
@@ -173,8 +173,8 @@ func TestString(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:\n%q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:\n%q",
+					tc.want, got)
 			}
 		})
 	}
@@ -198,8 +198,8 @@ func TestFormattedString(t *testing.T) {
 
 			// THEN the result is expected
 			if got != tc.want {
-				t.Errorf("%s:\nwant: %q\ngot:\n%q",
-					name, tc.want, got)
+				t.Errorf("want: %q\ngot:\n%q",
+					tc.want, got)
 			}
 		})
 	}
@@ -208,12 +208,12 @@ func TestFormattedString(t *testing.T) {
 func TestInitMetrics(t *testing.T) {
 	// GIVEN a Controller with multiple Command's
 	controller := Controller{
-		ServiceID: stringPtr("commands_TestInitMetrics"),
 		Command: &Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		Failed:         Fails{nil, boolPtr(false), boolPtr(true)},
+		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("InitMetrics")},
+		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
@@ -245,7 +245,7 @@ func TestInit(t *testing.T) {
 	tests := map[string]struct {
 		nilController     bool
 		log               *utils.JLog
-		serviceStatus     *service_status.Status
+		serviceStatus     service_status.Status
 		command           *Slice
 		shoutrrrNotifiers *shoutrrr.Slice
 		parentInterval    *string
@@ -271,41 +271,43 @@ func TestInit(t *testing.T) {
 			if !tc.nilController {
 				controller = &Controller{}
 			}
-			controller.Init(tc.log, stringPtr("TestInit"), tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
+			logBefore := jLog
+			tc.serviceStatus.ServiceID = stringPtr("TestInit")
+			controller.Init(tc.log, &tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
 
 			// THEN the result is expected
 			// log
-			if (jLog == nil && tc.log == nil) && jLog != tc.log {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, tc.log, jLog)
+			if (tc.log == nil && jLog != logBefore) && jLog != tc.log {
+				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
+					tc.log, jLog)
 			}
 			// nilController
 			if tc.nilController {
 				if controller != nil {
-					t.Fatalf("%s:\nInit of nil Controller gave %v",
-						name, controller)
+					t.Fatalf("Init of nil Controller gave %v",
+						controller)
 				}
 				return
 			}
 			// serviceStatus
-			if controller.ServiceStatus != tc.serviceStatus {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, controller.ServiceStatus, tc.serviceStatus)
+			if controller.ServiceStatus != &tc.serviceStatus {
+				t.Errorf("want: ServiceStatus=%v\ngot:  ServiceStatus=%v",
+					controller.ServiceStatus, &tc.serviceStatus)
 			}
 			// command
 			if controller.Command != tc.command {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, controller.Command, tc.command)
+				t.Errorf("want: Command=%v\ngot:  Command=%v",
+					controller.Command, tc.command)
 			}
 			// shoutrrrNotifiers
 			if controller.Notifiers.Shoutrrr != tc.shoutrrrNotifiers {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
+				t.Errorf("want: Notifiers.Shoutrrr=%v\ngot:  Notifiers.Shoutrrr=%v",
+					controller.Notifiers.Shoutrrr, tc.shoutrrrNotifiers)
 			}
 			// parentInterval
 			if controller.ParentInterval != tc.parentInterval {
-				t.Errorf("%s:\nwant: %v\ngot:  %v",
-					name, controller.ParentInterval, tc.parentInterval)
+				t.Errorf("want: ParentInterval=%v\ngot:  ParentInterval=%v",
+					controller.ParentInterval, tc.parentInterval)
 			}
 		})
 	}

@@ -27,21 +27,21 @@ import (
 func (s *Slice) Track(ordering *[]string) {
 	for _, key := range *ordering {
 		// Skip disabled Services
-		if !(*s)[key].GetActive() {
+		if !(*s)[key].Options.GetActive() {
 			continue
 		}
-		(*s)[key].Active = nil
+		(*s)[key].Options.Active = nil
 
 		jLog.Verbose(
-			fmt.Sprintf("Tracking %s at %s every %s", *(*s)[key].ID, (*s)[key].GetServiceURL(true), (*s)[key].GetInterval()),
-			utils.LogFrom{Primary: *(*s)[key].ID},
+			fmt.Sprintf("Tracking %s at %s every %s", (*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
+			utils.LogFrom{Primary: (*s)[key].ID},
 			true)
 
 		// Track this Service in a infinite loop goroutine.
 		go (*s)[key].Track()
 
 		// Space out the tracking of each Service.
-		time.Sleep(time.Duration(2) * time.Second)
+		time.Sleep(time.Second / 2)
 	}
 }
 
@@ -52,12 +52,13 @@ func (s *Service) Track() {
 	serviceInfo := s.GetServiceInfo()
 
 	// Track the deployed version in a infinite loop goroutine.
-	go s.DeployedVersionLookup.Track(s)
+	go s.DeployedVersionLookup.Track()
 
 	// Track forever.
+	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first
 	for {
 		// If new release found by this query.
-		newVersion, err := s.Query()
+		newVersion, err := s.LatestVersion.Query()
 
 		// If a new version was found and we're not already on it
 		if newVersion {
@@ -75,22 +76,20 @@ func (s *Service) Track() {
 		// If it failed
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "regex ") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 2)
-			} else if strings.HasPrefix(err.Error(), "failed converting") &&
-				strings.Contains(err.Error(), " semantic version.") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 3)
-			} else if strings.HasPrefix(err.Error(), "queried version") &&
-				strings.Contains(err.Error(), " less than ") {
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 4)
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 2)
+			} else if strings.HasPrefix(err.Error(), "failed converting") && strings.Contains(err.Error(), " semantic version.") {
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 3)
+			} else if strings.HasPrefix(err.Error(), "queried version") && strings.Contains(err.Error(), " less than ") {
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 4)
 			} else {
-				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.QueryMetric, *s.ID, "FAIL")
-				metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 0)
+				metrics.IncreasePrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, s.ID, "FAIL")
+				metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 0)
 			}
 		} else {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.QueryMetric, *s.ID, "SUCCESS")
-			metrics.SetPrometheusGaugeWithID(metrics.QueryLiveness, *s.ID, 1)
+			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, s.ID, "SUCCESS")
+			metrics.SetPrometheusGaugeWithID(metrics.LatestVersionQueryLiveness, s.ID, 1)
 		}
 		// Sleep interval between checks.
-		time.Sleep(s.GetIntervalDuration())
+		time.Sleep(s.Options.GetIntervalDuration())
 	}
 }

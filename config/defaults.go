@@ -20,6 +20,9 @@ import (
 	"github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -34,22 +37,27 @@ type Defaults struct {
 // SetDefaults (last resort vars).
 func (d *Defaults) SetDefaults() {
 	// Service defaults.
-	serviceAutoApprove := false
-	d.Service.AutoApprove = &serviceAutoApprove
-	serviceAllowInvalidCerts := false
-	d.Service.AllowInvalidCerts = &serviceAllowInvalidCerts
-	serviceIgnoreMisses := true
-	d.Service.IgnoreMisses = &serviceIgnoreMisses
-	serviceInterval := "10m"
-	d.Service.Interval = &serviceInterval
-	usePreRelease := false
-	d.Service.UsePreRelease = &usePreRelease
+	serviceActive := true
 	serviceSemanticVersioning := true
-	d.Service.SemanticVersioning = &serviceSemanticVersioning
-	// Service DeployedVersionLookup defaults.
+	d.Service.Options = options.Options{
+		Active:             &serviceActive,
+		Interval:           "10m",
+		SemanticVersioning: &serviceSemanticVersioning,
+	}
+	serviceLatestVersionAllowInvalidCerts := false
+	usePreRelease := false
+	d.Service.LatestVersion = latest_version.Lookup{
+		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
+		UsePreRelease:     &usePreRelease,
+	}
 	serviceDeployedVersionLookupAllowInvalidCerts := false
-	d.Service.DeployedVersionLookup = &service.DeployedVersionLookup{}
-	d.Service.DeployedVersionLookup.AllowInvalidCerts = &serviceDeployedVersionLookupAllowInvalidCerts
+	d.Service.DeployedVersionLookup = &deployed_version.Lookup{
+		AllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts,
+	}
+	serviceAutoApprove := false
+	d.Service.Dashboard = service.DashboardOptions{
+		AutoApprove: &serviceAutoApprove,
+	}
 
 	notifyDefaultOptions := map[string]string{
 		"message":   "{{ service_id }} - {{ version }} released",
@@ -163,10 +171,8 @@ func (d *Defaults) SetDefaults() {
 	d.Notify["zulip_chat"].InitMaps()
 
 	// WebHook defaults.
-	webhookType := "github"
-	d.WebHook.Type = &webhookType
-	webhookDelay := "0s"
-	d.WebHook.Delay = &webhookDelay
+	d.WebHook.Type = "github"
+	d.WebHook.Delay = "0s"
 	webhookMaxTries := uint(3)
 	d.WebHook.MaxTries = &webhookMaxTries
 	webhookAllowInvalidCerts := false
@@ -182,19 +188,9 @@ func (d *Defaults) CheckValues() (errs error) {
 	prefix := "  "
 
 	// Service
-	serviceErrs := false
 	if err := d.Service.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%sservice:\\%w",
 			utils.ErrorToString(errs), prefix, err)
-		serviceErrs = true
-	}
-	if err := d.Service.DeployedVersionLookup.CheckValues(prefix); err != nil {
-		customPrefix := ""
-		if !serviceErrs {
-			customPrefix = fmt.Sprintf("%s%sservice:\\", utils.ErrorToString(errs), prefix)
-		}
-		errs = fmt.Errorf("%s%s%s  deployed_version:\\%w",
-			utils.ErrorToString(errs), customPrefix, prefix, err)
 	}
 
 	// Notify
@@ -209,8 +205,8 @@ func (d *Defaults) CheckValues() (errs error) {
 
 	// WebHook
 	if err := d.WebHook.CheckValues(prefix); err != nil {
-		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%swebhook:\\%w",
+			utils.ErrorToString(errs), prefix, err)
 	}
 
 	return errs

@@ -17,13 +17,15 @@
 package config
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/utils"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -39,11 +41,13 @@ func testVerify() Config {
 		"test": &defaults.WebHook,
 	}
 	serviceID := "test"
-	serviceURL := "release-argus/argus"
 	service := service.Slice{
-		"test": &service.Service{
-			ID:  &serviceID,
-			URL: &serviceURL,
+		serviceID: &service.Service{
+			ID: serviceID,
+			LatestVersion: latest_version.Lookup{
+				Type: "github",
+				URL:  "release-argus/argus",
+			},
 		},
 	}
 	return Config{
@@ -69,7 +73,8 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				Defaults: Defaults{
 					Service: service.Service{
-						Interval: stringPtr("1x")}}},
+						Options: options.Options{
+							Interval: "1x"}}}},
 			errContains: `interval: "1x" <invalid>`},
 		"invalid Notify": {
 			config: Config{
@@ -83,14 +88,15 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
-						Delay: stringPtr("3x"),
+						Delay: "3x",
 					}}},
 			errContains: `delay: "3x" <invalid>`},
 		"invalid Service": {
 			config: Config{
 				Service: service.Slice{
 					"test": &service.Service{
-						Interval: stringPtr("4x"),
+						Options: options.Options{
+							Interval: "4x"},
 					}}},
 			errContains: `interval: "4x" <invalid>`},
 	}
@@ -107,11 +113,11 @@ func TestConfigCheckValues(t *testing.T) {
 					_ = recover()
 
 					w.Close()
-					out, _ := ioutil.ReadAll(r)
+					out, _ := io.ReadAll(r)
 					os.Stdout = stdout
 					output := string(out)
 					if !strings.Contains(output, tc.errContains) {
-						t.Fatalf("%s: should have panic'd with %q, not:\n%s",
+						t.Fatalf("%s should have panic'd with %q, not:\n%s",
 							name, tc.errContains, output)
 					}
 
@@ -123,16 +129,17 @@ func TestConfigCheckValues(t *testing.T) {
 
 			// THEN this call will/wont crash the program
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
 			if !strings.Contains(output, tc.errContains) {
-				t.Fatalf("%s: should have panic'd with %q. stdout:\n%s",
+				t.Fatalf("%s should have panic'd with %q. stdout:\n%s",
 					name, tc.errContains, output)
 			}
 		})
 	}
 }
+
 func TestConfigPrint(t *testing.T) {
 	// GIVEN a Config and print flags of true and false
 	jLog = utils.NewJLog("WARN", false)
@@ -142,7 +149,7 @@ func TestConfigPrint(t *testing.T) {
 		flag        bool
 		wantedLines int
 	}{
-		"flag on":  {flag: true, wantedLines: 165},
+		"flag on":  {flag: true, wantedLines: 148},
 		"flag off": {flag: false},
 	}
 
@@ -157,12 +164,12 @@ func TestConfigPrint(t *testing.T) {
 
 			// THEN config is printed onlt when the flag is true
 			w.Close()
-			out, _ := ioutil.ReadAll(r)
+			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			got := strings.Count(string(out), "\n")
 			if got != tc.wantedLines {
-				t.Errorf("Print with %s wants %d lines but got %d",
-					name, tc.wantedLines, got)
+				t.Errorf("Print with %s wants %d lines but got %d\n%s",
+					name, tc.wantedLines, got, string(out))
 			}
 		})
 	}

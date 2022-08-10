@@ -123,7 +123,7 @@ export const ServiceInfo = ({
               (service.webhook || service.command ? "" : " justify-left")
             }
           >
-            <p style={{ margin: 0 }}>
+            <div style={{ margin: 0 }}>
               <>
                 Current version:
                 {service.has_deployed_version && (
@@ -191,7 +191,7 @@ export const ServiceInfo = ({
                   </p>
                 </OverlayTrigger>
               </div>
-            </p>
+            </div>
             {(service.webhook || service.command) &&
               (!updateAvailable || updateSkipped) && (
                 <OverlayTrigger

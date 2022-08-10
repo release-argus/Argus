@@ -18,7 +18,6 @@ package db
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -56,15 +55,15 @@ func TestCheckFile(t *testing.T) {
 			if tc.createDirBefore != "" {
 				err := os.Mkdir(tc.createDirBefore, os.ModeDir|0755)
 				if err != nil {
-					t.Fatalf("%s:\n%s",
-						name, err)
+					t.Fatalf("%s",
+						err)
 				}
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
 				if err != nil {
-					t.Fatalf("%s:\n%s",
-						name, err)
+					t.Fatalf("%s",
+						err)
 				}
 				file.Close()
 			}
@@ -75,8 +74,8 @@ func TestCheckFile(t *testing.T) {
 					os.RemoveAll(tc.createDirBefore)
 					os.RemoveAll(tc.createFileBefore)
 					if !strings.Contains(r.(string), tc.panicContains) {
-						t.Errorf("%s:\nshould have panic'd with:\n%q, not:\n%q",
-							name, tc.panicContains, rStr)
+						t.Errorf("should have panic'd with:\n%q, not:\n%q",
+							tc.panicContains, rStr)
 					}
 				}()
 			}
@@ -86,8 +85,8 @@ func TestCheckFile(t *testing.T) {
 
 			// THEN we get here only when we should
 			if tc.panicContains != "" {
-				t.Fatalf("%s:\nExpected panic with %q",
-					name, tc.panicContains)
+				t.Fatalf("Expected panic with %q",
+					tc.panicContains)
 			}
 		})
 	}
@@ -182,14 +181,10 @@ func TestConvertServiceStatus(t *testing.T) {
 				if svc == nil {
 					t.Errorf("%q was not pushed to the table",
 						id)
-				} else if svc.Status == nil || svc.OldStatus != nil {
+				} else if svc.OldStatus != nil {
 					if svc.OldStatus != nil {
 						t.Errorf("%q OldStatus should be nil, not %v",
 							id, svc.OldStatus)
-					}
-					if svc.Status == nil {
-						t.Errorf("%q Status was not converted. Status=%v",
-							id, svc.Status)
 					}
 				} else {
 					if (*svc).Status.LatestVersion != lv {
@@ -222,6 +217,45 @@ func TestConvertServiceStatus(t *testing.T) {
 			os.Remove(*api.config.Settings.Data.DatabaseFile)
 		})
 	}
+}
+
+func TestQueryService(t *testing.T) {
+	// GIVEN a blank DB
+	initLogging()
+	cfg := testConfig()
+	api := api{config: &cfg}
+	*api.config.Settings.Data.DatabaseFile = "TestQueryService.db"
+	api.initialise()
+
+	// WHEN every Service.*.Status is pushed to the DB with convertServiceStatus
+	api.convertServiceStatus()
+
+	// THEN a Services that was copied over can be queried
+	target := "keep0"
+	got := queryRow(t, api.db, target)
+	svc := api.config.Service[target]
+	if (*svc).Status.LatestVersion != got.LatestVersion {
+		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
+			(*svc).Status.LatestVersion, got.LatestVersion)
+	}
+	if (*svc).Status.LatestVersionTimestamp != got.LatestVersionTimestamp {
+		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
+			(*svc).Status.LatestVersionTimestamp, got.LatestVersionTimestamp)
+	}
+	if (*svc).Status.DeployedVersion != got.DeployedVersion {
+		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%v",
+			(*svc).Status.DeployedVersion, got.DeployedVersion, got, (*svc).Status)
+	}
+	if (*svc).Status.DeployedVersionTimestamp != got.DeployedVersionTimestamp {
+		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
+			(*svc).Status.DeployedVersionTimestamp, got.DeployedVersionTimestamp)
+	}
+	if (*svc).Status.ApprovedVersion != got.ApprovedVersion {
+		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
+			(*svc).Status.ApprovedVersion, got.ApprovedVersion)
+	}
+	api.db.Close()
+	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
 func TestRemoveUnknownServices(t *testing.T) {
@@ -320,11 +354,11 @@ func TestRun(t *testing.T) {
 	// THEN the cell was changed in the DB
 	otherCfg := testConfig()
 	*otherCfg.Settings.Data.DatabaseFile = "TestRun-copy.db"
-	bytesRead, err := ioutil.ReadFile(*cfg.Settings.Data.DatabaseFile)
+	bytesRead, err := os.ReadFile(*cfg.Settings.Data.DatabaseFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
+	err = os.WriteFile(*otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +372,7 @@ func TestRun(t *testing.T) {
 		DeployedVersion:          "0.0.0",
 		DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
 	}
-	if got != want {
+	if got.LatestVersion != want.LatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
 			cell.Column, cell.Value, got, want)
 	}

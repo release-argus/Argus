@@ -17,109 +17,42 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestGetIPWithCloudflare(t *testing.T) {
-	// GIVEN a HTTP request is being made with the CF-CONNECTING-IP header
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	header := "CF-Connecting-IP"
-	ip := "1.1.1.1"
-	req.Header.Set(header, ip)
-
-	// WHEN getIP is called on this request
-	got := getIP(req)
-
-	// THEN the IP on the Cloudlare header will be returned
-	if got != ip {
-		t.Errorf("Expected IP on the %q header (%q) to be returned, not %q",
-			header, ip, got)
+func TestGetIP(t *testing.T) {
+	// GIVEN a request
+	tests := map[string]struct {
+		headers    map[string]string
+		remoteAddr string
+		want       string
+	}{
+		"CF-Connecting-Ip": {want: "1.1.1.1", headers: map[string]string{"CF-Connecting-IP": "1.1.1.1", "X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"X-Real-Ip":        {want: "2.2.2.2", headers: map[string]string{"X-REAL-IP": "2.2.2.2", "X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"X-Forwarded-For":  {want: "3.3.3.3", headers: map[string]string{"X-FORWARDED-FOR": "3.3.3.3"}, remoteAddr: "4.4.4.4:123"},
+		"RemoteAddr":       {want: "4.4.4.4", remoteAddr: "4.4.4.4:123"},
+		"Invalid RemoteAddr (SplitHostPort fail)": {remoteAddr: "1111", want: ""},
+		"Invalid RemoteAddr (ParseIP fail)":       {remoteAddr: "1111:123", want: ""},
 	}
-}
 
-func TestGetIPWithXRealIP(t *testing.T) {
-	// GIVEN a HTTP request is being made with the X-REAL-IP header
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	header := "X-REAL-IP"
-	ip := "1.1.1.1"
-	req.Header.Set(header, ip)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
+			for header, val := range tc.headers {
+				req.Header.Set(header, val)
+			}
+			req.RemoteAddr = tc.remoteAddr
 
-	// WHEN getIP is called on this request
-	got := getIP(req)
+			// WHEN getIP is called on this request
+			got := getIP(req)
 
-	// THEN the IP on the Cloudlare header will be returned
-	if got != ip {
-		t.Errorf("Expected IP on the %q header (%q) to be returned, not %q",
-			header, ip, got)
-	}
-}
-
-func TestGetIPWithXForwardedFor(t *testing.T) {
-	// GIVEN a HTTP request is being made with the X-FORWARDED-FOR header
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	header := "X-FORWARDED-FOR"
-	ip := "1.1.1.1"
-	req.Header.Set(header, ip)
-
-	// WHEN getIP is called on this request
-	got := getIP(req)
-
-	// THEN the IP on the Cloudlare header will be returned
-	if got != ip {
-		t.Errorf("Expected IP on the %q header (%q) to be returned, not %q",
-			header, ip, got)
-	}
-}
-
-func TestGetIPWithRemoteAddr(t *testing.T) {
-	// GIVEN a HTTP request is being made
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	ip := "1.1.1.1"
-	req.RemoteAddr = fmt.Sprintf("%s:123", ip)
-
-	// WHEN getIP is called on this request
-	got := getIP(req)
-
-	// THEN the IP on the Cloudlare header will be returned
-	if got != ip {
-		t.Errorf("Expected IP on the RemoteAddr (%q) to be returned, not %q",
-			ip, got)
-	}
-}
-
-func TestGetIPWithRemoteAddrAndNoPort(t *testing.T) {
-	// GIVEN a HTTP request is being made
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	ip := "1.1.1.1"
-	req.RemoteAddr = ip
-
-	// WHEN getIP is called on this request
-	got := getIP(req)
-
-	// THEN the IP on the Cloudlare header will be returned
-	want := ""
-	if got != want {
-		t.Errorf("Expected %q, not %q as RemoteAddr doesn't contain a port (%q)",
-			want, got, req.RemoteAddr)
-	}
-}
-
-func TestGetIPWithInvalid(t *testing.T) {
-	// GIVEN a HTTP request is being made
-	req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-	ip := "1111:123"
-	req.RemoteAddr = ip
-
-	// WHEN getIP is called on this request
-	got := getIP(req)
-
-	// THEN the IP on the Cloudlare header will be returned
-	want := ""
-	if got != want {
-		t.Errorf("Expected %q, not %q as RemoteAddr isn't a valid IP (%q)",
-			want, got, req.RemoteAddr)
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %v",
+					tc.want, got)
+			}
+		})
 	}
 }

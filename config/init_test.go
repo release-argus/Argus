@@ -28,23 +28,25 @@ func TestLoad(t *testing.T) {
 
 	// WHEN the vars loaded are inspected
 	tests := map[string]struct {
-		got  *string
+		got  string
 		want string
 	}{
 		"Defaults.Service.Interval": {
-			got: config.Defaults.Service.Interval, want: "123s"},
+			got: config.Defaults.Service.Options.Interval, want: "123s"},
 		"Notify.discord.username": {
-			got: stringPtr(config.Defaults.Notify["slack"].GetSelfParam("title")), want: "defaultTitle"},
+			got: config.Defaults.Notify["slack"].GetSelfParam("title"), want: "defaultTitle"},
 		"WebHook.Delay": {
 			got: config.Defaults.WebHook.Delay, want: "2s"},
 	}
 
 	// THEN they match the config file
 	for name, tc := range tests {
-		if utils.EvalNilPtr(tc.got, "") != tc.want {
-			t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
-				name, tc.want, utils.EvalNilPtr(tc.got, ""))
-		}
+		t.Run(name, func(t *testing.T) {
+			if tc.got != tc.want {
+				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
+					name, tc.want, tc.got)
+			}
+		})
 	}
 }
 
@@ -61,9 +63,9 @@ func TestLoadDefaults(t *testing.T) {
 
 	// THEN the defaults are assigned correctly to Services
 	want := false
-	got := config.Service["WantDefaults"].GetSemanticVersioning()
+	got := config.Service["WantDefaults"].Options.GetSemanticVersioning()
 	if got != want {
-		t.Errorf(`config.Service['WantDefaults'].SemanticVersioning = %v. GetSemanticVersion gave %t, want %t`,
-			got, *config.Service["WantDefaults"].SemanticVersioning, want)
+		t.Errorf(`config.Service['WantDefaults'].Options.SemanticVersioning = %v. GetSemanticVersion gave %t, want %t`,
+			got, *config.Service["WantDefaults"].Options.SemanticVersioning, want)
 	}
 }

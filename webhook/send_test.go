@@ -17,7 +17,9 @@
 package webhook
 
 import (
-	"fmt"
+	"io"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -26,349 +28,271 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-func TestTryWithInvalidURL(t *testing.T) {
-	// GIVEN a WebHook with an invalid URL
-	jLog = utils.NewJLog("WARN", false)
-	whType := "github"
-	whURL := "invalid://	test"
-	whSecret := "secret"
-	webhook := WebHook{
-		Type:         &whType,
-		URL:          &whURL,
-		Secret:       &whSecret,
-		Main:         &WebHook{},
-		Defaults:     &WebHook{},
-		HardDefaults: &WebHook{},
+func TestTry(t *testing.T) {
+	// GIVEN a WebHook
+	testLogging("WARN")
+	tests := map[string]struct {
+		url               *string
+		allowInvalidCerts bool
+		selfSignedCert    bool
+		wouldFail         bool
+		errRegex          string
+		desiredStatusCode int
+	}{
+		"invalid url": {url: stringPtr("invalid://	test"), errRegex: "failed to get .?http.request"},
+		"fail due to invalid secret":              {wouldFail: true, errRegex: "WebHook gave [0-9]+, not "},
+		"fail due to invalid cert":                {selfSignedCert: true, errRegex: " x509:"},
+		"pass with invalid certs allowed":         {selfSignedCert: true, errRegex: "^$", allowInvalidCerts: true},
+		"pass with valid certs":                   {errRegex: "^$", allowInvalidCerts: true},
+		"fail by not getting desired status code": {desiredStatusCode: 1, errRegex: "WebHook gave [0-9]+, not ", allowInvalidCerts: true},
+		"pass by getting desired status code":     {wouldFail: true, desiredStatusCode: 500, errRegex: "^$", allowInvalidCerts: true},
 	}
 
-	// WHEN try is called on this WebHook
-	err := webhook.try(utils.LogFrom{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				webhook := testWebHook(false, true, tc.selfSignedCert)
+				if tc.wouldFail {
+					webhook = testWebHook(true, true, tc.selfSignedCert)
+				}
+				if tc.url != nil {
+					webhook.URL = *tc.url
+				}
+				webhook.AllowInvalidCerts = &tc.allowInvalidCerts
+				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
-	// THEN err is not nil
-	if err == nil {
-		t.Errorf("try should have failed with invalid %q URL. err is %s",
-			whURL, err.Error())
-	}
-}
+				// WHEN try is called with it
+				err := webhook.try(utils.LogFrom{})
 
-func TestTryWithUnknownHostAndAllowInvalidCerts(t *testing.T) {
-	// GIVEN a WebHook which allows invalid certs
-	jLog = utils.NewJLog("WARN", false)
-	whType := "github"
-	whURL := "https://test"
-	whSecret := "secret"
-	whAllowInvalidCerts := true
-	webhook := WebHook{
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		Main:              &WebHook{},
-		Defaults:          &WebHook{},
-		HardDefaults:      &WebHook{},
-	}
-
-	// WHEN try is called on this WebHook
-	err := webhook.try(utils.LogFrom{})
-
-	// THEN err is about undefined host
-	startsWith := "Post \"https://test\": dial tcp: lookup test"
-	e := utils.ErrorToString(err)
-	if !strings.HasPrefix(e, startsWith) {
-		t.Errorf("try with %v should have errored starting %q. Got %q",
-			webhook, startsWith, e)
-	}
-}
-
-func TestTryWithUnknownHostAndRejectInvalidCerts(t *testing.T) {
-	// GIVEN a WebHook which doesn't allow invalid certs
-	jLog = utils.NewJLog("WARN", false)
-	whType := "github"
-	whURL := "https://test"
-	whSecret := "secret"
-	whAllowInvalidCerts := false
-	webhook := WebHook{
-		Type:              &whType,
-		URL:               &whURL,
-		Secret:            &whSecret,
-		AllowInvalidCerts: &whAllowInvalidCerts,
-		Main:              &WebHook{},
-		Defaults:          &WebHook{},
-		HardDefaults:      &WebHook{},
-	}
-
-	// WHEN try is called on this WebHook
-	err := webhook.try(utils.LogFrom{})
-
-	// THEN err is about undefined host
-	startsWith := "Post \"https://test\": dial tcp: lookup test"
-	e := utils.ErrorToString(err)
-	if !strings.HasPrefix(e, startsWith) {
-		t.Errorf("try with %v should have errored starting %q. Got %q",
-			webhook, startsWith, e)
+				// THEN any err is expected
+				e := utils.ErrorToString(err)
+				re := regexp.MustCompile(tc.errRegex)
+				match := re.MatchString(e)
+				if !match {
+					if strings.Contains(e, "context deadline exceeded") {
+						contextDeadlineExceeded = true
+						if try != 3 {
+							time.Sleep(time.Second)
+							continue
+						}
+					}
+					t.Errorf("want match for %q\nnot: %q",
+						tc.errRegex, e)
+				}
+			}
+		})
 	}
 }
 
-func TestTryWithKnownHostAndAllowAnyStatusCode(t *testing.T) {
-	// GIVEN a WebHook which accepts 2XX response status code
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookSuccessful()
-	*webhook.DesiredStatusCode = 0
+func TestWebHookSend(t *testing.T) {
+	// GIVEN a WebHook
+	testLogging("INFO")
+	tests := map[string]struct {
+		wouldFail   bool
+		useDelay    bool
+		delay       string
+		stdoutRegex string
+		tries       int
+		silentFails bool
+		notifiers   shoutrrr.Slice
+	}{
+		"successful webhook":                           {stdoutRegex: "WebHook received"},
+		"does use delay webhook":                       {stdoutRegex: "WebHook received"},
+		"failing webhook":                              {wouldFail: true, stdoutRegex: `failed \d times to send`},
+		"tries multiple times":                         {wouldFail: true, tries: 2, stdoutRegex: `(WebHook gave 500.*){2}WebHook received`},
+		"does try notifiers on fail":                   {wouldFail: true, stdoutRegex: `WebHook gave 500.*invalid gotify token`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
+		"doesn't try notifiers on fail if silentFails": {wouldFail: true, silentFails: true, stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
+	}
 
-	// WHEN try is called on this WebHook
-	err := webhook.try(utils.LogFrom{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				stdout := os.Stdout
+				r, w, _ := os.Pipe()
+				os.Stdout = w
+				webhook := testWebHook(false, true, false)
+				if tc.wouldFail {
+					webhook = testWebHook(true, true, false)
+				}
+				webhook.Delay = tc.delay
+				maxTries := uint(tc.tries + 1)
+				webhook.MaxTries = &maxTries
+				webhook.SilentFails = &tc.silentFails
+				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
+				if tc.tries > 0 {
+					go func() {
+						time.Sleep(time.Duration(6*(tc.tries-1))*time.Second + time.Second)
+						webhook.Secret = "argus"
+					}()
+				}
 
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q",
-			webhook, err.Error())
+				// WHEN try is called with it
+				webhook.Send(utils.ServiceInfo{}, tc.useDelay)
+
+				// THEN the logs are expected
+				w.Close()
+				out, _ := io.ReadAll(r)
+				os.Stdout = stdout
+				output := string(out)
+				re := regexp.MustCompile(tc.stdoutRegex)
+				output = strings.ReplaceAll(output, "\n", "-n")
+				match := re.MatchString(output)
+				if !match {
+					if strings.Contains(output, "context deadline exceeded") {
+						contextDeadlineExceeded = true
+						if try != 3 {
+							time.Sleep(time.Second)
+							continue
+						}
+					}
+					t.Errorf("match on %q not found in\n%q",
+						tc.stdoutRegex, output)
+				}
+			}
+		})
 	}
 }
 
-func TestTryWithKnownHostAndRejectStatusCode(t *testing.T) {
-	// GIVEN a WebHook which returns outside the allowed status code range
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookSuccessful()
-	*webhook.DesiredStatusCode = 50
-
-	attempts := 3
-	for attempts != 0 {
-		// WHEN try is called on this WebHook
-		err := webhook.try(utils.LogFrom{})
-
-		// THEN err is about the status code not matching
-		e := utils.ErrorToString(err)
-		if strings.Contains(e, "context deadline exceeded") {
-			attempts--
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		startsWith := fmt.Sprintf("WebHook didn't %d:", *webhook.DesiredStatusCode)
-		if !strings.HasPrefix(e, startsWith) {
-			t.Errorf("try with %v should have started with %q, but got %q",
-				webhook, startsWith, e)
-		}
-		return
-	}
-}
-
-func TestWebHookSendFailWithSilentFails(t *testing.T) {
-	// GIVEN a WebHook which will err on Send
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookFailing()
-	*webhook.SilentFails = true
-
-	attempts := 3
-	for attempts != 0 {
-		// WHEN Send is called on this WebHook
-		err := webhook.Send(utils.ServiceInfo{}, false)
-
-		// THEN err is about the failure
-		e := utils.ErrorToString(err)
-		if strings.Contains(e, "context deadline exceeded") {
-			attempts--
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		contains := "WebHook didn't 2XX"
-		if !strings.Contains(e, contains) {
-			t.Errorf("Send with %v should have errored %q. Got %q",
-				webhook, contains, e)
-		}
-		return
-	}
-}
-
-func TestWebHookSendFailDoesRetry(t *testing.T) {
-	// GIVEN a WebHook which will err on Send
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookFailing()
-	*webhook.MaxTries = uint(2)
-
-	// WHEN Send is called on this WebHook
-	start := time.Now().UTC()
-	err := webhook.Send(utils.ServiceInfo{}, false)
-
-	// THEN err is about the failure
-	errCount := strings.Count(utils.ErrorToString(err), "WebHook didn't 2XX")
-	since := time.Since(start)
-	if since < 10*time.Second || errCount != int(*webhook.MaxTries) {
-		t.Errorf("LastQueried was %v ago, not recent enough!",
-			since)
-	}
-}
-
-func TestWebHookSendFailWithoutSilentFails(t *testing.T) {
-	// GIVEN a WebHook which will err on Send
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookFailing()
-	*webhook.SilentFails = false
-
-	// WHEN Send is called on this WebHook
-	err := webhook.Send(utils.ServiceInfo{}, false)
-
-	// THEN err is about the failure
-	contains := "WebHook didn't 2XX"
-	e := utils.ErrorToString(err)
-	if !strings.Contains(e, contains) {
-		t.Errorf("Send with %v should have errored %q. Got %q",
-			webhook, contains, e)
-	}
-}
-
-func TestWebHookSendSuccess(t *testing.T) {
-	// GIVEN a WebHook which accepts 2XX response status code
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookSuccessful()
-	*webhook.DesiredStatusCode = 0
-
-	// WHEN try is called on this WebHook
-	err := webhook.Send(utils.ServiceInfo{}, false)
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q",
-			webhook, err.Error())
-	}
-}
-
-func TestWebHookSendSuccessWithDelay(t *testing.T) {
-	// GIVEN a WebHook with 5s Delay
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookSuccessful()
-	*webhook.Delay = "5s"
-
-	// WHEN Send is called on this WebHook with useDelay
-	start := time.Now().UTC()
-	webhook.Send(utils.ServiceInfo{}, true)
-
-	// THEN it took >= 5s to return
-	elapsed := time.Since(start)
-	if elapsed < 5*time.Second {
-		t.Errorf("Send with useDelay should have taken atleast %v. Only took %s",
-			webhook.Delay, elapsed)
-	}
-}
-
-func TestSliceSendWithNilSlice(t *testing.T) {
-	// GIVEN a nil Slice
-	var slice *Slice
-
-	// WHEN Send is called on this Slice
-	start := time.Now().UTC()
-	slice.Send(utils.ServiceInfo{}, false)
-
-	// THEN it returns almost instantly
-	elapsed := time.Since(start)
-	if elapsed > time.Second {
-		t.Errorf("Send took more than 1s (%fs) with a %v Slice",
-			elapsed.Seconds(), slice)
-	}
-}
-
-func TestSliceSendFail(t *testing.T) {
-	// GIVEN a Slice with a WebHook which will err on Send
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookFailing()
-	slice := Slice{
-		"test": &webhook,
+func TestSliceSend(t *testing.T) {
+	// GIVEN a Slice
+	testLogging("INFO")
+	tests := map[string]struct {
+		slice          *Slice
+		stdoutRegex    string
+		stdoutRegexAlt string
+		notifiers      shoutrrr.Slice
+		useDelay       bool
+		delays         map[string]string
+		repeat         int
+	}{
+		"nil slice": {slice: nil, stdoutRegex: `^$`},
+		"successful and failing webhook": {slice: &Slice{"pass": testWebHook(false, true, false), "fail": testWebHook(true, true, false)},
+			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
+		"does apply webhook delay": {slice: &Slice{"pass": testWebHook(false, true, false), "fail": testWebHook(true, true, false)},
+			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, useDelay: true,
+			delays: map[string]string{"fail": "2s", "pass": "1ms"}, repeat: 5},
 	}
 
-	// WHEN Send is called on this Slice
-	err := slice.Send(utils.ServiceInfo{}, false)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			try := 0
+			contextDeadlineExceeded := true
+			for contextDeadlineExceeded != false {
+				try++
+				contextDeadlineExceeded = false
+				tc.repeat++ // repeat to check delay usage as map order is random
+				for tc.repeat != 0 {
+					stdout := os.Stdout
+					r, w, _ := os.Pipe()
+					os.Stdout = w
+					if tc.slice != nil {
+						for id := range *tc.slice {
+							(*tc.slice)[id].ID = id
+						}
+						for id := range tc.delays {
+							(*tc.slice)[id].Delay = tc.delays[id]
+						}
+					}
 
-	// THEN err is about the failure
-	contains := "WebHook didn't 2XX"
-	e := utils.ErrorToString(err)
-	if !strings.Contains(e, contains) {
-		t.Errorf("Send with %v should have errored %q. Got %q",
-			*slice["test"], contains, e)
-	}
-}
+					// WHEN try is called with it
+					tc.slice.Send(utils.ServiceInfo{}, tc.useDelay)
 
-func TestSliceSendWithMultipleFails(t *testing.T) {
-	// GIVEN a Slice with a WebHook which will err on Send
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookFailing()
-	slice := Slice{
-		"test":  &webhook,
-		"other": &webhook,
-	}
-
-	// WHEN Send is called on this Slice
-	err := slice.Send(utils.ServiceInfo{}, false)
-
-	// THEN err is about the failure
-	contains := "WebHook didn't 2XX"
-	e := utils.ErrorToString(err)
-	if strings.Count(e, contains) != len(slice) {
-		t.Errorf("Send with %v should have errored %q %d times. Got %q",
-			*slice["test"], contains, len(slice), e)
-	}
-}
-
-func TestSliceSendSuccess(t *testing.T) {
-	// GIVEN a Slice with a WebHook which accepts 2XX response status code
-	jLog = utils.NewJLog("WARN", false)
-	webhook := testWebHookSuccessful()
-	slice := Slice{
-		"test": &webhook,
-	}
-
-	// WHEN try is called on this WebHook
-	err := slice.Send(utils.ServiceInfo{}, false)
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("try with %v shouldn't have errored %q",
-			*slice["test"], err.Error())
-	}
-}
-
-func TestNotifiersSendWithNil(t *testing.T) {
-	// GIVEN nil Notifiers
-	var notifiers *Notifiers
-
-	// WHEN Send is called with them
-	err := notifiers.Send("title", "message", &utils.ServiceInfo{})
-
-	// THEN err is nil
-	if err != nil {
-		t.Errorf("Send on %v Notifiers shouldn't have err'd. Got %s",
-			notifiers, err.Error())
+					// THEN the logs are expected
+					w.Close()
+					out, _ := io.ReadAll(r)
+					os.Stdout = stdout
+					output := string(out)
+					output = strings.ReplaceAll(output, "\n", "-n")
+					re := regexp.MustCompile(tc.stdoutRegex)
+					match := re.MatchString(output)
+					if !match {
+						if strings.Contains(output, "context deadline exceeded") {
+							contextDeadlineExceeded = true
+							if try != 3 {
+								time.Sleep(time.Second)
+								continue
+							}
+						}
+						if tc.stdoutRegexAlt != "" {
+							re = regexp.MustCompile(tc.stdoutRegexAlt)
+							match = re.MatchString(output)
+							if !match {
+								t.Errorf("match on %q not found in\n%q",
+									tc.stdoutRegexAlt, output)
+							}
+							return
+						}
+						t.Errorf("match on %q not found in\n%q",
+							tc.stdoutRegex, output)
+					}
+					tc.repeat--
+				}
+			}
+		})
 	}
 }
 
 func TestNotifiersSendWithNotifier(t *testing.T) {
-	// GIVEN nil Notifiers
-	id := "test"
-	notifiers := Notifiers{
-		Shoutrrr: &shoutrrr.Slice{
-			"test": &shoutrrr.Shoutrrr{
-				ID:   &id,
-				Type: "gotify",
-				URLFields: map[string]string{
-					"host":  "example.com",
-					"token": "Aqbq-Sk9NUzb.ct",
-				},
-				Options: map[string]string{
-					"max_tries": "1",
-					"delay":     "0s",
-				},
-			},
-		},
+	// GIVEN Notifiers
+	testLogging("INFO")
+	tests := map[string]struct {
+		shoutrrrNotifiers *shoutrrr.Slice
+		errRegex          string
+	}{
+		"nill Notifiers":      {errRegex: "^$"},
+		"successful notifier": {errRegex: "^$", shoutrrrNotifiers: &shoutrrr.Slice{"pass": testNotifier(false, false)}},
+		"failing notifier":    {errRegex: "invalid gotify token", shoutrrrNotifiers: &shoutrrr.Slice{"fail": testNotifier(true, false)}},
 	}
-	jLog = utils.NewJLog("WARN", false)
-	(*notifiers.Shoutrrr).Init(jLog, &id, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{})
-	(*notifiers.Shoutrrr)["test"].Init(&id, &shoutrrr.Shoutrrr{}, &shoutrrr.Shoutrrr{}, &shoutrrr.Shoutrrr{})
 
-	// WHEN Send is called with them
-	err := notifiers.Send("title", "message", &utils.ServiceInfo{})
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
-	// THEN err is a 404
-	e := utils.ErrorToString(err)
-	if !strings.Contains(e, "HTTP 404") {
-		t.Errorf("Send on %v Notifiers should have 404'd. Got \n%s",
-			notifiers, e)
+			// WHEN Send is called with them
+			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &utils.ServiceInfo{})
+
+			// THEN err is as expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("match on %q not found in\n%q",
+					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestCheckWebHookBody(t *testing.T) {
+	// GIVEN a response body
+	tests := map[string]struct {
+		body string
+		want bool
+	}{
+		"empty body":               {body: "", want: true},
+		"success body":             {body: "success", want: true},
+		"awx invalid secret":       {body: `{"detail":"You do not have permission to perform this action."}`, want: false},
+		"adnanh/webhook hook fail": {body: `Hook rules were not satisfied.`, want: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN checkWebHookBody is called on it
+			got := checkWebHookBody(tc.body)
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("want: %t\ngot:  %t",
+					tc.want, got)
+			}
+		})
 	}
 }
