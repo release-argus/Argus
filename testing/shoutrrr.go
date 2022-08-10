@@ -22,6 +22,7 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
+	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
 
@@ -116,10 +117,12 @@ func findShoutrrr(
 			log.Fatal(msg, logFrom, true)
 		}
 	}
+	serviceID := "TESTING"
+	slice["test"].ServiceStatus = &service_status.Status{ServiceID: &serviceID}
 	return slice
 }
 
-//  getAllShoutrrrNames will return a list of all unique shoutrrr names
+// getAllShoutrrrNames will return a list of all unique shoutrrr names
 func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	if cfg.Notify != nil {
 		for key := range cfg.Notify {

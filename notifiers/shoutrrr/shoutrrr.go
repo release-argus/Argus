@@ -323,7 +323,7 @@ func (s *Shoutrrr) Send(
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			msg = fmt.Sprintf("failed %d times to send a %s message to %s", s.GetMaxTries(), s.GetType(), s.GetURL())
+			msg = fmt.Sprintf("failed %d times to send a %s message for %s to %s", s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
 			(*s.Failed)[s.ID] = &failed

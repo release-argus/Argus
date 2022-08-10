@@ -97,8 +97,8 @@ func (w *WebHook) Send(
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			err := fmt.Errorf("failed %d times to send the WebHook (%s)",
-				w.GetMaxTries(), w.ID)
+			err := fmt.Errorf("failed %d times to send the WebHook for %s to %s",
+				w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
 			(*w.Failed)[w.ID] = &failed
