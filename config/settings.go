@@ -68,11 +68,18 @@ type DataSettings struct {
 
 // WebSettings for the binary.
 type WebSettings struct {
-	ListenHost  *string `yaml:"listen_host,omitempty"`  // Web listen host
-	ListenPort  *string `yaml:"listen_port,omitempty"`  // Web listen port
-	RoutePrefix *string `yaml:"route_prefix,omitempty"` // Web endpoint prefix
-	CertFile    *string `yaml:"cert_file,omitempty"`    // HTTPS certificate path
-	KeyFile     *string `yaml:"pkey_file,omitempty"`    // HTTPS privkey path
+	ListenHost  *string               `yaml:"listen_host,omitempty"`  // Web listen host
+	ListenPort  *string               `yaml:"listen_port,omitempty"`  // Web listen port
+	RoutePrefix *string               `yaml:"route_prefix,omitempty"` // Web endpoint prefix
+	CertFile    *string               `yaml:"cert_file,omitempty"`    // HTTPS certificate path
+	KeyFile     *string               `yaml:"pkey_file,omitempty"`    // HTTPS privkey path
+	BasicAuth   *WebSettingsBasicAuth `yaml:"basic_auth,omitempty"`   // Basic auth creds
+}
+
+// WebSettingsBasicAuth contains the basic auth credentials to use (if any)
+type WebSettingsBasicAuth struct {
+	Username string `yaml:"username,omitempty"`
+	Password string `yaml:"password,omitempty"`
 }
 
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
