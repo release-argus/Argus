@@ -103,6 +103,10 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 			SaveChannel:     c.SaveChannel,
 		}
 	}
+
+	// SaveHandler that listens for calls to save config changes.
+	go c.SaveHandler()
+
 	c.Init()
 	c.CheckValues()
 }
