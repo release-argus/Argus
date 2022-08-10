@@ -120,11 +120,11 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 				jLog.Warn(err, logFrom, true)
 				return "", err
 			}
-			switch queriedJSON[jsonKeys[k]].(type) {
+			switch v := queriedJSON[jsonKeys[k]].(type) {
 			case string, int, float32, float64:
-				version = fmt.Sprintf("%v", queriedJSON[jsonKeys[k]])
+				version = fmt.Sprint(queriedJSON[jsonKeys[k]])
 			case map[string]interface{}:
-				queriedJSON = queriedJSON[jsonKeys[k]].(map[string]interface{})
+				queriedJSON = v
 			}
 		}
 	} else {
@@ -186,7 +186,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 
 	// Basic auth
 	if l.BasicAuth != nil {
-		req.SetBasicAuth((*l.BasicAuth).Username, (*l.BasicAuth).Password)
+		req.SetBasicAuth(l.BasicAuth.Username, l.BasicAuth.Password)
 	}
 
 	client := &http.Client{Transport: customTransport}

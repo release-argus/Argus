@@ -151,7 +151,7 @@ func (c *Client) readPump() {
 				websocket.CloseGoingAway,
 				websocket.CloseAbnormalClosure,
 			) {
-				log.Printf("error: %v", err)
+				log.Printf("error: %v\n", err)
 			}
 			break
 		}
@@ -162,7 +162,7 @@ func (c *Client) readPump() {
 			true,
 		)
 
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
 		// Check it's not trying to be a server message by omitting the version key
 		var validation serverMessage
 		err = json.Unmarshal(message, &validation)

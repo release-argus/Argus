@@ -49,8 +49,8 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			lookup := testDeployedVersion()
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
-			(*lookup.Defaults).AllowInvalidCerts = tc.allowInvalidCertsDefault
-			(*lookup.HardDefaults).AllowInvalidCerts = tc.allowInvalidCertsHardDefault
+			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
+			lookup.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetAllowInvalidCerts()

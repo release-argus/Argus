@@ -167,9 +167,9 @@ func RandString(n int, alphabet string) string {
 // NormaliseNewlines all newlines in `data` to \n.
 func NormaliseNewlines(data []byte) []byte {
 	// replace CR LF \r\n (Windows) with LF \n (Unix)
-	data = bytes.Replace(data, []byte{13, 10}, []byte{10}, -1)
+	data = bytes.ReplaceAll(data, []byte{13, 10}, []byte{10})
 	// replace CF \r (Mac) with LF \n (Unix)
-	data = bytes.Replace(data, []byte{13}, []byte{10}, -1)
+	data = bytes.ReplaceAll(data, []byte{13}, []byte{10})
 
 	return data
 }

@@ -52,7 +52,7 @@ func (c *Controller) Init(
 	c.initMetrics()
 
 	// Command fail notifiers
-	(*c).Notifiers = Notifiers{
+	c.Notifiers = Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
 }

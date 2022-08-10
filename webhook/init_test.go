@@ -446,9 +446,9 @@ func TestGetRequest(t *testing.T) {
 		customHeaders map[string]string
 		wantNil       bool
 	}{
-		"valid github type":            {webhookType: "github", url: "release-argus/Argus"},
+		"valid github type": {webhookType: "github", url: "release-argus/Argus"},
 		"catch invalid github request": {webhookType: "github", url: "release-argus	/	Argus", wantNil: true},
-		"valid gitlab type":            {webhookType: "gitlab", url: "https://release-argus.io"},
+		"valid gitlab type": {webhookType: "gitlab", url: "https://release-argus.io"},
 		"catch invalid gitlab request": {webhookType: "gitlab", url: "release-argus	/	Argus", wantNil: true},
 		"sets custom headers for github": {webhookType: "github", url: "release-argus/Argus",
 			customHeaders: map[string]string{"X-Foo": "bar"}},

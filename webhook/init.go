@@ -76,17 +76,17 @@ func (w *WebHook) Init(
 	w.initMetrics()
 
 	// Give the matching main
-	(*w).Main = main
+	w.Main = main
 	if main == nil {
 		w.Main = &WebHook{}
 	}
 
 	// Give the defaults
-	(*w).Defaults = defaults
-	(*w).HardDefaults = hardDefaults
+	w.Defaults = defaults
+	w.HardDefaults = hardDefaults
 
 	// WebHook fail notifiers
-	(*w).Notifiers = &Notifiers{
+	w.Notifiers = &Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
 }
