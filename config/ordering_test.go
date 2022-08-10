@@ -96,13 +96,13 @@ func TestGetIndentationW(t *testing.T) {
 
 func TestFilterInactive(t *testing.T) {
 	// GIVEN a Config with inactive and active services
-	active := false
-	allServices := []string{"1", "2", "3"}
+	allServices := []string{"1", "2", "3", "4"}
 	config := Config{
 		Service: service.Slice{
 			"1": &service.Service{},
-			"2": &service.Service{Options: options.Options{Active: &active}},
-			"3": &service.Service{},
+			"2": &service.Service{Options: options.Options{Active: boolPtr(false)}},
+			"3": &service.Service{Active: boolPtr(false)},
+			"4": &service.Service{},
 		},
 		All:   allServices,
 		Order: &allServices,
@@ -112,8 +112,8 @@ func TestFilterInactive(t *testing.T) {
 	config.filterInactive()
 
 	// THEN the inactive Service is removed from Order
-	if len(*config.Order) != 2 || (*config.Order)[1] != "3" {
-		t.Fatalf("Service %q should have been removed from Order - %v",
-			"2", config.Order)
+	if len(*config.Order) != 2 || (*config.Order)[1] != "4" {
+		t.Fatalf("Service %q and %q should have been removed from Order - %v",
+			"2", "3", config.Order)
 	}
 }
