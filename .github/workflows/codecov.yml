@@ -38,7 +38,12 @@ jobs:
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Test
-        run: go test ./... -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags testing,unit,integration
+        run: go test -v ./... -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags testing,unit,integration
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
       - name: Publish coverage
         uses: codecov/codecov-action@v3

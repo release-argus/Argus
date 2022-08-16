@@ -85,6 +85,16 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		}
 	}
 
+	if !utils.CheckTemplate(s.GetSelfOption("message")) {
+		errsOptions = fmt.Errorf("%s%s  message: %q <invalid> (didn't pass templating)\\",
+			utils.ErrorToString(errsOptions), prefix, s.GetSelfOption("message"))
+	}
+	for key := range s.Params {
+		if !utils.CheckTemplate(s.GetSelfParam(key)) {
+			errsParams = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
+				utils.ErrorToString(errsParams), prefix, key, s.GetSelfParam("title"))
+		}
+	}
 	if errsOptions != nil {
 		errs = fmt.Errorf("%s%soptions:\\%w",
 			utils.ErrorToString(errs), prefix, errsOptions)

@@ -19,8 +19,11 @@ package command
 import (
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/utils"
 )
 
 func TestPrint(t *testing.T) {
@@ -53,6 +56,71 @@ func TestPrint(t *testing.T) {
 			if got != tc.lines {
 				t.Errorf("Print should have given %d lines, but gave %d\n%s",
 					tc.lines, got, out)
+			}
+		})
+	}
+}
+
+func TestCommandCheckValues(t *testing.T) {
+	// GIVEN a Command
+	tests := map[string]struct {
+		command  *Command
+		errRegex string
+	}{
+		"nil command":              {errRegex: `^$`, command: nil},
+		"valid command":            {errRegex: `^$`, command: &Command{"ls", "-la"}},
+		"invalid command template": {errRegex: `^.+ (.+) <invalid>`, command: &Command{"ls", "-la", "{{ version }"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called
+			err := tc.command.CheckValues()
+
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Fatalf("want match for %q\nnot: %q",
+					tc.errRegex, e)
+			}
+		})
+	}
+}
+func TestSliceCheckValues(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice    *Slice
+		errRegex []string
+	}{
+		"nil slice":          {errRegex: []string{`^$`}, slice: nil},
+		"valid slice":        {errRegex: []string{`^$`}, slice: &Slice{{"ls", "-la"}}},
+		"invalid templating": {errRegex: []string{`^command:$`, `^  item_1: .+ (.+) <invalid>`}, slice: &Slice{{"ls"}, {"ls", "-la", "{{ version }"}}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called
+			err := tc.slice.CheckValues("")
+
+			// THEN it err's when expected
+			e := utils.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
 			}
 		})
 	}

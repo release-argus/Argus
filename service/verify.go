@@ -52,6 +52,10 @@ func (s *Service) CheckValues(prefix string) (errs error) {
 		errs = fmt.Errorf("%s%w",
 			utils.ErrorToString(errs), notifyErrs)
 	}
+	if commandErrs := s.Command.CheckValues(prefix + "  "); commandErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			utils.ErrorToString(errs), commandErrs)
+	}
 	if webhookErrs := s.WebHook.CheckValues(prefix + "  "); webhookErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			utils.ErrorToString(errs), webhookErrs)

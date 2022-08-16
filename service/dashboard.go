@@ -46,3 +46,21 @@ func (d *DashboardOptions) Print(prefix string) {
 	utils.PrintlnIfNotDefault(d.IconLinkTo, fmt.Sprintf("%s  icon_link_to: %q", prefix, d.IconLinkTo))
 	utils.PrintlnIfNotDefault(d.WebURL, fmt.Sprintf("%s  web_url: %q", prefix, d.WebURL))
 }
+
+// CheckValues of the DashboardOptions.
+func (d *DashboardOptions) CheckValues(prefix string) (errs error) {
+	if d == nil {
+		return
+	}
+
+	if !utils.CheckTemplate(d.WebURL) {
+		errs = fmt.Errorf("%s  web_url: %q <invalid> (didn't pass templating)\\",
+			prefix, d.WebURL)
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%sdashboard:\\%s",
+			prefix, utils.ErrorToString(errs))
+	}
+	return
+}

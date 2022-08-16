@@ -22,10 +22,6 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
-var (
-	jLog *utils.JLog
-)
-
 // URLCommandSlice to be used to filter version from the URL Content.
 type URLCommandSlice []URLCommand
 
@@ -64,7 +60,9 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 // Init will give the filters package this log.
 func (c *URLCommandSlice) Init(log *utils.JLog) {
-	jLog = log
+	if log != nil {
+		jLog = log
+	}
 }
 
 // Print will print the URLCommand's in the URLCommandSlice.

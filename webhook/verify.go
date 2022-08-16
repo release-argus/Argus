@@ -57,13 +57,17 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 		}
 	}
 
+	if !utils.CheckTemplate(w.URL) {
+		errs = fmt.Errorf("%s%surl: %q <invalid> (didn't pass templating)\\",
+			utils.ErrorToString(errs), prefix, w.URL)
+	}
 	if w.Main != nil {
 		types := []string{"github", "gitlab"}
 		if !utils.Contains(types, w.GetType()) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
 				utils.ErrorToString(errs), prefix, w.GetType(), types)
 		}
-		if w.GetURL() == "" {
+		if utils.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL) == "" {
 			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\",
 				utils.ErrorToString(errs), prefix, w.ID)
 		}
@@ -72,6 +76,18 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 				utils.ErrorToString(errs), prefix, w.ID)
 		}
 	}
+	var headerErrs error
+	for key := range w.CustomHeaders {
+		if !utils.CheckTemplate(w.CustomHeaders[key]) {
+			headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
+				utils.ErrorToString(headerErrs), prefix, key, w.CustomHeaders[key])
+		}
+	}
+	if headerErrs != nil {
+		errs = fmt.Errorf("%s%scustom_headers:\\%s",
+			utils.ErrorToString(errs), prefix, headerErrs)
+	}
+
 	return
 }
 

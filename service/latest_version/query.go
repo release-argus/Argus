@@ -198,11 +198,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 		}
 
 		// Break if version passed the regex check
-		if err = l.Require.RegexCheckVersion(
-			version,
-			jLog,
-			logFrom,
-		); err == nil {
+		if err = l.Require.RegexCheckVersion(version, logFrom); err == nil {
 			// regexCheckContent if it's a newer version
 			if version != l.Status.LatestVersion {
 				var body interface{}
@@ -213,13 +209,18 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 				} else {
 					body = string(rawBody)
 				}
-				if err = l.Require.RegexCheckContent(
-					version,
-					body,
-					jLog,
-					logFrom,
-				); err != nil {
+				// If the Content doesn't match the provided RegEx
+				if err = l.Require.RegexCheckContent(version, body, logFrom); err != nil {
 					continue
+				}
+
+				// If the docker tag doesn't exist
+				if err = l.Require.DockerTagCheck(version); err != nil {
+					jLog.Warn(err, logFrom, true)
+					continue
+					// else if the tag does exist (and we did search for one)
+				} else if l.Require != nil && l.Require.Docker != nil {
+					jLog.Info(fmt.Sprintf(`found %s container "%s:%s"`, l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)), logFrom, true)
 				}
 				break
 

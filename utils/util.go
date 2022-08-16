@@ -17,6 +17,7 @@ package utils
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"sort"
@@ -226,4 +227,9 @@ func SortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func BasicAuth(username string, password string) string {
+	encode := fmt.Sprintf("%s:%s", username, password)
+	return base64.StdEncoding.EncodeToString([]byte(encode))
 }

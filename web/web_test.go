@@ -176,6 +176,7 @@ func TestWebSocket(t *testing.T) {
 		bodyRegex   string
 	}{
 		"no version":                   {msg: `{"key": "value"}`, stdoutRegex: "^$"},
+		"no version, unknown type":     {msg: `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`, stdoutRegex: "Unknown TYPE"},
 		"invalid JSON":                 {msg: `{"version": 1, "key": "value"`, stdoutRegex: "missing/invalid version key"},
 		"unknown page":                 {msg: `{"version": 1, "page": "foo", "type": "value"}`, stdoutRegex: "Unknown PAGE"},
 		"APPROVALS - unknown type":     {msg: `{"version": 1, "page": "APPROVALS", "type": "value"}`, stdoutRegex: "Unknown APPROVALS Type"},

@@ -17,6 +17,7 @@
 package latest_version
 
 import (
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -35,7 +36,7 @@ func TestHTTPRequest(t *testing.T) {
 		accessToken string
 		errRegex    string
 	}{
-		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
+		"invalid url":  {url: "invalid://	test", errRegex: "invalid control character in URL"},
 		"unknown url":  {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
 		"valid url":    {url: "https://release-argus.io", errRegex: "^$"},
 		"github token": {url: "release-argus/Argus", accessToken: "foo", errRegex: "^$", githubType: true},
@@ -80,6 +81,7 @@ func TestQuery(t *testing.T) {
 		wantLatestVersion     *string
 		requireRegexContent   string
 		requireRegexVersion   string
+		requireDockerCheck    *filters.DockerCheck
 		errRegex              string
 	}{
 		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
@@ -91,6 +93,8 @@ func TestQuery(t *testing.T) {
 			errRegex: "failed converting .* to a semantic version .* old version"}, "regex content mismatch": {requireRegexContent: "argus[0-9]+.exe", errRegex: "regex .* not matched on content for version"},
 		"regex content match":                         {requireRegexContent: "v{{ version }}", errRegex: "^$"},
 		"regex version mismatch":                      {requireRegexVersion: "^v[0-9]+$", errRegex: "regex not matched on version"},
+		"docker tag mismatch":                         {requireDockerCheck: &filters.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0-beta", Token: os.Getenv("GITHUB_TOKEN")}, errRegex: "manifest unknown"},
+		"docker tag match":                            {requireDockerCheck: &filters.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0", Token: os.Getenv("GITHUB_TOKEN")}, errRegex: "^$"},
 		"regex version match":                         {requireRegexVersion: "v([0-9.]+)", errRegex: "regex not matched on version"},
 		"urlCommand regex mismatch":                   {regex: stringPtr("^[0-9]+$"), errRegex: "regex .* didn't return any matches"},
 		"valid semantic version query":                {regex: stringPtr("v([0-9.]+)"), errRegex: "^$"},
@@ -129,6 +133,7 @@ func TestQuery(t *testing.T) {
 				lookup.Status.LatestVersion = tc.latestVersion
 				lookup.Require.RegexContent = tc.requireRegexContent
 				lookup.Require.RegexVersion = tc.requireRegexVersion
+				lookup.Require.Docker = tc.requireDockerCheck
 
 				// WHEN Query is called on it
 				_, err := lookup.Query()

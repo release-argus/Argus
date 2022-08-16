@@ -40,4 +40,4 @@ jobs:
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
 
       - name: Test
-        run: go test ./... -coverpkg=./... -covermode atomic --tags testing,unit,integration
+        run: go test -v ./... -coverpkg=./... -covermode atomic --tags testing,unit,integration
