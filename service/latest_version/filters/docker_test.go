@@ -18,8 +18,10 @@ package filters
 
 import (
 	"encoding/base64"
+	"io"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -155,8 +157,8 @@ func TestDockerCheckCheckToken(t *testing.T) {
 				t.Skip("ENV VAR undefined")
 			}
 
-			// WHEN CheckToken is called on it
-			err := tc.dockerCheck.CheckToken()
+			// WHEN checkToken is called on it
+			err := tc.dockerCheck.checkToken()
 
 			// THEN the err is what we expect
 			if tc.errRegex == "" {
@@ -303,6 +305,49 @@ func TestDockerCheckCheckValues(t *testing.T) {
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestPrint(t *testing.T) {
+	// GIVEN a DockerCheck
+	tests := map[string]struct {
+		dockerCheck *DockerCheck
+		lines       int
+		dontRender  string
+	}{
+		"nil DockerCheck":            {lines: 0, dockerCheck: nil},
+		"empty DockerCheck":          {lines: 1, dockerCheck: &DockerCheck{}},
+		"Type":                       {lines: 2, dockerCheck: &DockerCheck{Type: "ghcr"}},
+		"Type, Image":                {lines: 3, dockerCheck: &DockerCheck{Type: "ghcr", Image: "release-argus/Argus"}},
+		"Type, Image, Tag":           {lines: 4, dockerCheck: &DockerCheck{Type: "ghcr", Image: "release-argus/Argus", Tag: "{{ version }}"}},
+		"Type, Image, Tag, Username": {lines: 5, dockerCheck: &DockerCheck{Type: "ghcr", Image: "release-argus/Argus", Tag: "{{ version }}", Username: "Test"}},
+		"Type, Image, Tag, Username, Token": {lines: 6, dockerCheck: &DockerCheck{Type: "ghcr", Image: "release-argus/Argus", Tag: "{{ version }}", Username: "Test", Token: "SECRET_TOKEN"},
+			dontRender: "SECRET_TOKEN"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN Print is called
+			tc.dockerCheck.Print("")
+
+			// THEN it prints the expected number of lines
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = stdout
+			got := strings.Count(string(out), "\n")
+			if got != tc.lines {
+				t.Errorf("Print should have given %d lines, but gave %d\n%s",
+					tc.lines, got, string(out))
+			}
+			if tc.dontRender != "" && strings.Contains(string(out), tc.dontRender) {
+				t.Errorf("Print shouldn't have printed %q\n%s",
+					tc.dontRender, string(out))
 			}
 		})
 	}

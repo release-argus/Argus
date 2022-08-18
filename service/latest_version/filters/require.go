@@ -60,6 +60,7 @@ func (r *Require) Print(prefix string) {
 	if len(r.Command) != 0 {
 		fmt.Printf("%s  command: %s\n", prefix, r.Command.FormattedString())
 	}
+	r.Docker.Print(prefix + "  ")
 }
 
 // CheckValues of the Require options.

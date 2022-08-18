@@ -79,7 +79,8 @@ func TestRequirePrint(t *testing.T) {
 		"only regex_content": {require: &Require{RegexContent: "content"}, lines: 2},
 		"only regex_version": {require: &Require{RegexVersion: "version"}, lines: 2},
 		"only command":       {require: &Require{Command: []string{"bash", "update.sh"}}, lines: 2},
-		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version", Command: []string{"bash", "update.sh"}}, lines: 4},
+		"only docker":        {require: &Require{Docker: &DockerCheck{Type: "ghcr"}}, lines: 3},
+		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version", Command: []string{"bash", "update.sh"}, Docker: &DockerCheck{Type: "ghcr"}}, lines: 6},
 	}
 
 	for name, tc := range tests {
