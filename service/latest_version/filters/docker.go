@@ -33,7 +33,7 @@ type DockerCheck struct {
 	Tag        string    `yaml:"tag"`                // Tag to check for
 	Username   string    `yaml:"username,omitempty"` // Username to get a new token
 	Token      string    `yaml:"token,omitempty"`    // Token to get the token for the queries
-	token      string    `yaml:"token,omitempty"`    // Token to use for the queries
+	token      string    `yaml:"-"`                  // Token to use for the queries
 	validUntil time.Time `yaml:"-"`                  // Time this token is valud until
 }
 
