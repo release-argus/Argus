@@ -86,6 +86,7 @@ repos:
     # Go Test
     #
     -   id: go-test-mod
+        args: [ --tags, 'testing,unit,integration' ]
 #    -   id: go-test-pkg
 #    -   id: go-test-repo-mod
 #    -   id: go-test-repo-pkg
@@ -157,7 +158,7 @@ repos:
 #    -   id: golangci-lint-repo-mod
 #    -   id: golangci-lint-repo-pkg
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v1.3.0
+    rev: v2.0.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

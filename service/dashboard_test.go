@@ -19,8 +19,11 @@ package service
 import (
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/utils"
 )
 
 func TestGetAutoApprove(t *testing.T) {
@@ -90,6 +93,45 @@ func TestDashboardOptionsPrint(t *testing.T) {
 			if got != tc.lines {
 				t.Errorf("Print should have given %d lines, but gave %d\n%s",
 					tc.lines, got, out)
+			}
+		})
+	}
+}
+
+func TestDashboardOptionsCheckValues(t *testing.T) {
+	// GIVEN DashboardOptions
+	jLog = utils.NewJLog("WARN", false)
+	tests := map[string]struct {
+		dashboardOptions *DashboardOptions
+		errRegex         []string
+	}{
+		"nil DashboardOptions":     {errRegex: []string{"^$"}, dashboardOptions: nil},
+		"invalid web_url template": {errRegex: []string{"^-dashboard:$", "^-  web_url: .* <invalid>"}, dashboardOptions: &DashboardOptions{WebURL: "https://release-argus.io/{{ version }"}},
+		"valid web_url template":   {errRegex: []string{"^$"}, dashboardOptions: &DashboardOptions{WebURL: "https://release-argus.io"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckValues is called on it
+			err := tc.dashboardOptions.CheckValues("-")
+
+			// THEN the err is what we expect
+			e := utils.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
 			}
 		})
 	}

@@ -704,3 +704,19 @@ func TestSortedKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestBasicAuth(t *testing.T) {
+	// GIVEN a username and password
+	username := "test"
+	password := "123"
+
+	// WHEN BasicAuth is called with this
+	got := BasicAuth(username, password)
+
+	// THEN username:password is returned in base64
+	want := "dGVzdDoxMjM="
+	if want != got {
+		t.Errorf("Failed encoding\nwant: %q\ngot:  %q",
+			want, got)
+	}
+}

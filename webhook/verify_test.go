@@ -114,21 +114,25 @@ func TestSlicePrint(t *testing.T) {
 func TestWebHookCheckValues(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		delay     string
-		wantDelay string
-		noMain    bool
-		whType    string
-		url       *string
-		secret    *string
-		errRegex  string
+		delay         string
+		wantDelay     string
+		noMain        bool
+		whType        string
+		url           *string
+		secret        *string
+		customHeaders map[string]string
+		errRegex      string
 	}{
-		"valid WebHook": {errRegex: "^$"},
-		"invalid delay": {errRegex: "delay: .* <invalid>", delay: "5x"},
-		"fix int delay": {errRegex: "^$", delay: "5", wantDelay: "5s"},
-		"invalid type":  {errRegex: "type: .* <invalid>", whType: "foo"},
-		"no url":        {errRegex: "url: <required>", url: stringPtr("")},
-		"no secret":     {errRegex: "secret: <required>", secret: stringPtr("")},
-		"all errs":      {errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>", delay: "5x", whType: "foo", url: stringPtr(""), secret: stringPtr("")},
+		"valid WebHook":          {errRegex: "^$"},
+		"invalid delay":          {errRegex: "delay: .* <invalid>", delay: "5x"},
+		"fix int delay":          {errRegex: "^$", delay: "5", wantDelay: "5s"},
+		"invalid type":           {errRegex: "type: .* <invalid>", whType: "foo"},
+		"invalid url template":   {errRegex: "url: .* <invalid>", url: stringPtr("{{ version }")},
+		"no url":                 {errRegex: "url: <required>", url: stringPtr("")},
+		"no secret":              {errRegex: "secret: <required>", secret: stringPtr("")},
+		"valid custom headers":   {errRegex: "^$", customHeaders: map[string]string{"foo": "bar"}},
+		"invalid custom headers": {errRegex: `\  bar: .* <invalid>`, customHeaders: map[string]string{"foo": "bar", "bar": "{{ version }"}},
+		"all errs":               {errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>", delay: "5x", whType: "foo", url: stringPtr(""), secret: stringPtr("")},
 	}
 
 	for name, tc := range tests {
@@ -146,6 +150,7 @@ func TestWebHookCheckValues(t *testing.T) {
 			if tc.secret != nil {
 				webhook.Secret = *tc.secret
 			}
+			webhook.CustomHeaders = tc.customHeaders
 
 			// WHEN CheckValues is called
 			err := webhook.CheckValues("")

@@ -66,3 +66,28 @@ func TestTemplateString(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckTemplate(t *testing.T) {
+	// GIVEN a variety of string templates
+	tests := map[string]struct {
+		tmpl string
+		pass bool
+	}{
+		"no jinja template":            {tmpl: "testing 123", pass: true},
+		"valid jinja template":         {tmpl: "{{ version }}-foo", pass: true},
+		"invalid jinja template panic": {tmpl: "{{ version }", pass: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN CheckTemplate is called
+			got := CheckTemplate(tc.tmpl)
+
+			// THEN the string stays the same
+			if got != tc.pass {
+				t.Errorf("want: %t\ngot:  %t",
+					tc.pass, got)
+			}
+		})
+	}
+}

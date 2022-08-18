@@ -239,7 +239,7 @@ func (c *Client) writePump() {
 					)
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Type, string(message)),
+						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
@@ -310,7 +310,7 @@ func (c *Client) writePump() {
 					}
 				default:
 					c.api.Log.Error(
-						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Type, string(message)),
+						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Page, string(message)),
 						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)

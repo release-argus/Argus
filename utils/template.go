@@ -45,3 +45,13 @@ func TemplateString(template string, context ServiceInfo) string {
 	}
 	return out
 }
+
+// CheckTemplate will compile
+//
+// true == pass
+//
+// false == fail
+func CheckTemplate(template string) (pass bool) {
+	_, err := pongo2.FromString(template)
+	return err == nil
+}
