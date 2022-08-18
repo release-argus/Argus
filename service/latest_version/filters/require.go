@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"regexp"
 
+	command "github.com/release-argus/Argus/commands"
 	service_status "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/utils"
 )
@@ -31,6 +32,7 @@ type Require struct {
 	Status       *service_status.Status `yaml:"-"`                       // Service Status
 	RegexContent string                 `yaml:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
 	RegexVersion string                 `yaml:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
+	Command      command.Command        `yaml:"command,omitempty"`       // Docker image tag requirements
 	Docker       *DockerCheck           `yaml:"docker,omitempty"`        // Docker image tag requirements
 }
 
@@ -47,7 +49,7 @@ func (r *Require) Init(log *utils.JLog, status *service_status.Status) {
 	r.Status = status
 }
 
-// Print will print the Require.
+// Print the Require.
 func (r *Require) Print(prefix string) {
 	if r == nil {
 		return
@@ -55,6 +57,9 @@ func (r *Require) Print(prefix string) {
 	fmt.Printf("%srequire:\n", prefix)
 	utils.PrintlnIfNotDefault(r.RegexContent, fmt.Sprintf("%s  regex_content: %q", prefix, r.RegexContent))
 	utils.PrintlnIfNotDefault(r.RegexVersion, fmt.Sprintf("%s  regex_version: %q", prefix, r.RegexVersion))
+	if len(r.Command) != 0 {
+		fmt.Printf("%s  command: %s\n", prefix, r.Command.FormattedString())
+	}
 }
 
 // CheckValues of the Require options.
@@ -83,6 +88,14 @@ func (r *Require) CheckValues(prefix string) (errs error) {
 		if err != nil {
 			errs = fmt.Errorf("%s%s  regex_version: %q <invalid> (Invalid RegEx)\\",
 				utils.ErrorToString(errs), prefix, r.RegexVersion)
+		}
+	}
+
+	for i := range r.Command {
+		if !utils.CheckTemplate(r.Command[i]) {
+			errs = fmt.Errorf("%s%s  command: %v (%q) <invalid> (didn't pass templating)\\",
+				utils.ErrorToString(errs), prefix, r.Command, r.Command[i])
+			break
 		}
 	}
 

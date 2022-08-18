@@ -78,7 +78,7 @@ func TestURLCommandSlicePrint(t *testing.T) {
 
 func TestURLCommandSliceRun(t *testing.T) {
 	// GIVEN a URLCommandSlice
-	jLog = utils.NewJLog("WARN", false)
+	testLogging()
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice    *URLCommandSlice

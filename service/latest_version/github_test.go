@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package latest_version
 
 import (
@@ -67,7 +69,7 @@ func TestInsertionSort(t *testing.T) {
 
 func TestCheckGitHubReleasesBody(t *testing.T) {
 	// GIVEN a body
-	jLog = utils.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		body     string
 		errRegex string
@@ -100,7 +102,7 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 
 func TestFilterGitHubReleases(t *testing.T) {
 	// GIVEN a bunch of releases
-	jLog = utils.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		releases           []github_types.Release
 		semanticVersioning bool
