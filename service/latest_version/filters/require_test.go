@@ -78,7 +78,9 @@ func TestRequirePrint(t *testing.T) {
 		"nil require":        {require: nil, lines: 0},
 		"only regex_content": {require: &Require{RegexContent: "content"}, lines: 2},
 		"only regex_version": {require: &Require{RegexVersion: "version"}, lines: 2},
-		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version"}, lines: 3},
+		"only command":       {require: &Require{Command: []string{"bash", "update.sh"}}, lines: 2},
+		"only docker":        {require: &Require{Docker: &DockerCheck{Type: "ghcr"}}, lines: 3},
+		"full require":       {require: &Require{RegexContent: "content", RegexVersion: "version", Command: []string{"bash", "update.sh"}, Docker: &DockerCheck{Type: "ghcr"}}, lines: 6},
 	}
 
 	for name, tc := range tests {
@@ -110,9 +112,15 @@ func TestRequireCheckValues(t *testing.T) {
 		errRegex []string
 	}{
 		"nil":                            {require: nil, errRegex: []string{"^$"}},
+		"valid regex_content regex":      {require: &Require{RegexContent: "[0-9]"}, errRegex: []string{`^$`}},
 		"invalid regex_content regex":    {require: &Require{RegexContent: "[0-"}, errRegex: []string{`^require:$`, `^  regex_content: .* <invalid>.*RegEx`}},
+		"valid regex_content template":   {require: &Require{RegexContent: `{% if  version $}.linux-amd64{% endif %}`}, errRegex: []string{`^$`}},
 		"invalid regex_content template": {require: &Require{RegexContent: "{% if  version }.linux-amd64"}, errRegex: []string{`^require:$`, `^  regex_content: .* <invalid>.*templating`}},
+		"valid regex_version":            {require: &Require{RegexVersion: "[0-9]"}, errRegex: []string{`^$`}},
 		"invalid regex_version":          {require: &Require{RegexVersion: "[0-"}, errRegex: []string{`^require:$`, `^  regex_version: .* <invalid>`}},
+		"valid command":                  {require: &Require{Command: []string{"bash", "update.sh", "{{ version }}"}}, errRegex: []string{`^$`}},
+		"invalid command":                {require: &Require{Command: []string{"{{ version }"}}, errRegex: []string{`^require:$`, `^  command: .* <invalid>.*templating`}},
+		"valid docker":                   {require: &Require{Docker: &DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "{{ version }}"}}, errRegex: []string{`^$`}},
 		"invalid docker":                 {require: &Require{Docker: &DockerCheck{Type: "foo"}}, errRegex: []string{`^require:$`, `^  docker:$`, `^    type: .* <invalid>`}},
 		"all possible errors": {require: &Require{RegexContent: "[0-", RegexVersion: "[0-", Docker: &DockerCheck{Type: "foo"}},
 			errRegex: []string{`^require:$`, `^  regex_content: .* <invalid>`, `^  regex_version: .* <invalid>`, `^  docker:$`, `^    type: .* <invalid>`}},

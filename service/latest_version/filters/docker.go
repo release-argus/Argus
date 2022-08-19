@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/utils"
 )
 
+// DockerCheck will verify that Tag exists for Image
 type DockerCheck struct {
 	Type       string    `yaml:"type"`               // Where to check, e.g. hub (DockerHub), GHCR, Quay
 	Image      string    `yaml:"image"`              // Image to check
@@ -121,10 +122,16 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 			utils.ErrorToString(errs), prefix, d.Tag)
 	}
 
+	if err := d.checkToken(); err != nil {
+		errs = fmt.Errorf("%s%s\\",
+			utils.ErrorToString(errs), err)
+	}
+
 	return
 }
 
-func (d *DockerCheck) CheckToken() (err error) {
+// checkToken is provided
+func (d *DockerCheck) checkToken() (err error) {
 	if d == nil {
 		return
 	}
@@ -132,7 +139,6 @@ func (d *DockerCheck) CheckToken() (err error) {
 	switch d.Type {
 	case "hub":
 		_, err = d.GetToken()
-
 	case "quay":
 		if d.Token == "" {
 			return fmt.Errorf("token: <required>")
@@ -153,6 +159,7 @@ func (d *DockerCheck) GetTag(version string) string {
 	return utils.TemplateString(d.Tag, utils.ServiceInfo{LatestVersion: version})
 }
 
+// GetToken for API queries
 func (d *DockerCheck) GetToken() (string, error) {
 	if time.Now().UTC().Before(d.validUntil) {
 		return d.token, nil
@@ -183,6 +190,7 @@ func (d *DockerCheck) GetToken() (string, error) {
 	return d.token, err
 }
 
+// refreshDockerHubToken for the Image
 func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	// Get the http.Request
 	url := fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s:pull", d.Image)
@@ -218,6 +226,7 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	return err
 }
 
+// refreshGHCRToken for the image
 func (d *DockerCheck) refreshGHCRToken() (err error) {
 	url := fmt.Sprintf("https://ghcr.io/token?scope=repository:%s:pull", d.Image)
 	resp, err := http.Get(url)
@@ -238,4 +247,18 @@ func (d *DockerCheck) refreshGHCRToken() (err error) {
 	err = json.Unmarshal(body, &tokenJSON)
 	d.token = tokenJSON.Token
 	return err
+}
+
+// Print the DockerCheck.
+func (d *DockerCheck) Print(prefix string) {
+	if d == nil {
+		return
+	}
+
+	fmt.Printf("%sdocker::\n", prefix)
+	utils.PrintlnIfNotDefault(d.Type, fmt.Sprintf("%s  type: %q", prefix, d.Type))
+	utils.PrintlnIfNotDefault(d.Image, fmt.Sprintf("%s  image: %q", prefix, d.Image))
+	utils.PrintlnIfNotDefault(d.Tag, fmt.Sprintf("%s  tag: %q", prefix, d.Tag))
+	utils.PrintlnIfNotDefault(d.Username, fmt.Sprintf("%s  username: %q", prefix, d.Username))
+	utils.PrintlnIfNotDefault(d.Token, fmt.Sprintf("%s  token: %q", prefix, "<secret>"))
 }

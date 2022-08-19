@@ -16,8 +16,18 @@
 
 package filters
 
+import (
+	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/utils"
+)
+
 func stringPtr(val string) *string {
 	return &val
+}
+func testLogging() {
+	jLog = utils.NewJLog("WARN", false)
+	var commandController *command.Controller
+	commandController.Init(jLog, nil, nil, nil, nil)
 }
 
 func testURLCommandRegex() URLCommand {

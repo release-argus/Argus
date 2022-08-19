@@ -19,10 +19,12 @@ package latest_version
 import (
 	"os"
 
+	command "github.com/release-argus/Argus/commands"
 	db_types "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/utils"
 )
 
 func boolPtr(val bool) *bool {
@@ -30,6 +32,13 @@ func boolPtr(val bool) *bool {
 }
 func stringPtr(val string) *string {
 	return &val
+}
+func testLogging() {
+	jLog = utils.NewJLog("WARN", false)
+	var commandController *command.Controller
+	commandController.Init(jLog, nil, nil, nil, nil)
+	var logURLCommand *filters.URLCommandSlice
+	logURLCommand.Init(jLog)
 }
 
 func testLookup(urlType bool, allowInvalidCerts bool) Lookup {

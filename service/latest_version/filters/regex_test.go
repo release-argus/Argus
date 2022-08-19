@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:built unit
+//go:build unit
 
 package filters
 
@@ -27,7 +27,7 @@ import (
 
 func TestRequireRegexCheckVersion(t *testing.T) {
 	// GIVEN a Require
-	jLog = utils.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		require  *Require
 		errRegex string
@@ -61,7 +61,7 @@ func TestRequireRegexCheckVersion(t *testing.T) {
 
 func TestRequireRegexCheckContent(t *testing.T) {
 	// GIVEN a Require
-	jLog = utils.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		require  *Require
 		body     interface{}
