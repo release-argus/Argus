@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.10.0](https://github.com/release-argus/Argus/compare/0.9.0...0.10.0) (2022-08-21)
+
+
+### Features
+
+* **require:** command to accept/reject versions ([#144](https://github.com/release-argus/Argus/issues/144)) ([799c9fc](https://github.com/release-argus/Argus/commits/799c9fc1986af1da8ae537a2837a5735f9d94293))
+* **require:** docker tags ([#143](https://github.com/release-argus/Argus/issues/143)) ([b575030](https://github.com/release-argus/Argus/commits/b575030efc59ac62ff85d0fca753cbc1ec788a08))
+
 ## [0.9.0](https://github.com/release-argus/Argus/compare/0.8.2...0.9.0) (2022-08-10)
 
 
