@@ -82,14 +82,17 @@ func TestURLCommandSliceRun(t *testing.T) {
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice    *URLCommandSlice
+		text     string
 		want     string
 		errRegex string
 	}{
 		"nil slice":                 {slice: nil, errRegex: "^$", want: testText},
 		"regex":                     {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 1}}, errRegex: "^$", want: "def"},
 		"regex with negative index": {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: -1}}, errRegex: "^$", want: "def"},
-		"regex doesn't match": {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
-			errRegex: "regex .* didn't return any matches", want: testText},
+		"regex doesn't match (gives text that didn't match)": {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
+			errRegex: "regex .* didn't return any matches on .*" + testText, want: testText},
+		"regex doesn't match (doesn't give text that didn't match)": {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
+			errRegex: "regex .* didn't return any matches$", text: strings.Repeat("a123", 5), want: "a123a123a123a123a123"},
 		"regex index out of bounds": {slice: &URLCommandSlice{{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 2}},
 			errRegex: `regex .* returned \d elements but the index wants element number \d`, want: testText},
 		"replace":                   {slice: &URLCommandSlice{{Type: "replace", Old: stringPtr("-"), New: stringPtr(" ")}}, errRegex: "^$", want: "abc123 def456"},
@@ -107,7 +110,11 @@ func TestURLCommandSliceRun(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// WHEN run is called on it
-			text, err := tc.slice.Run(testText, utils.LogFrom{})
+			text := testText
+			if tc.text != "" {
+				text = tc.text
+			}
+			text, err := tc.slice.Run(text, utils.LogFrom{})
 
 			// THEN the expected text was returned
 			if tc.want != text {

@@ -115,7 +115,7 @@ func TestQuery(t *testing.T) {
 		"URL that doesn't resolve to JSON":    {errRegex: "failed to unmarshal", url: "https://release-argus.io", json: "something"},
 		"passing regex":                       {noSemanticVersioning: true, wantVersion: "[0-9]{4}", errRegex: "^$", url: "https://release-argus.io", regex: "([0-9]+) The Argus Developers"},
 		"passing regex with no capture group": {noSemanticVersioning: true, wantVersion: "[0-9]{4}", errRegex: "^$", url: "https://release-argus.io", regex: "[0-9]{4}"},
-		"failing regex":                       {errRegex: "regex didn't return any matches in", url: "https://release-argus.io", regex: "^bishbashbosh$"},
+		"failing regex":                       {errRegex: "regex .* didn't return any matches on", url: "https://release-argus.io", regex: "^bishbashbosh$"},
 		"want semantic versioning but get non-semantic version": {noSemanticVersioning: false, errRegex: "failed converting .* to a semantic version", url: "https://release-argus.io",
 			regex: "([0-9]+) The Argus Developers"},
 		"allow non-semantic versioning and get non-semantic version": {noSemanticVersioning: true, errRegex: "^$", url: "https://release-argus.io",

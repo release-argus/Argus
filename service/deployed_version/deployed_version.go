@@ -104,8 +104,7 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 		err := json.Unmarshal(rawBody, &queriedJSON)
 		if err != nil {
 			err := fmt.Errorf("failed to unmarshal the following from %q into json:%s",
-				l.URL,
-				string(rawBody))
+				l.URL, string(rawBody))
 			jLog.Error(err, logFrom, true)
 			return "", err
 		}
@@ -114,9 +113,7 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 		for k := range jsonKeys {
 			if queriedJSON[jsonKeys[k]] == nil {
 				err := fmt.Errorf("%q could not be found in the following JSON. Failed at %q:\n%s",
-					l.JSON,
-					jsonKeys[k],
-					string(rawBody))
+					l.JSON, jsonKeys[k], string(rawBody))
 				jLog.Warn(err, logFrom, true)
 				return "", err
 			}
@@ -138,9 +135,8 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 		index := 1
 
 		if len(texts) == 0 {
-			err := fmt.Errorf("%q regex didn't return any matches in %q",
-				l.Regex,
-				version)
+			err := fmt.Errorf("regex %q didn't return any matches on %q",
+				l.Regex, version)
 			jLog.Warn(err, logFrom, true)
 			return "", err
 		} else if len(texts) == 1 {

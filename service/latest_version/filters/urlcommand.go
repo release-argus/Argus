@@ -148,6 +148,10 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	if len(texts) == 0 {
 		err := fmt.Errorf("%s %q didn't return any matches",
 			c.Type, *c.Regex)
+		if len(text) < 20 {
+			err = fmt.Errorf("%s on %q",
+				err, text)
+		}
 		jLog.Warn(err, logFrom, true)
 
 		return text, err
