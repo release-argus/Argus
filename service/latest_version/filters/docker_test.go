@@ -64,10 +64,7 @@ func TestDockerCheckGetToken(t *testing.T) {
 		noToken        bool
 	}{
 		"no image does nothing": {dockerCheck: DockerCheck{Type: "hub"}},
-		"DockerHub invalid repo": {onlyIfEnvToken: true, errRegex: "invalid control character", dockerCheck: DockerCheck{Type: "hub", Image: "	releaseargus/argus",
-			Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"DockerHub get default token": {dockerCheck: DockerCheck{Type: "hub", Image: "releaseargus/argus"}},
-		"DockerHub invalid token": {errRegex: "(incorrect username or password|too many failed login attempts)", onlyIfEnvToken: true, dockerCheck: DockerCheck{
+		"DockerHub invalid token": {errRegex: "(incorrect username or password|too many failed login attempts|Cannot log into an organization account)", onlyIfEnvToken: true, dockerCheck: DockerCheck{
 			Type: "hub", Image: "releaseargus/argus", Username: "argus", Token: "invalid"}},
 		"DockerHub valid token": {onlyIfEnvToken: true, dockerCheck: DockerCheck{
 			Type: "hub", Image: "releaseargus/argus", Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
@@ -77,7 +74,7 @@ func TestDockerCheckGetToken(t *testing.T) {
 		"GHCR base64 access token": {onlyIfEnvToken: true, dockerCheck: DockerCheck{
 			Type: "ghcr", Image: "release-argus/argus", Token: base64.StdEncoding.EncodeToString([]byte(os.Getenv("GITHUB_TOKEN")))}},
 		"GHCR plaintext access token": {onlyIfEnvToken: true, dockerCheck: DockerCheck{
-			Type: "ghcr", Image: "release-argus/argus", Token: os.Getenv("GITHUB_TOKEN")}},
+			Type: "ghcr", Image: "release-argus/argus", Token: os.Getenv("GH_TOKEN")}},
 		"Quay get token": {dockerCheck: DockerCheck{
 			Type: "quay", Image: "argus-io/argus", Token: "foo"}},
 		"Doesn't get token if before validUntil": {onlyIfEnvToken: true, noToken: true, dockerCheck: DockerCheck{
@@ -92,8 +89,8 @@ func TestDockerCheckGetToken(t *testing.T) {
 				t.Skip("ENV VAR undefined")
 			}
 
-			// WHEN GetToken is called on it
-			token, err := tc.dockerCheck.GetToken()
+			// WHEN getToken is called on it
+			token, err := tc.dockerCheck.getToken()
 
 			// THEN the err is what we expect and a token is retrieved when expected
 			if tc.errRegex == "" {
@@ -133,11 +130,11 @@ func TestDockerCheckCheckToken(t *testing.T) {
 		errRegex       string
 	}{
 		"nil DockerCheck does nothing": {dockerCheck: nil},
-		"DockerHub invalid repo": {onlyIfEnvToken: true, errRegex: "token: .* <invalid> .*invalid control character", dockerCheck: &DockerCheck{Type: "hub", Image: "	releaseargus/argus",
-			Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"DockerHub get default token": {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus"}},
-		"DockerHub invalid token": {errRegex: "token: .* <invalid> .*(incorrect username or password|too many failed login attempts)", onlyIfEnvToken: true, dockerCheck: &DockerCheck{
-			Type: "hub", Image: "releaseargus/argus", Username: "argus", Token: "invalid"}},
+		"DockerHub get default token":  {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus"}},
+		"DockerHub no token for username": {errRegex: "token: <required>", dockerCheck: &DockerCheck{
+			Type: "hub", Image: "releaseargus/argus", Username: "xxxx"}},
+		"DockerHub no username for token": {errRegex: "username: <required>", dockerCheck: &DockerCheck{
+			Type: "hub", Image: "releaseargus/argus", Token: "xxxx"}},
 		"DockerHub valid token": {onlyIfEnvToken: true, dockerCheck: &DockerCheck{
 			Type: "hub", Image: "releaseargus/argus", Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
 		"GHCR get default token": {dockerCheck: &DockerCheck{Type: "ghcr", Image: "release-argus/argus"}},
@@ -147,8 +144,6 @@ func TestDockerCheckCheckToken(t *testing.T) {
 			Type: "ghcr", Image: "release-argus/argus", Token: os.Getenv("GITHUB_TOKEN")}},
 		"Quay have token": {dockerCheck: &DockerCheck{
 			Type: "quay", Image: "argus-io/argus", Token: "foo"}},
-		"Quay no token": {errRegex: "token: <required>", dockerCheck: &DockerCheck{
-			Type: "quay", Image: "argus-io/argus", Token: ""}},
 	}
 
 	for name, tc := range tests {
@@ -183,11 +178,9 @@ func TestRequireDockerTagCheck(t *testing.T) {
 		onlyIfEnvToken bool
 		errRegex       string
 	}{
-		"nil DockerCheck does nothing": {dockerCheck: nil},
-		"DockerHub valid token, invalid repo": {onlyIfEnvToken: true, errRegex: "invalid control character", dockerCheck: &DockerCheck{Type: "hub", Image: "	releaseargus/argus",
-			Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"DockerHub with default token, valid tag": {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus", Tag: "{{ version }}"}},
-		"DockerHub with default token, invalid tag": {errRegex: "tag .+ not found",
+		"nil DockerCheck does nothing":       {dockerCheck: nil},
+		"DockerHub with no token, valid tag": {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus", Tag: "{{ version }}"}},
+		"DockerHub with no token, invalid tag": {errRegex: "tag .+ not found",
 			dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus", Tag: "0.1.9"}},
 		"DockerHub valid token, valid tag": {onlyIfEnvToken: true, dockerCheck: &DockerCheck{
 			Type: "hub", Image: "releaseargus/argus", Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN"), Tag: "{{ version }}"}},
@@ -199,6 +192,8 @@ func TestRequireDockerTagCheck(t *testing.T) {
 			Type: "ghcr", Image: "release-argus/argus", Token: base64.StdEncoding.EncodeToString([]byte(os.Getenv("GITHUB_TOKEN"))), Tag: "{{ version }}"}},
 		"GHCR plaintext access token, valid tag": {onlyIfEnvToken: true, dockerCheck: &DockerCheck{
 			Type: "ghcr", Image: "release-argus/argus", Token: os.Getenv("GITHUB_TOKEN"), Tag: "{{ version }}"}},
+		"Quay with no token, valid tag": {dockerCheck: &DockerCheck{
+			Type: "quay", Image: "argus-io/argus", Token: "", Tag: "{{ version }}"}},
 		"Quay with valid token, valid tag": {onlyIfEnvToken: true, dockerCheck: &DockerCheck{
 			Type: "quay", Image: "argus-io/argus", Token: os.Getenv("QUAY_TOKEN"), Tag: "{{ version }}"}},
 		"Quay with valid token, invalid tag": {errRegex: "tag not found", onlyIfEnvToken: true, dockerCheck: &DockerCheck{
@@ -238,13 +233,11 @@ func TestDockerCheckRefreshDockerHubToken(t *testing.T) {
 		onlyIfEnvToken bool
 		errRegex       string
 	}{
-		"DockerHub valid token": {onlyIfEnvToken: true, errRegex: "^$", dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus",
+		"valid token": {onlyIfEnvToken: true, errRegex: "^$", dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus",
 			Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"DockerHub valid token, invalid repo": {onlyIfEnvToken: true, errRegex: "invalid control character", dockerCheck: &DockerCheck{Type: "hub", Image: "	releaseargus/argus",
-			Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"DockerHub invalid token": {onlyIfEnvToken: true, errRegex: "(incorrect username or password|too many failed login attempts)", dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus",
+		"invalid token": {onlyIfEnvToken: true, errRegex: "(incorrect username or password|too many failed login attempts|Cannot log into an organization account)", dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus",
 			Username: "argus", Token: "dkcr_pat_invalid"}},
-		"DockerHub with default token": {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus"}},
+		"no token": {dockerCheck: &DockerCheck{Type: "hub", Image: "releaseargus/argus"}},
 	}
 
 	for name, tc := range tests {
@@ -276,6 +269,7 @@ func TestDockerCheckCheckValues(t *testing.T) {
 	testLogging()
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
+		wantImage   string
 		errRegex    string
 	}{
 		"nil DockerCheck": {errRegex: "^$", dockerCheck: nil},
@@ -285,6 +279,10 @@ func TestDockerCheckCheckValues(t *testing.T) {
 			dockerCheck: &DockerCheck{Type: "foo", Tag: "1.2.3"}},
 		"invalid Type and no Image or Tag": {errRegex: "^-type: .*<invalid>.*-image: .*<required>.*tag: .*<required>",
 			dockerCheck: &DockerCheck{Type: "foo"}},
+		"official docker hub image": {errRegex: "^$",
+			dockerCheck: &DockerCheck{Type: "hub", Image: "release-argus/argus", Tag: "1.2.3"}},
+		"docker hub type with username but no password": {errRegex: "^-token: <required>", wantImage: "library/ubuntu",
+			dockerCheck: &DockerCheck{Type: "hub", Image: "ubuntu", Tag: "1.2.3", Username: "test"}},
 		"invalid Image": {errRegex: "image: .* <invalid>",
 			dockerCheck: &DockerCheck{Type: "hub", Image: "	release-argus/argus", Tag: "1.2.3"}},
 		"invalid Tag templating": {errRegex: "tag: .* <invalid>",
@@ -305,6 +303,10 @@ func TestDockerCheckCheckValues(t *testing.T) {
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+			if tc.wantImage != "" && tc.wantImage != tc.dockerCheck.Image {
+				t.Fatalf("expected image to be %q, not: %q",
+					tc.wantImage, tc.dockerCheck.Image)
 			}
 		})
 	}
