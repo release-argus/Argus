@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.1](https://github.com/release-argus/Argus/compare/0.10.0...0.10.1) (2022-08-24)
+
+
+### Bug Fixes
+
+* **require:** use auth for hub/quay Docker lookups ([#147](https://github.com/release-argus/Argus/issues/147)) ([d032dfb](https://github.com/release-argus/Argus/commits/d032dfba72fb9ef1bc5f34861a775c8c95b0efd3))
+
 ## [0.10.0](https://github.com/release-argus/Argus/compare/0.9.0...0.10.0) (2022-08-21)
 
 
