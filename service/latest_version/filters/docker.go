@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	net_url "net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ func (r *Require) DockerTagCheck(
 	var url string
 	tag := r.Docker.GetTag(version)
 	var req *http.Request
-	token, err := r.Docker.GetToken()
+	token, err := r.Docker.getToken()
 	if err != nil {
 		return fmt.Errorf("%s:%s - %s",
 			r.Docker.Image, tag, err)
@@ -58,6 +59,9 @@ func (r *Require) DockerTagCheck(
 		url = fmt.Sprintf("https://registry.hub.docker.com/v2/repositories/%s/tags/%s",
 			r.Docker.Image, tag)
 		req, _ = http.NewRequest(http.MethodGet, url, nil)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 	case "ghcr":
 		url = fmt.Sprintf("https://ghcr.io/v2/%s/manifests/%s",
 			r.Docker.Image, tag)
@@ -67,6 +71,9 @@ func (r *Require) DockerTagCheck(
 		url = fmt.Sprintf("https://quay.io/api/v1/repository/%s/tag/?onlyActiveTags=true&specificTag=%s",
 			r.Docker.Image, tag)
 		req, _ = http.NewRequest(http.MethodGet, url, nil)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 	}
 	// Do the request
 	client := &http.Client{}
@@ -108,9 +115,13 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 			utils.ErrorToString(errs), prefix)
 	} else {
 		regex := regexp.MustCompile(`^[\w\-\/]+$`)
+		// invalid image
 		if !regex.MatchString(d.Image) {
 			errs = fmt.Errorf("%s%simage: %q <invalid> (non-ASCII)\\",
 				utils.ErrorToString(errs), prefix, d.Image)
+			// e.g. prometheus = library/prometheus on the docker hub api
+		} else if d.Type == "hub" && strings.Count(d.Image, "/") == 0 {
+			d.Image = fmt.Sprintf("library/%s", d.Image)
 		}
 	}
 
@@ -123,8 +134,8 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 	}
 
 	if err := d.checkToken(); err != nil {
-		errs = fmt.Errorf("%s%s\\",
-			utils.ErrorToString(errs), err)
+		errs = fmt.Errorf("%s%s%s\\",
+			utils.ErrorToString(errs), prefix, err)
 	}
 
 	return
@@ -138,17 +149,15 @@ func (d *DockerCheck) checkToken() (err error) {
 
 	switch d.Type {
 	case "hub":
-		_, err = d.GetToken()
-	case "quay":
-		if d.Token == "" {
-			return fmt.Errorf("token: <required>")
+		// require token if username is defined or vice-versa
+		if d.Username != "" && d.Token == "" {
+			err = fmt.Errorf("token: <required> (token for %s)",
+				d.Username)
+		} else if d.Username == "" && d.Token != "" {
+			err = fmt.Errorf("username: <required> (token is for who?)")
 		}
+	case "quay":
 	case "ghcr":
-	}
-
-	if err != nil {
-		err = fmt.Errorf("token: %q <invalid> (%s)",
-			d.Token, err)
 	}
 
 	return
@@ -159,30 +168,32 @@ func (d *DockerCheck) GetTag(version string) string {
 	return utils.TemplateString(d.Tag, utils.ServiceInfo{LatestVersion: version})
 }
 
-// GetToken for API queries
-func (d *DockerCheck) GetToken() (string, error) {
+// getToken for API queries
+func (d *DockerCheck) getToken() (string, error) {
 	if time.Now().UTC().Before(d.validUntil) {
 		return d.token, nil
 	}
 	var err error
 	switch d.Type {
 	case "hub":
+		if d.Token == "" {
+			d.validUntil = time.Now().AddDate(1, 0, 0)
+		}
 		if err = d.refreshDockerHubToken(); err != nil {
 			return "", err
 		}
 	case "ghcr":
 		if d.Token != "" {
+			d.token = d.Token
 			if strings.HasPrefix(d.Token, "ghp_") {
 				d.token = base64.StdEncoding.EncodeToString([]byte(d.Token))
 			}
 			d.validUntil = time.Now().AddDate(1, 0, 0)
-		}
-		// Get a NOOP token for public images by default
-		if err = d.refreshGHCRToken(); err != nil {
+			// Get a NOOP token for public images
+		} else if err = d.refreshGHCRToken(); err != nil {
 			return "", err
 		}
 	case "quay":
-		// create an org -> application
 		d.token = d.Token
 		d.validUntil = time.Now().AddDate(1, 0, 0)
 	}
@@ -192,15 +203,19 @@ func (d *DockerCheck) GetToken() (string, error) {
 
 // refreshDockerHubToken for the Image
 func (d *DockerCheck) refreshDockerHubToken() (err error) {
+	if d.Token == "" {
+		return nil
+	}
 	// Get the http.Request
-	url := fmt.Sprintf("https://auth.docker.io/token?service=registry.docker.io&scope=repository:%s:pull", d.Image)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	url := "https://registry.hub.docker.com/v2/users/login"
+	reqBody := net_url.Values{}
+	reqBody.Set("username", d.Username)
+	reqBody.Set("password", d.Token)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody.Encode()))
 	if err != nil {
 		return err
 	}
-	if d.Username != "" {
-		req.Header.Set("Authorization", "Basic "+utils.BasicAuth(d.Username, d.Token))
-	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	// Do the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -214,15 +229,13 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf(string(body))
 	}
-	type quayJSON struct {
-		Token     string    `json:"token"`
-		ExpiresIn int       `json:"expires_in"`
-		IssuedAt  time.Time `json:"issued_at"`
+	type hubJSON struct {
+		Token string `json:"token"`
 	}
-	var tokenJSON quayJSON
+	var tokenJSON hubJSON
 	err = json.Unmarshal(body, &tokenJSON)
 	d.token = tokenJSON.Token
-	d.validUntil = tokenJSON.IssuedAt.Add(time.Duration(tokenJSON.ExpiresIn) * time.Second)
+	d.validUntil = time.Now().UTC().Add(5 * time.Minute)
 	return err
 }
 
@@ -246,6 +259,7 @@ func (d *DockerCheck) refreshGHCRToken() (err error) {
 	var tokenJSON ghcrJSON
 	err = json.Unmarshal(body, &tokenJSON)
 	d.token = tokenJSON.Token
+	d.validUntil = time.Now().UTC().Add(5 * time.Minute)
 	return err
 }
 

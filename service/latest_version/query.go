@@ -224,6 +224,9 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 
 				// If the docker tag doesn't exist
 				if err = l.Require.DockerTagCheck(version); err != nil {
+					if strings.HasSuffix(err.Error(), "\n") {
+						err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
+					}
 					jLog.Warn(err, logFrom, true)
 					continue
 					// else if the tag does exist (and we did search for one)
