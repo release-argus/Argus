@@ -199,6 +199,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	}
 
 	// Read the response body.
+	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
 	return
