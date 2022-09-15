@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.3](https://github.com/release-argus/Argus/compare/0.10.2...0.10.3) (2022-09-15)
+
+
+### Bug Fixes
+
+* **service:** use `Connection` header on HTTP requests ([#156](https://github.com/release-argus/Argus/issues/156)) ([6f46976](https://github.com/release-argus/Argus/commits/6f46976a58fe3d0a776d241d52facd97c9b09338))
+
 ### [0.10.2](https://github.com/release-argus/Argus/compare/0.10.1...0.10.2) (2022-09-06)
 
 
