@@ -33,6 +33,7 @@ import (
 func (api *API) basicAuth() mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
 			username, password, ok := r.BasicAuth()
 			if ok {
 				// Hash purely to prevent ConstantTimeCompare leaking lengths
@@ -51,6 +52,7 @@ func (api *API) basicAuth() mux.MiddlewareFunc {
 				}
 			}
 
+			w.Header().Set("Connection", "close")
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		})
@@ -59,9 +61,7 @@ func (api *API) basicAuth() mux.MiddlewareFunc {
 
 // SetupRoutesAPI will setup the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
-	api.Router.HandleFunc("/api/v1/version", func(w http.ResponseWriter, r *http.Request) {
-		api.httpVersion(w, r)
-	})
+	api.Router.HandleFunc("/api/v1/version", api.httpVersion)
 }
 
 // SetupRoutesNodeJS will setup the HTTP routes to the NodeJS files.
@@ -85,6 +85,8 @@ func (api *API) SetupRoutesNodeJS() {
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 	logFrom := utils.LogFrom{Primary: "apiVersion"}
 	api.Log.Verbose("-", logFrom, true)
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(api_types.VersionAPI{
 		Version:   utils.Version,
 		BuildDate: utils.BuildDate,

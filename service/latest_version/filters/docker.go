@@ -75,6 +75,7 @@ func (r *Require) DockerTagCheck(
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
 	}
+	req.Header.Set("Connection", "close")
 	// Do the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -82,8 +83,9 @@ func (r *Require) DockerTagCheck(
 		return fmt.Errorf("%s:%s - %s",
 			r.Docker.Image, tag, err)
 	}
-	defer resp.Body.Close()
+
 	// Parse the body
+	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s:%s - %s",
@@ -215,6 +217,7 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Connection", "close")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	// Do the request
 	client := &http.Client{}
@@ -223,8 +226,9 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 		jLog.Error(err, utils.LogFrom{Primary: "docker-hub", Secondary: d.Image}, true)
 		return
 	}
-	defer resp.Body.Close()
+
 	// Parse the body
+	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf(string(body))

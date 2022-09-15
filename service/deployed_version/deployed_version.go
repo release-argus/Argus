@@ -176,6 +176,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	}
 
 	// Set headers
+	req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
 		req.Header.Set(header.Key, header.Value)
 	}
@@ -190,7 +191,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	if err != nil {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
-			err = fmt.Errorf("x509 (Cert invalid)")
+			err = fmt.Errorf("x509 (certificate invalid)")
 			jLog.Warn(err, logFrom, true)
 			return
 		}

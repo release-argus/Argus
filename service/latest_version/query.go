@@ -126,13 +126,14 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 		return
 	}
 
+	// Set headers
+	req.Header.Set("Connection", "close")
 	if l.Type == "github" && utils.DefaultIfNil(l.GetAccessToken()) != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
 	}
 
 	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
-
 	if err != nil {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
