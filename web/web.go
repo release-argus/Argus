@@ -39,6 +39,8 @@ func NewRouter(cfg *config.Config, jLog *utils.JLog, hub *api_v1.Hub) *mux.Route
 
 	// WebSocket
 	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Connection", "close")
+		defer r.Body.Close()
 		api_v1.ServeWs(api, hub, w, r)
 	})
 
