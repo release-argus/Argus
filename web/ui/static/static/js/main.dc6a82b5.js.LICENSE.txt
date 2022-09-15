@@ -4,12 +4,6 @@
   http://jedwatson.github.io/classnames
 */
 
-/*!
- * Font Awesome Free 6.1.2 by @fontawesome - https://fontawesome.com
- * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
- * Copyright 2022 Fonticons, Inc.
- */
-
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
@@ -24,6 +18,8 @@ MERCHANTABLITY OR NON-INFRINGEMENT.
 See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
+
+/*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */
 
 /**
  * @license React
@@ -66,7 +62,7 @@ and limitations under the License.
  */
 
 /**
- * React Router DOM v6.3.0
+ * @remix-run/router v1.0.0
  *
  * Copyright (c) Remix Software Inc.
  *
@@ -77,7 +73,18 @@ and limitations under the License.
  */
 
 /**
- * React Router v6.3.0
+ * React Router DOM v6.4.0
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
+
+/**
+ * React Router v6.4.0
  *
  * Copyright (c) Remix Software Inc.
  *
