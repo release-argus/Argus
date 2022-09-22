@@ -35,7 +35,7 @@ For example, you could set it to monitor the Argus repo ([release-argus/argus](h
 
 ## Demo
 
-A demo of Argus can be seen on our website [here](https://argus.io/demo).
+A demo of Argus can be seen on our website [here](https://release-argus.io/demo).
 
 ## Command-line arguments
 
