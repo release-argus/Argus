@@ -12,6 +12,10 @@ ARG BUILD_VERSION="development"
 RUN make BUILD_VERSION=${BUILD_VERSION} go-build
 RUN chmod 755 /build/argus
 
+WORKDIR /build/_healthcheck/
+RUN go build -o ../healthcheck
+RUN chmod 755 /build/healthcheck
+
 
 #########
 # ARGUS #
@@ -26,6 +30,7 @@ RUN \
 
 COPY entrypoint.sh /entrypoint.sh
 COPY --from=0 /build/argus               /usr/bin/argus
+COPY --from=0 /build/healthcheck         /healthcheck
 COPY --from=0 /build/config.yml.example  /app/config.yml
 COPY --from=0 /build/LICENSE             /LICENSE
 

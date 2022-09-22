@@ -83,7 +83,7 @@ func (api *API) SetupRoutesNodeJS() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	logFrom := utils.LogFrom{Primary: "apiVersion"}
+	logFrom := utils.LogFrom{Primary: "apiVersion", Secondary: getIP(r)}
 	api.Log.Verbose("-", logFrom, true)
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")

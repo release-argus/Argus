@@ -13,6 +13,9 @@ vendor/
 
 # Output of `go build ./cmd/argus`
 /argus
+
+/healthcheck
+
 # Output of `make build-all`
 /.build/
 

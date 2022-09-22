@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -36,13 +37,22 @@ type API struct {
 func NewAPI(cfg *config.Config, log *utils.JLog) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := "/" + strings.TrimPrefix(cfg.Settings.GetWebRoutePrefix(), "/")
+
 	api := &API{
 		Config:      cfg,
 		Log:         log,
 		BaseRouter:  baseRouter,
-		Router:      baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true),
 		RoutePrefix: routePrefix,
 	}
+	// On baseRouter as Router may have basicAuth
+	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", strings.TrimSuffix(routePrefix, "/"))).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logFrom := utils.LogFrom{Primary: "apiHealthcheck", Secondary: getIP(r)}
+		api.Log.Verbose("-", logFrom, true)
+		w.Header().Set("Connection", "close")
+		fmt.Fprintf(w, "Alive")
+	})
+	api.Router = baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true)
+
 	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
 	if api.Config.Settings.Web.BasicAuth != nil {
 		api.Router.Use(api.basicAuth())

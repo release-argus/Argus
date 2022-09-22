@@ -85,9 +85,10 @@ func TestWebAccessible(t *testing.T) {
 		path      string
 		bodyRegex string
 	}{
-		"/approvals":      {path: "/approvals"},
-		"/metrics":        {path: "/metrics", bodyRegex: "go_gc_duration_"},
-		"/api/v1/version": {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, utils.GoVersion)},
+		"/approvals":          {path: "/approvals"},
+		"/metrics":            {path: "/metrics", bodyRegex: "go_gc_duration_"},
+		"/api/v1/healthcheck": {path: "/api/v1/healthcheck", bodyRegex: fmt.Sprintf(`^Alive$`)},
+		"/api/v1/version":     {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, utils.GoVersion)},
 	}
 
 	for name, tc := range tests {
