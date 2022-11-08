@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "husky": "^8.0.1",
+    "husky": "^8.0.2",
     "standard-version": "^9.5.0"
   },
   "dependencies": {
