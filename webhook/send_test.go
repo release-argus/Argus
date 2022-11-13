@@ -39,7 +39,7 @@ func TestTry(t *testing.T) {
 		errRegex          string
 		desiredStatusCode int
 	}{
-		"invalid url": {url: stringPtr("invalid://	test"), errRegex: "failed to get .?http.request"},
+		"invalid url":                             {url: stringPtr("invalid://	test"), errRegex: "failed to get .?http.request"},
 		"fail due to invalid secret":              {wouldFail: true, errRegex: "WebHook gave [0-9]+, not "},
 		"fail due to invalid cert":                {selfSignedCert: true, errRegex: " x509:"},
 		"pass with invalid certs allowed":         {selfSignedCert: true, errRegex: "^$", allowInvalidCerts: true},
@@ -55,9 +55,9 @@ func TestTry(t *testing.T) {
 			for contextDeadlineExceeded != false {
 				try++
 				contextDeadlineExceeded = false
-				webhook := testWebHook(false, true, tc.selfSignedCert)
+				webhook := testWebHook(false, true, tc.selfSignedCert, false)
 				if tc.wouldFail {
-					webhook = testWebHook(true, true, tc.selfSignedCert)
+					webhook = testWebHook(true, true, tc.selfSignedCert, false)
 				}
 				if tc.url != nil {
 					webhook.URL = *tc.url
@@ -92,17 +92,20 @@ func TestWebHookSend(t *testing.T) {
 	// GIVEN a WebHook
 	testLogging("INFO")
 	tests := map[string]struct {
-		wouldFail   bool
-		useDelay    bool
-		delay       string
-		stdoutRegex string
-		tries       int
-		silentFails bool
-		notifiers   shoutrrr.Slice
+		customHeaders bool
+		wouldFail     bool
+		useDelay      bool
+		delay         string
+		stdoutRegex   string
+		tries         int
+		silentFails   bool
+		notifiers     shoutrrr.Slice
 	}{
 		"successful webhook":                           {stdoutRegex: "WebHook received"},
+		"successful webhook with custom_headers":       {stdoutRegex: "WebHook received", customHeaders: true},
 		"does use delay webhook":                       {stdoutRegex: "WebHook received"},
 		"failing webhook":                              {wouldFail: true, stdoutRegex: `failed \d times to send`},
+		"failing webhook with custom_headers":          {wouldFail: true, stdoutRegex: `failed \d times to send`, customHeaders: true},
 		"tries multiple times":                         {wouldFail: true, tries: 2, stdoutRegex: `(WebHook gave 500.*){2}WebHook received`},
 		"does try notifiers on fail":                   {wouldFail: true, stdoutRegex: `WebHook gave 500.*invalid gotify token`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
 		"doesn't try notifiers on fail if silentFails": {wouldFail: true, silentFails: true, stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
@@ -118,10 +121,7 @@ func TestWebHookSend(t *testing.T) {
 				stdout := os.Stdout
 				r, w, _ := os.Pipe()
 				os.Stdout = w
-				webhook := testWebHook(false, true, false)
-				if tc.wouldFail {
-					webhook = testWebHook(true, true, false)
-				}
+				webhook := testWebHook(tc.wouldFail, true, false, tc.customHeaders)
 				webhook.Delay = tc.delay
 				maxTries := uint(tc.tries + 1)
 				webhook.MaxTries = &maxTries
@@ -174,9 +174,9 @@ func TestSliceSend(t *testing.T) {
 		repeat         int
 	}{
 		"nil slice": {slice: nil, stdoutRegex: `^$`},
-		"successful and failing webhook": {slice: &Slice{"pass": testWebHook(false, true, false), "fail": testWebHook(true, true, false)},
+		"successful and failing webhook": {slice: &Slice{"pass": testWebHook(false, true, false, false), "fail": testWebHook(true, true, false, false)},
 			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
-		"does apply webhook delay": {slice: &Slice{"pass": testWebHook(false, true, false), "fail": testWebHook(true, true, false)},
+		"does apply webhook delay": {slice: &Slice{"pass": testWebHook(false, true, false, false), "fail": testWebHook(true, true, false, false)},
 			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, useDelay: true,
 			delays: map[string]string{"fail": "2s", "pass": "1ms"}, repeat: 5},
 	}

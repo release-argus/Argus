@@ -48,7 +48,7 @@ func TestAnnounceSend(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			(*webhook.Failed)[webhook.ID] = tc.failed
 			webhook.ServiceStatus.AnnounceChannel = nil
 			if !tc.nilChannel {

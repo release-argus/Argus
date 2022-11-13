@@ -32,7 +32,7 @@ func TestWebHookPrint(t *testing.T) {
 		webhook WebHook
 		lines   int
 	}{
-		"all fields":     {lines: 8, webhook: *testWebHook(true, true, false)},
+		"all fields":     {lines: 10, webhook: *testWebHook(true, true, false, true)},
 		"partial fields": {lines: 2, webhook: WebHook{Type: "github", URL: "https://release-argus.io"}},
 	}
 
@@ -68,7 +68,7 @@ func TestSlicePrint(t *testing.T) {
 		"nil slice": {lines: 0, slice: nil},
 		"single element slice": {lines: 4, slice: &Slice{"single": &WebHook{Type: "github", URL: "https://release-argus.io"}},
 			regexMatches: []string{"^webhook:$", "^  single:$", "^    type: "}},
-		"multiple element slice": {lines: 13, slice: &Slice{"first": &WebHook{Type: "github", URL: "https://release-argus.io"}, "second": testWebHook(true, true, false)},
+		"multiple element slice": {lines: 13, slice: &Slice{"first": &WebHook{Type: "github", URL: "https://release-argus.io"}, "second": testWebHook(true, true, false, false)},
 			regexMatches: []string{"^webhook:$", "^  first:$", "^    type: ", "^  second:$", "^    delay"}},
 	}
 
@@ -137,7 +137,7 @@ func TestWebHookCheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, !tc.noMain, false)
+			webhook := testWebHook(true, !tc.noMain, false, false)
 			if tc.delay != "" {
 				webhook.Delay = tc.delay
 			}
@@ -150,7 +150,7 @@ func TestWebHookCheckValues(t *testing.T) {
 			if tc.secret != nil {
 				webhook.Secret = *tc.secret
 			}
-			webhook.CustomHeaders = tc.customHeaders
+			webhook.CustomHeaders = &tc.customHeaders
 
 			// WHEN CheckValues is called
 			err := webhook.CheckValues("")
@@ -178,9 +178,9 @@ func TestSliceCheckValues(t *testing.T) {
 		errRegex string
 	}{
 		"nil slice":                    {errRegex: "^$"},
-		"valid single element slice":   {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false)}},
+		"valid single element slice":   {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false, false)}},
 		"invalid single element slice": {errRegex: "delay: .* <invalid>", slice: &Slice{"a": &WebHook{Delay: "5x"}}},
-		"valid multi element slice":    {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false), "b": testWebHook(false, true, false)}},
+		"valid multi element slice":    {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false, false), "b": testWebHook(false, true, false, false)}},
 		"invalid multi element slice": {errRegex: "delay: .* <invalid>.*type: .* <invalid>",
 			slice: &Slice{"a": &WebHook{Delay: "5x"}, "b": &WebHook{Type: "foo", Main: &WebHook{}, Defaults: &WebHook{}, HardDefaults: &WebHook{}}}},
 	}

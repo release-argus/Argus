@@ -39,7 +39,7 @@ func TestInitMetrics(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, tc.forService, false)
+			webhook := testWebHook(true, tc.forService, false, false)
 			if tc.forService {
 				webhook.ID = name + "TestInitMetrics"
 				webhook.ServiceStatus.ServiceID = stringPtr(name + "TestInitMetrics")
@@ -66,7 +66,7 @@ func TestInitMetrics(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	// GIVEN a WebHook and vars for the Init
-	webhook := testWebHook(true, true, false)
+	webhook := testWebHook(true, true, false, false)
 	var notifiers shoutrrr.Slice
 	var main WebHook
 	var defaults WebHook
@@ -125,13 +125,13 @@ func TestSliceInit(t *testing.T) {
 	}{
 		"nil slice":   {slice: nil, nilSlice: true},
 		"empty slice": {slice: &Slice{}},
-		"no mains":    {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)}},
+		"no mains":    {slice: &Slice{"fail": testWebHook(true, true, false, false), "pass": testWebHook(false, true, false, false)}},
 		"slice with nil element and matching main": {slice: &Slice{"fail": nil},
-			mains: &Slice{"fail": testWebHook(false, true, false)}},
-		"have matching mains": {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)},
-			mains: &Slice{"fail": testWebHook(false, true, false), "pass": testWebHook(true, true, false)}},
-		"some matching mains": {slice: &Slice{"fail": testWebHook(true, true, false), "pass": testWebHook(false, true, false)},
-			mains: &Slice{"other": testWebHook(false, true, false), "pass": testWebHook(true, true, false)}},
+			mains: &Slice{"fail": testWebHook(false, true, false, false)}},
+		"have matching mains": {slice: &Slice{"fail": testWebHook(true, true, false, false), "pass": testWebHook(false, true, false, false)},
+			mains: &Slice{"fail": testWebHook(false, true, false, false), "pass": testWebHook(true, true, false, false)}},
+		"some matching mains": {slice: &Slice{"fail": testWebHook(true, true, false, false), "pass": testWebHook(false, true, false, false)},
+			mains: &Slice{"other": testWebHook(false, true, false, false), "pass": testWebHook(true, true, false, false)}},
 	}
 
 	for name, tc := range tests {
@@ -236,7 +236,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			webhook.Main.AllowInvalidCerts = tc.allowInvalidCertsMain
 			webhook.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
@@ -275,7 +275,7 @@ func TestGetDelay(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
 			webhook.Defaults.Delay = tc.delayDefault
@@ -314,7 +314,7 @@ func TestGetDelayDuration(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
 			webhook.Defaults.Delay = tc.delayDefault
@@ -353,7 +353,7 @@ func TestGetDesiredStatusCode(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.DesiredStatusCode = tc.desiredStatusCodeRoot
 			webhook.Main.DesiredStatusCode = tc.desiredStatusCodeMain
 			webhook.Defaults.DesiredStatusCode = tc.desiredStatusCodeDefault
@@ -383,7 +383,7 @@ func TestGetFailStatus(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			want := stringifyPointer(tc.failed)
 			(*webhook.Failed)[webhook.ID] = tc.failed
 
@@ -420,7 +420,7 @@ func TestGetMaxTries(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.MaxTries = tc.maxTriesRoot
 			webhook.Main.MaxTries = tc.maxTriesMain
 			webhook.Defaults.MaxTries = tc.maxTriesDefault
@@ -446,9 +446,9 @@ func TestGetRequest(t *testing.T) {
 		customHeaders map[string]string
 		wantNil       bool
 	}{
-		"valid github type": {webhookType: "github", url: "release-argus/Argus"},
+		"valid github type":            {webhookType: "github", url: "release-argus/Argus"},
 		"catch invalid github request": {webhookType: "github", url: "release-argus	/	Argus", wantNil: true},
-		"valid gitlab type": {webhookType: "gitlab", url: "https://release-argus.io"},
+		"valid gitlab type":            {webhookType: "gitlab", url: "https://release-argus.io"},
 		"catch invalid gitlab request": {webhookType: "gitlab", url: "release-argus	/	Argus", wantNil: true},
 		"sets custom headers for github": {webhookType: "github", url: "release-argus/Argus",
 			customHeaders: map[string]string{"X-Foo": "bar"}},
@@ -458,10 +458,10 @@ func TestGetRequest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.webhookType
 			webhook.URL = tc.url
-			webhook.CustomHeaders = tc.customHeaders
+			webhook.CustomHeaders = &tc.customHeaders
 
 			// WHEN GetRequest is called
 			req := webhook.GetRequest()
@@ -541,7 +541,7 @@ func TestGetType(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.typeRoot
 			webhook.Main.Type = tc.typeMain
 			webhook.Defaults.Type = tc.typeDefault
@@ -580,7 +580,7 @@ func TestGetSecret(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.Secret = tc.secretRoot
 			webhook.Main.Secret = tc.secretMain
 			webhook.Defaults.Secret = tc.secretDefault
@@ -619,7 +619,7 @@ func TestGetSilentFails(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.SilentFails = tc.silentFailsRoot
 			webhook.Main.SilentFails = tc.silentFailsMain
 			webhook.Defaults.SilentFails = tc.silentFailsDefault
@@ -663,7 +663,7 @@ func TestGetURL(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.URL = tc.urlRoot
 			webhook.Main.URL = tc.urlMain
 			webhook.Defaults.URL = tc.urlDefault
@@ -695,7 +695,7 @@ func TestGetIsRunnable(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.NextRunnable = tc.nextRunnable
 			time.Sleep(time.Nanosecond)
 
@@ -723,7 +723,7 @@ func TestSetFailStatus(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			want := stringifyPointer(tc.failed)
 			webhook.SetFailStatus(tc.failed)
 
@@ -785,7 +785,7 @@ func TestSetNextRunnable(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			webhook := testWebHook(true, true, false)
+			webhook := testWebHook(true, true, false, false)
 			webhook.SetFailStatus(tc.failed)
 			webhook.Delay = tc.delay
 			maxTries := uint(tc.maxTries)

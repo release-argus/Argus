@@ -436,14 +436,14 @@ func TestConvertWebHookToAPITypeWebHookDidCopyHeaders(t *testing.T) {
 	)
 	wh := webhook.WebHook{
 		URL:           "https://example.com",
-		CustomHeaders: headers,
+		CustomHeaders: &headers,
 	}
 
 	// WHEN convertWebHookToAPITypeWebHook is called on it
 	got := convertWebHookToAPITypeWebHook(&wh)
 
 	// THEN the slice was converted correctly
-	if (*got.CustomHeaders)["X-Something"] != wh.CustomHeaders["X-Something"] {
+	if (*got.CustomHeaders)["X-Something"] != (*wh.CustomHeaders)["X-Something"] {
 		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
 			wh, got)
 	}
