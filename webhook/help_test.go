@@ -52,7 +52,7 @@ func testLogging(level string) {
 	shoutrrrLogs.Init(jLog, nil, nil, nil, nil)
 }
 
-func testWebHook(failing bool, forService bool, selfSignedCert bool) *WebHook {
+func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeaders bool) *WebHook {
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
 	webhook := &WebHook{
@@ -80,6 +80,14 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool) *WebHook {
 	}
 	if failing {
 		webhook.Secret = "invalid"
+	}
+	if customHeaders {
+		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
+		if failing {
+			webhook.CustomHeaders = &map[string]string{"X-Test": "invalid"}
+		} else {
+			webhook.CustomHeaders = &map[string]string{"X-Test": "secret"}
+		}
 	}
 	return webhook
 }

@@ -32,12 +32,13 @@ type GitHub struct {
 
 // SetCustomHeaders of the req.
 func (w *WebHook) SetCustomHeaders(req *http.Request) {
-	if len(w.CustomHeaders) == 0 {
+	customHeaders := utils.GetFirstNonNilPtr(w.CustomHeaders, w.Main.CustomHeaders, w.Defaults.CustomHeaders)
+	if customHeaders == nil {
 		return
 	}
 
 	serviceInfo := utils.ServiceInfo{ID: *w.ServiceStatus.ServiceID, LatestVersion: w.ServiceStatus.LatestVersion}
-	for key, value := range w.CustomHeaders {
+	for key, value := range *customHeaders {
 		value = utils.TemplateString(value, serviceInfo)
 		req.Header[key] = []string{value}
 	}

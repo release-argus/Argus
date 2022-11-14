@@ -35,7 +35,7 @@ type WebHook struct {
 	Type              string                 `yaml:"type,omitempty"`                // "github"/"url"
 	URL               string                 `yaml:"url,omitempty"`                 // "https://example.com"
 	AllowInvalidCerts *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	CustomHeaders     map[string]string      `yaml:"custom_headers,omitempty"`      // Custom Headers for the WebHook
+	CustomHeaders     *map[string]string     `yaml:"custom_headers,omitempty"`      // Custom Headers for the WebHook
 	Secret            string                 `yaml:"secret,omitempty"`              // "SECRET"
 	DesiredStatusCode *int                   `yaml:"desired_status_code,omitempty"` // e.g. 202
 	Delay             string                 `yaml:"delay,omitempty"`               // The delay before sending the WebHook.

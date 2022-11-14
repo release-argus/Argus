@@ -80,8 +80,12 @@ func DefaultIfNil[T comparable](check *T) T {
 	return *check
 }
 
+type customComparable interface {
+	bool | int | map[string]string | string | uint
+}
+
 // GetFirstNonNilPtr will return the first pointer in `pointers` that is not nil.
-func GetFirstNonNilPtr[T comparable](pointers ...*T) *T {
+func GetFirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	for _, pointer := range pointers {
 		if pointer != nil {
 			return pointer

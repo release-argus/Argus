@@ -29,8 +29,9 @@ func TestSetCustomHeaders(t *testing.T) {
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := map[string]struct {
-		customHeaders map[string]string
-		wantHeaders   map[string]string
+		customHeaders     map[string]string
+		mainCustomHeaders map[string]string
+		wantHeaders       map[string]string
 	}{
 		"no customHeaders": {customHeaders: map[string]string{}},
 		"standard headers": {customHeaders: map[string]string{"X-Something": "foo", "X-Service": "test"}},
@@ -40,19 +41,31 @@ func TestSetCustomHeaders(t *testing.T) {
 			wantHeaders: map[string]string{"X-Service": serviceID}},
 		"header with version var": {customHeaders: map[string]string{"X-Service": "{{ service_id }}", "X-Version": "{{ version }}"},
 			wantHeaders: map[string]string{"X-Service": serviceID, "X-Version": latestVersion}},
+		"header from .Main": {mainCustomHeaders: map[string]string{"X-Service": "{{ service_id }}", "X-Version": "{{ version }}"},
+			wantHeaders: map[string]string{"X-Service": serviceID, "X-Version": latestVersion}},
+		"header from .CustomHeaders overrides those in .Main": {customHeaders: map[string]string{"X-Service": "{{ service_id }}", "X-Version": "{{ version }}"},
+			mainCustomHeaders: map[string]string{"X-Service": "{{ service_id }}", "X-Version": "----"},
+			wantHeaders:       map[string]string{"X-Service": serviceID, "X-Version": latestVersion}},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			webhook := WebHook{CustomHeaders: tc.customHeaders,
-				ServiceStatus: &service_status.Status{ServiceID: &serviceID, LatestVersion: latestVersion}}
+			webhook := WebHook{ServiceStatus: &service_status.Status{ServiceID: &serviceID, LatestVersion: latestVersion},
+				Main:     &WebHook{},
+				Defaults: &WebHook{}}
+			if tc.customHeaders != nil {
+				webhook.CustomHeaders = &tc.customHeaders
+			}
+			if tc.mainCustomHeaders != nil {
+				webhook.Main.CustomHeaders = &tc.mainCustomHeaders
+			}
 
 			// WHEN SetCustomHeaders is called on this request
 			webhook.SetCustomHeaders(req)
 
 			// THEN the function returns the correct result
-			if tc.customHeaders == nil {
+			if tc.customHeaders == nil && tc.mainCustomHeaders == nil {
 				if len(req.Header) != 0 {
 					t.Fatalf("custom headers was nil but Headers are %v",
 						req.Header)

@@ -77,10 +77,12 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 		}
 	}
 	var headerErrs error
-	for key := range w.CustomHeaders {
-		if !utils.CheckTemplate(w.CustomHeaders[key]) {
-			headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-				utils.ErrorToString(headerErrs), prefix, key, w.CustomHeaders[key])
+	if w.CustomHeaders != nil {
+		for key := range *w.CustomHeaders {
+			if !utils.CheckTemplate((*w.CustomHeaders)[key]) {
+				headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
+					utils.ErrorToString(headerErrs), prefix, key, (*w.CustomHeaders)[key])
+			}
 		}
 	}
 	if headerErrs != nil {
@@ -110,6 +112,12 @@ func (w *WebHook) Print(prefix string) {
 	utils.PrintlnIfNotDefault(w.Type, fmt.Sprintf("%stype: %s", prefix, w.Type))
 	utils.PrintlnIfNotDefault(w.URL, fmt.Sprintf("%surl: %s", prefix, w.URL))
 	utils.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(w.AllowInvalidCerts)))
+	if w.CustomHeaders != nil {
+		fmt.Printf("%scustom_headers:\n", prefix)
+		for key := range *w.CustomHeaders {
+			fmt.Printf("%s  - %s: %s\n", prefix, key, (*w.CustomHeaders)[key])
+		}
+	}
 	utils.PrintlnIfNotDefault(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, w.Secret))
 	utils.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, utils.DefaultIfNil(w.DesiredStatusCode)))
 	utils.PrintlnIfNotDefault(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, w.Delay))
