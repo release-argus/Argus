@@ -78,7 +78,7 @@ func TestURLCommandSlicePrint(t *testing.T) {
 
 func TestURLCommandSliceRun(t *testing.T) {
 	// GIVEN a URLCommandSlice
-	testLogging()
+	testLogging("WARN")
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice    *URLCommandSlice

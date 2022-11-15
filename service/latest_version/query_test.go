@@ -17,6 +17,7 @@
 package latest_version
 
 import (
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -29,14 +30,14 @@ import (
 
 func TestHTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		url         string
 		githubType  bool
 		accessToken string
 		errRegex    string
 	}{
-		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
+		"invalid url":  {url: "invalid://	test", errRegex: "invalid control character in URL"},
 		"unknown url":  {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
 		"valid url":    {url: "https://release-argus.io", errRegex: "^$"},
 		"github token": {url: "release-argus/Argus", accessToken: "foo", errRegex: "^$", githubType: true},
@@ -67,7 +68,7 @@ func TestHTTPRequest(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	// GIVEN a Lookup
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		githubService         bool
 		noAccessToken         bool
@@ -159,6 +160,72 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("wanted LatestVersion to become %q, not %q",
 						*tc.wantLatestVersion, lookup.Status.LatestVersion)
 				}
+			}
+		})
+	}
+}
+
+func TestQueryGitHubETag(t *testing.T) {
+	// GIVEN a Lookup
+	testLogging("VERBOSE")
+	tests := map[string]struct {
+		attempts                   int
+		eTagChanged                int
+		eTagUnchangedUseCache      int
+		eTagUnchangedNilCache      int
+		initialRequireRegexVersion string
+		errRegex                   string
+	}{
+		"three requests only uses 1 api limit": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 2, errRegex: `^$`},
+		"if initial request fails filters, cached results will be used": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 1, eTagUnchangedUseCache: 1,
+			initialRequireRegexVersion: `^FOO$`, errRegex: `regex not matched on version`},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			lookup := testLookup(false, false)
+			lookup.Status.ServiceID = &name
+			lookup.Require.RegexVersion = tc.initialRequireRegexVersion
+
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			attempt := 0
+			// WHEN Query is called on it attempts number of times
+			var errors string = ""
+			for tc.attempts != attempt {
+				attempt++
+				if attempt == 2 {
+					lookup.Require = &filters.Require{}
+				}
+
+				_, err := lookup.Query()
+				if err != nil {
+					errors += "--" + err.Error()
+				}
+			}
+
+			// THEN any err is expected
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = stdout
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(errors)
+			if !match {
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, errors)
+			}
+			gotETagChanged := strings.Count(string(out), "ETag changed")
+			if gotETagChanged != tc.eTagChanged {
+				t.Errorf("ETag changed - got=%d, want=%d\n%s", gotETagChanged, tc.eTagChanged, out)
+			}
+			gotETagUnchangedNilCache := strings.Count(string(out), "Latest version already matched all filters")
+			if gotETagUnchangedNilCache != tc.eTagUnchangedNilCache {
+				t.Errorf("ETag unchanged nil cache - got=%d, want=%d\n%s", gotETagUnchangedNilCache, tc.eTagUnchangedNilCache, out)
+			}
+			gotETagUnchangedUseCache := strings.Count(string(out), "Using cached releases")
+			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
+				t.Errorf("ETag unchanged use cache - got=%d, want=%d\n%s", gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, out)
 			}
 		})
 	}

@@ -24,8 +24,8 @@ import (
 func stringPtr(val string) *string {
 	return &val
 }
-func testLogging() {
-	jLog = utils.NewJLog("WARN", false)
+func testLogging(level string) {
+	jLog = utils.NewJLog(level, false)
 	var commandController *command.Controller
 	commandController.Init(jLog, nil, nil, nil, nil)
 }

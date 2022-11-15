@@ -33,8 +33,8 @@ func boolPtr(val bool) *bool {
 func stringPtr(val string) *string {
 	return &val
 }
-func testLogging() {
-	jLog = utils.NewJLog("WARN", false)
+func testLogging(level string) {
+	jLog = utils.NewJLog(level, false)
 	var commandController *command.Controller
 	commandController.Init(jLog, nil, nil, nil, nil)
 	var logURLCommand *filters.URLCommandSlice
@@ -43,7 +43,7 @@ func testLogging() {
 
 func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 2)
+		announceChannel chan []byte           = make(chan []byte, 24)
 		saveChannel     chan bool             = make(chan bool, 5)
 		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
 	)
@@ -71,6 +71,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 		lookup.URL = "https://valid.release-argus.io/plain"
 		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
 	} else {
+		lookup.GitHubData = &GitHubData{}
 		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 		lookup.UsePreRelease = boolPtr(false)

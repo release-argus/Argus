@@ -69,7 +69,7 @@ func TestInsertionSort(t *testing.T) {
 
 func TestCheckGitHubReleasesBody(t *testing.T) {
 	// GIVEN a body
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		body     string
 		errRegex string
@@ -102,7 +102,7 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 
 func TestFilterGitHubReleases(t *testing.T) {
 	// GIVEN a bunch of releases
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		releases           []github_types.Release
 		semanticVersioning bool
@@ -155,6 +155,7 @@ func TestFilterGitHubReleases(t *testing.T) {
 					Defaults:           &options.Options{},
 					HardDefaults:       &options.Options{},
 				},
+				GitHubData:    &GitHubData{},
 				UsePreRelease: &tc.usePreReleases,
 				Defaults:      &Lookup{},
 				HardDefaults:  &Lookup{}}
