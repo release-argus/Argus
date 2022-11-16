@@ -31,6 +31,10 @@ func (l *Lookup) Init(
 ) {
 	jLog = log
 
+	if l.Type == "github" {
+		l.GitHubData = &GitHubData{}
+	}
+
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
 	l.Status = status

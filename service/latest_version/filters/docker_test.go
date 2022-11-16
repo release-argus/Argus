@@ -30,7 +30,7 @@ import (
 
 func TestDockerCheckGetTag(t *testing.T) {
 	// GIVEN a DockerCheck and a version
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck DockerCheck
 		version     string
@@ -56,7 +56,7 @@ func TestDockerCheckGetTag(t *testing.T) {
 
 func TestDockerCheckGetToken(t *testing.T) {
 	// GIVEN a DockerCheck
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck    DockerCheck
 		onlyIfEnvToken bool
@@ -68,7 +68,7 @@ func TestDockerCheckGetToken(t *testing.T) {
 			Type: "hub", Image: "releaseargus/argus", Username: "argus", Token: "invalid"}},
 		"DockerHub valid token": {onlyIfEnvToken: true, dockerCheck: DockerCheck{
 			Type: "hub", Image: "releaseargus/argus", Username: os.Getenv("DOCKER_USERNAME"), Token: os.Getenv("DOCKER_TOKEN")}},
-		"GHCR invalid repo": {errRegex: "invalid control character", dockerCheck: DockerCheck{Type: "ghcr", Image: "	release-argus/argus"}},
+		"GHCR invalid repo":      {errRegex: "invalid control character", dockerCheck: DockerCheck{Type: "ghcr", Image: "	release-argus/argus"}},
 		"GHCR non-existing repo": {errRegex: "invalid repository name", dockerCheck: DockerCheck{Type: "ghcr", Image: "release-argus/argus-"}},
 		"GHCR get default token": {dockerCheck: DockerCheck{Type: "ghcr", Image: "release-argus/argus"}},
 		"GHCR base64 access token": {onlyIfEnvToken: true, dockerCheck: DockerCheck{
@@ -123,7 +123,7 @@ func TestDockerCheckGetToken(t *testing.T) {
 
 func TestDockerCheckCheckToken(t *testing.T) {
 	// GIVEN a DockerCheck
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -172,7 +172,7 @@ func TestDockerCheckCheckToken(t *testing.T) {
 
 func TestRequireDockerTagCheck(t *testing.T) {
 	// GIVEN a Require
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -227,7 +227,7 @@ func TestRequireDockerTagCheck(t *testing.T) {
 
 func TestDockerCheckRefreshDockerHubToken(t *testing.T) {
 	// GIVEN a Require
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck    *DockerCheck
 		onlyIfEnvToken bool
@@ -266,7 +266,7 @@ func TestDockerCheckRefreshDockerHubToken(t *testing.T) {
 
 func TestDockerCheckCheckValues(t *testing.T) {
 	// GIVEN a DockerCheck
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 		wantImage   string

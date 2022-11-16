@@ -27,7 +27,7 @@ import (
 
 func TestRequireRegexCheckVersion(t *testing.T) {
 	// GIVEN a Require
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		require  *Require
 		errRegex string
@@ -61,7 +61,7 @@ func TestRequireRegexCheckVersion(t *testing.T) {
 
 func TestRequireRegexCheckContent(t *testing.T) {
 	// GIVEN a Require
-	testLogging()
+	testLogging("WARN")
 	tests := map[string]struct {
 		require  *Require
 		body     interface{}

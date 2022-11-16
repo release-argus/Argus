@@ -128,8 +128,15 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 
 	// Set headers
 	req.Header.Set("Connection", "close")
-	if l.Type == "github" && utils.DefaultIfNil(l.GetAccessToken()) != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
+	if l.Type == "github" {
+		// Access Token
+		if utils.DefaultIfNil(l.GetAccessToken()) != "" {
+			req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
+		}
+		// Conditional requests - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
+		if l.GitHubData.ETag != "" {
+			req.Header.Set("If-None-Match", l.GitHubData.ETag)
+		}
 	}
 
 	client := &http.Client{Transport: customTransport}
@@ -149,6 +156,13 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
+	if l.Type == "github" && err == nil {
+		newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
+		if l.GitHubData.ETag != newETag {
+			jLog.Verbose("Potentially found new releases (ETag changed)", logFrom, true)
+		}
+		l.GitHubData.ETag = newETag
+	}
 	return
 }
 
@@ -187,9 +201,27 @@ func (l *Lookup) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRel
 
 // GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
 func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version string, err error) {
-	filteredReleases, err := l.GetVersions(rawBody, logFrom)
-	if err != nil {
-		return
+	var filteredReleases []github_types.Release
+	// rawBody length = 0 if GitHub ETag is unchanged
+	if len(rawBody) != 0 {
+		filteredReleases, err = l.GetVersions(rawBody, logFrom)
+		if err != nil {
+			return
+		}
+		// Store Releases until the latest is confirmed as available
+		if l.Type == "github" {
+			l.GitHubData.Releases = filteredReleases
+		}
+	} else {
+		// If the releases have been cleared, exit
+		// (top of the list passed all filters)
+		if l.GitHubData.Releases == nil {
+			jLog.Verbose("Latest version already matched all filters (ETag unchanged)", logFrom, true)
+			return l.Status.LatestVersion, nil
+		}
+		// ReCheck this ETag's filteredReleases
+		jLog.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
+		filteredReleases = l.GitHubData.Releases
 	}
 
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
@@ -202,7 +234,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 		if l.Require == nil {
 			break
 		}
-		// Break if version passed the regex check
+		// Check all `Require` filters for this version
 		if err = l.Require.RegexCheckVersion(version, logFrom); err == nil {
 			// regexCheckContent if it's a newer version
 			if version != l.Status.LatestVersion {
@@ -243,6 +275,9 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version stri
 				return
 			}
 		}
+	}
+	if l.Type == "github" && len(filteredReleases) > 0 && version == filteredReleases[0].TagName {
+		l.GitHubData.Releases = nil
 	}
 	return
 }

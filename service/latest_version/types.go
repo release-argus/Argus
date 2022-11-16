@@ -15,6 +15,7 @@
 package latest_version
 
 import (
+	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
 	"github.com/release-argus/Argus/service/latest_version/filters"
 	"github.com/release-argus/Argus/service/options"
 	service_status "github.com/release-argus/Argus/service/status"
@@ -34,7 +35,14 @@ type Lookup struct {
 	URLCommands       filters.URLCommandSlice `yaml:"url_commands,omitempty"`        // Commands to filter the release from the URL request
 	Require           *filters.Require        `yaml:"require,omitempty"`             // Options to require before a release is considered valid
 	Options           *options.Options        `yaml:"-"`                             // Options
+	GitHubData        *GitHubData             `yaml:"-"`                             // GitHub Conditional Request vars
 	Status            *service_status.Status  `yaml:"-"`                             // Service Status
 	Defaults          *Lookup                 `yaml:"-"`                             // Defaults
 	HardDefaults      *Lookup                 `yaml:"-"`                             // Hard Defaults
+}
+
+// GitHubData is data needed in GitHub requests
+type GitHubData struct {
+	ETag     string                 // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl
+	Releases []github_types.Release // Track the ETag releases until they're usable
 }
