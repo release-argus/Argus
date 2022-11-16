@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package latest_version
+package latestver
 
 import (
 	"io"
@@ -23,35 +23,35 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestPrint(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		lookup      Lookup
-		urlCommands filters.URLCommandSlice
-		require     *filters.Require
-		options     options.Options
+		urlCommands filter.URLCommandSlice
+		require     *filter.Require
+		options     opt.Options
 		lines       int
 	}{
 		"minimal github type with no urlCommands/require":       {lookup: Lookup{Type: "github", URL: "release-argus/Argus"}, lines: 3},
 		"fully defined github type with no urlCommands/require": {lookup: testLookup(false, false), lines: 6},
 		"url type with no urlCommands/require":                  {lookup: testLookup(true, false), lines: 4},
 		"url type with urlCommands and no require": {lookup: testLookup(true, false), lines: 7,
-			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
+			urlCommands: filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
 		"github type with urlCommands and no require": {lookup: testLookup(false, false), lines: 9,
-			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
+			urlCommands: filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}},
 		"url type with require and no urlCommands": {lookup: testLookup(true, false), lines: 6,
-			require: &filters.Require{RegexContent: "foo"}},
+			require: &filter.Require{RegexContent: "foo"}},
 		"github type with require and no urlCommands": {lookup: testLookup(false, false), lines: 8,
-			require: &filters.Require{RegexContent: "foo"}},
+			require: &filter.Require{RegexContent: "foo"}},
 		"url type with urlCommands and require": {lookup: testLookup(true, false), lines: 9,
-			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filters.Require{RegexContent: "foo"}, options: options.Options{Active: boolPtr(false)}},
+			urlCommands: filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filter.Require{RegexContent: "foo"}, options: opt.Options{Active: boolPtr(false)}},
 		"github type with urlCommands and require": {lookup: testLookup(false, false), lines: 11,
-			urlCommands: filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filters.Require{RegexContent: "foo"}, options: options.Options{Active: boolPtr(false)}},
+			urlCommands: filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}, require: &filter.Require{RegexContent: "foo"}, options: opt.Options{Active: boolPtr(false)}},
 	}
 
 	for name, tc := range tests {
@@ -85,8 +85,8 @@ func TestCheckValues(t *testing.T) {
 		lType       *string
 		url         *string
 		wantURL     *string
-		require     *filters.Require
-		urlCommands *filters.URLCommandSlice
+		require     *filter.Require
+		urlCommands *filter.URLCommandSlice
 		errRegex    string
 	}{
 		"valid service": {errRegex: `^$`},
@@ -95,14 +95,16 @@ func TestCheckValues(t *testing.T) {
 		"no url":        {errRegex: `url: <required>`, url: stringPtr("")},
 		"corrects github url": {errRegex: `^$`, url: stringPtr("https://github.com/release-argus/Argus"),
 			wantURL: stringPtr("release-argus/Argus")},
-		"invalid require":     {errRegex: `regex_content: .* <invalid>`, require: &filters.Require{RegexContent: "[0-"}},
-		"invalid urlCommands": {errRegex: `type: .* <invalid>`, urlCommands: &filters.URLCommandSlice{{Type: "foo"}}},
-		"all errs": {errRegex: `url: <required>`, url: stringPtr(""), require: &filters.Require{RegexContent: "[0-"},
-			urlCommands: &filters.URLCommandSlice{{Type: "foo"}}},
+		"invalid require":     {errRegex: `regex_content: .* <invalid>`, require: &filter.Require{RegexContent: "[0-"}},
+		"invalid urlCommands": {errRegex: `type: .* <invalid>`, urlCommands: &filter.URLCommandSlice{{Type: "foo"}}},
+		"all errs": {errRegex: `url: <required>`, url: stringPtr(""), require: &filter.Require{RegexContent: "[0-"},
+			urlCommands: &filter.URLCommandSlice{{Type: "foo"}}},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testLookup(false, false)
 			if tc.lType != nil {
 				lookup.Type = *tc.lType
@@ -121,7 +123,7 @@ func TestCheckValues(t *testing.T) {
 			err := lookup.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

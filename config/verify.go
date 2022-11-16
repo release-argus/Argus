@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // CheckValues are valid.
@@ -32,22 +32,22 @@ func (c *Config) CheckValues() {
 
 	if err := c.Notify.CheckValues("  "); err != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), err)
+			util.ErrorToString(errs), err)
 	}
 
 	if err := c.WebHook.CheckValues("  "); err != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), err)
+			util.ErrorToString(errs), err)
 	}
 
 	if err := c.Service.CheckValues("  "); err != nil {
 		errs = fmt.Errorf("%sservice:\\%w",
-			utils.ErrorToString(errs), err)
+			util.ErrorToString(errs), err)
 	}
 
 	if errs != nil {
 		fmt.Println(strings.ReplaceAll(errs.Error(), "\\", "\n"))
-		jLog.Fatal("Config could not be parsed successfully.", utils.LogFrom{}, true)
+		jLog.Fatal("Config could not be parsed successfully.", util.LogFrom{}, true)
 	}
 }
 

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -45,7 +45,7 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 func testLogging(level string) {
-	jLog = utils.NewJLog(level, false)
+	jLog = util.NewJLog(level, false)
 	jLog.Testing = true
 }
 
@@ -63,9 +63,9 @@ func testShoutrrr(failing bool, forService bool, selfSignedCert bool) *Shoutrrr 
 	}
 	if forService {
 		shoutrrr.ID = "test"
-		shoutrrr.ServiceStatus = &service_status.Status{
+		shoutrrr.ServiceStatus = &svcstatus.Status{
 			ServiceID: stringPtr("service"),
-			Fails:     service_status.Fails{Shoutrrr: make(map[string]*bool, 2)},
+			Fails:     svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)},
 		}
 		shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 		shoutrrr.Main = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}

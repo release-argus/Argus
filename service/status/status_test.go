@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package service_status
+package svcstatus
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 )
 
 func TestInit(t *testing.T) {
@@ -46,7 +46,9 @@ func TestInit(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			var status Status
 
 			// WHEN Init is called
@@ -116,7 +118,9 @@ func TestGetWebURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := Status{LatestVersion: latestVersion, WebURL: tc.webURL}
 
 			// WHEN GetWebURL is called
@@ -165,8 +169,10 @@ func TestSetDeployedVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			dbChannel := make(chan db_types.Message, 4)
+			t.Parallel()
+			dbChannel := make(chan dbtype.Message, 4)
 			status := Status{ApprovedVersion: approvedVersion, DeployedVersion: deployedVersion, LatestVersion: latestVersion,
 				DatabaseChannel: &dbChannel, ServiceID: stringPtr("test")}
 
@@ -212,7 +218,9 @@ func TestResetFails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN resetFails is called on it
 			tc.fails.resetFails()
 
@@ -255,8 +263,10 @@ func TestSetLatestVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			dbChannel := make(chan db_types.Message, 4)
+			t.Parallel()
+			dbChannel := make(chan dbtype.Message, 4)
 			status := Status{ApprovedVersion: approvedVersion, DeployedVersion: deployedVersion, LatestVersion: latestVersion,
 				DatabaseChannel: &dbChannel, ServiceID: stringPtr("test")}
 

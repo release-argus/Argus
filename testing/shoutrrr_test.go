@@ -26,12 +26,12 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestGetAllShoutrrrNames(t *testing.T) {
 	// GIVEN various Service's and Notify's
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
 		service       service.Slice
@@ -95,8 +95,8 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 				for wantIndex := range tc.want {
 					if got[gotIndex] == tc.want[wantIndex] {
 						found = true
-						utils.RemoveIndex(&got, gotIndex)
-						utils.RemoveIndex(&tc.want, wantIndex)
+						util.RemoveIndex(&got, gotIndex)
+						util.RemoveIndex(&tc.want, wantIndex)
 						break
 					}
 				}
@@ -112,7 +112,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 
 func TestFindShoutrrr(t *testing.T) {
 	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s)
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
 		flag          string
@@ -313,7 +313,7 @@ func TestFindShoutrrr(t *testing.T) {
 				Notify:   tc.rootNotifiers,
 				Defaults: tc.defaults,
 			}
-			got := findShoutrrr(tc.flag, &cfg, jLog, utils.LogFrom{})
+			got := findShoutrrr(tc.flag, &cfg, jLog, util.LogFrom{})
 
 			// THEN we get the expected output
 			w.Close()
@@ -380,7 +380,7 @@ func identicalNotifiers(a *shoutrrr.Shoutrrr, b *shoutrrr.Shoutrrr) (identical b
 
 func TestNotifyTest(t *testing.T) {
 	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s)
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	InitJLog(jLog)
 	emptyShoutrrr := shoutrrr.Shoutrrr{
 		Options:   map[string]string{},

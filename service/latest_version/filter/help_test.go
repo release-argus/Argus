@@ -14,18 +14,18 @@
 
 //go:build testing
 
-package filters
+package filter
 
 import (
 	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func stringPtr(val string) *string {
 	return &val
 }
 func testLogging(level string) {
-	jLog = utils.NewJLog(level, false)
+	jLog = util.NewJLog(level, false)
 	var commandController *command.Controller
 	commandController.Init(jLog, nil, nil, nil, nil)
 }

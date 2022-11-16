@@ -12,22 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package util
 
-import (
-	"regexp"
-)
-
-// regexCheck returns whether there is a regex match of `re` on `text`.
-func RegexCheck(re string, text string) bool {
-	regex := regexp.MustCompile(re)
-	// Return whether there's a regex match.
-	return regex.MatchString(text)
-}
-
-// regexCheckWithParams returns the result of a regex match of `re` on `text`
-// after replacing "{{ version }}" with the version string.
-func RegexCheckWithParams(re string, text string, version string) bool {
-	re = TemplateString(re, ServiceInfo{LatestVersion: version})
-	return RegexCheck(re, text)
+// ServiceInfo
+type ServiceInfo struct {
+	ID            string
+	URL           string
+	WebURL        string
+	LatestVersion string
 }

@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package latest_version
+package latestver
 
 import (
 	"regexp"
@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestInsertionSort(t *testing.T) {
@@ -39,7 +39,9 @@ func TestInsertionSort(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			releases := []github_types.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0"},
@@ -81,15 +83,17 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			body := []byte(tc.body)
 			lv := Lookup{}
 
 			// WHEN filterGitHubReleases is called on this body
-			_, err := lv.checkGitHubReleasesBody(&body, utils.LogFrom{})
+			_, err := lv.checkGitHubReleasesBody(&body, util.LogFrom{})
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -148,12 +152,14 @@ func TestFilterGitHubReleases(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lv := Lookup{
-				Options: &options.Options{
+				Options: &opt.Options{
 					SemanticVersioning: &tc.semanticVersioning,
-					Defaults:           &options.Options{},
-					HardDefaults:       &options.Options{},
+					Defaults:           &opt.Options{},
+					HardDefaults:       &opt.Options{},
 				},
 				GitHubData:    &GitHubData{},
 				UsePreRelease: &tc.usePreReleases,
@@ -161,7 +167,7 @@ func TestFilterGitHubReleases(t *testing.T) {
 				HardDefaults:  &Lookup{}}
 
 			// WHEN filterGitHubReleases is called on this body
-			filteredReleases := lv.filterGitHubReleases(tc.releases, utils.LogFrom{})
+			filteredReleases := lv.filterGitHubReleases(tc.releases, util.LogFrom{})
 
 			// THEN only the expected releases are kept
 			if len(tc.want) != len(filteredReleases) {

@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // Export the flags.
@@ -165,44 +165,44 @@ func (s *Settings) SetDefaults() {
 
 // GetLogTimestamps.
 func (s *Settings) GetLogTimestamps() *bool {
-	return utils.GetFirstNonNilPtr(s.FromFlags.Log.Timestamps, s.Log.Timestamps, s.HardDefaults.Log.Timestamps)
+	return util.GetFirstNonNilPtr(s.FromFlags.Log.Timestamps, s.Log.Timestamps, s.HardDefaults.Log.Timestamps)
 }
 
 // GetLogLevel.
 func (s *Settings) GetLogLevel() string {
-	return strings.ToUpper(*utils.GetFirstNonNilPtr(s.FromFlags.Log.Level, s.Log.Level, s.HardDefaults.Log.Level))
+	return strings.ToUpper(*util.GetFirstNonNilPtr(s.FromFlags.Log.Level, s.Log.Level, s.HardDefaults.Log.Level))
 }
 
 // GetDataDatabaseFile.
 func (s *Settings) GetDataDatabaseFile() *string {
-	return utils.GetFirstNonNilPtr(s.FromFlags.Data.DatabaseFile, s.Data.DatabaseFile, s.HardDefaults.Data.DatabaseFile)
+	return util.GetFirstNonNilPtr(s.FromFlags.Data.DatabaseFile, s.Data.DatabaseFile, s.HardDefaults.Data.DatabaseFile)
 }
 
 // GetWebListenHost.
 func (s *Settings) GetWebListenHost() string {
-	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.ListenHost, s.Web.ListenHost, s.HardDefaults.Web.ListenHost)
+	return *util.GetFirstNonNilPtr(s.FromFlags.Web.ListenHost, s.Web.ListenHost, s.HardDefaults.Web.ListenHost)
 }
 
 // GetWebListenPort.
 func (s *Settings) GetWebListenPort() string {
-	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.ListenPort, s.Web.ListenPort, s.HardDefaults.Web.ListenPort)
+	return *util.GetFirstNonNilPtr(s.FromFlags.Web.ListenPort, s.Web.ListenPort, s.HardDefaults.Web.ListenPort)
 }
 
 // GetWebRoutePrefix.
 func (s *Settings) GetWebRoutePrefix() string {
-	return *utils.GetFirstNonNilPtr(s.FromFlags.Web.RoutePrefix, s.Web.RoutePrefix, s.HardDefaults.Web.RoutePrefix)
+	return *util.GetFirstNonNilPtr(s.FromFlags.Web.RoutePrefix, s.Web.RoutePrefix, s.HardDefaults.Web.RoutePrefix)
 }
 
 // GetWebCertFile.
 func (s *Settings) GetWebCertFile() *string {
-	certFile := utils.GetFirstNonNilPtr(s.FromFlags.Web.CertFile, s.Web.CertFile, s.HardDefaults.Web.CertFile)
+	certFile := util.GetFirstNonNilPtr(s.FromFlags.Web.CertFile, s.Web.CertFile, s.HardDefaults.Web.CertFile)
 	if certFile == nil || *certFile == "" {
 		return nil
 	}
 	if _, err := os.Stat(*certFile); err != nil {
 		if !filepath.IsAbs(*certFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, utils.LogFrom{}, execErr != nil)
+			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*certFile+":",
@@ -210,21 +210,21 @@ func (s *Settings) GetWebCertFile() *string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.cert_file "+err.Error(), utils.LogFrom{}, true)
+		jLog.Fatal("settings.web.cert_file "+err.Error(), util.LogFrom{}, true)
 	}
 	return certFile
 }
 
 // GetWebKeyFile.
 func (s *Settings) GetWebKeyFile() *string {
-	keyFile := utils.GetFirstNonNilPtr(s.FromFlags.Web.KeyFile, s.Web.KeyFile, s.HardDefaults.Web.KeyFile)
+	keyFile := util.GetFirstNonNilPtr(s.FromFlags.Web.KeyFile, s.Web.KeyFile, s.HardDefaults.Web.KeyFile)
 	if keyFile == nil || *keyFile == "" {
 		return nil
 	}
 	if _, err := os.Stat(*keyFile); err != nil {
 		if !filepath.IsAbs(*keyFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, utils.LogFrom{}, execErr != nil)
+			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*keyFile+":",
@@ -232,7 +232,7 @@ func (s *Settings) GetWebKeyFile() *string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.key_file "+err.Error(), utils.LogFrom{}, true)
+		jLog.Fatal("settings.web.key_file "+err.Error(), util.LogFrom{}, true)
 	}
 	return keyFile
 }

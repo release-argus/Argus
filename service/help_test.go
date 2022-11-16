@@ -19,15 +19,14 @@ package service
 import (
 	"fmt"
 	"os"
-	"time"
 
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -45,29 +44,29 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 func testLogging() {
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	jLog.Testing = true
 	var webhookLogs *webhook.Slice
 	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil)
-	var latestVersion latest_version.Lookup
-	latestVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
-	var deployedVersion *deployed_version.Lookup
-	deployedVersion.Init(jLog, nil, nil, &service_status.Status{ServiceID: stringPtr("foo")}, nil)
+	var latestVersion latestver.Lookup
+	latestVersion.Init(jLog, nil, nil, &svcstatus.Status{ServiceID: stringPtr("foo")}, nil)
+	var deployedVersion *deployedver.Lookup
+	deployedVersion.Init(jLog, nil, nil, &svcstatus.Status{ServiceID: stringPtr("foo")}, nil)
 }
 
-func testServiceGitHub() *Service {
+func testServiceGitHub(id string) *Service {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 2)
-		saveChannel     chan bool             = make(chan bool, 5)
-		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte         = make(chan []byte, 2)
+		saveChannel     chan bool           = make(chan bool, 5)
+		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 	)
 	svc := &Service{
-		ID: "test",
-		LatestVersion: latest_version.Lookup{
+		ID: id,
+		LatestVersion: latestver.Lookup{
 			Type:        "github",
 			AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
 			URL:         "release-argus/Argus",
-			Require: &filters.Require{
+			Require: &filter.Require{
 				RegexContent: "content",
 				RegexVersion: "version",
 			},
@@ -80,7 +79,7 @@ func testServiceGitHub() *Service {
 			IconLinkTo:  "https://example.com",
 			WebURL:      "https://release-argus.io",
 		},
-		Status: service_status.Status{
+		Status: svcstatus.Status{
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
 			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
@@ -90,13 +89,13 @@ func testServiceGitHub() *Service {
 			DatabaseChannel:          &databaseChannel,
 			SaveChannel:              &saveChannel,
 		},
-		Options: options.Options{
+		Options: opt.Options{
 			Interval:           "5s",
 			SemanticVersioning: boolPtr(true),
 		},
 		Defaults: &Service{},
 		HardDefaults: &Service{
-			Options: options.Options{
+			Options: opt.Options{
 				Active: boolPtr(true)},
 		},
 	}
@@ -106,28 +105,28 @@ func testServiceGitHub() *Service {
 	return svc
 }
 
-func testServiceURL() *Service {
+func testServiceURL(id string) *Service {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 5)
-		saveChannel     chan bool             = make(chan bool, 5)
-		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel = make(chan []byte, 5)
+		saveChannel     = make(chan bool, 5)
+		databaseChannel = make(chan dbtype.Message, 5)
 	)
 	svc := &Service{
-		ID: "test",
-		LatestVersion: latest_version.Lookup{
+		ID: id,
+		LatestVersion: latestver.Lookup{
 			Type: "url",
 			URL:  "https://valid.release-argus.io/plain",
-			Require: &filters.Require{
+			Require: &filter.Require{
 				RegexContent: "{{ version }}-beta",
 				RegexVersion: "[0-9]+",
 			},
-			URLCommands: filters.URLCommandSlice{
+			URLCommands: filter.URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
 			},
 			AllowInvalidCerts: boolPtr(true),
 			UsePreRelease:     boolPtr(false),
 		},
-		DeployedVersionLookup: &deployed_version.Lookup{
+		DeployedVersionLookup: &deployedver.Lookup{
 			URL:               "https://valid.release-argus.io/json",
 			JSON:              "version",
 			AllowInvalidCerts: boolPtr(false),
@@ -140,7 +139,7 @@ func testServiceURL() *Service {
 			Defaults:     &DashboardOptions{},
 			HardDefaults: &DashboardOptions{},
 		},
-		Status: service_status.Status{
+		Status: svcstatus.Status{
 			ServiceID:                stringPtr("test"),
 			ApprovedVersion:          "1.1.1",
 			LatestVersion:            "2.2.2",
@@ -151,24 +150,23 @@ func testServiceURL() *Service {
 			DatabaseChannel:          &databaseChannel,
 			SaveChannel:              &saveChannel,
 		},
-		Options: options.Options{
+		Options: opt.Options{
 			Interval:           "5s",
 			SemanticVersioning: boolPtr(true),
-			Defaults:           &options.Options{},
-			HardDefaults:       &options.Options{},
+			Defaults:           &opt.Options{},
+			HardDefaults:       &opt.Options{},
 		},
 		Defaults: &Service{},
 		HardDefaults: &Service{
-			Options: options.Options{
+			Options: opt.Options{
 				Active: boolPtr(true)},
-			DeployedVersionLookup: &deployed_version.Lookup{},
+			DeployedVersionLookup: &deployedver.Lookup{},
 		},
 	}
 	svc.Status.ServiceID = &svc.ID
-	svc.LatestVersion.Init(jLog, &latest_version.Lookup{}, &latest_version.Lookup{}, &svc.Status, &svc.Options)
-	svc.DeployedVersionLookup.Init(jLog, &deployed_version.Lookup{}, &deployed_version.Lookup{}, &svc.Status, &svc.Options)
+	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
+	svc.DeployedVersionLookup.Init(jLog, &deployedver.Lookup{}, &deployedver.Lookup{}, &svc.Status, &svc.Options)
 	svc.Status.WebURL = &svc.Dashboard.WebURL
-	time.Sleep(time.Second)
 	return svc
 }
 

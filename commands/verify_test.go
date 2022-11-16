@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestPrint(t *testing.T) {
@@ -73,12 +73,14 @@ func TestCommandCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			err := tc.command.CheckValues()
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -100,12 +102,14 @@ func TestSliceCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])

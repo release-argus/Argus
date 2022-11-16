@@ -18,7 +18,6 @@ import (
 	"database/sql"
 
 	"github.com/release-argus/Argus/config"
-	_ "modernc.org/sqlite"
 )
 
 type api struct {

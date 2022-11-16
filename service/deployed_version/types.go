@@ -12,30 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployed_version
+package deployedver
 
 import (
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 var (
-	jLog *utils.JLog
+	jLog *util.JLog
 )
 
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL               string                 `yaml:"url,omitempty"`                 // URL to query.
-	AllowInvalidCerts *bool                  `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth             `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
-	Headers           []Header               `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
-	JSON              string                 `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string                 `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
-	Options           *options.Options       `yaml:"-"`                             // Options for the lookups
-	Status            *service_status.Status `yaml:"-"`                             // Service Status
-	HardDefaults      *Lookup                `yaml:"-"`                             // Hardcoded default values.
-	Defaults          *Lookup                `yaml:"-"`                             // Default values.
+	URL               string            `yaml:"url,omitempty"`                 // URL to query.
+	AllowInvalidCerts *bool             `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	BasicAuth         *BasicAuth        `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
+	Headers           []Header          `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
+	JSON              string            `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
+	Regex             string            `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
+	Options           *opt.Options      `yaml:"-"`                             // Options for the lookups
+	Status            *svcstatus.Status `yaml:"-"`                             // Service Status
+	HardDefaults      *Lookup           `yaml:"-"`                             // Hardcoded default values.
+	Defaults          *Lookup           `yaml:"-"`                             // Default values.
 }
 
 // BasicAuth to use on the HTTP(s) request.

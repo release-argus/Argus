@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package latest_version
+package latestver
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // Print the struct.
 func (l *Lookup) Print(prefix string) {
 	fmt.Printf("%slatest_version:\n", prefix)
 	prefix += "  "
-	utils.PrintlnIfNotDefault(l.Type, fmt.Sprintf("%stype: %s", prefix, l.Type))
-	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	utils.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %q", prefix, utils.DefaultIfNil(l.AccessToken)))
-	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
-	utils.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, utils.DefaultIfNil(l.UsePreRelease)))
+	util.PrintlnIfNotDefault(l.Type, fmt.Sprintf("%stype: %s", prefix, l.Type))
+	util.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
+	util.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %q", prefix, util.DefaultIfNil(l.AccessToken)))
+	util.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
+	util.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, util.DefaultIfNil(l.UsePreRelease)))
 	l.URLCommands.Print(prefix)
 	l.Require.Print(prefix)
 }
@@ -39,7 +39,7 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 	if l.URL == "" {
 		if l.Defaults != nil {
 			errs = fmt.Errorf("%s%s  url: <required> e.g. github:'release-argus/Argus' or url:'https://example.com'\\",
-				utils.ErrorToString(errs), prefix)
+				util.ErrorToString(errs), prefix)
 		}
 	} else if l.Type != "url" && l.Type != "github" {
 		errType := "<required>"
@@ -47,7 +47,7 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 			errType = fmt.Sprintf("%q <invalid>", l.Type)
 		}
 		errs = fmt.Errorf("%s%s  type: %s e.g. github or url\\",
-			utils.ErrorToString(errs), prefix, errType)
+			util.ErrorToString(errs), prefix, errType)
 	}
 	if l.Type == "github" && strings.Count(l.URL, "/") > 1 {
 		parts := strings.Split(l.URL, "/")
@@ -56,11 +56,11 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 
 	if requireErrs := l.Require.CheckValues(prefix + "  "); requireErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), requireErrs)
+			util.ErrorToString(errs), requireErrs)
 	}
 	if urlCommandErrs := l.URLCommands.CheckValues(prefix + "  "); urlCommandErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), urlCommandErrs)
+			util.ErrorToString(errs), urlCommandErrs)
 	}
 
 	if errs != nil {

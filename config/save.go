@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -60,7 +60,7 @@ func (c *Config) Save() {
 	// Write the config to file (unordered slices, but with an order list)
 	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	errMsg := fmt.Sprintf("error opening/creating file: %v", err)
-	jLog.Fatal(errMsg, utils.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
 
 	yamlEncoder := yaml.NewEncoder(file)
 	yamlEncoder.SetIndent(int(c.Settings.Indentation))
@@ -72,7 +72,7 @@ func (c *Config) Save() {
 			c.File,
 			err,
 		),
-		utils.LogFrom{},
+		util.LogFrom{},
 		err != nil,
 	)
 	err = file.Close()
@@ -82,28 +82,28 @@ func (c *Config) Save() {
 			c.File,
 			err,
 		),
-		utils.LogFrom{},
+		util.LogFrom{},
 		err != nil,
 	)
 
 	// Read the file.
 	data, err := os.ReadFile(c.File)
 	msg := fmt.Sprintf("Error reading %q\n%s", c.File, err)
-	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
-	lines := strings.Split(string(utils.NormaliseNewlines(data)), "\n")
+	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	lines := strings.Split(string(util.NormaliseNewlines(data)), "\n")
 
 	// Fix the ordering of the read data.
 	var (
-		changed      bool   = true
-		indentation  string = strings.Repeat(" ", int(c.Settings.Indentation))
-		serviceCount int    = len(c.Service)
+		changed      = true
+		indentation  = strings.Repeat(" ", int(c.Settings.Indentation))
+		serviceCount = len(c.Service)
 
 		configType string // section of the config we're in, e.g. 'service'
 
 		currentServiceNumber   int
-		currentOrder           []string = make([]string, serviceCount)
-		currentOrderIndexStart []int    = make([]int, serviceCount+1)
-		currentOrderIndexEnd   []int    = make([]int, serviceCount+1)
+		currentOrder           = make([]string, serviceCount)
+		currentOrderIndexStart = make([]int, serviceCount+1)
+		currentOrderIndexEnd   = make([]int, serviceCount+1)
 	)
 
 	// Keep track of the number of lines we've removed and adjust index by it
@@ -159,7 +159,7 @@ func (c *Config) Save() {
 				continue
 			}
 
-			utils.RemoveIndex(&lines, index)
+			util.RemoveIndex(&lines, index)
 			currentOrderIndexEnd[currentServiceNumber]--
 			linesRemoved++
 
@@ -185,17 +185,17 @@ func (c *Config) Save() {
 
 				// If it's an empty map
 				if strings.HasSuffix(lines[index], ": {}") {
-					utils.RemoveIndex(&lines, index)
+					util.RemoveIndex(&lines, index)
 					currentOrderIndexEnd[currentServiceNumber]--
 					removed = true
 					linesRemoved++
 				} else {
-					deepestRemovable := utils.GetIndentation(lines[index], c.Settings.Indentation)
+					deepestRemovable := util.GetIndentation(lines[index], c.Settings.Indentation)
 					if index != 0 &&
 						strings.HasSuffix(lines[index-1], ":") &&
 						strings.HasPrefix(lines[index-1], deepestRemovable) {
 
-						utils.RemoveIndex(&lines, index-1)
+						util.RemoveIndex(&lines, index-1)
 						currentOrderIndexEnd[currentServiceNumber]--
 						removed = true
 						linesRemoved++
@@ -233,7 +233,7 @@ func (c *Config) Save() {
 
 			if swap {
 				// currentID needs to be moved before previousID
-				utils.Swap(&lines, currentOrderIndexStart[i-1], currentOrderIndexEnd[i-1], currentOrderIndexStart[i], currentOrderIndexEnd[i])
+				util.Swap(&lines, currentOrderIndexStart[i-1], currentOrderIndexEnd[i-1], currentOrderIndexStart[i], currentOrderIndexEnd[i])
 				changed = true
 
 				// Update the current ordering values
@@ -248,7 +248,7 @@ func (c *Config) Save() {
 	// Open the file.
 	file, err = os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	errMsg = fmt.Sprintf("error opening/creating file: %v", err)
-	jLog.Fatal(errMsg, utils.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
 
 	// Buffered writes to the file.
 	writer := bufio.NewWriter(file)
@@ -260,9 +260,9 @@ func (c *Config) Save() {
 	// Flush the writes.
 	err = writer.Flush()
 	errMsg = fmt.Sprintf("error writing file: %v", err)
-	jLog.Fatal(errMsg, utils.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
 	jLog.Info(
 		fmt.Sprintf("Saved service updates to %s", c.File),
-		utils.LogFrom{},
+		util.LogFrom{},
 		true)
 }

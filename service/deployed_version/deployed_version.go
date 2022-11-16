@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployed_version
+package deployedver
 
 import (
 	"crypto/tls"
@@ -25,13 +25,13 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
+	return *util.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
 }
 
 // Track the deployed version (DeployedVersion) of the `parent`.
@@ -39,15 +39,15 @@ func (l *Lookup) Track() {
 	if l == nil {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: *l.Status.ServiceID}
+	logFrom := util.LogFrom{Primary: *l.Status.ServiceID}
 
 	// Track forever.
 	for {
 		deployedVersion, err := l.Query(logFrom)
 		// If new release found by ^ query.
 		if err == nil {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *l.Status.ServiceID, 1)
+			metric.IncreasePrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
+			metric.SetPrometheusGaugeWithID(metric.DeployedVersionQueryLiveness, *l.Status.ServiceID, 1)
 			if deployedVersion != l.Status.DeployedVersion {
 				// Announce the updated deployment
 				l.Status.SetDeployedVersion(deployedVersion)
@@ -56,10 +56,8 @@ func (l *Lookup) Track() {
 				// Check that it's not a later version than LatestVersion
 				if deployedVersion != l.Status.LatestVersion && l.Options.GetSemanticVersioning() && l.Status.LatestVersion != "" {
 					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
-					//nolint:errcheck // ^
 					deployedVersionSV, _ := semver.NewVersion(deployedVersion)
 					//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
-					//nolint:errcheck // ^
 					latestVersionSV, _ := semver.NewVersion(l.Status.LatestVersion)
 
 					// Update LatestVersion to DeployedVersion if it's newer
@@ -82,8 +80,8 @@ func (l *Lookup) Track() {
 				l.Status.AnnounceUpdate()
 			}
 		} else {
-			metrics.IncreasePrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
-			metrics.SetPrometheusGaugeWithID(metrics.DeployedVersionQueryLiveness, *l.Status.ServiceID, 0)
+			metric.IncreasePrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+			metric.SetPrometheusGaugeWithID(metric.DeployedVersionQueryLiveness, *l.Status.ServiceID, 0)
 		}
 		// Sleep interval between queries.
 		time.Sleep(l.Options.GetIntervalDuration())
@@ -91,7 +89,7 @@ func (l *Lookup) Track() {
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
+func (l *Lookup) Query(logFrom util.LogFrom) (string, error) {
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
@@ -160,7 +158,7 @@ func (l *Lookup) Query(logFrom utils.LogFrom) (string, error) {
 	return version, nil
 }
 
-func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
 	// HTTPS insecure skip verify.
 	customTransport := &http.Transport{}
 	if l.GetAllowInvalidCerts() {

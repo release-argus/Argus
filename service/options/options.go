@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package opt
 
 import (
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 type Options struct {
@@ -32,17 +32,17 @@ type Options struct {
 
 // GetActive status of the Service..
 func (o *Options) GetActive() bool {
-	return utils.EvalNilPtr(o.Active, true)
+	return util.EvalNilPtr(o.Active, true)
 }
 
 // GetInterval between queries for this Service's latest version.
 func (o *Options) GetInterval() string {
-	return utils.GetFirstNonDefault(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
+	return util.GetFirstNonDefault(o.Interval, o.Defaults.Interval, o.HardDefaults.Interval)
 }
 
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
 func (o *Options) GetSemanticVersioning() bool {
-	return *utils.GetFirstNonNilPtr(o.SemanticVersioning, o.Defaults.SemanticVersioning, o.HardDefaults.SemanticVersioning)
+	return *util.GetFirstNonNilPtr(o.SemanticVersioning, o.Defaults.SemanticVersioning, o.HardDefaults.SemanticVersioning)
 }
 
 // GetIntervalPointer returns a pointer to the interval between queries on this Service's version.
@@ -62,7 +62,7 @@ func (o *Options) GetIntervalDuration() time.Duration {
 	return d
 }
 
-// CheckValues of the Options.
+// CheckValues of the option.
 func (o *Options) CheckValues(prefix string) (errs error) {
 	// Interval
 	if o.Interval != "" {
@@ -72,7 +72,7 @@ func (o *Options) CheckValues(prefix string) (errs error) {
 		}
 		if _, err := time.ParseDuration(o.Interval); err != nil {
 			errs = fmt.Errorf("%s%s  interval: %q <invalid> (Use 'AhBmCs' duration format)\\",
-				utils.ErrorToString(errs), prefix, o.Interval)
+				util.ErrorToString(errs), prefix, o.Interval)
 		}
 	}
 
@@ -91,7 +91,7 @@ func (o *Options) Print(prefix string) {
 	}
 
 	fmt.Printf("%soptions:\n", prefix)
-	utils.PrintlnIfNotNil(o.Active, fmt.Sprintf("%s  active: %t", prefix, utils.DefaultIfNil(o.Active)))
-	utils.PrintlnIfNotDefault(o.Interval, fmt.Sprintf("%s  interval: %s", prefix, o.Interval))
-	utils.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%s  semantic_versioning: %t", prefix, utils.DefaultIfNil(o.SemanticVersioning)))
+	util.PrintlnIfNotNil(o.Active, fmt.Sprintf("%s  active: %t", prefix, util.DefaultIfNil(o.Active)))
+	util.PrintlnIfNotDefault(o.Interval, fmt.Sprintf("%s  interval: %s", prefix, o.Interval))
+	util.PrintlnIfNotNil(o.SemanticVersioning, fmt.Sprintf("%s  semantic_versioning: %t", prefix, util.DefaultIfNil(o.SemanticVersioning)))
 }

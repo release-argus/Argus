@@ -17,9 +17,8 @@ package db
 import (
 	"fmt"
 
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/utils"
-	_ "modernc.org/sqlite"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/util"
 )
 
 // handler will listen to the DatabaseChannel and act on
@@ -34,7 +33,7 @@ func (api *api) handler() {
 }
 
 // updateRow will update the cells of the serviceID row.
-func (api *api) updateRow(serviceID string, cells []db_types.Cell) {
+func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	replace := ""
 	for i := range cells {
 		replace += fmt.Sprintf("'%s' = '%s',",
@@ -44,7 +43,7 @@ func (api *api) updateRow(serviceID string, cells []db_types.Cell) {
 		replace[:len(replace)-1], serviceID)
 	res, err := api.db.Exec(sqlStmt)
 	jLog.Error(
-		fmt.Sprintf("updateRow UPDATE: %q, %s", sqlStmt, utils.ErrorToString(err)),
+		fmt.Sprintf("updateRow UPDATE: %q, %s", sqlStmt, util.ErrorToString(err)),
 		*logFrom,
 		err != nil)
 	count, _ := res.RowsAffected()
@@ -60,7 +59,7 @@ func (api *api) updateRow(serviceID string, cells []db_types.Cell) {
 			columns[:len(columns)-1], serviceID, values[:len(values)-1])
 		_, err = api.db.Exec(sqlStmt)
 		jLog.Error(
-			fmt.Sprintf("updateRow INSERT: %q, %s", sqlStmt, utils.ErrorToString(err)),
+			fmt.Sprintf("updateRow INSERT: %q, %s", sqlStmt, util.ErrorToString(err)),
 			*logFrom,
 			err != nil)
 	}

@@ -21,14 +21,13 @@ import (
 	"path/filepath"
 
 	"github.com/release-argus/Argus/config"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	_ "modernc.org/sqlite"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 var (
-	jLog    *utils.JLog
-	logFrom *utils.LogFrom
+	jLog    *util.JLog
+	logFrom *util.LogFrom
 )
 
 func checkFile(path string) {
@@ -44,7 +43,7 @@ func checkFile(path string) {
 			fmt.Sprintf("db path %q exists but is not a directory", dir),
 			*logFrom,
 			!info.IsDir())
-		jLog.Fatal(utils.ErrorToString(err), *logFrom, err != nil)
+		jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
 	}
 	info, _ := os.Stat(path)
 	jLog.Fatal(
@@ -53,10 +52,10 @@ func checkFile(path string) {
 		info != nil && info.IsDir())
 }
 
-func Run(cfg *config.Config, log *utils.JLog) {
+func Run(cfg *config.Config, log *util.JLog) {
 	jLog = log
 	databaseFile := cfg.Settings.GetDataDatabaseFile()
-	logFrom = &utils.LogFrom{Primary: "db", Secondary: *databaseFile}
+	logFrom = &util.LogFrom{Primary: "db", Secondary: *databaseFile}
 
 	api := api{config: cfg}
 	api.initialise()
@@ -88,7 +87,7 @@ func (api *api) initialise() {
 			approved_version STRING DEFAULT ''
 		);`
 	_, err = db.Exec(sqlStmt)
-	jLog.Fatal(utils.ErrorToString(err), *logFrom, err != nil)
+	jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
 
 	api.db = db
 }
@@ -105,7 +104,7 @@ func (api *api) removeUnknownServices() {
 		allServices[:len(allServices)-1])
 	_, err := api.db.Exec(sqlStmt)
 	jLog.Fatal(
-		fmt.Sprintf("removeUnknownServices: %s", utils.ErrorToString(err)),
+		fmt.Sprintf("removeUnknownServices: %s", util.ErrorToString(err)),
 		*logFrom,
 		err != nil)
 }
@@ -135,7 +134,7 @@ func (api *api) extractServiceStatus() {
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		jLog.Fatal(
-			fmt.Sprintf("extractServiceStatus row: %s", utils.ErrorToString(err)),
+			fmt.Sprintf("extractServiceStatus row: %s", util.ErrorToString(err)),
 			*logFrom,
 			err != nil)
 		api.config.Service[id].Status.LatestVersion = lv
@@ -146,7 +145,7 @@ func (api *api) extractServiceStatus() {
 	}
 	err = rows.Err()
 	jLog.Fatal(
-		fmt.Sprintf("extractServiceStatus: %s", utils.ErrorToString(err)),
+		fmt.Sprintf("extractServiceStatus: %s", util.ErrorToString(err)),
 		*logFrom,
 		err != nil)
 }
@@ -177,7 +176,7 @@ func (api *api) convertServiceStatus() {
 				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
 				api.config.Service[id].OldStatus.ApprovedVersion,
 			)
-			api.config.Service[id].Status = service_status.Status{
+			api.config.Service[id].Status = svcstatus.Status{
 				LatestVersion:            api.config.Service[id].OldStatus.LatestVersion,
 				LatestVersionTimestamp:   api.config.Service[id].OldStatus.LatestVersionTimestamp,
 				DeployedVersion:          api.config.Service[id].OldStatus.DeployedVersion,
@@ -191,7 +190,7 @@ func (api *api) convertServiceStatus() {
 		_, err := api.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
 		jLog.Fatal(
 			fmt.Sprintf("convertServiceStatus: %s\n%s",
-				utils.ErrorToString(err), sqlStmt),
+				util.ErrorToString(err), sqlStmt),
 			*logFrom,
 			err != nil)
 		for _, id := range api.config.All {

@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestWebHookPrint(t *testing.T) {
@@ -136,7 +136,9 @@ func TestWebHookCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, !tc.noMain, false, false)
 			if tc.delay != "" {
 				webhook.Delay = tc.delay
@@ -156,7 +158,7 @@ func TestWebHookCheckValues(t *testing.T) {
 			err := webhook.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -186,12 +188,14 @@ func TestSliceCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

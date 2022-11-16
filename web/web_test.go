@@ -33,10 +33,10 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -47,7 +47,7 @@ var cfg config.Config
 func TestMain(m *testing.M) {
 	// GIVEN a valid config with a Service
 	cfg = testConfig()
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	port = cfg.Settings.Web.ListenPort
 
 	// WHEN the Router is fetched for this Config
@@ -65,7 +65,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 	*config.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
-	go Run(&config, utils.NewJLog("WARN", false))
+	go Run(&config, util.NewJLog("WARN", false))
 	time.Sleep(50 * time.Millisecond)
 
 	// THEN Web UI is accessible
@@ -88,11 +88,13 @@ func TestWebAccessible(t *testing.T) {
 		"/approvals":          {path: "/approvals"},
 		"/metrics":            {path: "/metrics", bodyRegex: "go_gc_duration_"},
 		"/api/v1/healthcheck": {path: "/api/v1/healthcheck", bodyRegex: fmt.Sprintf(`^Alive$`)},
-		"/api/v1/version":     {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, utils.GoVersion)},
+		"/api/v1/version":     {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, util.GoVersion)},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN we make a request to path
 			req, _ := http.NewRequest("GET", tc.path, nil)
 			response := httptest.NewRecorder()
@@ -139,9 +141,9 @@ func connectToWebSocket(t *testing.T) *websocket.Conn {
 
 // seeIfMessage will try and get a message from the WebSocket
 // if it receives no message withing 100ms, it will give up and return nil
-func seeIfMessage(t *testing.T, ws *websocket.Conn) *api_types.WebSocketMessage {
-	var message api_types.WebSocketMessage
-	msgChan := make(chan api_types.WebSocketMessage, 1)
+func seeIfMessage(t *testing.T, ws *websocket.Conn) *api_type.WebSocketMessage {
+	var message api_type.WebSocketMessage
+	msgChan := make(chan api_type.WebSocketMessage, 1)
 	errChan := make(chan error, 1)
 	go func() {
 		_, p, err := ws.ReadMessage()
@@ -233,7 +235,7 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 			defer ws.Close()
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "INIT"}
+			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "INIT"}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
 				t.Fatalf("error sending message\n%s",
@@ -348,8 +350,8 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
-			var hadDVL deployed_version.Lookup
-			var hadStatus service_status.Status
+			var hadDVL deployedver.Lookup
+			var hadStatus svcstatus.Status
 			if cfg.Service[tc.serviceID] != nil {
 				hadStatus = cfg.Service[tc.serviceID].Status
 				cfg.Service[tc.serviceID].Status.Fails.Command = make([]*bool, len(tc.commands))
@@ -396,10 +398,10 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
-				Target: tc.target, ServiceData: &api_types.ServiceSummary{ID: tc.serviceID}}
+			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
+				Target: tc.target, ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
-				msg.ServiceData.Status = &api_types.Status{
+				msg.ServiceData.Status = &api_type.Status{
 					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
 				}
 			}
@@ -428,7 +430,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				expecting += len(tc.commands)
 				if tc.commandFails != nil {
 					for i := range tc.commandFails {
-						if utils.EvalNilPtr(tc.commandFails[i], true) == false {
+						if util.EvalNilPtr(tc.commandFails[i], true) == false {
 							expecting--
 						}
 					}
@@ -453,7 +455,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			if tc.wantSkipMessage {
 				expecting++
 			}
-			messages := make([]api_types.WebSocketMessage, expecting)
+			messages := make([]api_type.WebSocketMessage, expecting)
 			t.Logf("expecting %d messages", expecting)
 			got := 0
 			for expecting != 0 {
@@ -497,7 +499,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			}
 			t.Log(output)
 			// Check version was skipped
-			if utils.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
+			if util.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
 				if tc.wantSkipMessage && messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+cfg.Service[tc.serviceID].Status.LatestVersion {
 					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
 						cfg.Service[tc.serviceID].Status.LatestVersion, cfg.Service[tc.serviceID].Status.ApprovedVersion, messages[0].ServiceData.Status.ApprovedVersion)
@@ -509,7 +511,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					expecting += len(tc.commands)
 					if tc.commandFails != nil {
 						for i := range tc.commandFails {
-							if utils.EvalNilPtr(tc.commandFails[i], true) == false {
+							if util.EvalNilPtr(tc.commandFails[i], true) == false {
 								expecting--
 							}
 						}
@@ -606,7 +608,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
-			var hadStatus service_status.Status
+			var hadStatus svcstatus.Status
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 			if cfg.Service[tc.serviceID] != nil {
@@ -634,10 +636,10 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN we send a message to the server (wsService)
-			msg := api_types.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
-				ServiceData: &api_types.ServiceSummary{ID: tc.serviceID}}
+			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
+				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
-				msg.ServiceData.Status = &api_types.Status{
+				msg.ServiceData.Status = &api_type.Status{
 					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
 				}
 			}
@@ -708,7 +710,7 @@ func TestWebSocketRuntimeBuildINIT(t *testing.T) {
 		msgPage    string = "RUNTIME_BUILD"
 		msgType    string = "INIT"
 	)
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    msgPage,
 		Type:    msgType,
@@ -733,9 +735,9 @@ func TestWebSocketRuntimeBuildINIT(t *testing.T) {
 		t.Fatalf("Didn't get any InfoData in the message\n%#v",
 			message)
 	}
-	if message.InfoData.Build.GoVersion != utils.GoVersion {
+	if message.InfoData.Build.GoVersion != util.GoVersion {
 		t.Errorf("Expected Info.Build.GoVersion to be %q, got %q\n%s",
-			utils.GoVersion, message.InfoData.Build.GoVersion, raw)
+			util.GoVersion, message.InfoData.Build.GoVersion, raw)
 	}
 }
 
@@ -750,7 +752,7 @@ func TestWebSocketFlagsINIT(t *testing.T) {
 		msgPage    string = "FLAGS"
 		msgType    string = "INIT"
 	)
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Version: &msgVersion,
 		Page:    msgPage,
 		Type:    msgType,
@@ -850,7 +852,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				msgPage    string = "CONFIG"
 				msgType    string = "INIT"
 			)
-			msg := api_types.WebSocketMessage{
+			msg := api_type.WebSocketMessage{
 				Version: &msgVersion,
 				Page:    msgPage,
 				Type:    msgType,
@@ -908,7 +910,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 						t.Errorf("Didn't receive ConfigData.Defaults.Service.Interval from\n%#v",
 							message)
 					} else if message.ConfigData.Defaults.Service.Options.Interval != cfg.Defaults.Service.Options.Interval {
-						t.Errorf("Expected ConfigData.Defaults.Service.Options.Interval to be %q, got %q\n%s",
+						t.Errorf("Expected ConfigData.Defaults..Service.Options.Interval to be %q, got %q\n%s",
 							cfg.Defaults.Service.Options.Interval, message.ConfigData.Defaults.Service.Options.Interval, raw)
 					}
 				}
@@ -1043,9 +1045,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					if receivedTestService.LatestVersion.URLCommands == nil {
 						t.Errorf("ConfigData.Service.test.URLCommands should've been %#v, got %#v",
 							cfgTestService.LatestVersion.URLCommands, receivedTestService.LatestVersion.URLCommands)
-					} else if utils.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex) != utils.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
+					} else if util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex) != util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
 						t.Errorf("ConfigData.Service.test.URLCommands[0].Regex should've been %q, got %q",
-							utils.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), utils.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex))
+							util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex))
 					}
 				}
 				// notify

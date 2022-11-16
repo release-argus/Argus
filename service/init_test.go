@@ -23,15 +23,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestGetServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceURL()
+	service := testServiceURL("TestGetServiceInfo")
 	id := "test_id"
 	service.ID = id
 	url := "https://test_url.com"
@@ -45,7 +45,7 @@ func TestGetServiceInfo(t *testing.T) {
 
 	// When GetServiceInfo is called on it
 	got := service.GetServiceInfo()
-	want := utils.ServiceInfo{
+	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
 		WebURL:        webURL,
@@ -103,8 +103,10 @@ func TestServiceGetIconURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			service := testServiceGitHub()
+			t.Parallel()
+			service := testServiceGitHub(name)
 			service.Dashboard.Icon = tc.icon
 			service.Notify = tc.notify
 
@@ -125,8 +127,8 @@ func TestInit(t *testing.T) {
 	tests := map[string]struct {
 		service Service
 	}{
-		"bare service": {service: Service{ID: "Init", LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}},
-		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
+		"bare service": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}},
+		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
 			Notify:  shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{Type: "discord"}},
 			Command: command.Slice{{"ls"}},
 			WebHook: webhook.Slice{"test": testWebHook(false)}}},
@@ -134,13 +136,13 @@ func TestInit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := utils.NewJLog("WARN", false)
+			log := util.NewJLog("WARN", false)
 			var defaults Service
 			var hardDefaults Service
 			tc.service.ID = name
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+			hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
 			tc.service.Init(log, &defaults, &hardDefaults, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 
 			// THEN pointers to those vars are handed out to the Lookup
@@ -159,7 +161,7 @@ func TestInit(t *testing.T) {
 				t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 					&defaults.Dashboard, tc.service.Dashboard.Defaults)
 			}
-			// options.defaults
+			// option.defaults
 			if tc.service.Options.Defaults != &defaults.Options {
 				t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 					&defaults.Options, tc.service.Options.Defaults)
@@ -174,13 +176,13 @@ func TestInit(t *testing.T) {
 				t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 					&hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
 			}
-			// options.hardDefaults
+			// option.hardDefaults
 			if tc.service.Options.HardDefaults != &hardDefaults.Options {
 				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 					&hardDefaults.Options, tc.service.Options.HardDefaults)
 			}
 			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metrics.LatestVersionQueryMetric)
+			gotC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
 			wantC := 2
 			if (gotC - hadC) != wantC {
 				t.Errorf("%d Counter metrics's were initialised, expecting %d",

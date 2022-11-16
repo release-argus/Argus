@@ -14,7 +14,7 @@
 
 //go:built unit
 
-package filters
+package filter
 
 import (
 	"io"
@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestRequireInit(t *testing.T) {
@@ -39,8 +39,8 @@ func TestRequireInit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			status := service_status.Status{DeployedVersion: "1.2.3"}
-			newJLog := utils.NewJLog("WARN", false)
+			status := svcstatus.Status{DeployedVersion: "1.2.3"}
+			newJLog := util.NewJLog("WARN", false)
 
 			// WHEN Init is called with it
 			tc.req.Init(newJLog, &status)
@@ -132,7 +132,7 @@ func TestRequireCheckValues(t *testing.T) {
 			err := tc.require.CheckValues("")
 
 			// THEN err is expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])

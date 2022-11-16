@@ -22,9 +22,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestSetNextRunnable(t *testing.T) {
@@ -34,7 +34,7 @@ func TestSetNextRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
 		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   make([]time.Time, 3),
 		ParentInterval: stringPtr("11m"),
@@ -55,7 +55,9 @@ func TestSetNextRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN SetNextRunnable is called
 			ranAt := time.Now().UTC()
 			controller.SetNextRunnable(tc.index, tc.executing)
@@ -82,7 +84,7 @@ func TestIsRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
 		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
@@ -97,8 +99,11 @@ func TestIsRunnable(t *testing.T) {
 		"NextRunnable out of range": {index: 3, want: false},
 	}
 
+	time.Sleep(5 * time.Millisecond)
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN IsRunnable is called
 			got := controller.IsRunnable(tc.index)
 
@@ -118,7 +123,7 @@ func TestGetNextRunnable(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id")},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
 		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
@@ -136,7 +141,9 @@ func TestGetNextRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN GetNextRunnable is called
 			got := controller.GetNextRunnable(tc.index)
 
@@ -167,7 +174,9 @@ func TestString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN the command is stringified with String
 			got := tc.cmd.String()
 
@@ -192,7 +201,9 @@ func TestFormattedString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN the command is stringified with FormattedString
 			got := tc.cmd.FormattedString()
 
@@ -212,27 +223,27 @@ func TestInitMetrics(t *testing.T) {
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("InitMetrics")},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("InitMetrics")},
 		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
 		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
 		ParentInterval: stringPtr("11m"),
 	}
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
-	hadC := testutil.CollectAndCount(metrics.CommandMetric)
-	hadG := testutil.CollectAndCount(metrics.AckWaiting)
+	hadC := testutil.CollectAndCount(metric.CommandMetric)
+	hadG := testutil.CollectAndCount(metric.AckWaiting)
 	controller.initMetrics()
 
 	// THEN it can be collected
 	// counters
-	gotC := testutil.CollectAndCount(metrics.CommandMetric)
+	gotC := testutil.CollectAndCount(metric.CommandMetric)
 	wantC := 2 * len(*controller.Command)
 	if (gotC - hadC) != wantC {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
 			(gotC - hadC), wantC)
 	}
 	// gauges
-	gotG := testutil.CollectAndCount(metrics.AckWaiting)
+	gotG := testutil.CollectAndCount(metric.AckWaiting)
 	wantG := 1
 	if (gotG - hadG) != wantG {
 		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
@@ -244,14 +255,14 @@ func TestInit(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
 		nilController     bool
-		log               *utils.JLog
-		serviceStatus     service_status.Status
+		log               *util.JLog
+		serviceStatus     svcstatus.Status
 		command           *Slice
 		shoutrrrNotifiers *shoutrrr.Slice
 		parentInterval    *string
 	}{
 		"nil log":            {log: nil, command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"non-nil log":        {log: utils.NewJLog("INFO", false), command: &Slice{{"date", "+%m-%d-%Y"}}},
+		"non-nil log":        {log: util.NewJLog("INFO", false), command: &Slice{{"date", "+%m-%d-%Y"}}},
 		"nil Controller":     {nilController: true},
 		"non-nil Controller": {command: &Slice{{"date", "+%m-%d-%Y"}}},
 		"non-nil Command's": {command: &Slice{

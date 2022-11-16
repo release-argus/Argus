@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	service_status "github.com/release-argus/Argus/service/status"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestAnnounceCommand(t *testing.T) {
@@ -53,7 +53,9 @@ func TestAnnounceCommand(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			controller := Controller{
 				Command: &Slice{
 					{"ls", "-lah", "/root"},
@@ -63,7 +65,7 @@ func TestAnnounceCommand(t *testing.T) {
 				Failed:         &fails,
 				NextRunnable:   make([]time.Time, 3),
 				ParentInterval: stringPtr("11m"),
-				ServiceStatus:  &service_status.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
+				ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
 				controller.ServiceStatus.AnnounceChannel = &announceChannel
@@ -79,7 +81,7 @@ func TestAnnounceCommand(t *testing.T) {
 				return
 			}
 			m := <-*controller.ServiceStatus.AnnounceChannel
-			var parsed api_types.WebSocketMessage
+			var parsed api_type.WebSocketMessage
 			json.Unmarshal(m, &parsed)
 
 			if parsed.CommandData[(*controller.Command)[tc.index].String()] == nil {
@@ -118,7 +120,7 @@ func TestFind(t *testing.T) {
 			Command{"ls", "-lah", "b"},
 			Command{"bash", "upgrade.sh", "{{ version }}"},
 		},
-		ServiceStatus: &service_status.Status{ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
+		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
 		Failed:        &fails,
 	}
 	tests := map[string]struct {
@@ -126,15 +128,17 @@ func TestFind(t *testing.T) {
 		want          *int
 		nilController bool
 	}{
-		"command at first index":      {command: "ls -lah", want: intPtr(0)},
-		"command at second index":     {command: "ls -lah a", want: intPtr(1)},
-		"command with service_status": {command: "bash upgrade.sh 1.2.3", want: intPtr(3)},
-		"unknown command":             {command: "ls -lah /root", want: nil},
-		"nil controller":              {command: "ls -lah /root", want: nil, nilController: true},
+		"command at first index":  {command: "ls -lah", want: intPtr(0)},
+		"command at second index": {command: "ls -lah a", want: intPtr(1)},
+		"command with svcstatus":  {command: "bash upgrade.sh 1.2.3", want: intPtr(3)},
+		"unknown command":         {command: "ls -lah /root", want: nil},
+		"nil controller":          {command: "ls -lah /root", want: nil, nilController: true},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			var target *Controller
 			if !tc.nilController {
 				target = &controller
@@ -170,7 +174,9 @@ func TestResetFails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN ResetFails is run on this controller
 			tc.controller.ResetFails()
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package util
 
 import (
 	"bytes"
@@ -214,11 +214,11 @@ func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
 
 // LowercaseStringStringMap will convert all lowercase all keys in the map
 func LowercaseStringStringMap(change *map[string]string) map[string]string {
-	new := make(map[string]string, len(*change))
+	lowercasedMap := make(map[string]string, len(*change))
 	for i := range *change {
-		new[strings.ToLower(i)] = (*change)[i]
+		lowercasedMap[strings.ToLower(i)] = (*change)[i]
 	}
-	return new
+	return lowercasedMap
 }
 
 // Sorted keys will return a sorted list of the keys in a map.

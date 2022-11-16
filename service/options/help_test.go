@@ -14,7 +14,7 @@
 
 //go:build testing
 
-package options
+package opt
 
 func boolPtr(val bool) *bool {
 	return &val

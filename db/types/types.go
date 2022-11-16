@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package db_types
+package dbtype
 
 // message to be used in the channel for messages to the Database
-// e.g. update deployed_version/latest_version_timestamp
+// e.g. update deployed_version/latest_version_timestamp.
 type Message struct {
 	ServiceID string
 	Cells     []Cell

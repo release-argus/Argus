@@ -19,7 +19,7 @@ package config
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestLoad(t *testing.T) {
@@ -41,7 +41,9 @@ func TestLoad(t *testing.T) {
 
 	// THEN they match the config file
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.got != tc.want {
 				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
 					name, tc.want, tc.got)
@@ -59,7 +61,7 @@ func TestLoadDefaults(t *testing.T) {
 	flags := make(map[string]bool)
 
 	// WHEN Load is called on it
-	config.Load(configFile, &flags, &utils.JLog{})
+	config.Load(configFile, &flags, &util.JLog{})
 
 	// THEN the defaults are assigned correctly to Services
 	want := false

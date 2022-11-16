@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to those
@@ -56,7 +56,7 @@ type AnnounceMSG struct {
 }
 
 // Run will start the WebSocket Hub.
-func (h *Hub) Run(jLog *utils.JLog) {
+func (h *Hub) Run(jLog *util.JLog) {
 	for {
 		select {
 		case client := <-h.register:
@@ -71,14 +71,14 @@ func (h *Hub) Run(jLog *utils.JLog) {
 			for n != 0 {
 				jLog.Debug(
 					fmt.Sprintf("Broadcast %s", string(message)),
-					utils.LogFrom{Primary: "WebSocket"},
+					util.LogFrom{Primary: "WebSocket"},
 					len(h.clients) > 0,
 				)
 				var msg AnnounceMSG
 				if err := json.Unmarshal(message, &msg); err != nil {
 					jLog.Warn(
 						"Invalid JSON broadcast to the WebSocket",
-						utils.LogFrom{Primary: "WebSocket"},
+						util.LogFrom{Primary: "WebSocket"},
 						true,
 					)
 					n = len(h.Broadcast)

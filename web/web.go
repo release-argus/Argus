@@ -18,19 +18,18 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
-	api_v1 "github.com/release-argus/Argus/web/api/v1"
-
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/util"
+	api_v1 "github.com/release-argus/Argus/web/api/v1"
 )
 
-var jLog *utils.JLog
+var jLog *util.JLog
 
 // NewRouter that serves the Prometheus metrics,
 // WebSocket and NodeJS frontend at the RoutePrefix.
-func NewRouter(cfg *config.Config, jLog *utils.JLog, hub *api_v1.Hub) *mux.Router {
+func NewRouter(cfg *config.Config, jLog *util.JLog, hub *api_v1.Hub) *mux.Router {
 	// Go
 	api := api_v1.NewAPI(cfg, jLog)
 
@@ -66,16 +65,16 @@ func newWebUI(cfg *config.Config) *mux.Router {
 	return router
 }
 
-func Run(cfg *config.Config, log *utils.JLog) {
+func Run(cfg *config.Config, log *util.JLog) {
 	jLog = log
 	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), utils.LogFrom{}, true)
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), util.LogFrom{}, true)
 
 	if cfg.Settings.GetWebCertFile() != nil && cfg.Settings.GetWebKeyFile() != nil {
-		jLog.Fatal(http.ListenAndServeTLS(listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router), utils.LogFrom{}, true)
+		jLog.Fatal(http.ListenAndServeTLS(listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router), util.LogFrom{}, true)
 	} else {
-		jLog.Fatal(http.ListenAndServe(listenAddress, router), utils.LogFrom{}, true)
+		jLog.Fatal(http.ListenAndServe(listenAddress, router), util.LogFrom{}, true)
 	}
 }

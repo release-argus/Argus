@@ -17,16 +17,16 @@ package webhook
 import (
 	"encoding/json"
 
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 // AnnounceSend of the WebHook to the `w.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (w *WebHook) AnnounceSend() {
 	w.SetNextRunnable(false, false)
-	webhookSummary := make(map[string]*api_types.WebHookSummary)
-	webhookSummary[w.ID] = &api_types.WebHookSummary{
+	webhookSummary := make(map[string]*api_type.WebHookSummary)
+	webhookSummary[w.ID] = &api_type.WebHookSummary{
 		Failed:       (*w.Failed)[w.ID],
 		NextRunnable: w.NextRunnable,
 	}
@@ -35,12 +35,12 @@ func (w *WebHook) AnnounceSend() {
 	wsPage := "APPROVALS"
 	wsType := "WEBHOOK"
 	wsSubType := "EVENT"
-	payloadData, _ := json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ := json.Marshal(api_type.WebSocketMessage{
 		Page:    wsPage,
 		Type:    wsType,
 		SubType: wsSubType,
-		ServiceData: &api_types.ServiceSummary{
-			ID: utils.DefaultIfNil(w.ServiceStatus.ServiceID),
+		ServiceData: &api_type.ServiceSummary{
+			ID: util.DefaultIfNil(w.ServiceStatus.ServiceID),
 		},
 		WebHookData: webhookSummary,
 	})

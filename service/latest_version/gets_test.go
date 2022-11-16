@@ -14,12 +14,12 @@
 
 //go:build unit
 
-package latest_version
+package latestver
 
 import (
 	"testing"
 
-	service_status "github.com/release-argus/Argus/service/status"
+	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
 func TestGetAccessToken(t *testing.T) {
@@ -39,7 +39,9 @@ func TestGetAccessToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testLookup(false, false)
 			lookup.AccessToken = tc.accessTokenRoot
 			lookup.Defaults.AccessToken = tc.accessTokenDefault
@@ -77,7 +79,9 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testLookup(false, false)
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
@@ -124,8 +128,10 @@ func TestGetServiceURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			status := service_status.Status{LatestVersion: tc.latestVersion, WebURL: &tc.webURL}
+			t.Parallel()
+			status := svcstatus.Status{LatestVersion: tc.latestVersion, WebURL: &tc.webURL}
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called
@@ -157,7 +163,9 @@ func TestGetUsePreRelease(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testLookup(false, false)
 			lookup.UsePreRelease = tc.usePreReleaseRoot
 			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault

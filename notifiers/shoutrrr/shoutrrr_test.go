@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestGetURL(t *testing.T) {
@@ -127,7 +127,9 @@ func TestGetURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.Type = tc.sType
 			shoutrrr.URLFields = tc.urlFields
@@ -147,7 +149,7 @@ func TestGetURL(t *testing.T) {
 
 func TestGetParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo
-	serviceInfo := utils.ServiceInfo{
+	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
 	}
@@ -173,7 +175,9 @@ func TestGetParams(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.paramsRoot != nil {
@@ -204,7 +208,7 @@ func TestGetParams(t *testing.T) {
 func TestShoutrrrSend(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo
 	testLogging("INFO")
-	serviceInfo := utils.ServiceInfo{
+	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
 	}
@@ -219,7 +223,7 @@ func TestShoutrrrSend(t *testing.T) {
 		errRegex    string
 		retries     int
 	}{
-		"invalid host": {host: "	test", errRegex: "error initializing router services"},
+		"invalid host":                {host: "	test", errRegex: "error initializing router services"},
 		"selfsigned cert":             {invalidCert: true, errRegex: " x509:"},
 		"has default title":           {title: stringPtr(""), errRegex: "^$"},
 		"has default message":         {message: stringPtr(""), errRegex: "message.*required"},
@@ -230,7 +234,9 @@ func TestShoutrrrSend(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(tc.wouldFail, true, tc.invalidCert)
 			shoutrrr.SetOption("max_tries", fmt.Sprint(tc.retries+1))
 			shoutrrr.SetOption("delay", tc.delay)
@@ -251,7 +257,7 @@ func TestShoutrrrSend(t *testing.T) {
 			err := shoutrrr.Send(title, message, &serviceInfo, tc.useDelay)
 
 			// THEN the logs are expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -275,7 +281,7 @@ func TestShoutrrrSend(t *testing.T) {
 func TestSliceSend(t *testing.T) {
 	// GIVEN a Slice and ServiceInfo
 	testLogging("INFO")
-	serviceInfo := utils.ServiceInfo{
+	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
 	}
@@ -296,7 +302,9 @@ func TestSliceSend(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN Send is called
 			// start := time.Now().UTC()
 			copyServiceInfo := serviceInfo
@@ -307,7 +315,7 @@ func TestSliceSend(t *testing.T) {
 			err := tc.slice.Send("TestSliceSend", name, sInfo, tc.useDelay)
 
 			// THEN the logs are expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

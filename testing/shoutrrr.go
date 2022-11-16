@@ -22,15 +22,15 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 // NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
 func NotifyTest(
 	flag *string,
 	cfg *config.Config,
-	log *utils.JLog,
+	log *util.JLog,
 ) {
 	// Only if flag has been provided
 	if *flag == "" {
@@ -38,14 +38,14 @@ func NotifyTest(
 	}
 	var logSlice *shoutrrr.Slice
 	logSlice.Init(log, nil, nil, nil, nil)
-	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
 	slice := findShoutrrr(*flag, cfg, log, logFrom)
 
-	title := slice["test"].GetTitle(&utils.ServiceInfo{ID: "Test"})
+	title := slice["test"].GetTitle(&util.ServiceInfo{ID: "Test"})
 	message := "TEST - " + slice["test"].GetMessage(
-		&utils.ServiceInfo{
+		&util.ServiceInfo{
 			ID:            "NAME_OF_SERVICE",
 			URL:           "QUERY_URL",
 			WebURL:        "WEB_URL",
@@ -55,7 +55,7 @@ func NotifyTest(
 	err := slice.Send(
 		title,
 		message,
-		&utils.ServiceInfo{
+		&util.ServiceInfo{
 			ID:            "ID",
 			URL:           "URL",
 			WebURL:        "WebURL",
@@ -63,7 +63,7 @@ func NotifyTest(
 		},
 		false)
 	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
-	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, utils.ErrorToString(err)), logFrom, err != nil)
+	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, util.ErrorToString(err)), logFrom, err != nil)
 	if !log.Testing {
 		os.Exit(0)
 	}
@@ -73,8 +73,8 @@ func NotifyTest(
 func findShoutrrr(
 	name string,
 	cfg *config.Config,
-	log *utils.JLog,
-	logFrom utils.LogFrom,
+	log *util.JLog,
+	logFrom util.LogFrom,
 ) shoutrrr.Slice {
 	slice := shoutrrr.Slice{}
 	for _, svc := range cfg.Service {
@@ -118,7 +118,7 @@ func findShoutrrr(
 		}
 	}
 	serviceID := "TESTING"
-	slice["test"].ServiceStatus = &service_status.Status{ServiceID: &serviceID}
+	slice["test"].ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
 	return slice
 }
 
@@ -133,7 +133,7 @@ func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
 			for key := range svc.Notify {
-				if !utils.Contains(all, key) {
+				if !util.Contains(all, key) {
 					all = append(all, key)
 				}
 			}

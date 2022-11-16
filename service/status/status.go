@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service_status
+package svcstatus
 
 import (
 	"fmt"
 	"time"
 
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/util"
 )
 
 // Status is the current state of the Service element (version and regex misses).
@@ -35,11 +35,11 @@ type Status struct {
 	Fails                    Fails  `yaml:"-"` // Track the Notify/WebHook fails
 
 	// Announces
-	AnnounceChannel *chan []byte           `yaml:"-"` // Announce to the WebSocket
-	DatabaseChannel *chan db_types.Message `yaml:"-"` // Channel for broadcasts to the Database
-	SaveChannel     *chan bool             `yaml:"-"` // Channel for triggering a save of the config
-	ServiceID       *string                `yaml:"-"` // ID of the Service
-	WebURL          *string                `yaml:"-"` // Web URL of the Service
+	AnnounceChannel *chan []byte         `yaml:"-"` // Announce to the WebSocket
+	DatabaseChannel *chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database
+	SaveChannel     *chan bool           `yaml:"-"` // Channel for triggering a save of the config
+	ServiceID       *string              `yaml:"-"` // ID of the Service
+	WebURL          *string              `yaml:"-"` // Web URL of the Service
 }
 
 // TODO: Deprecate
@@ -92,9 +92,9 @@ func (s *Status) SetDeployedVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.Fails.resetFails()
 
-	*s.DatabaseChannel <- db_types.Message{
+	*s.DatabaseChannel <- dbtype.Message{
 		ServiceID: *s.ServiceID,
-		Cells: []db_types.Cell{
+		Cells: []dbtype.Cell{
 			{Column: "deployed_version", Value: s.DeployedVersion},
 			{Column: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
 		},
@@ -109,9 +109,9 @@ func (s *Status) SetLatestVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.Fails.resetFails()
 
-	*s.DatabaseChannel <- db_types.Message{
+	*s.DatabaseChannel <- dbtype.Message{
 		ServiceID: *s.ServiceID,
-		Cells: []db_types.Cell{
+		Cells: []dbtype.Cell{
 			{Column: "latest_version", Value: s.LatestVersion},
 			{Column: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
 		},
@@ -133,18 +133,18 @@ func (f *Fails) resetFails() {
 
 // GetWebURL returns the Web URL.
 func (s *Status) GetWebURL() string {
-	if utils.DefaultIfNil(s.WebURL) == "" {
+	if util.DefaultIfNil(s.WebURL) == "" {
 		return ""
 	}
 
-	return utils.TemplateString(*s.WebURL, utils.ServiceInfo{LatestVersion: s.LatestVersion})
+	return util.TemplateString(*s.WebURL, util.ServiceInfo{LatestVersion: s.LatestVersion})
 }
 
 // Print will print the Status.
 func (s *Status) Print(prefix string) {
-	utils.PrintlnIfNotDefault(s.ApprovedVersion, fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
-	utils.PrintlnIfNotDefault(s.DeployedVersion, fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
-	utils.PrintlnIfNotDefault(s.DeployedVersionTimestamp, fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
-	utils.PrintlnIfNotDefault(s.LatestVersion, fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
-	utils.PrintlnIfNotDefault(s.LatestVersionTimestamp, fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
+	util.PrintlnIfNotDefault(s.ApprovedVersion, fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
+	util.PrintlnIfNotDefault(s.DeployedVersion, fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
+	util.PrintlnIfNotDefault(s.DeployedVersionTimestamp, fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
+	util.PrintlnIfNotDefault(s.LatestVersion, fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
+	util.PrintlnIfNotDefault(s.LatestVersionTimestamp, fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
 }

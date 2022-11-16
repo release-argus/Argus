@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package filter
 
-import (
-	"github.com/release-argus/Argus/utils"
-)
+import "github.com/release-argus/Argus/util"
 
 // command will run r.Command and return an err if it failed.
-func (r *Require) ExecCommand(logFrom *utils.LogFrom) error {
+func (r *Require) ExecCommand(logFrom *util.LogFrom) error {
 	if r == nil || len(r.Command) == 0 {
 		return nil
 	}
 	cmd := r.Command.ApplyTemplate(r.Status)
+	//nolint:wrapcheck
 	return cmd.Exec(logFrom)
 }

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package apitype
 
 import (
 	"time"
 
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // ServiceSummary is the Summary of a Service.
@@ -173,7 +173,7 @@ func (n *Notify) Censor() *Notify {
 	}
 
 	// url_fields
-	url_fields_to_censor := []string{
+	urlFieldsToCensor := []string{
 		"apikey",
 		"botkey",
 		"password",
@@ -182,22 +182,22 @@ func (n *Notify) Censor() *Notify {
 		"tokenb",
 		"webhookid",
 	}
-	urlFields := utils.CopyMap(n.URLFields)
-	for i := range url_fields_to_censor {
-		if urlFields[url_fields_to_censor[i]] != "" {
-			urlFields[url_fields_to_censor[i]] = "<secret>"
+	urlFields := util.CopyMap(n.URLFields)
+	for i := range urlFieldsToCensor {
+		if urlFields[urlFieldsToCensor[i]] != "" {
+			urlFields[urlFieldsToCensor[i]] = "<secret>"
 		}
 	}
 
 	// params
-	params_to_censor := []string{
+	paramsToCensor := []string{
 		"devices",
 		"host",
 	}
-	params := utils.CopyMap(n.Params)
-	for i := range params_to_censor {
-		if params[params_to_censor[i]] != "" {
-			params[params_to_censor[i]] = "<secret>"
+	params := util.CopyMap(n.Params)
+	for i := range paramsToCensor {
+		if params[paramsToCensor[i]] != "" {
+			params[paramsToCensor[i]] = "<secret>"
 		}
 	}
 
@@ -227,14 +227,14 @@ type Service struct {
 	Dashboard             *DashboardOptions      `json:"dashboard,omitempty"`        // Dashboard options
 }
 
-// ServiceOptions.
+// Serviceoption.
 type ServiceOptions struct {
 	Active             *bool  `json:"active,omitempty"`              // Active Service?
 	Interval           string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
 	SemanticVersioning *bool  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
 }
 
-// DashboardOptions.
+// Dashboardoption.
 type DashboardOptions struct {
 	AutoApprove *bool  `json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
 	Icon        string `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI

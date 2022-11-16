@@ -20,15 +20,15 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Init the Command Controller.
 func (c *Controller) Init(
-	log *utils.JLog,
-	serviceStatus *service_status.Status,
+	log *util.JLog,
+	serviceStatus *svcstatus.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
@@ -64,14 +64,14 @@ func (c *Controller) initMetrics() {
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
-		metrics.InitPrometheusCounterActions(metrics.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
+		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
+		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
+	metric.SetPrometheusGaugeWithID(metric.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'
@@ -110,7 +110,7 @@ func (c *Controller) SetNextRunnable(index int, executing bool) {
 	}
 
 	// Different times depending on pass/fail
-	if !utils.EvalNilPtr((*c.Failed)[index], true) {
+	if !util.EvalNilPtr((*c.Failed)[index], true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
 		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {

@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/ui"
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
@@ -83,14 +83,14 @@ func (api *API) SetupRoutesNodeJS() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	logFrom := utils.LogFrom{Primary: "apiVersion", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "apiVersion", Secondary: getIP(r)}
 	api.Log.Verbose("-", logFrom, true)
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(api_types.VersionAPI{
-		Version:   utils.Version,
-		BuildDate: utils.BuildDate,
-		GoVersion: utils.GoVersion,
+	err := json.NewEncoder(w).Encode(api_type.VersionAPI{
+		Version:   util.Version,
+		BuildDate: util.BuildDate,
+		GoVersion: util.GoVersion,
 	})
 	api.Log.Error(err, logFrom, err != nil)
 }

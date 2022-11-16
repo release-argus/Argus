@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package latest_version
+package latestver
 
 import (
 	"crypto/tls"
@@ -22,15 +22,15 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
-	"github.com/release-argus/Argus/utils"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	"github.com/release-argus/Argus/util"
 )
 
 // Query queries the Service source, updating Service.LatestVersion
 // and returning true if it has changed (is a new release),
 // otherwise returns false.
 func (l *Lookup) Query() (bool, error) {
-	logFrom := utils.LogFrom{Primary: *l.Status.ServiceID}
+	logFrom := util.LogFrom{Primary: *l.Status.ServiceID}
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -111,7 +111,7 @@ func (l *Lookup) Query() (bool, error) {
 	return false, nil
 }
 
-func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) {
+func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
 	if l.GetAllowInvalidCerts() {
@@ -130,7 +130,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 	req.Header.Set("Connection", "close")
 	if l.Type == "github" {
 		// Access Token
-		if utils.DefaultIfNil(l.GetAccessToken()) != "" {
+		if util.DefaultIfNil(l.GetAccessToken()) != "" {
 			req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
 		}
 		// Conditional requests - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
@@ -168,7 +168,7 @@ func (l *Lookup) httpRequest(logFrom utils.LogFrom) (rawBody []byte, err error) 
 
 // GetVersions will filter out releases from rawBody that are preReleases (if not wanted) and will sort releases if
 // semantic versioning is wanted
-func (l *Lookup) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredReleases []github_types.Release, err error) {
+func (l *Lookup) GetVersions(rawBody []byte, logFrom util.LogFrom) (filteredReleases []github_types.Release, err error) {
 	var releases []github_types.Release
 	body := string(rawBody)
 	// GitHub service.
@@ -186,6 +186,7 @@ func (l *Lookup) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRel
 	} else {
 		version, err := l.URLCommands.Run(body, logFrom)
 		if err != nil {
+			//nolint:wrapcheck
 			return filteredReleases, err
 		}
 		filteredReleases = append(filteredReleases, github_types.Release{TagName: version})
@@ -200,7 +201,7 @@ func (l *Lookup) GetVersions(rawBody []byte, logFrom utils.LogFrom) (filteredRel
 }
 
 // GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
-func (l *Lookup) GetVersion(rawBody []byte, logFrom utils.LogFrom) (version string, err error) {
+func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version string, err error) {
 	var filteredReleases []github_types.Release
 	// rawBody length = 0 if GitHub ETag is unchanged
 	if len(rawBody) != 0 {

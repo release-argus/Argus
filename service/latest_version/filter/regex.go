@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package filter
 
 import (
 	"fmt"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
-	"github.com/release-argus/Argus/utils"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	"github.com/release-argus/Argus/util"
 )
 
 // RegexCheckVersion
 func (r *Require) RegexCheckVersion(
 	version string,
-	logFrom utils.LogFrom,
+	logFrom util.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -34,7 +34,7 @@ func (r *Require) RegexCheckVersion(
 	if r.RegexVersion == "" {
 		return nil
 	}
-	regexMatch := utils.RegexCheck(r.RegexVersion, version)
+	regexMatch := util.RegexCheck(r.RegexVersion, version)
 	if !regexMatch {
 		err := fmt.Errorf("regex not matched on version %q",
 			version)
@@ -50,7 +50,7 @@ func (r *Require) RegexCheckVersion(
 func (r *Require) RegexCheckContent(
 	version string,
 	body interface{},
-	logFrom utils.LogFrom,
+	logFrom util.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -79,7 +79,7 @@ func (r *Require) RegexCheckContent(
 	}
 
 	for i := range searchArea {
-		regexMatch := utils.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
+		regexMatch := util.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
 		jLog.Debug(
 			fmt.Sprintf("%q RegexContent on %q, match=%t", r.RegexContent, searchArea[i], regexMatch),
 			logFrom,
@@ -89,7 +89,7 @@ func (r *Require) RegexCheckContent(
 			if i == len(searchArea)-1 {
 				err := fmt.Errorf(
 					"regex %q not matched on content for version %q",
-					utils.TemplateString(r.RegexContent, utils.ServiceInfo{LatestVersion: version}),
+					util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version}),
 					version,
 				)
 				r.Status.RegexMissesContent++

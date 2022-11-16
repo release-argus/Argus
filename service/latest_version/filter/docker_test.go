@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package filters
+package filter
 
 import (
 	"encoding/base64"
@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestDockerCheckGetTag(t *testing.T) {
@@ -41,7 +41,9 @@ func TestDockerCheckGetTag(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN GetTag is called on it
 			got := tc.dockerCheck.GetTag(tc.version)
 
@@ -84,7 +86,9 @@ func TestDockerCheckGetToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -96,7 +100,7 @@ func TestDockerCheckGetToken(t *testing.T) {
 			if tc.errRegex == "" {
 				tc.errRegex = "^$"
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -147,7 +151,9 @@ func TestDockerCheckCheckToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -159,7 +165,7 @@ func TestDockerCheckCheckToken(t *testing.T) {
 			if tc.errRegex == "" {
 				tc.errRegex = "^$"
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -201,7 +207,9 @@ func TestRequireDockerTagCheck(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -214,7 +222,7 @@ func TestRequireDockerTagCheck(t *testing.T) {
 			if tc.errRegex == "" {
 				tc.errRegex = "^$"
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -241,7 +249,9 @@ func TestDockerCheckRefreshDockerHubToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -253,7 +263,7 @@ func TestDockerCheckRefreshDockerHubToken(t *testing.T) {
 			if tc.errRegex == "" {
 				tc.errRegex = "^$"
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -292,12 +302,14 @@ func TestDockerCheckCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called on it
 			err := tc.dockerCheck.CheckValues("-")
 
 			// THEN the err is what we expect
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

@@ -19,13 +19,13 @@ import (
 	"os/exec"
 	"time"
 
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Exec will execute all `Command` for the controller and returns all errors encountered
-func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
+func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
 		return nil
 	}
@@ -44,14 +44,14 @@ func (c *Controller) Exec(logFrom *utils.LogFrom) (errs error) {
 		err := <-errChan
 		if err != nil {
 			errs = fmt.Errorf("%s\n%w",
-				utils.ErrorToString(errs), err)
+				util.ErrorToString(errs), err)
 		}
 	}
 
 	return
 }
 
-func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
+func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
 	if index >= len(*c.Command) {
 		return nil
 	}
@@ -82,22 +82,23 @@ func (c *Controller) ExecIndex(logFrom *utils.LogFrom, index int) error {
 			nil,
 			true)
 	}
-	metrics.IncreasePrometheusCounterActions(metrics.CommandMetric, (*c.Command)[index].String(), *c.ServiceStatus.ServiceID, "", metricResult)
+	metric.IncreasePrometheusCounterActions(metric.CommandMetric, (*c.Command)[index].String(), *c.ServiceStatus.ServiceID, "", metricResult)
 
 	return err
 }
 
-func (c *Command) Exec(logFrom *utils.LogFrom) error {
+func (c *Command) Exec(logFrom *util.LogFrom) error {
 	jLog.Info(fmt.Sprintf("Executing '%s'", c.String()), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
-	jLog.Error(utils.ErrorToString(err), *logFrom, err != nil)
+	jLog.Error(util.ErrorToString(err), *logFrom, err != nil)
 	jLog.Info(string(out), *logFrom, err == nil && string(out) != "")
 
+	//nolint:wrapcheck
 	return err
 }
 
-func (c *Command) ApplyTemplate(serviceStatus *service_status.Status) Command {
+func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) Command {
 	if serviceStatus == nil {
 		return *c
 	}
@@ -105,7 +106,7 @@ func (c *Command) ApplyTemplate(serviceStatus *service_status.Status) Command {
 	command := Command(make([]string, len(*c)))
 	copy(command, *c)
 	for i := range command {
-		command[i] = utils.TemplateString(command[i], utils.ServiceInfo{LatestVersion: serviceStatus.LatestVersion})
+		command[i] = util.TemplateString(command[i], util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion})
 	}
 	return command
 }

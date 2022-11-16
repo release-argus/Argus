@@ -14,10 +14,10 @@
 
 //go:build testing
 
-package service_status
+package svcstatus
 
 import (
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 )
 
 func boolPtr(val bool) *bool {
@@ -29,9 +29,9 @@ func stringPtr(val string) *string {
 
 func testStatus() Status {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 2)
-		saveChannel     chan bool             = make(chan bool, 5)
-		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte         = make(chan []byte, 2)
+		saveChannel     chan bool           = make(chan bool, 5)
+		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 	)
 	return Status{
 		ServiceID:                stringPtr("test"),

@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestInitMetrics(t *testing.T) {
@@ -46,12 +46,12 @@ func TestInitMetrics(t *testing.T) {
 			}
 
 			// WHEN the Prometheus metrics are initialised with initMetrics
-			had := testutil.CollectAndCount(metrics.NotifyMetric)
+			had := testutil.CollectAndCount(metric.NotifyMetric)
 			shoutrrr.initMetrics()
 
 			// THEN it can be collected
 			// counters
-			got := testutil.CollectAndCount(metrics.NotifyMetric)
+			got := testutil.CollectAndCount(metric.NotifyMetric)
 			want := 0
 			if tc.wantMetrics {
 				want = 2
@@ -77,7 +77,9 @@ func TestInitOptions(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -113,7 +115,9 @@ func TestInitURLFields(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.URLFields = tc.had
@@ -149,7 +153,9 @@ func TestInitParams(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Params = tc.had
@@ -187,7 +193,9 @@ func TestInitMaps(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -282,12 +290,12 @@ func TestShoutrrrInit(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metrics.NotifyMetric)
+			hadC := testutil.CollectAndCount(metric.NotifyMetric)
 			shoutrrr.Init(&serviceStatus, tc.main, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
 			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metrics.NotifyMetric)
+			gotC := testutil.CollectAndCount(metric.NotifyMetric)
 			if (gotC - hadC) != tc.metricCount {
 				t.Errorf("%d Counter metrics's were initialised, expecting %d",
 					(gotC - hadC), tc.metricCount)
@@ -363,7 +371,7 @@ func TestSliceInit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := utils.NewJLog("WARN", false)
+			log := util.NewJLog("WARN", false)
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -372,8 +380,8 @@ func TestSliceInit(t *testing.T) {
 					}
 				}
 			}
-			serviceStatus := service_status.Status{
-				Fails:     service_status.Fails{Shoutrrr: map[string]*bool{}},
+			serviceStatus := svcstatus.Status{
+				Fails:     svcstatus.Fails{Shoutrrr: map[string]*bool{}},
 				ServiceID: stringPtr(name),
 			}
 			for i := range tc.defaults {
@@ -393,12 +401,12 @@ func TestSliceInit(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metrics.NotifyMetric)
+			hadC := testutil.CollectAndCount(metric.NotifyMetric)
 			tc.slice.Init(log, &serviceStatus, tc.mains, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
 			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metrics.NotifyMetric)
+			gotC := testutil.CollectAndCount(metric.NotifyMetric)
 			wantMetrics := 0
 			if tc.slice != nil {
 				wantMetrics = 2 * len(*tc.slice)

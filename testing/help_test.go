@@ -16,9 +16,9 @@
 
 package testing
 
-import "github.com/release-argus/Argus/utils"
+import "github.com/release-argus/Argus/util"
 
-var jLog *utils.JLog
+var jLog *util.JLog
 
 func boolPtr(val bool) *bool {
 	return &val
@@ -27,6 +27,6 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func InitJLog(log *utils.JLog) {
+func InitJLog(log *util.JLog) {
 	jLog = log
 }

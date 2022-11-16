@@ -22,15 +22,15 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Init the Slice metrics and hand out the defaults/notifiers.
 func (w *Slice) Init(
-	log *utils.JLog,
-	serviceStatus *service_status.Status,
+	log *util.JLog,
+	serviceStatus *svcstatus.Status,
 	mains *Slice,
 	defaults *WebHook,
 	hardDefaults *WebHook,
@@ -64,7 +64,7 @@ func (w *Slice) Init(
 
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
-	serviceStatus *service_status.Status,
+	serviceStatus *svcstatus.Status,
 	main *WebHook,
 	defaults *WebHook,
 	hardDefaults *WebHook,
@@ -96,23 +96,23 @@ func (w *WebHook) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "FAIL")
+	metric.InitPrometheusCounterActions(metric.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "SUCCESS")
+	metric.InitPrometheusCounterActions(metric.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "FAIL")
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metrics.SetPrometheusGaugeWithID(metrics.AckWaiting, *w.ServiceStatus.ServiceID, float64(0))
+	metric.SetPrometheusGaugeWithID(metric.AckWaiting, *w.ServiceStatus.ServiceID, float64(0))
 }
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (w *WebHook) GetAllowInvalidCerts() bool {
-	return *utils.GetFirstNonNilPtr(w.AllowInvalidCerts, w.Main.AllowInvalidCerts, w.Defaults.AllowInvalidCerts, w.HardDefaults.AllowInvalidCerts)
+	return *util.GetFirstNonNilPtr(w.AllowInvalidCerts, w.Main.AllowInvalidCerts, w.Defaults.AllowInvalidCerts, w.HardDefaults.AllowInvalidCerts)
 }
 
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
-	return utils.GetFirstNonDefault(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
+	return util.GetFirstNonDefault(w.Delay, w.Main.Delay, w.Defaults.Delay, w.HardDefaults.Delay)
 }
 
 // GetDelayDuration before auto-approving this WebHook.
@@ -123,7 +123,7 @@ func (w *WebHook) GetDelayDuration() time.Duration {
 
 // GetDesiredStatusCode of the WebHook.
 func (w *WebHook) GetDesiredStatusCode() int {
-	return *utils.GetFirstNonNilPtr(w.DesiredStatusCode, w.Main.DesiredStatusCode, w.Defaults.DesiredStatusCode, w.HardDefaults.DesiredStatusCode)
+	return *util.GetFirstNonNilPtr(w.DesiredStatusCode, w.Main.DesiredStatusCode, w.Defaults.DesiredStatusCode, w.HardDefaults.DesiredStatusCode)
 }
 
 // GetFailStatus of this WebHook.
@@ -133,7 +133,7 @@ func (w *WebHook) GetFailStatus() *bool {
 
 // GetMaxTries allowed for the WebHook.
 func (w *WebHook) GetMaxTries() uint {
-	return *utils.GetFirstNonNilPtr(w.MaxTries, w.Main.MaxTries, w.Defaults.MaxTries, w.HardDefaults.MaxTries)
+	return *util.GetFirstNonNilPtr(w.MaxTries, w.Main.MaxTries, w.Defaults.MaxTries, w.HardDefaults.MaxTries)
 }
 
 // GetRequest will return the WebHook http.request ready to be sent.
@@ -145,8 +145,8 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 		//nolint:errcheck // ^
 		payload, _ := json.Marshal(GitHub{
 			Ref:    "refs/heads/master",
-			Before: utils.RandAlphaNumericLower(40),
-			After:  utils.RandAlphaNumericLower(40),
+			Before: util.RandAlphaNumericLower(40),
+			After:  util.RandAlphaNumericLower(40),
 		})
 
 		req, err = http.NewRequest(http.MethodPost, w.GetURL(), bytes.NewReader(payload))
@@ -172,24 +172,24 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return utils.GetFirstNonDefault(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
+	return util.GetFirstNonDefault(w.Type, w.Main.Type, w.Defaults.Type, w.HardDefaults.Type)
 }
 
 // GetSecret for the WebHook.
 func (w *WebHook) GetSecret() string {
-	return utils.GetFirstNonDefault(w.Secret, w.Main.Secret, w.Defaults.Secret)
+	return util.GetFirstNonDefault(w.Secret, w.Main.Secret, w.Defaults.Secret)
 }
 
 // GetSilentFails returns the flag for whether WebHooks should fail silently or notify.
 func (w *WebHook) GetSilentFails() bool {
-	return *utils.GetFirstNonNilPtr(w.SilentFails, w.Main.SilentFails, w.Defaults.SilentFails, w.HardDefaults.SilentFails)
+	return *util.GetFirstNonNilPtr(w.SilentFails, w.Main.SilentFails, w.Defaults.SilentFails, w.HardDefaults.SilentFails)
 }
 
 // GetURL of the WebHook.
 func (w *WebHook) GetURL() string {
-	url := utils.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL)
+	url := util.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL)
 	if w.ServiceStatus != nil && url != "" && strings.Contains(url, "{") {
-		url = strings.Clone(utils.TemplateString(url, utils.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
+		url = strings.Clone(util.TemplateString(url, util.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
 	}
 	return url
 }
@@ -210,7 +210,7 @@ func (w *WebHook) SetFailStatus(status *bool) {
 func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
 	// pass
-	if !utils.EvalNilPtr(w.GetFailStatus(), true) {
+	if !util.EvalNilPtr(w.GetFailStatus(), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil

@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestOption(t *testing.T) {
@@ -44,7 +44,9 @@ func TestOption(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -73,9 +75,9 @@ func TestOption(t *testing.T) {
 			got = shoutrrr.GetSelfOption(key)
 
 			// THEN the function returns the Option in itself
-			if got != utils.DefaultIfNil(tc.optionRoot) {
+			if got != util.DefaultIfNil(tc.optionRoot) {
 				t.Fatalf("GetSelfOption:\nwant: %q\ngot:  %q",
-					utils.DefaultIfNil(tc.optionRoot), got)
+					util.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetOption is called
@@ -112,7 +114,9 @@ func TestURLField(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -141,9 +145,9 @@ func TestURLField(t *testing.T) {
 			got = shoutrrr.GetSelfURLField(key)
 
 			// THEN the function returns the URLField in itself
-			if got != utils.DefaultIfNil(tc.optionRoot) {
+			if got != util.DefaultIfNil(tc.optionRoot) {
 				t.Fatalf("GetSelfURLField:\nwant: %q\ngot:  %q",
-					utils.DefaultIfNil(tc.optionRoot), got)
+					util.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetURLField is called
@@ -180,7 +184,9 @@ func TestParam(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -209,9 +215,9 @@ func TestParam(t *testing.T) {
 			got = shoutrrr.GetSelfParam(key)
 
 			// THEN the function returns the Param in itself
-			if got != utils.DefaultIfNil(tc.optionRoot) {
+			if got != util.DefaultIfNil(tc.optionRoot) {
 				t.Fatalf("GetSelfParam:\nwant: %q\ngot:  %q",
-					utils.DefaultIfNil(tc.optionRoot), got)
+					util.DefaultIfNil(tc.optionRoot), got)
 			}
 
 			// WHEN SetParam is called
@@ -250,7 +256,9 @@ func TestGetDelay(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -298,7 +306,9 @@ func TestGetDelayDuration(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -346,7 +356,9 @@ func TestGetMaxTries(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "max_tries"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.maxTriesRoot != nil {
@@ -376,7 +388,7 @@ func TestGetMaxTries(t *testing.T) {
 
 func TestGetMessage(t *testing.T) {
 	// GIVEN a Shoutrrr
-	serviceInfo := &utils.ServiceInfo{
+	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
 		WebURL:        "https://release-argus.io/demo",
@@ -405,7 +417,9 @@ func TestGetMessage(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "message"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.messageRoot != nil {
@@ -435,7 +449,7 @@ func TestGetMessage(t *testing.T) {
 
 func TestGetTitle(t *testing.T) {
 	// GIVEN a Shoutrrr
-	serviceInfo := &utils.ServiceInfo{
+	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
 		WebURL:        "https://release-argus.io/demo",
@@ -464,7 +478,9 @@ func TestGetTitle(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			key := "title"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.titleRoot != nil {
@@ -512,7 +528,9 @@ func TestGetType(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.Type = tc.typeRoot
 			shoutrrr.Main.Type = tc.typeMain

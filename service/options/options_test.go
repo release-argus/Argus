@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package options
+package opt
 
 import (
 	"io"
@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestGetActive(t *testing.T) {
@@ -39,7 +39,9 @@ func TestGetActive(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testOptions()
 			lookup.Active = tc.active
 
@@ -72,7 +74,9 @@ func TestGetInterval(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testOptions()
 			lookup.Interval = tc.intervalRoot
 			lookup.Defaults.Interval = tc.intervalDefault
@@ -107,7 +111,9 @@ func TestGetSemanticVersioning(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testOptions()
 			lookup.SemanticVersioning = tc.semanticVersioningRoot
 			lookup.Defaults.SemanticVersioning = tc.semanticVersioningDefault
@@ -207,12 +213,14 @@ func TestCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			err := tc.options.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

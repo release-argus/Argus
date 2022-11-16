@@ -21,20 +21,20 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // API is the API to use for the webserver.
 type API struct {
 	Config      *config.Config
-	Log         *utils.JLog
+	Log         *util.JLog
 	BaseRouter  *mux.Router
 	Router      *mux.Router
 	RoutePrefix string
 }
 
 // NewAPI will create a new API with the provided config.
-func NewAPI(cfg *config.Config, log *utils.JLog) *API {
+func NewAPI(cfg *config.Config, log *util.JLog) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := "/" + strings.TrimPrefix(cfg.Settings.GetWebRoutePrefix(), "/")
 
@@ -46,7 +46,7 @@ func NewAPI(cfg *config.Config, log *utils.JLog) *API {
 	}
 	// On baseRouter as Router may have basicAuth
 	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", strings.TrimSuffix(routePrefix, "/"))).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logFrom := utils.LogFrom{Primary: "apiHealthcheck", Secondary: getIP(r)}
+		logFrom := util.LogFrom{Primary: "apiHealthcheck", Secondary: getIP(r)}
 		api.Log.Verbose("-", logFrom, true)
 		w.Header().Set("Connection", "close")
 		fmt.Fprintf(w, "Alive")

@@ -23,20 +23,20 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // SetGitHubHeaders of the req based on the payload and secret.
 func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	req.Header.Set("X-Github-Event", "push")
-	req.Header.Set("X-Github-Hook-Id", utils.RandNumeric(9))
+	req.Header.Set("X-Github-Hook-Id", util.RandNumeric(9))
 	req.Header.Set("X-Github-Delivery", fmt.Sprintf("%s-%s-%s-%s-%s",
-		utils.RandAlphaNumericLower(8),
-		utils.RandAlphaNumericLower(4),
-		utils.RandAlphaNumericLower(4),
-		utils.RandAlphaNumericLower(4),
-		utils.RandAlphaNumericLower(12)))
-	req.Header.Set("X-Github-Hook-Installation-Target-Id", utils.RandNumeric(9))
+		util.RandAlphaNumericLower(8),
+		util.RandAlphaNumericLower(4),
+		util.RandAlphaNumericLower(4),
+		util.RandAlphaNumericLower(4),
+		util.RandAlphaNumericLower(12)))
+	req.Header.Set("X-Github-Hook-Installation-Target-Id", util.RandNumeric(9))
 	req.Header.Set("X-Github-Hook-Installation-Target-Type", "repository")
 
 	// X-Hub-Signature-256.

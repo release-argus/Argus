@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestGetAutoApprove(t *testing.T) {
@@ -100,7 +100,7 @@ func TestDashboardOptionsPrint(t *testing.T) {
 
 func TestDashboardOptionsCheckValues(t *testing.T) {
 	// GIVEN DashboardOptions
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		dashboardOptions *DashboardOptions
 		errRegex         []string
@@ -116,7 +116,7 @@ func TestDashboardOptionsCheckValues(t *testing.T) {
 			err := tc.dashboardOptions.CheckValues("-")
 
 			// THEN the err is what we expect
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])

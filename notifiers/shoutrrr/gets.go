@@ -18,12 +18,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // GetOption from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetOption(key string) string {
-	return utils.GetFirstNonDefault(s.Options[key], s.Main.Options[key], s.Defaults.Options[key], s.HardDefaults.Options[key])
+	return util.GetFirstNonDefault(s.Options[key], s.Main.Options[key], s.Defaults.Options[key], s.HardDefaults.Options[key])
 }
 
 // GetSelfOption gets Options[key] from this Shoutrrr
@@ -33,7 +33,7 @@ func (s *Shoutrrr) GetSelfOption(key string) string {
 
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetURLField(key string) string {
-	return utils.GetFirstNonDefault(s.URLFields[key], s.Main.URLFields[key], s.Defaults.URLFields[key], s.HardDefaults.URLFields[key])
+	return util.GetFirstNonDefault(s.URLFields[key], s.Main.URLFields[key], s.Defaults.URLFields[key], s.HardDefaults.URLFields[key])
 }
 
 // GetSelfURLField gets URLFields[key] from this Shoutrrr
@@ -43,7 +43,7 @@ func (s *Shoutrrr) GetSelfURLField(key string) string {
 
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetParam(key string) string {
-	return utils.GetFirstNonDefault(s.Params[key], s.Main.Params[key], s.Defaults.Params[key], s.HardDefaults.Params[key])
+	return util.GetFirstNonDefault(s.Params[key], s.Main.Params[key], s.Defaults.Params[key], s.HardDefaults.Params[key])
 }
 
 // GetSelfParam gets Params[key] from this Shoutrrr
@@ -88,17 +88,17 @@ func (s *Shoutrrr) GetMaxTries() uint {
 }
 
 // GetMessage of the Gotification after the context is applied and template evaluated.
-func (s *Shoutrrr) GetMessage(context *utils.ServiceInfo) string {
-	return utils.TemplateString(s.GetOption("message"), *context)
+func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) string {
+	return util.TemplateString(s.GetOption("message"), *context)
 }
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) GetTitle(serviceInfo *utils.ServiceInfo) string {
-	title := utils.GetFirstNonDefault(s.GetSelfParam("title"), s.Main.GetSelfParam("title"), s.Defaults.GetSelfParam("title"), s.HardDefaults.GetSelfParam("title"))
-	return utils.TemplateString(title, *serviceInfo)
+func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) string {
+	title := util.GetFirstNonDefault(s.GetSelfParam("title"), s.Main.GetSelfParam("title"), s.Defaults.GetSelfParam("title"), s.HardDefaults.GetSelfParam("title"))
+	return util.TemplateString(title, *serviceInfo)
 }
 
 // GetType of this Shoutrrr
 func (s *Shoutrrr) GetType() string {
-	return utils.GetFirstNonDefault(s.Type, s.Main.Type)
+	return util.GetFirstNonDefault(s.Type, s.Main.Type)
 }

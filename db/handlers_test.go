@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 	_ "modernc.org/sqlite"
 )
 
@@ -31,19 +31,21 @@ func TestUpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
 	tests := map[string]struct {
-		cells  []db_types.Cell
+		cells  []dbtype.Cell
 		target string
 	}{
-		"update single column of a row": {target: "keep0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
-		"update multiple columns of a row": {target: "keep0", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+		"update single column of a row": {target: "keep0", cells: []dbtype.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a row": {target: "keep0", cells: []dbtype.Cell{{Column: "deployed_version", Value: "8.8.8"},
 			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
-		"update single column of a non-existing row (new service)": {target: "new0", cells: []db_types.Cell{{Column: "latest_version", Value: "9.9.9"}}},
-		"update multiple columns of a non-existing  row (new service)": {target: "new1", cells: []db_types.Cell{{Column: "deployed_version", Value: "8.8.8"},
+		"update single column of a non-existing row (new service)": {target: "new0", cells: []dbtype.Cell{{Column: "latest_version", Value: "9.9.9"}}},
+		"update multiple columns of a non-existing  row (new service)": {target: "new1", cells: []dbtype.Cell{{Column: "deployed_version", Value: "8.8.8"},
 			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
@@ -94,12 +96,12 @@ func TestHandler(t *testing.T) {
 
 	// WHEN a message is send to the DatabaseChannel targeting latest_version
 	target := "keep0"
-	cell := db_types.Cell{Column: "latest_version", Value: "9.9.9"}
+	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	want := queryRow(t, api.db, target)
 	want.LatestVersion = cell.Value
-	*api.config.DatabaseChannel <- db_types.Message{
+	*api.config.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
-		Cells:     []db_types.Cell{cell},
+		Cells:     []dbtype.Cell{cell},
 	}
 	time.Sleep(time.Second)
 

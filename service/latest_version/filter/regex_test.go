@@ -14,15 +14,15 @@
 
 //go:build unit
 
-package filters
+package filter
 
 import (
 	"regexp"
 	"testing"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestRequireRegexCheckVersion(t *testing.T) {
@@ -41,14 +41,14 @@ func TestRequireRegexCheckVersion(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			if tc.require != nil {
-				tc.require.Status = &service_status.Status{}
+				tc.require.Status = &svcstatus.Status{}
 			}
 
 			// WHEN RegexCheckVersion is called on it
-			err := tc.require.RegexCheckVersion("0.1.1-beta", utils.LogFrom{})
+			err := tc.require.RegexCheckVersion("0.1.1-beta", util.LogFrom{})
 
 			// THEN the err is what we expect
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -84,14 +84,14 @@ func TestRequireRegexCheckContent(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			if tc.require != nil {
-				tc.require.Status = &service_status.Status{}
+				tc.require.Status = &svcstatus.Status{}
 			}
 
 			// WHEN RegexCheckContent is called on it
-			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, utils.LogFrom{})
+			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, util.LogFrom{})
 
 			// THEN the err is what we expect
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

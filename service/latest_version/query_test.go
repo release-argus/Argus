@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package latest_version
+package latestver
 
 import (
 	"io"
@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestHTTPRequest(t *testing.T) {
@@ -44,18 +44,20 @@ func TestHTTPRequest(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testLookup(!tc.githubType, false)
-			if tc.githubType && utils.DefaultIfNil(lookup.AccessToken) == "" {
+			if tc.githubType && util.DefaultIfNil(lookup.AccessToken) == "" {
 				lookup.AccessToken = &tc.accessToken
 			}
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it
-			_, err := lookup.httpRequest(utils.LogFrom{})
+			_, err := lookup.httpRequest(util.LogFrom{})
 
 			// THEN any err is expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -81,7 +83,7 @@ func TestQuery(t *testing.T) {
 		requireRegexContent   string
 		requireRegexVersion   string
 		requireCommand        []string
-		requireDockerCheck    *filters.DockerCheck
+		requireDockerCheck    *filter.DockerCheck
 		errRegex              string
 	}{
 		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
@@ -95,8 +97,8 @@ func TestQuery(t *testing.T) {
 		"regex version mismatch":                      {requireRegexVersion: "^v[0-9]+$", errRegex: "regex not matched on version"},
 		"command fail":                                {requireCommand: []string{"false"}, errRegex: "exit status 1"},
 		"command pass":                                {requireCommand: []string{"true"}, errRegex: "^$"},
-		"docker tag mismatch":                         {requireDockerCheck: &filters.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0-beta", Token: os.Getenv("GH_TOKEN")}, errRegex: "manifest unknown"},
-		"docker tag match":                            {requireDockerCheck: &filters.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0", Token: os.Getenv("GH_TOKEN")}, errRegex: "^$"},
+		"docker tag mismatch":                         {requireDockerCheck: &filter.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0-beta", Token: os.Getenv("GH_TOKEN")}, errRegex: "manifest unknown"},
+		"docker tag match":                            {requireDockerCheck: &filter.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0", Token: os.Getenv("GH_TOKEN")}, errRegex: "^$"},
 		"regex version match":                         {requireRegexVersion: "v([0-9.]+)", errRegex: "regex not matched on version"},
 		"urlCommand regex mismatch":                   {regex: stringPtr("^[0-9]+$"), errRegex: "regex .* didn't return any matches"},
 		"valid semantic version query":                {regex: stringPtr("v([0-9.]+)"), errRegex: "^$"},
@@ -127,7 +129,7 @@ func TestQuery(t *testing.T) {
 				}
 				if tc.regex != nil {
 					if lookup.URLCommands == nil {
-						lookup.URLCommands = filters.URLCommandSlice{{Type: "regex"}}
+						lookup.URLCommands = filter.URLCommandSlice{{Type: "regex"}}
 					}
 					lookup.URLCommands[0].Regex = tc.regex
 				}
@@ -142,7 +144,7 @@ func TestQuery(t *testing.T) {
 				_, err := lookup.Query()
 
 				// THEN any err is expected
-				e := utils.ErrorToString(err)
+				e := util.ErrorToString(err)
 				re := regexp.MustCompile(tc.errRegex)
 				match := re.MatchString(e)
 				if !match {
@@ -177,7 +179,7 @@ func TestQueryGitHubETag(t *testing.T) {
 		errRegex                   string
 	}{
 		"three requests only uses 1 api limit": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 2, errRegex: `^$`},
-		"if initial request fails filters, cached results will be used": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 1, eTagUnchangedUseCache: 1,
+		"if initial request fails filter, cached results will be used": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 1, eTagUnchangedUseCache: 1,
 			initialRequireRegexVersion: `^FOO$`, errRegex: `regex not matched on version`},
 	}
 
@@ -196,7 +198,7 @@ func TestQueryGitHubETag(t *testing.T) {
 			for tc.attempts != attempt {
 				attempt++
 				if attempt == 2 {
-					lookup.Require = &filters.Require{}
+					lookup.Require = &filter.Require{}
 				}
 
 				_, err := lookup.Query()

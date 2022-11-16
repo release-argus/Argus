@@ -22,15 +22,15 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -52,7 +52,7 @@ func stringifyPointer[T comparable](ptr *T) string {
 }
 
 func testLogging(level string, timestamps bool) {
-	jLog = utils.NewJLog(level, timestamps)
+	jLog = util.NewJLog(level, timestamps)
 	var logInitCommands *command.Controller
 	logInitCommands.Init(jLog, nil, nil, nil, nil)
 	var logInitWebHooks *webhook.Slice
@@ -87,7 +87,7 @@ func testConfig() config.Config {
 	svc := testService("test")
 	dvl := testDeployedVersion()
 	svc.DeployedVersionLookup = &dvl
-	svc.LatestVersion.URLCommands = filters.URLCommandSlice{testURLCommandRegex()}
+	svc.LatestVersion.URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
 	emptyNotify := shoutrrr.Shoutrrr{
 		Options:   map[string]string{},
 		Params:    map[string]string{},
@@ -143,27 +143,27 @@ func getFreePort() (int, error) {
 
 func testService(id string) service.Service {
 	var (
-		sAnnounceChannel chan []byte           = make(chan []byte, 2)
-		sDatabaseChannel chan db_types.Message = make(chan db_types.Message, 5)
-		sSaveChannel     chan bool             = make(chan bool, 5)
+		sAnnounceChannel chan []byte         = make(chan []byte, 2)
+		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
+		sSaveChannel     chan bool           = make(chan bool, 5)
 	)
 	svc := service.Service{
 		ID: id,
-		LatestVersion: latest_version.Lookup{
+		LatestVersion: latestver.Lookup{
 			URL:               "https://release-argus.io",
 			AccessToken:       stringPtr(""),
 			AllowInvalidCerts: boolPtr(false),
 			UsePreRelease:     boolPtr(false),
-			Require: &filters.Require{
+			Require: &filter.Require{
 				RegexContent: "content",
 				RegexVersion: "version",
 			},
 		},
-		Options: options.Options{
+		Options: opt.Options{
 			SemanticVersioning: boolPtr(true),
 			Interval:           "10m",
-			Defaults:           &options.Options{},
-			HardDefaults:       &options.Options{},
+			Defaults:           &opt.Options{},
+			HardDefaults:       &opt.Options{},
 		},
 		Dashboard: service.DashboardOptions{
 			AutoApprove:  boolPtr(false),
@@ -177,14 +177,14 @@ func testService(id string) service.Service {
 		Command:           command.Slice{command.Command{"ls", "-lah"}},
 		CommandController: &command.Controller{},
 		WebHook:           webhook.Slice{"test": &webhook.WebHook{URL: "example.com"}},
-		Status: service_status.Status{
+		Status: svcstatus.Status{
 			AnnounceChannel: &sAnnounceChannel,
 			DatabaseChannel: &sDatabaseChannel,
 			SaveChannel:     &sSaveChannel,
 		},
 	}
 	svc.Status.Init(len(svc.Notify), len(svc.Command), len(svc.WebHook), &svc.ID, &svc.Dashboard.WebURL)
-	svc.LatestVersion.Init(jLog, &latest_version.Lookup{}, &latest_version.Lookup{}, &svc.Status, &svc.Options)
+	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
 	svc.CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
 	return svc
 }
@@ -198,7 +198,7 @@ func testCommand(failing bool) command.Command {
 
 func testWebHook(failing bool, id string) *webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(utils.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	slice.Init(util.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
 
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
@@ -213,7 +213,7 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 		MaxTries:          &whMaxTries,
 		ID:                "test",
 		ParentInterval:    stringPtr("11m"),
-		ServiceStatus:     &service_status.Status{},
+		ServiceStatus:     &svcstatus.Status{},
 		Main:              &webhook.WebHook{},
 		Defaults:          &webhook.WebHook{},
 		HardDefaults:      &webhook.WebHook{},
@@ -224,31 +224,31 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 	return wh
 }
 
-func testDeployedVersion() deployed_version.Lookup {
+func testDeployedVersion() deployedver.Lookup {
 	var (
-		allowInvalidCerts bool = false
+		allowInvalidCerts = false
 	)
-	return deployed_version.Lookup{
+	return deployedver.Lookup{
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
-		Headers: []deployed_version.Header{
+		Headers: []deployedver.Header{
 			{Key: "foo", Value: "bar"},
 		},
 		JSON:  "something",
 		Regex: "([0-9]+) The Argus Developers",
-		BasicAuth: &deployed_version.BasicAuth{
+		BasicAuth: &deployedver.BasicAuth{
 			Username: "fizz",
 			Password: "buzz",
 		},
-		Defaults:     &deployed_version.Lookup{},
-		HardDefaults: &deployed_version.Lookup{},
+		Defaults:     &deployedver.Lookup{},
+		HardDefaults: &deployedver.Lookup{},
 	}
 }
 
-func testURLCommandRegex() filters.URLCommand {
+func testURLCommandRegex() filter.URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
-	return filters.URLCommand{
+	return filter.URLCommand{
 		Type:  "regex",
 		Regex: &regex,
 		Index: index,

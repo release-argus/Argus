@@ -14,17 +14,17 @@
 
 //go:build testing
 
-package latest_version
+package latestver
 
 import (
 	"os"
 
 	command "github.com/release-argus/Argus/commands"
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -34,30 +34,30 @@ func stringPtr(val string) *string {
 	return &val
 }
 func testLogging(level string) {
-	jLog = utils.NewJLog(level, false)
+	jLog = util.NewJLog(level, false)
 	var commandController *command.Controller
 	commandController.Init(jLog, nil, nil, nil, nil)
-	var logURLCommand *filters.URLCommandSlice
+	var logURLCommand *filter.URLCommandSlice
 	logURLCommand.Init(jLog)
 }
 
 func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	var (
-		announceChannel chan []byte           = make(chan []byte, 24)
-		saveChannel     chan bool             = make(chan bool, 5)
-		databaseChannel chan db_types.Message = make(chan db_types.Message, 5)
+		announceChannel chan []byte         = make(chan []byte, 24)
+		saveChannel     chan bool           = make(chan bool, 5)
+		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 	)
 	lookup := Lookup{
 		Type:              "github",
 		URL:               "release-argus/Argus",
 		AllowInvalidCerts: boolPtr(allowInvalidCerts),
-		Require:           &filters.Require{},
-		Options: &options.Options{
+		Require:           &filter.Require{},
+		Options: &opt.Options{
 			SemanticVersioning: boolPtr(true),
-			Defaults:           &options.Options{},
-			HardDefaults:       &options.Options{},
+			Defaults:           &opt.Options{},
+			HardDefaults:       &opt.Options{},
 		},
-		Status: &service_status.Status{
+		Status: &svcstatus.Status{
 			ServiceID:       stringPtr("test"),
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel,
@@ -69,10 +69,10 @@ func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	if urlType {
 		lookup.Type = "url"
 		lookup.URL = "https://valid.release-argus.io/plain"
-		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
+		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
 	} else {
 		lookup.GitHubData = &GitHubData{}
-		lookup.URLCommands = filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
+		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 		lookup.UsePreRelease = boolPtr(false)
 	}

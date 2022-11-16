@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package filters
+package filter
 
 import (
 	"io"
@@ -23,14 +23,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
 
 func TestURLCommandSliceInit(t *testing.T) {
 	// GIVEN URLCommandSlice and a JLog
 	var slice URLCommandSlice
-	newJLog := utils.NewJLog("WARN", false)
+	newJLog := util.NewJLog("WARN", false)
 
 	// WHEN Init is called with it
 	slice.Init(newJLog)
@@ -114,14 +114,14 @@ func TestURLCommandSliceRun(t *testing.T) {
 			if tc.text != "" {
 				text = tc.text
 			}
-			text, err := tc.slice.Run(text, utils.LogFrom{})
+			text, err := tc.slice.Run(text, util.LogFrom{})
 
 			// THEN the expected text was returned
 			if tc.want != text {
 				t.Errorf("Should have got %q, not %q",
 					tc.want, text)
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -158,7 +158,7 @@ func TestURLCommandCheckValues(t *testing.T) {
 			err := tc.slice.CheckValues("")
 
 			// THEN err is expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])
@@ -204,7 +204,7 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 			err := yaml.Unmarshal(data, &slice)
 
 			// THEN the it errs when appropriate and unmarshals correctly into a list
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -220,25 +220,25 @@ func TestUnmarshalYAMLSingle(t *testing.T) {
 					t.Errorf("wrong Type:\nwant: %q\ngot:  %q\n",
 						tc.slice[i].Type, slice[i].Type)
 				}
-				if utils.DefaultIfNil(slice[i].Regex) != utils.DefaultIfNil(tc.slice[i].Regex) {
+				if util.DefaultIfNil(slice[i].Regex) != util.DefaultIfNil(tc.slice[i].Regex) {
 					t.Errorf("wrong Regex:\nwant: %q\ngot:  %q\n",
-						utils.DefaultIfNil(tc.slice[i].Regex), utils.DefaultIfNil(slice[i].Regex))
+						util.DefaultIfNil(tc.slice[i].Regex), util.DefaultIfNil(slice[i].Regex))
 				}
 				if slice[i].Index != tc.slice[i].Index {
 					t.Errorf("wrong Index:\nwant: %q\ngot:  %q\n",
 						tc.slice[i].Index, slice[i].Index)
 				}
-				if utils.DefaultIfNil(slice[i].Text) != utils.DefaultIfNil(tc.slice[i].Text) {
+				if util.DefaultIfNil(slice[i].Text) != util.DefaultIfNil(tc.slice[i].Text) {
 					t.Errorf("wrong Text:\nwant: %q\ngot:  %q\n",
-						utils.DefaultIfNil(tc.slice[i].Text), utils.DefaultIfNil(slice[i].Text))
+						util.DefaultIfNil(tc.slice[i].Text), util.DefaultIfNil(slice[i].Text))
 				}
-				if utils.DefaultIfNil(slice[i].Old) != utils.DefaultIfNil(tc.slice[i].Old) {
+				if util.DefaultIfNil(slice[i].Old) != util.DefaultIfNil(tc.slice[i].Old) {
 					t.Errorf("wrong Old:\nwant: %q\ngot:  %q\n",
-						utils.DefaultIfNil(tc.slice[i].Old), utils.DefaultIfNil(slice[i].Old))
+						util.DefaultIfNil(tc.slice[i].Old), util.DefaultIfNil(slice[i].Old))
 				}
-				if utils.DefaultIfNil(slice[i].New) != utils.DefaultIfNil(tc.slice[i].New) {
+				if util.DefaultIfNil(slice[i].New) != util.DefaultIfNil(tc.slice[i].New) {
 					t.Errorf("wrong New:\nwant: %q\ngot:  %q\n",
-						utils.DefaultIfNil(tc.slice[i].New), utils.DefaultIfNil(slice[i].New))
+						util.DefaultIfNil(tc.slice[i].New), util.DefaultIfNil(slice[i].New))
 				}
 			}
 		})

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployed_version
+package deployedver
 
 import (
 	"fmt"
 	"regexp"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // Print will print the Lookup.
@@ -29,8 +29,8 @@ func (l *Lookup) Print(prefix string) {
 	fmt.Printf("%sdeployed_version:\n", prefix)
 	prefix += "  "
 
-	utils.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	utils.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, utils.DefaultIfNil(l.AllowInvalidCerts)))
+	util.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
+	util.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
 	if l.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
 		fmt.Printf("%s  username: %s\n", prefix, l.BasicAuth.Username)
@@ -43,8 +43,8 @@ func (l *Lookup) Print(prefix string) {
 			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
-	utils.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
-	utils.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
+	util.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
+	util.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
 }
 
 // CheckValues of the Lookup.
@@ -56,14 +56,14 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 	// URL
 	if l.URL == "" && l.Defaults != nil {
 		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\",
-			utils.ErrorToString(errs), prefix)
+			util.ErrorToString(errs), prefix)
 	}
 
 	// RegEx
 	_, err := regexp.Compile(l.Regex)
 	if err != nil {
 		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\",
-			utils.ErrorToString(errs), prefix, l.Regex)
+			util.ErrorToString(errs), prefix, l.Regex)
 	}
 
 	if errs != nil {

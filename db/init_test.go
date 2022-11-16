@@ -23,9 +23,9 @@ import (
 	"testing"
 	"time"
 
-	db_types "github.com/release-argus/Argus/db/types"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 	_ "modernc.org/sqlite"
 )
 
@@ -49,7 +49,9 @@ func TestCheckFile(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			os.RemoveAll(tc.removeBefore)
 			os.RemoveAll(tc.createDirBefore)
 			if tc.createDirBefore != "" {
@@ -141,10 +143,12 @@ func TestConvertServiceStatus(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			cfg := testConfig()
 			api := api{config: &cfg}
-			*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatus.db"
+			*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatus" + name + ".db"
 			api.initialise()
 
 			// WHEN we call convertServiceStatus
@@ -322,7 +326,7 @@ func TestRemoveUnknownServices(t *testing.T) {
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		svc := api.config.Service[id]
-		if svc == nil || !utils.Contains(api.config.All, id) {
+		if svc == nil || !util.Contains(api.config.All, id) {
 			t.Errorf("%q should have been removed from the table",
 				id)
 		}
@@ -344,10 +348,10 @@ func TestRun(t *testing.T) {
 
 	// WHEN a message is send to the DatabaseChannel targeting latest_version
 	target := "keep0"
-	cell := db_types.Cell{Column: "latest_version", Value: "9.9.9"}
-	*cfg.DatabaseChannel <- db_types.Message{
+	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
+	*cfg.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
-		Cells:     []db_types.Cell{cell},
+		Cells:     []dbtype.Cell{cell},
 	}
 	time.Sleep(time.Second)
 
@@ -365,7 +369,7 @@ func TestRun(t *testing.T) {
 	api := api{config: &otherCfg}
 	api.initialise()
 	got := queryRow(t, api.db, target)
-	want := service_status.Status{
+	want := svcstatus.Status{
 		LatestVersion:            "9.9.9",
 		LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
 		ApprovedVersion:          "0.0.1",

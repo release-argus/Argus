@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -46,7 +46,7 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 func testLogging(level string) {
-	jLog = utils.NewJLog(level, false)
+	jLog = util.NewJLog(level, false)
 	jLog.Testing = true
 	var shoutrrrLogs *shoutrrr.Slice
 	shoutrrrLogs.Init(jLog, nil, nil, nil, nil)
@@ -68,7 +68,7 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if forService {
 		webhook.ID = "test"
 		webhook.ParentInterval = stringPtr("12m")
-		webhook.ServiceStatus = &service_status.Status{ServiceID: stringPtr("test")}
+		webhook.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr("test")}
 		webhook.ServiceStatus.Fails.WebHook = make(map[string]*bool, 1)
 		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 		webhook.Main = &WebHook{}
@@ -101,7 +101,7 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		Type:          "gotify",
 		ID:            "test",
 		Failed:        nil,
-		ServiceStatus: &service_status.Status{ServiceID: stringPtr("service"), Fails: service_status.Fails{Shoutrrr: make(map[string]*bool, 2)}},
+		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("service"), Fails: svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)}},
 		Main:          &shoutrrr.Shoutrrr{},
 		Defaults:      &shoutrrr.Shoutrrr{},
 		HardDefaults:  &shoutrrr.Shoutrrr{},
