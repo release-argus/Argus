@@ -23,6 +23,7 @@ jobs:
           echo "sha_short=$(git rev-parse --short HEAD)"  >> ${GITHUB_ENV}
           echo "repository=${repository,,}" >> ${GITHUB_ENV}
           echo "repository_owner=${repository_owner,,}" >> ${GITHUB_ENV}
+          echo "GO_VERSION=$(cat go.mod | grep -Po 'go \K([0-9.]+)')" >> ${GITHUB_ENV}
         env:
           repository: '${{ github.repository }}'
           repository_owner: '${{ github.repository_owner }}'
@@ -77,6 +78,7 @@ jobs:
           platforms: linux/amd64,linux/arm,linux/arm64
           build-args: |
             BUILD_VERSION=${{ github.event.release.tag_name }}
+            GO_VERSION=${{ env.GO_VERSION }}
 
       - name: Build and push (master)
         id: docker_build_master
@@ -94,3 +96,4 @@ jobs:
           platforms: linux/amd64,linux/arm,linux/arm64
           build-args: |
             BUILD_VERSION=${{ env.sha_short }}
+            GO_VERSION=${{ env.GO_VERSION }}

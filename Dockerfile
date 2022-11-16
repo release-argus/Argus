@@ -1,8 +1,8 @@
 ########
 # BASE #
 ########
-ARG GO_VERSION="1.19.1"
 ARG DEBIAN_VERSION="bullseye"
+ARG GO_VERSION="1.19"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION}
 
 COPY . /build/
