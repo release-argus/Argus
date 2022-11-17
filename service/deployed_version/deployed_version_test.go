@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployed_version
+package deployedver
 
 import (
 	"io"
@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	dbtype "github.com/release-argus/Argus/db/types"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestGetAllowInvalidCerts(t *testing.T) {
@@ -46,7 +46,9 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testDeployedVersion()
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
@@ -66,7 +68,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 
 func TestHTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		url      string
 		errRegex string
@@ -77,15 +79,17 @@ func TestHTTPRequest(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := testDeployedVersion()
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it
-			_, err := lookup.httpRequest(utils.LogFrom{})
+			_, err := lookup.httpRequest(util.LogFrom{})
 
 			// THEN any err is expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -98,7 +102,7 @@ func TestHTTPRequest(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		url                  string
 		allowInvalidCerts    bool
@@ -127,7 +131,9 @@ func TestQuery(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			dvl := testDeployedVersion()
 			dvl.URL = tc.url
 			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
@@ -138,7 +144,7 @@ func TestQuery(t *testing.T) {
 			*dvl.Options.SemanticVersioning = !tc.noSemanticVersioning
 
 			// WHEN Query is called on it
-			version, err := dvl.Query(utils.LogFrom{})
+			version, err := dvl.Query(util.LogFrom{})
 
 			// THEN any err is expected
 			if tc.wantVersion != "" {
@@ -149,7 +155,7 @@ func TestQuery(t *testing.T) {
 						tc.wantVersion, version)
 				}
 			}
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -162,7 +168,7 @@ func TestQuery(t *testing.T) {
 
 func TestTrack(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		lookup               *Lookup
 		allowInvalidCerts    bool
@@ -208,26 +214,28 @@ func TestTrack(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 			if tc.lookup != nil {
 				defaults := &Lookup{}
-				dbChannel := make(chan db_types.Message, 4)
+				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
 				webURL := &tc.lookup.URL
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
 				tc.lookup.Defaults = defaults
 				tc.lookup.HardDefaults = defaults
-				tc.lookup.Options = &options.Options{
+				tc.lookup.Options = &opt.Options{
 					Interval:           "2s",
 					SemanticVersioning: boolPtr(tc.semanticVersioning),
-					Defaults:           &options.Options{},
-					HardDefaults:       &options.Options{},
+					Defaults:           &opt.Options{},
+					HardDefaults:       &opt.Options{},
 				}
-				tc.lookup.Status = &service_status.Status{
+				tc.lookup.Status = &svcstatus.Status{
 					ServiceID:       stringPtr(name),
 					DeployedVersion: tc.startDeployedVersion,
 					LatestVersion:   tc.startLatestVersion,
@@ -235,8 +243,8 @@ func TestTrack(t *testing.T) {
 					DatabaseChannel: &dbChannel,
 					WebURL:          webURL,
 				}
-				metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "SUCCESS")
-				metrics.InitPrometheusCounterWithIDAndResult(metrics.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "FAIL")
+				metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "SUCCESS")
+				metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "FAIL")
 			}
 			didFinish := make(chan bool, 1)
 
@@ -257,8 +265,8 @@ func TestTrack(t *testing.T) {
 			}
 			haveQueried := false
 			for haveQueried != false {
-				passQ := testutil.ToFloat64(metrics.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "SUCCESS"))
-				failQ := testutil.ToFloat64(metrics.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "FAIL"))
+				passQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "SUCCESS"))
+				failQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "FAIL"))
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 				}

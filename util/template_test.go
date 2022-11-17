@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package utils
+package util
 
 import (
 	"fmt"
@@ -40,7 +40,9 @@ func TestTemplateString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
@@ -79,7 +81,9 @@ func TestCheckTemplate(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckTemplate is called
 			got := CheckTemplate(tc.tmpl)
 

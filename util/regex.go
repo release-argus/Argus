@@ -12,25 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+package util
 
-package utils
+import (
+	"regexp"
+)
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
+// regexCheck returns whether there is a regex match of `re` on `text`.
+func RegexCheck(re string, text string) bool {
+	regex := regexp.MustCompile(re)
+	// Return whether there's a regex match.
+	return regex.MatchString(text)
 }
 
-func testServiceInfo() ServiceInfo {
-	return ServiceInfo{
-		ID:            "something",
-		URL:           "example.com",
-		WebURL:        "other.com",
-		LatestVersion: "NEW",
-	}
+// regexCheckWithParams returns the result of a regex match of `re` on `text`
+// after replacing "{{ version }}" with the version string.
+func RegexCheckWithParams(re string, text string, version string) bool {
+	re = TemplateString(re, ServiceInfo{LatestVersion: version})
+	return RegexCheck(re, text)
 }

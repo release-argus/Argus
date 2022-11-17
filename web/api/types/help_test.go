@@ -14,7 +14,7 @@
 
 //go:build testing
 
-package types
+package apitype
 
 func testNotify() Notify {
 	return Notify{

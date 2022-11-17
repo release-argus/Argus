@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestShoutrrrPrint(t *testing.T) {
@@ -318,7 +318,9 @@ func TestCheckValuesMaster(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.sType != nil {
 				shoutrrr.Type = *tc.sType
@@ -343,7 +345,7 @@ func TestCheckValuesMaster(t *testing.T) {
 			if tc.errsRegex == "" {
 				tc.errsRegex = "^$"
 			}
-			e := utils.ErrorToString(errs)
+			e := util.ErrorToString(errs)
 			re := regexp.MustCompile(tc.errsRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -354,7 +356,7 @@ func TestCheckValuesMaster(t *testing.T) {
 			if tc.errsOptionsRegex == "" {
 				tc.errsOptionsRegex = "^$"
 			}
-			e = utils.ErrorToString(errsOptions)
+			e = util.ErrorToString(errsOptions)
 			re = regexp.MustCompile(tc.errsOptionsRegex)
 			match = re.MatchString(e)
 			if !match {
@@ -365,7 +367,7 @@ func TestCheckValuesMaster(t *testing.T) {
 			if tc.errsURLFieldsRegex == "" {
 				tc.errsURLFieldsRegex = "^$"
 			}
-			e = utils.ErrorToString(errsURLFields)
+			e = util.ErrorToString(errsURLFields)
 			re = regexp.MustCompile(tc.errsURLFieldsRegex)
 			match = re.MatchString(e)
 			if !match {
@@ -376,7 +378,7 @@ func TestCheckValuesMaster(t *testing.T) {
 			if tc.errsParamsRegex == "" {
 				tc.errsParamsRegex = "^$"
 			}
-			e = utils.ErrorToString(errsParams)
+			e = util.ErrorToString(errsParams)
 			re = regexp.MustCompile(tc.errsParamsRegex)
 			match = re.MatchString(e)
 			if !match {
@@ -413,7 +415,9 @@ func TestCorrectSelf(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := Shoutrrr{Type: tc.sType}
 			shoutrrr.InitMaps()
 			if tc.mapTarget == "url_fields" {
@@ -483,7 +487,9 @@ func TestShoutrrrCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			shoutrrr := testShoutrrr(false, tc.serviceShoutrrr, false)
 			if tc.sType != "" {
 				shoutrrr.Type = tc.sType
@@ -501,7 +507,7 @@ func TestShoutrrrCheckValues(t *testing.T) {
 			eer := shoutrrr.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(eer)
+			e := util.ErrorToString(eer)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -541,12 +547,14 @@ func TestSliceCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			eer := tc.slice.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(eer)
+			e := util.ErrorToString(eer)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

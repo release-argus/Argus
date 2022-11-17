@@ -24,9 +24,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestInitMetrics(t *testing.T) {
@@ -38,7 +38,9 @@ func TestInitMetrics(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, tc.forService, false, false)
 			if tc.forService {
 				webhook.ID = name + "TestInitMetrics"
@@ -46,12 +48,12 @@ func TestInitMetrics(t *testing.T) {
 			}
 
 			// WHEN the Prometheus metrics are initialised with initMetrics
-			hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+			hadC := testutil.CollectAndCount(metric.WebHookMetric)
 			webhook.initMetrics()
 
 			// THEN it can be collected
 			// counters
-			gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+			gotC := testutil.CollectAndCount(metric.WebHookMetric)
 			wantC := 0
 			if tc.forService {
 				wantC = 2
@@ -71,10 +73,10 @@ func TestInit(t *testing.T) {
 	var main WebHook
 	var defaults WebHook
 	var hardDefaults WebHook
-	status := service_status.Status{ServiceID: stringPtr("TestInit")}
+	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
 
 	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+	hadC := testutil.CollectAndCount(metric.WebHookMetric)
 	webhook.Init(&status, &main, &defaults, &hardDefaults, &notifiers, webhook.ParentInterval)
 	webhook.ID = "TestInit"
 
@@ -105,7 +107,7 @@ func TestInit(t *testing.T) {
 			&notifiers, webhook.Notifiers.Shoutrrr)
 	}
 	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+	gotC := testutil.CollectAndCount(metric.WebHookMetric)
 	wantC := 2
 	if (gotC - hadC) != wantC {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
@@ -136,8 +138,8 @@ func TestSliceInit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := utils.NewJLog("WARN", false)
-			status := service_status.Status{ServiceID: &name}
+			log := util.NewJLog("WARN", false)
+			status := svcstatus.Status{ServiceID: &name}
 			if !tc.nilSlice {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -156,12 +158,12 @@ func TestSliceInit(t *testing.T) {
 			parentInterval := "10s"
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metrics.WebHookMetric)
+			hadC := testutil.CollectAndCount(metric.WebHookMetric)
 			tc.slice.Init(log, &status, tc.mains, &tc.defaults, &tc.hardDefaults, &notifiers, &parentInterval)
 
 			// THEN pointers to those vars are handed out to the WebHook
 			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metrics.WebHookMetric)
+			gotC := testutil.CollectAndCount(metric.WebHookMetric)
 			wantC := 0
 			if !tc.nilSlice {
 				wantC = 2 * len(*tc.slice)
@@ -235,7 +237,9 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			webhook.Main.AllowInvalidCerts = tc.allowInvalidCertsMain
@@ -274,7 +278,9 @@ func TestGetDelay(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
@@ -313,7 +319,9 @@ func TestGetDelayDuration(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
@@ -352,7 +360,9 @@ func TestGetDesiredStatusCode(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.DesiredStatusCode = tc.desiredStatusCodeRoot
 			webhook.Main.DesiredStatusCode = tc.desiredStatusCodeMain
@@ -382,7 +392,9 @@ func TestGetFailStatus(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			want := stringifyPointer(tc.failed)
 			(*webhook.Failed)[webhook.ID] = tc.failed
@@ -419,7 +431,9 @@ func TestGetMaxTries(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.MaxTries = tc.maxTriesRoot
 			webhook.Main.MaxTries = tc.maxTriesMain
@@ -457,7 +471,9 @@ func TestGetRequest(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.webhookType
 			webhook.URL = tc.url
@@ -540,7 +556,9 @@ func TestGetType(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.typeRoot
 			webhook.Main.Type = tc.typeMain
@@ -579,7 +597,9 @@ func TestGetSecret(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.Secret = tc.secretRoot
 			webhook.Main.Secret = tc.secretMain
@@ -618,7 +638,9 @@ func TestGetSilentFails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.SilentFails = tc.silentFailsRoot
 			webhook.Main.SilentFails = tc.silentFailsMain
@@ -662,7 +684,9 @@ func TestGetURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.URL = tc.urlRoot
 			webhook.Main.URL = tc.urlMain
@@ -694,7 +718,9 @@ func TestGetIsRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.NextRunnable = tc.nextRunnable
 			time.Sleep(time.Nanosecond)
@@ -722,7 +748,9 @@ func TestSetFailStatus(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			want := stringifyPointer(tc.failed)
 			webhook.SetFailStatus(tc.failed)
@@ -784,7 +812,9 @@ func TestSetNextRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			webhook.SetFailStatus(tc.failed)
 			webhook.Delay = tc.delay
@@ -822,7 +852,9 @@ func TestGetResetFails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					(*tc.slice)[i].Failed = &tc.fails

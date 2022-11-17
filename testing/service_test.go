@@ -25,20 +25,20 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/config"
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
 		flag        string
@@ -51,7 +51,7 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					Options: options.Options{
+					Options: opt.Options{
 						Interval: "0s"},
 				},
 			}},
@@ -60,7 +60,7 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					Options: options.Options{
+					Options: opt.Options{
 						Interval: "0s"},
 				},
 			}},
@@ -68,16 +68,16 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					LatestVersion: latest_version.Lookup{
+					LatestVersion: latestver.Lookup{
 						Type: "github",
 						URL:  "release-argus/Argus",
-						URLCommands: filters.URLCommandSlice{
+						URLCommands: filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
 						},
 						AccessToken:       stringPtr(os.Getenv("GITHUB_TOKEN")),
 						AllowInvalidCerts: boolPtr(false),
 					},
-					Options: options.Options{
+					Options: opt.Options{
 						Interval: "0s",
 					},
 				},
@@ -87,15 +87,15 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latest_version.Lookup{
+					LatestVersion: latestver.Lookup{
 						Type: "url",
 						URL:  "release-argus/Argus",
-						URLCommands: filters.URLCommandSlice{
+						URLCommands: filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
 						},
 						AllowInvalidCerts: boolPtr(false),
 					},
-					Options: options.Options{
+					Options: opt.Options{
 						Interval: "0s",
 					},
 				},
@@ -105,14 +105,14 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latest_version.Lookup{
+					LatestVersion: latestver.Lookup{
 						Type: "url",
 						URL:  "https://github.com/release-argus/Argus/releases",
-						URLCommands: filters.URLCommandSlice{
+						URLCommands: filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 						},
 						AllowInvalidCerts: boolPtr(false),
-						Options: &options.Options{
+						Options: &opt.Options{
 							Interval: "0s",
 						},
 					},
@@ -123,20 +123,20 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latest_version.Lookup{
+					LatestVersion: latestver.Lookup{
 						Type: "url",
 						URL:  "https://github.com/release-argus/Argus/releases",
-						URLCommands: filters.URLCommandSlice{
+						URLCommands: filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
 						},
 						AllowInvalidCerts: boolPtr(false),
 					},
-					DeployedVersionLookup: &deployed_version.Lookup{
+					DeployedVersionLookup: &deployedver.Lookup{
 						URL:               "https://release-argus.io/demo/api/v1/version",
 						AllowInvalidCerts: boolPtr(true),
 						JSON:              "version",
 					},
-					Options: options.Options{
+					Options: opt.Options{
 						Interval:           "0s",
 						SemanticVersioning: boolPtr(true),
 					},
@@ -171,11 +171,11 @@ func TestServiceTest(t *testing.T) {
 					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
 					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
-				dbChannel := make(chan db_types.Message, 4)
+				dbChannel := make(chan dbtype.Message, 4)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
 				if tc.slice[tc.flag].DeployedVersionLookup != nil {
-					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployed_version.Lookup{}
-					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployed_version.Lookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployedver.Lookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployedver.Lookup{}
 				}
 			}
 

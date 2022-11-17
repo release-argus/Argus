@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	service_status "github.com/release-argus/Argus/service/status"
+	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
 func TestSetCustomHeaders(t *testing.T) {
@@ -49,9 +49,11 @@ func TestSetCustomHeaders(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			webhook := WebHook{ServiceStatus: &service_status.Status{ServiceID: &serviceID, LatestVersion: latestVersion},
+			webhook := WebHook{ServiceStatus: &svcstatus.Status{ServiceID: &serviceID, LatestVersion: latestVersion},
 				Main:     &WebHook{},
 				Defaults: &WebHook{}}
 			if tc.customHeaders != nil {

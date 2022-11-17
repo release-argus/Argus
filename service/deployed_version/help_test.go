@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deployed_version
+package deployedver
 
 import (
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
 func stringPtr(val string) *string {
@@ -28,7 +28,7 @@ func boolPtr(val bool) *bool {
 
 func testDeployedVersion() Lookup {
 	var (
-		allowInvalidCerts bool = false
+		allowInvalidCerts = false
 	)
 	dflt := &Lookup{}
 	hardDflt := &Lookup{}
@@ -36,12 +36,12 @@ func testDeployedVersion() Lookup {
 		URL:               "https://release-argus.io",
 		AllowInvalidCerts: &allowInvalidCerts,
 		Regex:             "([0-9]+) The Argus Developers",
-		Options: &options.Options{
+		Options: &opt.Options{
 			SemanticVersioning: boolPtr(true),
-			Defaults:           &options.Options{},
-			HardDefaults:       &options.Options{},
+			Defaults:           &opt.Options{},
+			HardDefaults:       &opt.Options{},
 		},
-		Status:       &service_status.Status{ServiceID: stringPtr("test")},
+		Status:       &svcstatus.Status{ServiceID: stringPtr("test")},
 		Defaults:     dflt,
 		HardDefaults: hardDflt,
 	}

@@ -25,11 +25,11 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -67,14 +67,14 @@ func testAPI() API {
 				serviceID: &service.Service{
 					ID:      serviceID,
 					Comment: "foo",
-					LatestVersion: latest_version.Lookup{
+					LatestVersion: latestver.Lookup{
 						Type: "github",
 						URL:  "release-argus/Argus",
 					},
 				},
 			},
 		},
-		Log: utils.NewJLog("WARN", false),
+		Log: util.NewJLog("WARN", false),
 	}
 }
 
@@ -82,19 +82,19 @@ func testService(id string) service.Service {
 	return service.Service{
 		ID:      id,
 		Comment: "foo",
-		LatestVersion: latest_version.Lookup{
+		LatestVersion: latestver.Lookup{
 			Type: "github",
 			URL:  "release-argus/Argus",
 		},
 	}
 }
 
-func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *testing.T) {
+func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookupWithNil(t *testing.T) {
 	// GIVEN a nil DeployedVersionLookup
-	var dvl *deployed_version.Lookup
+	var dvl *deployedver.Lookup
 
-	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
-	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl)
+	// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
+	got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl)
 
 	// THEN nil was returned
 	if got != nil {
@@ -103,22 +103,22 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupWithNil(t *te
 	}
 }
 
-func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNasicAuthPassword(t *testing.T) {
+func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookupDidConcealNasicAuthPassword(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
-	basicAuth := deployed_version.BasicAuth{
+	basicAuth := deployedver.BasicAuth{
 		Username: "username",
 		Password: "pass123",
 	}
-	dvl := deployed_version.Lookup{
+	dvl := deployedver.Lookup{
 		URL:       "https://example.com",
 		BasicAuth: &basicAuth,
 	}
 
-	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
-	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(&dvl)
+	// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
+	got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(&dvl)
 
 	// THEN basic auth was censored
-	want := api_types.BasicAuth{
+	want := api_type.BasicAuth{
 		Username: dvl.BasicAuth.Username,
 		Password: "<secret>",
 	}
@@ -129,21 +129,21 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealNas
 	}
 }
 
-func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHeaderKeys(t *testing.T) {
+func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookupDidConcealHeaderKeys(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with headers
-	dvl := deployed_version.Lookup{
+	dvl := deployedver.Lookup{
 		URL: "https://example.com",
-		Headers: []deployed_version.Header{
+		Headers: []deployedver.Header{
 			{Key: "X-Test-0", Value: "foo"},
 			{Key: "X-Test-1", Value: "foo"},
 		},
 	}
 
-	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
-	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(&dvl)
+	// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
+	got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(&dvl)
 
 	// THEN the header keys were censored
-	want := []api_types.Header{
+	want := []api_type.Header{
 		{Key: dvl.Headers[0].Key, Value: "<secret>"},
 		{Key: dvl.Headers[1].Key, Value: "<secret>"},
 	}
@@ -155,18 +155,18 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookupDidConcealHea
 	}
 }
 
-func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T) {
+func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T) {
 	// GIVEN a DeployedVersionLookup with a basic auth password
 	allowInvalidCerts := true
-	dvl := deployed_version.Lookup{
+	dvl := deployedver.Lookup{
 		URL:               "https://example.com",
 		AllowInvalidCerts: &allowInvalidCerts,
 		JSON:              "foo",
 		Regex:             "bar",
 	}
 
-	// WHEN convertDeployedVersionLookupToApiTypeDeployedVersionLookup is called on it
-	got := convertDeployedVersionLookupToApiTypeDeployedVersionLookup(&dvl)
+	// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
+	got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(&dvl)
 
 	// THEN the vars were placed correctly
 	if got.URL != dvl.URL ||
@@ -180,7 +180,7 @@ func TestConvertDeployedVersionLookupToApiTypeDeployedVersionLookup(t *testing.T
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 	// GIVEN a nil URL Command slice
-	var slice *filters.URLCommandSlice
+	var slice *filter.URLCommandSlice
 
 	// WHEN convertURLCommandSliceToAPITypeURLCommandSlice is called on it
 	got := convertURLCommandSliceToAPITypeURLCommandSlice(slice)
@@ -194,7 +194,7 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSliceWithNil(t *testing.T) {
 
 func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	// GIVEN a URL Command slice
-	slice := filters.URLCommandSlice{
+	slice := filter.URLCommandSlice{
 		{
 			Type:  "something",
 			Regex: stringPtr("foo"),

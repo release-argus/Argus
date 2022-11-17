@@ -20,10 +20,10 @@ import (
 	"github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -39,19 +39,19 @@ func (d *Defaults) SetDefaults() {
 	// Service defaults.
 	serviceActive := true
 	serviceSemanticVersioning := true
-	d.Service.Options = options.Options{
+	d.Service.Options = opt.Options{
 		Active:             &serviceActive,
 		Interval:           "10m",
 		SemanticVersioning: &serviceSemanticVersioning,
 	}
 	serviceLatestVersionAllowInvalidCerts := false
 	usePreRelease := false
-	d.Service.LatestVersion = latest_version.Lookup{
+	d.Service.LatestVersion = latestver.Lookup{
 		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
 		UsePreRelease:     &usePreRelease,
 	}
 	serviceDeployedVersionLookupAllowInvalidCerts := false
-	d.Service.DeployedVersionLookup = &deployed_version.Lookup{
+	d.Service.DeployedVersionLookup = &deployedver.Lookup{
 		AllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts,
 	}
 	serviceAutoApprove := false
@@ -190,7 +190,7 @@ func (d *Defaults) CheckValues() (errs error) {
 	// Service
 	if err := d.Service.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%sservice:\\%w",
-			utils.ErrorToString(errs), prefix, err)
+			util.ErrorToString(errs), prefix, err)
 	}
 
 	// Notify
@@ -200,13 +200,13 @@ func (d *Defaults) CheckValues() (errs error) {
 	}
 	if err := d.Notify.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), err)
+			util.ErrorToString(errs), err)
 	}
 
 	// WebHook
 	if err := d.WebHook.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%swebhook:\\%w",
-			utils.ErrorToString(errs), prefix, err)
+			util.ErrorToString(errs), prefix, err)
 	}
 
 	return errs

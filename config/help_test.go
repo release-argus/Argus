@@ -17,8 +17,8 @@
 package config
 
 import (
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -31,7 +31,7 @@ func stringPtr(val string) *string {
 func testConfig() Config {
 	logLevel := "DEBUG"
 	saveChannel := make(chan bool, 5)
-	databaseChannel := make(chan db_types.Message, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
 	return Config{
 		File:            "/root/inaccessible",
 		DatabaseChannel: &databaseChannel,
@@ -82,7 +82,7 @@ func testLoad(fileOverride string) Config {
 	}
 
 	flags := make(map[string]bool)
-	config.Load(configFile, &flags, &utils.JLog{})
+	config.Load(configFile, &flags, &util.JLog{})
 
 	return config
 }

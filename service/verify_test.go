@@ -25,10 +25,10 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -36,9 +36,9 @@ func TestServicePrint(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		service          Service
-		options          options.Options
-		latestVersion    latest_version.Lookup
-		deployedVersion  *deployed_version.Lookup
+		options          opt.Options
+		latestVersion    latestver.Lookup
+		deployedVersion  *deployedver.Lookup
 		commands         command.Slice
 		webhooks         webhook.Slice
 		notifies         shoutrrr.Slice
@@ -47,28 +47,28 @@ func TestServicePrint(t *testing.T) {
 	}{
 		"base fields only": {lines: 2, service: Service{ID: "test", Comment: "foo_comment"}},
 		"base + latest_version": {lines: 4, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}},
+			latestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}},
 		"base + latest_version + deployed_version": {lines: 6, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"}},
+			latestVersion:   latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{URL: "https://release-argus.io/demo/api/v1/version"}},
 		"base + latest_version + deployed_version + notifies": {lines: 9, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			latestVersion:   latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}}},
 		"base + latest_version + deployed_version + notifies + commands": {lines: 11, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			latestVersion:   latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			commands:        command.Slice{{"ls", "-la"}}},
 		"base + latest_version + deployed_version + notifies + commands + webhooks": {lines: 14, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion:   latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			latestVersion:   latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			commands:        command.Slice{{"ls", "-la"}},
 			webhooks:        webhook.Slice{"bar": &webhook.WebHook{URL: "https://example.com"}}},
 		"base + latest_version + deployed_version + notifies + commands + webhooks + dashboard": {lines: 16, service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion:    latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			deployedVersion:  &deployed_version.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
+			latestVersion:    latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			deployedVersion:  &deployedver.Lookup{URL: "https://release-argus.io/demo/api/v1/version"},
 			notifies:         shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			commands:         command.Slice{{"ls", "-la"}},
 			webhooks:         webhook.Slice{"bar": &webhook.WebHook{URL: "https://example.com"}},
@@ -153,9 +153,9 @@ func TestServiceCheckValues(t *testing.T) {
 	tests := map[string]struct {
 		service          Service
 		defaults         *Service
-		options          options.Options
-		latestVersion    latest_version.Lookup
-		deployedVersion  *deployed_version.Lookup
+		options          opt.Options
+		latestVersion    latestver.Lookup
+		deployedVersion  *deployedver.Lookup
 		commands         command.Slice
 		webhooks         webhook.Slice
 		notifies         shoutrrr.Slice
@@ -163,30 +163,30 @@ func TestServiceCheckValues(t *testing.T) {
 		errRegex         []string
 	}{
 		"options with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			latestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"},
-			options:       options.Options{Interval: "10x"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`}},
+			latestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
+			options:       opt.Options{Interval: "10x"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`}},
 		"options,latest_version, with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			options:       options.Options{Interval: "10x"},
-			latestVersion: latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
+			options:       opt.Options{Interval: "10x"},
+			latestVersion: latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
 				`^  latest_version:$`, `^    type: .* <invalid>`}},
 		"latest_version, deployed_version with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			options:         options.Options{Interval: "10x"},
-			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{Regex: "[0-"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
+			options:         opt.Options{Interval: "10x"},
+			latestVersion:   latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{Regex: "[0-"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
 				`^  latest_version:$`, `^    type: .* <invalid>`,
 				`^  deployed_version:$`, `^    regex: .* <invalid>`}},
 		"latest_version, deployed_version, command with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			options:         options.Options{Interval: "10x"},
-			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{Regex: "[0-"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
+			options:         opt.Options{Interval: "10x"},
+			latestVersion:   latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{Regex: "[0-"}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
 				`^  latest_version:$`, `^    type: .* <invalid>`,
 				`^  deployed_version:$`, `^    regex: .* <invalid>`,
 				`^  command:$`, `^    item_0: bash .* <invalid>.*templating`},
 			commands: command.Slice{{"bash", "update.sh", "{{ version }"}}},
 		"latest_version, deployed_version, notify with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			options:         options.Options{Interval: "10x"},
-			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{Regex: "[0-"},
+			options:         opt.Options{Interval: "10x"},
+			latestVersion:   latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{Regex: "[0-"},
 			commands:        command.Slice{{"bash", "update.sh", "{{ version }"}},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
 				`^  latest_version:$`, `^    type: .* <invalid>`,
@@ -194,9 +194,9 @@ func TestServiceCheckValues(t *testing.T) {
 				`^  command:$`, `^    item_0: bash .* <invalid>.*templating`,
 				`^  notify:`, `^    foo:$`, `^      url_fields:$`, `^        token: <required>`, `^        webhookid: <required>`}},
 		"latest_version, deployed_version, webhook with errs": {service: Service{ID: "test", Comment: "foo_comment"},
-			options:         options.Options{Interval: "10x"},
-			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{Regex: "[0-"},
+			options:         opt.Options{Interval: "10x"},
+			latestVersion:   latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{Regex: "[0-"},
 			commands:        command.Slice{{"bash", "update.sh", "{{ version }"}},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			webhooks:        webhook.Slice{"wh": &webhook.WebHook{Delay: "0x"}}, errRegex: []string{`^  options:$`, `^    interval: .* <invalid>`,
@@ -207,9 +207,9 @@ func TestServiceCheckValues(t *testing.T) {
 				`^  webhook:$`, `^    wh:$`, `^      delay: .* <invalid>`}},
 		"has defaults. latest_version, deployed_version, webhook with errs": {service: Service{ID: "test", Comment: "foo_comment"},
 			defaults:        &Service{},
-			options:         options.Options{Interval: "10x"},
-			latestVersion:   latest_version.Lookup{Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployed_version.Lookup{Regex: "[0-"},
+			options:         opt.Options{Interval: "10x"},
+			latestVersion:   latestver.Lookup{Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{Regex: "[0-"},
 			commands:        command.Slice{{"bash", "update.sh", "{{ version }"}},
 			notifies:        shoutrrr.Slice{"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
 			webhooks:        webhook.Slice{"wh": &webhook.WebHook{Delay: "0x"}}, errRegex: []string{`^  test:$`,
@@ -242,7 +242,7 @@ func TestServiceCheckValues(t *testing.T) {
 			err := tc.service.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])
@@ -270,22 +270,24 @@ func TestSliceCheckValues(t *testing.T) {
 		errRegex      string
 		errRegexOther string
 	}{
-		"single valid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10s"},
-			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `^$`},
-		"single invalid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10x"},
-			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `interval: .* <invalid>`},
-		"multiple invalid services": {slice: Slice{"foo": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10x"},
-			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}, "bar": {ID: "test", Comment: "foo_comment", Options: options.Options{Interval: "10y"},
-			LatestVersion: latest_version.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `interval: .*10x.* <invalid>.*interval: .*10y.* <invalid>`, errRegexOther: "interval: .*10y.* <invalid>.*interval: .*10x.* <invalid>"},
+		"single valid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: opt.Options{Interval: "10s"},
+			LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `^$`},
+		"single invalid service": {slice: Slice{"first": {ID: "test", Comment: "foo_comment", Options: opt.Options{Interval: "10x"},
+			LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `interval: .* <invalid>`},
+		"multiple invalid services": {slice: Slice{"foo": {ID: "test", Comment: "foo_comment", Options: opt.Options{Interval: "10x"},
+			LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}, "bar": {ID: "test", Comment: "foo_comment", Options: opt.Options{Interval: "10y"},
+			LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}}, errRegex: `interval: .*10x.* <invalid>.*interval: .*10y.* <invalid>`, errRegexOther: "interval: .*10y.* <invalid>.*interval: .*10x.* <invalid>"},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

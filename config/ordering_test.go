@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/options"
+	opt "github.com/release-argus/Argus/service/options"
 )
 
 func TestOrdering(t *testing.T) {
@@ -40,7 +40,9 @@ func TestOrdering(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN they are loaded
 			config := testLoad(tc.file)
 
@@ -81,7 +83,9 @@ func TestGetIndentationW(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN getIndentation is called on it
 			got := getIndentation(tc.input)
 
@@ -100,7 +104,7 @@ func TestFilterInactive(t *testing.T) {
 	config := Config{
 		Service: service.Slice{
 			"1": &service.Service{},
-			"2": &service.Service{Options: options.Options{Active: boolPtr(false)}},
+			"2": &service.Service{Options: opt.Options{Active: boolPtr(false)}},
 			"3": &service.Service{Active: boolPtr(false)},
 			"4": &service.Service{},
 		},

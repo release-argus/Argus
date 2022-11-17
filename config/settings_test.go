@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestNilUndefinedFlags(t *testing.T) {
@@ -41,7 +41,9 @@ func TestNilUndefinedFlags(t *testing.T) {
 	flag := "log.level"
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN a flag is set/unset and NilUndefinedFlags is called
 			flagset[flag] = tc.flagSet
 			LogLevel = tc.setTo
@@ -51,7 +53,7 @@ func TestNilUndefinedFlags(t *testing.T) {
 			if (tc.flagSet && LogLevel == nil) ||
 				(!tc.flagSet && LogLevel != nil) {
 				t.Errorf("%s %s:\nwant: %s\ngot:  %v",
-					flag, name, *tc.setTo, utils.EvalNilPtr(LogLevel, "<nil>"))
+					flag, name, *tc.setTo, util.EvalNilPtr(LogLevel, "<nil>"))
 			}
 		})
 	}
@@ -110,7 +112,7 @@ func TestSettingsGetString(t *testing.T) {
 				got = tc.getFunc()
 			}
 			if tc.getFuncPtr != nil {
-				got = utils.EvalNilPtr(tc.getFuncPtr(), "<nil>")
+				got = util.EvalNilPtr(tc.getFuncPtr(), "<nil>")
 			}
 			if got != tc.want {
 				t.Errorf("want: %s\ngot:  %v",
@@ -171,7 +173,7 @@ func TestSettingsGetBool(t *testing.T) {
 
 func TestGetWebWebFileNotExist(t *testing.T) {
 	// GIVEN strings that point to files that don't exist
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	settings := Settings{}
 	tests := map[string]struct {
 		file      string

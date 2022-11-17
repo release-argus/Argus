@@ -14,16 +14,16 @@
 
 //go:build unit
 
-package deployed_version
+package deployedver
 
 import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestInitMetrics(t *testing.T) {
@@ -31,12 +31,12 @@ func TestInitMetrics(t *testing.T) {
 	lookup := testDeployedVersion()
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
-	hadC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
+	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
 	lookup.initMetrics()
 
 	// THEN it can be collected
 	// counters
-	gotC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
+	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
 	wantC := 2
 	if (gotC - hadC) != wantC {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
@@ -47,14 +47,14 @@ func TestInitMetrics(t *testing.T) {
 func TestInit(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testDeployedVersion()
-	log := utils.NewJLog("WARN", false)
+	log := util.NewJLog("WARN", false)
 	var defaults *Lookup = &Lookup{}
 	var hardDefaults *Lookup = &Lookup{}
-	status := service_status.Status{ServiceID: stringPtr("TestInit")}
-	var options options.Options
+	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
+	var options opt.Options
 
 	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
+	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
 	lookup.Init(log, defaults, hardDefaults, &status, &options)
 
 	// THEN pointers to those vars are handed out to the Lookup
@@ -84,7 +84,7 @@ func TestInit(t *testing.T) {
 			&options, lookup.Options)
 	}
 	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metrics.DeployedVersionQueryMetric)
+	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
 	wantC := 2
 	if (gotC - hadC) != wantC {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d\ngot=%d, had=%d",

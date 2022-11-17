@@ -22,23 +22,23 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func initLogging() {
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	jLog.Testing = true
-	logFrom = &utils.LogFrom{}
+	logFrom = &util.LogFrom{}
 }
 
 func testConfig() config.Config {
 	databaseFile := "test.db"
 	svc := service.Service{
-		Status: service_status.Status{},
-		OldStatus: &service_status.OldStatus{
+		Status: svcstatus.Status{},
+		OldStatus: &svcstatus.OldStatus{
 			LatestVersion:            "0.0.2",
 			LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
 			DeployedVersion:          "0.0.0",
@@ -46,7 +46,7 @@ func testConfig() config.Config {
 			ApprovedVersion:          "0.0.1",
 		},
 	}
-	databaseChannel := make(chan db_types.Message, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
 	saveChannel := make(chan bool, 16)
 	return config.Config{
 		Settings: config.Settings{
@@ -73,7 +73,7 @@ func testConfig() config.Config {
 	}
 }
 
-func queryRow(t *testing.T, db *sql.DB, serviceID string) service_status.Status {
+func queryRow(t *testing.T, db *sql.DB, serviceID string) svcstatus.Status {
 	sqlStmt := fmt.Sprintf(`
 	SELECT
 		id,
@@ -104,7 +104,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) service_status.Status 
 			t.Fatal(err)
 		}
 	}
-	return service_status.Status{
+	return svcstatus.Status{
 		LatestVersion:            lv,
 		LatestVersionTimestamp:   lvt,
 		DeployedVersion:          dv,

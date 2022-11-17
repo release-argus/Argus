@@ -14,13 +14,13 @@
 
 //go:build unit
 
-package service_status
+package svcstatus
 
 import (
 	"encoding/json"
 	"testing"
 
-	api_types "github.com/release-argus/Argus/web/api/types"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestAnnounceFirstVersion(t *testing.T) {
@@ -33,7 +33,9 @@ func TestAnnounceFirstVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -50,7 +52,7 @@ func TestAnnounceFirstVersion(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_types.WebSocketMessage
+			var got api_type.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q",
@@ -78,7 +80,9 @@ func TestAnnounceQuery(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -94,7 +98,7 @@ func TestAnnounceQuery(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_types.WebSocketMessage
+			var got api_type.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -118,7 +122,9 @@ func TestAnnounceQueryNewVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -135,7 +141,7 @@ func TestAnnounceQueryNewVersion(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_types.WebSocketMessage
+			var got api_type.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -163,7 +169,9 @@ func TestAnnounceUpdate(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -180,7 +188,7 @@ func TestAnnounceUpdate(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_types.WebSocketMessage
+			var got api_type.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -235,7 +243,9 @@ func TestAnnounceApproved(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -251,7 +261,7 @@ func TestAnnounceApproved(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_types.WebSocketMessage
+			var got api_type.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",

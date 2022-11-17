@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package util
 
 import (
 	"fmt"
@@ -50,10 +50,10 @@ type LogFrom struct {
 }
 
 func NewJLog(level string, timestamps bool) *JLog {
-	new := JLog{}
-	new.SetLevel(level)
-	new.SetTimestamps(timestamps)
-	return &new
+	newJLog := JLog{}
+	newJLog.SetLevel(level)
+	newJLog.SetTimestamps(timestamps)
+	return &newJLog
 }
 
 // SetLevel of the JLog.

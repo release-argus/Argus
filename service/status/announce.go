@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service_status
+package svcstatus
 
 import (
 	"encoding/json"
 
-	api_types "github.com/release-argus/Argus/web/api/types"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 // AnnounceFirstVersion of a Service to the `s.AnnounceChannel`
@@ -26,14 +26,14 @@ func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
 	serviceWebURL := s.GetWebURL()
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "INIT",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				LatestVersion:          s.LatestVersion,
 				LatestVersionTimestamp: s.LatestVersionTimestamp,
 			},
@@ -50,13 +50,13 @@ func (s *Status) AnnounceFirstVersion() {
 func (s *Status) AnnounceQuery() {
 	var payloadData []byte
 
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "QUERY",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				LastQueried: s.LastQueried,
 			},
 		},
@@ -74,14 +74,14 @@ func (s *Status) AnnounceQueryNewVersion() {
 
 	// Last query time update OR approvel/approved
 	serviceWebURL := s.GetWebURL()
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "NEW",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID:  *s.ServiceID,
 			URL: &serviceWebURL,
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				LatestVersion:          s.LatestVersion,
 				LatestVersionTimestamp: s.LatestVersionTimestamp,
 			},
@@ -99,13 +99,13 @@ func (s *Status) AnnounceUpdate() {
 	var payloadData []byte
 
 	// DeployedVersion update
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "UPDATED",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				DeployedVersion:          s.DeployedVersion,
 				DeployedVersionTimestamp: s.DeployedVersionTimestamp,
 			},
@@ -123,13 +123,13 @@ func (s *Status) AnnounceApproved() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "ACTION",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				ApprovedVersion: s.ApprovedVersion,
 			},
 		},

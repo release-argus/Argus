@@ -14,15 +14,15 @@
 
 //go:build unit
 
-package filters
+package filter
 
 import (
 	"regexp"
 	"testing"
 
 	command "github.com/release-argus/Argus/commands"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestExecCommand(t *testing.T) {
@@ -41,13 +41,13 @@ func TestExecCommand(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			require := Require{Command: tc.cmd}
-			require.Status = &service_status.Status{}
+			require.Status = &svcstatus.Status{}
 
 			// WHEN ApplyTemplate is called on the Command
-			err := require.ExecCommand(&utils.LogFrom{})
+			err := require.ExecCommand(&util.LogFrom{})
 
 			// THEN the err is expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

@@ -12,12 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+//go:build testing
 
-// ServiceInfo
-type ServiceInfo struct {
-	ID            string
-	URL           string
-	WebURL        string
-	LatestVersion string
+package util
+
+func boolPtr(val bool) *bool {
+	return &val
+}
+func intPtr(val int) *int {
+	return &val
+}
+func stringPtr(val string) *string {
+	return &val
+}
+
+func testServiceInfo() ServiceInfo {
+	return ServiceInfo{
+		ID:            "something",
+		URL:           "example.com",
+		WebURL:        "other.com",
+		LatestVersion: "NEW",
+	}
 }

@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestTry(t *testing.T) {
@@ -49,7 +49,9 @@ func TestTry(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
@@ -66,10 +68,10 @@ func TestTry(t *testing.T) {
 				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
 				// WHEN try is called with it
-				err := webhook.try(utils.LogFrom{})
+				err := webhook.try(util.LogFrom{})
 
 				// THEN any err is expected
-				e := utils.ErrorToString(err)
+				e := util.ErrorToString(err)
 				re := regexp.MustCompile(tc.errRegex)
 				match := re.MatchString(e)
 				if !match {
@@ -135,7 +137,7 @@ func TestWebHookSend(t *testing.T) {
 				}
 
 				// WHEN try is called with it
-				webhook.Send(utils.ServiceInfo{}, tc.useDelay)
+				webhook.Send(util.ServiceInfo{}, tc.useDelay)
 
 				// THEN the logs are expected
 				w.Close()
@@ -203,7 +205,7 @@ func TestSliceSend(t *testing.T) {
 					}
 
 					// WHEN try is called with it
-					tc.slice.Send(utils.ServiceInfo{}, tc.useDelay)
+					tc.slice.Send(util.ServiceInfo{}, tc.useDelay)
 
 					// THEN the logs are expected
 					w.Close()
@@ -253,14 +255,16 @@ func TestNotifiersSendWithNotifier(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
 			// WHEN Send is called with them
-			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &utils.ServiceInfo{})
+			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &util.ServiceInfo{})
 
 			// THEN err is as expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -284,7 +288,9 @@ func TestCheckWebHookBody(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN checkWebHookBody is called on it
 			got := checkWebHookBody(tc.body)
 

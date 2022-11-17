@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package utils
+package util
 
 import (
 	"bytes"
@@ -43,7 +43,9 @@ func TestNewJLog(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN NewJLog is called
 			jLog := NewJLog(tc.level, tc.timestamps)
 
@@ -77,7 +79,9 @@ func TestSetLevel(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			jLog := NewJLog("INFO", false)
 			if tc.panicRegex != nil {
 				jLog.Testing = true
@@ -119,7 +123,9 @@ func TestSetTimestamps(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			jLog := NewJLog("INFO", tc.start)
 
 			// WHEN SetTimestamps is called
@@ -147,7 +153,9 @@ func TestFormatMessageSource(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN FormatMessageSource is called with this LogFrom
 			got := FormatMessageSource(tc.logFrom)
 
@@ -196,7 +204,9 @@ func TestIsLevel(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			jLog := NewJLog(tc.startLevel, false)
 
 			// WHEN IsLevel is called to check the given level

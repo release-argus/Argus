@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package util
 
 import (
 	"reflect"
@@ -56,7 +56,7 @@ func Swap[T comparable](list *[]T, aStart int, aEnd int, bStart int, bEnd int) {
 		// shiftBy the <last-direct-swap-on-b> - <last-direct-swap-on-a>
 		shiftBy = (bStart + index - 1) - (aStart + index - 1)
 	} else {
-		// More on the left, so we we need to shift some to the right
+		// More on the left, so we need to shift some to the right
 		direction = 1
 		startAt = aEnd
 		// shiftBy the <last-direct-swap-on-b> - <aEnd>

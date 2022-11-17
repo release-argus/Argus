@@ -25,7 +25,7 @@ import (
 	"time"
 
 	cfg "github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -65,7 +65,7 @@ func TestTheMain(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			reset()
-			jLog = *utils.NewJLog("WARN", false)
+			jLog = *util.NewJLog("WARN", false)
 			configFile = &tc.file
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

@@ -17,27 +17,27 @@ package command
 import (
 	"encoding/json"
 
-	api_types "github.com/release-argus/Argus/web/api/types"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 // AnnounceCommand will announce the Command fail status to `c.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (c *Controller) AnnounceCommand(index int) {
 	c.SetNextRunnable(index, false)
-	commandSummary := make(map[string]*api_types.CommandSummary)
+	commandSummary := make(map[string]*api_type.CommandSummary)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
-	commandSummary[formatted.String()] = &api_types.CommandSummary{
+	commandSummary[formatted.String()] = &api_type.CommandSummary{
 		Failed:       (*c.Failed)[index],
 		NextRunnable: c.NextRunnable[index],
 	}
 
 	// Command success/fail
 	var payloadData []byte
-	payloadData, _ = json.Marshal(api_types.WebSocketMessage{
+	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "COMMAND",
 		SubType: "EVENT",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: *c.ServiceStatus.ServiceID,
 		},
 		CommandData: commandSummary,

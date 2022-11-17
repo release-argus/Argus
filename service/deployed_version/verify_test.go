@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package deployed_version
+package deployedver
 
 import (
 	"io"
@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestPrint(t *testing.T) {
@@ -34,20 +34,20 @@ func TestPrint(t *testing.T) {
 		lookup    *Lookup
 		headers   []Header
 		basicAuth *BasicAuth
-		options   options.Options
+		options   opt.Options
 		lines     int
 	}{
 		"nil lookup": {lines: 0, lookup: nil},
-		"lookup with no basicAuth/headers/options": {lines: 5, lookup: &Lookup{
+		"lookup with no basicAuth/headers/option": {lines: 5, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with basicAuth and no headers/options": {lines: 8, basicAuth: &BasicAuth{Username: "foo", Password: "bar"}, lookup: &Lookup{
+		"lookup with basicAuth and no headers/option": {lines: 8, basicAuth: &BasicAuth{Username: "foo", Password: "bar"}, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with headers and no basicAuth/options": {lines: 10, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
+		"lookup with headers and no basicAuth/option": {lines: 10, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with no basicAuth/headers": {lines: 5, options: options.Options{Interval: "10m"}, lookup: &Lookup{
+		"lookup with no basicAuth/headers": {lines: 5, options: opt.Options{Interval: "10m"}, lookup: &Lookup{
 			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
 		"lookup with basicAuth and headers": {lines: 13, basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
-			options: options.Options{Interval: "10m"}, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
+			options: opt.Options{Interval: "10m"}, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
 				URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
 	}
 
@@ -96,7 +96,9 @@ func TestCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			lookup := &Lookup{}
 			*lookup = testDeployedVersion()
 			lookup.URL = tc.url
@@ -113,7 +115,7 @@ func TestCheckValues(t *testing.T) {
 			err := lookup.CheckValues("")
 
 			// THEN it err's when expected
-			e := utils.ErrorToString(err)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {

@@ -17,18 +17,18 @@ package service
 import (
 	"fmt"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // CheckValues of the Service(s) in the Slice.
 func (s *Slice) CheckValues(prefix string) error {
 	var errs error
 
-	keys := utils.SortedKeys(*s)
+	keys := util.SortedKeys(*s)
 	for _, key := range keys {
 		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
 			errs = fmt.Errorf("%s%w",
-				utils.ErrorToString(errs), serviceErrs)
+				util.ErrorToString(errs), serviceErrs)
 		}
 	}
 	return errs
@@ -38,27 +38,27 @@ func (s *Slice) CheckValues(prefix string) error {
 func (s *Service) CheckValues(prefix string) (errs error) {
 	if optionErrs := s.Options.CheckValues(prefix + "  "); optionErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), optionErrs)
+			util.ErrorToString(errs), optionErrs)
 	}
 	if latestVersionErrs := s.LatestVersion.CheckValues(prefix + "  "); latestVersionErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), latestVersionErrs)
+			util.ErrorToString(errs), latestVersionErrs)
 	}
 	if deployedVersionErrs := s.DeployedVersionLookup.CheckValues(prefix + "  "); deployedVersionErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), deployedVersionErrs)
+			util.ErrorToString(errs), deployedVersionErrs)
 	}
 	if notifyErrs := s.Notify.CheckValues(prefix + "  "); notifyErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), notifyErrs)
+			util.ErrorToString(errs), notifyErrs)
 	}
 	if commandErrs := s.Command.CheckValues(prefix + "  "); commandErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), commandErrs)
+			util.ErrorToString(errs), commandErrs)
 	}
 	if webhookErrs := s.WebHook.CheckValues(prefix + "  "); webhookErrs != nil {
 		errs = fmt.Errorf("%s%w",
-			utils.ErrorToString(errs), webhookErrs)
+			util.ErrorToString(errs), webhookErrs)
 	}
 
 	if errs != nil && s.Defaults != nil {
@@ -83,7 +83,7 @@ func (s *Slice) Print(prefix string, order []string) {
 
 // Print will print the Service.
 func (s *Service) Print(prefix string) {
-	utils.PrintlnIfNotDefault(s.Comment, fmt.Sprintf("%scomment: %q", prefix, s.Comment))
+	util.PrintlnIfNotDefault(s.Comment, fmt.Sprintf("%scomment: %q", prefix, s.Comment))
 
 	// Options
 	s.Options.Print(prefix)

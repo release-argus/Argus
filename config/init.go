@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"os"
 
-	db_types "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/service/deployed_version"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	dbtype "github.com/release-argus/Argus/db/types"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +31,7 @@ func (c *Config) Init() {
 	c.Settings.SetDefaults()
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
-		c.Defaults.Service.DeployedVersionLookup = &deployed_version.Lookup{}
+		c.Defaults.Service.DeployedVersionLookup = &deployedver.Lookup{}
 	}
 	c.Defaults.Service.Status.SaveChannel = c.SaveChannel
 	c.Defaults.Service.Convert()
@@ -42,7 +42,7 @@ func (c *Config) Init() {
 	i := 0
 	for key := range c.Service {
 		i++
-		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), utils.LogFrom{}, true)
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), util.LogFrom{}, true)
 		c.Service[key].Init(
 			jLog,
 			&c.Defaults.Service,
@@ -57,6 +57,7 @@ func (c *Config) Init() {
 	}
 
 	// c.Notify
+	//nolint:typecheck
 	if c.Notify != nil {
 		for key := range c.Notify {
 			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
@@ -65,6 +66,7 @@ func (c *Config) Init() {
 		}
 	}
 	// c.WebHook
+	//nolint:typecheck
 	if c.WebHook != nil {
 		for key := range c.WebHook {
 			c.WebHook[key].Defaults = &c.Defaults.WebHook
@@ -74,7 +76,7 @@ func (c *Config) Init() {
 }
 
 // Load `file` as Config.
-func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
+func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.File = file
 	jLog = log
 	c.Settings.NilUndefinedFlags(flagset)
@@ -82,15 +84,15 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 	//#nosec G304 -- Loading the file asked for by the user
 	data, err := os.ReadFile(file)
 	msg := fmt.Sprintf("Error reading %q\n%s", file, err)
-	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
+	jLog.Fatal(msg, util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, c)
 	msg = fmt.Sprintf("Unmarshal of %q failed\n%s", file, err)
-	jLog.Fatal(msg, utils.LogFrom{}, err != nil)
+	jLog.Fatal(msg, util.LogFrom{}, err != nil)
 
 	c.GetOrder(data)
 
-	databaseChannel := make(chan db_types.Message, 32)
+	databaseChannel := make(chan dbtype.Message, 32)
 	c.DatabaseChannel = &databaseChannel
 
 	saveChannel := make(chan bool, 32)
@@ -98,7 +100,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *utils.JLog) {
 
 	for key := range c.Service {
 		c.Service[key].ID = key
-		c.Service[key].Status = service_status.Status{
+		c.Service[key].Status = svcstatus.Status{
 			DatabaseChannel: c.DatabaseChannel,
 			SaveChannel:     c.SaveChannel,
 		}

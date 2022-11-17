@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 const (
@@ -126,8 +126,8 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		err := c.conn.Close()
 		c.api.Log.Verbose(
-			fmt.Sprintf("Closing the websocket connection failed (readPump)\n%s", utils.ErrorToString(err)),
-			utils.LogFrom{},
+			fmt.Sprintf("Closing the websocket connection failed (readPump)\n%s", util.ErrorToString(err)),
+			util.LogFrom{},
 			err != nil,
 		)
 	}()
@@ -158,7 +158,7 @@ func (c *Client) readPump() {
 
 		c.api.Log.Debug(
 			fmt.Sprintf("READ %s", message),
-			utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+			util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 			true,
 		)
 
@@ -169,7 +169,7 @@ func (c *Client) readPump() {
 		if err != nil {
 			c.api.Log.Warn(
 				fmt.Sprintf("Invalid message (missing/invalid version key)\n%s", message),
-				utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true,
 			)
 			continue
@@ -190,8 +190,8 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		err := c.conn.Close()
 		c.api.Log.Verbose(
-			fmt.Sprintf("Closing the connection\n%s", utils.ErrorToString(err)),
-			utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+			fmt.Sprintf("Closing the connection\n%s", util.ErrorToString(err)),
+			util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 			true,
 		)
 	}()
@@ -206,19 +206,19 @@ func (c *Client) writePump() {
 				// The hub closed the channel.
 				err := c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				c.api.Log.Verbose(
-					fmt.Sprintf("Closing the connection (writePump)\n%s", utils.ErrorToString(err)),
-					utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					fmt.Sprintf("Closing the connection (writePump)\n%s", util.ErrorToString(err)),
+					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true,
 				)
 				return
 			}
 
-			var msg api_types.WebSocketMessage
+			var msg api_type.WebSocketMessage
 			err := json.Unmarshal(message, &msg)
 			if err != nil {
 				c.api.Log.Error(
-					fmt.Sprintf("Message failed to unmarshal %s", utils.ErrorToString(err)),
-					utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					fmt.Sprintf("Message failed to unmarshal %s", util.ErrorToString(err)),
+					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true,
 				)
 				continue
@@ -233,14 +233,14 @@ func (c *Client) writePump() {
 				case "VERSION", "WEBHOOK", "COMMAND":
 					err := c.conn.WriteJSON(msg)
 					c.api.Log.Error(
-						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, utils.ErrorToString(err)),
-						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, util.ErrorToString(err)),
+						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						err != nil,
 					)
 				default:
 					c.api.Log.Error(
 						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
-						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
 					continue
@@ -264,7 +264,7 @@ func (c *Client) writePump() {
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", msg.Type, string(message)),
-							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 						continue
@@ -276,7 +276,7 @@ func (c *Client) writePump() {
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown RUNTIME_BUILD Type %q\nFull message: %s", msg.Type, string(message)),
-							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 					}
@@ -287,7 +287,7 @@ func (c *Client) writePump() {
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown FLAGS Type %q\nFull message: %s", msg.Type, string(message)),
-							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 						continue
@@ -303,7 +303,7 @@ func (c *Client) writePump() {
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown CONFIG Type %q\nFull message: %s", msg.Type, string(message)),
-							utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true,
 						)
 						continue
@@ -311,7 +311,7 @@ func (c *Client) writePump() {
 				default:
 					c.api.Log.Error(
 						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Page, string(message)),
-						utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
 					continue
@@ -323,8 +323,8 @@ func (c *Client) writePump() {
 			for i := 0; i < n; i++ {
 				err := c.conn.WriteJSON(<-c.send)
 				c.api.Log.Error(
-					fmt.Sprintf("WriteJSON for the queued chat messages\n%s\n", utils.ErrorToString(err)),
-					utils.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					fmt.Sprintf("WriteJSON for the queued chat messages\n%s\n", util.ErrorToString(err)),
+					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					err != nil,
 				)
 			}

@@ -25,9 +25,9 @@ import (
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -51,11 +51,16 @@ func TestDefaultsSetDefaults(t *testing.T) {
 
 	// THEN the defaults are set correctly
 	for name, tc := range tests {
-		if tc.got != tc.want {
-			t.Log(name)
-			t.Errorf("want: %s\ngot:  %s",
-				tc.want, tc.got)
-		}
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.got != tc.want {
+				t.Log(name)
+				t.Errorf("want: %s\ngot:  %s",
+					tc.want, tc.got)
+			}
+		})
 	}
 }
 
@@ -69,19 +74,19 @@ func TestDefaultsCheckValues(t *testing.T) {
 	}{
 		"Service.Interval": {
 			input: Defaults{Service: service.Service{
-				Options: options.Options{
+				Options: opt.Options{
 					Interval: "10x"}}},
 			errContains: []string{`^  service:$`, `^      interval: "10x" <invalid>`}},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
-				DeployedVersionLookup: &deployed_version.Lookup{
+				DeployedVersionLookup: &deployedver.Lookup{
 					Regex: `^something[0-`}}},
 			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
-				Options: options.Options{
+				Options: opt.Options{
 					Interval: "10x"},
-				DeployedVersionLookup: &deployed_version.Lookup{
+				DeployedVersionLookup: &deployedver.Lookup{
 					Regex: `^something[0-`}}},
 			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
 		"Notify.x.Delay": {
@@ -96,9 +101,11 @@ func TestDefaultsCheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN CheckValues is called on it
-			err := utils.ErrorToString(tc.input.CheckValues())
+			err := util.ErrorToString(tc.input.CheckValues())
 
 			// THEN err matches expected
 			lines := strings.Split(err, "\\")

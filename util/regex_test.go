@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package utils
+package util
 
 import (
 	"testing"
@@ -32,7 +32,9 @@ func TestRegexCheck(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN RegexCheck is called
 			got := RegexCheck(tc.regex, str)
 
@@ -58,7 +60,9 @@ func TestRegexCheckWithParams(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN RegexCheck is called
 			got := RegexCheckWithParams(tc.regex, str, tc.version)
 

@@ -24,9 +24,9 @@ import (
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	latestver "github.com/release-argus/Argus/service/latest_version"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -44,7 +44,7 @@ func testVerify() Config {
 	service := service.Slice{
 		serviceID: &service.Service{
 			ID: serviceID,
-			LatestVersion: latest_version.Lookup{
+			LatestVersion: latestver.Lookup{
 				Type: "github",
 				URL:  "release-argus/argus",
 			},
@@ -61,7 +61,7 @@ func testVerify() Config {
 
 func TestConfigCheckValues(t *testing.T) {
 	// GIVEN variations of Config to test
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		config      Config
 		errContains string
@@ -73,7 +73,7 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				Defaults: Defaults{
 					Service: service.Service{
-						Options: options.Options{
+						Options: opt.Options{
 							Interval: "1x"}}}},
 			errContains: `interval: "1x" <invalid>`},
 		"invalid Notify": {
@@ -95,7 +95,7 @@ func TestConfigCheckValues(t *testing.T) {
 			config: Config{
 				Service: service.Slice{
 					"test": &service.Service{
-						Options: options.Options{
+						Options: opt.Options{
 							Interval: "4x"},
 					}}},
 			errContains: `interval: "4x" <invalid>`},
@@ -142,7 +142,7 @@ func TestConfigCheckValues(t *testing.T) {
 
 func TestConfigPrint(t *testing.T) {
 	// GIVEN a Config and print flags of true and false
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	jLog.Testing = true
 	config := testVerify()
 	tests := map[string]struct {

@@ -15,25 +15,25 @@
 package shoutrrr
 
 import (
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 var (
-	jLog *utils.JLog
+	jLog *util.JLog
 )
 
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr
 
 type Shoutrrr struct {
-	Type          string                 `yaml:"type,omitempty"` // Notification type, e.g. slack
-	ID            string                 `yaml:"-"`              // ID for this Shoutrrr sender
-	Failed        *map[string]*bool      `yaml:"-"`              // Whether the last send attempt failed
-	ServiceStatus *service_status.Status `yaml:"-"`              // Status of the Service (used for templating commands)
-	Main          *Shoutrrr              `yaml:"-"`              // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
-	Defaults      *Shoutrrr              `yaml:"-"`              // Default values
-	HardDefaults  *Shoutrrr              `yaml:"-"`              // Harcoded default values
+	Type          string            `yaml:"type,omitempty"` // Notification type, e.g. slack
+	ID            string            `yaml:"-"`              // ID for this Shoutrrr sender
+	Failed        *map[string]*bool `yaml:"-"`              // Whether the last send attempt failed
+	ServiceStatus *svcstatus.Status `yaml:"-"`              // Status of the Service (used for templating commands)
+	Main          *Shoutrrr         `yaml:"-"`              // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
+	Defaults      *Shoutrrr         `yaml:"-"`              // Default values
+	HardDefaults  *Shoutrrr         `yaml:"-"`              // Harcoded default values
 
 	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
 	// Thinking this may be preferable as it makes adding new services much quicker/easier

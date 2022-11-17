@@ -20,20 +20,20 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // ServiceTest will query the service and return the version it finds.
 func ServiceTest(
 	flag *string,
 	cfg *config.Config,
-	log *utils.JLog,
+	log *util.JLog,
 ) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	log.Info(
 		"",
@@ -54,7 +54,6 @@ func ServiceTest(
 	}
 
 	if service != nil {
-		//nolint:staticcheck // log.Fatal if nil above. this ignore doesn't seem to work though
 		_, err := service.LatestVersion.Query()
 		if err != nil {
 			helpMsg := ""

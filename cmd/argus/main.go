@@ -22,16 +22,16 @@ import (
 	"flag"
 	"fmt"
 
+	cfg "github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/db"
 	argus_testing "github.com/release-argus/Argus/testing"
-
-	cfg "github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web"
+	_ "modernc.org/sqlite"
 )
 
 var (
-	jLog             utils.JLog
+	jLog             util.JLog
 	config           cfg.Config
 	configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
 	configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
@@ -61,12 +61,12 @@ func main() {
 
 	// config.Service.Init()
 	serviceCount := len(*config.Order)
-	jLog.Fatal("No services to monitor were found.", utils.LogFrom{}, serviceCount == 0)
+	jLog.Fatal("No services to monitor were found.", util.LogFrom{}, serviceCount == 0)
 
 	// INFO or above
 	if jLog.Level > 1 {
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		jLog.Info(msg, utils.LogFrom{}, true)
+		jLog.Info(msg, util.LogFrom{}, true)
 
 		for _, key := range *config.Order {
 			fmt.Printf("  - %s\n", config.Service[key].ID)

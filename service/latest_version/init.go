@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package latest_version
+package latestver
 
 import (
-	"github.com/release-argus/Argus/service/options"
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// Init will initialise the Service metrics.
+// Init will initialise the Service metric.
 func (l *Lookup) Init(
-	log *utils.JLog,
+	log *util.JLog,
 	defaults *Lookup,
 	hardDefaults *Lookup,
-	status *service_status.Status,
-	options *options.Options,
+	status *svcstatus.Status,
+	options *opt.Options,
 ) {
 	jLog = log
 
@@ -44,11 +44,11 @@ func (l *Lookup) Init(
 	l.Require.Init(log, status)
 }
 
-// initMetrics will initialise the Prometheus metrics.
+// initMetrics will initialise the Prometheus metric.
 func (l *Lookup) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-	metrics.InitPrometheusCounterWithIDAndResult(metrics.LatestVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
+	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "FAIL")
 }

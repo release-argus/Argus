@@ -17,7 +17,7 @@ package command
 import (
 	"fmt"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // Print will print the Slice.
@@ -41,13 +41,13 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 	for i := range *s {
 		if err := (*s)[i].CheckValues(); err != nil {
 			errs = fmt.Errorf("%s%s  item_%d: %w",
-				utils.ErrorToString(errs), prefix, i, err)
+				util.ErrorToString(errs), prefix, i, err)
 		}
 	}
 
 	if errs != nil {
 		errs = fmt.Errorf("%scommand:\\%s",
-			prefix, utils.ErrorToString(errs))
+			prefix, util.ErrorToString(errs))
 	}
 	return
 }
@@ -58,7 +58,7 @@ func (c *Command) CheckValues() error {
 	}
 
 	for i := range *c {
-		if !utils.CheckTemplate((*c)[i]) {
+		if !util.CheckTemplate((*c)[i]) {
 			return fmt.Errorf("%s (%q) <invalid> (didn't pass templating)\\",
 				c.String(), (*c)[i])
 		}

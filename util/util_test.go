@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package utils
+package util
 
 import (
 	"fmt"
@@ -35,7 +35,9 @@ func TestContains(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN Contains is run on this list with a element inside it
 			var found bool
 			found = Contains(tc.list, tc.contain)
@@ -61,7 +63,9 @@ func TestEvalNilPtr(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN EvalNilPtr is run on a pointer
 			got := EvalNilPtr(tc.ptr, tc.nilStr)
 
@@ -86,7 +90,9 @@ func TestPtrOrValueToPtr(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN PtrOrValueToPtr is run on pointer and a value
 			got := PtrOrValueToPtr(tc.a, tc.b)
 
@@ -111,7 +117,9 @@ func TestValueIfNotNil(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN ValueIfNotNil is run on pointer and a value
 			got := ValueIfNotNil(tc.check, tc.value)
 
@@ -147,7 +155,9 @@ func TestValueIfNotDefault(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN ValueIfNotDefault is run on pointer and a value
 			got := ValueIfNotDefault(tc.check, tc.value)
 
@@ -172,7 +182,9 @@ func TestDefaultIfNil(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN DefaultIfNil is run on pointer and a value
 			got := DefaultIfNil(tc.check)
 
@@ -199,7 +211,9 @@ func TestGetFirstNonNilPtr(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN GetFirstNonNilPtr is run on a slice of pointers
 			got := GetFirstNonNilPtr(tc.pointers...)
 
@@ -233,7 +247,9 @@ func TestGetFirstNonDefault(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN GetFirstNonDefault is run on a slice of slice
 			got := GetFirstNonDefault(tc.slice...)
 
@@ -264,7 +280,9 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			msg := "var is not default from PrintlnIfNotDefault"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -304,7 +322,9 @@ func TestPrintlnIfNotNil(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			msg := "var is not default from PrintlnIfNotNil"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -344,7 +364,9 @@ func TestPrintlnIfNil(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			msg := "var is not default from PrintlnIfNil"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -385,7 +407,9 @@ func TestDefaultOrValue(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN DefaultOrValue is called
 			got := DefaultOrValue(tc.element, tc.value)
 
@@ -409,7 +433,9 @@ func TestErrorToString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN ErrorToString is called
 			got := ErrorToString(tc.err)
 
@@ -436,7 +462,9 @@ func TestRandString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN RandString is called
 			got := RandString(tc.wanted, tc.alphabet)
@@ -477,7 +505,9 @@ func TestRandAlphaNumericLower(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN RandAlphaNumericLower is called
 			got := RandAlphaNumericLower(tc.wanted)
@@ -518,7 +548,9 @@ func TestRandNumeric(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN RandNumeric is called
 			got := RandNumeric(tc.wanted)
@@ -565,7 +597,9 @@ func TestNormaliseNewlines(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN NormaliseNewlines is called
 			got := NormaliseNewlines(tc.input)
@@ -593,7 +627,9 @@ func TestCopyMap(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN CopyMap is called
 			got := CopyMap(tc.input)
@@ -632,7 +668,9 @@ func TestGetPortFromURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN GetPortFromURL is called
 			got := GetPortFromURL(tc.url, tc.defaultPort)
@@ -666,7 +704,9 @@ func TestLowercaseStringStringMap(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN LowercaseStringStringMap is called
 			got := LowercaseStringStringMap(&tc.input)

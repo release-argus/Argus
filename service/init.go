@@ -19,14 +19,14 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/utils"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
-// Init will initialise the Service metrics.
+// Init will initialise the Service metric.
 func (s *Service) Init(
-	log *utils.JLog,
+	log *util.JLog,
 	defaults *Service,
 	hardDefaults *Service,
 	rootNotifyConfig *shoutrrr.Slice,
@@ -48,6 +48,7 @@ func (s *Service) Init(
 
 	s.Notify.Init(jLog, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
 
+	//nolint:typecheck
 	if s.Command != nil {
 		s.CommandController = &command.Controller{}
 		s.CommandController.Init(jLog, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
@@ -57,15 +58,15 @@ func (s *Service) Init(
 
 	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
 	if s.Defaults.DeployedVersionLookup == nil {
-		s.Defaults.DeployedVersionLookup = &deployed_version.Lookup{}
+		s.Defaults.DeployedVersionLookup = &deployedver.Lookup{}
 	}
 	s.DeployedVersionLookup.Init(jLog, s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
 	s.Convert()
 }
 
 // GetServiceInfo returns info about the service.
-func (s *Service) GetServiceInfo() utils.ServiceInfo {
-	return utils.ServiceInfo{
+func (s *Service) GetServiceInfo() util.ServiceInfo {
+	return util.ServiceInfo{
 		ID:            s.ID,
 		URL:           s.LatestVersion.GetServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
@@ -80,6 +81,7 @@ func (s *Service) GetIconURL() string {
 		return s.Dashboard.Icon
 	}
 
+	//nolint:typecheck
 	if s.Notify != nil {
 		for key := range s.Notify {
 			// `Params.Icon`

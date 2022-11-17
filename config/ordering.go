@@ -17,12 +17,12 @@ package config
 import (
 	"strings"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // GetOrder of the Services from `c.File`.
 func (c *Config) GetOrder(data []byte) {
-	data = utils.NormaliseNewlines(data)
+	data = util.NormaliseNewlines(data)
 	lines := strings.Split(string(data), "\n")
 	var order []string
 	afterService := false
@@ -74,15 +74,16 @@ func getIndentation(line string) (indentation string) {
 
 func (c *Config) filterInactive() {
 	removed := 0
+	//nolint:typecheck // 'id declared but not used'
 	for index, id := range c.All {
-		if !utils.EvalNilPtr(c.Service[id].Active, true) ||
-			!utils.EvalNilPtr(c.Service[id].Options.Active, true) {
+		if !util.EvalNilPtr(c.Service[id].Active, true) ||
+			!util.EvalNilPtr(c.Service[id].Options.Active, true) {
 			if removed == 0 {
 				order := make([]string, len(c.All))
 				copy(order, c.All)
 				c.Order = &order
 			}
-			utils.RemoveIndex(c.Order, index-removed)
+			util.RemoveIndex(c.Order, index-removed)
 			removed++
 		}
 	}

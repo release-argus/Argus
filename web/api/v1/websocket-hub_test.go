@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestNewHub(t *testing.T) {
@@ -49,7 +49,7 @@ func TestRunWithRegister(t *testing.T) {
 	// GIVEN a WebSocket Hub and API
 	hub := NewHub()
 	api := API{}
-	go hub.Run(utils.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("WARN", false))
 	time.Sleep(time.Second)
 
 	// WHEN a new client connects
@@ -69,7 +69,7 @@ func TestRunWithUnregister(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	client := testClient()
 	hub := client.hub
-	go hub.Run(utils.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("WARN", false))
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(time.Second)
@@ -90,7 +90,7 @@ func TestRunWithBroadcast(t *testing.T) {
 	// and a valid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(utils.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("WARN", false))
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(2 * time.Second)
@@ -119,7 +119,7 @@ func TestRunWithInvalidBroadcast(t *testing.T) {
 	// and an invalid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(utils.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("WARN", false))
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(time.Second)

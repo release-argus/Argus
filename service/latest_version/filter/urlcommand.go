@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package filter
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // URLCommandSlice to be used to filter version from the URL Content.
@@ -58,8 +58,8 @@ func (c *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
-// Init will give the filters package this log.
-func (c *URLCommandSlice) Init(log *utils.JLog) {
+// Init will give the filter package this log.
+func (c *URLCommandSlice) Init(log *util.JLog) {
 	if log != nil {
 		jLog = log
 	}
@@ -83,18 +83,18 @@ func (c *URLCommand) Print(prefix string) {
 	switch c.Type {
 	case "regex":
 		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
-		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
+		util.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
 	case "replace":
 		fmt.Printf("%s  new: %q\n", prefix, *c.New)
 		fmt.Printf("%s  old: %q\n", prefix, *c.Old)
 	case "split":
 		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
-		utils.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
+		util.PrintlnIfNotDefault(c.Index, fmt.Sprintf("%s  index: %d", prefix, c.Index))
 	}
 }
 
 // Run will run all of the URLCommand(s) in this URLCommandSlice.
-func (c *URLCommandSlice) Run(text string, logFrom utils.LogFrom) (string, error) {
+func (c *URLCommandSlice) Run(text string, logFrom util.LogFrom) (string, error) {
 	if c == nil {
 		return text, nil
 	}
@@ -111,7 +111,7 @@ func (c *URLCommandSlice) Run(text string, logFrom utils.LogFrom) (string, error
 }
 
 // run will exectue this URLCommand on `text`
-func (c *URLCommand) run(text string, logFrom utils.LogFrom) (string, error) {
+func (c *URLCommand) run(text string, logFrom util.LogFrom) (string, error) {
 	var err error
 	// Iterate through the commands to filter the text.
 	textBak := text
@@ -135,7 +135,7 @@ func (c *URLCommand) run(text string, logFrom utils.LogFrom) (string, error) {
 	return text, err
 }
 
-func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
+func (c *URLCommand) regex(text string, logFrom util.LogFrom) (string, error) {
 	re := regexp.MustCompile(*c.Regex)
 
 	index := c.Index
@@ -149,7 +149,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 		err := fmt.Errorf("%s %q didn't return any matches",
 			c.Type, *c.Regex)
 		if len(text) < 20 {
-			err = fmt.Errorf("%s on %q",
+			err = fmt.Errorf("%w on %q",
 				err, text)
 		}
 		jLog.Warn(err, logFrom, true)
@@ -168,7 +168,7 @@ func (c *URLCommand) regex(text string, logFrom utils.LogFrom) (string, error) {
 	return texts[index][len(texts[index])-1], nil
 }
 
-func (c *URLCommand) split(text string, logFrom utils.LogFrom) (string, error) {
+func (c *URLCommand) split(text string, logFrom util.LogFrom) (string, error) {
 	texts := strings.Split(text, *c.Text)
 
 	if len(texts) == 1 {
@@ -206,13 +206,13 @@ func (c *URLCommandSlice) CheckValues(prefix string) error {
 	for index := range *c {
 		if err := (*c)[index].CheckValues(prefix + "    "); err != nil {
 			errs = fmt.Errorf("%s%s  item_%d:\\%w",
-				utils.ErrorToString(errs), prefix, index, err)
+				util.ErrorToString(errs), prefix, index, err)
 		}
 	}
 
 	if errs != nil {
 		errs = fmt.Errorf("%surl_commands:\\%s",
-			prefix, utils.ErrorToString(errs))
+			prefix, util.ErrorToString(errs))
 	}
 	return errs
 }
@@ -225,37 +225,37 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	case "regex":
 		if c.Regex == nil {
 			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
-				utils.ErrorToString(errs), prefix)
+				util.ErrorToString(errs), prefix)
 		} else {
 			_, err := regexp.Compile(*c.Regex)
 			if err != nil {
 				errs = fmt.Errorf("%s%sregex: %q <invalid> (Invalid RegEx)\\",
-					utils.ErrorToString(errs), prefix, *c.Regex)
+					util.ErrorToString(errs), prefix, *c.Regex)
 			}
 		}
 	case "replace":
 		if c.New == nil {
 			errs = fmt.Errorf("%s%snew: <required> (text you want to replace with)\\",
-				utils.ErrorToString(errs), prefix)
+				util.ErrorToString(errs), prefix)
 		}
 		if c.Old == nil {
 			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\",
-				utils.ErrorToString(errs), prefix)
+				util.ErrorToString(errs), prefix)
 		}
 	case "split":
 		if c.Text == nil {
 			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
-				utils.ErrorToString(errs), prefix)
+				util.ErrorToString(errs), prefix)
 		}
 	default:
 		validType = false
 		errs = fmt.Errorf("%s%stype: %q <invalid> is not a valid url_command (regex/replace/split)\\",
-			utils.ErrorToString(errs), prefix, c.Type)
+			util.ErrorToString(errs), prefix, c.Type)
 	}
 
 	if errs != nil && validType {
-		errs = fmt.Errorf("%stype: %s\\%s",
+		errs = fmt.Errorf("%stype: %s\\%w",
 			prefix, c.Type, errs)
 	}
-	return
+	return errs
 }

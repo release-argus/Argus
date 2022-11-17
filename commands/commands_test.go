@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestApplyTemplate(t *testing.T) {
@@ -34,20 +34,22 @@ func TestApplyTemplate(t *testing.T) {
 	tests := map[string]struct {
 		input         Command
 		want          Command
-		serviceStatus *service_status.Status
+		serviceStatus *svcstatus.Status
 	}{
 		"command with no templating and non-nil service status": {
 			input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"},
-			serviceStatus: &service_status.Status{LatestVersion: "1.2.3"},
+			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"},
 		},
 		"command with no templating and nil service status": {input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"}},
 		"command with templating and nil service status":    {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "{{ version }}"}},
 		"command with templating and non-nil service status": {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "1.2.3"},
-			serviceStatus: &service_status.Status{LatestVersion: "1.2.3"}},
+			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"}},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			// WHEN ApplyTemplate is called on the Command
 			got := tc.input.ApplyTemplate(tc.serviceStatus)
 
@@ -62,7 +64,7 @@ func TestApplyTemplate(t *testing.T) {
 
 func TestCommandExec(t *testing.T) {
 	// GIVEN different Command's to execute
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	tests := map[string]struct {
 		cmd         Command
 		err         error
@@ -79,10 +81,10 @@ func TestCommandExec(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN Exec is called on it
-			err := tc.cmd.Exec(&utils.LogFrom{})
+			err := tc.cmd.Exec(&util.LogFrom{})
 
 			// THEN the output is expected
-			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
 					tc.err, err)
 			}
@@ -102,7 +104,7 @@ func TestCommandExec(t *testing.T) {
 
 func TestExecIndex(t *testing.T) {
 	// GIVEN a Controller with different Command's to execute
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{
 		Command: &Slice{
@@ -111,7 +113,7 @@ func TestExecIndex(t *testing.T) {
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		index       int
@@ -132,11 +134,11 @@ func TestExecIndex(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN the Command @index is exectured
-			err := controller.ExecIndex(&utils.LogFrom{}, tc.index)
+			err := controller.ExecIndex(&util.LogFrom{}, tc.index)
 
 			// THEN the output is expected
 			// err
-			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
 					tc.err, err)
 			}
@@ -165,13 +167,13 @@ func TestExecIndex(t *testing.T) {
 
 func TestControllerExec(t *testing.T) {
 	// GIVEN a Controller
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{
 		Failed:         &[]*bool{nil, nil},
 		NextRunnable:   make([]time.Time, 2),
 		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &service_status.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
 	}
 	tests := map[string]struct {
 		nilController bool
@@ -202,17 +204,17 @@ func TestControllerExec(t *testing.T) {
 			var err error
 			if tc.nilController {
 				var controller *Controller
-				err = controller.Exec(&utils.LogFrom{})
+				err = controller.Exec(&util.LogFrom{})
 			} else {
 				controller.Command = tc.commands
-				err = controller.Exec(&utils.LogFrom{})
+				err = controller.Exec(&util.LogFrom{})
 			}
 
 			// THEN the output is expected
 			// err
-			if utils.ErrorToString(err) != utils.ErrorToString(tc.err) {
+			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %q\ngot:  %q",
-					utils.ErrorToString(tc.err), utils.ErrorToString(err))
+					util.ErrorToString(tc.err), util.ErrorToString(err))
 			}
 			// output
 			w.Close()

@@ -19,8 +19,8 @@ package service
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestConvert(t *testing.T) {
@@ -33,7 +33,7 @@ func TestConvert(t *testing.T) {
 	allowInvalidCerts := true
 	accessToken := "foo"
 	usePreRelease := true
-	urlCommands := filters.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}
+	urlCommands := filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}
 	autoApprove := true
 	icon := "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"
 	iconLinkTo := "https://release-argus.io/demo"
@@ -61,15 +61,15 @@ func TestConvert(t *testing.T) {
 
 	// THEN the vars are converted correctly
 	if service.Options.Active != &active {
-		t.Errorf("Type not pushed to Options.Active correctly\nwant: %t\ngot:  %v",
+		t.Errorf("Type not pushed to option.Active correctly\nwant: %t\ngot:  %v",
 			active, service.Options.Active)
 	}
 	if service.Options.Interval != interval {
-		t.Errorf("Interval not pushed to Options.Interval correctly\nwant: %q\ngot:  %v",
+		t.Errorf("Interval not pushed to option.Interval correctly\nwant: %q\ngot:  %v",
 			interval, service.Options.Interval)
 	}
 	if *service.Options.SemanticVersioning != semanticVersioning {
-		t.Errorf("SemanticVersioning not pushed to Options.SemanticVersioning correctly\nwant: %t\ngot:  %v",
+		t.Errorf("SemanticVersioning not pushed to option.SemanticVersioning correctly\nwant: %t\ngot:  %v",
 			semanticVersioning, service.Options.SemanticVersioning)
 	}
 	if service.LatestVersion.Type != serviceType {
@@ -86,7 +86,7 @@ func TestConvert(t *testing.T) {
 	}
 	if service.LatestVersion.AccessToken != &accessToken {
 		t.Errorf("AccessToken not pushed to LatestVersion.AccessToken correctly\nwant: %q\ngot:  %q",
-			accessToken, utils.EvalNilPtr(service.LatestVersion.AccessToken, "nil"))
+			accessToken, util.EvalNilPtr(service.LatestVersion.AccessToken, "nil"))
 	}
 	if service.LatestVersion.UsePreRelease != &usePreRelease {
 		t.Errorf("UsePreRelease not pushed to LatestVersion.UsePreRelease correctly\nwant: %t\ngot:  %v",

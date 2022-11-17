@@ -20,20 +20,20 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // CommandTest will test the commands given to a Service.
 func CommandTest(
 	flag *string,
 	cfg *config.Config,
-	log *utils.JLog,
+	log *util.JLog,
 ) {
 	// Only if flag has been provided
 	if *flag == "" {
 		return
 	}
-	logFrom := utils.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	log.Info(
 		"",

@@ -21,13 +21,13 @@ import (
 
 	shoutrrr_lib "github.com/containrrr/shoutrrr"
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // GetParams returns the params using everything from master>main>defaults>hardDefaults when
 // the key is not defined in the lower level
-func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types.Params) {
+func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
 	p := make(shoutrrr_types.Params)
 	params = &p
 
@@ -65,7 +65,7 @@ func (s *Shoutrrr) GetParams(context *utils.ServiceInfo) (params *shoutrrr_types
 
 	// Apply Jinja templating
 	for key := range *params {
-		(*params)[key] = utils.TemplateString((*params)[key], *context)
+		(*params)[key] = util.TemplateString((*params)[key], *context)
 	}
 
 	return
@@ -81,12 +81,12 @@ func (s *Shoutrrr) GetURL() (url string) {
 	case "smtp":
 		// smtp://username:password@host:port/?fromaddress=X&toaddresses=Y
 		login := s.GetURLField("password")
-		login = s.GetURLField("username") + utils.ValueIfNotDefault(login, ":"+login)
+		login = s.GetURLField("username") + util.ValueIfNotDefault(login, ":"+login)
 		port := s.GetURLField("port")
 		url = fmt.Sprintf("smtp://%s%s%s/?fromaddress=%s&toaddresses=%s",
-			utils.ValueIfNotDefault(login, login+"@"),
+			util.ValueIfNotDefault(login, login+"@"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(port, ":"+port),
 			s.GetParam("fromaddress"),
 			s.GetParam("toaddresses"))
 	case "gotify":
@@ -95,8 +95,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 		path := s.GetURLField("path")
 		url = fmt.Sprintf("gotify://%s%s%s/%s",
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("token"))
 	case "googlechat":
 		url = s.GetURLField("raw")
@@ -120,21 +120,21 @@ func (s *Shoutrrr) GetURL() (url string) {
 		path := s.GetURLField("path")
 		channel := s.GetURLField("channel")
 		url = fmt.Sprintf("mattermost://%s%s%s%s/%s%s",
-			utils.ValueIfNotDefault(username, username+"@"),
+			util.ValueIfNotDefault(username, username+"@"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("token"),
-			utils.ValueIfNotDefault(channel, "/"+channel))
+			util.ValueIfNotDefault(channel, "/"+channel))
 	case "matrix":
 		// matrix://user:password@host[:port][/port]/[?rooms=!roomID1[,roomAlias2]][&disableTLS=yes]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 		user := s.GetURLField("user")
 		rooms := s.GetParam("rooms")
-		rooms = utils.ValueIfNotDefault(rooms, "?rooms="+rooms)
+		rooms = util.ValueIfNotDefault(rooms, "?rooms="+rooms)
 		disableTLS := s.GetParam("disabletls")
-		disableTLS = utils.ValueIfNotDefault(disableTLS, "disableTLS="+disableTLS)
+		disableTLS = util.ValueIfNotDefault(disableTLS, "disableTLS="+disableTLS)
 		if disableTLS != "" {
 			if rooms != "" {
 				disableTLS = "&" + disableTLS
@@ -143,11 +143,11 @@ func (s *Shoutrrr) GetURL() (url string) {
 			}
 		}
 		url = fmt.Sprintf("matrix://%s%s@%s%s%s/%s%s",
-			utils.ValueIfNotDefault(user, user+":"),
+			util.ValueIfNotDefault(user, user+":"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
 			rooms,
 			disableTLS,
 		)
@@ -157,8 +157,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 		path := s.GetURLField("path")
 		url = fmt.Sprintf("opsgenie://%s%s%s/%s",
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("apikey"))
 	case "pushbullet":
 		// pushbullet://token/targets
@@ -171,17 +171,17 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("pushover://shoutrrr:%s@%s/%s",
 			s.GetURLField("token"),
 			s.GetURLField("user"),
-			utils.ValueIfNotDefault(devices, "?devices="+devices))
+			util.ValueIfNotDefault(devices, "?devices="+devices))
 	case "rocketchat":
 		// rocketchat://[username@]host:port[/port]/tokenA/tokenB/channel
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 		url = fmt.Sprintf("rocketchat://%s%s%s%s/%s/%s/%s",
-			utils.ValueIfNotDefault(username, username+"@"),
+			util.ValueIfNotDefault(username, username+"@"),
 			s.GetURLField("host"),
-			utils.ValueIfNotDefault(port, ":"+port),
-			utils.ValueIfNotDefault(path, "/"+path),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
 			s.GetURLField("tokena"),
 			s.GetURLField("tokenb"),
 			s.GetURLField("channel"))
@@ -196,10 +196,10 @@ func (s *Shoutrrr) GetURL() (url string) {
 		altid := strings.TrimPrefix(s.GetURLField("altid"), "/")
 		groupowner := strings.TrimPrefix(s.GetURLField("groupowner"), "/")
 		url = fmt.Sprintf("teams://%s%s%s%s?host=%s",
-			utils.ValueIfNotDefault(group, group+"@"),
+			util.ValueIfNotDefault(group, group+"@"),
 			s.GetURLField("tenant"),
-			utils.ValueIfNotDefault(altid, "/"+altid),
-			utils.ValueIfNotDefault(groupowner, "/"+groupowner),
+			util.ValueIfNotDefault(altid, "/"+altid),
+			util.ValueIfNotDefault(groupowner, "/"+groupowner),
 			s.GetParam("host"))
 		url = strings.Replace(url, "///", "//", 1)
 	case "telegram":
@@ -210,9 +210,9 @@ func (s *Shoutrrr) GetURL() (url string) {
 	case "zulip_chat":
 		// zulip://botMail:botKey@host?stream=STREAM&topic=TOPIC
 		stream := s.GetParam("stream")
-		stream = utils.ValueIfNotDefault(stream, "?stream="+stream)
+		stream = util.ValueIfNotDefault(stream, "?stream="+stream)
 		topic := s.GetParam("topic")
-		topic = utils.ValueIfNotDefault(topic, "&topic="+topic)
+		topic = util.ValueIfNotDefault(topic, "&topic="+topic)
 		if stream == "" {
 			topic = strings.Replace(topic, "&", "?", 1)
 		}
@@ -232,14 +232,14 @@ func (s *Shoutrrr) GetURL() (url string) {
 func (s *Slice) Send(
 	title string,
 	message string,
-	serviceInfo *utils.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	if s == nil {
 		return nil
 	}
 	if serviceInfo == nil {
-		serviceInfo = &utils.ServiceInfo{}
+		serviceInfo = &util.ServiceInfo{}
 	}
 
 	errChan := make(chan error)
@@ -257,7 +257,7 @@ func (s *Slice) Send(
 		err := <-errChan
 		if err != nil {
 			errs = fmt.Errorf("%s\n%w",
-				utils.ErrorToString(errs), err)
+				util.ErrorToString(errs), err)
 		}
 	}
 	return
@@ -266,11 +266,11 @@ func (s *Slice) Send(
 func (s *Shoutrrr) Send(
 	title string,
 	message string,
-	serviceInfo *utils.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
-	logFrom := utils.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := s.GetMaxTries()                                       // Number of times to send Shoutrrr (until 200 received).
+	logFrom := util.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
+	triesLeft := s.GetMaxTries()                                      // Number of times to send Shoutrrr (until 200 received).
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
@@ -282,7 +282,7 @@ func (s *Shoutrrr) Send(
 	url := s.GetURL()
 	sender, err := shoutrrr_lib.CreateSender(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("ailed to create Shoutrrr sender: %w", err)
 	}
 	params := s.GetParams(serviceInfo)
 	if title != "" {
@@ -311,14 +311,14 @@ func (s *Shoutrrr) Send(
 
 		// SUCCESS!
 		if !failed {
-			metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
+			metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
 			failed := false
 			(*s.Failed)[s.ID] = &failed
 			return
 		}
 
 		// FAIL
-		metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "FAIL")
+		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "FAIL")
 		triesLeft--
 
 		// Give up after MaxTries.
@@ -329,7 +329,7 @@ func (s *Shoutrrr) Send(
 			(*s.Failed)[s.ID] = &failed
 			for key := range combinedErrs {
 				errs = fmt.Errorf("%s%s x %d",
-					utils.ErrorToString(errs), key, combinedErrs[key])
+					util.ErrorToString(errs), key, combinedErrs[key])
 			}
 			return
 		}

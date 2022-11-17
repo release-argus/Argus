@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package latest_version
+package latestver
 
 import (
 	"encoding/json"
@@ -21,15 +21,15 @@ import (
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	github_types "github.com/release-argus/Argus/service/latest_version/api_types"
-	"github.com/release-argus/Argus/utils"
+	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	"github.com/release-argus/Argus/util"
 )
 
 // filterGitHubReleases will filter releases that fail the URLCommands, aren't semantic (if wanted),
 // or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
 func (l *Lookup) filterGitHubReleases(
 	releases []github_types.Release,
-	logFrom utils.LogFrom,
+	logFrom util.LogFrom,
 ) (filteredReleases []github_types.Release) {
 	semanticVerioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.GetUsePreRelease()
@@ -89,7 +89,7 @@ func insertionSort(release github_types.Release, filteredReleases *[]github_type
 }
 
 // checkGitHubReleasesBody will check that the body is of the expected API format for a successful query
-func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (releases []github_types.Release, err error) {
+func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom util.LogFrom) (releases []github_types.Release, err error) {
 	// Check for rate lirmRDrit.
 	if len(string(*body)) < 500 {
 		if strings.Contains(string(*body), "rate limit") {
@@ -110,7 +110,7 @@ func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom utils.LogFrom) (r
 
 	if err = json.Unmarshal(*body, &releases); err != nil {
 		jLog.Error(err, logFrom, true)
-		err = fmt.Errorf("unmarshal of GitHub API data failed\n%s",
+		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w",
 			err)
 		jLog.Error(err, logFrom, true)
 	}

@@ -15,28 +15,28 @@
 package config
 
 import (
-	db_types "github.com/release-argus/Argus/db/types"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var (
-	jLog *utils.JLog
+	jLog *util.JLog
 )
 
 // Config for Argus.
 type Config struct {
-	File            string                 `yaml:"-"`                  // Path to the config file (--config.file='').
-	Settings        Settings               `yaml:"settings,omitempty"` // Settings for the program.
-	HardDefaults    Defaults               `yaml:"-"`                  // Hardcoded default values for the various parameters.
-	Defaults        Defaults               `yaml:"defaults,omitempty"` // Default values for the various parameters.
-	Notify          shoutrrr.Slice         `yaml:"notify,omitempty"`   // Shoutrrr message(s) to send on a new release.
-	WebHook         webhook.Slice          `yaml:"webhook,omitempty"`  // WebHook(s) to send on a new release.
-	Service         service.Slice          `yaml:"service,omitempty"`  // The service(s) to monitor.
-	All             []string               `yaml:"-"`                  // Ordered list of all Service(s).
-	Order           *[]string              `yaml:"-"`                  // Ordered list of all enabled Service(s).
-	DatabaseChannel *chan db_types.Message `yaml:"-"`                  // Channel for broadcasts to the Database
-	SaveChannel     *chan bool             `yaml:"-"`                  // Channel for triggering a save of the config.
+	File            string               `yaml:"-"`                  // Path to the config file (--config.file='').
+	Settings        Settings             `yaml:"settings,omitempty"` // Settings for the program.
+	HardDefaults    Defaults             `yaml:"-"`                  // Hardcoded default values for the various parameters.
+	Defaults        Defaults             `yaml:"defaults,omitempty"` // Default values for the various parameters.
+	Notify          shoutrrr.Slice       `yaml:"notify,omitempty"`   // Shoutrrr message(s) to send on a new release.
+	WebHook         webhook.Slice        `yaml:"webhook,omitempty"`  // WebHook(s) to send on a new release.
+	Service         service.Slice        `yaml:"service,omitempty"`  // The service(s) to monitor.
+	All             []string             `yaml:"-"`                  // Ordered list of all Service(s).
+	Order           *[]string            `yaml:"-"`                  // Ordered list of all enabled Service(s).
+	DatabaseChannel *chan dbtype.Message `yaml:"-"`                  // Channel for broadcasts to the Database
+	SaveChannel     *chan bool           `yaml:"-"`                  // Channel for triggering a save of the config.
 }

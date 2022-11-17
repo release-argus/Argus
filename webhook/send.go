@@ -17,21 +17,20 @@ package webhook
 import (
 	"context"
 	"crypto/tls"
-	"io"
-	"strings"
-
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Send every WebHook in this Slice with a delay between each webhook.
 func (w *Slice) Send(
-	serviceInfo utils.ServiceInfo,
+	serviceInfo util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	if w == nil {
@@ -52,7 +51,7 @@ func (w *Slice) Send(
 		err := <-errChan
 		if err != nil {
 			errs = fmt.Errorf("%s\n%w",
-				utils.ErrorToString(errs), err)
+				util.ErrorToString(errs), err)
 		}
 	}
 	return
@@ -60,11 +59,11 @@ func (w *Slice) Send(
 
 // Send the WebHook MaxTries number of times until a success.
 func (w *WebHook) Send(
-	serviceInfo utils.ServiceInfo,
+	serviceInfo util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
-	logFrom := utils.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := w.GetMaxTries()                                       // Number of times to send WebHook (until DesiredStatusCode received).
+	logFrom := util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID} // For logging
+	triesLeft := w.GetMaxTries()                                      // Number of times to send WebHook (until DesiredStatusCode received).
 
 	if useDelay && w.GetDelay() != "0s" {
 		// Delay sending the WebHook message by the defined interval.
@@ -81,7 +80,7 @@ func (w *WebHook) Send(
 
 		// SUCCESS!
 		if err == nil {
-			metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceInfo.ID, "", "SUCCESS")
+			metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "SUCCESS")
 			failed := false
 			(*w.Failed)[w.ID] = &failed
 			w.AnnounceSend()
@@ -90,10 +89,10 @@ func (w *WebHook) Send(
 
 		// FAIL!
 		jLog.Error(err, logFrom, true)
-		metrics.IncreasePrometheusCounterActions(metrics.WebHookMetric, w.ID, serviceInfo.ID, "", "FAIL")
+		metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "FAIL")
 		triesLeft--
 		errs = fmt.Errorf("%s\n%w",
-			utils.ErrorToString(errs), err)
+			util.ErrorToString(errs), err)
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
@@ -117,7 +116,7 @@ func (w *WebHook) Send(
 
 // try to send a WebHook to its URL with the body SHA1 and SHA256 encrypted with its Secret.
 // It also simulates other GitHub headers and returns when an error is encountered.
-func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
+func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	req := w.GetRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
@@ -165,7 +164,7 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	}
 
 	return fmt.Errorf(
-		"%sWebHook gave %d, not %s:\n%s\n%s", utils.FormatMessageSource(logFrom),
+		"%sWebHook gave %d, not %s:\n%s\n%s", util.FormatMessageSource(logFrom),
 		resp.StatusCode,
 		prettyStatusCode,
 		resp.Status,
@@ -173,11 +172,12 @@ func (w *WebHook) try(logFrom utils.LogFrom) (err error) {
 	)
 }
 
-func (n *Notifiers) Send(title string, message string, serviceInfo *utils.ServiceInfo) error {
+func (n *Notifiers) Send(title string, message string, serviceInfo *util.ServiceInfo) error {
 	if n == nil || n.Shoutrrr == nil {
 		return nil
 	}
 
+	//nolint:wrapcheck
 	return (*n.Shoutrrr).Send(title, message, serviceInfo, false)
 }
 

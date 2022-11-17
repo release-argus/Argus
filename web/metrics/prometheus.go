@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package metric
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Prometheus metrics.
+// Prometheus metric.
 var (
 	LatestVersionQueryMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "latest_version_query_result_total",
@@ -94,11 +94,11 @@ func InitPrometheusCounterWithIDAndResult(metric *prometheus.CounterVec, id stri
 }
 
 // InitPrometheusCounterActions will set the `metric` counter for this service to 0.
-func InitPrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, src_type string, result string) {
-	if src_type == "" {
+func InitPrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, srcType string, result string) {
+	if srcType == "" {
 		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Add(float64(0))
 	} else {
-		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": src_type, "result": result}).Add(float64(0))
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": srcType, "result": result}).Add(float64(0))
 	}
 }
 
@@ -108,11 +108,11 @@ func IncreasePrometheusCounterWithIDAndResult(metric *prometheus.CounterVec, id 
 }
 
 // IncreasePrometheusCounterActions will increase the `metric` counter for this id and serviceID.
-func IncreasePrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, src_type string, result string) {
-	if src_type == "" {
+func IncreasePrometheusCounterActions(metric *prometheus.CounterVec, id string, serviceID string, srcType string, result string) {
+	if srcType == "" {
 		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "result": result}).Inc()
 	} else {
-		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": src_type, "result": result}).Inc()
+		metric.With(prometheus.Labels{"id": id, "service_id": serviceID, "type": srcType, "result": result}).Inc()
 	}
 }
 

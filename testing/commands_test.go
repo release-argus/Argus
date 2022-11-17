@@ -26,13 +26,13 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/utils"
+	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestCommandTest(t *testing.T) {
 	// GIVEN a Config with a Service containing a Command
-	jLog = utils.NewJLog("INFO", false)
+	jLog = util.NewJLog("INFO", false)
 	InitJLog(jLog)
 	tests := map[string]struct {
 		flag        string
@@ -49,7 +49,7 @@ func TestCommandTest(t *testing.T) {
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
-					Options:           options.Options{Interval: "0s"},
+					Options:           opt.Options{Interval: "0s"},
 				},
 			}},
 		"unknown service in flag": {flag: "something",
@@ -62,7 +62,7 @@ func TestCommandTest(t *testing.T) {
 						command.Command{"true", "0"},
 					},
 					CommandController: &command.Controller{},
-					Options:           options.Options{Interval: "0s"},
+					Options:           opt.Options{Interval: "0s"},
 				},
 			}},
 		"known service in flag successful command": {flag: "argus",
@@ -74,7 +74,7 @@ func TestCommandTest(t *testing.T) {
 						command.Command{"echo", "command did run"},
 					},
 					CommandController: &command.Controller{},
-					Options:           options.Options{Interval: "0s"},
+					Options:           opt.Options{Interval: "0s"},
 				},
 			}},
 		"known service in flag failing command": {flag: "argus",
@@ -86,7 +86,7 @@ func TestCommandTest(t *testing.T) {
 						command.Command{"ls", "/root"},
 					},
 					CommandController: &command.Controller{},
-					Options:           options.Options{Interval: "0s"},
+					Options:           opt.Options{Interval: "0s"},
 				},
 			}},
 		"service with no commands": {flag: "argus",

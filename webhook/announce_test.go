@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	api_types "github.com/release-argus/Argus/web/api/types"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestAnnounceSend(t *testing.T) {
@@ -47,7 +47,9 @@ func TestAnnounceSend(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			webhook := testWebHook(true, true, false, false)
 			(*webhook.Failed)[webhook.ID] = tc.failed
 			webhook.ServiceStatus.AnnounceChannel = nil
@@ -64,7 +66,7 @@ func TestAnnounceSend(t *testing.T) {
 				return
 			}
 			m := <-*webhook.ServiceStatus.AnnounceChannel
-			var parsed api_types.WebSocketMessage
+			var parsed api_type.WebSocketMessage
 			json.Unmarshal(m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {

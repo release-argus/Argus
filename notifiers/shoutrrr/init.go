@@ -15,15 +15,15 @@
 package shoutrrr
 
 import (
-	service_status "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/utils"
-	metrics "github.com/release-argus/Argus/web/metrics"
+	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// Init the Slice metrics.
+// Init the Slice metrics amd hand out the defaults.
 func (s *Slice) Init(
-	log *utils.JLog,
-	serviceStatus *service_status.Status,
+	log *util.JLog,
+	serviceStatus *svcstatus.Status,
 	mains *Slice,
 	defaults *Slice,
 	hardDefaults *Slice,
@@ -52,7 +52,7 @@ func (s *Slice) Init(
 		}
 
 		// Get Type from this or the associated Main
-		notifyType := utils.GetFirstNonDefault(
+		notifyType := util.GetFirstNonDefault(
 			(*s)[key].Type,
 			(*mains)[key].Type,
 		)
@@ -74,7 +74,7 @@ func (s *Slice) Init(
 
 // Init the Shoutrrr metrics and hand out the defaults.
 func (s *Shoutrrr) Init(
-	serviceStatus *service_status.Status,
+	serviceStatus *svcstatus.Status,
 	main *Shoutrrr,
 	defaults *Shoutrrr,
 	hardDefaults *Shoutrrr,
@@ -106,18 +106,18 @@ func (s *Shoutrrr) Init(
 
 // initOptions mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initOptions() {
-	s.Options = utils.LowercaseStringStringMap(&s.Options)
+	s.Options = util.LowercaseStringStringMap(&s.Options)
 }
 
 // initURLFields mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initURLFields() {
-	s.URLFields = utils.LowercaseStringStringMap(&s.URLFields)
+	s.URLFields = util.LowercaseStringStringMap(&s.URLFields)
 }
 
 // initParams mapping, converting all keys to lowercase.
 func (s *Shoutrrr) initParams() {
 	have := map[string]string(s.Params)
-	s.Params = utils.LowercaseStringStringMap(&have)
+	s.Params = util.LowercaseStringStringMap(&have)
 }
 
 // InitMaps will initialise all maps, converting all keys to lowercase.
@@ -140,6 +140,6 @@ func (s *Shoutrrr) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
-	metrics.InitPrometheusCounterActions(metrics.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
+	metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
+	metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
 }

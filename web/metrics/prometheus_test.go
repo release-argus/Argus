@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package metric
 
 import (
 	"testing"
@@ -35,7 +35,12 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for i := range tc.args {
+				tc.args[i] += name
+			}
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {
@@ -94,6 +99,7 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestPrometheusGaugeVec(t *testing.T) {
 	// GIVEN a metric
 	tests := map[string]struct {
@@ -108,7 +114,12 @@ func TestPrometheusGaugeVec(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for i := range tc.args {
+				tc.args[i] += name
+			}
 			got := testutil.CollectAndCount(tc.metric)
 			want := 0
 			if got != want {

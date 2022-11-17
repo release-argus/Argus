@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package filter
 
 import (
 	"encoding/base64"
@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // DockerCheck will verify that Tag exists for Image
@@ -51,7 +51,7 @@ func (r *Require) DockerTagCheck(
 	var req *http.Request
 	token, err := r.Docker.getToken()
 	if err != nil {
-		return fmt.Errorf("%s:%s - %s",
+		return fmt.Errorf("%s:%s - %w",
 			r.Docker.Image, tag, err)
 	}
 	switch r.Docker.Type {
@@ -80,7 +80,7 @@ func (r *Require) DockerTagCheck(
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%s:%s - %s",
+		return fmt.Errorf("%s:%s - %w",
 			r.Docker.Image, tag, err)
 	}
 
@@ -107,20 +107,20 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 	}
 
 	validTypes := []string{"hub", "quay", "ghcr"}
-	if !utils.Contains(validTypes, d.Type) {
+	if !util.Contains(validTypes, d.Type) {
 		errs = fmt.Errorf("%s%stype: %q <invalid> (should be hub/quay/ghcr)\\",
-			utils.ErrorToString(errs), prefix, d.Type)
+			util.ErrorToString(errs), prefix, d.Type)
 	}
 
 	if d.Image == "" {
 		errs = fmt.Errorf("%s%simage: <required> (image to check tags for)",
-			utils.ErrorToString(errs), prefix)
+			util.ErrorToString(errs), prefix)
 	} else {
 		regex := regexp.MustCompile(`^[\w\-\/]+$`)
 		// invalid image
 		if !regex.MatchString(d.Image) {
 			errs = fmt.Errorf("%s%simage: %q <invalid> (non-ASCII)\\",
-				utils.ErrorToString(errs), prefix, d.Image)
+				util.ErrorToString(errs), prefix, d.Image)
 			// e.g. prometheus = library/prometheus on the docker hub api
 		} else if d.Type == "hub" && strings.Count(d.Image, "/") == 0 {
 			d.Image = fmt.Sprintf("library/%s", d.Image)
@@ -129,15 +129,15 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 
 	if d.Tag == "" {
 		errs = fmt.Errorf("%s%stag: <required> (tag to check for existence)",
-			utils.ErrorToString(errs), prefix)
-	} else if !utils.CheckTemplate(d.Tag) {
+			util.ErrorToString(errs), prefix)
+	} else if !util.CheckTemplate(d.Tag) {
 		errs = fmt.Errorf("%s%stag: %q <invalid> (didn't pass templating)\\",
-			utils.ErrorToString(errs), prefix, d.Tag)
+			util.ErrorToString(errs), prefix, d.Tag)
 	}
 
 	if err := d.checkToken(); err != nil {
-		errs = fmt.Errorf("%s%s%s\\",
-			utils.ErrorToString(errs), prefix, err)
+		errs = fmt.Errorf("%s%s%w\\",
+			util.ErrorToString(errs), prefix, err)
 	}
 
 	return
@@ -167,7 +167,7 @@ func (d *DockerCheck) checkToken() (err error) {
 
 // GetTag to search for on Image
 func (d *DockerCheck) GetTag(version string) string {
-	return utils.TemplateString(d.Tag, utils.ServiceInfo{LatestVersion: version})
+	return util.TemplateString(d.Tag, util.ServiceInfo{LatestVersion: version})
 }
 
 // getToken for API queries
@@ -215,7 +215,7 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	reqBody.Set("password", d.Token)
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody.Encode()))
 	if err != nil {
-		return err
+		return fmt.Errorf("DockerHub login request, creation failed: %w", err)
 	}
 	req.Header.Set("Connection", "close")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -223,8 +223,8 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		jLog.Error(err, utils.LogFrom{Primary: "docker-hub", Secondary: d.Image}, true)
-		return
+		jLog.Error(err, util.LogFrom{Primary: "docker-hub", Secondary: d.Image}, true)
+		return fmt.Errorf("DockerHub login fail: %w", err)
 	}
 
 	// Parse the body
@@ -240,6 +240,7 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	err = json.Unmarshal(body, &tokenJSON)
 	d.token = tokenJSON.Token
 	d.validUntil = time.Now().UTC().Add(5 * time.Minute)
+	//nolint:wrapcheck
 	return err
 }
 
@@ -248,14 +249,14 @@ func (d *DockerCheck) refreshGHCRToken() (err error) {
 	url := fmt.Sprintf("https://ghcr.io/token?scope=repository:%s:pull", d.Image)
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("GHCR token refresh fail: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read the token
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("GHCR Token request failed: %s", body)
 	}
 	type ghcrJSON struct {
 		Token string `json:"token"`
@@ -264,6 +265,7 @@ func (d *DockerCheck) refreshGHCRToken() (err error) {
 	err = json.Unmarshal(body, &tokenJSON)
 	d.token = tokenJSON.Token
 	d.validUntil = time.Now().UTC().Add(5 * time.Minute)
+	//nolint:wrapcheck
 	return err
 }
 
@@ -274,9 +276,9 @@ func (d *DockerCheck) Print(prefix string) {
 	}
 
 	fmt.Printf("%sdocker::\n", prefix)
-	utils.PrintlnIfNotDefault(d.Type, fmt.Sprintf("%s  type: %q", prefix, d.Type))
-	utils.PrintlnIfNotDefault(d.Image, fmt.Sprintf("%s  image: %q", prefix, d.Image))
-	utils.PrintlnIfNotDefault(d.Tag, fmt.Sprintf("%s  tag: %q", prefix, d.Tag))
-	utils.PrintlnIfNotDefault(d.Username, fmt.Sprintf("%s  username: %q", prefix, d.Username))
-	utils.PrintlnIfNotDefault(d.Token, fmt.Sprintf("%s  token: %q", prefix, "<secret>"))
+	util.PrintlnIfNotDefault(d.Type, fmt.Sprintf("%s  type: %q", prefix, d.Type))
+	util.PrintlnIfNotDefault(d.Image, fmt.Sprintf("%s  image: %q", prefix, d.Image))
+	util.PrintlnIfNotDefault(d.Tag, fmt.Sprintf("%s  tag: %q", prefix, d.Tag))
+	util.PrintlnIfNotDefault(d.Username, fmt.Sprintf("%s  username: %q", prefix, d.Username))
+	util.PrintlnIfNotDefault(d.Token, fmt.Sprintf("%s  token: %q", prefix, "<secret>"))
 }

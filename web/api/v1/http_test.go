@@ -24,16 +24,16 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestHTTPVersion(t *testing.T) {
 	// GIVEN an API and the Version,BuildDate and GoVersion vars defined
 	api := API{}
-	api.Log = utils.NewJLog("WARN", false)
-	utils.Version = "1.2.3"
-	utils.BuildDate = "2022-01-01T01:01:01Z"
+	api.Log = util.NewJLog("WARN", false)
+	util.Version = "1.2.3"
+	util.BuildDate = "2022-01-01T01:01:01Z"
 
 	// WHEN a HTTP request is made to the httpVersion handler
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
@@ -48,12 +48,12 @@ func TestHTTPVersion(t *testing.T) {
 		t.Errorf("expected error to be nil got %v",
 			err)
 	}
-	var got api_types.VersionAPI
+	var got api_type.VersionAPI
 	json.Unmarshal(data, &got)
-	want := api_types.VersionAPI{
-		Version:   utils.Version,
-		BuildDate: utils.BuildDate,
-		GoVersion: utils.GoVersion,
+	want := api_type.VersionAPI{
+		Version:   util.Version,
+		BuildDate: util.BuildDate,
+		GoVersion: util.GoVersion,
 	}
 	if got != want {
 		t.Errorf("Version HTTP should have returned %v, not %v",
@@ -79,7 +79,7 @@ func TestBasicAuth(t *testing.T) {
 			cfg := config.Config{}
 			cfg.Settings.Web.BasicAuth = tc.basicAuth
 			cfg.Settings.Web.RoutePrefix = stringPtr("")
-			api := NewAPI(&cfg, utils.NewJLog("WARN", false))
+			api := NewAPI(&cfg, util.NewJLog("WARN", false))
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
 				return
 			})

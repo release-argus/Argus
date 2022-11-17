@@ -15,12 +15,9 @@
 package webhook
 
 import (
-
-	//#nosec G505 -- GitHub's X-Hub-Signature uses SHA-1
-
 	"net/http"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 // GitHub is the WebHook payload to emulate GitHub.
@@ -32,14 +29,14 @@ type GitHub struct {
 
 // SetCustomHeaders of the req.
 func (w *WebHook) SetCustomHeaders(req *http.Request) {
-	customHeaders := utils.GetFirstNonNilPtr(w.CustomHeaders, w.Main.CustomHeaders, w.Defaults.CustomHeaders)
+	customHeaders := util.GetFirstNonNilPtr(w.CustomHeaders, w.Main.CustomHeaders, w.Defaults.CustomHeaders)
 	if customHeaders == nil {
 		return
 	}
 
-	serviceInfo := utils.ServiceInfo{ID: *w.ServiceStatus.ServiceID, LatestVersion: w.ServiceStatus.LatestVersion}
+	serviceInfo := util.ServiceInfo{ID: *w.ServiceStatus.ServiceID, LatestVersion: w.ServiceStatus.LatestVersion}
 	for key, value := range *customHeaders {
-		value = utils.TemplateString(value, serviceInfo)
+		value = util.TemplateString(value, serviceInfo)
 		req.Header[key] = []string{value}
 	}
 }

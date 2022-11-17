@@ -22,14 +22,14 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/utils"
-	"github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestSliceTrack(t *testing.T) {
 	// GIVEN a Slice
-	jLog = utils.NewJLog("WARN", false)
+	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		ordering     []string
 		slice        []string
@@ -41,7 +41,9 @@ func TestSliceTrack(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			var slice *Slice
 			if len(tc.slice) != 0 {
 				slice = &Slice{}
@@ -49,9 +51,9 @@ func TestSliceTrack(t *testing.T) {
 				for _, j := range tc.slice {
 					switch j {
 					case "github":
-						(*slice)[j] = testServiceGitHub()
+						(*slice)[j] = testServiceGitHub(name)
 					case "url":
-						(*slice)[j] = testServiceURL()
+						(*slice)[j] = testServiceURL(name)
 					}
 					if len(tc.active) != 0 {
 						(*slice)[j].Options.Active = boolPtr(tc.active[i])
@@ -68,12 +70,12 @@ func TestSliceTrack(t *testing.T) {
 			// THEN the function exits straight away
 			time.Sleep(time.Second)
 			for i := range *slice {
-				if !utils.Contains(tc.ordering, i) {
+				if !util.Contains(tc.ordering, i) {
 					if (*slice)[i].Status.LatestVersion != "" {
 						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
 							i, tc.ordering, (*slice)[i].Status)
 					}
-				} else if utils.EvalNilPtr((*slice)[i].Options.Active, true) {
+				} else if util.EvalNilPtr((*slice)[i].Options.Active, true) {
 					if (*slice)[i].Status.LatestVersion == "" {
 						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
 							(*slice)[i].Status)
@@ -165,10 +167,11 @@ func TestServiceTrack(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			didFinish := make(chan bool, 1)
-			service := testServiceURL()
-			service.ID = name
+			service := testServiceURL(name)
 			service.Status.LatestVersion = tc.startLatestVersion
 			service.Status.DeployedVersion = tc.startDeployedVersion
 			if tc.keepDeployedLookup {
@@ -200,13 +203,13 @@ func TestServiceTrack(t *testing.T) {
 			}()
 			haveQueried := false
 			for haveQueried != false {
-				passQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
-				failQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
+				passQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
+				failQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 					if tc.keepDeployedLookup {
-						passQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
-						failQ := testutil.ToFloat64(metrics.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
+						passQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(service.ID, "SUCCESS"))
+						failQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(service.ID, "FAIL"))
 						// if deployedVersionLookup hasn't queried, reset haveQueried
 						if passQ == float64(0) && failQ == float64(0) {
 							haveQueried = false
@@ -223,7 +226,7 @@ func TestServiceTrack(t *testing.T) {
 					tc.wantLatestVersion, service.Status.LatestVersion, tc.wantDeployedVersion, service.Status.DeployedVersion)
 			}
 			// LatestVersionQueryMetric
-			gotMetric := testutil.ToFloat64(metrics.LatestVersionQueryLiveness.WithLabelValues(service.ID))
+			gotMetric := testutil.ToFloat64(metric.LatestVersionQueryLiveness.WithLabelValues(service.ID))
 			if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
 				t.Errorf("LatestVersionQueryLiveness should be %d, not %f",
 					tc.livenessMetric, gotMetric)

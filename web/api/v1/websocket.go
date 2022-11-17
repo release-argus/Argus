@@ -22,22 +22,22 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	"github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version/filters"
-	"github.com/release-argus/Argus/utils"
-	api_types "github.com/release-argus/Argus/web/api/types"
+	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/util"
+	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func (api *API) wsService(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsService", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsService", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	responsePage := "APPROVALS"
 	responseType := "SERVICE"
 
 	// Send the ordering
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    responsePage,
 		Type:    responseType,
 		SubType: "ORDERING",
@@ -59,7 +59,7 @@ func (api *API) wsService(client *Client) {
 		url := service.LatestVersion.GetServiceURL(false)
 		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
 
-		serviceSummary := api_types.ServiceSummary{
+		serviceSummary := api_type.ServiceSummary{
 			Active:                   service.Options.Active,
 			ID:                       service.ID,
 			Type:                     service.LatestVersion.Type,
@@ -69,7 +69,7 @@ func (api *API) wsService(client *Client) {
 			HasDeployedVersionLookup: hasDeployedVersionLookup,
 			Command:                  len(service.Command),
 			WebHook:                  len(service.WebHook),
-			Status: &api_types.Status{
+			Status: &api_type.Status{
 				ApprovedVersion:          service.Status.ApprovedVersion,
 				DeployedVersion:          service.Status.DeployedVersion,
 				DeployedVersionTimestamp: service.Status.DeployedVersionTimestamp,
@@ -80,7 +80,7 @@ func (api *API) wsService(client *Client) {
 		}
 
 		// Create and send ServiceSummary
-		msg := api_types.WebSocketMessage{
+		msg := api_type.WebSocketMessage{
 			Page:        responsePage,
 			Type:        responseType,
 			SubType:     "INIT",
@@ -98,8 +98,8 @@ func (api *API) wsService(client *Client) {
 // Required params:
 //
 // service_data.id - Service ID to approve/deny release.
-func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessage) {
-	logFrom := utils.LogFrom{Primary: "wsServiceAction", Secondary: client.ip}
+func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessage) {
+	logFrom := util.LogFrom{Primary: "wsServiceAction", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	if payload.ServiceData.ID == "" {
@@ -158,8 +158,8 @@ func (api *API) wsServiceAction(client *Client, payload api_types.WebSocketMessa
 // Required params:
 //
 // service_data.id - Service ID to get the Command(s) of.
-func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
-	logFrom := utils.LogFrom{Primary: "wsCommand", Secondary: client.ip}
+func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
+	logFrom := util.LogFrom{Primary: "wsCommand", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	if payload.ServiceData.ID == "" {
@@ -176,20 +176,20 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	// Create and send commandSummary
-	commandSummary := make(map[string]*api_types.CommandSummary, len(api.Config.Service[id].Command))
+	commandSummary := make(map[string]*api_type.CommandSummary, len(api.Config.Service[id].Command))
 	for key := range *api.Config.Service[id].CommandController.Command {
 		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(&api.Config.Service[id].Status)
-		commandSummary[command.String()] = &api_types.CommandSummary{
+		commandSummary[command.String()] = &api_type.CommandSummary{
 			Failed:       api.Config.Service[id].Status.Fails.Command[key],
 			NextRunnable: api.Config.Service[id].CommandController.NextRunnable[key],
 		}
 	}
 
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "COMMAND",
 		SubType: "SUMMARY",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: id,
 		},
 		CommandData: commandSummary,
@@ -204,8 +204,8 @@ func (api *API) wsCommand(client *Client, payload api_types.WebSocketMessage) {
 // Required params:
 //
 // service_data.id - Service ID to get the WebHook(s) of.
-func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
-	logFrom := utils.LogFrom{Primary: "wsWebHook", Secondary: client.ip}
+func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
+	logFrom := util.LogFrom{Primary: "wsWebHook", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	if payload.ServiceData.ID == "" {
@@ -222,20 +222,20 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 	}
 
 	// Create and send webhookSummary
-	webhookSummary := make(map[string]*api_types.WebHookSummary, len(api.Config.Service[id].WebHook))
+	webhookSummary := make(map[string]*api_type.WebHookSummary, len(api.Config.Service[id].WebHook))
 
 	for key := range api.Config.Service[id].WebHook {
-		webhookSummary[key] = &api_types.WebHookSummary{
+		webhookSummary[key] = &api_type.WebHookSummary{
 			Failed:       api.Config.Service[id].Status.Fails.WebHook[key],
 			NextRunnable: api.Config.Service[id].WebHook[key].NextRunnable,
 		}
 	}
 
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "WEBHOOK",
 		SubType: "SUMMARY",
-		ServiceData: &api_types.ServiceSummary{
+		ServiceData: &api_type.ServiceSummary{
 			ID: id,
 		},
 		WebHookData: webhookSummary,
@@ -247,19 +247,19 @@ func (api *API) wsWebHook(client *Client, payload api_types.WebSocketMessage) {
 
 // wsStatus handles getting the info of the Argus binary status.
 func (api *API) wsStatus(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsStatus", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsStatus", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	info := api_types.Info{
-		Build: api_types.BuildInfo{
-			Version:   utils.Version,
-			BuildDate: utils.BuildDate,
-			GoVersion: utils.GoVersion,
+	info := api_type.Info{
+		Build: api_type.BuildInfo{
+			Version:   util.Version,
+			BuildDate: util.BuildDate,
+			GoVersion: util.GoVersion,
 		},
-		Runtime: api_types.RuntimeInfo{
-			StartTime:      utils.StartTime,
-			CWD:            utils.CWD,
+		Runtime: api_type.RuntimeInfo{
+			StartTime:      util.StartTime,
+			CWD:            util.CWD,
 			GoRoutineCount: runtime.NumGoroutine(),
 			GOMAXPROCS:     runtime.GOMAXPROCS(0),
 			GoGC:           os.Getenv("GOGC"),
@@ -267,7 +267,7 @@ func (api *API) wsStatus(client *Client) {
 		},
 	}
 
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:     "RUNTIME_BUILD",
 		Type:     "INIT",
 		InfoData: &info,
@@ -279,14 +279,14 @@ func (api *API) wsStatus(client *Client) {
 
 // wsFlags handles getting the values of the flags that can be used with the binary.
 func (api *API) wsFlags(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsFlags", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsFlags", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page: "FLAGS",
 		Type: "INIT",
-		FlagsData: &api_types.Flags{
+		FlagsData: &api_type.Flags{
 			ConfigFile:       &api.Config.File,
 			LogLevel:         api.Config.Settings.GetLogLevel(),
 			LogTimestamps:    api.Config.Settings.GetLogTimestamps(),
@@ -305,21 +305,21 @@ func (api *API) wsFlags(client *Client) {
 
 // wsConfigSettings handles getting the `settings` config that's in use.
 func (api *API) wsConfigSettings(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigSettings", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsConfigSettings", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
 		Type:    "SETTINGS",
 		SubType: "INIT",
-		ConfigData: &api_types.Config{
-			Settings: &api_types.Settings{
-				Log: api_types.LogSettings{
+		ConfigData: &api_type.Config{
+			Settings: &api_type.Settings{
+				Log: api_type.LogSettings{
 					Timestamps: api.Config.Settings.Log.Timestamps,
 					Level:      api.Config.Settings.Log.Level,
 				},
-				Web: api_types.WebSettings{
+				Web: api_type.WebSettings{
 					ListenHost:  api.Config.Settings.Web.ListenHost,
 					ListenPort:  api.Config.Settings.Web.ListenPort,
 					CertFile:    api.Config.Settings.Web.CertFile,
@@ -336,33 +336,33 @@ func (api *API) wsConfigSettings(client *Client) {
 
 // wsConfigDefaults handles getting the `defaults` config that's in use.
 func (api *API) wsConfigDefaults(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigDefaults", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsConfigDefaults", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
 	notifyDefaults := convertNotifySliceToAPITypeNotifySlice(&api.Config.Defaults.Notify)
 	webhookDefaults := convertWebHookToAPITypeWebHook(&api.Config.Defaults.WebHook)
 
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
 		Type:    "DEFAULTS",
 		SubType: "INIT",
-		ConfigData: &api_types.Config{
-			Defaults: &api_types.Defaults{
-				Service: api_types.Service{
-					Options: &api_types.ServiceOptions{
+		ConfigData: &api_type.Config{
+			Defaults: &api_type.Defaults{
+				Service: api_type.Service{
+					Options: &api_type.ServiceOptions{
 						Interval:           api.Config.Defaults.Service.Options.Interval,
 						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
 					},
-					LatestVersion: &api_types.LatestVersion{
-						AccessToken:       utils.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
+					LatestVersion: &api_type.LatestVersion{
+						AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
 						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
 					},
-					DeployedVersionLookup: &api_types.DeployedVersionLookup{
+					DeployedVersionLookup: &api_type.DeployedVersionLookup{
 						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
 					},
-					Dashboard: &api_types.DashboardOptions{
+					Dashboard: &api_type.DashboardOptions{
 						AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove,
 					},
 				},
@@ -380,15 +380,15 @@ func (api *API) wsConfigDefaults(client *Client) {
 
 // wsConfigNotify handles getting the `notify` config that's in use.
 func (api *API) wsConfigNotify(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigNotify", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsConfigNotify", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
 		Type:    "NOTIFY",
 		SubType: "INIT",
-		ConfigData: &api_types.Config{
+		ConfigData: &api_type.Config{
 			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify),
 		},
 	}
@@ -399,15 +399,15 @@ func (api *API) wsConfigNotify(client *Client) {
 
 // wsConfigWebHook handles getting the `webhook` config that's in use.
 func (api *API) wsConfigWebHook(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigWebHook", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsConfigWebHook", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
 		Type:    "WEBHOOK",
 		SubType: "INIT",
-		ConfigData: &api_types.Config{
+		ConfigData: &api_type.Config{
 			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook),
 		},
 	}
@@ -418,31 +418,31 @@ func (api *API) wsConfigWebHook(client *Client) {
 
 // wsConfigService handles getting the `service` config that's in use.
 func (api *API) wsConfigService(client *Client) {
-	logFrom := utils.LogFrom{Primary: "wsConfigService", Secondary: client.ip}
+	logFrom := util.LogFrom{Primary: "wsConfigService", Secondary: client.ip}
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	serviceConfig := make(api_types.ServiceSlice)
+	serviceConfig := make(api_type.ServiceSlice)
 	if api.Config.Service != nil {
 		for _, key := range api.Config.All {
 			service := api.Config.Service[key]
 
-			serviceConfig[key] = &api_types.Service{
+			serviceConfig[key] = &api_type.Service{
 				Comment: service.Comment,
-				Options: &api_types.ServiceOptions{
+				Options: &api_type.ServiceOptions{
 					Active:             service.Options.Active,
 					Interval:           service.Options.Interval,
 					SemanticVersioning: service.Options.SemanticVersioning,
 				},
-				LatestVersion: &api_types.LatestVersion{
+				LatestVersion: &api_type.LatestVersion{
 					Type:              service.LatestVersion.Type,
 					URL:               service.LatestVersion.URL,
 					URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands),
-					AccessToken:       utils.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
+					AccessToken:       util.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 					AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 					UsePreRelease:     service.LatestVersion.UsePreRelease,
 				},
-				Dashboard: &api_types.DashboardOptions{
+				Dashboard: &api_type.DashboardOptions{
 					AutoApprove: service.Dashboard.AutoApprove,
 					Icon:        service.Dashboard.Icon,
 					IconLinkTo:  service.Dashboard.IconLinkTo,
@@ -450,14 +450,14 @@ func (api *API) wsConfigService(client *Client) {
 				},
 			}
 			if service.LatestVersion.Require != nil {
-				serviceConfig[key].LatestVersion.Require = &api_types.LatestVersionRequire{
+				serviceConfig[key].LatestVersion.Require = &api_type.LatestVersionRequire{
 					RegexContent: service.LatestVersion.Require.RegexContent,
 					RegexVersion: service.LatestVersion.Require.RegexVersion,
 				}
 			}
 
 			// DeployedVersionLookup
-			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToApiTypeDeployedVersionLookup(service.DeployedVersionLookup)
+			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToAPITypeDeployedVersionLookup(service.DeployedVersionLookup)
 			// Notify
 			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
 			// Command
@@ -467,11 +467,11 @@ func (api *API) wsConfigService(client *Client) {
 		}
 	}
 
-	msg := api_types.WebSocketMessage{
+	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
 		Type:    "SERVICE",
 		SubType: "INIT",
-		ConfigData: &api_types.Config{
+		ConfigData: &api_type.Config{
 			Service: &serviceConfig,
 			Order:   api.Config.All,
 		},
@@ -481,12 +481,12 @@ func (api *API) wsConfigService(client *Client) {
 	}
 }
 
-func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_version.Lookup) *api_types.DeployedVersionLookup {
+func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) *api_type.DeployedVersionLookup {
 	if dvl == nil {
 		return nil
 	}
-	var headers []api_types.Header
-	apiDVL := api_types.DeployedVersionLookup{
+	var headers []api_type.Header
+	apiDVL := api_type.DeployedVersionLookup{
 		URL:               dvl.URL,
 		AllowInvalidCerts: dvl.AllowInvalidCerts,
 		Headers:           headers,
@@ -495,7 +495,7 @@ func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_ve
 	}
 	// Basic auth
 	if dvl.BasicAuth != nil {
-		apiDVL.BasicAuth = &api_types.BasicAuth{
+		apiDVL.BasicAuth = &api_type.BasicAuth{
 			Username: dvl.BasicAuth.Username,
 			Password: "<secret>",
 		}
@@ -504,7 +504,7 @@ func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_ve
 	for i := range dvl.Headers {
 		apiDVL.Headers = append(
 			apiDVL.Headers,
-			api_types.Header{
+			api_type.Header{
 				Key:   dvl.Headers[i].Key,
 				Value: "<secret>",
 			},
@@ -513,13 +513,13 @@ func convertDeployedVersionLookupToApiTypeDeployedVersionLookup(dvl *deployed_ve
 	return &apiDVL
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommandSlice) api_types.URLCommandSlice {
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) api_type.URLCommandSlice {
 	if commands == nil {
 		return nil
 	}
-	apiSlice := make(api_types.URLCommandSlice, len(*commands))
+	apiSlice := make(api_type.URLCommandSlice, len(*commands))
 	for index := range *commands {
-		apiSlice[index] = api_types.URLCommand{
+		apiSlice[index] = api_type.URLCommand{
 			Type:  (*commands)[index].Type,
 			Regex: (*commands)[index].Regex,
 			Index: (*commands)[index].Index,
@@ -531,13 +531,13 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filters.URLCommand
 	return apiSlice
 }
 
-func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_types.NotifySlice {
+func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type.NotifySlice {
 	if notifiers == nil {
 		return nil
 	}
-	apiSlice := make(api_types.NotifySlice, len(*notifiers))
+	apiSlice := make(api_type.NotifySlice, len(*notifiers))
 	for index := range *notifiers {
-		apiSlice[index] = &api_types.Notify{
+		apiSlice[index] = &api_type.Notify{
 			Type:      (*notifiers)[index].Type,
 			Options:   (*notifiers)[index].Options,
 			URLFields: (*notifiers)[index].URLFields,
@@ -549,36 +549,36 @@ func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type
 	return &apiSlice
 }
 
-func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_types.CommandSlice {
+func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_type.CommandSlice {
 	if commands == nil {
 		return nil
 	}
-	apiSlice := make(api_types.CommandSlice, len(*commands))
+	apiSlice := make(api_type.CommandSlice, len(*commands))
 	for index := range *commands {
-		apiSlice[index] = api_types.Command((*commands)[index])
+		apiSlice[index] = api_type.Command((*commands)[index])
 	}
 	return &apiSlice
 }
 
-func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_types.WebHookSlice {
+func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_type.WebHookSlice {
 	if webhooks == nil {
 		return nil
 	}
-	apiSlice := make(api_types.WebHookSlice, len(*webhooks))
+	apiSlice := make(api_type.WebHookSlice, len(*webhooks))
 	for index := range *webhooks {
 		apiSlice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
 	}
 	return &apiSlice
 }
 
-func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_types.WebHook) {
+func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_type.WebHook) {
 	if webhook == nil {
 		return
 	}
-	apiElement = &api_types.WebHook{
+	apiElement = &api_type.WebHook{
 		Type:              &webhook.Type,
 		URL:               &webhook.URL,
-		Secret:            utils.ValueIfNotNil(&webhook.Secret, "<secret>"),
+		Secret:            util.ValueIfNotNil(&webhook.Secret, "<secret>"),
 		CustomHeaders:     webhook.CustomHeaders,
 		DesiredStatusCode: webhook.DesiredStatusCode,
 		Delay:             webhook.Delay,

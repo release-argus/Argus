@@ -14,12 +14,12 @@
 
 //go:build unit
 
-package types
+package apitype
 
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/utils"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestNotifyCensorWithNil(t *testing.T) {
@@ -94,7 +94,7 @@ func TestNotifyCensorURLFields(t *testing.T) {
 	wantCensor := "<secret>"
 	for key, value := range (*got).URLFields {
 		if value != "" &&
-			utils.Contains(should_be_censored, key) &&
+			util.Contains(should_be_censored, key) &&
 			value != wantCensor {
 			t.Errorf("%q should have been censored to %q, not %q",
 				key, wantCensor, value)
@@ -121,7 +121,7 @@ func TestNotifyCensorParams(t *testing.T) {
 	wantCensor := "<secret>"
 	for key, value := range (*got).Params {
 		if value != "" &&
-			utils.Contains(should_be_censored, key) &&
+			util.Contains(should_be_censored, key) &&
 			value != wantCensor {
 			t.Errorf("%q should have been censored to %q, not %q",
 				key, wantCensor, value)
