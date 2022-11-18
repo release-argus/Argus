@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.11.0](https://github.com/release-argus/Argus/compare/0.10.3...0.11.0) (2022-11-18)
+
+
+### Features
+
+* **docker:** add `/api/v1/healthcheck` endpoint and binary ([589287a](https://github.com/release-argus/Argus/commits/589287a1d4ac27ee4f1d4931af59327e0246fc41))
+* **service:** github, conditional requests ([#176](https://github.com/release-argus/Argus/issues/176)) ([cccab2b](https://github.com/release-argus/Argus/commits/a1e9deac47899029828cbedd6fc52eeb2198d758))
+
+
+### Bug Fixes
+
+* **webhook:** use `custom_headers` from main/defaults ([#174](https://github.com/release-argus/Argus/issues/174)) ([0ba4124](https://github.com/release-argus/Argus/commits/0ba412420bed4922978483ca5016f7abd4f89e41))
+
 ### [0.10.3](https://github.com/release-argus/Argus/compare/0.10.2...0.10.3) (2022-09-15)
 
 
