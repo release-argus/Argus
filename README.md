@@ -4,16 +4,15 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
 [![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
 [![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Test?label=Tests)](https://github.com/release-argus/Argus/actions/workflows/test.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
 
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Binary%20Build?label=Binary%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
 [![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
 [![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/release-argus/argus/Docker%20Build?label=Docker%20Build)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
 [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
 [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
 [![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
