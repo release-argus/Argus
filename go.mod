@@ -19,7 +19,7 @@ require (
 	modernc.org/libc v1.22.2 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.4.0 // indirect
-	modernc.org/sqlite v1.20.1
+	modernc.org/sqlite v1.20.2
 )
 
 require (
