@@ -130,7 +130,6 @@ func (s *Shoutrrr) GetURL() (url string) {
 		// matrix://user:password@host[:port][/port]/[?rooms=!roomID1[,roomAlias2]][&disableTLS=yes]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
-		user := s.GetURLField("user")
 		rooms := s.GetParam("rooms")
 		rooms = util.ValueIfNotDefault(rooms, "?rooms="+rooms)
 		disableTLS := s.GetParam("disabletls")
@@ -142,8 +141,8 @@ func (s *Shoutrrr) GetURL() (url string) {
 				disableTLS = "?" + disableTLS
 			}
 		}
-		url = fmt.Sprintf("matrix://%s%s@%s%s%s/%s%s",
-			util.ValueIfNotDefault(user, user+":"),
+		url = fmt.Sprintf("matrix://%s:%s@%s%s%s/%s%s",
+			s.GetURLField("user"),
 			s.GetURLField("password"),
 			s.GetURLField("host"),
 			util.ValueIfNotDefault(port, ":"+port),
@@ -297,7 +296,7 @@ func (s *Shoutrrr) Send(
 	for {
 		msg := fmt.Sprintf("Sending %q to %q", toSend, url)
 		jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
-		jLog.Debug(msg+fmt.Sprintf(" with params=%q", *params), logFrom, jLog.IsLevel("debug"))
+		jLog.Debug(fmt.Sprintf("%s with params=%q", msg, *params), logFrom, jLog.IsLevel("debug"))
 		err := sender.Send(toSend, params)
 
 		failed := false

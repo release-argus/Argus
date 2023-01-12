@@ -97,6 +97,7 @@ func findShoutrrr(
 			slice["test"].HardDefaults = &emptyShoutrrs
 			slice["test"].InitMaps()
 			slice["test"].Main.InitMaps()
+			slice["test"].Failed = &map[string]*bool{}
 
 			notifyType := slice["test"].GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
