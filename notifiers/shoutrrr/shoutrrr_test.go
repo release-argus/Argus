@@ -67,7 +67,7 @@ func TestGetURL(t *testing.T) {
 			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "username": "USERNAME", "port": "8443"}},
 		"mattermost - base + port + path": {sType: "mattermost", want: "mattermost://USERNAME@HOST:8443/PATH/TOKEN",
 			urlFields: map[string]string{"host": "HOST", "token": "TOKEN", "username": "USERNAME", "path": "PATH", "port": "8443"}},
-		"matrix - base": {sType: "matrix", want: "matrix://PASSWORD@HOST/",
+		"matrix - base": {sType: "matrix", want: "matrix://:PASSWORD@HOST/",
 			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD"}},
 		"matrix - base + user": {sType: "matrix", want: "matrix://USER:PASSWORD@HOST/",
 			urlFields: map[string]string{"host": "HOST", "password": "PASSWORD", "user": "USER"}},

@@ -244,7 +244,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 				util.ErrorToString(*errsURLFields), prefix)
 		}
 		if s.GetURLField("password") == "" {
-			*errsURLFields = fmt.Errorf("%s%s  password: <required> e.g. 'pass123' OR 'access_token'\\",
+			*errsURLFields = fmt.Errorf("%s%s  password: <required> e.g. 'pass123' (with user) OR 'access_token' (no user)\\",
 				util.ErrorToString(*errsURLFields), prefix)
 		}
 	case "opsgenie":
