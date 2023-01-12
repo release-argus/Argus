@@ -127,6 +127,11 @@ func (s *Shoutrrr) correctSelf() {
 	}
 
 	switch s.Type {
+	case "matrix":
+		// Remove #'s in channel aliases
+		if rooms := strings.ReplaceAll(s.GetSelfParam("rooms"), "#", ""); rooms != "" {
+			s.SetParam("rooms", rooms)
+		}
 	case "mattermost":
 		// Channel, strip leading /
 		if channel := strings.TrimPrefix(s.GetSelfURLField("channel"), "/"); channel != "" {
