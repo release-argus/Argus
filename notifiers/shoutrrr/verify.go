@@ -76,11 +76,14 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 	if s.Main != nil {
 		s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
 
-		//#nosec G104 -- Disregard as we're not giving any rawURLs
-		sender, _ := shoutrrr_lib.CreateSender()
-		if _, err := sender.Locate(s.GetURL()); err != nil {
-			errsLocate = fmt.Errorf("%s%s^ %w\\",
-				util.ErrorToString(errsLocate), prefix, err)
+		// Exclude matrix since it logs in, so may run into a rate-limit
+		if s.GetType() != "matrix" {
+			//#nosec G104 -- Disregard as we're not giving any rawURLs
+			sender, _ := shoutrrr_lib.CreateSender()
+			if _, err := sender.Locate(s.GetURL()); err != nil {
+				errsLocate = fmt.Errorf("%s%s^ %w\\",
+					util.ErrorToString(errsLocate), prefix, err)
+			}
 		}
 	}
 
