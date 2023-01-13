@@ -1,4 +1,12 @@
 coverage:
   precision: 2
   round: up
-
+  status:
+    patch:
+      default:
+        # docker.go may fail because of secrets
+        # websocket-client.go is flaky sometimes
+        threshold: 0.75%
+    project:
+      default:
+        threshold: 0.75%

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.11.1](https://github.com/release-argus/Argus/compare/0.11.0...0.11.1) (2023-01-13)
+
+
+### Bug Fixes
+
+* **notify:** don't login to matrix to verify (could run into a rate-limit) ([#198](https://github.com/release-argus/Argus/issues/198)) ([a15437d](https://github.com/release-argus/Argus/commits/a15437d62434300a3cf03aefd67a5ee9eb63e68b))
+* **notify:** get access_token `password`s working for matrix ([#196](https://github.com/release-argus/Argus/issues/196)) ([74282d1](https://github.com/release-argus/Argus/commits/74282d1bdf6f6b7fc8179d02abe8ba0c6bc6d43c))
+* **notify:** handle `#`s in matrix `params.rooms` ([#197](https://github.com/release-argus/Argus/issues/197)) ([81a2a72](https://github.com/release-argus/Argus/commits/81a2a72dc2405096b846c91daf9d88162511fd87))
+
 ## [0.11.0](https://github.com/release-argus/Argus/compare/0.10.3...0.11.0) (2022-11-18)
 
 
