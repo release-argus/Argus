@@ -487,6 +487,8 @@ func TestShoutrrrCheckValues(t *testing.T) {
 			main: &Shoutrrr{}, sType: "gotify"},
 		"does field check service shoutrrrs - invalid params + locate fail": {errRegex: "fromaddress: <required>.*toaddresses: <required>", serviceShoutrrr: true,
 			urlFields: map[string]string{"host": "https://release-argus.io"}, main: &Shoutrrr{}, sType: "smtp"},
+		"valid matrix - skip Locate": {errRegex: "^$", serviceShoutrrr: true,
+			main: &Shoutrrr{URLFields: map[string]string{"host": "matrix.example.io", "password": "access_token"}}, sType: "matrix"},
 	}
 
 	for name, tc := range tests {
