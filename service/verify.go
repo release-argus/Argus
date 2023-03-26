@@ -83,7 +83,8 @@ func (s *Slice) Print(prefix string, order []string) {
 
 // Print will print the Service.
 func (s *Service) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.Comment, fmt.Sprintf("%scomment: %q", prefix, s.Comment))
+	util.PrintlnIfNotDefault(s.Comment,
+		fmt.Sprintf("%scomment: %q", prefix, s.Comment))
 
 	// Options
 	s.Options.Print(prefix)

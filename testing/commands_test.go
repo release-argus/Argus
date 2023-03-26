@@ -40,63 +40,63 @@ func TestCommandTest(t *testing.T) {
 		outputRegex *string
 		panicRegex  *string
 	}{
-		"flag is empty": {flag: "",
+		"flag is empty": {
+			flag:        "",
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					Command: command.Slice{
-						command.Command{"true", "0"},
-					},
+						{"true", "0"}},
 					CommandController: &command.Controller{},
-					Options:           opt.Options{Interval: "0s"},
-				},
-			}},
-		"unknown service in flag": {flag: "something",
+					Options: opt.Options{
+						Interval: "0s"}}},
+		},
+		"unknown service in flag": {
+			flag:        "something",
 			panicRegex:  stringPtr(" could not be found "),
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					Command: command.Slice{
-						command.Command{"true", "0"},
-					},
+						{"true", "0"}},
 					CommandController: &command.Controller{},
-					Options:           opt.Options{Interval: "0s"},
-				},
-			}},
-		"known service in flag successful command": {flag: "argus",
+					Options: opt.Options{
+						Interval: "0s"}}},
+		},
+		"known service in flag successful command": {
+			flag:        "argus",
 			outputRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					Command: command.Slice{
-						command.Command{"echo", "command did run"},
-					},
+						{"echo", "command did run"}},
 					CommandController: &command.Controller{},
-					Options:           opt.Options{Interval: "0s"},
-				},
-			}},
-		"known service in flag failing command": {flag: "argus",
-			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status 2\s+`),
+					Options: opt.Options{
+						Interval: "0s"}}},
+		},
+		"known service in flag failing command": {
+			flag:        "argus",
+			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					Command: command.Slice{
-						command.Command{"ls", "/root"},
-					},
+						{"ls", "/root"}},
 					CommandController: &command.Controller{},
-					Options:           opt.Options{Interval: "0s"},
-				},
-			}},
-		"service with no commands": {flag: "argus",
+					Options: opt.Options{
+						Interval: "0s"}}},
+		},
+		"service with no commands": {
+			flag:        "argus",
 			panicRegex:  stringPtr(" does not have any `command` defined"),
 			outputRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
-					ID: "argus",
-				},
-			}},
+					ID: "argus"}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -133,7 +133,7 @@ func TestCommandTest(t *testing.T) {
 			}
 			cfg := config.Config{
 				Service: tc.slice,
-				Order:   &order,
+				Order:   order,
 			}
 			CommandTest(&tc.flag, &cfg, jLog)
 
@@ -146,7 +146,7 @@ func TestCommandTest(t *testing.T) {
 				re := regexp.MustCompile(*tc.outputRegex)
 				match := re.MatchString(output)
 				if !match {
-					t.Errorf("want match for %q\nnot: %q",
+					t.Errorf("want match for %q\ngot: %q",
 						*tc.outputRegex, output)
 				}
 			}

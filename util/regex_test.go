@@ -55,8 +55,14 @@ func TestRegexCheckWithParams(t *testing.T) {
 		version string
 		match   bool
 	}{
-		"regex match":    {regex: `release": "{{ version }}"`, version: "0.1.1", match: true},
-		"no regex match": {regex: `release": "{{ version }}"`, version: "0.1.2", match: false},
+		"regex match": {
+			regex:   `release": "{{ version }}"`,
+			version: "0.1.1",
+			match:   true},
+		"no regex match": {
+			regex:   `release": "{{ version }}"`,
+			version: "0.1.2",
+			match:   false},
 	}
 
 	for name, tc := range tests {

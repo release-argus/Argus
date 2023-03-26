@@ -45,7 +45,7 @@ func TestNewHub(t *testing.T) {
 	}
 }
 
-func TestRunWithRegister(t *testing.T) {
+func TestHub_RunWithRegister(t *testing.T) {
 	// GIVEN a WebSocket Hub and API
 	hub := NewHub()
 	api := API{}
@@ -65,7 +65,7 @@ func TestRunWithRegister(t *testing.T) {
 	}
 }
 
-func TestRunWithUnregister(t *testing.T) {
+func TestHub_RunWithUnregister(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	client := testClient()
 	hub := client.hub
@@ -85,7 +85,7 @@ func TestRunWithUnregister(t *testing.T) {
 	}
 }
 
-func TestRunWithBroadcast(t *testing.T) {
+func TestHub_RunWithBroadcast(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	// and a valid message wants to be sent
 	client := testClient()
@@ -114,7 +114,7 @@ func TestRunWithBroadcast(t *testing.T) {
 	}
 }
 
-func TestRunWithInvalidBroadcast(t *testing.T) {
+func TestHub_RunWithInvalidBroadcast(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	// and an invalid message wants to be sent
 	client := testClient()

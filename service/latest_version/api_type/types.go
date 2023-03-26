@@ -15,64 +15,37 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/coreos/go-semver/semver"
 )
 
 // Release is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
 type Release struct {
-	URL             string          `json:"url"`
-	AssetsURL       string          `json:"assets_url"`
-	UploadURL       string          `json:"upload_url"`
-	HTMLURL         string          `json:"html_url"`
-	ID              uint            `json:"id"`
-	Author          Author          `json:"author"`
-	NodeID          string          `json:"node_id"`
+	URL             string          `json:"url,omitempty"`
+	AssetsURL       string          `json:"assets_url,omitempty"`
 	SemanticVersion *semver.Version `json:"-"`
-	TagName         string          `json:"tag_name"`
-	TargetCommitish string          `json:"target_commitish"`
-	Name            string          `json:"name"`
-	Draft           bool            `json:"draft"`
-	PreRelease      bool            `json:"prerelease"`
-	CreatedAt       string          `json:"created_at"`
-	PublishedAt     string          `json:"published_at"`
-	Assets          []Asset         `json:"assets"`
+	TagName         string          `json:"tag_name,omitempty"`
+	PreRelease      bool            `json:"prerelease,omitempty"`
+	Assets          []Asset         `json:"assets,omitempty"`
 }
 
-// Author is the format of an Author on api.github.com/repos/OWNER/REPO/releases.
-type Author struct {
-	Login             string `json:"login"`
-	ID                uint   `json:"id"`
-	NodeID            string `json:"node_id"`
-	AvatarURL         string `json:"avatar_url"`
-	GravatarID        string `json:"gravatar_id"`
-	URL               string `json:"url"`
-	HTMLURL           string `json:"html_url"`
-	FollowersURL      string `json:"followers_url"`
-	FollowingURL      string `json:"following_url"`
-	GistsURL          string `json:"gists_url"`
-	StarredURL        string `json:"starred_url"`
-	SubscriptionsURL  string `json:"subscriptions_url"`
-	OrganizationsURL  string `json:"organizations_url"`
-	ReposURL          string `json:"repos_url"`
-	EventsURL         string `json:"events_url"`
-	ReceivedEventsURL string `json:"received__events_url"`
-	Type              string `json:"type"`
-	SiteAdmin         bool   `json:"site_admin"`
+// String returns a string representation of the Release.
+func (r *Release) String() string {
+	jsonBytes, _ := json.Marshal(r)
+	return string(jsonBytes)
 }
 
 // Asset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
 type Asset struct {
-	URL                string `json:"url"`
 	ID                 uint   `json:"id"`
-	NodeID             string `json:"node_id"`
-	Name               string `json:"name"`
-	Label              string `json:"label"`
-	Uploader           Author `json:"uploader"`
-	ContentType        string `json:"content_type"`
-	State              string `json:"state"`
-	Size               uint   `json:"size"`
-	DownloadCount      uint   `json:"download_count"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
-	BrowserDownloadURL string `json:"browser_download_url"`
+	Name               string `json:"name,omitempty"`
+	URL                string `json:"url,omitempty"`
+	BrowserDownloadURL string `json:"browser_download_url,omitempty"`
+}
+
+// String returns a string representation of the Asset.
+func (a *Asset) String() string {
+	jsonBytes, _ := json.Marshal(a)
+	return string(jsonBytes)
 }

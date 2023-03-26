@@ -27,16 +27,24 @@ type GitHub struct {
 	After  string `json:"after"`  // "RandAlphaNumericLower(40)"
 }
 
-// SetCustomHeaders of the req.
-func (w *WebHook) SetCustomHeaders(req *http.Request) {
-	customHeaders := util.GetFirstNonNilPtr(w.CustomHeaders, w.Main.CustomHeaders, w.Defaults.CustomHeaders)
+// setCustomHeaders of the req.
+func (w *WebHook) setCustomHeaders(req *http.Request) {
+	var customHeaders *Headers
+	// trunk-ignore(golangci-lint/gocritic)
+	if w.CustomHeaders != nil {
+		customHeaders = w.CustomHeaders
+	} else if w.Main.CustomHeaders != nil {
+		customHeaders = w.Main.CustomHeaders
+	} else if w.Defaults.CustomHeaders != nil {
+		customHeaders = w.Defaults.CustomHeaders
+	}
 	if customHeaders == nil {
 		return
 	}
 
 	serviceInfo := util.ServiceInfo{ID: *w.ServiceStatus.ServiceID, LatestVersion: w.ServiceStatus.LatestVersion}
-	for key, value := range *customHeaders {
-		value = util.TemplateString(value, serviceInfo)
-		req.Header[key] = []string{value}
+	for _, header := range *customHeaders {
+		value := util.TemplateString(header.Value, serviceInfo)
+		req.Header[header.Key] = []string{value}
 	}
 }

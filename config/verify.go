@@ -57,7 +57,7 @@ func (c *Config) Print(flag *bool) {
 		return
 	}
 
-	c.Service.Print("", c.All)
+	c.Service.Print("", c.Order)
 	fmt.Println()
 	c.Notify.Print("")
 	fmt.Println()

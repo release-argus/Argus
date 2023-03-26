@@ -31,7 +31,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestDefaultsSetDefaults(t *testing.T) {
+func TestDefaults_SetDefaults(t *testing.T) {
 	// GIVEN nil defaults
 	var defaults Defaults
 
@@ -42,11 +42,14 @@ func TestDefaultsSetDefaults(t *testing.T) {
 		want string
 	}{
 		"Service.Interval": {
-			got: defaults.Service.Options.Interval, want: "10m"},
+			got:  defaults.Service.Options.Interval,
+			want: "10m"},
 		"Notify.discord.username": {
-			got: defaults.Notify["discord"].GetSelfParam("username"), want: "Argus"},
+			got:  defaults.Notify["discord"].GetSelfParam("username"),
+			want: "Argus"},
 		"WebHook.Delay": {
-			got: defaults.WebHook.Delay, want: "0s"},
+			got:  defaults.WebHook.Delay,
+			want: "0s"},
 	}
 
 	// THEN the defaults are set correctly
@@ -64,7 +67,7 @@ func TestDefaultsSetDefaults(t *testing.T) {
 	}
 }
 
-func TestDefaultsCheckValues(t *testing.T) {
+func TestDefaults_CheckValues(t *testing.T) {
 	// GIVEN defaults with a test of invalid vars
 	var defaults Defaults
 	defaults.SetDefaults()
@@ -76,28 +79,46 @@ func TestDefaultsCheckValues(t *testing.T) {
 			input: Defaults{Service: service.Service{
 				Options: opt.Options{
 					Interval: "10x"}}},
-			errContains: []string{`^  service:$`, `^      interval: "10x" <invalid>`}},
+			errContains: []string{
+				`^  service:$`,
+				`^      interval: "10x" <invalid>`},
+		},
 		"Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					Regex: `^something[0-`}}},
-			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
+			errContains: []string{
+				`^  service:$`,
+				`^    deployed_version:$`,
+				`^      regex: "\^something\[0\-" <invalid>`},
+		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: Defaults{Service: service.Service{
 				Options: opt.Options{
 					Interval: "10x"},
 				DeployedVersionLookup: &deployedver.Lookup{
 					Regex: `^something[0-`}}},
-			errContains: []string{`^  service:$`, `^    deployed_version:$`, `^      regex: "\^something\[0\-" <invalid>`}},
+			errContains: []string{
+				`^  service:$`,
+				`^    deployed_version:$`,
+				`^      regex: "\^something\[0\-" <invalid>`},
+		},
 		"Notify.x.Delay": {
 			input: Defaults{Notify: shoutrrr.Slice{
 				"slack": &shoutrrr.Shoutrrr{
 					Options: map[string]string{"delay": "10x"}}}},
-			errContains: []string{`^  notify:$`, `^    slack:$`, `^      options:`, `^        delay: "10x" <invalid>`}},
+			errContains: []string{
+				`^  notify:$`,
+				`^    slack:$`,
+				`^      options:`,
+				`^        delay: "10x" <invalid>`},
+		},
 		"WebHook.Delay": {
 			input: Defaults{WebHook: webhook.WebHook{
 				Delay: "10x"}},
-			errContains: []string{`^  webhook:$`, `^  delay: "10x" <invalid>`}},
+			errContains: []string{
+				`^  webhook:$`,
+				`^  delay: "10x" <invalid>`}},
 	}
 
 	for name, tc := range tests {
@@ -128,7 +149,7 @@ func TestDefaultsCheckValues(t *testing.T) {
 	}
 }
 
-func TestDefaultsPrint(t *testing.T) {
+func TestDefaults_Print(t *testing.T) {
 	// GIVEN unmodified defaults from SetDefaults
 	var defaults Defaults
 	defaults.SetDefaults()
@@ -143,7 +164,7 @@ func TestDefaultsPrint(t *testing.T) {
 	w.Close()
 	out, _ := io.ReadAll(r)
 	os.Stdout = stdout
-	want := 124
+	want := 129
 	got := strings.Count(string(out), "\n")
 	if got != want {
 		t.Errorf("Print should have given %d lines, but gave %d\n%s", want, got, out)

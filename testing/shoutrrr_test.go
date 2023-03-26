@@ -313,7 +313,7 @@ func TestFindShoutrrr(t *testing.T) {
 				Notify:   tc.rootNotifiers,
 				Defaults: tc.defaults,
 			}
-			got := findShoutrrr(tc.flag, &cfg, jLog, util.LogFrom{})
+			got := findShoutrrr(tc.flag, &cfg, jLog, &util.LogFrom{})
 
 			// THEN we get the expected output
 			w.Close()

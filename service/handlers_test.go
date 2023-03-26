@@ -27,15 +27,21 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestUpdateLatestApproved(t *testing.T) {
+func TestService_UpdateLatestApproved(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		latestVersion        string
 		startApprovedVersion string
 		wantAnnounces        int
 	}{
-		"empty ApprovedVersion does announce":   {startApprovedVersion: "", latestVersion: "1.2.3", wantAnnounces: 1},
-		"same ApprovedVersion doesn't announce": {startApprovedVersion: "1.2.3", latestVersion: "1.2.3", wantAnnounces: 0},
+		"empty ApprovedVersion does announce": {
+			startApprovedVersion: "",
+			latestVersion:        "1.2.3",
+			wantAnnounces:        1},
+		"same ApprovedVersion doesn't announce": {
+			startApprovedVersion: "1.2.3",
+			latestVersion:        "1.2.3",
+			wantAnnounces:        0},
 	}
 
 	for name, tc := range tests {
@@ -65,7 +71,7 @@ func TestUpdateLatestApproved(t *testing.T) {
 	}
 }
 
-func TestUpdatedVersion(t *testing.T) {
+func TestService_UpdatedVersion(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		commands              command.Slice
@@ -77,28 +83,118 @@ func TestUpdatedVersion(t *testing.T) {
 		deployedBecomesLatest bool
 		wantAnnounces         int
 	}{
-		"doesn't do anything if DeployedVersion == LatestVersion":                             {latestIsDeployed: true, wantAnnounces: 0, deployedBecomesLatest: true},
-		"no webhooks/command/deployedVersionLookup does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true},
-		"commands that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
-			commands: command.Slice{{"true"}, {"false"}}, fails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}}},
-		"commands that haven't run fails doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
-			commands: command.Slice{{"true"}, {"false"}}, fails: svcstatus.Fails{Command: []*bool{boolPtr(false), nil}}},
-		"commands that have failed doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
-			commands: command.Slice{{"true"}, {"false"}}, fails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(true)}}},
-		"webhooks that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
-			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: svcstatus.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
-		"webhooks that haven't run fails doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
-			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: svcstatus.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": nil}}},
-		"webhooks that have failed doesn't announce or update deployed_version": {wantAnnounces: 0, deployedBecomesLatest: false,
-			webhooks: webhook.Slice{"0": {}, "1": {}}, fails: svcstatus.Fails{WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(true)}}},
-		"commands and webhooks that have no fails does announce and update deployed_version": {wantAnnounces: 1, deployedBecomesLatest: true,
-			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"0": {}, "1": {}},
-			fails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
-		"commands and webhooks that have no fails with deployedVersionLookup does announce and only update approved_version": {wantAnnounces: 1, deployedBecomesLatest: false, approvedBecomesLatest: true,
-			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"0": {}, "1": {}}, deployedVersion: &deployedver.Lookup{},
-			fails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
-		"deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version": {wantAnnounces: 0, deployedBecomesLatest: false, deployedVersion: &deployedver.Lookup{},
-			fails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false)}, WebHook: map[string]*bool{"0": boolPtr(false), "1": boolPtr(false)}}},
+		"doesn't do anything if DeployedVersion == LatestVersion": {
+			latestIsDeployed:      true,
+			wantAnnounces:         0,
+			deployedBecomesLatest: true,
+		},
+		"no webhooks/command/deployedVersionLookup does announce and update deployed_version": {
+			wantAnnounces:         1,
+			deployedBecomesLatest: true,
+		},
+		"commands that have no fails does announce and update deployed_version": {
+			wantAnnounces:         1,
+			deployedBecomesLatest: true,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false)}},
+		},
+		"commands that haven't run fails doesn't announce or update deployed_version": {
+			wantAnnounces:         0,
+			deployedBecomesLatest: false,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), nil}},
+		},
+		"commands that have failed doesn't announce or update deployed_version": {
+			wantAnnounces:         0,
+			deployedBecomesLatest: false,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(true)}},
+		},
+		"webhooks that have no fails does announce and update deployed_version": {
+			wantAnnounces:         1,
+			deployedBecomesLatest: true,
+			webhooks: webhook.Slice{
+				"0": {},
+				"1": {}},
+			fails: svcstatus.Fails{
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": boolPtr(false)}},
+		},
+		"webhooks that haven't run fails doesn't announce or update deployed_version": {
+			wantAnnounces:         0,
+			deployedBecomesLatest: false,
+			webhooks: webhook.Slice{
+				"0": {},
+				"1": {}},
+			fails: svcstatus.Fails{
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": nil}},
+		},
+		"webhooks that have failed doesn't announce or update deployed_version": {
+			wantAnnounces:         0,
+			deployedBecomesLatest: false,
+			webhooks: webhook.Slice{
+				"0": {},
+				"1": {}},
+			fails: svcstatus.Fails{
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": boolPtr(true)}},
+		},
+		"commands and webhooks that have no fails does announce and update deployed_version": {
+			wantAnnounces:         1,
+			deployedBecomesLatest: true,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+			webhooks: webhook.Slice{
+				"0": {},
+				"1": {}},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false)},
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": boolPtr(false)}},
+		},
+		"commands and webhooks that have no fails with deployedVersionLookup does announce and only update approved_version": {
+			wantAnnounces:         1,
+			deployedBecomesLatest: false,
+			approvedBecomesLatest: true,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+			webhooks: webhook.Slice{
+				"0": {},
+				"1": {}},
+			deployedVersion: &deployedver.Lookup{},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false)},
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": boolPtr(false)}},
+		},
+		"deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version": {
+			wantAnnounces:         0,
+			deployedBecomesLatest: false,
+			deployedVersion:       &deployedver.Lookup{},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false)},
+				WebHook: map[string]*bool{
+					"0": boolPtr(false),
+					"1": boolPtr(false)}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -139,7 +235,7 @@ func TestUpdatedVersion(t *testing.T) {
 	}
 }
 
-func TestHandleUpdateActions(t *testing.T) {
+func TestService_HandleUpdateActions(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	tests := map[string]struct {
@@ -149,17 +245,46 @@ func TestHandleUpdateActions(t *testing.T) {
 		deployedBecomesLatest bool
 		wantAnnounces         int
 	}{
-		"no auto_approve and no webhooks/command does announce and update deployed_version": {autoApprove: false, wantAnnounces: 1, deployedBecomesLatest: true},
-		"no auto_approve but do have webhooks only announces the new version": {autoApprove: false, wantAnnounces: 1, deployedBecomesLatest: false,
-			webhooks: webhook.Slice{"fail": testWebHook(true)}},
-		"auto_approve and webhook that fails only announces the fail and doesn't update deployed_version": {autoApprove: true, wantAnnounces: 1, deployedBecomesLatest: false,
-			webhooks: webhook.Slice{"fail": testWebHook(true)}},
-		"auto_approve and webhook that passes announces the pass and version change and updates deployed_version": {autoApprove: true, wantAnnounces: 2, deployedBecomesLatest: true,
-			webhooks: webhook.Slice{"pass": testWebHook(false)}},
-		"auto_approve and command that fails only announces the fail and doesn't update deployed_version": {autoApprove: true, wantAnnounces: 2, deployedBecomesLatest: false,
-			commands: command.Slice{{"true"}, {"false"}}},
-		"auto_approve and command that passes announces the pass and version change and updates deployed_version": {autoApprove: true, wantAnnounces: 3, deployedBecomesLatest: true,
-			commands: command.Slice{{"true"}, {"ls"}}},
+		"no auto_approve and no webhooks/command does announce and update deployed_version": {
+			autoApprove:           false,
+			wantAnnounces:         1,
+			deployedBecomesLatest: true,
+		},
+		"no auto_approve but do have webhooks only announces the new version": {
+			autoApprove:           false,
+			wantAnnounces:         1,
+			deployedBecomesLatest: false,
+			webhooks: webhook.Slice{
+				"fail": testWebHook(true)},
+		},
+		"auto_approve and webhook that fails only announces the fail and doesn't update deployed_version": {
+			autoApprove:           true,
+			wantAnnounces:         1,
+			deployedBecomesLatest: false,
+			webhooks: webhook.Slice{
+				"fail": testWebHook(true)},
+		},
+		"auto_approve and webhook that passes announces the pass and version change and updates deployed_version": {
+			autoApprove:           true,
+			wantAnnounces:         2,
+			deployedBecomesLatest: true,
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+		},
+		"auto_approve and command that fails only announces the fail and doesn't update deployed_version": {
+			autoApprove:           true,
+			wantAnnounces:         2,
+			deployedBecomesLatest: false,
+			commands: command.Slice{
+				{"true"}, {"false"}},
+		},
+		"auto_approve and command that passes announces the pass and version change and updates deployed_version": {
+			autoApprove:           true,
+			wantAnnounces:         3,
+			deployedBecomesLatest: true,
+			commands: command.Slice{
+				{"true"}, {"ls"}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -257,7 +382,7 @@ func TestHandleUpdateActions(t *testing.T) {
 	}
 }
 
-func TestHandleFailedActions(t *testing.T) {
+func TestService_HandleFailedActions(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	tests := map[string]struct {
@@ -271,36 +396,144 @@ func TestHandleFailedActions(t *testing.T) {
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
-		"no command or webhooks fails retries all": {wantAnnounces: 2, // 2 = 1 command fail, 1 webhook fail
-			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHook(true)},
-			fails:     svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{Command: []*bool{boolPtr(true)}, WebHook: map[string]*bool{"will_fail": boolPtr(true)}}},
-		"have command fails and no webhook fails retries only the failed commands": {wantAnnounces: 3, deployedLatest: false, // 2 = 2 command runs
-			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
-			fails:     svcstatus.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
-			wantFails: svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}}},
-		"command fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 = no runs
-			commands: command.Slice{{"true"}, {"false"}, {"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
-			fails:                svcstatus.Fails{Command: []*bool{boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
-			wantFails:            svcstatus.Fails{Command: []*bool{boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
-			commandNextRunnables: []time.Time{time.Now().UTC(), time.Now().UTC(), time.Now().UTC().Add(time.Minute), time.Now().UTC().Add(time.Minute)}},
-		"have command fails no webhook fails and retries only the failed commands and updates deployed_version": {wantAnnounces: 2, deployedBecomesLatest: true, // 2 = 1 command, 1 deployed
-			commands: command.Slice{{"true"}, {"false"}}, webhooks: webhook.Slice{"pass": testWebHook(false)},
-			fails:     svcstatus.Fails{Command: []*bool{boolPtr(true), boolPtr(false)}, WebHook: map[string]*bool{"pass": boolPtr(false)}},
-			wantFails: svcstatus.Fails{Command: []*bool{nil, nil}, WebHook: map[string]*bool{"pass": nil}}},
-		"have webhook fails and no command fails retries only the failed commands": {wantAnnounces: 2, deployedLatest: false, // 2 = 2 webhook runs
-			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_fail": testWebHook(true), "will_pass": testWebHook(false), "would_fail": testWebHook(true)},
-			fails:     svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(true), "would_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_fail": boolPtr(true), "will_pass": boolPtr(false), "would_fail": boolPtr(false)}}},
-		"webhook fails before their next_runnable don't run": {wantAnnounces: 1, deployedLatest: false, // 0 runs
-			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"is_runnable": testWebHook(false), "not_runnable": testWebHook(true), "would_fail": testWebHook(true)},
-			fails:                svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(true), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
-			wantFails:            svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"is_runnable": boolPtr(false), "not_runnable": boolPtr(true), "would_fail": boolPtr(false)}},
-			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)}},
-		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {wantAnnounces: 3, deployedBecomesLatest: true, // 2 webhook runs
-			commands: command.Slice{{"false"}}, webhooks: webhook.Slice{"will_pass0": testWebHook(false), "will_pass1": testWebHook(false), "would_fail": testWebHook(true)},
-			fails:     svcstatus.Fails{Command: []*bool{boolPtr(false)}, WebHook: map[string]*bool{"will_pass0": boolPtr(true), "will_pass1": boolPtr(true), "would_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{Command: []*bool{nil}, WebHook: map[string]*bool{"will_pass0": nil, "will_pass1": nil, "would_fail": nil}}},
+		"no command or webhooks fails retries all": {
+			wantAnnounces: 2, // 2 = 1 command fail, 1 webhook fail
+			commands:      command.Slice{{"false"}},
+			webhooks: webhook.Slice{
+				"will_fail": testWebHook(true)},
+			fails: svcstatus.Fails{
+				Command: []*bool{boolPtr(false)},
+				WebHook: map[string]*bool{
+					"will_fail": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{boolPtr(true)},
+				WebHook: map[string]*bool{
+					"will_fail": boolPtr(true)}},
+		},
+		"have command fails and no webhook fails retries only the failed commands": {
+			wantAnnounces:  3, // 2 = 2 command runs
+			deployedLatest: false,
+			commands: command.Slice{
+				{"true"}, {"false"}, {"true"}, {"false"}},
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
+				WebHook: map[string]*bool{
+					"pass": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)},
+				WebHook: map[string]*bool{
+					"pass": boolPtr(false)}},
+		},
+		"command fails before their next_runnable don't run": {
+			wantAnnounces:  1, // 0 = no runs
+			deployedLatest: false,
+			commands: command.Slice{
+				{"true"}, {"false"}, {"true"}, {"false"}},
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
+				WebHook: map[string]*bool{
+					"pass": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)},
+				WebHook: map[string]*bool{
+					"pass": boolPtr(false)}},
+			commandNextRunnables: []time.Time{
+				time.Now().UTC(),
+				time.Now().UTC(),
+				time.Now().UTC().Add(time.Minute),
+				time.Now().UTC().Add(time.Minute)},
+		},
+		"have command fails no webhook fails and retries only the failed commands and updates deployed_version": {
+			wantAnnounces:         2, // 2 = 1 command, 1 deployed
+			deployedBecomesLatest: true,
+			commands:              command.Slice{{"true"}, {"false"}},
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+			fails: svcstatus.Fails{
+				Command: []*bool{boolPtr(true), boolPtr(false)},
+				WebHook: map[string]*bool{
+					"pass": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{nil, nil},
+				WebHook: map[string]*bool{
+					"pass": nil}},
+		},
+		"have webhook fails and no command fails retries only the failed commands": {
+			wantAnnounces:  2, // 2 = 2 webhook runs
+			deployedLatest: false,
+			commands:       command.Slice{{"false"}},
+			webhooks: webhook.Slice{
+				"will_fail":  testWebHook(true),
+				"will_pass":  testWebHook(false),
+				"would_fail": testWebHook(true)},
+			fails: svcstatus.Fails{
+				Command: []*bool{boolPtr(false)},
+				WebHook: map[string]*bool{
+					"will_fail":  boolPtr(true),
+					"will_pass":  boolPtr(true),
+					"would_fail": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{boolPtr(false)},
+				WebHook: map[string]*bool{
+					"will_fail":  boolPtr(true),
+					"will_pass":  boolPtr(false),
+					"would_fail": boolPtr(false)}},
+		},
+		"webhook fails before their next_runnable don't run": {
+			wantAnnounces:  1, // 0 runs
+			deployedLatest: false,
+			commands: command.Slice{
+				{"false"}},
+			webhooks: webhook.Slice{
+				"is_runnable":  testWebHook(false),
+				"not_runnable": testWebHook(true),
+				"would_fail":   testWebHook(true)},
+			fails: svcstatus.Fails{
+				Command: []*bool{boolPtr(false)},
+				WebHook: map[string]*bool{
+					"is_runnable":  boolPtr(true),
+					"not_runnable": boolPtr(true),
+					"would_fail":   boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{boolPtr(false)},
+				WebHook: map[string]*bool{
+					"is_runnable":  boolPtr(false),
+					"not_runnable": boolPtr(true),
+					"would_fail":   boolPtr(false)}},
+			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)},
+		},
+		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {
+			wantAnnounces:         3, // 2 webhook runs
+			deployedBecomesLatest: true,
+			commands: command.Slice{
+				{"false"}},
+			webhooks: webhook.Slice{
+				"will_pass0": testWebHook(false),
+				"will_pass1": testWebHook(false),
+				"would_fail": testWebHook(true)},
+			fails: svcstatus.Fails{
+				Command: []*bool{
+					boolPtr(false)},
+				WebHook: map[string]*bool{
+					"will_pass0": boolPtr(true),
+					"will_pass1": boolPtr(true),
+					"would_fail": boolPtr(false)}},
+			wantFails: svcstatus.Fails{
+				Command: []*bool{
+					nil},
+				WebHook: map[string]*bool{
+					"will_pass0": nil,
+					"will_pass1": nil,
+					"would_fail": nil}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -411,7 +644,7 @@ func TestHandleFailedActions(t *testing.T) {
 	}
 }
 
-func TestHandleCommand(t *testing.T) {
+func TestService_HandleCommand(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	tests := map[string]struct {
@@ -424,15 +657,59 @@ func TestHandleCommand(t *testing.T) {
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
-		"empty Command slice does nothing": {commands: command.Slice{}, wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false},
-		"Command that failed passes": {commands: command.Slice{{"ls", "-lah"}}, command: "ls -lah", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: []*bool{boolPtr(true)}, wantFails: []*bool{boolPtr(false)}},
-		"Command that passed fails": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(true)}},
-		"Command that's not runnable doesn't run": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false,
-			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(false)}, nextRunnable: time.Now().UTC().Add(time.Minute)},
-		"Command that's runnable does run": {commands: command.Slice{{"false"}}, command: "false", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: []*bool{boolPtr(false)}, wantFails: []*bool{boolPtr(true)}, nextRunnable: time.Now().UTC().Add(-time.Second)},
+		"empty Command slice does nothing": {
+			commands:              command.Slice{},
+			wantAnnounces:         0,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+		},
+		"Command that failed passes": {
+			commands: command.Slice{
+				{"ls", "-lah"}},
+			command:               "ls -lah",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: []*bool{
+				boolPtr(true)},
+			wantFails: []*bool{
+				boolPtr(false)},
+		},
+		"Command that passed fails": {
+			commands:              command.Slice{{"false"}},
+			command:               "false",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: []*bool{
+				boolPtr(false)},
+			wantFails: []*bool{
+				boolPtr(true)},
+		},
+		"Command that's not runnable doesn't run": {
+			commands:              command.Slice{{"false"}},
+			command:               "false",
+			wantAnnounces:         0,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: []*bool{
+				boolPtr(false)},
+			wantFails: []*bool{
+				boolPtr(false)},
+			nextRunnable: time.Now().UTC().Add(time.Minute),
+		},
+		"Command that's runnable does run": {
+			commands:              command.Slice{{"false"}},
+			command:               "false",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: []*bool{
+				boolPtr(false)},
+			wantFails: []*bool{
+				boolPtr(true)},
+			nextRunnable: time.Now().UTC().Add(-time.Second),
+		},
 	}
 
 	for name, tc := range tests {
@@ -516,7 +793,7 @@ func TestHandleCommand(t *testing.T) {
 	}
 }
 
-func TestHandleWebHook(t *testing.T) {
+func TestService_HandleWebHook(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	tests := map[string]struct {
@@ -529,15 +806,62 @@ func TestHandleWebHook(t *testing.T) {
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
-		"empty WebHook slice does nothing": {webhooks: webhook.Slice{}, wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false},
-		"WebHook that failed passes": {webhooks: webhook.Slice{"pass": testWebHook(false)}, webhook: "pass", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: map[string]*bool{"pass": boolPtr(true)}, wantFails: map[string]*bool{"pass": boolPtr(false)}},
-		"WebHook that passed fails": {webhooks: webhook.Slice{"fail": testWebHook(true)}, webhook: "fail", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: map[string]*bool{"fail": boolPtr(false)}, wantFails: map[string]*bool{"fail": boolPtr(true)}},
-		"WebHook that's not runnable doesn't run": {webhooks: webhook.Slice{"pass": testWebHook(true)}, webhook: "pass", wantAnnounces: 0, deployedLatest: true, deployedBecomesLatest: false,
-			fails: map[string]*bool{"pass": boolPtr(false)}, wantFails: map[string]*bool{"pass": boolPtr(false)}, nextRunnable: time.Now().UTC().Add(time.Minute)},
-		"WebHook that's runnable does run": {webhooks: webhook.Slice{"pass": testWebHook(false)}, webhook: "pass", wantAnnounces: 1, deployedLatest: true, deployedBecomesLatest: false,
-			fails: map[string]*bool{"pass": boolPtr(true)}, wantFails: map[string]*bool{"pass": boolPtr(false)}, nextRunnable: time.Now().UTC().Add(-time.Second)},
+		"empty WebHook slice does nothing": {
+			webhooks:              webhook.Slice{},
+			wantAnnounces:         0,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+		},
+		"WebHook that failed passes": {
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+			webhook:               "pass",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: map[string]*bool{
+				"pass": boolPtr(true)},
+			wantFails: map[string]*bool{
+				"pass": boolPtr(false)},
+		},
+		"WebHook that passed fails": {
+			webhooks: webhook.Slice{
+				"fail": testWebHook(true)},
+			webhook:               "fail",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: map[string]*bool{
+				"fail": boolPtr(false)},
+			wantFails: map[string]*bool{
+				"fail": boolPtr(true)},
+		},
+		"WebHook that's not runnable doesn't run": {
+			webhooks: webhook.Slice{
+				"pass": testWebHook(true)},
+			webhook:               "pass",
+			wantAnnounces:         0,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: map[string]*bool{
+				"pass": boolPtr(false)},
+			wantFails: map[string]*bool{
+				"pass": boolPtr(false)},
+			nextRunnable: time.Now().UTC().Add(time.Minute),
+		},
+		"WebHook that's runnable does run": {
+			webhooks: webhook.Slice{
+				"pass": testWebHook(false)},
+			webhook:               "pass",
+			wantAnnounces:         1,
+			deployedLatest:        true,
+			deployedBecomesLatest: false,
+			fails: map[string]*bool{
+				"pass": boolPtr(true)},
+			wantFails: map[string]*bool{
+				"pass": boolPtr(false)},
+			nextRunnable: time.Now().UTC().Add(-time.Second),
+		},
 	}
 
 	for name, tc := range tests {
@@ -618,7 +942,7 @@ func TestHandleWebHook(t *testing.T) {
 	}
 }
 
-func TestHandleSkip(t *testing.T) {
+func TestService_HandleSkip(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	latestVersion := "1.2.3"
@@ -627,10 +951,21 @@ func TestHandleSkip(t *testing.T) {
 		approvedVersion      string
 		wantAnnounces        int
 		wantDatabaseMessages int
+		prepDelete           bool
 	}{
-		"skip of not latest version does nothing": {skipVersion: latestVersion + "-beta"},
+		"skip of not latest version does nothing": {
+			skipVersion: latestVersion + "-beta"},
 		"skip of latest version skips version and announces to announce and database channels": {
-			skipVersion: latestVersion, approvedVersion: "SKIP_" + latestVersion, wantAnnounces: 1, wantDatabaseMessages: 1},
+			skipVersion:          latestVersion,
+			approvedVersion:      "SKIP_" + latestVersion,
+			wantAnnounces:        1,
+			wantDatabaseMessages: 1},
+		"skip of latest version but PrepDelete has nil'd the database channel": {
+			skipVersion:          latestVersion,
+			approvedVersion:      "SKIP_" + latestVersion,
+			prepDelete:           true,
+			wantAnnounces:        0,
+			wantDatabaseMessages: 0},
 	}
 
 	for name, tc := range tests {
@@ -640,6 +975,9 @@ func TestHandleSkip(t *testing.T) {
 			service := testServiceURL(name)
 			service.Status.ApprovedVersion = ""
 			service.Status.LatestVersion = latestVersion
+			if tc.prepDelete {
+				service.PrepDelete()
+			}
 
 			// WHEN HandleSkip is called on it
 			service.HandleSkip(tc.skipVersion)
@@ -650,12 +988,18 @@ func TestHandleSkip(t *testing.T) {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
 					tc.approvedVersion, got)
 			}
-			// THEN the correct number of changes are announced to the announce channel
+			// AND the correct number of changes are announced to the announce channel
+			if tc.prepDelete && (service.Status.AnnounceChannel != nil || service.Status.DatabaseChannel != nil) {
+				t.Errorf("AnnounceChannel and DatabaseChannel should be nil but are not")
+			} else if tc.prepDelete {
+				return
+			}
+			// AND the correct number of changes are announced to the announce channel
 			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
 			}
-			// THEN the correct number of messages are announced to the database channel
+			// AND the correct number of messages are announced to the database channel
 			if len(*service.Status.DatabaseChannel) != tc.wantDatabaseMessages {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantDatabaseMessages, len(*service.Status.DatabaseChannel))
@@ -664,7 +1008,7 @@ func TestHandleSkip(t *testing.T) {
 	}
 }
 
-func TestShouldRetryAll(t *testing.T) {
+func TestService_ShouldRetryAll(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	tests := map[string]struct {
@@ -672,19 +1016,89 @@ func TestShouldRetryAll(t *testing.T) {
 		webhook map[string]*bool
 		want    bool
 	}{
-		"no commands or webhooks":                    {want: true},
-		"commands that haven't run":                  {command: []*bool{nil, nil}, want: false},
-		"commands that have failed":                  {command: []*bool{boolPtr(true), boolPtr(true)}, want: false},
-		"commands that have failed/haven't run":      {command: []*bool{boolPtr(true), nil}, want: false},
-		"commands that haven't failed":               {command: []*bool{boolPtr(false), boolPtr(false)}, want: true},
-		"mix of all command fail states":             {command: []*bool{boolPtr(true), boolPtr(false), nil}, want: false},
-		"webhooks that haven't run":                  {webhook: map[string]*bool{"1": nil, "2": nil}, want: false},
-		"webhooks that have failed":                  {webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(true)}, want: false},
-		"webhooks that have failed/haven't run":      {webhook: map[string]*bool{"1": boolPtr(true), "2": nil}, want: false},
-		"webhooks that haven't failed":               {webhook: map[string]*bool{"1": boolPtr(false), "2": boolPtr(false)}, want: true},
-		"mix of all webhook fail states":             {webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(false), "3": nil}, want: false},
-		"mix of all webhook and command fail states": {command: []*bool{boolPtr(true), boolPtr(false), nil}, webhook: map[string]*bool{"1": boolPtr(true), "2": boolPtr(false), "3": nil}, want: false},
-		"mix of all webhook and command no fails":    {command: []*bool{boolPtr(false), boolPtr(false), boolPtr(false)}, webhook: map[string]*bool{"1": boolPtr(false), "2": boolPtr(false), "3": boolPtr(false)}, want: true},
+		"no commands or webhooks": {
+			want: true,
+		},
+		"commands that haven't run": {
+			command: []*bool{
+				nil,
+				nil},
+			want: false,
+		},
+		"commands that have failed": {
+			command: []*bool{
+				boolPtr(true),
+				boolPtr(true)},
+			want: false,
+		},
+		"commands that have failed/haven't run": {
+			command: []*bool{
+				boolPtr(true),
+				nil},
+			want: false,
+		},
+		"commands that haven't failed": {
+			command: []*bool{
+				boolPtr(false),
+				boolPtr(false)},
+			want: true,
+		},
+		"mix of all command fail states": {
+			command: []*bool{
+				boolPtr(true),
+				boolPtr(false),
+				nil},
+			want: false,
+		},
+		"webhooks that haven't run": {
+			webhook: map[string]*bool{
+				"1": nil,
+				"2": nil},
+			want: false,
+		},
+		"webhooks that have failed": {
+			webhook: map[string]*bool{
+				"1": boolPtr(true),
+				"2": boolPtr(true)},
+			want: false,
+		},
+		"webhooks that have failed/haven't run": {
+			webhook: map[string]*bool{
+				"1": boolPtr(true),
+				"2": nil},
+			want: false,
+		},
+		"webhooks that haven't failed": {
+			webhook: map[string]*bool{
+				"1": boolPtr(false),
+				"2": boolPtr(false)},
+			want: true,
+		},
+		"mix of all webhook fail states": {
+			webhook: map[string]*bool{
+				"1": boolPtr(true),
+				"2": boolPtr(false),
+				"3": nil},
+			want: false,
+		},
+		"mix of all webhook and command fail states": {
+			command: []*bool{
+				boolPtr(true), boolPtr(false), nil},
+			webhook: map[string]*bool{
+				"1": boolPtr(true),
+				"2": boolPtr(false),
+				"3": nil},
+			want: false,
+		},
+		"mix of all webhook and command no fails": {
+			command: []*bool{
+				boolPtr(false), boolPtr(false), boolPtr(false)},
+			webhook: map[string]*bool{
+				"1": boolPtr(false),
+				"2": boolPtr(false),
+				"3": boolPtr(false)},
+			want: true,
+		},
 	}
 
 	for name, tc := range tests {

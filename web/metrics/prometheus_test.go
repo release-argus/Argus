@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package metric
 
 import (
@@ -27,11 +29,21 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 		metric *prometheus.CounterVec
 		args   []string
 	}{
-		"LatestVersionQueryMetric":   {metric: LatestVersionQueryMetric, args: []string{"SERVICE_ID", "RESULT"}},
-		"DeployedVersionQueryMetric": {metric: DeployedVersionQueryMetric, args: []string{"SERVICE_ID", "RESULT"}},
-		"CommandMetric":              {metric: CommandMetric, args: []string{"COMMAND_ID", "RESULT", "SERVICE_ID"}},
-		"NotifyMetric":               {metric: NotifyMetric, args: []string{"NOTIFY_ID", "RESULT", "SERVICE_ID", "TYPE"}},
-		"WebHookMetric":              {metric: WebHookMetric, args: []string{"WEBHOOK_ID", "RESULT", "SERVICE_ID"}},
+		"LatestVersionQueryMetric": {
+			metric: LatestVersionQueryMetric,
+			args:   []string{"SERVICE_ID", "RESULT"}},
+		"DeployedVersionQueryMetric": {
+			metric: DeployedVersionQueryMetric,
+			args:   []string{"SERVICE_ID", "RESULT"}},
+		"CommandMetric": {
+			metric: CommandMetric,
+			args:   []string{"COMMAND_ID", "RESULT", "SERVICE_ID"}},
+		"NotifyMetric": {
+			metric: NotifyMetric,
+			args:   []string{"NOTIFY_ID", "RESULT", "SERVICE_ID", "TYPE"}},
+		"WebHookMetric": {
+			metric: WebHookMetric,
+			args:   []string{"WEBHOOK_ID", "RESULT", "SERVICE_ID"}},
 	}
 
 	for name, tc := range tests {
@@ -108,9 +120,15 @@ func TestPrometheusGaugeVec(t *testing.T) {
 		isGaugeVec bool
 		value      float64
 	}{
-		"LatestVersionQueryLiveness":   {metric: LatestVersionQueryLiveness, args: []string{"SERVICE_ID"}},
-		"DeployedVersionQueryLiveness": {metric: DeployedVersionQueryLiveness, args: []string{"SERVICE_ID"}},
-		"AckWaiting":                   {metric: AckWaiting, args: []string{"SERVICE_ID"}},
+		"LatestVersionQueryLiveness": {
+			metric: LatestVersionQueryLiveness,
+			args:   []string{"SERVICE_ID"}},
+		"DeployedVersionQueryLiveness": {
+			metric: DeployedVersionQueryLiveness,
+			args:   []string{"SERVICE_ID"}},
+		"AckWaiting": {
+			metric: AckWaiting,
+			args:   []string{"SERVICE_ID"}},
 	}
 
 	for name, tc := range tests {

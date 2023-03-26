@@ -26,17 +26,27 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 // DockerCheck will verify that Tag exists for Image
 type DockerCheck struct {
-	Type       string    `yaml:"type"`               // Where to check, e.g. hub (DockerHub), GHCR, Quay
-	Image      string    `yaml:"image"`              // Image to check
-	Tag        string    `yaml:"tag"`                // Tag to check for
-	Username   string    `yaml:"username,omitempty"` // Username to get a new token
-	Token      string    `yaml:"token,omitempty"`    // Token to get the token for the queries
-	token      string    `yaml:"-"`                  // Token to use for the queries
-	validUntil time.Time `yaml:"-"`                  // Time this token is valud until
+	Type       string    `yaml:"type" json:"type"`                             // Where to check, e.g. hub (DockerHub), GHCR, Quay
+	Image      string    `yaml:"image" json:"image"`                           // Image to check
+	Tag        string    `yaml:"tag" json:"tag"`                               // Tag to check for
+	Username   string    `yaml:"username,omitempty" json:"username,omitempty"` // Username to get a new token
+	Token      string    `yaml:"token,omitempty" json:"token,omitempty"`       // Token to get the token for the queries
+	token      string    `yaml:"-" json:"-"`                                   // Token to use for the queries
+	validUntil time.Time `yaml:"-" json:"-"`                                   // Time this token is valid until
+}
+
+// String returns a string representation of the DockerCheck.
+func (d *DockerCheck) String() string {
+	if d == nil {
+		return "<nil>"
+	}
+	yamlBytes, _ := yaml.Marshal(d)
+	return string(yamlBytes)
 }
 
 // DockerTagCheck
@@ -276,9 +286,14 @@ func (d *DockerCheck) Print(prefix string) {
 	}
 
 	fmt.Printf("%sdocker::\n", prefix)
-	util.PrintlnIfNotDefault(d.Type, fmt.Sprintf("%s  type: %q", prefix, d.Type))
-	util.PrintlnIfNotDefault(d.Image, fmt.Sprintf("%s  image: %q", prefix, d.Image))
-	util.PrintlnIfNotDefault(d.Tag, fmt.Sprintf("%s  tag: %q", prefix, d.Tag))
-	util.PrintlnIfNotDefault(d.Username, fmt.Sprintf("%s  username: %q", prefix, d.Username))
-	util.PrintlnIfNotDefault(d.Token, fmt.Sprintf("%s  token: %q", prefix, "<secret>"))
+	util.PrintlnIfNotDefault(d.Type,
+		fmt.Sprintf("%s  type: %q", prefix, d.Type))
+	util.PrintlnIfNotDefault(d.Image,
+		fmt.Sprintf("%s  image: %q", prefix, d.Image))
+	util.PrintlnIfNotDefault(d.Tag,
+		fmt.Sprintf("%s  tag: %q", prefix, d.Tag))
+	util.PrintlnIfNotDefault(d.Username,
+		fmt.Sprintf("%s  username: %q", prefix, d.Username))
+	util.PrintlnIfNotDefault(d.Token,
+		fmt.Sprintf("%s  token: %q", prefix, "<secret>"))
 }

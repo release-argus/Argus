@@ -46,7 +46,7 @@ func ServiceTest(
 		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(*cfg.Order, "\n  - "),
+				*flag, strings.Join(cfg.Order, "\n  - "),
 			),
 			logFrom,
 			true,
@@ -75,7 +75,7 @@ func ServiceTest(
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(logFrom)
+		version, err := service.DeployedVersionLookup.Query(&logFrom)
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",

@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"os"
 
+	command "github.com/release-argus/Argus/commands"
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -33,8 +35,8 @@ func (c *Config) Init() {
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &deployedver.Lookup{}
 	}
-	c.Defaults.Service.Status.SaveChannel = c.SaveChannel
 	c.Defaults.Service.Convert()
+	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
@@ -73,6 +75,19 @@ func (c *Config) Init() {
 			c.WebHook[key].HardDefaults = &c.HardDefaults.WebHook
 		}
 	}
+
+	// Give the log to the other packages
+	svc := service.Service{Command: command.Slice{}}
+	svc.Init(
+		jLog,
+		&c.Defaults.Service,
+		&c.HardDefaults.Service,
+		&c.Notify,
+		&c.Defaults.Notify,
+		&c.HardDefaults.Notify,
+		&c.WebHook,
+		&c.Defaults.WebHook,
+		&c.HardDefaults.WebHook)
 }
 
 // Load `file` as Config.
@@ -105,6 +120,8 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 			SaveChannel:     c.SaveChannel,
 		}
 	}
+	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel
+	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
 	// SaveHandler that listens for calls to save config changes.
 	go c.SaveHandler()

@@ -25,17 +25,24 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestExecCommand(t *testing.T) {
+func TestRequire_ExecCommand(t *testing.T) {
 	// GIVEN a Require with a Command
 	testLogging("WARN")
 	tests := map[string]struct {
 		cmd      command.Command
 		errRegex string
 	}{
-		"no command":              {errRegex: "^$"},
-		"valid command":           {cmd: []string{"true"}, errRegex: "^$"},
-		"valid multi-arg command": {cmd: []string{"ls", "-lah"}, errRegex: "^$"},
-		"invalid command":         {cmd: []string{"false"}, errRegex: "exit status 1"},
+		"no command": {
+			errRegex: "^$"},
+		"valid command": {
+			cmd:      []string{"true"},
+			errRegex: "^$"},
+		"valid multi-arg command": {
+			cmd:      []string{"ls", "-lah"},
+			errRegex: "^$"},
+		"invalid command": {
+			cmd:      []string{"false"},
+			errRegex: "exit status 1"},
 	}
 
 	for name, tc := range tests {

@@ -144,6 +144,74 @@ func TestRemoveIndex(t *testing.T) {
 	}
 }
 
+func TestRemoveElement(t *testing.T) {
+	// GIVEN a set of lists
+	tests := map[string]struct {
+		removeInt int
+		hadInt    []int
+		wantInt   []int
+		removeStr string
+		hadStr    []string
+		wantStr   []string
+	}{
+		"handles []int": {
+			removeInt: 7,
+			hadInt:    []int{9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
+			wantInt:   []int{9, 8, 6, 5, 4, 3, 2, 1, 0},
+		},
+		"handles []string": {
+			removeStr: "bash",
+			hadStr:    []string{"bish", "bash", "bosh", "bush"},
+			wantStr:   []string{"bish", "bosh", "bush"},
+		},
+		"handles []string with duplicates": {
+			removeStr: "bash",
+			hadStr:    []string{"bish", "bash", "bosh", "bush", "bash"},
+			wantStr:   []string{"bish", "bosh", "bush", "bash"},
+		},
+		"handles []string with no match": {
+			removeStr: "bush",
+			hadStr:    []string{"bish", "bosh", "bosh"},
+			wantStr:   []string{"bish", "bosh", "bosh"},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN RemoveElement is called on a list
+			gotInt := RemoveElement(tc.hadInt, tc.removeInt)
+			gotStr := RemoveElement(tc.hadStr, tc.removeStr)
+
+			// THEN the Removal is successful
+			// int
+			if len(gotInt) != len(tc.wantInt) {
+				t.Fatalf("Remove element failed\nwant:%v\ngot:  %v",
+					tc.wantInt, gotInt)
+			}
+			for i := range gotInt {
+				if gotInt[i] != tc.wantInt[i] {
+					t.Fatalf("Mismatch at index %d: got %d, want %d\ngot:  %v\nwant: %v",
+						i, gotInt[i], tc.wantInt[i], gotInt, tc.wantInt)
+				}
+			}
+			// string
+			if len(gotStr) != len(tc.wantStr) {
+				t.Fatalf("Remove element failed\nwant:%v\ngot:  %v",
+					tc.wantStr, gotStr)
+			}
+			for i := range gotStr {
+				if gotStr[i] != tc.wantStr[i] {
+					t.Fatalf("Mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
+						i, gotStr[i], tc.wantStr[i], gotStr, tc.wantStr)
+				}
+			}
+		})
+	}
+}
+
 func TestGetIndentation(t *testing.T) {
 	// GIVEN a set of strings with varying indentation
 	tests := map[string]struct {
@@ -184,6 +252,62 @@ func TestGetIndentation(t *testing.T) {
 			if got != tc.want {
 				t.Fatalf("want:%q\ngot:  %q",
 					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestReplaceElement(t *testing.T) {
+	// GIVEN a set of lists
+	tests := map[string]struct {
+		had     []string
+		want    []string
+		replace string
+		with    string
+	}{
+		"Replace element at end": {
+			had:     []string{"foo", "bar", "baz"},
+			want:    []string{"foo", "bar", "bash"},
+			replace: "baz",
+			with:    "bash",
+		},
+		"Replace element at start": {
+			had:     []string{"foo", "bar", "baz"},
+			want:    []string{"bash", "bar", "baz"},
+			replace: "foo",
+			with:    "bash",
+		},
+		"Replace element in middle": {
+			had:     []string{"foo", "bar", "baz"},
+			want:    []string{"foo", "bash", "baz"},
+			replace: "bar",
+			with:    "bash",
+		},
+		"Replace element not in list": {
+			had:     []string{"foo", "bar", "baz"},
+			want:    []string{"foo", "bar", "baz"},
+			replace: "bash",
+			with:    "bosh",
+		}}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN ReplaceElement is called on a list
+			got := ReplaceElement(tc.had, tc.replace, tc.with)
+
+			// THEN the Replacement is successful
+			if len(got) != len(tc.want) {
+				t.Fatalf("ReplaceElement failed:\nwant:%v\ngot:  %v",
+					tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("\nwant: %v\ngot:  %v",
+						tc.want, got)
+				}
 			}
 		})
 	}

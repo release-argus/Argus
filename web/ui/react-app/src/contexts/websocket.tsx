@@ -1,11 +1,17 @@
-import { createContext, useContext, useReducer, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useReducer,
+  useState,
+} from "react";
 
 import { BooleanType } from "types/boolean";
 import { MonitorSummaryType } from "types/summary";
 import ReconnectingWebSocket from "reconnecting-websocket";
 import { WS_ADDRESS } from "config";
 import { WebSocketStatus } from "components/websocket/status";
-import { getBasename } from "utils/get_basename";
+import { getBasename } from "utils";
 import { handleMessage } from "handlers/websocket";
 import reducerMonitor from "reducers/monitor";
 
@@ -34,6 +40,15 @@ export const WebSocketProvider = (props: Props) => {
     service: {},
   });
   const [connected, setConnected] = useState<Bool>(undefined);
+
+  const contextValue = useMemo(
+    () => ({
+      ws: ws,
+      connected: connected,
+      monitorData: monitorData,
+    }),
+    [ws, connected, monitorData]
+  );
 
   ws.onopen = () => {
     setConnected(true);
@@ -86,13 +101,7 @@ export const WebSocketProvider = (props: Props) => {
   };
 
   return (
-    <WebSocketContext.Provider
-      value={{
-        ws: ws,
-        connected: connected,
-        monitorData: monitorData,
-      }}
-    >
+    <WebSocketContext.Provider value={contextValue}>
       <WebSocketStatus connected={connected} />
       {props.children}
     </WebSocketContext.Provider>

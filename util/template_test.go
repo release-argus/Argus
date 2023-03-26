@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func TestTemplateString(t *testing.T) {
+func TestTemplate_String(t *testing.T) {
 	// GIVEN a variety of string templates
 	serviceInfo := testServiceInfo()
 	tests := map[string]struct {
@@ -30,7 +30,9 @@ func TestTemplateString(t *testing.T) {
 		panicRegex *string
 		want       string
 	}{
-		"no jinja template": {tmpl: "testing 123", want: "testing 123"},
+		"no jinja template": {
+			tmpl: "testing 123",
+			want: "testing 123"},
 		"valid jinja template": {
 			tmpl: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			want: "-something-example.com-other.com-NEW"},

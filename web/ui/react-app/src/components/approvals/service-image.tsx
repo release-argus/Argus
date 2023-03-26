@@ -1,3 +1,4 @@
+import { FC, useMemo } from "react";
 import {
   faCircleNotch,
   faWindowMaximize,
@@ -5,31 +6,31 @@ import {
 
 import { Card } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ReactElement } from "react";
 import { ServiceSummaryType } from "types/summary";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 
-interface ServiceImageData {
+interface Props {
   service: ServiceSummaryType;
   visible: boolean;
 }
 
-export const ServiceImage = ({
-  service,
-  visible,
-}: ServiceImageData): ReactElement => {
+export const ServiceImage: FC<Props> = ({ service, visible }) => {
   const delayedRender = useDelayedRender(500);
+  const icon = useMemo(
+    () => (service.type === "github" ? faGithub : faWindowMaximize),
+    [service.type]
+  );
   return (
     <div
       className="empty"
       style={{ height: "7rem", display: visible ? "flex" : "none" }}
     >
       <a
-        href={service.icon_link_to}
+        href={service.icon_link_to || undefined}
         target="_blank"
         rel="noreferrer noopener"
-        style={{ display: "contents" }}
+        style={{ color: "inherit", display: "contents" }}
       >
         {service?.icon ? (
           <Card.Img
@@ -40,7 +41,7 @@ export const ServiceImage = ({
           />
         ) : service?.loading === false ? (
           <FontAwesomeIcon
-            icon={service.type === "github" ? faGithub : faWindowMaximize}
+            icon={icon}
             style={{
               minWidth: "fit-content",
               height: "6rem",

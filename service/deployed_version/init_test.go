@@ -26,9 +26,9 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestInitMetrics(t *testing.T) {
+func TestLookup_InitMetrics(t *testing.T) {
 	// GIVEN a Lookup
-	lookup := testDeployedVersion()
+	lookup := testLookup()
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
@@ -44,9 +44,9 @@ func TestInitMetrics(t *testing.T) {
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
-	lookup := testDeployedVersion()
+	lookup := testLookup()
 	log := util.NewJLog("WARN", false)
 	var defaults *Lookup = &Lookup{}
 	var hardDefaults *Lookup = &Lookup{}

@@ -29,10 +29,10 @@ func (l *Lookup) Init(
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {
+	jLog = log
 	if l == nil {
 		return
 	}
-	jLog = log
 
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults

@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package command
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	svcstatus "github.com/release-argus/Argus/service/status"
+)
 
 func boolPtr(val bool) *bool {
 	return &val
@@ -33,4 +38,13 @@ func stringifyPointer[T comparable](ptr *T) string {
 		str = fmt.Sprint(*ptr)
 	}
 	return str
+}
+
+func testController(announce *chan []byte) *Controller {
+	return &Controller{
+		Failed:         &[]*bool{nil, nil},
+		NextRunnable:   make([]time.Time, 2),
+		ParentInterval: stringPtr("10m"),
+		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: announce},
+	}
 }

@@ -31,12 +31,12 @@ import (
 // otherwise returns false.
 func (l *Lookup) Query() (bool, error) {
 	logFrom := util.LogFrom{Primary: *l.Status.ServiceID}
-	rawBody, err := l.httpRequest(logFrom)
+	rawBody, err := l.httpRequest(&logFrom)
 	if err != nil {
 		return false, err
 	}
 
-	version, err := l.GetVersion(rawBody, logFrom)
+	version, err := l.GetVersion(rawBody, &logFrom)
 	if err != nil {
 		return false, err
 	}
@@ -44,10 +44,10 @@ func (l *Lookup) Query() (bool, error) {
 	l.Status.SetLastQueried()
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 
-	// If this version is different (new).
+	// If this version is different (new?).
 	if version != l.Status.LatestVersion {
 		if wantSemanticVersioning {
-			// Check it's a valid smenatic version
+			// Check it's a valid semnatic version
 			newVersion, err := semver.NewVersion(version)
 			if err != nil {
 				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
@@ -58,23 +58,20 @@ func (l *Lookup) Query() (bool, error) {
 
 			// Check for a progressive change in version.
 			if l.Status.LatestVersion != "" {
-				oldVersion, err := semver.NewVersion(l.Status.LatestVersion)
-				if err != nil {
-					err := fmt.Errorf("failed converting %q to a semantic version (This is the old version, so you've probably just enabled `semantic_versioning`. Update/remove this latest_version from the config)",
-						l.Status.LatestVersion)
-					jLog.Error(err, logFrom, true)
-					return false, err
-				}
-
-				// e.g.
-				// newVersion = 1.2.9
-				// oldVersion = 1.2.10
-				// return false (don't notify anything. Stay on oldVersion)
-				if newVersion.LessThan(*oldVersion) {
-					err := fmt.Errorf("queried version %q is less than the deployed version %q",
-						version, l.Status.LatestVersion)
-					jLog.Warn(err, logFrom, true)
-					return false, err
+				oldVersion, err := semver.NewVersion(l.Status.DeployedVersion)
+				// If the old version is not a semantic version, then we can't compare it.
+				// (if we switched to semantic versioning with non-semantic versions tracked)
+				if err == nil {
+					// e.g.
+					// newVersion = 1.2.9
+					// oldVersion = 1.2.10
+					// return false (don't notify anything and stay on oldVersion)
+					if newVersion.LessThan(*oldVersion) {
+						err := fmt.Errorf("queried version %q is less than the deployed version %q",
+							version, l.Status.LatestVersion)
+						jLog.Warn(err, logFrom, true)
+						return false, err
+					}
 				}
 			}
 		}
@@ -111,7 +108,7 @@ func (l *Lookup) Query() (bool, error) {
 	return false, nil
 }
 
-func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
+func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
 	if l.GetAllowInvalidCerts() {
@@ -122,7 +119,7 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
 
 	req, err := http.NewRequest(http.MethodGet, GetURL(l.URL, l.Type), nil)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 		return
 	}
 
@@ -145,21 +142,21 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
-			jLog.Warn(err, logFrom, true)
+			jLog.Warn(err, *logFrom, true)
 			return
 		}
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 		return
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
-	jLog.Error(err, logFrom, err != nil)
+	jLog.Error(err, *logFrom, err != nil)
 	if l.Type == "github" && err == nil {
 		newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
 		if l.GitHubData.ETag != newETag {
-			jLog.Verbose("Potentially found new releases (ETag changed)", logFrom, true)
+			jLog.Verbose("Potentially found new releases (ETag changed)", *logFrom, true)
 		}
 		l.GitHubData.ETag = newETag
 	}
@@ -168,7 +165,7 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) (rawBody []byte, err error) {
 
 // GetVersions will filter out releases from rawBody that are preReleases (if not wanted) and will sort releases if
 // semantic versioning is wanted
-func (l *Lookup) GetVersions(rawBody []byte, logFrom util.LogFrom) (filteredReleases []github_types.Release, err error) {
+func (l *Lookup) GetVersions(rawBody []byte, logFrom *util.LogFrom) (filteredReleases []github_types.Release, err error) {
 	var releases []github_types.Release
 	body := string(rawBody)
 	// GitHub service.
@@ -177,31 +174,35 @@ func (l *Lookup) GetVersions(rawBody []byte, logFrom util.LogFrom) (filteredRele
 		if err != nil {
 			return
 		}
+		// Store the unfiltered releases to support filter changes without a refetch
+		// Copy as we don't want this slice to be modified by the filter
+		l.GitHubData.Releases = releases
+		// Filter releases
 		filteredReleases = l.filterGitHubReleases(
-			releases,
+			l.GitHubData.Releases,
 			logFrom,
 		)
 
 		// url service
 	} else {
-		version, err := l.URLCommands.Run(body, logFrom)
+		version, err := l.URLCommands.Run(body, *logFrom)
 		if err != nil {
 			//nolint:wrapcheck
 			return filteredReleases, err
 		}
-		filteredReleases = append(filteredReleases, github_types.Release{TagName: version})
+		filteredReleases = []github_types.Release{{TagName: version}}
 	}
 
 	if len(filteredReleases) == 0 {
 		err = fmt.Errorf("no releases were found matching the url_commands")
-		jLog.Warn(err, logFrom, true)
+		jLog.Warn(err, *logFrom, true)
 		return
 	}
 	return filteredReleases, nil
 }
 
 // GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
-func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version string, err error) {
+func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version string, err error) {
 	var filteredReleases []github_types.Release
 	// rawBody length = 0 if GitHub ETag is unchanged
 	if len(rawBody) != 0 {
@@ -209,20 +210,13 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version strin
 		if err != nil {
 			return
 		}
-		// Store Releases until the latest is confirmed as available
-		if l.Type == "github" {
-			l.GitHubData.Releases = filteredReleases
-		}
-	} else {
-		// If the releases have been cleared, exit
-		// (top of the list passed all filters)
-		if l.GitHubData.Releases == nil {
-			jLog.Verbose("Latest version already matched all filters (ETag unchanged)", logFrom, true)
-			return l.Status.LatestVersion, nil
-		}
-		// ReCheck this ETag's filteredReleases
-		jLog.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
-		filteredReleases = l.GitHubData.Releases
+	} else if l.Type == "github" {
+		// ReCheck this ETag's filteredReleases incase filters/releases changed
+		jLog.Verbose("Using cached releases (ETag unchanged)", *logFrom, true)
+		filteredReleases = l.filterGitHubReleases(
+			l.GitHubData.Releases,
+			logFrom,
+		)
 	}
 
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
@@ -253,7 +247,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version strin
 				}
 
 				// If the Command didn't return successfully
-				if err = l.Require.ExecCommand(&logFrom); err != nil {
+				if err = l.Require.ExecCommand(logFrom); err != nil {
 					continue
 				}
 
@@ -262,11 +256,15 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version strin
 					if strings.HasSuffix(err.Error(), "\n") {
 						err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
 					}
-					jLog.Warn(err, logFrom, true)
+					jLog.Warn(err, *logFrom, true)
 					continue
 					// else if the tag does exist (and we did search for one)
 				} else if l.Require.Docker != nil {
-					jLog.Info(fmt.Sprintf(`found %s container "%s:%s"`, l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)), logFrom, true)
+					jLog.Info(
+						fmt.Sprintf(`found %s container "%s:%s"`,
+							l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
+						*logFrom,
+						true)
 				}
 				break
 
@@ -276,9 +274,6 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom util.LogFrom) (version strin
 				return
 			}
 		}
-	}
-	if l.Type == "github" && len(filteredReleases) > 0 && version == filteredReleases[0].TagName {
-		l.GitHubData.Releases = nil
 	}
 	return
 }

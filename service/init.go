@@ -38,7 +38,14 @@ func (s *Service) Init(
 ) {
 	jLog = log
 
-	s.Status.Init(len(s.Notify), len(s.Command), len(s.WebHook), &s.ID, &s.Dashboard.WebURL)
+	// Status
+	s.Status.Init(
+		len(s.Notify),
+		len(s.Command),
+		len(s.WebHook),
+		&s.ID,
+		&s.Dashboard.WebURL)
+
 	s.Defaults = defaults
 	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Options.Defaults = &s.Defaults.Options
@@ -46,21 +53,55 @@ func (s *Service) Init(
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
-	s.Notify.Init(jLog, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+	// Notify
+	s.Notify.Init(
+		jLog,
+		&s.Status,
+		rootNotifyConfig,
+		notifyDefaults,
+		notifyHardDefaults)
 
-	//nolint:typecheck
+	// Command
 	if s.Command != nil {
 		s.CommandController = &command.Controller{}
-		s.CommandController.Init(jLog, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
+		s.CommandController.Init(
+			jLog,
+			&s.Status,
+			&s.Command,
+			&s.Notify,
+			s.Options.GetIntervalPointer())
 	}
 
-	s.WebHook.Init(jLog, &s.Status, rootWebHookConfig, webhookDefaults, webhookHardDefaults, &s.Notify, s.Options.GetIntervalPointer())
+	// WebHook
+	s.WebHook.Init(
+		jLog,
+		&s.Status,
+		rootWebHookConfig,
+		webhookDefaults,
+		webhookHardDefaults,
+		&s.Notify,
+		s.Options.GetIntervalPointer())
 
-	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
+	// LatestVersion
+	s.LatestVersion.Init(
+		jLog,
+		&s.Defaults.LatestVersion,
+		&s.HardDefaults.LatestVersion,
+		&s.Status,
+		&s.Options)
+
+	// DeployedVersionLookup
 	if s.Defaults.DeployedVersionLookup == nil {
 		s.Defaults.DeployedVersionLookup = &deployedver.Lookup{}
 	}
-	s.DeployedVersionLookup.Init(jLog, s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
+	s.DeployedVersionLookup.Init(
+		jLog,
+		s.Defaults.DeployedVersionLookup,
+		s.HardDefaults.DeployedVersionLookup,
+		&s.Status,
+		&s.Options)
+
+	// Convert from old format
 	s.Convert()
 }
 

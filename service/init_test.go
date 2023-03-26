@@ -29,7 +29,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestGetServiceInfo(t *testing.T) {
+func TestService_GetServiceInfo(t *testing.T) {
 	// GIVEN a Service
 	service := testServiceURL("TestGetServiceInfo")
 	id := "test_id"
@@ -59,47 +59,69 @@ func TestGetServiceInfo(t *testing.T) {
 	}
 }
 
-func TestServiceGetIconURL(t *testing.T) {
+func TestService_GetIconURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		icon   string
-		want   string
-		notify shoutrrr.Slice
+		dashboardIcon string
+		want          string
+		notify        shoutrrr.Slice
 	}{
-		"no icon": {want: "", icon: ""},
-		"no icon anywhere": {want: "", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		}}},
-		"emoji icon": {want: "", icon: ":smile:"},
-		"web icon":   {want: "https://example.com/icon.png", icon: "https://example.com/icon.png"},
-		"notify icon only": {want: "https://example.com/icon.png", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-			Params: map[string]string{
-				"icon": "https://example.com/icon.png",
-			},
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		}}},
-		"notify icon takes precedence over emoji": {want: "https://example.com/icon.png", icon: ":smile:",
+		"no dashboard.icon": {
+			want:          "",
+			dashboardIcon: "",
+		},
+		"no icon anywhere": {
+			want:          "",
+			dashboardIcon: "",
 			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+				Main:         &shoutrrr.Shoutrrr{},
+				Defaults:     &shoutrrr.Shoutrrr{},
+				HardDefaults: &shoutrrr.Shoutrrr{},
+			}},
+		},
+		"emoji icon": {
+			want:          "",
+			dashboardIcon: ":smile:",
+		},
+		"web icon": {
+			want:          "https://example.com/icon.png",
+			dashboardIcon: "https://example.com/icon.png",
+		},
+		"notify icon only": {
+			want: "https://example.com/icon.png",
+			notify: shoutrrr.Slice{"test": {
 				Params: map[string]string{
 					"icon": "https://example.com/icon.png",
 				},
 				Main:         &shoutrrr.Shoutrrr{},
 				Defaults:     &shoutrrr.Shoutrrr{},
 				HardDefaults: &shoutrrr.Shoutrrr{},
-			}}},
-		"dashboard icon takes precedence over notify icon": {want: "https://root.com/icon.png", icon: "https://root.com/icon.png",
-			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+			}},
+		},
+		"notify icon takes precedence over emoji": {
+			want:          "https://example.com/icon.png",
+			dashboardIcon: ":smile:",
+			notify: shoutrrr.Slice{"test": {
 				Params: map[string]string{
 					"icon": "https://example.com/icon.png",
 				},
 				Main:         &shoutrrr.Shoutrrr{},
 				Defaults:     &shoutrrr.Shoutrrr{},
 				HardDefaults: &shoutrrr.Shoutrrr{},
-			}}},
+			}},
+		},
+		"dashboard icon takes precedence over notify icon": {
+			want:          "https://root.com/icon.png",
+			dashboardIcon: "https://root.com/icon.png",
+			notify: shoutrrr.Slice{"test": {
+				Params: map[string]string{
+					"icon": "https://example.com/icon.png",
+				},
+				Main:         &shoutrrr.Shoutrrr{},
+				Defaults:     &shoutrrr.Shoutrrr{},
+				HardDefaults: &shoutrrr.Shoutrrr{},
+			}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -107,7 +129,7 @@ func TestServiceGetIconURL(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			service := testServiceGitHub(name)
-			service.Dashboard.Icon = tc.icon
+			service.Dashboard.Icon = tc.dashboardIcon
 			service.Notify = tc.notify
 
 			// WHEN GetIconURL is called
@@ -122,16 +144,29 @@ func TestServiceGetIconURL(t *testing.T) {
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestService_Init(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		service Service
 	}{
-		"bare service": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}},
-		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
-			Notify:  shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{Type: "discord"}},
-			Command: command.Slice{{"ls"}},
-			WebHook: webhook.Slice{"test": testWebHook(false)}}},
+		"bare service": {
+			service: Service{
+				ID: "Init",
+				LatestVersion: latestver.Lookup{
+					Type: "github", URL: "release-argus/Argus"}},
+		},
+		"service with notify, command and webhook": {
+			service: Service{
+				ID: "Init",
+				LatestVersion: latestver.Lookup{
+					Type: "github", URL: "release-argus/Argus"},
+				Notify: shoutrrr.Slice{
+					"test": &shoutrrr.Shoutrrr{Type: "discord"}},
+				Command: command.Slice{
+					{"ls"}},
+				WebHook: webhook.Slice{
+					"test": testWebHook(false)}},
+		},
 	}
 
 	for name, tc := range tests {

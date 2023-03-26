@@ -28,7 +28,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestTry(t *testing.T) {
+func TestWebHook_Try(t *testing.T) {
 	// GIVEN a WebHook
 	testLogging("WARN")
 	tests := map[string]struct {
@@ -39,13 +39,31 @@ func TestTry(t *testing.T) {
 		errRegex          string
 		desiredStatusCode int
 	}{
-		"invalid url":                             {url: stringPtr("invalid://	test"), errRegex: "failed to get .?http.request"},
-		"fail due to invalid secret":              {wouldFail: true, errRegex: "WebHook gave [0-9]+, not "},
-		"fail due to invalid cert":                {selfSignedCert: true, errRegex: " x509:"},
-		"pass with invalid certs allowed":         {selfSignedCert: true, errRegex: "^$", allowInvalidCerts: true},
-		"pass with valid certs":                   {errRegex: "^$", allowInvalidCerts: true},
-		"fail by not getting desired status code": {desiredStatusCode: 1, errRegex: "WebHook gave [0-9]+, not ", allowInvalidCerts: true},
-		"pass by getting desired status code":     {wouldFail: true, desiredStatusCode: 500, errRegex: "^$", allowInvalidCerts: true},
+		"invalid url": {
+			url:      stringPtr("invalid://	test"),
+			errRegex: "failed to get .?http.request"},
+		"fail due to invalid secret": {
+			wouldFail: true,
+			errRegex:  "WebHook gave [0-9]+, not "},
+		"fail due to invalid cert": {
+			selfSignedCert: true,
+			errRegex:       " x509:"},
+		"pass with invalid certs allowed": {
+			selfSignedCert:    true,
+			errRegex:          "^$",
+			allowInvalidCerts: true},
+		"pass with valid certs": {
+			errRegex:          "^$",
+			allowInvalidCerts: true},
+		"fail by not getting desired status code": {
+			desiredStatusCode: 1,
+			errRegex:          "WebHook gave [0-9]+, not ",
+			allowInvalidCerts: true},
+		"pass by getting desired status code": {
+			wouldFail:         true,
+			desiredStatusCode: 500,
+			errRegex:          "^$",
+			allowInvalidCerts: true},
 	}
 
 	for name, tc := range tests {
@@ -68,7 +86,7 @@ func TestTry(t *testing.T) {
 				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
 				// WHEN try is called with it
-				err := webhook.try(util.LogFrom{})
+				err := webhook.try(&util.LogFrom{})
 
 				// THEN any err is expected
 				e := util.ErrorToString(err)
@@ -90,7 +108,7 @@ func TestTry(t *testing.T) {
 	}
 }
 
-func TestWebHookSend(t *testing.T) {
+func TestWebHook_Send(t *testing.T) {
 	// GIVEN a WebHook
 	testLogging("INFO")
 	tests := map[string]struct {
@@ -102,15 +120,49 @@ func TestWebHookSend(t *testing.T) {
 		tries         int
 		silentFails   bool
 		notifiers     shoutrrr.Slice
+		deleting      bool
 	}{
-		"successful webhook":                           {stdoutRegex: "WebHook received"},
-		"successful webhook with custom_headers":       {stdoutRegex: "WebHook received", customHeaders: true},
-		"does use delay webhook":                       {stdoutRegex: "WebHook received"},
-		"failing webhook":                              {wouldFail: true, stdoutRegex: `failed \d times to send`},
-		"failing webhook with custom_headers":          {wouldFail: true, stdoutRegex: `failed \d times to send`, customHeaders: true},
-		"tries multiple times":                         {wouldFail: true, tries: 2, stdoutRegex: `(WebHook gave 500.*){2}WebHook received`},
-		"does try notifiers on fail":                   {wouldFail: true, stdoutRegex: `WebHook gave 500.*invalid gotify token`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
-		"doesn't try notifiers on fail if silentFails": {wouldFail: true, silentFails: true, stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`, notifiers: shoutrrr.Slice{"fail": testNotifier(true, false)}},
+		"successful webhook": {
+			stdoutRegex: "WebHook received",
+		},
+		"successful webhook with custom_headers": {
+			stdoutRegex:   "WebHook received",
+			customHeaders: true,
+		},
+		"does use delay webhook": {
+			stdoutRegex: "WebHook received",
+		},
+		"failing webhook": {
+			wouldFail:   true,
+			stdoutRegex: `failed \d times to send`,
+		},
+		"failing webhook with custom_headers": {
+			wouldFail:     true,
+			customHeaders: true,
+			stdoutRegex:   `failed \d times to send`,
+		},
+		"tries multiple times": {
+			wouldFail:   true,
+			tries:       2,
+			stdoutRegex: `(WebHook gave 500.*){2}WebHook received`,
+		},
+		"does try notifiers on fail": {
+			wouldFail:   true,
+			stdoutRegex: `WebHook gave 500.*invalid gotify token`,
+			notifiers: shoutrrr.Slice{
+				"fail": testNotifier(true, false)},
+		},
+		"doesn't try notifiers on fail if silentFails": {
+			wouldFail:   true,
+			silentFails: true,
+			stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`,
+			notifiers: shoutrrr.Slice{
+				"fail": testNotifier(true, false)},
+		},
+		"doesn't send if deleting": {
+			deleting:    true,
+			stdoutRegex: `^$`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -124,6 +176,7 @@ func TestWebHookSend(t *testing.T) {
 				r, w, _ := os.Pipe()
 				os.Stdout = w
 				webhook := testWebHook(tc.wouldFail, true, false, tc.customHeaders)
+				webhook.ServiceStatus.Deleting = tc.deleting
 				webhook.Delay = tc.delay
 				maxTries := uint(tc.tries + 1)
 				webhook.MaxTries = &maxTries
@@ -163,7 +216,7 @@ func TestWebHookSend(t *testing.T) {
 	}
 }
 
-func TestSliceSend(t *testing.T) {
+func TestSlice_Send(t *testing.T) {
 	// GIVEN a Slice
 	testLogging("INFO")
 	tests := map[string]struct {
@@ -175,12 +228,25 @@ func TestSliceSend(t *testing.T) {
 		delays         map[string]string
 		repeat         int
 	}{
-		"nil slice": {slice: nil, stdoutRegex: `^$`},
-		"successful and failing webhook": {slice: &Slice{"pass": testWebHook(false, true, false, false), "fail": testWebHook(true, true, false, false)},
-			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
-		"does apply webhook delay": {slice: &Slice{"pass": testWebHook(false, true, false, false), "fail": testWebHook(true, true, false, false)},
-			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`, useDelay: true,
-			delays: map[string]string{"fail": "2s", "pass": "1ms"}, repeat: 5},
+		"nil slice": {
+			slice:       nil,
+			stdoutRegex: `^$`},
+		"successful and failing webhook": {
+			slice: &Slice{
+				"pass": testWebHook(false, true, false, false),
+				"fail": testWebHook(true, true, false, false)},
+			stdoutRegex:    `WebHook received.*failed \d times to send the WebHook`,
+			stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
+		"does apply webhook delay": {
+			slice: &Slice{
+				"pass": testWebHook(false, true, false, false),
+				"fail": testWebHook(true, true, false, false)},
+			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`,
+			useDelay:    true,
+			delays: map[string]string{
+				"fail": "2s",
+				"pass": "1ms"},
+			repeat: 5},
 	}
 
 	for name, tc := range tests {
@@ -242,16 +308,23 @@ func TestSliceSend(t *testing.T) {
 	}
 }
 
-func TestNotifiersSendWithNotifier(t *testing.T) {
+func TestNotifiers_SendWithNotifier(t *testing.T) {
 	// GIVEN Notifiers
 	testLogging("INFO")
 	tests := map[string]struct {
 		shoutrrrNotifiers *shoutrrr.Slice
 		errRegex          string
 	}{
-		"nill Notifiers":      {errRegex: "^$"},
-		"successful notifier": {errRegex: "^$", shoutrrrNotifiers: &shoutrrr.Slice{"pass": testNotifier(false, false)}},
-		"failing notifier":    {errRegex: "invalid gotify token", shoutrrrNotifiers: &shoutrrr.Slice{"fail": testNotifier(true, false)}},
+		"nill Notifiers": {
+			errRegex: "^$"},
+		"successful notifier": {
+			errRegex: "^$",
+			shoutrrrNotifiers: &shoutrrr.Slice{
+				"pass": testNotifier(false, false)}},
+		"failing notifier": {
+			errRegex: "invalid gotify token",
+			shoutrrrNotifiers: &shoutrrr.Slice{
+				"fail": testNotifier(true, false)}},
 	}
 
 	for name, tc := range tests {
@@ -281,10 +354,18 @@ func TestCheckWebHookBody(t *testing.T) {
 		body string
 		want bool
 	}{
-		"empty body":               {body: "", want: true},
-		"success body":             {body: "success", want: true},
-		"awx invalid secret":       {body: `{"detail":"You do not have permission to perform this action."}`, want: false},
-		"adnanh/webhook hook fail": {body: `Hook rules were not satisfied.`, want: false},
+		"empty body": {
+			body: "",
+			want: true},
+		"success body": {
+			body: "success",
+			want: true},
+		"awx invalid secret": {
+			body: `{"detail":"You do not have permission to perform this action."}`,
+			want: false},
+		"adnanh/webhook hook fail": {
+			body: `Hook rules were not satisfied.`,
+			want: false},
 	}
 
 	for name, tc := range tests {

@@ -85,10 +85,18 @@ func TestWebAccessible(t *testing.T) {
 		path      string
 		bodyRegex string
 	}{
-		"/approvals":          {path: "/approvals"},
-		"/metrics":            {path: "/metrics", bodyRegex: "go_gc_duration_"},
-		"/api/v1/healthcheck": {path: "/api/v1/healthcheck", bodyRegex: fmt.Sprintf(`^Alive$`)},
-		"/api/v1/version":     {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, util.GoVersion)},
+		"/approvals": {
+			path: "/approvals"},
+		"/metrics": {
+			path:      "/metrics",
+			bodyRegex: "go_gc_duration_"},
+		"/api/v1/healthcheck": {
+			path:      "/api/v1/healthcheck",
+			bodyRegex: fmt.Sprintf(`^Alive$`)},
+		"/api/v1/version": {
+			path: "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
+				util.GoVersion)},
 	}
 
 	for name, tc := range tests {
@@ -178,14 +186,30 @@ func TestWebSocket(t *testing.T) {
 		stdoutRegex string
 		bodyRegex   string
 	}{
-		"no version":                   {msg: `{"key": "value"}`, stdoutRegex: "^$"},
-		"no version, unknown type":     {msg: `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`, stdoutRegex: "Unknown TYPE"},
-		"invalid JSON":                 {msg: `{"version": 1, "key": "value"`, stdoutRegex: "missing/invalid version key"},
-		"unknown page":                 {msg: `{"version": 1, "page": "foo", "type": "value"}`, stdoutRegex: "Unknown PAGE"},
-		"APPROVALS - unknown type":     {msg: `{"version": 1, "page": "APPROVALS", "type": "value"}`, stdoutRegex: "Unknown APPROVALS Type"},
-		"RUNTIME_BUILD - unknown type": {msg: `{"version": 1, "page": "RUNTIME_BUILD", "type": "value"}`, stdoutRegex: "Unknown RUNTIME_BUILD Type"},
-		"FLAGS - unknown type":         {msg: `{"version": 1, "page": "FLAGS", "type": "value"}`, stdoutRegex: "Unknown FLAGS Type"},
-		"CONFIG - unknown type":        {msg: `{"version": 1, "page": "CONFIG", "type": "value"}`, stdoutRegex: "Unknown CONFIG Type"},
+		"no version": {
+			msg:         `{"key": "value"}`,
+			stdoutRegex: "^$"},
+		"no version, unknown type": {
+			msg:         `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`,
+			stdoutRegex: "Unknown TYPE"},
+		"invalid JSON": {
+			msg:         `{"version": 1, "key": "value"`,
+			stdoutRegex: "missing/invalid version key"},
+		"unknown page": {
+			msg:         `{"version": 1, "page": "foo", "type": "value"}`,
+			stdoutRegex: "Unknown PAGE"},
+		"APPROVALS - unknown type": {
+			msg:         `{"version": 1, "page": "APPROVALS", "type": "value"}`,
+			stdoutRegex: "Unknown APPROVALS Type"},
+		"RUNTIME_BUILD - unknown type": {
+			msg:         `{"version": 1, "page": "RUNTIME_BUILD", "type": "value"}`,
+			stdoutRegex: "Unknown RUNTIME_BUILD Type"},
+		"FLAGS - unknown type": {
+			msg:         `{"version": 1, "page": "FLAGS", "type": "value"}`,
+			stdoutRegex: "Unknown FLAGS Type"},
+		"CONFIG - unknown type": {
+			msg:         `{"version": 1, "page": "CONFIG", "type": "value"}`,
+			stdoutRegex: "Unknown CONFIG Type"},
 	}
 
 	for name, tc := range tests {
@@ -223,18 +247,20 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 	tests := map[string]struct {
 		order []string
 	}{
-		"INIT":                                  {order: *cfg.Order},
-		"INIT with nil Service in config.Order": {order: append(*cfg.Order, "nilService")},
+		"INIT": {
+			order: cfg.Order},
+		"INIT with nil Service in config.Order": {
+			order: append(cfg.Order, "nilService")},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			order := cfg.Order
-			cfg.Order = &tc.order
+			cfg.Order = tc.order
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 
-			// WHEN we send a message to the server (wsService)
+			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "INIT"}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -285,6 +311,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 	testLogging("VERBOSE", true)
 	tests := map[string]struct {
 		serviceID                   string
+		active                      *bool
 		target                      *string
 		wantSkipMessage             bool
 		stdoutRegex                 string
@@ -300,49 +327,143 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 		upgradesDeployedVersion     bool
 		approveCommandsIndividually bool
 	}{
-		"ARGUS_SKIP known service_id": {serviceID: "test", target: stringPtr("ARGUS_SKIP"), wantSkipMessage: true},
-		"ARGUS_SKIP unknown service_id": {serviceID: "unknown?", target: stringPtr("ARGUS_SKIP"),
-			stdoutRegex: "service not found"},
-		"ARGUS_SKIP empty service_id": {serviceID: "", target: stringPtr("ARGUS_SKIP"),
-			stdoutRegex: "service_data.id not provided"},
-		"target=nil, known service_id": {serviceID: "test", target: nil,
-			stdoutRegex: "target for command/webhook not provided"},
-		"ARGUS_ALL, known service_id with no commands/webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"), stdoutRegex: "does not have any commands/webhooks to approve"},
-		"ARGUS_ALL, known service_id with command": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"false", "0"}}},
-		"ARGUS_ALL, known service_id with webhook": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")}},
-		"ARGUS_ALL, known service_id with multiple webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"), "known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")}},
-		"ARGUS_ALL, known service_id with multiple commands": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls", "-a"}, {"false", "1"}}},
-		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"ls", "-b"}},
-			webhooks:                webhook.Slice{"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
-			upgradesApprovedVersion: true, latestVersion: "0.9.0"},
-		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:  command.Slice{{"ls", "-c"}},
-			webhooks:  webhook.Slice{"known-service-upgrade-deployed-version-webhook-0": testWebHook(false, "known-service-upgrade-deployed-version-webhook-0")},
-			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"ls", "-d"}},
-			webhooks:                webhook.Slice{"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
-			latestVersionIsApproved: true},
-		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"fail"}},
-			webhooks:                webhook.Slice{"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
-			latestVersionIsApproved: true},
-		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("webhook_will_pass"),
-			commands: command.Slice{{"ls", "-f"}}, commandFails: []*bool{boolPtr(false)},
-			webhooks:     webhook.Slice{"will_pass": testWebHook(false, "will_pass"), "would_fail": testWebHook(true, "would_fail")},
-			webhookFails: map[string]*bool{"will_pass": boolPtr(true), "would_fail": boolPtr(false)},
-			removeDVL:    true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("command_ls -g"),
-			commands: command.Slice{{"ls", "/root"}, {"ls", "-g"}}, commandFails: []*bool{boolPtr(false), boolPtr(true)},
-			webhooks: webhook.Slice{"would_fail": testWebHook(true, "would_fail")}, webhookFails: map[string]*bool{"would_fail": boolPtr(false)},
-			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {serviceID: "test",
-			commands: command.Slice{{"ls", "-h"}, {"false", "2"}, {"true"}}, approveCommandsIndividually: true},
+		"ARGUS_SKIP known service_id": {
+			serviceID:       "test",
+			target:          stringPtr("ARGUS_SKIP"),
+			wantSkipMessage: true,
+		},
+		"ARGUS_SKIP inactive service_id": {
+			serviceID:       "test",
+			active:          boolPtr(false),
+			target:          stringPtr("ARGUS_SKIP"),
+			wantSkipMessage: false,
+		},
+		"ARGUS_SKIP unknown service_id": {
+			serviceID:   "unknown?",
+			target:      stringPtr("ARGUS_SKIP"),
+			stdoutRegex: "service not found",
+		},
+		"ARGUS_SKIP empty service_id": {
+			serviceID:   "",
+			target:      stringPtr("ARGUS_SKIP"),
+			stdoutRegex: "service_data.id not provided",
+		},
+		"target=nil, known service_id": {
+			serviceID:   "test",
+			target:      nil,
+			stdoutRegex: "target for command/webhook not provided",
+		},
+		"ARGUS_ALL, known service_id with no commands/webhooks": {
+			serviceID:   "test",
+			target:      stringPtr("ARGUS_ALL"),
+			stdoutRegex: "does not have any commands/webhooks to approve",
+		},
+		"ARGUS_ALL, known service_id with command": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"false", "0"}},
+		},
+		"ARGUS_ALL, known service_id with webhook": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{
+				"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")},
+		},
+		"ARGUS_ALL, known service_id with multiple webhooks": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{
+				"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"),
+				"known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")},
+		},
+		"ARGUS_ALL, known service_id with multiple commands": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-a"}, {"false", "1"}},
+		},
+		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-b"}},
+			webhooks: webhook.Slice{
+				"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
+			upgradesApprovedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-c"}},
+			webhooks: webhook.Slice{
+				"known-service-upgrade-deployed-version-webhook-0": testWebHook(false,
+					"known-service-upgrade-deployed-version-webhook-0")},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-d"}},
+			webhooks: webhook.Slice{
+				"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
+			latestVersionIsApproved: true,
+		},
+		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"fail"}},
+			webhooks: webhook.Slice{
+				"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
+			latestVersionIsApproved: true,
+		},
+		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("webhook_will_pass"),
+			commands: command.Slice{
+				{"ls", "-f"}},
+			commandFails: []*bool{
+				boolPtr(false)},
+			webhooks: webhook.Slice{
+				"will_pass":  testWebHook(false, "will_pass"),
+				"would_fail": testWebHook(true, "would_fail")},
+			webhookFails: map[string]*bool{
+				"will_pass":  boolPtr(true),
+				"would_fail": boolPtr(false)},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("command_ls -g"),
+			commands: command.Slice{
+				{"ls", "/root"},
+				{"ls", "-g"}},
+			commandFails: []*bool{
+				boolPtr(false),
+				boolPtr(true)},
+			webhooks: webhook.Slice{
+				"would_fail": testWebHook(true, "would_fail")},
+			webhookFails: map[string]*bool{
+				"would_fail": boolPtr(false)},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {
+			serviceID: "test",
+			commands: command.Slice{
+				{"ls", "-h"},
+				{"false", "2"},
+				{"true"}},
+			approveCommandsIndividually: true},
 	}
 
 	for name, tc := range tests {
@@ -353,6 +474,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			var hadDVL deployedver.Lookup
 			var hadStatus svcstatus.Status
 			if cfg.Service[tc.serviceID] != nil {
+				cfg.Service[tc.serviceID].Options.Active = tc.active
 				hadStatus = cfg.Service[tc.serviceID].Status
 				cfg.Service[tc.serviceID].Status.Fails.Command = make([]*bool, len(tc.commands))
 				cfg.Service[tc.serviceID].Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
@@ -397,7 +519,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			// WHEN we send a message to the server (wsService)
+			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
 				Target: tc.target, ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
@@ -592,15 +714,47 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 		commands    command.Slice
 		webhooks    webhook.Slice
 	}{
-		"service_id=unknown":                       {serviceID: "unknown?", stdoutRegex: "service not found"},
-		"service_id=nil":                           {serviceID: "", stdoutRegex: "service_data.id not provided"},
-		"known service_id, 0 command, 0 webhooks,": {serviceID: "test", stdoutRegex: "^$"},
-		"known service_id, 1 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true)}},
-		"known service_id, 2 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)}},
-		"known service_id, 0 command, 1 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0")}},
-		"known service_id, 0 command, 2 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
-		"known service_id, 2 command, 2 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)},
-			webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
+		"service_id=unknown": {
+			serviceID:   "unknown?",
+			stdoutRegex: "service not found",
+		},
+		"service_id=nil": {
+			serviceID:   "",
+			stdoutRegex: "service_data.id not provided",
+		},
+		"known service_id, 0 command, 0 webhooks,": {
+			serviceID:   "test",
+			stdoutRegex: "^$",
+		},
+		"known service_id, 1 command, 0 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true)},
+		},
+		"known service_id, 2 command, 0 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true), testCommand(false)},
+		},
+		"known service_id, 0 command, 1 webhooks,": {
+			serviceID: "test",
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0")},
+		},
+		"known service_id, 0 command, 2 webhooks,": {
+			serviceID: "test",
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0"),
+				"pass0": testWebHook(false, "pass0")},
+		},
+		"known service_id, 2 command, 2 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true), testCommand(false)},
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0"),
+				"pass0": testWebHook(false, "pass0")},
+		},
 	}
 
 	for name, tc := range tests {
@@ -635,7 +789,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			// WHEN we send a message to the server (wsService)
+			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
 				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if cfg.Service[tc.serviceID] != nil {
@@ -653,8 +807,6 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			message := seeIfMessage(t, ws)
 			w.Close()
 			out, _ := io.ReadAll(r)
-			// fmt.Println(r)
-			// out := []byte{}
 			os.Stdout = stdout
 			output := string(out)
 			// stdout finishes
@@ -793,12 +945,18 @@ func TestWebSocketConfigINIT(t *testing.T) {
 		nilServiceC      bool
 		nilServiceWH     bool
 	}{
-		"no Service's":                     {nilService: true},
-		"no Service DeployedVersionLookup": {nilServiceDVL: true},
-		"no Service URLCommands":           {nilServiceURLC: true},
-		"no Service Notify":                {nilServiceNotify: true},
-		"no Service Command":               {nilServiceC: true},
-		"no Service WebHook":               {nilServiceWH: true},
+		"no Service's": {
+			nilService: true},
+		"no Service DeployedVersionLookup": {
+			nilServiceDVL: true},
+		"no Service URLCommands": {
+			nilServiceURLC: true},
+		"no Service Notify": {
+			nilServiceNotify: true},
+		"no Service Command": {
+			nilServiceC: true},
+		"no Service WebHook": {
+			nilServiceWH: true},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -1003,10 +1161,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// deployed version lookup
 				if tc.nilServiceDVL {
 					if receivedTestService.DeployedVersionLookup != nil {
-						if receivedTestService.DeployedVersionLookup != nil {
-							t.Errorf("expecting DeployedVersionLookup to be nil, not \n%#v",
-								receivedTestService.DeployedVersionLookup)
-						}
+						t.Errorf("expecting DeployedVersionLookup to be nil, not \n%#v",
+							receivedTestService.DeployedVersionLookup)
 					}
 				} else {
 					// url
@@ -1037,26 +1193,24 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// url commands
 				if tc.nilServiceURLC {
-					if len(receivedTestService.LatestVersion.URLCommands) != 0 && len(receivedTestService.LatestVersion.URLCommands) != 0 {
-						t.Errorf("expecting URLCommands to be nil, not \n%#v",
-							receivedTestService.LatestVersion.URLCommands)
+					if receivedTestService.LatestVersion.URLCommands == nil || len(*receivedTestService.LatestVersion.URLCommands) != 0 {
+						t.Errorf("expecting URLCommands to be 0, not \n%#v",
+							len(*receivedTestService.LatestVersion.URLCommands))
 					}
 				} else {
 					if receivedTestService.LatestVersion.URLCommands == nil {
 						t.Errorf("ConfigData.Service.test.URLCommands should've been %#v, got %#v",
 							cfgTestService.LatestVersion.URLCommands, receivedTestService.LatestVersion.URLCommands)
-					} else if util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex) != util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
+					} else if util.DefaultIfNil((*receivedTestService.LatestVersion.URLCommands)[0].Regex) != util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
 						t.Errorf("ConfigData.Service.test.URLCommands[0].Regex should've been %q, got %q",
-							util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex))
+							util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), util.DefaultIfNil((*receivedTestService.LatestVersion.URLCommands)[0].Regex))
 					}
 				}
 				// notify
 				if tc.nilServiceNotify {
-					if receivedTestService.Notify != nil {
-						if receivedTestService.Notify != nil && len(*receivedTestService.Notify) != 0 {
-							t.Errorf("expecting Notify to be nil, not \n%#v",
-								receivedTestService.Notify)
-						}
+					if receivedTestService.Notify != nil && len(*receivedTestService.Notify) != 0 {
+						t.Errorf("expecting Notify to be nil, not \n%#v",
+							receivedTestService.Notify)
 					}
 				} else {
 					if receivedTestService.Notify == nil {
@@ -1069,11 +1223,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// webhook
 				if tc.nilServiceWH {
-					if receivedTestService.WebHook != nil {
-						if receivedTestService.WebHook != nil && len(*receivedTestService.WebHook) != 0 {
-							t.Errorf("expecting WebHook to be nil, not \n%#v",
-								receivedTestService.WebHook)
-						}
+					if receivedTestService.WebHook != nil && len(*receivedTestService.WebHook) != 0 {
+						t.Errorf("expecting WebHook to be nil, not \n%#v",
+							receivedTestService.WebHook)
 					}
 				} else {
 					if receivedTestService.WebHook == nil {
@@ -1086,11 +1238,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// command
 				if tc.nilServiceC {
-					if receivedTestService.Command != nil {
-						if receivedTestService.Command != nil && len(*receivedTestService.Command) != 0 {
-							t.Errorf("expecting Command to be nil, not \n%#v",
-								receivedTestService.Command)
-						}
+					if receivedTestService.Command != nil && len(*receivedTestService.Command) != 0 {
+						t.Errorf("expecting Command to be nil, not \n%#v",
+							receivedTestService.Command)
 					}
 				} else {
 					if receivedTestService.Command == nil {

@@ -2,11 +2,11 @@ import { ReactElement, useEffect, useReducer } from "react";
 import { addMessageHandler, sendMessage } from "contexts/websocket";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { WebSocketResponse } from "types/websocket";
 import YAML from "yaml";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import reducerConfig from "reducers/config";
 import { useDelayedRender } from "hooks/delayed-render";
-import { websocketResponse } from "types/websocket";
 
 export const Config = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
@@ -25,7 +25,7 @@ export const Config = (): ReactElement => {
     );
 
     // Handler to listen to WebSocket messages
-    const handler = (event: websocketResponse) => {
+    const handler = (event: WebSocketResponse) => {
       if (event.page === "CONFIG") {
         setConfig(event);
       }

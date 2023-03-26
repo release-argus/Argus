@@ -50,54 +50,57 @@ func reset() {
 func TestTheMain(t *testing.T) {
 	// GIVEN different Config's to test
 	tests := map[string]struct {
-		file               string
+		file               func(path string)
 		panicShouldContain *string
 		outputContains     *[]string
 		db                 string
 	}{
-		"config with no services": {file: "../../test/no_services.yml", db: "test-no_services.db", panicShouldContain: stringPtr("No services to monitor")},
-		"config with services": {file: "../../test/argus.yml", db: "test-argus.db", outputContains: stringListPtr([]string{
-			"services to monitor:",
-			"release-argus/Argus, Latest Release - ",
-		})},
+		"config with no services": {
+			file:               testYAML_NoServices,
+			db:                 "test-no_services.db",
+			panicShouldContain: stringPtr("No services to monitor"),
+			outputContains: stringListPtr([]string{
+				"Found 0 services to monitor",
+				"Listening on "})},
+		"config with services": {
+			file: testYAML_Argus,
+			db:   "test-argus.db",
+			outputContains: stringListPtr([]string{
+				"services to monitor:",
+				"release-argus/Argus, Latest Release - ",
+				"Listening on "})},
+		"config with services and some !active": {
+			file: testYAML_Argus_SomeInactive,
+			db:   "test-argus-some-inactive.db",
+			outputContains: stringListPtr([]string{
+				"Found 1 services to monitor:"})},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			file := fmt.Sprintf("%s.yml", name)
+			tc.file(file)
+			defer os.Remove(file)
+			defer os.Remove(tc.db)
 			reset()
 			jLog = *util.NewJLog("WARN", false)
-			configFile = &tc.file
+			configFile = &file
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
 			// WHEN Main is called
 			go func() {
-				// Switch Fatal to panic and disable this panic.
 				jLog.Testing = true
-				defer func() {
-					r := recover()
-					rStr := fmt.Sprint(r)
-					if tc.panicShouldContain != nil {
-						if !strings.Contains(rStr, *tc.panicShouldContain) {
-							t.Errorf("should have panic'd with:\n%q, not:\n%q",
-								*tc.panicShouldContain, r)
-						}
-					} else if r != nil {
-						t.Errorf("wasn't expecting a panic - %q",
-							rStr)
-					}
-				}()
 				main()
 			}()
-			time.Sleep(4 * time.Second)
+			time.Sleep(3 * time.Second)
 
 			// THEN the program will have printed everything expected
 			w.Close()
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
-			os.Remove(tc.db)
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
 					if !strings.Contains(output, text) {

@@ -17,6 +17,7 @@ package shoutrrr
 import (
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -26,18 +27,38 @@ var (
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr
 
+// String returns a string representation of the Slice.
+func (s *Slice) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+
+	yamlBytes, _ := yaml.Marshal(s)
+	return string(yamlBytes)
+}
+
 type Shoutrrr struct {
-	Type          string            `yaml:"type,omitempty"` // Notification type, e.g. slack
-	ID            string            `yaml:"-"`              // ID for this Shoutrrr sender
-	Failed        *map[string]*bool `yaml:"-"`              // Whether the last send attempt failed
-	ServiceStatus *svcstatus.Status `yaml:"-"`              // Status of the Service (used for templating commands)
-	Main          *Shoutrrr         `yaml:"-"`              // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
-	Defaults      *Shoutrrr         `yaml:"-"`              // Default values
-	HardDefaults  *Shoutrrr         `yaml:"-"`              // Harcoded default values
+	Type          string            `yaml:"type,omitempty" json:"type,omitempty"` // Notification type, e.g. slack
+	ID            string            `yaml:"-" json:"-"`                           // ID for this Shoutrrr sender
+	Failed        *map[string]*bool `yaml:"-" json:"-"`                           // Whether the last send attempt failed
+	ServiceStatus *svcstatus.Status `yaml:"-" json:"-"`                           // Status of the Service (used for templating commands)
+	Main          *Shoutrrr         `yaml:"-" json:"-"`                           // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
+	Defaults      *Shoutrrr         `yaml:"-" json:"-"`                           // Default values
+	HardDefaults  *Shoutrrr         `yaml:"-" json:"-"`                           // Harcoded default values
 
 	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
 	// Thinking this may be preferable as it makes adding new services much quicker/easier
-	Options   map[string]string `yaml:"options,omitempty"`    // Options
-	URLFields map[string]string `yaml:"url_fields,omitempty"` // URL Fields
-	Params    map[string]string `yaml:"params,omitempty"`     // Query/Param Props
+	Options   map[string]string `yaml:"options,omitempty" json:"options,omitempty"`       // Options
+	URLFields map[string]string `yaml:"url_fields,omitempty" json:"url_fields,omitempty"` // URL Fields
+	Params    map[string]string `yaml:"params,omitempty" json:"params,omitempty"`         // Query/Param Props
+}
+
+// String returns a string representation of the Shoutrrr.
+func (s *Shoutrrr) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+
+	yamlBytes, _ := yaml.Marshal(s)
+	return string(yamlBytes)
 }

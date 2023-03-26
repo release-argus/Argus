@@ -27,7 +27,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 )
 
-func TestInit(t *testing.T) {
+func TestStatus_Init(t *testing.T) {
 	// GIVEN we have a Status
 	tests := map[string]struct {
 		shoutrrrs int
@@ -36,13 +36,22 @@ func TestInit(t *testing.T) {
 		serviceID string
 		webURL    string
 	}{
-		"ServiceID": {serviceID: "test"},
-		"WebURL":    {webURL: "https://example.com"},
-		"shoutrrrs": {shoutrrrs: 2},
-		"commands":  {commands: 3},
-		"webhooks":  {webhooks: 4},
-		"all": {serviceID: "argus", webURL: "https://release-argus.io",
-			shoutrrrs: 5, commands: 5, webhooks: 5},
+		"ServiceID": {
+			serviceID: "test"},
+		"WebURL": {
+			webURL: "https://example.com"},
+		"shoutrrrs": {
+			shoutrrrs: 2},
+		"commands": {
+			commands: 3},
+		"webhooks": {
+			webhooks: 4},
+		"all": {
+			serviceID: "argus",
+			webURL:    "https://release-argus.io",
+			shoutrrrs: 5,
+			commands:  5,
+			webhooks:  5},
 	}
 
 	for name, tc := range tests {
@@ -104,17 +113,25 @@ func TestInit(t *testing.T) {
 		})
 	}
 }
-func TestGetWebURL(t *testing.T) {
+func TestStatus_GetWebURL(t *testing.T) {
 	// GIVEN we have a Status
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
 		webURL *string
 		want   string
 	}{
-		"nil string":                {webURL: stringPtr(""), want: ""},
-		"empty string":              {webURL: stringPtr(""), want: ""},
-		"string without templating": {webURL: stringPtr("https://something.com/somewhere"), want: "https://something.com/somewhere"},
-		"string with templating":    {webURL: stringPtr("https://something.com/somewhere/{{ version }}"), want: "https://something.com/somewhere/" + latestVersion},
+		"nil string": {
+			webURL: stringPtr(""),
+			want:   ""},
+		"empty string": {
+			webURL: stringPtr(""),
+			want:   ""},
+		"string without templating": {
+			webURL: stringPtr("https://something.com/somewhere"),
+			want:   "https://something.com/somewhere"},
+		"string with templating": {
+			webURL: stringPtr("https://something.com/somewhere/{{ version }}"),
+			want:   "https://something.com/somewhere/" + latestVersion},
 	}
 
 	for name, tc := range tests {
@@ -135,7 +152,7 @@ func TestGetWebURL(t *testing.T) {
 	}
 }
 
-func TestSetLastQueried(t *testing.T) {
+func TestStatus_SetLastQueried(t *testing.T) {
 	// GIVEN we have a Status and some webhooks
 	var status Status
 
@@ -151,7 +168,7 @@ func TestSetLastQueried(t *testing.T) {
 	}
 }
 
-func TestSetDeployedVersion(t *testing.T) {
+func TestStatus_SetDeployedVersion(t *testing.T) {
 	// GIVEN a Status
 	approvedVersion := "0.0.2"
 	deployedVersion := "0.0.1"
@@ -162,10 +179,16 @@ func TestSetDeployedVersion(t *testing.T) {
 		deployedVersion string
 		latestVersion   string
 	}{
-		"Deploying ApprovedVersion - DeployedVersion becomes ApprovedVersion and resets ApprovedVersion": {deploying: approvedVersion,
-			approvedVersion: "", deployedVersion: approvedVersion, latestVersion: latestVersion},
-		"Deploying unknown Version - DeployedVersion becomes this version": {deploying: "0.0.4",
-			approvedVersion: approvedVersion, deployedVersion: "0.0.4", latestVersion: latestVersion},
+		"Deploying ApprovedVersion - DeployedVersion becomes ApprovedVersion and resets ApprovedVersion": {
+			deploying:       approvedVersion,
+			approvedVersion: "",
+			deployedVersion: approvedVersion,
+			latestVersion:   latestVersion},
+		"Deploying unknown Version - DeployedVersion becomes this version": {
+			deploying:       "0.0.4",
+			approvedVersion: approvedVersion,
+			deployedVersion: "0.0.4",
+			latestVersion:   latestVersion},
 	}
 
 	for name, tc := range tests {
@@ -203,18 +226,47 @@ func TestSetDeployedVersion(t *testing.T) {
 	}
 }
 
-func TestResetFails(t *testing.T) {
+func TestFails_ResetFails(t *testing.T) {
 	// GIVEN a Fails struct
 	tests := map[string]struct {
 		fails Fails
 	}{
-		"all empty":     {fails: Fails{}},
-		"only notifies": {fails: Fails{Shoutrrr: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
-		"only commands": {fails: Fails{Command: []*bool{nil, boolPtr(false), boolPtr(true)}}},
-		"only webhooks": {fails: Fails{WebHook: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
-		"all filled": {fails: Fails{Shoutrrr: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)},
-			Command: []*bool{nil, boolPtr(false), boolPtr(true)},
-			WebHook: map[string]*bool{"0": nil, "1": boolPtr(false), "3": boolPtr(true)}}},
+		"all empty": {
+			fails: Fails{},
+		},
+		"only notifies": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"0": nil,
+					"1": boolPtr(false),
+					"3": boolPtr(true)}},
+		},
+		"only commands": {
+			fails: Fails{
+				Command: []*bool{
+					nil,
+					boolPtr(false),
+					boolPtr(true)}},
+		},
+		"only webhooks": {
+			fails: Fails{
+				WebHook: map[string]*bool{
+					"0": nil,
+					"1": boolPtr(false),
+					"3": boolPtr(true)}},
+		},
+		"all filled": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"0": nil,
+					"1": boolPtr(false),
+					"3": boolPtr(true)},
+				Command: []*bool{nil, boolPtr(false), boolPtr(true)},
+				WebHook: map[string]*bool{
+					"0": nil,
+					"1": boolPtr(false),
+					"3": boolPtr(true)}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -247,7 +299,7 @@ func TestResetFails(t *testing.T) {
 	}
 }
 
-func TestSetLatestVersion(t *testing.T) {
+func TestStatus_SetLatestVersion(t *testing.T) {
 	// GIVEN a Status
 	approvedVersion := "0.0.2"
 	deployedVersion := "0.0.1"
@@ -258,8 +310,11 @@ func TestSetLatestVersion(t *testing.T) {
 		deployedVersion string
 		latestVersion   string
 	}{
-		"Sets LatestVersion and LatestVersionTimestamp": {deploying: "0.0.4",
-			approvedVersion: approvedVersion, deployedVersion: deployedVersion, latestVersion: "0.0.4"},
+		"Sets LatestVersion and LatestVersionTimestamp": {
+			deploying:       "0.0.4",
+			approvedVersion: approvedVersion,
+			deployedVersion: deployedVersion,
+			latestVersion:   "0.0.4"},
 	}
 
 	for name, tc := range tests {
@@ -295,7 +350,7 @@ func TestSetLatestVersion(t *testing.T) {
 	}
 }
 
-func TestPrintFull(t *testing.T) {
+func TestStatus_PrintFull(t *testing.T) {
 	// GIVEN we have a Status with everything defined
 	status := Status{
 		ApprovedVersion:          "1.2.4",
@@ -323,7 +378,7 @@ func TestPrintFull(t *testing.T) {
 	}
 }
 
-func TestPrintEmpty(t *testing.T) {
+func TestStatus_PrintEmpty(t *testing.T) {
 	// GIVEN we have a Status with nothing defined
 	status := Status{}
 	stdout := os.Stdout
@@ -342,5 +397,173 @@ func TestPrintEmpty(t *testing.T) {
 	if got != want {
 		t.Errorf("Print should have given %d lines, but gave %d\n%s",
 			want, got, out)
+	}
+}
+
+func TestStatus_String(t *testing.T) {
+	// GIVEN a Status
+	tests := map[string]struct {
+		status Status
+		want   string
+	}{
+		"empty status": {
+			status: Status{},
+			want:   "",
+		},
+		"only fails": {
+			status: Status{
+				Fails: Fails{
+					Shoutrrr: map[string]*bool{
+						"bish": nil,
+						"bash": boolPtr(false),
+						"bosh": boolPtr(true)},
+					Command: []*bool{
+						nil,
+						boolPtr(false),
+						boolPtr(true)},
+					WebHook: map[string]*bool{
+						"foo": boolPtr(false),
+						"bar": nil},
+				}},
+			want: "fails: {shoutrrr: {bosh: true}, command: [2: true]}",
+		},
+		"all fields": {
+			status: Status{
+				ApprovedVersion:          "1.2.4",
+				DeployedVersion:          "1.2.3",
+				DeployedVersionTimestamp: "2022-01-01T01:01:01Z",
+				LatestVersion:            "1.2.4",
+				LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
+				LastQueried:              "2022-01-01T01:01:01Z",
+				RegexMissesContent:       1,
+				RegexMissesVersion:       2,
+				Fails: Fails{
+					Shoutrrr: map[string]*bool{
+						"bish": nil,
+						"bash": boolPtr(false),
+						"bosh": boolPtr(true)},
+					Command: []*bool{
+						nil,
+						boolPtr(false),
+						boolPtr(true)},
+					WebHook: map[string]*bool{
+						"foo": boolPtr(false),
+						"bar": nil},
+				},
+			},
+			want: "approved_version: 1.2.4, deployed_version: 1.2.3, deployed_version_timestamp: 2022-01-01T01:01:01Z, latest_version: 1.2.4, latest_version_timestamp: 2022-01-01T01:01:01Z, last_queried: 2022-01-01T01:01:01Z, regex_misses_content: 1, regex_misses_version: 2, fails: {shoutrrr: {bosh: true}, command: [2: true]}",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			// WHEN the Status is stringified with String
+			got := tc.status.String()
+
+			// THEN the result is as expected
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFails_String(t *testing.T) {
+	// GIVEN a Fails
+	tests := map[string]struct {
+		fails Fails
+		want  string
+	}{
+		"empty fails": {
+			fails: Fails{}, want: "",
+		},
+		"no fails": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"foo": nil,
+					"bar": boolPtr(false)},
+				Command: []*bool{
+					nil, boolPtr(false)},
+				WebHook: map[string]*bool{
+					"foo": boolPtr(false),
+					"bar": nil},
+			}, want: "",
+		},
+		"only shoutrrr": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"bish": nil,
+					"bash": boolPtr(false),
+					"bosh": boolPtr(true)}},
+			want: "shoutrrr: {bosh: true}",
+		},
+		"only command": {
+			fails: Fails{
+				Command: []*bool{
+					nil,
+					boolPtr(false),
+					boolPtr(true)}},
+			want: "command: [2: true]",
+		},
+		"only webhook": {
+			fails: Fails{
+				WebHook: map[string]*bool{
+					"bish": boolPtr(false),
+					"bash": boolPtr(true),
+					"bosh": nil}},
+			want: "webhook: {bash: true}",
+		},
+		"all": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"bish": boolPtr(true),
+					"bash": boolPtr(false),
+					"bosh": nil},
+				Command: []*bool{
+					nil,
+					boolPtr(false),
+					boolPtr(true)},
+				WebHook: map[string]*bool{
+					"bish": nil,
+					"bash": boolPtr(false),
+					"bosh": boolPtr(true)},
+			},
+			want: "shoutrrr: {bish: true}, command: [2: true], webhook: {bosh: true}",
+		},
+		"maps are alphabetical": {
+			fails: Fails{
+				Shoutrrr: map[string]*bool{
+					"bish": boolPtr(true),
+					"bash": boolPtr(true),
+					"bosh": boolPtr(true)},
+				Command: []*bool{
+					nil,
+					boolPtr(true),
+					boolPtr(false)},
+				WebHook: map[string]*bool{
+					"zip":  boolPtr(true),
+					"zap":  boolPtr(true),
+					"zoop": boolPtr(true)},
+			},
+			want: "shoutrrr: {bash: true, bish: true, bosh: true}, command: [1: true], webhook: {zap: true, zip: true, zoop: true}",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			// WHEN the Fails is stringified with String
+			got := tc.fails.String()
+
+			// THEN the result is as expected
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
 	}
 }

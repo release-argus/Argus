@@ -1,17 +1,14 @@
 import { Dispatch } from "react";
-import { websocketResponse } from "types/websocket";
+import { WebSocketResponse } from "types/websocket";
 
 export function handleMessage(
-  action: websocketResponse,
-  reducer: Dispatch<websocketResponse>
+  action: WebSocketResponse,
+  reducer: Dispatch<WebSocketResponse>
 ) {
-  switch (action.page) {
-    case "APPROVALS":
-      switch (action.type) {
-        // SERVICE || VERSION
-        case "SERVICE":
-        case "VERSION":
-          reducer(action);
-      }
+  if (
+    action.page === "APPROVALS" &&
+    ["SERVICE", "VERSION", "EDIT", "DELETE", "RESET"].includes(action.type)
+  ) {
+    reducer(action);
   }
 }

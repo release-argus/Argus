@@ -140,6 +140,8 @@ func (s *Shoutrrr) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
-	metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
+	if s.ServiceStatus != nil {
+		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
+		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
+	}
 }

@@ -205,12 +205,11 @@ func (s *Service) HandleCommand(command string) {
 // HandleWebHook will handle sending the WebHook for this service
 // to the WebHook with a matching ID.
 func (s *Service) HandleWebHook(webhookID string) {
-	//nolint:typecheck
 	if s.WebHook == nil || s.WebHook[webhookID] == nil {
 		return
 	}
 
-	// Skip if it's before NextRunnable
+	// Skip if it's before NextRunnable.
 	if !s.WebHook[webhookID].IsRunnable() {
 		return
 	}
@@ -231,11 +230,15 @@ func (s *Service) HandleSkip(version string) {
 	s.Status.ApprovedVersion = "SKIP_" + version
 	s.Status.AnnounceApproved()
 
-	*s.Status.DatabaseChannel <- dbtype.Message{
-		ServiceID: s.ID,
-		Cells: []dbtype.Cell{
-			{Column: "approved_version", Value: s.Status.ApprovedVersion},
-		},
+	// Update the database
+	if s.Status.DatabaseChannel != nil {
+		*s.Status.DatabaseChannel <- dbtype.Message{
+			ServiceID: s.ID,
+			Cells: []dbtype.Cell{
+				{Column: "approved_version",
+					Value: s.Status.ApprovedVersion},
+			},
+		}
 	}
 }
 

@@ -41,7 +41,7 @@ func NotifyTest(
 	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
-	slice := findShoutrrr(*flag, cfg, log, logFrom)
+	slice := findShoutrrr(*flag, cfg, log, &logFrom)
 
 	title := slice["test"].GetTitle(&util.ServiceInfo{ID: "Test"})
 	message := "TEST - " + slice["test"].GetMessage(
@@ -74,7 +74,7 @@ func findShoutrrr(
 	name string,
 	cfg *config.Config,
 	log *util.JLog,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) shoutrrr.Slice {
 	slice := shoutrrr.Slice{}
 	for _, svc := range cfg.Service {
@@ -109,13 +109,13 @@ func findShoutrrr(
 
 			if err := slice["test"].CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))
-				log.Fatal(msg, logFrom, true)
+				log.Fatal(msg, *logFrom, true)
 			}
 		} else {
 			all := getAllShoutrrrNames(cfg)
 			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
 				name, strings.Join(all, "\n  - "))
-			log.Fatal(msg, logFrom, true)
+			log.Fatal(msg, *logFrom, true)
 		}
 	}
 	serviceID := "TESTING"
@@ -125,12 +125,18 @@ func findShoutrrr(
 
 // getAllShoutrrrNames will return a list of all unique shoutrrr names
 func getAllShoutrrrNames(cfg *config.Config) (all []string) {
+	// All global Shoutrrrs
 	if cfg.Notify != nil {
+		all = make([]string, len(cfg.Notify))
+		index := 0
 		for key := range cfg.Notify {
-			all = append(all, key)
+			all[index] = key
+			index++
 		}
 	}
 	sort.Strings(all)
+
+	// All Shoutrrrs in services
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
 			for key := range svc.Notify {

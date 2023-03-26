@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package service
 
@@ -30,10 +30,13 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func stringPtr(val string) *string {
+func boolPtr(val bool) *bool {
 	return &val
 }
-func boolPtr(val bool) *bool {
+func intPtr(val int) *int {
+	return &val
+}
+func stringPtr(val string) *string {
 	return &val
 }
 func stringifyPointer[T comparable](ptr *T) string {
@@ -105,6 +108,30 @@ func testServiceGitHub(id string) *Service {
 	return svc
 }
 
+func testLatestVersionLookupURL(fail bool) latestver.Lookup {
+	return latestver.Lookup{
+		Type: "url",
+		URL:  "https://invalid.release-argus.io/plain",
+		Require: &filter.Require{
+			RegexContent: "{{ version }}-beta",
+			RegexVersion: "[0-9]+",
+		},
+		URLCommands: filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
+		},
+		AllowInvalidCerts: boolPtr(!fail),
+		UsePreRelease:     boolPtr(false),
+	}
+}
+
+func testDeployedVersionLookup(fail bool) *deployedver.Lookup {
+	return &deployedver.Lookup{
+		URL:               "https://invalid.release-argus.io/json",
+		JSON:              "version",
+		AllowInvalidCerts: boolPtr(!fail),
+	}
+}
+
 func testServiceURL(id string) *Service {
 	var (
 		announceChannel = make(chan []byte, 5)
@@ -112,25 +139,9 @@ func testServiceURL(id string) *Service {
 		databaseChannel = make(chan dbtype.Message, 5)
 	)
 	svc := &Service{
-		ID: id,
-		LatestVersion: latestver.Lookup{
-			Type: "url",
-			URL:  "https://valid.release-argus.io/plain",
-			Require: &filter.Require{
-				RegexContent: "{{ version }}-beta",
-				RegexVersion: "[0-9]+",
-			},
-			URLCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
-			},
-			AllowInvalidCerts: boolPtr(true),
-			UsePreRelease:     boolPtr(false),
-		},
-		DeployedVersionLookup: &deployedver.Lookup{
-			URL:               "https://valid.release-argus.io/json",
-			JSON:              "version",
-			AllowInvalidCerts: boolPtr(false),
-		},
+		ID:                    id,
+		LatestVersion:         testLatestVersionLookupURL(false),
+		DeployedVersionLookup: testDeployedVersionLookup(false),
 		Dashboard: DashboardOptions{
 			AutoApprove:  boolPtr(false),
 			Icon:         "test",

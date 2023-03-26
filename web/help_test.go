@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package web
 
@@ -124,8 +124,7 @@ func testConfig() config.Config {
 		Service: service.Slice{
 			svc.ID: &svc,
 		},
-		Order: &[]string{svc.ID},
-		All:   []string{svc.ID},
+		Order: []string{svc.ID},
 	}
 }
 
@@ -157,6 +156,11 @@ func testService(id string) service.Service {
 			Require: &filter.Require{
 				RegexContent: "content",
 				RegexVersion: "version",
+				Docker: &filter.DockerCheck{
+					Type:  "ghcr",
+					Image: "release-argus/argus",
+					Tag:   "{{ version }}",
+				},
 			},
 		},
 		Options: opt.Options{

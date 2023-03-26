@@ -17,49 +17,53 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 
-	"github.com/release-argus/Argus/service"
-	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/util"
 )
 
-func TestOrdering(t *testing.T) {
+func TestConfig_LoadOrdering(t *testing.T) {
 	// GIVEN we have configs to load
 	tests := map[string]struct {
-		file  string
-		all   []string
+		file  func(path string)
 		order []string
 	}{
-		"with services": {file: "../test/ordering_0.yml",
-			all:   []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"},
-			order: []string{"NoDefaults", "WantDefaults", "Gitea"}},
-		"no services": {file: "../test/ordering_1.yml",
-			all:   []string{},
+		"with services": {file: testYAML_Ordering_0,
+			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"}},
+		"no services": {file: testYAML_Ordering_1,
 			order: []string{}},
 	}
 
+	var lock sync.Mutex
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			file := fmt.Sprintf("%s.yml", name)
+			defer os.Remove(file)
+			tc.file(file)
+
 			// WHEN they are loaded
-			config := testLoad(tc.file)
+			flags := make(map[string]bool)
+			log := util.NewJLog("WARN", true)
+			var config Config
+			// Lock as jLog = log would DATA RACE
+			lock.Lock()
+			config.Load(file, &flags, log)
+			lock.Unlock()
+			defer os.Remove(*config.Settings.GetDataDatabaseFile())
 
 			// THEN it gets the ordering correctly
-			gotAll := config.All
-			for i := range gotAll {
-				if i >= len(gotAll) || tc.all[i] != (gotAll)[i] {
-					t.Fatalf("%q %s - all:\nwant:%v\ngot:  %v", tc.file, name, tc.all, gotAll)
-				}
-			}
-			gotOrder := *config.Order
+			gotOrder := config.Order
 			for i := range gotOrder {
 				if i >= len(gotOrder) || tc.order[i] != (gotOrder)[i] {
-					t.Fatalf("%q %s - order:\nwant: %v\ngot:  %v", tc.file, name, tc.order, gotOrder)
+					t.Fatalf("%q %s - order:\nwant: %v\ngot:  %v",
+						file, name, tc.order, gotOrder)
 				}
 			}
-			os.Remove(*config.Settings.GetDataDatabaseFile())
 		})
 	}
 }
@@ -71,15 +75,20 @@ func TestGetIndentationW(t *testing.T) {
 		want  string
 	}{
 		"leading space": {
-			input: "   abc", want: "   "},
+			input: "   abc",
+			want:  "   "},
 		"leading and trailing space": {
-			input: "   abc      ", want: "   "},
+			input: "   abc      ",
+			want:  "   "},
 		"trailing space": {
-			input: "abc      ", want: ""},
+			input: "abc      ",
+			want:  ""},
 		"no indents": {
-			input: "abc", want: ""},
+			input: "abc",
+			want:  ""},
 		"empty string": {
-			input: "", want: ""},
+			input: "",
+			want:  ""},
 	}
 
 	for name, tc := range tests {
@@ -95,29 +104,5 @@ func TestGetIndentationW(t *testing.T) {
 					name, tc.input, tc.want, got)
 			}
 		})
-	}
-}
-
-func TestFilterInactive(t *testing.T) {
-	// GIVEN a Config with inactive and active services
-	allServices := []string{"1", "2", "3", "4"}
-	config := Config{
-		Service: service.Slice{
-			"1": &service.Service{},
-			"2": &service.Service{Options: opt.Options{Active: boolPtr(false)}},
-			"3": &service.Service{Active: boolPtr(false)},
-			"4": &service.Service{},
-		},
-		All:   allServices,
-		Order: &allServices,
-	}
-
-	// WHEN filterInactive is called on this Config
-	config.filterInactive()
-
-	// THEN the inactive Service is removed from Order
-	if len(*config.Order) != 2 || (*config.Order)[1] != "4" {
-		t.Fatalf("Service %q and %q should have been removed from Order - %v",
-			"2", "3", config.Order)
 	}
 }

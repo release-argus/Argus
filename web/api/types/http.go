@@ -14,9 +14,18 @@
 
 package apitype
 
-// VersionAPI used to /api/v1/version
+import "time"
+
+// VersionAPI used in /api/v1/version
 type VersionAPI struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"buildDate"`
 	GoVersion string `json:"goVersion"`
+}
+
+// RefreshAPI used in /api/v1/*_version/refresh
+type RefreshAPI struct {
+	Version string    `json:"version"`
+	Error   string    `json:"error,omitempty"`
+	Date    time.Time `json:"timestamp"`
 }

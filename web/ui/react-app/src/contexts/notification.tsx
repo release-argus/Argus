@@ -1,4 +1,10 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import Notification from "components/notification";
 import { NotificationType } from "types/notification";
@@ -20,45 +26,45 @@ const NotificationContext = createContext<NotificationCtx>({
   removeNotification: (id: number | undefined) => {},
 });
 
-let id = 0;
 const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
 
-  const addNotification = useCallback(
-    (notification: NotificationType) => {
-      // Don't repeat notifications
-      setNotifications((notifications) => [
-        ...notifications,
-        { ...notification, id: id++ },
-      ]);
-    },
-    [setNotifications]
-  );
+  const addNotification = (notification: NotificationType) => {
+    // Don't repeat notifications
+    setNotifications((prevState: NotificationType[]) => [
+      ...prevState,
+      {
+        ...notification,
+        id:
+          prevState.length === 0
+            ? 0
+            : (prevState[prevState.length - 1].id as number) + 1,
+      },
+    ]);
+  };
 
   useEffect(() => {
     addMessageHandler("notifications", handleNotifications, {
       addNotification: addNotification,
     });
-  }, [addNotification]);
+  }, []);
 
-  const removeNotification = useCallback(
-    (id: number | undefined) => {
-      id !== undefined &&
-        setNotifications((notifications) =>
-          notifications.filter((n) => n.id !== id)
-        );
-    },
-    [setNotifications]
+  const removeNotification = useCallback((id?: number) => {
+    id !== undefined &&
+      setNotifications((prevState) => prevState.filter((n) => n.id !== id));
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      notifications,
+      addNotification,
+      removeNotification,
+    }),
+    [notifications, addNotification, removeNotification]
   );
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        addNotification,
-        removeNotification,
-      }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       <ToastContainer
         className="p-3 position-fixed"
         position={"bottom-end"}

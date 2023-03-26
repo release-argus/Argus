@@ -32,8 +32,14 @@ func TestWebHookPrint(t *testing.T) {
 		webhook WebHook
 		lines   int
 	}{
-		"all fields":     {lines: 10, webhook: *testWebHook(true, true, false, true)},
-		"partial fields": {lines: 2, webhook: WebHook{Type: "github", URL: "https://release-argus.io"}},
+		"all fields": {
+			lines:   10,
+			webhook: *testWebHook(true, true, false, true)},
+		"partial fields": {
+			lines: 2,
+			webhook: WebHook{
+				Type: "github",
+				URL:  "https://release-argus.io"}},
 	}
 
 	for name, tc := range tests {
@@ -65,11 +71,34 @@ func TestSlicePrint(t *testing.T) {
 		lines        int
 		regexMatches []string
 	}{
-		"nil slice": {lines: 0, slice: nil},
-		"single element slice": {lines: 4, slice: &Slice{"single": &WebHook{Type: "github", URL: "https://release-argus.io"}},
-			regexMatches: []string{"^webhook:$", "^  single:$", "^    type: "}},
-		"multiple element slice": {lines: 13, slice: &Slice{"first": &WebHook{Type: "github", URL: "https://release-argus.io"}, "second": testWebHook(true, true, false, false)},
-			regexMatches: []string{"^webhook:$", "^  first:$", "^    type: ", "^  second:$", "^    delay"}},
+		"nil slice": {
+			lines: 0, slice: nil,
+		},
+		"single element slice": {
+			lines: 4,
+			slice: &Slice{
+				"single": &WebHook{
+					Type: "github",
+					URL:  "https://release-argus.io"}},
+			regexMatches: []string{
+				"^webhook:$",
+				"^  single:$",
+				"^    type: "},
+		},
+		"multiple element slice": {
+			lines: 13,
+			slice: &Slice{
+				"first": &WebHook{
+					Type: "github",
+					URL:  "https://release-argus.io"},
+				"second": testWebHook(true, true, false, false)},
+			regexMatches: []string{
+				"^webhook:$",
+				"^  first:$",
+				"^    type: ",
+				"^  second:$",
+				"^    delay"},
+		},
 	}
 
 	for name, tc := range tests {
@@ -120,19 +149,55 @@ func TestWebHookCheckValues(t *testing.T) {
 		whType        string
 		url           *string
 		secret        *string
-		customHeaders map[string]string
+		customHeaders Headers
 		errRegex      string
 	}{
-		"valid WebHook":          {errRegex: "^$"},
-		"invalid delay":          {errRegex: "delay: .* <invalid>", delay: "5x"},
-		"fix int delay":          {errRegex: "^$", delay: "5", wantDelay: "5s"},
-		"invalid type":           {errRegex: "type: .* <invalid>", whType: "foo"},
-		"invalid url template":   {errRegex: "url: .* <invalid>", url: stringPtr("{{ version }")},
-		"no url":                 {errRegex: "url: <required>", url: stringPtr("")},
-		"no secret":              {errRegex: "secret: <required>", secret: stringPtr("")},
-		"valid custom headers":   {errRegex: "^$", customHeaders: map[string]string{"foo": "bar"}},
-		"invalid custom headers": {errRegex: `\  bar: .* <invalid>`, customHeaders: map[string]string{"foo": "bar", "bar": "{{ version }"}},
-		"all errs":               {errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>", delay: "5x", whType: "foo", url: stringPtr(""), secret: stringPtr("")},
+		"valid WebHook": {
+			errRegex: "^$",
+		},
+		"invalid delay": {
+			errRegex: "delay: .* <invalid>",
+			delay:    "5x",
+		},
+		"fix int delay": {
+			errRegex:  "^$",
+			delay:     "5",
+			wantDelay: "5s",
+		},
+		"invalid type": {
+			errRegex: "type: .* <invalid>",
+			whType:   "foo",
+		},
+		"invalid url template": {
+			errRegex: "url: .* <invalid>",
+			url:      stringPtr("{{ version }"),
+		},
+		"no url": {
+			errRegex: "url: <required>",
+			url:      stringPtr(""),
+		},
+		"no secret": {
+			errRegex: "secret: <required>",
+			secret:   stringPtr(""),
+		},
+		"valid custom headers": {
+			errRegex: "^$",
+			customHeaders: Headers{
+				{Key: "foo", Value: "bar"}},
+		},
+		"invalid custom headers": {
+			errRegex: `\  bar: .* <invalid>`,
+			customHeaders: Headers{
+				{Key: "foo", Value: "bar"},
+				{Key: "bar", Value: "{{ version }"}},
+		},
+		"all errs": {
+			errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>",
+			delay:    "5x",
+			whType:   "foo",
+			url:      stringPtr(""),
+			secret:   stringPtr(""),
+		},
 	}
 
 	for name, tc := range tests {
@@ -179,12 +244,36 @@ func TestSliceCheckValues(t *testing.T) {
 		slice    *Slice
 		errRegex string
 	}{
-		"nil slice":                    {errRegex: "^$"},
-		"valid single element slice":   {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false, false)}},
-		"invalid single element slice": {errRegex: "delay: .* <invalid>", slice: &Slice{"a": &WebHook{Delay: "5x"}}},
-		"valid multi element slice":    {errRegex: "^$", slice: &Slice{"a": testWebHook(true, true, false, false), "b": testWebHook(false, true, false, false)}},
-		"invalid multi element slice": {errRegex: "delay: .* <invalid>.*type: .* <invalid>",
-			slice: &Slice{"a": &WebHook{Delay: "5x"}, "b": &WebHook{Type: "foo", Main: &WebHook{}, Defaults: &WebHook{}, HardDefaults: &WebHook{}}}},
+		"nil slice": {
+			errRegex: "^$",
+		},
+		"valid single element slice": {
+			errRegex: "^$",
+			slice: &Slice{
+				"a": testWebHook(true, true, false, false)},
+		},
+		"invalid single element slice": {
+			errRegex: "delay: .* <invalid>",
+			slice: &Slice{
+				"a": &WebHook{Delay: "5x"}},
+		},
+		"valid multi element slice": {
+			errRegex: "^$",
+			slice: &Slice{
+				"a": testWebHook(true, true, false, false),
+				"b": testWebHook(false, true, false, false)},
+		},
+		"invalid multi element slice": {
+			errRegex: "delay: .* <invalid>.*type: .* <invalid>",
+			slice: &Slice{
+				"a": &WebHook{
+					Delay: "5x"},
+				"b": &WebHook{
+					Type:         "foo",
+					Main:         &WebHook{},
+					Defaults:     &WebHook{},
+					HardDefaults: &WebHook{}}},
+		},
 	}
 
 	for name, tc := range tests {

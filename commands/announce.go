@@ -24,7 +24,7 @@ import (
 // (Broadcast to all WebSocket clients).
 func (c *Controller) AnnounceCommand(index int) {
 	c.SetNextRunnable(index, false)
-	commandSummary := make(map[string]*api_type.CommandSummary)
+	commandSummary := make(map[string]*api_type.CommandSummary, 1)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_type.CommandSummary{
 		Failed:       (*c.Failed)[index],

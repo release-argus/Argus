@@ -1,15 +1,15 @@
-import { ModalType, ServiceSummaryType, WebHookModal } from "types/summary";
+import { ModalType, ServiceModal, ServiceSummaryType } from "types/summary";
 
 import { useState } from "react";
 
 const useModal = () => {
-  const [modal, setModal] = useState<WebHookModal>({
-    type: "",
+  const [modal, setModal] = useState<ServiceModal>({
+    actionType: "",
     service: { id: "", loading: true },
   });
 
-  const handleModal = (type: ModalType, service: ServiceSummaryType) => {
-    setModal({ type, service });
+  const handleModal = (actionType: ModalType, service: ServiceSummaryType) => {
+    setModal({ actionType, service });
   };
 
   return { modal, handleModal };

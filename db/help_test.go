@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package db
 
 import (
 	"database/sql"
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -63,10 +63,14 @@ func testConfig() config.Config {
 			"keep2":   &svc,
 			"delete3": &svc,
 		},
-		All: []string{
+		Order: []string{
+			"delete0",
 			"keep0",
+			"delete1",
 			"keep1",
+			"delete2",
 			"keep2",
+			"delete3",
 		},
 		DatabaseChannel: &databaseChannel,
 		SaveChannel:     &saveChannel,
@@ -74,7 +78,7 @@ func testConfig() config.Config {
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) svcstatus.Status {
-	sqlStmt := fmt.Sprintf(`
+	sqlStmt := `
 	SELECT
 		id,
 		latest_version,
@@ -83,13 +87,22 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) svcstatus.Status {
 		deployed_version_timestamp,
 		approved_version
 	FROM status
-	WHERE id = '%s';`,
-		serviceID)
-	row, err := db.Query(sqlStmt)
+	WHERE id = ?;`
+	// Retry up-to 10 times incase 'database is locked'
+	var row *sql.Rows
+	var err error
+	for i := 0; i < 10; i++ {
+		row, err = db.Query(sqlStmt, serviceID)
+		if err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer row.Close()
+
 	var (
 		id  string
 		lv  string

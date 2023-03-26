@@ -1,16 +1,16 @@
 import { Alert } from "react-bootstrap";
 import { BooleanType } from "types/boolean";
+import { FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ReactElement } from "react";
 import { WS_ADDRESS } from "config";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 
-interface params {
+interface Props {
   connected: BooleanType;
 }
 
-export const WebSocketStatus = ({ connected }: params): ReactElement => {
+export const WebSocketStatus: FC<Props> = ({ connected }) => {
   const delayedRender = useDelayedRender(1000);
   const fallback = (
     <Alert variant={connected === false ? "danger" : "info"}>

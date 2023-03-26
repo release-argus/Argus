@@ -24,14 +24,15 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceSend(t *testing.T) {
+func TestWebHook_AnnounceSend(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
 		nilChannel     bool
 		failed         *bool
 		timeDifference time.Duration
 	}{
-		"no channel": {nilChannel: true},
+		"no channel": {
+			nilChannel: true},
 		"not tried (failed=nil) does delay by 15s": {
 			timeDifference: 15 * time.Second,
 			failed:         nil,

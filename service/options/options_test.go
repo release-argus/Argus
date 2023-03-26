@@ -27,26 +27,32 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestGetActive(t *testing.T) {
-	// GIVEN a Lookup
+func TestOptions_GetActive(t *testing.T) {
+	// GIVEN Options
 	tests := map[string]struct {
 		active *bool
 		want   bool
 	}{
-		"nil":   {active: nil, want: true},
-		"true":  {active: boolPtr(true), want: true},
-		"false": {active: boolPtr(false), want: false},
+		"nil": {
+			active: nil,
+			want:   true},
+		"true": {
+			active: boolPtr(true),
+			want:   true},
+		"false": {
+			active: boolPtr(false),
+			want:   false},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			lookup := testOptions()
-			lookup.Active = tc.active
+			options := testOptions()
+			options.Active = tc.active
 
 			// WHEN GetActive is called
-			got := lookup.GetActive()
+			got := options.GetActive()
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -57,33 +63,45 @@ func TestGetActive(t *testing.T) {
 	}
 }
 
-func TestGetInterval(t *testing.T) {
-	// GIVEN a Lookup
+func TestOptions_GetInterval(t *testing.T) {
+	// GIVEN Options
 	tests := map[string]struct {
 		intervalRoot        string
 		intervalDefault     string
 		intervalHardDefault string
 		wantString          string
 	}{
-		"root overrides all": {wantString: "10s", intervalRoot: "10s",
-			intervalDefault: "1m10s", intervalHardDefault: "1m10s"},
-		"default overrides hardDefault": {wantString: "10s", intervalRoot: "",
-			intervalDefault: "10s", intervalHardDefault: "1m10s"},
-		"hardDefault is last resort": {wantString: "10s", intervalRoot: "", intervalDefault: "",
-			intervalHardDefault: "10s"},
+		"root overrides all": {
+			wantString:          "10s",
+			intervalRoot:        "10s",
+			intervalDefault:     "1m10s",
+			intervalHardDefault: "1m10s",
+		},
+		"default overrides hardDefault": {
+			wantString:          "10s",
+			intervalRoot:        "",
+			intervalDefault:     "10s",
+			intervalHardDefault: "1m10s",
+		},
+		"hardDefault is last resort": {
+			wantString:          "10s",
+			intervalRoot:        "",
+			intervalDefault:     "",
+			intervalHardDefault: "10s",
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			lookup := testOptions()
-			lookup.Interval = tc.intervalRoot
-			lookup.Defaults.Interval = tc.intervalDefault
-			lookup.HardDefaults.Interval = tc.intervalHardDefault
+			options := testOptions()
+			options.Interval = tc.intervalRoot
+			options.Defaults.Interval = tc.intervalDefault
+			options.HardDefaults.Interval = tc.intervalHardDefault
 
 			// WHEN GetInterval is called
-			got := lookup.GetInterval()
+			got := options.GetInterval()
 
 			// THEN the function returns the correct result
 			if got != tc.wantString {
@@ -94,33 +112,45 @@ func TestGetInterval(t *testing.T) {
 	}
 }
 
-func TestGetSemanticVersioning(t *testing.T) {
-	// GIVEN a Lookup
+func TestOptions_GetSemanticVersioning(t *testing.T) {
+	// GIVEN Options
 	tests := map[string]struct {
 		semanticVersioningRoot        *bool
 		semanticVersioningDefault     *bool
 		semanticVersioningHardDefault *bool
 		wantBool                      bool
 	}{
-		"root overrides all": {wantBool: true, semanticVersioningRoot: boolPtr(true),
-			semanticVersioningDefault: boolPtr(false), semanticVersioningHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, semanticVersioningRoot: nil,
-			semanticVersioningDefault: boolPtr(true), semanticVersioningHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, semanticVersioningRoot: nil, semanticVersioningDefault: nil,
-			semanticVersioningHardDefault: boolPtr(true)},
+		"root overrides all": {
+			wantBool:                      true,
+			semanticVersioningRoot:        boolPtr(true),
+			semanticVersioningDefault:     boolPtr(false),
+			semanticVersioningHardDefault: boolPtr(false),
+		},
+		"default overrides hardDefault": {
+			wantBool:                      true,
+			semanticVersioningRoot:        nil,
+			semanticVersioningDefault:     boolPtr(true),
+			semanticVersioningHardDefault: boolPtr(false),
+		},
+		"hardDefault is last resort": {
+			wantBool:                      true,
+			semanticVersioningRoot:        nil,
+			semanticVersioningDefault:     nil,
+			semanticVersioningHardDefault: boolPtr(true),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			lookup := testOptions()
-			lookup.SemanticVersioning = tc.semanticVersioningRoot
-			lookup.Defaults.SemanticVersioning = tc.semanticVersioningDefault
-			lookup.HardDefaults.SemanticVersioning = tc.semanticVersioningHardDefault
+			options := testOptions()
+			options.SemanticVersioning = tc.semanticVersioningRoot
+			options.Defaults.SemanticVersioning = tc.semanticVersioningDefault
+			options.HardDefaults.SemanticVersioning = tc.semanticVersioningHardDefault
 
 			// WHEN GetSemanticVersioning is called
-			got := lookup.GetSemanticVersioning()
+			got := options.GetSemanticVersioning()
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
@@ -131,28 +161,59 @@ func TestGetSemanticVersioning(t *testing.T) {
 	}
 }
 
-func TestGetIntervalPointer(t *testing.T) {
-	// GIVEN a Lookup
-	lookup := testOptions()
-	lookup.Interval = "10s"
+func TestOptions_GetIntervalPointer(t *testing.T) {
+	// GIVEN options
+	tests := map[string]struct {
+		options *Options
+		want    string
+	}{
+		"root overrides all": {
+			options: &Options{
+				Interval: "10s",
+				Defaults: &Options{
+					Interval: "20s"},
+				HardDefaults: &Options{
+					Interval: "30s"}},
+			want: "10s"},
+		"default overrides hardDefault": {
+			options: &Options{
+				Defaults: &Options{
+					Interval: "20s"},
+				HardDefaults: &Options{
+					Interval: "30s"}},
+			want: "20s"},
+		"hardDefault is last resort": {
+			options: &Options{
+				Defaults: &Options{},
+				HardDefaults: &Options{
+					Interval: "30s"}},
+			want: "30s"},
+	}
 
-	// WHEN GetIntervalPointer is called
-	got := lookup.GetIntervalPointer()
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	// THEN the function returns the correct result
-	if got != &lookup.Interval {
-		t.Errorf("want: %v\ngot:  %v",
-			lookup.Interval, got)
+			// WHEN GetIntervalPointer is called
+			got := tc.options.GetIntervalPointer()
+
+			// THEN the function returns the correct result
+			if *got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, *got)
+			}
+		})
 	}
 }
 
-func TestGetIntervalDuration(t *testing.T) {
-	// GIVEN a Lookup
-	lookup := testOptions()
-	lookup.Interval = "3h2m1s"
+func TestOptions_GetIntervalDuration(t *testing.T) {
+	// GIVEN Options
+	options := testOptions()
+	options.Interval = "3h2m1s"
 
 	// WHEN GetInterval is called
-	got := lookup.GetIntervalDuration()
+	got := options.GetIntervalDuration()
 
 	// THEN the function returns the correct result
 	want := (3 * time.Hour) + (2 * time.Minute) + time.Second
@@ -162,17 +223,38 @@ func TestGetIntervalDuration(t *testing.T) {
 	}
 }
 
-func TestPrint(t *testing.T) {
-	// GIVEN a Lookup
+func TestOptions_Print(t *testing.T) {
+	// GIVEN Options
 	tests := map[string]struct {
 		options Options
 		lines   int
 	}{
-		"empty/default Options":    {options: Options{}, lines: 0},
-		"only active":              {options: Options{Active: boolPtr(false)}, lines: 2},
-		"only interval":            {options: Options{Interval: "10s"}, lines: 2},
-		"only semantic_versioning": {options: Options{SemanticVersioning: boolPtr(false)}, lines: 2},
-		"all options defined":      {options: Options{Active: boolPtr(false), Interval: "10s", SemanticVersioning: boolPtr(false)}, lines: 4},
+		"empty/default Options": {
+			options: Options{},
+			lines:   0,
+		},
+		"only active": {
+			options: Options{
+				Active: boolPtr(false)},
+			lines: 2,
+		},
+		"only interval": {
+			options: Options{
+				Interval: "10s"},
+			lines: 2,
+		},
+		"only semantic_versioning": {
+			options: Options{
+				SemanticVersioning: boolPtr(false)},
+			lines: 2,
+		},
+		"all options defined": {
+			options: Options{
+				Active:             boolPtr(false),
+				Interval:           "10s",
+				SemanticVersioning: boolPtr(false)},
+			lines: 4,
+		},
 	}
 
 	for name, tc := range tests {
@@ -197,19 +279,35 @@ func TestPrint(t *testing.T) {
 	}
 }
 
-func TestCheckValues(t *testing.T) {
-	// GIVEN a Lookup
+func TestOptions_CheckValues(t *testing.T) {
+	// GIVEN Options
 	tests := map[string]struct {
 		options      Options
 		wantInterval string
 		errRegex     string
 	}{
-		"valid options": {errRegex: `^$`,
-			options: Options{Active: boolPtr(false), Interval: "10s", SemanticVersioning: boolPtr(false)}},
-		"invalid interval": {errRegex: `interval: .* <invalid>`,
-			options: Options{Active: boolPtr(false), Interval: "10x", SemanticVersioning: boolPtr(false)}},
-		"seconds get appended to pure decimal interval": {errRegex: `^$`, wantInterval: "10s",
-			options: Options{Active: boolPtr(false), Interval: "10", SemanticVersioning: boolPtr(false)}},
+		"valid options": {
+			errRegex: `^$`,
+			options: Options{
+				Active:             boolPtr(false),
+				Interval:           "10s",
+				SemanticVersioning: boolPtr(false)},
+		},
+		"invalid interval": {
+			errRegex: `interval: .* <invalid>`,
+			options: Options{
+				Active:             boolPtr(false),
+				Interval:           "10x",
+				SemanticVersioning: boolPtr(false)},
+		},
+		"seconds get appended to pure decimal interval": {
+			errRegex:     `^$`,
+			wantInterval: "10s",
+			options: Options{
+				Active:             boolPtr(false),
+				Interval:           "10",
+				SemanticVersioning: boolPtr(false)},
+		},
 	}
 
 	for name, tc := range tests {
@@ -226,6 +324,102 @@ func TestCheckValues(t *testing.T) {
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestOptions_String(t *testing.T) {
+	tests := map[string]struct {
+		options *Options
+		want    string
+	}{
+		"nil": {
+			options: nil,
+			want:    "<nil>",
+		},
+		"empty/default Options": {
+			options: &Options{},
+			want:    "{}\n",
+		},
+		"all options defined": {
+			options: &Options{
+				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)},
+			want: `
+active: true
+interval: 10s
+semantic_versioning: true
+`,
+		},
+		"empty with defaults": {
+			options: &Options{
+				Defaults: &Options{
+					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)}},
+			want: "{}\n",
+		},
+		"all with defaults": {
+			options: &Options{
+				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
+				Defaults: &Options{
+					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			want: `
+active: true
+interval: 10s
+semantic_versioning: true
+`,
+		},
+		"empty with hardDefaults": {
+			options: &Options{
+				HardDefaults: &Options{
+					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)}},
+			want: "{}\n",
+		},
+		"all with hardDefaults": {
+			options: &Options{
+				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
+				HardDefaults: &Options{
+					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			want: `
+active: true
+interval: 10s
+semantic_versioning: true
+`,
+		},
+		"empty with defaults and hardDefaults": {
+			options: &Options{
+				Defaults: &Options{
+					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)},
+				HardDefaults: &Options{
+					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			want: "{}\n",
+		},
+		"all with defaults and hardDefaults": {
+			options: &Options{
+				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
+				Defaults: &Options{
+					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)},
+				HardDefaults: &Options{
+					Active: boolPtr(true), Interval: "1m", SemanticVersioning: boolPtr(true)}},
+			want: `
+active: true
+interval: 10s
+semantic_versioning: true
+`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			// WHEN the Options is stringified with String
+			got := tc.options.String()
+
+			// THEN the result is as expected
+			tc.want = strings.TrimPrefix(tc.want, "\n")
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
 			}
 		})
 	}

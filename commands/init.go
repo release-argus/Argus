@@ -79,11 +79,6 @@ func (c *Command) FormattedString() string {
 	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
-// String will convert Command to a string in the format of 'arg0 arg1'
-func (c *Command) String() string {
-	return strings.Join(*c, " ")
-}
-
 // GetNextRunnable returns the NextRunnable of this WebHook as time.time.
 func (c *Controller) GetNextRunnable(index int) (at time.Time) {
 	if index < len(c.NextRunnable) {
@@ -95,7 +90,7 @@ func (c *Controller) GetNextRunnable(index int) (at time.Time) {
 // IsRunnable will return whether the current time is before NextRunnable
 func (c *Controller) IsRunnable(index int) bool {
 	// If out of range
-	if !(index < len(c.NextRunnable)) {
+	if index >= len(c.NextRunnable) {
 		return false
 	}
 
@@ -105,7 +100,7 @@ func (c *Controller) IsRunnable(index int) bool {
 // SetNextRunnable time that the Command at index can be re-run.
 func (c *Controller) SetNextRunnable(index int, executing bool) {
 	// If out of range
-	if !(index < len(c.NextRunnable)) {
+	if index >= len(c.NextRunnable) {
 		return
 	}
 

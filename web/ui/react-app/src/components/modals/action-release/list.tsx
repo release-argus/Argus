@@ -5,11 +5,11 @@ import {
 } from "types/summary";
 
 import { Container } from "react-bootstrap";
+import { FC } from "react";
 import { Item } from "components/modals/action-release/item";
 import { Loading } from "components/modals/action-release/loading";
-import { ReactElement } from "react";
 
-interface params {
+interface Props {
   itemType: "COMMAND" | "WEBHOOK";
   modalType: ModalType;
   serviceID: string;
@@ -21,7 +21,7 @@ interface params {
   delayedRender: any;
 }
 
-export const ModalList = ({
+export const ModalList: FC<Props> = ({
   itemType,
   modalType,
   serviceID,
@@ -30,7 +30,7 @@ export const ModalList = ({
   onClickAcknowledge,
   setSendingThisService,
   delayedRender,
-}: params) => {
+}) => {
   return (
     <Container fluid className="list">
       {Object.keys(data ? data : {}).length === 0
@@ -41,7 +41,7 @@ export const ModalList = ({
               delayedRender={delayedRender}
             />
           ))
-        : Object.entries(data).map(([title, item]): ReactElement => {
+        : Object.entries(data).map(([title, item]) => {
             let sending = false;
             if (sent.includes(`${serviceID} ${title}`)) {
               setSendingThisService(true);

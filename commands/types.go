@@ -15,6 +15,7 @@
 package command
 
 import (
+	"strings"
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -31,16 +32,55 @@ type Slice []Command
 
 type Command []string
 
+// String returns a string representation of the Command in the format of 'arg0 arg1'.
+func (c *Command) String() string {
+	if c == nil {
+		return ""
+	}
+	return strings.Join(*c, " ")
+}
+
 type Controller struct {
-	Command        *Slice            `yaml:"-"` // command to run (with args)
-	NextRunnable   []time.Time       `yaml:"-"` // Time the Commands can next be run (for staggering)
-	Failed         *[]*bool          `yaml:"-"` // Whether the last execution attempt failed
-	Notifiers      Notifiers         `yaml:"-"` // The Notify's to notify on failures
-	ServiceStatus  *svcstatus.Status `yaml:"-"` // Status of the Service (used for templating commands)
-	ParentInterval *string           `yaml:"-"` // Interval between the parent Service's queries
+	Command        *Slice            `yaml:"-" json:"-"` // command(s) to run (with args)
+	NextRunnable   []time.Time       `yaml:"-" json:"-"` // Time the Commands can next be run (for staggering)
+	Failed         *[]*bool          `yaml:"-" json:"-"` // Whether the last execution attempt failed
+	Notifiers      Notifiers         `yaml:"-" json:"-"` // The Notify's to notify on failures
+	ServiceStatus  *svcstatus.Status `yaml:"-" json:"-"` // Status of the Service (used for templating commands)
+	ParentInterval *string           `yaml:"-" json:"-"` // Interval between the parent Service's queries
 }
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
 	Shoutrrr *shoutrrr.Slice // Shoutrrr
+}
+
+// CopyFailsFrom target
+func (c *Controller) CopyFailsFrom(target *Controller) {
+	if c == nil || c.Command == nil ||
+		target == nil || target.Failed == nil {
+		return
+	}
+
+	if c.Failed == nil {
+		fails := make([]*bool, len(*c.Command))
+		c.Failed = &fails
+		c.NextRunnable = make([]time.Time, len(*c.Command))
+	}
+
+	// Loop through old fails
+	for i := range *target.Failed {
+		// Loop through new fails to find try and find this command
+		for j := range *c.Failed {
+			// If the command has been run (has a failed state)
+			// and the commands match, copy the failed status
+			if (*target.Failed)[i] != nil &&
+				(*target.Command)[i].FormattedString() == (*c.Command)[j].FormattedString() {
+				failed := *(*target.Failed)[i]
+				(*c.Failed)[j] = &failed
+				c.NextRunnable[j] = target.NextRunnable[i]
+				break
+			}
+		}
+	}
+
 }

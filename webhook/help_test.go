@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package webhook
 
@@ -84,9 +84,11 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if customHeaders {
 		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
 		if failing {
-			webhook.CustomHeaders = &map[string]string{"X-Test": "invalid"}
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "invalid"}}
 		} else {
-			webhook.CustomHeaders = &map[string]string{"X-Test": "secret"}
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "secret"}}
 		}
 	}
 	return webhook
@@ -106,8 +108,9 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		Defaults:      &shoutrrr.Shoutrrr{},
 		HardDefaults:  &shoutrrr.Shoutrrr{},
 		Options:       map[string]string{"max_tries": "1"},
-		URLFields:     map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
-		Params:        map[string]string{},
+		// trunk-ignore(gitleaks/generic-api-key)
+		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		Params:    map[string]string{},
 	}
 	notifier.Failed = &notifier.ServiceStatus.Fails.Shoutrrr
 	if failing {

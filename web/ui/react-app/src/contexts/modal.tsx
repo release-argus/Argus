@@ -1,20 +1,20 @@
-import { ModalType, ServiceSummaryType, WebHookModal } from "types/summary";
-import { ReactElement, ReactNode, createContext } from "react";
+import { ModalType, ServiceModal, ServiceSummaryType } from "types/summary";
+import { ReactElement, ReactNode, createContext, useMemo } from "react";
 
 import ApprovalModal from "modals/action-release";
+import ServiceEditModal from "modals/service-edit";
 import useModal from "hooks/modal";
 
 interface ModalCtx {
   handleModal: (modalType: ModalType, service: ServiceSummaryType) => void;
-  modal: WebHookModal;
+  modal: ServiceModal;
 }
 
 const ModalContext = createContext<ModalCtx>({
   // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
   handleModal: (modalType: ModalType, service: ServiceSummaryType) => {},
-  modal: { type: "", service: { id: "", loading: true } },
+  modal: { actionType: "", service: { id: "", loading: true } },
 });
-const { Provider } = ModalContext;
 
 interface Props {
   children: ReactNode;
@@ -22,17 +22,17 @@ interface Props {
 
 const ModalProvider = (props: Props): ReactElement => {
   const { modal, handleModal } = useModal();
+  const contextValue = useMemo(
+    () => ({ handleModal, modal }),
+    [handleModal, modal]
+  );
 
   return (
-    <Provider
-      value={{
-        handleModal,
-        modal,
-      }}
-    >
+    <ModalContext.Provider value={contextValue}>
       <ApprovalModal />
+      <ServiceEditModal />
       {props.children}
-    </Provider>
+    </ModalContext.Provider>
   );
 };
 

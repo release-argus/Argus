@@ -17,14 +17,19 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
 )
 
-func TestLoad(t *testing.T) {
+func TestConfig_Load(t *testing.T) {
 	// GIVEN Load is ran on a config
-	config := testLoad("")
+	file := "TestConfig_Load.yml"
+	testYAML_ConfigTest(file)
+	defer os.Remove(file)
+	config := testLoad(file)
+	defer os.Remove(*config.Settings.GetDataDatabaseFile())
 
 	// WHEN the vars loaded are inspected
 	tests := map[string]struct {
@@ -32,11 +37,14 @@ func TestLoad(t *testing.T) {
 		want string
 	}{
 		"Defaults.Service.Interval": {
-			got: config.Defaults.Service.Options.Interval, want: "123s"},
+			got:  config.Defaults.Service.Options.Interval,
+			want: "123s"},
 		"Notify.discord.username": {
-			got: config.Defaults.Notify["slack"].GetSelfParam("title"), want: "defaultTitle"},
+			got:  config.Defaults.Notify["slack"].GetSelfParam("title"),
+			want: "defaultTitle"},
 		"WebHook.Delay": {
-			got: config.Defaults.WebHook.Delay, want: "2s"},
+			got:  config.Defaults.WebHook.Delay,
+			want: "2s"},
 	}
 
 	// THEN they match the config file
@@ -52,16 +60,19 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestLoadDefaults(t *testing.T) {
+func TestConfig_LoadDefaults(t *testing.T) {
 	// GIVEN config to Load
 	var (
 		config     Config
-		configFile string = "../test/config_test.yml"
+		configFile func(path string) = testYAML_ConfigTest
 	)
 	flags := make(map[string]bool)
+	file := "TestConfig_LoadDefaults.yml"
+	defer os.Remove(file)
+	configFile(file)
 
 	// WHEN Load is called on it
-	config.Load(configFile, &flags, &util.JLog{})
+	config.Load(file, &flags, &util.JLog{})
 
 	// THEN the defaults are assigned correctly to Services
 	want := false

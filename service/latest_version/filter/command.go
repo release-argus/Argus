@@ -14,7 +14,9 @@
 
 package filter
 
-import "github.com/release-argus/Argus/util"
+import (
+	"github.com/release-argus/Argus/util"
+)
 
 // command will run r.Command and return an err if it failed.
 func (r *Require) ExecCommand(logFrom *util.LogFrom) error {

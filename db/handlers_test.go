@@ -27,19 +27,42 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestUpdateRow(t *testing.T) {
+func TestAPI_UpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
 	tests := map[string]struct {
 		cells  []dbtype.Cell
 		target string
 	}{
-		"update single column of a row": {target: "keep0", cells: []dbtype.Cell{{Column: "latest_version", Value: "9.9.9"}}},
-		"update multiple columns of a row": {target: "keep0", cells: []dbtype.Cell{{Column: "deployed_version", Value: "8.8.8"},
-			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
-		"update single column of a non-existing row (new service)": {target: "new0", cells: []dbtype.Cell{{Column: "latest_version", Value: "9.9.9"}}},
-		"update multiple columns of a non-existing  row (new service)": {target: "new1", cells: []dbtype.Cell{{Column: "deployed_version", Value: "8.8.8"},
-			{Column: "deployed_version_timestamp", Value: time.Now().UTC().Format(time.RFC3339)}}},
+		"update single column of a row": {
+			target: "keep0",
+			cells: []dbtype.Cell{
+				{Column: "latest_version",
+					Value: "9.9.9"}},
+		},
+		// "trailing 0 is kept":        {target: "keep0", cells: []dbtype.Cell{{Column: "latest_version", Value: "1.20"}}},
+		"update multiple columns of a row": {
+			target: "keep0",
+			cells: []dbtype.Cell{
+				{Column: "deployed_version",
+					Value: "8.8.8"},
+				{Column: "deployed_version_timestamp",
+					Value: time.Now().UTC().Format(time.RFC3339)}},
+		},
+		"update single column of a non-existing row (new service)": {
+			target: "new0",
+			cells: []dbtype.Cell{
+				{Column: "latest_version",
+					Value: "9.9.9"}},
+		},
+		"update multiple columns of a non-existing row (new service)": {
+			target: "new1",
+			cells: []dbtype.Cell{
+				{Column: "deployed_version",
+					Value: "8.8.8"},
+				{Column: "deployed_version_timestamp",
+					Value: time.Now().UTC().Format(time.RFC3339)}},
+		},
 	}
 
 	for name, tc := range tests {
@@ -84,26 +107,83 @@ func TestUpdateRow(t *testing.T) {
 	}
 }
 
+func TestAPI_DeleteRow(t *testing.T) {
+	// GIVEN a DB with a few service status'
+	initLogging()
+	tests := map[string]struct {
+		serviceID string
+		exists    bool
+	}{
+		"delete a row": {
+			serviceID: "TestDeleteRow0",
+			exists:    true},
+		"delete a non-existing row": {
+			serviceID: "TestDeleteRow1",
+			exists:    false},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cfg := testConfig()
+			api := api{config: &cfg}
+			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
+			api.initialise()
+			api.convertServiceStatus()
+
+			// Ensure the row exists if tc.exists
+			if tc.exists {
+				api.updateRow(tc.serviceID, []dbtype.Cell{
+					{Column: "latest_version", Value: "9.9.9"}, {Column: "deployed_version", Value: "8.8.8"}})
+				time.Sleep(100 * time.Millisecond)
+			}
+			// Check the row existance before the test
+			row := queryRow(t, api.db, tc.serviceID)
+			if tc.exists && (row.LatestVersion == "" || row.DeployedVersion == "") {
+				t.Errorf("expecting row to exist. got %#v", row)
+			}
+
+			// WHEN deleteRow is called targeting a row
+			api.deleteRow(tc.serviceID)
+			time.Sleep(100 * time.Millisecond)
+
+			// THEN the row is deleted from the DB
+			row = queryRow(t, api.db, tc.serviceID)
+			if row.LatestVersion != "" || row.DeployedVersion != "" {
+				t.Errorf("expecting row to be deleted. got %#v", row)
+			}
+			api.db.Close()
+			os.Remove(*api.config.Settings.Data.DatabaseFile)
+			time.Sleep(100 * time.Millisecond)
+		})
+	}
+}
+
 func TestHandler(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	initLogging()
 	cfg := testConfig()
 	api := api{config: &cfg}
 	*api.config.Settings.Data.DatabaseFile = "TestHandler.db"
+	defer os.Remove(*api.config.Settings.Data.DatabaseFile)
+	defer os.Remove(*api.config.Settings.Data.DatabaseFile + "-journal")
 	api.initialise()
 	api.convertServiceStatus()
 	go api.handler()
+	defer api.db.Close()
 
-	// WHEN a message is send to the DatabaseChannel targeting latest_version
+	// WHEN a message is sent to the DatabaseChannel targeting latest_version
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	want := queryRow(t, api.db, target)
 	want.LatestVersion = cell.Value
-	*api.config.DatabaseChannel <- dbtype.Message{
+	msg := dbtype.Message{
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell},
 	}
-	time.Sleep(time.Second)
+	*api.config.DatabaseChannel <- msg
+	time.Sleep(250 * time.Millisecond)
 
 	// THEN the cell was changed in the DB
 	got := queryRow(t, api.db, target)
@@ -111,6 +191,31 @@ func TestHandler(t *testing.T) {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
+
+	// WHEN a message is sent to the DatabaseChannel deleting a row
+	*api.config.DatabaseChannel <- dbtype.Message{
+		ServiceID: target,
+		Delete:    true,
+	}
+	time.Sleep(250 * time.Millisecond)
+
+	// THEN the row is deleted from the DB
+	got = queryRow(t, api.db, target)
+	if got.LatestVersion != "" || got.DeployedVersion != "" {
+		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
+	}
+
+	// WHEN multiple messages are targeting the same row in quick succession
+	*api.config.DatabaseChannel <- msg
+	msg.Cells[0].Value = msg.Cells[0].Value + "-dev"
+	wantLatestVersion := msg.Cells[0].Value
+	*api.config.DatabaseChannel <- msg
+	time.Sleep(250 * time.Millisecond)
+
+	// THEN the last message is the one that is applied
+	got = queryRow(t, api.db, target)
+	if got.LatestVersion != wantLatestVersion {
+		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
+			cell.Column, cell.Value, got, want)
+	}
 }

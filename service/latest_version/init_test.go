@@ -26,7 +26,7 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestInitMetrics(t *testing.T) {
+func TestLookup_InitMetrics(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testLookup(false, false)
 	*lookup.Status.ServiceID += "TestInitMetrics"
@@ -45,7 +45,7 @@ func TestInitMetrics(t *testing.T) {
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup(false, false)
 	log := util.NewJLog("WARN", false)

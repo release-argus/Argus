@@ -30,10 +30,21 @@ func TestSetGitLabParameter(t *testing.T) {
 		queryParams string
 		want        string
 	}{
-		"query param override ref":                   {secret: "fizz", queryParams: "?ref=main", want: "ref=main&token=fizz"},
-		"query param override secret as well as ref": {secret: "fizz", queryParams: "?ref=main&token=bang", want: "ref=main&token=bang"},
-		"query param add other params":               {secret: "fizz", queryParams: "?ref=main&token=bang&foo=bar", want: "foo=bar&ref=main&token=bang"},
-		"no query params":                            {secret: "bang", want: "ref=master&token=bang"},
+		"query param override ref": {
+			secret:      "fizz",
+			queryParams: "?ref=main",
+			want:        "ref=main&token=fizz"},
+		"query param override secret as well as ref": {
+			secret:      "fizz",
+			queryParams: "?ref=main&token=bang",
+			want:        "ref=main&token=bang"},
+		"query param add other params": {
+			secret:      "fizz",
+			queryParams: "?ref=main&token=bang&foo=bar",
+			want:        "foo=bar&ref=main&token=bang"},
+		"no query params": {
+			secret: "bang",
+			want:   "ref=master&token=bang"},
 	}
 
 	for name, tc := range tests {

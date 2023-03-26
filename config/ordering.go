@@ -24,7 +24,7 @@ import (
 func (c *Config) GetOrder(data []byte) {
 	data = util.NormaliseNewlines(data)
 	lines := strings.Split(string(data), "\n")
-	var order []string
+	order := make([]string, 0, len(c.Service))
 	afterService := false
 	indentation := ""
 	for index, line := range lines {
@@ -54,11 +54,7 @@ func (c *Config) GetOrder(data []byte) {
 		}
 	}
 
-	c.All = order
-	c.Order = &c.All
-
-	// Filter out Services that aren't Active
-	c.filterInactive()
+	c.Order = order
 }
 
 func getIndentation(line string) (indentation string) {
@@ -70,21 +66,4 @@ func getIndentation(line string) (indentation string) {
 		}
 	}
 	return
-}
-
-func (c *Config) filterInactive() {
-	removed := 0
-	//nolint:typecheck // 'id declared but not used'
-	for index, id := range c.All {
-		if !util.EvalNilPtr(c.Service[id].Active, true) ||
-			!util.EvalNilPtr(c.Service[id].Options.Active, true) {
-			if removed == 0 {
-				order := make([]string, len(c.All))
-				copy(order, c.All)
-				c.Order = &order
-			}
-			util.RemoveIndex(c.Order, index-removed)
-			removed++
-		}
-	}
 }

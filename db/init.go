@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/release-argus/Argus/config"
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -31,25 +32,36 @@ var (
 )
 
 func checkFile(path string) {
+	file := filepath.Base(path)
+	// Check that the directory exists
 	dir := filepath.Dir(path)
-	err := os.Mkdir(dir, os.ModeDir|0755)
-	if err == nil {
-		return
+	fileInfo, err := os.Stat(dir)
+	if err != nil {
+		// directory doesn't exist
+		// create the dir
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(dir, 0755)
+			jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+		} else {
+			// other error
+			jLog.Fatal(util.ErrorToString(err), *logFrom, true)
+		}
+
+		// directory exists but is not a directory
+	} else if fileInfo == nil || !fileInfo.IsDir() {
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is not a directory", dir, file), *logFrom, true)
 	}
-	if os.IsExist(err) {
-		// check that the existing path is a directory
-		info, err := os.Stat(dir)
-		jLog.Fatal(
-			fmt.Sprintf("db path %q exists but is not a directory", dir),
-			*logFrom,
-			!info.IsDir())
-		jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+
+	// Check that the file exists
+	fileInfo, err = os.Stat(path)
+	if err != nil {
+		// file doesn't exist
+		jLog.Fatal(util.ErrorToString(err), *logFrom, os.IsExist(err))
+
+		// item exists but is a directory
+	} else if fileInfo != nil && fileInfo.IsDir() {
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is a directory, not a file", path, file), *logFrom, true)
 	}
-	info, _ := os.Stat(path)
-	jLog.Fatal(
-		fmt.Sprintf("db path %q exists but is a directory, not a file", path),
-		*logFrom,
-		info != nil && info.IsDir())
 }
 
 func Run(cfg *config.Config, log *util.JLog) {
@@ -60,7 +72,7 @@ func Run(cfg *config.Config, log *util.JLog) {
 	api := api{config: cfg}
 	api.initialise()
 	defer api.db.Close()
-	if len(api.config.All) > 0 {
+	if len(api.config.Order) > 0 {
 		api.removeUnknownServices()
 		api.convertServiceStatus()
 		api.extractServiceStatus()
@@ -92,17 +104,24 @@ func (api *api) initialise() {
 	api.db = db
 }
 
-// removeUnknownServices will remove rows with an id not in config.All
+// removeUnknownServices will remove rows with an id not in config.Order
 func (api *api) removeUnknownServices() {
-	var allServices string
-	for _, id := range api.config.All {
-		allServices += fmt.Sprintf(`'%s',`, id)
-	}
+	// ? for each service
+	services := strings.Repeat(`?,`, len(api.config.Order))
+
+	// SQL statement to remove unknown services
 	sqlStmt := fmt.Sprintf(`
 		DELETE FROM status
 		WHERE id NOT IN (%s);`,
-		allServices[:len(allServices)-1])
-	_, err := api.db.Exec(sqlStmt)
+		services[:len(services)-1])
+
+	// Get the vars for the SQL statement
+	params := make([]interface{}, len(api.config.Order))
+	for i, name := range api.config.Order {
+		params[i] = name
+	}
+
+	_, err := api.db.Exec(sqlStmt, params...)
 	jLog.Fatal(
 		fmt.Sprintf("removeUnknownServices: %s", util.ErrorToString(err)),
 		*logFrom,
@@ -165,7 +184,7 @@ func (api *api) convertServiceStatus() {
 			)
 		VALUES`
 	servicesToConvert := 0
-	for _, id := range api.config.All {
+	for _, id := range api.config.Order {
 		if api.config.Service[id].OldStatus != nil {
 			servicesToConvert++
 			sqlStmt += fmt.Sprintf(" ('%s', '%s', '%s', '%s', '%s', '%s'),",
@@ -193,7 +212,7 @@ func (api *api) convertServiceStatus() {
 				util.ErrorToString(err), sqlStmt),
 			*logFrom,
 			err != nil)
-		for _, id := range api.config.All {
+		for _, id := range api.config.Order {
 			api.config.Service[id].OldStatus = nil
 		}
 	}

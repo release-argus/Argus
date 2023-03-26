@@ -16,18 +16,18 @@ import {
 
 import { ModalContext } from "contexts/modal";
 import { ModalList } from "components/modals/action-release/list";
+import { WebSocketResponse } from "types/websocket";
 import formatRelative from "date-fns/formatRelative";
 import reducerActionModal from "reducers/action-release";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useTheme } from "contexts/theme";
-import { websocketResponse } from "types/websocket";
 
-const WebHookModal = () => {
-  // modal.type:
+const ActionReleaseModal = () => {
+  // modal.actionType:
   // RESEND - 0 WebHooks failed. Resend Modal
   // SEND   - Send WebHooks for this new version. New release Modal
   // SKIP   - Release not wanted. Skip release Modal
-  // RETRY  - !+ WebHooks failed to send. Retry send Modal
+  // RETRY  - 1+ WebHooks failed to send. Retry send Modal
   const { handleModal, modal } = useContext(ModalContext);
   const delayedRender = useDelayedRender(250);
   const [modalData, setModalData] = useReducer(reducerActionModal, {
@@ -39,11 +39,13 @@ const WebHookModal = () => {
   });
   const themeCtx = useTheme();
 
+  const [sendingThisService, setSendingThisService] = useState(false);
+
   const hideModal = useCallback(() => {
     setSendingThisService(false);
     setModalData({ page: "APPROVALS", type: "ACTION", sub_type: "RESET" });
     handleModal("", { id: "", loading: true });
-  }, [handleModal]);
+  }, []);
 
   const onClickAcknowledge = useCallback(
     (target: string, isWebHook?: boolean) => {
@@ -74,47 +76,50 @@ const WebHookModal = () => {
           })
         );
 
-        unspecificTarget
-          ? target === "ARGUS_SKIP"
-            ? {}
-            : // Sending ARGUS_ALL or ARGUS_FAILED
-              setModalData({
-                page: "APPROVALS",
-                type: "ACTION",
-                sub_type: "SENDING",
-                service_data: { id: modal.service.id, loading: false },
-                command_data: unspecificTarget ? {} : { [`${target}`]: {} },
-              })
-          : isWebHook
-          ? // Sending WebHook X
+        if (unspecificTarget) {
+          if (target !== "ARGUS_SKIP") {
+            // Sending ARGUS_ALL or ARGUS_FAILED
             setModalData({
               page: "APPROVALS",
-              type: "WEBHOOK",
-              sub_type: "SENDING",
-              service_data: { id: modal.service.id, loading: false },
-              webhook_data: unspecificTarget ? {} : { [`${target}`]: {} },
-            })
-          : // Sending Command Y
-            setModalData({
-              page: "APPROVALS",
-              type: "COMMAND",
+              type: "ACTION",
               sub_type: "SENDING",
               service_data: { id: modal.service.id, loading: false },
               command_data: unspecificTarget ? {} : { [`${target}`]: {} },
             });
+          }
+        } else if (isWebHook) {
+          // Sending WebHook X
+          setModalData({
+            page: "APPROVALS",
+            type: "WEBHOOK",
+            sub_type: "SENDING",
+            service_data: { id: modal.service.id, loading: false },
+            webhook_data: unspecificTarget ? {} : { [`${target}`]: {} },
+          });
+        } else {
+          // Sending Command Y
+          setModalData({
+            page: "APPROVALS",
+            type: "COMMAND",
+            sub_type: "SENDING",
+            service_data: { id: modal.service.id, loading: false },
+            command_data: unspecificTarget ? {} : { [`${target}`]: {} },
+          });
+        }
       }
 
       if (unspecificTarget) {
         hideModal();
       }
     },
-    [modal.service, hideModal]
+    [modal.service, sendingThisService]
   );
 
   useEffect(() => {
-    if (modal.service.id !== "") {
+    if (modal.actionType !== "EDIT" && modal.service.id !== "") {
+      console.log("Action-Release");
       // Handler to listen to WebSocket messages
-      const handler = (event: websocketResponse) => {
+      const handler = (event: WebSocketResponse) => {
         if (event && ["ACTIONS", "COMMAND", "WEBHOOK"].includes(event.type)) {
           setModalData(event);
         }
@@ -133,30 +138,32 @@ const WebHookModal = () => {
         })
       );
     }
-  }, [modal.type, modal.service.id]);
-  const [sendingThisService, setSendingThisService] = useState(false);
+  }, [modal.actionType, modal.service.id]);
 
   return (
-    <Modal show={modal.type !== ""} onHide={() => hideModal()}>
+    <Modal
+      show={!["", "EDIT"].includes(modal.actionType)}
+      onHide={() => hideModal()}
+    >
       <Modal.Header
         closeButton
         closeVariant={themeCtx.theme === "theme-dark" ? "white" : undefined}
       >
         <Modal.Title>
           <strong>
-            {modal.type === "RESEND"
+            {modal.actionType === "RESEND"
               ? `Resend the ${
                   modal.service.webhook ? "WebHook" : "Command"
                 }(s)?`
-              : modal.type === "SEND"
+              : modal.actionType === "SEND"
               ? `Send the  ${
                   modal.service.webhook ? "WebHook" : "Command"
                 }(s) to upgrade?`
-              : modal.type === "SKIP"
+              : modal.actionType === "SKIP"
               ? `Skip this release? (don't send any  ${
                   modal.service.webhook ? "WebHook" : "Command"
                 }s)`
-              : modal.type === "SKIP_NO_WH"
+              : modal.actionType === "SKIP_NO_WH"
               ? "Skip this release?"
               : ""}
           </strong>
@@ -169,14 +176,14 @@ const WebHookModal = () => {
           style={{ paddingLeft: "0px" }}
         >
           <strong>{modal.service.id}</strong>
-          {modal.type === "RESEND"
+          {modal.actionType === "RESEND"
             ? modal.service?.status?.latest_version
               ? ` - ${modal.service?.status?.latest_version}`
               : " - Unknown"
             : ""}
         </Container>
         <>
-          {modal.type !== "RESEND" && (
+          {modal.actionType !== "RESEND" && (
             <>
               <OverlayTrigger
                 key="from-version"
@@ -200,7 +207,7 @@ const WebHookModal = () => {
                 }
               >
                 <p style={{ margin: 0, maxWidth: "fit-content" }}>
-                  {`${modal.type === "SKIP" ? "Stay on" : "From"}: ${
+                  {`${modal.actionType === "SKIP" ? "Stay on" : "From"}: ${
                     modal.service?.status?.deployed_version
                   }`}
                 </p>
@@ -227,20 +234,20 @@ const WebHookModal = () => {
                 }
               >
                 <p style={{ margin: 0, maxWidth: "fit-content" }}>
-                  {`${modal.type === "SKIP" ? "Skip" : "To"}: ${
+                  {`${modal.actionType === "SKIP" ? "Skip" : "To"}: ${
                     modal.service?.status?.latest_version
                   }`}
                 </p>
               </OverlayTrigger>
             </>
           )}
-          {modal.type !== "SKIP_NO_WH" && modal.service.webhook && (
+          {modal.actionType !== "SKIP_NO_WH" && modal.service.webhook !== 0 && (
             <>
               <br />
               <strong>WebHook(s):</strong>
               <ModalList
                 itemType="WEBHOOK"
-                modalType={modal.type}
+                modalType={modal.actionType}
                 serviceID={modalData.service_id}
                 data={modalData.webhooks}
                 sent={modalData.sentWH}
@@ -250,13 +257,13 @@ const WebHookModal = () => {
               />
             </>
           )}
-          {modal.type !== "SKIP_NO_WH" && modal.service.command && (
+          {modal.actionType !== "SKIP_NO_WH" && modal.service.command !== 0 && (
             <>
               <br />
               <strong>Command(s):</strong>
               <ModalList
                 itemType="COMMAND"
-                modalType={modal.type}
+                modalType={modal.actionType}
                 serviceID={modalData.service_id}
                 data={modalData.commands}
                 sent={modalData.sentC}
@@ -280,32 +287,39 @@ const WebHookModal = () => {
         <Button
           id="modal-action"
           variant="primary"
-          onClick={() =>
-            sendingThisService
-              ? hideModal()
-              : modal.type === "RESEND"
-              ? onClickAcknowledge("ARGUS_ALL")
-              : modal.type === "SEND"
-              ? onClickAcknowledge("ARGUS_FAILED")
-              : modal.type === "RETRY"
-              ? onClickAcknowledge("ARGUS_FAILED")
-              : modal.type === "SKIP" || modal.type === "SKIP_NO_WH"
-              ? onClickAcknowledge("ARGUS_SKIP")
-              : hideModal()
-          }
-          disabled={modal.type === "SKIP" && sendingThisService}
+          onClick={() => {
+            if (sendingThisService) {
+              hideModal();
+              return;
+            }
+            switch (modal.actionType) {
+              case "RESEND":
+                onClickAcknowledge("ARGUS_ALL");
+                break;
+              case "SEND":
+              case "RETRY":
+                onClickAcknowledge("ARGUS_FAILED");
+                break;
+              case "SKIP":
+              case "SKIP_NO_WH":
+                onClickAcknowledge("ARGUS_SKIP");
+                break;
+            }
+          }}
+          disabled={modal.actionType === "SKIP" && sendingThisService}
         >
           {sendingThisService
-            ? modal.type === "SKIP"
+            ? modal.actionType === "SKIP"
               ? "Still sending..."
               : "Done"
-            : modal.type === "RESEND"
+            : // Not sending this service
+            modal.actionType === "RESEND"
             ? "Resend all"
-            : modal.type === "SEND"
+            : modal.actionType === "SEND"
             ? "Confirm"
-            : modal.type === "RETRY"
+            : modal.actionType === "RETRY"
             ? "Retry all failed"
-            : modal.type === "SKIP" || modal.type === "SKIP_NO_WH"
+            : modal.actionType === "SKIP" || modal.actionType === "SKIP_NO_WH"
             ? "Skip release"
             : ""}
         </Button>
@@ -314,4 +328,4 @@ const WebHookModal = () => {
   );
 };
 
-export default WebHookModal;
+export default ActionReleaseModal;

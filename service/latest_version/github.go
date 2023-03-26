@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
@@ -29,38 +30,51 @@ import (
 // or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
 func (l *Lookup) filterGitHubReleases(
 	releases []github_types.Release,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) (filteredReleases []github_types.Release) {
 	semanticVerioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.GetUsePreRelease()
+
+	// Make a slice with the same capacity as releases
+	filteredReleases = make([]github_types.Release, 0, len(releases))
+
 	for i := range releases {
-		// If it isn't a prerelease, or it is and they're wanted
-		if !releases[i].PreRelease || (releases[i].PreRelease && usePreReleases) {
-			var err error
-			// Check that TagName matches URLCommands
-			if releases[i].TagName, err = l.URLCommands.Run(releases[i].TagName, logFrom); err != nil {
-				continue
-			}
-
-			// If SemVer isn't wanted, add all
-			if !semanticVerioning {
-				filteredReleases = append(filteredReleases, releases[i])
-				continue
-			}
-
-			// Else, sort the versions
-			semVer, err := semver.NewVersion(releases[i].TagName)
-			if err != nil {
-				continue
-			}
-			releases[i].SemanticVersion = semVer
-			if len(filteredReleases) == 0 {
-				filteredReleases = append(filteredReleases, releases[i])
-				continue
-			}
-			// Insertion Sort
-			insertionSort(releases[i], &filteredReleases)
+		// If it's a prerelease, and they're not wanted, skip
+		if releases[i].PreRelease && !usePreReleases {
+			continue
 		}
+
+		var tagName string
+		var err error
+
+		// Check that TagName matches URLCommands
+		if tagName, err = l.URLCommands.Run(releases[i].TagName, *logFrom); err != nil {
+			continue
+		}
+
+		// Copy the release with the filtered TagName
+		release := releases[i]
+		release.TagName = tagName
+
+		// If SemVer isn't wanted, add without any sorting
+		if !semanticVerioning {
+			filteredReleases = append(filteredReleases, release)
+			continue
+		}
+
+		// Else, sort the versions
+		semVer, err := semver.NewVersion(tagName)
+		if err != nil {
+			continue
+		}
+		release.SemanticVersion = semVer
+		// If there's no other versions, just add it without insertions sort
+		if len(filteredReleases) == 0 {
+			filteredReleases = append(filteredReleases, release)
+			continue
+		}
+		// Insertion Sort
+		insertionSort(release, &filteredReleases)
 	}
 	return
 }
@@ -69,50 +83,52 @@ func (l *Lookup) filterGitHubReleases(
 //
 // Every GitHubRelease must be follow SemanticVersioning for this insertion
 func insertionSort(release github_types.Release, filteredReleases *[]github_types.Release) {
-	index := len(*filteredReleases)
-	for index != 0 {
-		index--
-		// semVer @current is less than @index
-		if release.SemanticVersion.LessThan(*(*filteredReleases)[index].SemanticVersion) {
-			if index == len(*filteredReleases)-1 {
-				*filteredReleases = append(*filteredReleases, release)
-				return
-			}
-			*filteredReleases = append((*filteredReleases)[:index+1], (*filteredReleases)[index:]...)
-			(*filteredReleases)[index+1] = release
-			return
-		} else if index == 0 {
-			// releases[i] is newer than all filteredReleases. Prepend
-			*filteredReleases = append([]github_types.Release{release}, *filteredReleases...)
-		}
+	n := len(*filteredReleases)
+	// find the insertion point
+	i := sort.Search(n, func(index int) bool {
+		return (*filteredReleases)[index].SemanticVersion.LessThan(*release.SemanticVersion)
+	})
+
+	// append an empty release to the end of the slice
+	*filteredReleases = append(*filteredReleases, github_types.Release{})
+
+	// insert the release at the insertion point
+	if i < n {
+		// shift elements to the right to make room for this release
+		copy((*filteredReleases)[i+1:], (*filteredReleases)[i:])
+		// overwrite the element at the insertion point
+		(*filteredReleases)[i] = release
+	} else {
+		// append the release to the end of the slice
+		(*filteredReleases)[n] = release
 	}
 }
 
 // checkGitHubReleasesBody will check that the body is of the expected API format for a successful query
-func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom util.LogFrom) (releases []github_types.Release, err error) {
+func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom *util.LogFrom) (releases []github_types.Release, err error) {
 	// Check for rate lirmRDrit.
 	if len(string(*body)) < 500 {
 		if strings.Contains(string(*body), "rate limit") {
 			err = errors.New("rate limit reached for GitHub")
-			jLog.Warn(err, logFrom, true)
+			jLog.Warn(err, *logFrom, true)
 			return
 		}
 		if !strings.Contains(string(*body), `"tag_name"`) {
 			err = errors.New("github access token is invalid")
-			jLog.Error(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
+			jLog.Error(err, *logFrom, strings.Contains(string(*body), "Bad credentials"))
 
 			err = fmt.Errorf("tag_name not found at %s\n%s",
 				l.URL, string(*body))
-			jLog.Error(err, logFrom, true)
+			jLog.Error(err, *logFrom, true)
 			return
 		}
 	}
 
 	if err = json.Unmarshal(*body, &releases); err != nil {
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w",
 			err)
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 	}
 	return
 }

@@ -25,14 +25,21 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestInitMetrics(t *testing.T) {
+func TestShoutrrr_InitMetrics(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		serviceShoutrrr bool
 		wantMetrics     bool
 	}{
-		"service Shoutrrr gives metrics":                         {serviceShoutrrr: true, wantMetrics: true},
-		"hardDefault/default/main Shoutrrr doesn't give metrics": {serviceShoutrrr: false, wantMetrics: false},
+		"service Shoutrrr gives metrics": {
+			serviceShoutrrr: true,
+			wantMetrics:     true},
+		"hardDefault/default/main Shoutrrr doesn't give metrics": {
+			serviceShoutrrr: false,
+			wantMetrics:     false},
+		"service Shoutrrr with nil ServiceStatus doesn't give metrics": {
+			serviceShoutrrr: false,
+			wantMetrics:     false},
 	}
 
 	for name, tc := range tests {
@@ -64,16 +71,22 @@ func TestInitMetrics(t *testing.T) {
 	}
 }
 
-func TestInitOptions(t *testing.T) {
+func TestShoutrrr_InitOptions(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
@@ -102,16 +115,22 @@ func TestInitOptions(t *testing.T) {
 	}
 }
 
-func TestInitURLFields(t *testing.T) {
+func TestShoutrrr_InitURLFields(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
@@ -140,16 +159,22 @@ func TestInitURLFields(t *testing.T) {
 	}
 }
 
-func TestInitParams(t *testing.T) {
+func TestShoutrrr_InitParams(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
@@ -178,18 +203,25 @@ func TestInitParams(t *testing.T) {
 	}
 }
 
-func TestInitMaps(t *testing.T) {
+func TestShoutrrr_InitMaps(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had         map[string]string
 		want        map[string]string
 		nilShoutrrr bool
 	}{
-		"nil shoutrrr": {nilShoutrrr: true},
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"nil shoutrrr": {
+			nilShoutrrr: true},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
@@ -246,7 +278,7 @@ func TestInitMaps(t *testing.T) {
 	}
 }
 
-func TestShoutrrrInit(t *testing.T) {
+func TestShoutrrr_Init(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		id              string
@@ -260,17 +292,36 @@ func TestShoutrrrInit(t *testing.T) {
 		metricCount     int
 		nilShoutrrr     bool
 	}{
-		"nil shoutrrr": {nilShoutrrr: true, metricCount: 0},
-		"all lowercase keys": {serviceShoutrrr: true, id: "lowercase", metricCount: 2,
-			had:  map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {serviceShoutrrr: true, id: "mixed-case", metricCount: 2,
-			had:  map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"gives matching main": {serviceShoutrrr: true, id: "matching-main", metricCount: 2,
-			main: &Shoutrrr{}, giveMain: true},
-		"creates new main if none match": {serviceShoutrrr: true, id: "no-matching-main", metricCount: 2,
-			main: nil},
+		"nil shoutrrr": {
+			nilShoutrrr: true,
+			metricCount: 0},
+		"all lowercase keys": {
+			id:              "lowercase",
+			serviceShoutrrr: true,
+			metricCount:     2,
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			id:              "mixed-case",
+			serviceShoutrrr: true,
+			metricCount:     2,
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"gives matching main": {
+			id:              "matching-main",
+			serviceShoutrrr: true,
+			metricCount:     2,
+			main:            &Shoutrrr{},
+			giveMain:        true},
+		"creates new main if none match": {
+			id:              "no-matching-main",
+			serviceShoutrrr: true,
+			metricCount:     2,
+			main:            nil},
 	}
 
 	for name, tc := range tests {
@@ -347,7 +398,7 @@ func TestShoutrrrInit(t *testing.T) {
 	}
 }
 
-func TestSliceInit(t *testing.T) {
+func TestSlice_Init(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		nilSlice     bool
@@ -358,15 +409,40 @@ func TestSliceInit(t *testing.T) {
 		defaults     Slice
 		hardDefaults Slice
 	}{
-		"nil slice":   {slice: nil, nilSlice: true},
-		"empty slice": {slice: &Slice{}},
-		"nil mains":   {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)}},
-		"slice with nil element and matching main": {slice: &Slice{"fail": nil},
-			mains: &Slice{"fail": testShoutrrr(false, false, false)}},
-		"have matching mains": {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)},
-			mains: &Slice{"fail": testShoutrrr(false, true, false), "pass": testShoutrrr(true, true, false)}},
-		"some matching mains": {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)},
-			mains: &Slice{"other": testShoutrrr(false, true, false), "pass": testShoutrrr(true, true, false)}},
+		"nil slice": {
+			slice:    nil,
+			nilSlice: true,
+		},
+		"empty slice": {
+			slice: &Slice{},
+		},
+		"nil mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+		},
+		"slice with nil element and matching main": {
+			slice: &Slice{
+				"fail": nil},
+			mains: &Slice{
+				"fail": testShoutrrr(false, false, false)},
+		},
+		"have matching mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+			mains: &Slice{
+				"fail": testShoutrrr(false, true, false),
+				"pass": testShoutrrr(true, true, false)},
+		},
+		"some matching mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+			mains: &Slice{
+				"other": testShoutrrr(false, true, false),
+				"pass":  testShoutrrr(true, true, false)},
+		},
 	}
 
 	for name, tc := range tests {

@@ -26,8 +26,8 @@ import (
 // Track will call Track on all Services in this Slice.
 func (s *Slice) Track(ordering *[]string) {
 	for _, key := range *ordering {
-		// Skip disabled Services
-		if !(*s)[key].Options.GetActive() {
+		// Skip inactive Services (and services that were deleted on startup)
+		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {
 			continue
 		}
 		(*s)[key].Options.Active = nil
@@ -49,14 +49,38 @@ func (s *Slice) Track(ordering *[]string) {
 // well as WebHooks (Service.WebHook) when a new release is spotted.
 // It sleeps for Service.Interval between each check.
 func (s *Service) Track() {
+	// Skip inactive Services
+	if !s.Options.GetActive() {
+		return
+	}
+
 	serviceInfo := s.GetServiceInfo()
 
 	// Track the deployed version in a infinite loop goroutine.
-	go s.DeployedVersionLookup.Track()
+	go func() {
+		time.Sleep(2 * time.Second) // Give LatestVersion some time to query first
 
+		// If DeployedVersion was queried less than interval ago, wait until it's been long enough.
+		deployedVersionAt, _ := time.Parse(time.RFC3339, s.Status.DeployedVersionTimestamp)
+		if time.Since(deployedVersionAt) < s.Options.GetIntervalDuration() {
+			time.Sleep(s.Options.GetIntervalDuration() - time.Since(deployedVersionAt))
+		}
+
+		go s.DeployedVersionLookup.Track()
+	}()
+
+	// If LatestVersion was queried less than interval ago, wait until it's been long enough.
+	latestVersionAt, _ := time.Parse(time.RFC3339, s.Status.LatestVersionTimestamp)
+	if time.Since(latestVersionAt) < s.Options.GetIntervalDuration() {
+		time.Sleep(s.Options.GetIntervalDuration() - time.Since(latestVersionAt))
+	}
 	// Track forever.
-	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first
 	for {
+		// If we're deleting this Service, stop tracking it.
+		if s.Status.Deleting {
+			return
+		}
+
 		// If new release found by this query.
 		newVersion, err := s.LatestVersion.Query()
 

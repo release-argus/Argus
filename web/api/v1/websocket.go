@@ -20,76 +20,34 @@ import (
 	"runtime"
 	"strings"
 
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
-	"github.com/release-argus/Argus/webhook"
 )
 
-func (api *API) wsService(client *Client) {
-	logFrom := util.LogFrom{Primary: "wsService", Secondary: client.ip}
-	api.Log.Verbose("-", logFrom, true)
+func (api *API) wsSendJSON(client *Client, msg api_type.WebSocketMessage, logFrom *util.LogFrom) {
+	client.lock.Lock()
+	defer client.lock.Unlock()
+	if err := client.conn.WriteJSON(msg); err != nil {
+		api.Log.Error(err, *logFrom, true)
+	}
+}
 
-	responsePage := "APPROVALS"
-	responseType := "SERVICE"
+func (api *API) wsServiceInit(client *Client) {
+	logFrom := util.LogFrom{Primary: "wsServiceInit", Secondary: client.ip}
+	api.Log.Verbose("-", logFrom, true)
 
 	// Send the ordering
 	msg := api_type.WebSocketMessage{
-		Page:    responsePage,
-		Type:    responseType,
+		Page:    "APPROVALS",
+		Type:    "SERVICE",
 		SubType: "ORDERING",
-		Order:   api.Config.Order,
+		Order:   &api.Config.Order,
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-		return
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 
 	// Initialise the services
-	for _, key := range *api.Config.Order {
-		// Check Service still exists in this ordering
-		if api.Config.Service[key] == nil {
-			continue
-		}
-
-		service := api.Config.Service[key]
-		url := service.LatestVersion.GetServiceURL(false)
-		hasDeployedVersionLookup := service.DeployedVersionLookup != nil
-
-		serviceSummary := api_type.ServiceSummary{
-			Active:                   service.Options.Active,
-			ID:                       service.ID,
-			Type:                     service.LatestVersion.Type,
-			URL:                      &url,
-			Icon:                     service.GetIconURL(),
-			IconLinkTo:               service.Dashboard.IconLinkTo,
-			HasDeployedVersionLookup: hasDeployedVersionLookup,
-			Command:                  len(service.Command),
-			WebHook:                  len(service.WebHook),
-			Status: &api_type.Status{
-				ApprovedVersion:          service.Status.ApprovedVersion,
-				DeployedVersion:          service.Status.DeployedVersion,
-				DeployedVersionTimestamp: service.Status.DeployedVersionTimestamp,
-				LatestVersion:            service.Status.LatestVersion,
-				LatestVersionTimestamp:   service.Status.LatestVersionTimestamp,
-				LastQueried:              service.Status.LastQueried,
-			},
-		}
-
-		// Create and send ServiceSummary
-		msg := api_type.WebSocketMessage{
-			Page:        responsePage,
-			Type:        responseType,
-			SubType:     "INIT",
-			ServiceData: &serviceSummary,
-		}
-		if err := client.conn.WriteJSON(msg); err != nil {
-			api.Log.Error(err, logFrom, true)
-			return
-		}
+	for _, key := range api.Config.Order {
+		api.announceService(key, client, &logFrom)
 	}
 }
 
@@ -110,9 +68,16 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 		api.Log.Error("target for command/webhook not provided", logFrom, true)
 		return
 	}
+
+	// Check the service exists.
 	id := payload.ServiceData.ID
-	if api.Config.Service[id] == nil {
+	svc := api.Config.Service[id]
+	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
+		return
+	}
+	// Don't do anything if the service is not active.
+	if !svc.Options.GetActive() {
 		return
 	}
 
@@ -120,11 +85,11 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%s release skip - %q", id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
-		api.Config.Service[id].HandleSkip(payload.ServiceData.Status.LatestVersion)
+		svc.HandleSkip(payload.ServiceData.Status.LatestVersion)
 		return
 	}
 
-	if api.Config.Service[id].WebHook == nil && api.Config.Service[id].Command == nil {
+	if svc.WebHook == nil && svc.Command == nil {
 		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", id), logFrom, true)
 		return
 	}
@@ -132,7 +97,7 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 	// Send the WebHook(s).
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
 		id,
-		api.Config.Service[id].Status.LatestVersion,
+		svc.Status.LatestVersion,
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,
@@ -143,12 +108,12 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 	api.Log.Info(msg, logFrom, true)
 	switch *payload.Target {
 	case "ARGUS_ALL", "ARGUS_FAILED":
-		go api.Config.Service[id].HandleFailedActions()
+		go svc.HandleFailedActions()
 	default:
 		if strings.HasPrefix(*payload.Target, "webhook_") {
-			go api.Config.Service[id].HandleWebHook(strings.TrimPrefix(*payload.Target, "webhook_"))
+			go svc.HandleWebHook(strings.TrimPrefix(*payload.Target, "webhook_"))
 		} else {
-			go api.Config.Service[id].HandleCommand(strings.TrimPrefix(*payload.Target, "command_"))
+			go svc.HandleCommand(strings.TrimPrefix(*payload.Target, "command_"))
 		}
 	}
 }
@@ -167,21 +132,22 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		return
 	}
 	id := payload.ServiceData.ID
-	if api.Config.Service[id] == nil {
+	svc := api.Config.Service[id]
+	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
 	}
-	if api.Config.Service[id].CommandController == nil {
+	if svc.CommandController == nil {
 		return
 	}
 
 	// Create and send commandSummary
-	commandSummary := make(map[string]*api_type.CommandSummary, len(api.Config.Service[id].Command))
-	for key := range *api.Config.Service[id].CommandController.Command {
-		command := (*api.Config.Service[id].CommandController.Command)[key].ApplyTemplate(&api.Config.Service[id].Status)
+	commandSummary := make(map[string]*api_type.CommandSummary, len(svc.Command))
+	for i := range *svc.CommandController.Command {
+		command := (*svc.CommandController.Command)[i].ApplyTemplate(&svc.Status)
 		commandSummary[command.String()] = &api_type.CommandSummary{
-			Failed:       api.Config.Service[id].Status.Fails.Command[key],
-			NextRunnable: api.Config.Service[id].CommandController.NextRunnable[key],
+			Failed:       svc.Status.Fails.Command[i],
+			NextRunnable: svc.CommandController.NextRunnable[i],
 		}
 	}
 
@@ -194,9 +160,7 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		},
 		CommandData: commandSummary,
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsWebHook handles getting the WebHook(s) of a service.
@@ -213,21 +177,22 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 		return
 	}
 	id := payload.ServiceData.ID
-	if api.Config.Service[id] == nil {
+	svc := api.Config.Service[id]
+	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
 	}
-	if api.Config.Service[id].WebHook == nil {
+	if svc.WebHook == nil {
 		return
 	}
 
 	// Create and send webhookSummary
-	webhookSummary := make(map[string]*api_type.WebHookSummary, len(api.Config.Service[id].WebHook))
+	webhookSummary := make(map[string]*api_type.WebHookSummary, len(svc.WebHook))
 
-	for key := range api.Config.Service[id].WebHook {
+	for key := range svc.WebHook {
 		webhookSummary[key] = &api_type.WebHookSummary{
-			Failed:       api.Config.Service[id].Status.Fails.WebHook[key],
-			NextRunnable: api.Config.Service[id].WebHook[key].NextRunnable,
+			Failed:       svc.Status.Fails.WebHook[key],
+			NextRunnable: svc.WebHook[key].NextRunnable,
 		}
 	}
 
@@ -240,9 +205,7 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 		},
 		WebHookData: webhookSummary,
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsStatus handles getting the info of the Argus binary status.
@@ -272,9 +235,7 @@ func (api *API) wsStatus(client *Client) {
 		Type:     "INIT",
 		InfoData: &info,
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsFlags handles getting the values of the flags that can be used with the binary.
@@ -298,9 +259,7 @@ func (api *API) wsFlags(client *Client) {
 			WebRoutePrefix:   api.Config.Settings.GetWebRoutePrefix(),
 		},
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsConfigSettings handles getting the `settings` config that's in use.
@@ -329,9 +288,7 @@ func (api *API) wsConfigSettings(client *Client) {
 			},
 		},
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsConfigDefaults handles getting the `defaults` config that's in use.
@@ -373,9 +330,7 @@ func (api *API) wsConfigDefaults(client *Client) {
 	}
 
 	msg.ConfigData.Defaults.Notify = *msg.ConfigData.Defaults.Notify.Censor()
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsConfigNotify handles getting the `notify` config that's in use.
@@ -392,9 +347,7 @@ func (api *API) wsConfigNotify(client *Client) {
 			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify),
 		},
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsConfigWebHook handles getting the `webhook` config that's in use.
@@ -411,9 +364,7 @@ func (api *API) wsConfigWebHook(client *Client) {
 			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook),
 		},
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
+	api.wsSendJSON(client, msg, &logFrom)
 }
 
 // wsConfigService handles getting the `service` config that's in use.
@@ -424,46 +375,9 @@ func (api *API) wsConfigService(client *Client) {
 	// Create and send status page data
 	serviceConfig := make(api_type.ServiceSlice)
 	if api.Config.Service != nil {
-		for _, key := range api.Config.All {
+		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]
-
-			serviceConfig[key] = &api_type.Service{
-				Comment: service.Comment,
-				Options: &api_type.ServiceOptions{
-					Active:             service.Options.Active,
-					Interval:           service.Options.Interval,
-					SemanticVersioning: service.Options.SemanticVersioning,
-				},
-				LatestVersion: &api_type.LatestVersion{
-					Type:              service.LatestVersion.Type,
-					URL:               service.LatestVersion.URL,
-					URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands),
-					AccessToken:       util.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
-					AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
-					UsePreRelease:     service.LatestVersion.UsePreRelease,
-				},
-				Dashboard: &api_type.DashboardOptions{
-					AutoApprove: service.Dashboard.AutoApprove,
-					Icon:        service.Dashboard.Icon,
-					IconLinkTo:  service.Dashboard.IconLinkTo,
-					WebURL:      service.Dashboard.WebURL,
-				},
-			}
-			if service.LatestVersion.Require != nil {
-				serviceConfig[key].LatestVersion.Require = &api_type.LatestVersionRequire{
-					RegexContent: service.LatestVersion.Require.RegexContent,
-					RegexVersion: service.LatestVersion.Require.RegexVersion,
-				}
-			}
-
-			// DeployedVersionLookup
-			serviceConfig[key].DeployedVersionLookup = convertDeployedVersionLookupToAPITypeDeployedVersionLookup(service.DeployedVersionLookup)
-			// Notify
-			serviceConfig[key].Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
-			// Command
-			serviceConfig[key].Command = convertCommandSliceToAPITypeCommandSlice(&service.Command)
-			// WebHook
-			serviceConfig[key].WebHook = convertWebHookSliceToAPITypeWebHookSlice(&service.WebHook)
+			serviceConfig[key] = convertServiceToAPITypeService(service)
 		}
 	}
 
@@ -473,117 +387,8 @@ func (api *API) wsConfigService(client *Client) {
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
 			Service: &serviceConfig,
-			Order:   api.Config.All,
+			Order:   api.Config.Order,
 		},
 	}
-	if err := client.conn.WriteJSON(msg); err != nil {
-		api.Log.Error(err, logFrom, true)
-	}
-}
-
-func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) *api_type.DeployedVersionLookup {
-	if dvl == nil {
-		return nil
-	}
-	var headers []api_type.Header
-	apiDVL := api_type.DeployedVersionLookup{
-		URL:               dvl.URL,
-		AllowInvalidCerts: dvl.AllowInvalidCerts,
-		Headers:           headers,
-		JSON:              dvl.JSON,
-		Regex:             dvl.Regex,
-	}
-	// Basic auth
-	if dvl.BasicAuth != nil {
-		apiDVL.BasicAuth = &api_type.BasicAuth{
-			Username: dvl.BasicAuth.Username,
-			Password: "<secret>",
-		}
-	}
-	// Headers
-	for i := range dvl.Headers {
-		apiDVL.Headers = append(
-			apiDVL.Headers,
-			api_type.Header{
-				Key:   dvl.Headers[i].Key,
-				Value: "<secret>",
-			},
-		)
-	}
-	return &apiDVL
-}
-
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) api_type.URLCommandSlice {
-	if commands == nil {
-		return nil
-	}
-	apiSlice := make(api_type.URLCommandSlice, len(*commands))
-	for index := range *commands {
-		apiSlice[index] = api_type.URLCommand{
-			Type:  (*commands)[index].Type,
-			Regex: (*commands)[index].Regex,
-			Index: (*commands)[index].Index,
-			Text:  (*commands)[index].Text,
-			Old:   (*commands)[index].Old,
-			New:   (*commands)[index].New,
-		}
-	}
-	return apiSlice
-}
-
-func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type.NotifySlice {
-	if notifiers == nil {
-		return nil
-	}
-	apiSlice := make(api_type.NotifySlice, len(*notifiers))
-	for index := range *notifiers {
-		apiSlice[index] = &api_type.Notify{
-			Type:      (*notifiers)[index].Type,
-			Options:   (*notifiers)[index].Options,
-			URLFields: (*notifiers)[index].URLFields,
-			Params:    (*notifiers)[index].Params,
-		}
-		// Assign as it may be a new pointer as the fields are a map rather than individual pointers/vars
-		apiSlice[index] = apiSlice[index].Censor()
-	}
-	return &apiSlice
-}
-
-func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_type.CommandSlice {
-	if commands == nil {
-		return nil
-	}
-	apiSlice := make(api_type.CommandSlice, len(*commands))
-	for index := range *commands {
-		apiSlice[index] = api_type.Command((*commands)[index])
-	}
-	return &apiSlice
-}
-
-func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_type.WebHookSlice {
-	if webhooks == nil {
-		return nil
-	}
-	apiSlice := make(api_type.WebHookSlice, len(*webhooks))
-	for index := range *webhooks {
-		apiSlice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
-	}
-	return &apiSlice
-}
-
-func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_type.WebHook) {
-	if webhook == nil {
-		return
-	}
-	apiElement = &api_type.WebHook{
-		Type:              &webhook.Type,
-		URL:               &webhook.URL,
-		Secret:            util.ValueIfNotNil(&webhook.Secret, "<secret>"),
-		CustomHeaders:     webhook.CustomHeaders,
-		DesiredStatusCode: webhook.DesiredStatusCode,
-		Delay:             webhook.Delay,
-		MaxTries:          webhook.MaxTries,
-		SilentFails:       webhook.SilentFails,
-	}
-	return
+	api.wsSendJSON(client, msg, &logFrom)
 }

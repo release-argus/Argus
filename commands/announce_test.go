@@ -25,7 +25,7 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceCommand(t *testing.T) {
+func TestController_AnnounceCommand(t *testing.T) {
 	// GIVEN Controllers with various failed Command announces
 	fails := make([]*bool, 3)
 	tests := map[string]struct {
@@ -34,7 +34,9 @@ func TestAnnounceCommand(t *testing.T) {
 		failed         *bool
 		timeDifference time.Duration
 	}{
-		"no channel": {nilChannel: true},
+		"no channel": {
+			nilChannel: true,
+		},
 		"not tried does delay by 15s": {
 			index:          2,
 			timeDifference: 15 * time.Second,
@@ -110,41 +112,53 @@ func TestAnnounceCommand(t *testing.T) {
 	}
 }
 
-func TestFind(t *testing.T) {
+func TestController_Find(t *testing.T) {
 	// GIVEN we have a Controller with Command's
-	fails := make([]*bool, 3)
-	controller := Controller{
-		Command: &Slice{
-			Command{"ls", "-lah"},
-			Command{"ls", "-lah", "a"},
-			Command{"ls", "-lah", "b"},
-			Command{"bash", "upgrade.sh", "{{ version }}"},
-		},
-		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
-		Failed:        &fails,
-	}
 	tests := map[string]struct {
 		command       string
 		want          *int
 		nilController bool
 	}{
-		"command at first index":  {command: "ls -lah", want: intPtr(0)},
-		"command at second index": {command: "ls -lah a", want: intPtr(1)},
-		"command with svcstatus":  {command: "bash upgrade.sh 1.2.3", want: intPtr(3)},
-		"unknown command":         {command: "ls -lah /root", want: nil},
-		"nil controller":          {command: "ls -lah /root", want: nil, nilController: true},
+		"command at first index": {
+			command: "ls -lah",
+			want:    intPtr(0)},
+		"command at second index": {
+			command: "ls -lah a",
+			want:    intPtr(1)},
+		"command with svcstatus": {
+			command: "bash upgrade.sh 1.2.3",
+			want:    intPtr(3)},
+		"unknown command": {
+			command: "ls -lah /root",
+			want:    nil},
+		"nil controller": {
+			command:       "ls -lah /root",
+			want:          nil,
+			nilController: true},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			var target *Controller
-			if !tc.nilController {
-				target = &controller
+			fails := make([]*bool, 4)
+			controller := &Controller{
+				Command: &Slice{
+					Command{"ls", "-lah"},
+					Command{"ls", "-lah", "a"},
+					Command{"ls", "-lah", "b"},
+					Command{"bash", "upgrade.sh", "{{ version }}"},
+				},
+				ServiceStatus: &svcstatus.Status{
+					ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
+				Failed: &fails,
 			}
+			if tc.nilController {
+				controller = nil
+			}
+
 			// WHEN Find is run for a command
-			index := target.Find(tc.command)
+			index := controller.Find(tc.command)
 
 			// THEN the index is returned if it exists
 			got := stringifyPointer(index)
@@ -157,26 +171,37 @@ func TestFind(t *testing.T) {
 	}
 }
 
-func TestResetFails(t *testing.T) {
+func TestController_ResetFails(t *testing.T) {
 	// GIVEN we have a Controller
 	tests := map[string]struct {
 		controller *Controller
 	}{
-		"nil controller": {controller: nil},
-		"controller with all fails": {controller: &Controller{
-			Failed: &[]*bool{boolPtr(true), boolPtr(true)}}},
-		"controller with no fails": {controller: &Controller{
-			Failed: &[]*bool{boolPtr(false), boolPtr(false)}}},
-		"controller with some fails": {controller: &Controller{
-			Failed: &[]*bool{boolPtr(true), boolPtr(false)}}},
-		"controller with nil fails": {controller: &Controller{
-			Failed: &[]*bool{nil, nil}}},
+		"nil controller": {
+			controller: nil,
+		},
+		"controller with all fails": {
+			controller: &Controller{
+				Failed: &[]*bool{
+					boolPtr(true), boolPtr(true)}}},
+		"controller with no fails": {
+			controller: &Controller{
+				Failed: &[]*bool{
+					boolPtr(false), boolPtr(false)}}},
+		"controller with some fails": {
+			controller: &Controller{
+				Failed: &[]*bool{
+					boolPtr(true), boolPtr(false)}}},
+		"controller with nil fails": {
+			controller: &Controller{
+				Failed: &[]*bool{
+					nil, nil}}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN ResetFails is run on this controller
 			tc.controller.ResetFails()
 

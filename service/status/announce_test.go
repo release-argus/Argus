@@ -23,13 +23,15 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceFirstVersion(t *testing.T) {
-	// GIVEN a Status
+func TestStatus_AnnounceFirstVersion(t *testing.T) {
+	// GIVEN a Status and an AnnounceChannel that may be nil
 	tests := map[string]struct {
 		nilChannel bool
 	}{
-		"nil channel doesn't crash":  {nilChannel: true},
-		"non-nil sends correct data": {nilChannel: false},
+		"nil channel doesn't crash": {
+			nilChannel: true},
+		"non-nil sends correct data": {
+			nilChannel: false},
 	}
 
 	for name, tc := range tests {
@@ -70,13 +72,15 @@ func TestAnnounceFirstVersion(t *testing.T) {
 	}
 }
 
-func TestAnnounceQuery(t *testing.T) {
-	// GIVEN a Status
+func TestStatus_AnnounceQuery(t *testing.T) {
+	// GIVEN an AnnounceChannel
 	tests := map[string]struct {
 		nilChannel bool
 	}{
-		"nil channel doesn't crash":  {nilChannel: true},
-		"non-nil sends correct data": {nilChannel: false},
+		"nil channel doesn't crash": {
+			nilChannel: true},
+		"non-nil sends correct data": {
+			nilChannel: false},
 	}
 
 	for name, tc := range tests {
@@ -112,13 +116,15 @@ func TestAnnounceQuery(t *testing.T) {
 	}
 }
 
-func TestAnnounceQueryNewVersion(t *testing.T) {
-	// GIVEN a Status
+func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
+	// GIVEN a Status and an AnnounceChannel that may be nil
 	tests := map[string]struct {
 		nilChannel bool
 	}{
-		"nil channel doesn't crash":  {nilChannel: true},
-		"non-nil sends correct data": {nilChannel: false},
+		"nil channel doesn't crash": {
+			nilChannel: true},
+		"non-nil sends correct data": {
+			nilChannel: false},
 	}
 
 	for name, tc := range tests {
@@ -159,13 +165,15 @@ func TestAnnounceQueryNewVersion(t *testing.T) {
 	}
 }
 
-func TestAnnounceUpdate(t *testing.T) {
-	// GIVEN a Status
+func TestStatus_AnnounceUpdate(t *testing.T) {
+	// GIVEN a Status and an AnnounceChannel that may be nil
 	tests := map[string]struct {
 		nilChannel bool
 	}{
-		"nil channel doesn't crash":  {nilChannel: true},
-		"non-nil sends correct data": {nilChannel: false},
+		"nil channel doesn't crash": {
+			nilChannel: true},
+		"non-nil sends correct data": {
+			nilChannel: false},
 	}
 
 	for name, tc := range tests {
@@ -206,40 +214,15 @@ func TestAnnounceUpdate(t *testing.T) {
 	}
 }
 
-func TestAnnounceApprovedWithNilAnnounce(t *testing.T) {
-	// GIVEN a Status with a nil Announce
-	status := testStatus()
-	status.AnnounceChannel = nil
-
-	// WHEN AnnounceApproved is called on it
-	status.AnnounceApproved()
-
-	// THEN the function doesn't hang/err
-}
-
-func TestAnnounceApprovedWithAnnounce(t *testing.T) {
-	// GIVEN a Status with an Announce channel
-	status := testStatus()
-
-	// WHEN AnnounceApproved is called on it
-	status.AnnounceApproved()
-
-	// THEN the function announces to the channel
-	got := len(*status.AnnounceChannel)
-	want := 1
-	if got != want {
-		t.Errorf("%d messages in the channel from the announce. Should be %d",
-			got, want)
-	}
-}
-
-func TestAnnounceApproved(t *testing.T) {
-	// GIVEN a Status
+func TestStatus_AnnounceApproved(t *testing.T) {
+	// GIVEN a Status and an AnnounceChannel
 	tests := map[string]struct {
 		nilChannel bool
 	}{
-		"nil channel doesn't crash":  {nilChannel: true},
-		"non-nil sends correct data": {nilChannel: false},
+		"nil channel": {
+			nilChannel: true},
+		"non-nil": {
+			nilChannel: false},
 	}
 
 	for name, tc := range tests {

@@ -15,7 +15,10 @@
 package svcstatus
 
 import (
+	"bytes"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -24,22 +27,58 @@ import (
 
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
-	ApprovedVersion          string `yaml:"-"` // The version that's been approved
-	DeployedVersion          string `yaml:"-"` // Track the deployed version of the service from the last successful WebHook.
-	DeployedVersionTimestamp string `yaml:"-"` // UTC timestamp of DeployedVersion being changed.
-	LatestVersion            string `yaml:"-"` // Latest version found from query().
-	LatestVersionTimestamp   string `yaml:"-"` // UTC timestamp of LatestVersion being changed.
-	LastQueried              string `yaml:"-"` // UTC timestamp that version was last queried/checked.
-	RegexMissesContent       uint   `yaml:"-"` // Counter for the number of regex misses on URL content.
-	RegexMissesVersion       uint   `yaml:"-"` // Counter for the number of regex misses on version.
-	Fails                    Fails  `yaml:"-"` // Track the Notify/WebHook fails
+	ApprovedVersion          string `yaml:"-" json:"-"` // The version that's been approved
+	DeployedVersion          string `yaml:"-" json:"-"` // Track the deployed version of the service from the last successful WebHook.
+	DeployedVersionTimestamp string `yaml:"-" json:"-"` // UTC timestamp of DeployedVersion being changed.
+	LatestVersion            string `yaml:"-" json:"-"` // Latest version found from query().
+	LatestVersionTimestamp   string `yaml:"-" json:"-"` // UTC timestamp of LatestVersion being changed.
+	LastQueried              string `yaml:"-" json:"-"` // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint   `yaml:"-" json:"-"` // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint   `yaml:"-" json:"-"` // Counter for the number of regex misses on version.
+	Fails                    Fails  `yaml:"-" json:"-"` // Track the Notify/WebHook fails
+	Deleting                 bool   `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
 
 	// Announces
-	AnnounceChannel *chan []byte         `yaml:"-"` // Announce to the WebSocket
-	DatabaseChannel *chan dbtype.Message `yaml:"-"` // Channel for broadcasts to the Database
-	SaveChannel     *chan bool           `yaml:"-"` // Channel for triggering a save of the config
-	ServiceID       *string              `yaml:"-"` // ID of the Service
-	WebURL          *string              `yaml:"-"` // Web URL of the Service
+	AnnounceChannel *chan []byte         `yaml:"-" json:"-"` // Announce to the WebSocket
+	DatabaseChannel *chan dbtype.Message `yaml:"-" json:"-"` // Channel for broadcasts to the Database
+	SaveChannel     *chan bool           `yaml:"-" json:"-"` // Channel for triggering a save of the config
+	ServiceID       *string              `yaml:"-" json:"-"` // ID of the Service
+	WebURL          *string              `yaml:"-" json:"-"` // Web URL of the Service
+}
+
+// String returns a string representation of the Status.
+func (s *Status) String() string {
+	fields := []util.Field{
+		{Name: "approved_version", Value: s.ApprovedVersion},
+		{Name: "deployed_version", Value: s.DeployedVersion},
+		{Name: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
+		{Name: "latest_version", Value: s.LatestVersion},
+		{Name: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
+		{Name: "last_queried", Value: s.LastQueried},
+		{Name: "regex_misses_content", Value: s.RegexMissesContent},
+		{Name: "regex_misses_version", Value: s.RegexMissesVersion},
+		{Name: "fails", Value: s.Fails},
+	}
+
+	var buf bytes.Buffer
+	for _, f := range fields {
+		switch v := f.Value.(type) {
+		case string:
+			if v != "" {
+				fmt.Fprint(&buf, f.Name, ": ", v, ", ")
+			}
+		case uint:
+			if v != 0 {
+				fmt.Fprint(&buf, f.Name, ": ", v, ", ")
+			}
+		case Fails:
+			if fails := v.String(); fails != "" {
+				fmt.Fprint(&buf, f.Name, ": {", fails, "}, ")
+			}
+		}
+	}
+
+	return strings.TrimSuffix(buf.String(), ", ")
 }
 
 // TODO: Deprecate
@@ -54,9 +93,86 @@ type OldStatus struct {
 
 // Fails keeps track of whether any of the notifications failed on the last version change.
 type Fails struct {
-	Shoutrrr map[string]*bool `yaml:"-"` // Shoutrrr unsent/fail/pass.
-	WebHook  map[string]*bool `yaml:"-"` // WebHook unsent/fail/pass.
-	Command  []*bool          `yaml:"-"` // Command unsent/fail/pass.
+	Shoutrrr map[string]*bool `yaml:"-" json:"-"` // Shoutrrr unsent/fail/pass.
+	Command  []*bool          `yaml:"-" json:"-"` // Command unsent/fail/pass.
+	WebHook  map[string]*bool `yaml:"-" json:"-"` // WebHook unsent/fail/pass.
+}
+
+// String returns a string representation of the Fails.
+func (s *Fails) String() string {
+	fields := []util.Field{
+		{Name: "shoutrrr", Value: s.Shoutrrr},
+		{Name: "command", Value: s.Command},
+		{Name: "webhook", Value: s.WebHook},
+	}
+
+	var buf bytes.Buffer
+	for _, f := range fields {
+		switch v := f.Value.(type) {
+		case map[string]*bool:
+			if len(v) == 0 {
+				continue
+			}
+			// Check for fails in the map.
+			hasFail := false
+			for i := range v {
+				if util.DefaultIfNil(v[i]) {
+					hasFail = true
+					break
+				}
+			}
+			// If there are no fails, skip this field.
+			if !hasFail {
+				continue
+			}
+
+			fmt.Fprint(&buf, f.Name, ": {")
+
+			// Create a slice of keys and sort them
+			keys := make([]string, 0, len(v))
+			for k := range v {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+
+			// Iterate over the sorted keys
+			for _, key := range keys {
+				if util.DefaultIfNil(v[key]) {
+					fmt.Fprint(&buf, key, ": ", *v[key], ", ")
+				}
+			}
+			// Remove the trailing ", "
+			buf.Truncate(buf.Len() - 2)
+			fmt.Fprint(&buf, "}, ")
+		case []*bool:
+			if len(v) > 0 {
+				// Check for fails in the list.
+				hasFail := false
+				for i := range v {
+					if util.DefaultIfNil(v[i]) {
+						hasFail = true
+						break
+					}
+				}
+				// If there are no fails, skip this field.
+				if !hasFail {
+					continue
+				}
+
+				fmt.Fprint(&buf, f.Name, ": [")
+				for i, v := range v {
+					if util.DefaultIfNil(v) {
+						fmt.Fprint(&buf, i, ": ", *v, ", ")
+					}
+				}
+				// Remove the trailing ", "
+				buf.Truncate(buf.Len() - 2)
+				fmt.Fprint(&buf, "], ")
+			}
+		}
+	}
+
+	return strings.TrimSuffix(buf.String(), ", ")
 }
 
 // Init initialises the Status vars when more than the default value is needed.
@@ -92,12 +208,14 @@ func (s *Status) SetDeployedVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.Fails.resetFails()
 
-	*s.DatabaseChannel <- dbtype.Message{
-		ServiceID: *s.ServiceID,
-		Cells: []dbtype.Cell{
-			{Column: "deployed_version", Value: s.DeployedVersion},
-			{Column: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
-		},
+	if s.DatabaseChannel != nil {
+		*s.DatabaseChannel <- dbtype.Message{
+			ServiceID: *s.ServiceID,
+			Cells: []dbtype.Cell{
+				{Column: "deployed_version", Value: s.DeployedVersion},
+				{Column: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
+			},
+		}
 	}
 }
 
@@ -109,12 +227,14 @@ func (s *Status) SetLatestVersion(version string) {
 	// Clear the fail status of WebHooks/Commands
 	s.Fails.resetFails()
 
-	*s.DatabaseChannel <- dbtype.Message{
-		ServiceID: *s.ServiceID,
-		Cells: []dbtype.Cell{
-			{Column: "latest_version", Value: s.LatestVersion},
-			{Column: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
-		},
+	if s.DatabaseChannel != nil {
+		*s.DatabaseChannel <- dbtype.Message{
+			ServiceID: *s.ServiceID,
+			Cells: []dbtype.Cell{
+				{Column: "latest_version", Value: s.LatestVersion},
+				{Column: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
+			},
+		}
 	}
 }
 
@@ -142,9 +262,14 @@ func (s *Status) GetWebURL() string {
 
 // Print will print the Status.
 func (s *Status) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.ApprovedVersion, fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
-	util.PrintlnIfNotDefault(s.DeployedVersion, fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
-	util.PrintlnIfNotDefault(s.DeployedVersionTimestamp, fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
-	util.PrintlnIfNotDefault(s.LatestVersion, fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
-	util.PrintlnIfNotDefault(s.LatestVersionTimestamp, fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
+	util.PrintlnIfNotDefault(s.ApprovedVersion,
+		fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
+	util.PrintlnIfNotDefault(s.DeployedVersion,
+		fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
+	util.PrintlnIfNotDefault(s.DeployedVersionTimestamp,
+		fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
+	util.PrintlnIfNotDefault(s.LatestVersion,
+		fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
+	util.PrintlnIfNotDefault(s.LatestVersionTimestamp,
+		fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
 }

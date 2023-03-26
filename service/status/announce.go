@@ -25,14 +25,13 @@ import (
 func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
-	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "INIT",
 		ServiceData: &api_type.ServiceSummary{
-			ID:  *s.ServiceID,
-			URL: &serviceWebURL,
+			ID:     *s.ServiceID,
+			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
 				LatestVersion:          s.LatestVersion,
 				LatestVersionTimestamp: s.LatestVersionTimestamp,
@@ -73,14 +72,13 @@ func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "NEW",
 		ServiceData: &api_type.ServiceSummary{
-			ID:  *s.ServiceID,
-			URL: &serviceWebURL,
+			ID:     *s.ServiceID,
+			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
 				LatestVersion:          s.LatestVersion,
 				LatestVersionTimestamp: s.LatestVersionTimestamp,

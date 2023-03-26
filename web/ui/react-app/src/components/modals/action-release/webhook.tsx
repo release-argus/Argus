@@ -14,10 +14,10 @@ import {
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 
+import { FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ReactElement } from "react";
 
-interface params {
+interface Props {
   modalType: ModalType;
   name: string;
   webhook: WebHookSummaryType;
@@ -25,13 +25,13 @@ interface params {
   ack: (target: string, isWebHook: boolean) => void;
 }
 
-export const WebHook = ({
+export const WebHook: FC<Props> = ({
   modalType,
   name,
   webhook,
   sending,
   ack,
-}: params): ReactElement => {
+}) => {
   return (
     <Card bg="secondary" className={"no-margin service"}>
       <Card.Title className="modal-item-title" key={name + "-title"}>

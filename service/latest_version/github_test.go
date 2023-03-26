@@ -33,9 +33,12 @@ func TestInsertionSort(t *testing.T) {
 		release  string
 		expectAt int
 	}{
-		"newer release":  {release: "1.0.0", expectAt: 0},
-		"middle release": {release: "0.2.0", expectAt: 2},
-		"oldest release": {release: "0.0.0", expectAt: 5},
+		"newer release": {
+			release: "1.0.0", expectAt: 0},
+		"middle release": {
+			release: "0.2.0", expectAt: 2},
+		"oldest release": {
+			release: "0.0.0", expectAt: 5},
 	}
 
 	for name, tc := range tests {
@@ -69,17 +72,25 @@ func TestInsertionSort(t *testing.T) {
 	}
 }
 
-func TestCheckGitHubReleasesBody(t *testing.T) {
+func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 	// GIVEN a body
 	testLogging("WARN")
 	tests := map[string]struct {
 		body     string
 		errRegex string
 	}{
-		"rate limit":        {body: "something rate limit something", errRegex: "rate limit reached"},
-		"bad credentials":   {body: "something Bad credentials something", errRegex: "tag_name not found at"},
-		"no tag_name found": {body: "bish bash bosh", errRegex: "tag_name not found at"},
-		"invalid json":      {body: strings.Repeat("something something something", 100), errRegex: "unmarshal .* failed"},
+		"rate limit": {
+			body:     "something rate limit something",
+			errRegex: "rate limit reached"},
+		"bad credentials": {
+			body:     "something Bad credentials something",
+			errRegex: "tag_name not found at"},
+		"no tag_name found": {
+			body:     "bish bash bosh",
+			errRegex: "tag_name not found at"},
+		"invalid json": {
+			body:     strings.Repeat("something something something", 100),
+			errRegex: "unmarshal .* failed"},
 	}
 
 	for name, tc := range tests {
@@ -90,7 +101,7 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 			lv := Lookup{}
 
 			// WHEN filterGitHubReleases is called on this body
-			_, err := lv.checkGitHubReleasesBody(&body, util.LogFrom{})
+			_, err := lv.checkGitHubReleasesBody(&body, &util.LogFrom{})
 
 			// THEN it err's when expected
 			e := util.ErrorToString(err)
@@ -104,7 +115,7 @@ func TestCheckGitHubReleasesBody(t *testing.T) {
 	}
 }
 
-func TestFilterGitHubReleases(t *testing.T) {
+func TestLookup_FilterGitHubReleases(t *testing.T) {
 	// GIVEN a bunch of releases
 	testLogging("WARN")
 	tests := map[string]struct {
@@ -113,42 +124,62 @@ func TestFilterGitHubReleases(t *testing.T) {
 		usePreReleases     bool
 		want               []string
 	}{
-		"keep pre-releases": {usePreReleases: true, releases: []github_types.Release{
-			{TagName: "0.99.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.99.0", "0.3.0", "0.0.1"}},
-		"exclude pre-releases": {usePreReleases: false, releases: []github_types.Release{
-			{TagName: "0.99.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.99.0", "0.0.1"}},
-		"exclude non-semantic": {usePreReleases: true, semanticVersioning: true, releases: []github_types.Release{
-			{TagName: "0.99.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "v0.2.0", PreRelease: true},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.99.0", "0.3.0", "0.0.1"}},
-		"keep pre-release non-semantic": {usePreReleases: true, releases: []github_types.Release{
-			{TagName: "0.99.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "v0.2.0", PreRelease: true},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.99.0", "0.3.0", "v0.2.0", "0.0.1"}},
-		"exclude pre-release non-semantic": {usePreReleases: false, releases: []github_types.Release{
-			{TagName: "0.99.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "v0.2.0", PreRelease: true},
-			{TagName: "v0.0.2"},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.99.0", "v0.0.2", "0.0.1"}},
-		"does sort releases": {usePreReleases: true, semanticVersioning: true, releases: []github_types.Release{
-			{TagName: "0.0.0"},
-			{TagName: "0.3.0", PreRelease: true},
-			{TagName: "0.2.0", PreRelease: true},
-			{TagName: "0.0.2"},
-			{TagName: "0.0.1"},
-		}, want: []string{"0.3.0", "0.2.0", "0.0.2", "0.0.1", "0.0.0"}},
+		"keep pre-releases": {
+			usePreReleases: true,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "0.3.0", "0.0.1"},
+		},
+		"exclude pre-releases": {
+			usePreReleases: false,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "0.0.1"},
+		},
+		"exclude non-semantic": {
+			usePreReleases:     true,
+			semanticVersioning: true,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "v0.2.0", PreRelease: true},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "0.3.0", "0.0.1"},
+		},
+		"keep pre-release non-semantic": {
+			usePreReleases: true,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "v0.2.0", PreRelease: true},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "0.3.0", "v0.2.0", "0.0.1"},
+		},
+		"exclude pre-release non-semantic": {
+			usePreReleases: false,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "v0.2.0", PreRelease: true},
+				{TagName: "v0.0.2"},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "v0.0.2", "0.0.1"},
+		},
+		"does sort releases": {
+			usePreReleases:     true,
+			semanticVersioning: true,
+			releases: []github_types.Release{
+				{TagName: "0.0.0"},
+				{TagName: "0.3.0", PreRelease: true},
+				{TagName: "0.2.0", PreRelease: true},
+				{TagName: "0.0.2"},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.3.0", "0.2.0", "0.0.2", "0.0.1", "0.0.0"},
+		},
 	}
 
 	for name, tc := range tests {
@@ -167,7 +198,7 @@ func TestFilterGitHubReleases(t *testing.T) {
 				HardDefaults:  &Lookup{}}
 
 			// WHEN filterGitHubReleases is called on this body
-			filteredReleases := lv.filterGitHubReleases(tc.releases, util.LogFrom{})
+			filteredReleases := lv.filterGitHubReleases(tc.releases, &util.LogFrom{})
 
 			// THEN only the expected releases are kept
 			if len(tc.want) != len(filteredReleases) {

@@ -158,7 +158,7 @@ func (s *Shoutrrr) correctSelf() {
 		if groupowner := strings.TrimPrefix(s.GetSelfURLField("groupowner"), "/"); groupowner != "" {
 			s.SetURLField("groupowner", groupowner)
 		}
-	case "zulip_chat":
+	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
 		if botmail := s.GetSelfURLField("botmail"); botmail != "" {
 			s.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
@@ -341,7 +341,7 @@ func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *er
 			*errsParams = fmt.Errorf("%s%s  chats: <required> e.g. '@channelName' or 'chatID'\\",
 				util.ErrorToString(*errsParams), prefix)
 		}
-	case "zulip_chat":
+	case "zulip":
 		// zulip://botMail:botKey@host:port
 		if s.GetURLField("host") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  host: <required> e.g. 'example.zulipchat.com'\\",
@@ -376,8 +376,10 @@ func (s *Slice) Print(prefix string) bool {
 		return false
 	}
 
+	keys := util.SortedKeys(*s)
+
 	fmt.Printf("%snotify:\n", prefix)
-	for key := range *s {
+	for _, key := range keys {
 		fmt.Printf("%s  %s:\n", prefix, key)
 		(*s)[key].Print(prefix + "    ")
 	}
@@ -386,13 +388,15 @@ func (s *Slice) Print(prefix string) bool {
 
 // Print the Shourrr Struct.
 func (s *Shoutrrr) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.Type, fmt.Sprintf("%stype: %s", prefix, s.Type))
+	util.PrintlnIfNotDefault(s.Type,
+		fmt.Sprintf("%stype: %s", prefix, s.Type))
 
 	if len(s.Options) != 0 {
 		fmt.Printf("%soptions:\n", prefix)
 		keys := util.SortedKeys(s.Options)
 		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfOption(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
+			util.PrintlnIfNotDefault(s.GetSelfOption(key),
+				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
 		}
 	}
 
@@ -400,7 +404,8 @@ func (s *Shoutrrr) Print(prefix string) {
 		fmt.Printf("%surl_fields:\n", prefix)
 		keys := util.SortedKeys(s.URLFields)
 		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfURLField(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
+			util.PrintlnIfNotDefault(s.GetSelfURLField(key),
+				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
 		}
 	}
 
@@ -408,7 +413,8 @@ func (s *Shoutrrr) Print(prefix string) {
 		fmt.Printf("%sparams:\n", prefix)
 		keys := util.SortedKeys(s.Params)
 		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfParam(key), fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
+			util.PrintlnIfNotDefault(s.GetSelfParam(key),
+				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
 		}
 	}
 }

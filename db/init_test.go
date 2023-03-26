@@ -19,7 +19,7 @@ package db
 import (
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
 	"testing"
 	"time"
 
@@ -37,15 +37,25 @@ func TestCheckFile(t *testing.T) {
 		createDirBefore  string
 		createFileBefore string
 		path             string
-		panicContains    string
+		panicRegex       string
 	}{
-		"file doesn't exist":      {path: "something_doesnt_exist.db", removeBefore: "something_doesnt_exist.db"},
-		"dir doesn't exist":       {path: "dir_doesnt_exist/argus.db", removeBefore: "dir_doesnt_exist"},
-		"dir exists but not file": {path: "dir_does_exist/argus.db", createDirBefore: "dir_does_exist"},
-		"file is dir": {path: "folder.db", createDirBefore: "folder.db",
-			panicContains: " exists but is a directory"},
-		"dir is file": {path: "folder_not_a_dir/argus.db", createFileBefore: "folder_not_a_dir",
-			panicContains: " exists but is not a directory"},
+		"file doesn't exist": {
+			path:         "something_doesnt_exist.db",
+			removeBefore: "something_doesnt_exist.db"},
+		"dir doesn't exist, so is created": {
+			path:         "dir_doesnt_exist/argus.db",
+			removeBefore: "dir_doesnt_exist"},
+		"dir exists but not file": {
+			path:            "dir_does_exist/argus.db",
+			createDirBefore: "dir_does_exist"},
+		"file is dir": {
+			path:            "folder.db",
+			createDirBefore: "folder.db",
+			panicRegex:      "path .* is a directory, not a file"},
+		"dir is file": {
+			path:             "item_not_a_dir/argus.db",
+			createFileBefore: "item_not_a_dir",
+			panicRegex:       "path .* is not a directory"},
 	}
 
 	for name, tc := range tests {
@@ -60,6 +70,7 @@ func TestCheckFile(t *testing.T) {
 					t.Fatalf("%s",
 						err)
 				}
+				defer os.RemoveAll(tc.createDirBefore)
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
@@ -68,16 +79,17 @@ func TestCheckFile(t *testing.T) {
 						err)
 				}
 				file.Close()
+				defer os.Remove(tc.createFileBefore)
 			}
-			if tc.panicContains != "" {
+			if tc.panicRegex != "" {
 				defer func() {
 					r := recover()
 					rStr := fmt.Sprint(r)
-					os.RemoveAll(tc.createDirBefore)
-					os.RemoveAll(tc.createFileBefore)
-					if !strings.Contains(r.(string), tc.panicContains) {
-						t.Errorf("should have panic'd with:\n%q, not:\n%q",
-							tc.panicContains, rStr)
+					re := regexp.MustCompile(tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("want match for %q\nnot: %q",
+							tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -86,15 +98,15 @@ func TestCheckFile(t *testing.T) {
 			checkFile(tc.path)
 
 			// THEN we get here only when we should
-			if tc.panicContains != "" {
+			if tc.panicRegex != "" {
 				t.Fatalf("Expected panic with %q",
-					tc.panicContains)
+					tc.panicRegex)
 			}
 		})
 	}
 }
 
-func TestInitialise(t *testing.T) {
+func TestAPI_Initialise(t *testing.T) {
 	// GIVEN a config with a database location
 	initLogging()
 	cfg := testConfig()
@@ -132,14 +144,16 @@ func TestInitialise(t *testing.T) {
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
-func TestConvertServiceStatus(t *testing.T) {
+func TestAPI_ConvertServiceStatus(t *testing.T) {
 	// GIVEN a blank DB
 	initLogging()
 	tests := map[string]struct {
 		runs int
 	}{
-		"one run":       {runs: 1},
-		"multiple runs": {runs: 2},
+		"one run": {
+			runs: 1},
+		"multiple runs": {
+			runs: 2},
 	}
 
 	for name, tc := range tests {
@@ -213,9 +227,9 @@ func TestConvertServiceStatus(t *testing.T) {
 					}
 				}
 			}
-			if count != len(api.config.All) {
+			if count != len(api.config.Order) {
 				t.Errorf("%d were pushed to the table. Expected %d",
-					count, len(api.config.All))
+					count, len(api.config.Order))
 			}
 			api.db.Close()
 			os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -223,7 +237,7 @@ func TestConvertServiceStatus(t *testing.T) {
 	}
 }
 
-func TestQueryService(t *testing.T) {
+func TestDBQueryService(t *testing.T) {
 	// GIVEN a blank DB
 	initLogging()
 	cfg := testConfig()
@@ -234,7 +248,7 @@ func TestQueryService(t *testing.T) {
 	// WHEN every Service.*.Status is pushed to the DB with convertServiceStatus
 	api.convertServiceStatus()
 
-	// THEN a Services that was copied over can be queried
+	// THEN a Service that was copied over can be queried
 	target := "keep0"
 	got := queryRow(t, api.db, target)
 	svc := api.config.Service[target]
@@ -262,7 +276,7 @@ func TestQueryService(t *testing.T) {
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
-func TestRemoveUnknownServices(t *testing.T) {
+func TestAPI_RemoveUnknownServices(t *testing.T) {
 	// GIVEN a DB with loads of service status'
 	initLogging()
 	cfg := testConfig()
@@ -326,14 +340,14 @@ func TestRemoveUnknownServices(t *testing.T) {
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		svc := api.config.Service[id]
-		if svc == nil || !util.Contains(api.config.All, id) {
+		if svc == nil || !util.Contains(api.config.Order, id) {
 			t.Errorf("%q should have been removed from the table",
 				id)
 		}
 	}
-	if count != len(api.config.All) {
+	if count != len(api.config.Order) {
 		t.Errorf("Only %d were left in the table. Expected %d",
-			count, len(api.config.All))
+			count, len(api.config.Order))
 	}
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package filter
 
@@ -57,5 +57,18 @@ func testURLCommandSplit() URLCommand {
 		Type:  "split",
 		Text:  &text,
 		Index: index,
+	}
+}
+
+func testRequire() Require {
+	return Require{
+		Command:      command.Command{"echo", "foo"},
+		RegexContent: "bish",
+		RegexVersion: "bash",
+		Docker: &DockerCheck{
+			Type:  "ghcr",
+			Image: "releaseargus/argus",
+			Tag:   "latest",
+		},
 	}
 }

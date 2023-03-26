@@ -67,7 +67,10 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
 				util.ErrorToString(errs), prefix, w.GetType(), types)
 		}
-		if util.GetFirstNonDefault(w.URL, w.Main.URL, w.Defaults.URL) == "" {
+		if util.GetFirstNonDefault(
+			w.URL,
+			w.Main.URL,
+			w.Defaults.URL) == "" {
 			errs = fmt.Errorf("%s%surl: <required> (here, or in webhook.%s)\\",
 				util.ErrorToString(errs), prefix, w.ID)
 		}
@@ -78,10 +81,10 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 	}
 	var headerErrs error
 	if w.CustomHeaders != nil {
-		for key := range *w.CustomHeaders {
-			if !util.CheckTemplate((*w.CustomHeaders)[key]) {
+		for i := range *w.CustomHeaders {
+			if !util.CheckTemplate((*w.CustomHeaders)[i].Value) {
 				headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-					util.ErrorToString(headerErrs), prefix, key, (*w.CustomHeaders)[key])
+					util.ErrorToString(headerErrs), prefix, (*w.CustomHeaders)[i].Key, (*w.CustomHeaders)[i].Value)
 			}
 		}
 	}
@@ -109,18 +112,26 @@ func (w *Slice) Print(prefix string) {
 
 // Print the WebHook Struct.
 func (w *WebHook) Print(prefix string) {
-	util.PrintlnIfNotDefault(w.Type, fmt.Sprintf("%stype: %s", prefix, w.Type))
-	util.PrintlnIfNotDefault(w.URL, fmt.Sprintf("%surl: %s", prefix, w.URL))
-	util.PrintlnIfNotNil(w.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(w.AllowInvalidCerts)))
+	util.PrintlnIfNotDefault(w.Type,
+		fmt.Sprintf("%stype: %s", prefix, w.Type))
+	util.PrintlnIfNotDefault(w.URL,
+		fmt.Sprintf("%surl: %s", prefix, w.URL))
+	util.PrintlnIfNotNil(w.AllowInvalidCerts,
+		fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(w.AllowInvalidCerts)))
 	if w.CustomHeaders != nil {
 		fmt.Printf("%scustom_headers:\n", prefix)
-		for key := range *w.CustomHeaders {
-			fmt.Printf("%s  - %s: %s\n", prefix, key, (*w.CustomHeaders)[key])
+		for i := range *w.CustomHeaders {
+			fmt.Printf("%s  - %s: %s\n", prefix, (*w.CustomHeaders)[i].Key, (*w.CustomHeaders)[i].Value)
 		}
 	}
-	util.PrintlnIfNotDefault(w.Secret, fmt.Sprintf("%ssecret: %q", prefix, w.Secret))
-	util.PrintlnIfNotNil(w.DesiredStatusCode, fmt.Sprintf("%sdesired_status_code: %d", prefix, util.DefaultIfNil(w.DesiredStatusCode)))
-	util.PrintlnIfNotDefault(w.Delay, fmt.Sprintf("%sdelay: %s", prefix, w.Delay))
-	util.PrintlnIfNotNil(w.MaxTries, fmt.Sprintf("%smax_tries: %d", prefix, util.DefaultIfNil(w.MaxTries)))
-	util.PrintlnIfNotNil(w.SilentFails, fmt.Sprintf("%ssilent_fails: %t", prefix, util.DefaultIfNil(w.SilentFails)))
+	util.PrintlnIfNotDefault(w.Secret,
+		fmt.Sprintf("%ssecret: %q", prefix, w.Secret))
+	util.PrintlnIfNotNil(w.DesiredStatusCode,
+		fmt.Sprintf("%sdesired_status_code: %d", prefix, util.DefaultIfNil(w.DesiredStatusCode)))
+	util.PrintlnIfNotDefault(w.Delay,
+		fmt.Sprintf("%sdelay: %s", prefix, w.Delay))
+	util.PrintlnIfNotNil(w.MaxTries,
+		fmt.Sprintf("%smax_tries: %d", prefix, util.DefaultIfNil(w.MaxTries)))
+	util.PrintlnIfNotNil(w.SilentFails,
+		fmt.Sprintf("%ssilent_fails: %t", prefix, util.DefaultIfNil(w.SilentFails)))
 }

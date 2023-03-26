@@ -28,7 +28,7 @@ import (
 // GetParams returns the params using everything from master>main>defaults>hardDefaults when
 // the key is not defined in the lower level
 func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
-	p := make(shoutrrr_types.Params)
+	p := make(shoutrrr_types.Params, len(s.Params)+len(s.Main.Params))
 	params = &p
 
 	// Service Params
@@ -206,7 +206,7 @@ func (s *Shoutrrr) GetURL() (url string) {
 		url = fmt.Sprintf("telegram://%s@telegram?chats=%s",
 			s.GetURLField("token"),
 			s.GetParam("chats"))
-	case "zulip_chat":
+	case "zulip":
 		// zulip://botMail:botKey@host?stream=STREAM&topic=TOPIC
 		stream := s.GetParam("stream")
 		stream = util.ValueIfNotDefault(stream, "?stream="+stream)
@@ -281,7 +281,7 @@ func (s *Shoutrrr) Send(
 	url := s.GetURL()
 	sender, err := shoutrrr_lib.CreateSender(url)
 	if err != nil {
-		return fmt.Errorf("ailed to create Shoutrrr sender: %w", err)
+		return fmt.Errorf("failed to create Shoutrrr sender: %w", err)
 	}
 	params := s.GetParams(serviceInfo)
 	if title != "" {
@@ -294,6 +294,12 @@ func (s *Shoutrrr) Send(
 
 	combinedErrs := make(map[string]int)
 	for {
+		// Check if we're deleting the Service.
+		if s.ServiceStatus.Deleting {
+			return
+		}
+
+		// Try sending the message.
 		msg := fmt.Sprintf("Sending %q to %q", toSend, url)
 		jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
 		jLog.Debug(fmt.Sprintf("%s with params=%q", msg, *params), logFrom, jLog.IsLevel("debug"))

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package latestver
 
@@ -41,13 +41,11 @@ func testLogging(level string) {
 	logURLCommand.Init(jLog)
 }
 
-func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
-	var (
-		announceChannel chan []byte         = make(chan []byte, 24)
-		saveChannel     chan bool           = make(chan bool, 5)
-		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-	)
-	lookup := Lookup{
+func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
+	announceChannel := make(chan []byte, 24)
+	saveChannel := make(chan bool, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
+	lookup := &Lookup{
 		Type:              "github",
 		URL:               "release-argus/Argus",
 		AllowInvalidCerts: boolPtr(allowInvalidCerts),
@@ -68,11 +66,13 @@ func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	}
 	if urlType {
 		lookup.Type = "url"
-		lookup.URL = "https://valid.release-argus.io/plain"
-		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
+		lookup.URL = "https://invalid.release-argus.io/plain"
+		lookup.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
 	} else {
 		lookup.GitHubData = &GitHubData{}
-		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
+		lookup.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 		lookup.UsePreRelease = boolPtr(false)
 	}

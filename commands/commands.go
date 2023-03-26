@@ -32,6 +32,7 @@ func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 
 	errChan := make(chan error)
 	for index := range *c.Command {
+		index := index
 		go func(controller *Controller) {
 			errChan <- controller.ExecIndex(logFrom, index)
 		}(c)
@@ -88,7 +89,7 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
 }
 
 func (c *Command) Exec(logFrom *util.LogFrom) error {
-	jLog.Info(fmt.Sprintf("Executing '%s'", c.String()), *logFrom, true)
+	jLog.Info(fmt.Sprintf("Executing '%s'", c), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
 	jLog.Error(util.ErrorToString(err), *logFrom, err != nil)
@@ -105,8 +106,9 @@ func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) Command {
 
 	command := Command(make([]string, len(*c)))
 	copy(command, *c)
+	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion}
 	for i := range command {
-		command[i] = util.TemplateString(command[i], util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion})
+		command[i] = util.TemplateString(command[i], serviceInfo)
 	}
 	return command
 }

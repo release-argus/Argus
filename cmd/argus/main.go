@@ -59,16 +59,19 @@ func main() {
 	argus_testing.NotifyTest(testNotifyFlag, &config, &jLog)
 	argus_testing.ServiceTest(testServiceFlag, &config, &jLog)
 
-	// config.Service.Init()
-	serviceCount := len(*config.Order)
-	jLog.Fatal("No services to monitor were found.", util.LogFrom{}, serviceCount == 0)
+	// Count of active services to monitor
+	serviceCount := len(config.Order)
+	for _, key := range config.Order {
+		if !config.Service[key].Options.GetActive() {
+			serviceCount--
+		}
+	}
 
-	// INFO or above
-	if jLog.Level > 1 {
-		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		jLog.Info(msg, util.LogFrom{}, true)
+	msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
+	jLog.Info(msg, util.LogFrom{}, true)
 
-		for _, key := range *config.Order {
+	for _, key := range config.Order {
+		if config.Service[key].Options.GetActive() {
 			fmt.Printf("  - %s\n", config.Service[key].ID)
 		}
 	}
@@ -76,7 +79,7 @@ func main() {
 	go db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
-	go (&config).Service.Track(config.Order)
+	go (&config).Service.Track(&config.Order)
 
 	// Web server
 	web.Run(&config, &jLog)

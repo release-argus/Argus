@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -72,6 +73,9 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	// Lock to prevent concurrent write panics
+	lock sync.Mutex
 }
 
 func getIP(r *http.Request) string {
@@ -230,7 +234,7 @@ func (c *Client) writePump() {
 			// If message is from the server (doesn't use version)
 			if msg.Version == nil {
 				switch msg.Type {
-				case "VERSION", "WEBHOOK", "COMMAND":
+				case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
 					err := c.conn.WriteJSON(msg)
 					c.api.Log.Error(
 						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, util.ErrorToString(err)),
@@ -252,7 +256,7 @@ func (c *Client) writePump() {
 					switch msg.Type {
 					case "VERSION":
 						// Approval/Skip
-						go c.api.wsServiceAction(c, msg)
+						c.api.wsServiceAction(c, msg)
 					case "ACTIONS":
 						// Get Command data for a service
 						c.api.wsCommand(c, msg)
@@ -260,7 +264,7 @@ func (c *Client) writePump() {
 						c.api.wsWebHook(c, msg)
 					case "INIT":
 						// Get all Service data
-						go c.api.wsService(c)
+						c.api.wsServiceInit(c)
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", msg.Type, string(message)),

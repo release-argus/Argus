@@ -76,7 +76,13 @@ func (w *WebHook) Send(
 	}
 
 	for {
-		err := w.try(logFrom)
+		// Check if we're deleting the Service.
+		if w.ServiceStatus.Deleting {
+			return
+		}
+
+		// Try sending the WebHook.
+		err := w.try(&logFrom)
 
 		// SUCCESS!
 		if err == nil {
@@ -116,11 +122,11 @@ func (w *WebHook) Send(
 
 // try to send a WebHook to its URL with the body SHA1 and SHA256 encrypted with its Secret.
 // It also simulates other GitHub headers and returns when an error is encountered.
-func (w *WebHook) try(logFrom util.LogFrom) (err error) {
+func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
 	req := w.GetRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 		return
 	}
 
@@ -139,8 +145,6 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
 	if err != nil {
-		// If verbose or above, print the error every time
-		jLog.Error(err, logFrom, (jLog.Level > 2))
 		return
 	}
 	defer resp.Body.Close()
@@ -152,7 +156,7 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay && (resp.StatusCode == desiredStatusCode || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
 		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
-		jLog.Info(msg, logFrom, true)
+		jLog.Info(msg, *logFrom, true)
 		return
 	}
 
@@ -164,7 +168,8 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	}
 
 	return fmt.Errorf(
-		"%sWebHook gave %d, not %s:\n%s\n%s", util.FormatMessageSource(logFrom),
+		"%sWebHook gave %d, not %s:\n%s\n%s",
+		util.FormatMessageSource(*logFrom),
 		resp.StatusCode,
 		prettyStatusCode,
 		resp.Status,
