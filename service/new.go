@@ -252,15 +252,6 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 			continue
 		}
 
-		// failed
-		if oldWebHook.Failed != nil && (*oldWebHook.Failed)[oldWebHook.ID] != nil &&
-			oldWebHook.String() == s.WebHook[i].String() {
-			failed := (*oldWebHook.Failed)[oldWebHook.ID]
-			(*s.WebHook[i].Failed)[i] = failed
-		}
-		// next_runnable
-		s.WebHook[i].NextRunnable = oldWebHook.NextRunnable
-
 		// secret
 		if s.WebHook[i].Secret == "<secret>" {
 			s.WebHook[i].Secret = oldWebHook.Secret
@@ -268,30 +259,37 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 
 		// custom_headers
 		// Check we have headers in old and new
-		if s.WebHook[i].CustomHeaders == nil || len(*s.WebHook[i].CustomHeaders) == 0 ||
-			oldWebHook.CustomHeaders == nil || len(*oldWebHook.CustomHeaders) == 0 ||
-			len((*secretRefs)[i].CustomHeaders) == 0 {
-			continue
-		}
-		for hI := range *s.WebHook[i].CustomHeaders {
-			// Skip if we're not referencing a secret of an existing header
-			// or it's an index out of range
-			if (*s.WebHook[i].CustomHeaders)[hI].Value != "<secret>" ||
-				hI >= len((*secretRefs)[i].CustomHeaders) {
-				continue
-			}
+		if s.WebHook[i].CustomHeaders != nil && oldWebHook.CustomHeaders != nil ||
+			len((*secretRefs)[i].CustomHeaders) != 0 {
+			for hI := range *s.WebHook[i].CustomHeaders {
+				// Skip if we're not referencing a secret of an existing header
+				// or it's an index out of range
+				if (*s.WebHook[i].CustomHeaders)[hI].Value != "<secret>" ||
+					hI >= len((*secretRefs)[i].CustomHeaders) {
+					continue
+				}
 
-			// Index for this headers secret in the old Service
-			// Map <secret> in `i.hI` to this index
-			oldHeaderIndex := (*secretRefs)[i].CustomHeaders[hI].OldIndex
-			// New header, or not referencing a previous secret
-			if oldHeaderIndex == nil || len(*oldWebHook.CustomHeaders) <= *oldHeaderIndex {
-				continue
-			}
+				// Index for this headers secret in the old Service
+				// Map <secret> in `i.hI` to this index
+				oldHeaderIndex := (*secretRefs)[i].CustomHeaders[hI].OldIndex
+				// New header, or not referencing a previous secret
+				if oldHeaderIndex == nil || len(*oldWebHook.CustomHeaders) <= *oldHeaderIndex {
+					continue
+				}
 
-			// Set the new header value to the old one
-			(*s.WebHook[i].CustomHeaders)[hI].Value = (*oldWebHook.CustomHeaders)[*oldHeaderIndex].Value
+				// Set the new header value to the old one
+				(*s.WebHook[i].CustomHeaders)[hI].Value = (*oldWebHook.CustomHeaders)[*oldHeaderIndex].Value
+			}
 		}
+
+		// failed
+		if oldWebHook.Failed != nil && (*oldWebHook.Failed)[oldWebHook.ID] != nil &&
+			oldWebHook.String() == s.WebHook[i].String() {
+			failed := *(*oldWebHook.Failed)[oldWebHook.ID]
+			(*s.WebHook[i].Failed)[i] = &failed
+		}
+		// next_runnable
+		s.WebHook[i].NextRunnable = oldWebHook.NextRunnable
 	}
 }
 
@@ -314,20 +312,18 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
 
 	// Keep LatestVersion if the LatestVersion lookup is unchanged
-	if s.LatestVersion.IsEqual(&oldService.LatestVersion) {
-		if oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-			s.Status.ApprovedVersion = oldService.Status.ApprovedVersion
-			s.Status.LatestVersion = oldService.Status.LatestVersion
-			s.Status.LatestVersionTimestamp = oldService.Status.LatestVersionTimestamp
-			s.Status.LastQueried = oldService.Status.LastQueried
-		}
+	if s.LatestVersion.IsEqual(&oldService.LatestVersion) &&
+		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		s.Status.ApprovedVersion = oldService.Status.ApprovedVersion
+		s.Status.LatestVersion = oldService.Status.LatestVersion
+		s.Status.LatestVersionTimestamp = oldService.Status.LatestVersionTimestamp
+		s.Status.LastQueried = oldService.Status.LastQueried
 	}
 	// Keep DeployedVersion if the DeployedVersionLookup is unchanged
-	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) {
-		if oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-			s.Status.DeployedVersion = oldService.Status.DeployedVersion
-			s.Status.DeployedVersionTimestamp = oldService.Status.DeployedVersionTimestamp
-		}
+	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
+		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		s.Status.DeployedVersion = oldService.Status.DeployedVersion
+		s.Status.DeployedVersionTimestamp = oldService.Status.DeployedVersionTimestamp
 	}
 }
 
@@ -338,7 +334,8 @@ func (s *Service) CheckFetches() error {
 		return nil
 	}
 	// All versions carried over from old service
-	if s.Status.LatestVersion != "" && (s.DeployedVersionLookup == nil || s.Status.DeployedVersion != "") {
+	if (s.Status.LatestVersion != "" && s.Status.LastQueried != "") &&
+		(s.DeployedVersionLookup == nil || s.Status.DeployedVersion != "") {
 		return nil
 	}
 

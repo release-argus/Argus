@@ -59,7 +59,6 @@ func (c *Config) Init() {
 	}
 
 	// c.Notify
-	//nolint:typecheck
 	if c.Notify != nil {
 		for key := range c.Notify {
 			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
@@ -68,7 +67,6 @@ func (c *Config) Init() {
 		}
 	}
 	// c.WebHook
-	//nolint:typecheck
 	if c.WebHook != nil {
 		for key := range c.WebHook {
 			c.WebHook[key].Defaults = &c.Defaults.WebHook

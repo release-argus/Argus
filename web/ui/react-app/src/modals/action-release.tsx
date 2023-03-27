@@ -117,7 +117,6 @@ const ActionReleaseModal = () => {
 
   useEffect(() => {
     if (modal.actionType !== "EDIT" && modal.service.id !== "") {
-      console.log("Action-Release");
       // Handler to listen to WebSocket messages
       const handler = (event: WebSocketResponse) => {
         if (event && ["ACTIONS", "COMMAND", "WEBHOOK"].includes(event.type)) {

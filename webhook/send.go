@@ -30,7 +30,7 @@ import (
 
 // Send every WebHook in this Slice with a delay between each webhook.
 func (w *Slice) Send(
-	serviceInfo util.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	if w == nil {
@@ -59,7 +59,7 @@ func (w *Slice) Send(
 
 // Send the WebHook MaxTries number of times until a success.
 func (w *WebHook) Send(
-	serviceInfo util.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	logFrom := util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID} // For logging
@@ -86,7 +86,11 @@ func (w *WebHook) Send(
 
 		// SUCCESS!
 		if err == nil {
-			metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "SUCCESS")
+			metric.IncreasePrometheusCounter(metric.WebHookMetric,
+				w.ID,
+				serviceInfo.ID,
+				"",
+				"SUCCESS")
 			failed := false
 			(*w.Failed)[w.ID] = &failed
 			w.AnnounceSend()
@@ -95,14 +99,18 @@ func (w *WebHook) Send(
 
 		// FAIL!
 		jLog.Error(err, logFrom, true)
-		metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "FAIL")
+		metric.IncreasePrometheusCounter(metric.WebHookMetric,
+			w.ID,
+			serviceInfo.ID,
+			"",
+			"FAIL")
 		triesLeft--
 		errs = fmt.Errorf("%s\n%w",
 			util.ErrorToString(errs), err)
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			err := fmt.Errorf("failed %d times to send the WebHook for %s to %s",
+			err := fmt.Errorf("failed %d times to send the WebHook for %s to %q",
 				w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
@@ -111,7 +119,7 @@ func (w *WebHook) Send(
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL
 				//nolint:errcheck // ^
-				w.Notifiers.Send("WebHook fail", err.Error(), &serviceInfo)
+				w.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
 			}
 			return
 		}

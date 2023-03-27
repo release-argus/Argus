@@ -90,6 +90,9 @@ func (s *Shoutrrr) Init(
 	s.Main = main
 	if main == nil && s.ServiceStatus != nil {
 		s.Main = &Shoutrrr{}
+	} else if s.Type == s.Main.Type {
+		// Remove the type if it's the same as the main
+		s.Type = ""
 	}
 	s.Main.InitMaps()
 
@@ -100,8 +103,6 @@ func (s *Shoutrrr) Init(
 	// Give Hard Defaults
 	s.HardDefaults = hardDefaults
 	s.HardDefaults.InitMaps()
-
-	s.initMetrics()
 }
 
 // initOptions mapping, converting all keys to lowercase.
@@ -130,7 +131,18 @@ func (s *Shoutrrr) InitMaps() {
 	s.initParams()
 }
 
-// initMetrics, giving them all a starting value.
+// InitMetrics for this Slice.
+func (s *Slice) InitMetrics() {
+	if s == nil {
+		return
+	}
+
+	for key := range *s {
+		(*s)[key].initMetrics()
+	}
+}
+
+// initMetrics for this Shoutrrr.
 func (s *Shoutrrr) initMetrics() {
 	// Only record metrics for Shoutrrrs attached to a Service
 	if s.Main == nil || s.GetType() == "" {
@@ -141,7 +153,45 @@ func (s *Shoutrrr) initMetrics() {
 	// # Counters #
 	// ############
 	if s.ServiceStatus != nil {
-		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "SUCCESS")
-		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, *s.ServiceStatus.ServiceID, s.GetType(), "FAIL")
+		metric.InitPrometheusCounter(metric.NotifyMetric,
+			s.ID,
+			*s.ServiceStatus.ServiceID,
+			s.GetType(),
+			"SUCCESS")
+		metric.InitPrometheusCounter(metric.NotifyMetric,
+			s.ID,
+			*s.ServiceStatus.ServiceID,
+			s.GetType(),
+			"FAIL")
 	}
+}
+
+// DeleteMetrics for this Slice.
+func (s *Slice) DeleteMetrics() {
+	if s == nil {
+		return
+	}
+
+	for key := range *s {
+		(*s)[key].deleteMetrics()
+	}
+}
+
+// deleteMetrics for this Shoutrrr.
+func (s *Shoutrrr) deleteMetrics() {
+	// Only record metrics for Shoutrrrs attached to a Service
+	if s.Main == nil || s.GetType() == "" {
+		return
+	}
+
+	metric.DeletePrometheusCounter(metric.NotifyMetric,
+		s.ID,
+		*s.ServiceStatus.ServiceID,
+		s.GetType(),
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.NotifyMetric,
+		s.ID,
+		*s.ServiceStatus.ServiceID,
+		s.GetType(),
+		"FAIL")
 }

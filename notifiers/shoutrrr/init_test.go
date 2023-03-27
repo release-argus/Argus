@@ -25,7 +25,65 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestShoutrrr_InitMetrics(t *testing.T) {
+func TestSlice_Metrics(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice *Slice
+	}{
+		"nil": {
+			slice: nil},
+		"empty": {
+			slice: &Slice{}},
+		"with one": {
+			slice: &Slice{
+				"foo": &Shoutrrr{}}},
+		"multiple": {
+			slice: &Slice{
+				"bish": &Shoutrrr{},
+				"bash": &Shoutrrr{},
+				"bosh": &Shoutrrr{}}},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+			if tc.slice != nil {
+				for name, s := range *tc.slice {
+					s.ID = name
+					s.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr(name + "-service")}
+					s.Main = &Shoutrrr{}
+					s.Type = "gotify"
+				}
+			}
+
+			// WHEN the Prometheus metrics are initialised with initMetrics
+			had := testutil.CollectAndCount(metric.NotifyMetric)
+			tc.slice.InitMetrics()
+
+			// THEN it can be counted
+			got := testutil.CollectAndCount(metric.NotifyMetric)
+			want := had
+			if tc.slice != nil {
+				want += 2 * len(*tc.slice)
+			}
+			if got != want {
+				t.Errorf("got %d metrics, expecting %d",
+					got, want)
+			}
+
+			// AND the metrics can be deleted
+			tc.slice.DeleteMetrics()
+			got = testutil.CollectAndCount(metric.NotifyMetric)
+			if got != had {
+				t.Errorf("deleted metrics but got %d, expecting %d",
+					got, want)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_Metrics(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		serviceShoutrrr bool
@@ -66,6 +124,14 @@ func TestShoutrrr_InitMetrics(t *testing.T) {
 			if (got - had) != want {
 				t.Errorf("%d Counter metrics's were initialised, expecting %d",
 					(got - had), want)
+			}
+
+			// AND it can be deleted
+			shoutrrr.deleteMetrics()
+			got = testutil.CollectAndCount(metric.NotifyMetric)
+			if got != had {
+				t.Errorf("Counter metrics's were deleted, got %d. expecting %d",
+					got, had)
 			}
 		})
 	}
@@ -289,16 +355,13 @@ func TestShoutrrr_Init(t *testing.T) {
 		defaults        Shoutrrr
 		hardDefaults    Shoutrrr
 		serviceShoutrrr bool
-		metricCount     int
 		nilShoutrrr     bool
 	}{
 		"nil shoutrrr": {
-			nilShoutrrr: true,
-			metricCount: 0},
+			nilShoutrrr: true},
 		"all lowercase keys": {
 			id:              "lowercase",
 			serviceShoutrrr: true,
-			metricCount:     2,
 			had: map[string]string{
 				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
 			want: map[string]string{
@@ -306,7 +369,6 @@ func TestShoutrrr_Init(t *testing.T) {
 		"mixed-case keys": {
 			id:              "mixed-case",
 			serviceShoutrrr: true,
-			metricCount:     2,
 			had: map[string]string{
 				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
 			want: map[string]string{
@@ -314,13 +376,11 @@ func TestShoutrrr_Init(t *testing.T) {
 		"gives matching main": {
 			id:              "matching-main",
 			serviceShoutrrr: true,
-			metricCount:     2,
 			main:            &Shoutrrr{},
 			giveMain:        true},
 		"creates new main if none match": {
 			id:              "no-matching-main",
 			serviceShoutrrr: true,
-			metricCount:     2,
 			main:            nil},
 	}
 
@@ -341,16 +401,9 @@ func TestShoutrrr_Init(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.NotifyMetric)
 			shoutrrr.Init(&serviceStatus, tc.main, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.NotifyMetric)
-			if (gotC - hadC) != tc.metricCount {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), tc.metricCount)
-			}
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",
@@ -477,20 +530,9 @@ func TestSlice_Init(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.NotifyMetric)
 			tc.slice.Init(log, &serviceStatus, tc.mains, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.NotifyMetric)
-			wantMetrics := 0
-			if tc.slice != nil {
-				wantMetrics = 2 * len(*tc.slice)
-			}
-			if (gotC - hadC) != wantMetrics {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), wantMetrics)
-			}
 			if tc.nilSlice {
 				if tc.slice != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",

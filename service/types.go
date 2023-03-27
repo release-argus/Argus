@@ -43,8 +43,8 @@ type Service struct {
 	Options               opt.Options         `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service
 	LatestVersion         latestver.Lookup    `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to getting the latest version of the Service
 	DeployedVersionLookup *deployedver.Lookup `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
-	CommandController     *command.Controller `yaml:"-" json:"-"`                                                   // The controller for the OS Commands that tracks fails and has the announce channel
 	Notify                shoutrrr.Slice      `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Service-specific Shoutrrr vars
+	CommandController     *command.Controller `yaml:"-" json:"-"`                                                   // The controller for the OS Commands that tracks fails and has the announce channel
 	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"`                   // OS Commands to run on new release
 	WebHook               webhook.Slice       `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Service-specific WebHook vars
 	Dashboard             DashboardOptions    `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Options for the dashboard

@@ -38,14 +38,42 @@ func (l *Lookup) Init(
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
-	l.initMetrics()
 }
 
-// initMetrics will initialise the Prometheus metric.
-func (l *Lookup) initMetrics() {
+// InitMetrics for this Lookup.
+func (l *Lookup) InitMetrics() {
+	if l == nil {
+		return
+	}
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-	metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
+}
+
+// DeleteMetrics for this Lookup.
+func (l *Lookup) DeleteMetrics() {
+	if l == nil {
+		return
+	}
+
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
 }

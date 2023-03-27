@@ -21,7 +21,7 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// Init will initialise the Service metric.
+// Init the Lookup, assigning Defaults and initialising child structs.
 func (l *Lookup) Init(
 	log *util.JLog,
 	defaults *Lookup,
@@ -39,16 +39,37 @@ func (l *Lookup) Init(
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
-	l.initMetrics()
 	l.URLCommands.Init(jLog)
 	l.Require.Init(log, status)
 }
 
-// initMetrics will initialise the Prometheus metric.
-func (l *Lookup) initMetrics() {
+// initMetrics for this Lookup.
+func (l *Lookup) InitMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
+}
+
+// DeleteMetrics for this Lookup.
+func (l *Lookup) DeleteMetrics() {
+	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
 }

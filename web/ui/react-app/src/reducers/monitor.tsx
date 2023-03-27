@@ -149,14 +149,9 @@ export default function reducerMonitor(
         service.active = action.service_data?.active ?? service.active;
         service.type = action.service_data?.type ?? service.type;
         service.url = action.service_data?.url ?? service.url;
-        service.icon =
-          action.service_data?.icon === undefined
-            ? service.icon
-            : action.service_data?.icon;
+        service.icon = action.service_data?.icon || service.icon;
         service.icon_link_to =
-          action.service_data?.icon_link_to === undefined
-            ? service.icon_link_to
-            : action.service_data?.icon_link_to;
+          action.service_data?.icon_link_to || service.icon_link_to;
         service.has_deployed_version =
           action.service_data?.has_deployed_version ??
           service.has_deployed_version;

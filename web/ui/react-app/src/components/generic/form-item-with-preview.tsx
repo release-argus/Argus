@@ -4,7 +4,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
 
-interface FormItemWithPreviewProps {
+interface Props {
   name: string;
 
   label: string;
@@ -12,7 +12,7 @@ interface FormItemWithPreviewProps {
   placeholder?: string;
 }
 
-const FormItemWithPreview: FC<FormItemWithPreviewProps> = ({
+const FormItemWithPreview: FC<Props> = ({
   name,
 
   label,

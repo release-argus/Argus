@@ -68,7 +68,8 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if forService {
 		webhook.ID = "test"
 		webhook.ParentInterval = stringPtr("12m")
-		webhook.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr("test")}
+		webhook.ServiceStatus = &svcstatus.Status{
+			ServiceID: stringPtr("testServiceID")}
 		webhook.ServiceStatus.Fails.WebHook = make(map[string]*bool, 1)
 		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 		webhook.Main = &WebHook{}
@@ -91,6 +92,7 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 				{Key: "X-Test", Value: "secret"}}
 		}
 	}
+	webhook.initMetrics()
 	return webhook
 }
 
@@ -100,14 +102,16 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
 	notifier := &shoutrrr.Shoutrrr{
-		Type:          "gotify",
-		ID:            "test",
-		Failed:        nil,
-		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("service"), Fails: svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)}},
-		Main:          &shoutrrr.Shoutrrr{},
-		Defaults:      &shoutrrr.Shoutrrr{},
-		HardDefaults:  &shoutrrr.Shoutrrr{},
-		Options:       map[string]string{"max_tries": "1"},
+		Type:   "gotify",
+		ID:     "test",
+		Failed: nil,
+		ServiceStatus: &svcstatus.Status{
+			ServiceID: stringPtr("service"),
+			Fails:     svcstatus.Fails{Shoutrrr: make(map[string]*bool, 1)}},
+		Main:         &shoutrrr.Shoutrrr{},
+		Defaults:     &shoutrrr.Shoutrrr{},
+		HardDefaults: &shoutrrr.Shoutrrr{},
+		Options:      map[string]string{"max_tries": "1"},
 		// trunk-ignore(gitleaks/generic-api-key)
 		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
 		Params:    map[string]string{},

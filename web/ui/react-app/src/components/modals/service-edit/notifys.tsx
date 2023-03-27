@@ -64,9 +64,9 @@ const EditServiceNotifys: FC<Props> = ({
                 {
                   type: "discord",
                   name: "",
-                  options: { delay: "", max_tries: "", message: "" },
-                  url_fields: { webhookid: "", token: "" },
-                  params: { avatar: "", username: "", title: "" },
+                  options: {},
+                  url_fields: {},
+                  params: { avatar: "", color: "", icon: "" },
                 },
                 { shouldFocus: false }
               );

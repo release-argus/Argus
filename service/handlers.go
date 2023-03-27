@@ -46,7 +46,6 @@ func (s *Service) UpdatedVersion() {
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
-		//nolint:typecheck
 		if s.Command != nil || s.WebHook != nil {
 			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
 			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
@@ -75,7 +74,6 @@ func (s *Service) UpdateLatestApproved() {
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions() {
-	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
 		if s.Dashboard.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
@@ -99,7 +97,9 @@ func (s *Service) HandleUpdateActions() {
 		} else {
 			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
 
-			metric.SetPrometheusGaugeWithID(metric.AckWaiting, s.ID, 1)
+			metric.SetPrometheusGauge(metric.AckWaiting,
+				s.ID,
+				1)
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {

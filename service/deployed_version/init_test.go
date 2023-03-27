@@ -26,13 +26,13 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestLookup_InitMetrics(t *testing.T) {
+func TestLookup_Metrics(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testLookup()
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
-	lookup.initMetrics()
+	lookup.InitMetrics()
 
 	// THEN it can be collected
 	// counters
@@ -41,6 +41,14 @@ func TestLookup_InitMetrics(t *testing.T) {
 	if (gotC - hadC) != wantC {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
 			(gotC - hadC), wantC)
+	}
+
+	// AND it can be deleted
+	lookup.DeleteMetrics()
+	gotC = testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
+	if gotC != hadC {
+		t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
+			gotC, hadC)
 	}
 }
 
@@ -54,7 +62,6 @@ func TestLookup_Init(t *testing.T) {
 	var options opt.Options
 
 	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
 	lookup.Init(log, defaults, hardDefaults, &status, &options)
 
 	// THEN pointers to those vars are handed out to the Lookup
@@ -82,13 +89,6 @@ func TestLookup_Init(t *testing.T) {
 	if lookup.Options != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&options, lookup.Options)
-	}
-	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
-	wantC := 2
-	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics's were initialised, expecting %d\ngot=%d, had=%d",
-			(gotC - hadC), wantC, gotC, hadC)
 	}
 
 	var nilLookup *Lookup

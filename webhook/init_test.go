@@ -29,7 +29,75 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestWebHook_InitMetrics(t *testing.T) {
+func TestSlice_Metrics(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice  *Slice
+		ignore *int
+	}{
+		"nil": {
+			slice: nil},
+		"empty": {
+			slice: &Slice{}},
+		"with one": {
+			slice: &Slice{
+				"foo": &WebHook{
+					Main: &WebHook{}}}},
+		"no Main, no metrics": {
+			slice: &Slice{
+				"foo": &WebHook{}},
+			ignore: intPtr(1)},
+		"multiple": {
+			slice: &Slice{
+				"bish": &WebHook{
+					Main: &WebHook{}},
+				"bash": &WebHook{
+					Main: &WebHook{}},
+				"bosh": &WebHook{
+					Main: &WebHook{}}}},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+			if tc.slice != nil {
+				for name, s := range *tc.slice {
+					s.ID = name
+					s.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr(name + "-service")}
+				}
+			}
+
+			// WHEN the Prometheus metrics are initialised with initMetrics
+			had := testutil.CollectAndCount(metric.WebHookMetric)
+			tc.slice.InitMetrics()
+
+			// THEN it can be counted
+			got := testutil.CollectAndCount(metric.WebHookMetric)
+			want := had
+			if tc.slice != nil {
+				want += 2 * len(*tc.slice)
+			}
+			if tc.ignore != nil {
+				want -= 2 * *tc.ignore
+			}
+			if got != want {
+				t.Errorf("got %d metrics, expecting %d",
+					got, want)
+			}
+
+			// AND the metrics can be deleted
+			tc.slice.DeleteMetrics()
+			got = testutil.CollectAndCount(metric.WebHookMetric)
+			if got != had {
+				t.Errorf("deleted metrics but got %d, expecting %d",
+					got, want)
+			}
+		})
+	}
+}
+
+func TestWebHook_Metrics(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
 		forService bool
@@ -62,6 +130,14 @@ func TestWebHook_InitMetrics(t *testing.T) {
 				t.Errorf("%d Counter metrics's were initialised, expecting %d",
 					(gotC - hadC), wantC)
 			}
+
+			// AND it can be deleted
+			webhook.deleteMetrics()
+			gotC = testutil.CollectAndCount(metric.WebHookMetric)
+			if gotC != hadC {
+				t.Errorf("Counter metrics were not deleted, still have %d. expexting %d",
+					gotC, hadC)
+			}
 		})
 	}
 }
@@ -76,7 +152,6 @@ func TestWebHook_Init(t *testing.T) {
 	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
 
 	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metric.WebHookMetric)
 	webhook.Init(&status, &main, &defaults, &hardDefaults, &notifiers, webhook.ParentInterval)
 	webhook.ID = "TestInit"
 
@@ -105,13 +180,6 @@ func TestWebHook_Init(t *testing.T) {
 	if webhook.Notifiers.Shoutrrr != &notifiers {
 		t.Errorf("Notifiers were not handed to the WebHook correctly\n want: %v\ngot:  %v",
 			&notifiers, webhook.Notifiers.Shoutrrr)
-	}
-	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metric.WebHookMetric)
-	wantC := 2
-	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics's were initialised, expecting %d",
-			(gotC - hadC), wantC)
 	}
 }
 
@@ -183,20 +251,9 @@ func TestSlice_Init(t *testing.T) {
 			parentInterval := "10s"
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.WebHookMetric)
 			tc.slice.Init(log, &status, tc.mains, &tc.defaults, &tc.hardDefaults, &notifiers, &parentInterval)
 
 			// THEN pointers to those vars are handed out to the WebHook
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.WebHookMetric)
-			wantC := 0
-			if !tc.nilSlice {
-				wantC = 2 * len(*tc.slice)
-			}
-			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), wantC)
-			}
 			if jLog != log {
 				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
 					log, jLog)

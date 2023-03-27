@@ -132,18 +132,15 @@ func (api *API) announceEdit(old *api_type.ServiceSummary, new *api_type.Service
 		new.RemoveUnchanged(old)
 	}
 
-	payloadData, err := json.Marshal(api_type.WebSocketMessage{
+	payloadData, _ := json.Marshal(api_type.WebSocketMessage{
 		Page:        "APPROVALS",
 		Type:        "EDIT",
 		SubType:     serviceChanged,
 		ServiceData: new,
 	})
-	if err != nil {
-		api.Log.Error(err, util.LogFrom{Primary: "announceEdit"}, true)
-		return
-	}
 
 	// If the service has been changed, the payload will have more than 16 double quotes.
+	//       2         4      6      8         10               12             14        16
 	// {"page":"SERVICE","type":"EDIT","sub_type":"serviceChanged","service_data":{"status":{}}}
 	if strings.Count(string(payloadData), `"`) >= 16 {
 		*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
@@ -155,7 +152,7 @@ func (api *API) announceEdit(old *api_type.ServiceSummary, new *api_type.Service
 func (api *API) announceService(name string, client *Client, logFrom *util.LogFrom) {
 	// Check Service still exists in this ordering
 	service := api.Config.Service[name]
-	if service == nil {
+	if service == nil || client == nil {
 		return
 	}
 
@@ -167,14 +164,7 @@ func (api *API) announceService(name string, client *Client, logFrom *util.LogFr
 		ServiceData: service.Summary(),
 	}
 
-	if client != nil {
-		api.wsSendJSON(client, msg, logFrom)
-		return
-	}
-
-	// Broadcast to all clients
-	payloadData, _ := json.Marshal(msg)
-	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
+	api.wsSendJSON(client, msg, logFrom)
 }
 
 func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) *api_type.DeployedVersionLookup {

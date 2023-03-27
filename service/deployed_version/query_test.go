@@ -387,8 +387,16 @@ func TestLookup_Track(t *testing.T) {
 					DatabaseChannel: &dbChannel,
 					WebURL:          webURL,
 				}
-				metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "SUCCESS")
-				metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *tc.lookup.Status.ServiceID, "FAIL")
+				metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+					*tc.lookup.Status.ServiceID,
+					"",
+					"",
+					"SUCCESS")
+				metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+					*tc.lookup.Status.ServiceID,
+					"",
+					"",
+					"FAIL")
 			}
 			didFinish := make(chan bool, 1)
 

@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -933,10 +934,13 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			t.Parallel()
 			newService := &Service{Notify: tc.notify}
 			// Give empty defaults and hardDefaults to the NotifySlice
-			for _, notify := range newService.Notify {
-				notify.Defaults = &shoutrrr.Shoutrrr{}
-				notify.HardDefaults = &shoutrrr.Shoutrrr{}
-			}
+			newService.Notify.Init(
+				jLog,
+				&svcstatus.Status{ServiceID: &name},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+			)
 
 			// WHEN we call giveSecretsNotify
 			newService.giveSecretsNotify(tc.otherNotify, tc.secretRefs)
@@ -1732,12 +1736,84 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{
 				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
 		},
+		"unchanged Command keeps Failed": {
+			service: &Service{
+				Command: command.Slice{
+					{"ls", "-la"}}},
+			oldService: &Service{
+				Command: command.Slice{
+					{"ls", "-la"}},
+				CommandController: &command.Controller{
+					Failed: &[]*bool{
+						boolPtr(true)}}},
+			expected: &Service{
+				Command: command.Slice{
+					{"ls", "-la"}},
+				CommandController: &command.Controller{
+					Failed: &[]*bool{
+						boolPtr(true)}}},
+			secretRefs: oldSecretRefs{},
+		},
+		"changed Command loses Failed": {
+			service: &Service{
+				Command: command.Slice{
+					{"ls", "-lah"}}},
+			oldService: &Service{
+				Command: command.Slice{
+					{"ls", "-la"}},
+				CommandController: &command.Controller{
+					Failed: &[]*bool{
+						boolPtr(true)}}},
+			expected: &Service{
+				Command: command.Slice{
+					{"ls", "-lah"}}},
+			secretRefs: oldSecretRefs{},
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			tc.service.Init(
+				jLog,
+				&Service{},
+				&Service{},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+				&webhook.Slice{},
+				&webhook.WebHook{},
+				&webhook.WebHook{},
+			)
+			if tc.oldService != nil && tc.oldService.Command != nil {
+				tc.oldService.CommandController.Command = &tc.oldService.Command
+				tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
+			}
+			// preserve fails that'd be lost in the Init
+			var webhookFails map[string]*map[string]*bool
+			if tc.expected.WebHook != nil {
+				webhookFails = make(map[string]*map[string]*bool, len(tc.expected.WebHook))
+				for name, wh := range tc.expected.WebHook {
+					webhookFails[name] = wh.Failed
+				}
+			}
+			tc.expected.Init(
+				jLog,
+				&Service{},
+				&Service{},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+				&shoutrrr.Slice{},
+				&webhook.Slice{},
+				&webhook.WebHook{},
+				&webhook.WebHook{},
+			)
+			if tc.expected.WebHook != nil {
+				for name, wh := range tc.expected.WebHook {
+					wh.Failed = webhookFails[name]
+				}
+			}
 
 			// WHEN we call giveSecrets
 			tc.service.giveSecrets(tc.oldService, tc.secretRefs)

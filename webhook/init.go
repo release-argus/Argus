@@ -73,7 +73,6 @@ func (w *WebHook) Init(
 ) {
 	w.ParentInterval = parentInterval
 	w.ServiceStatus = serviceStatus
-	w.initMetrics()
 
 	// Give the matching main
 	w.Main = main
@@ -91,18 +90,72 @@ func (w *WebHook) Init(
 	}
 }
 
+// InitMetrics of the Slice.
+func (w *Slice) InitMetrics() {
+	if w == nil {
+		return
+	}
+
+	for id := range *w {
+		(*w)[id].initMetrics()
+	}
+}
+
 // initMetrics, giving them all a starting value.
 func (w *WebHook) initMetrics() {
+	// Only record metrics for WebHooks attached to a Service
+	if w.Main == nil {
+		return
+	}
+
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterActions(metric.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "SUCCESS")
-	metric.InitPrometheusCounterActions(metric.WebHookMetric, w.ID, *w.ServiceStatus.ServiceID, "", "FAIL")
+	metric.InitPrometheusCounter(metric.WebHookMetric,
+		w.ID,
+		*w.ServiceStatus.ServiceID,
+		"",
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.WebHookMetric,
+		w.ID,
+		*w.ServiceStatus.ServiceID,
+		"",
+		"FAIL")
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metric.SetPrometheusGaugeWithID(metric.AckWaiting, *w.ServiceStatus.ServiceID, float64(0))
+	metric.SetPrometheusGauge(metric.AckWaiting,
+		*w.ServiceStatus.ServiceID,
+		float64(0))
+}
+
+// DeleteMetrics of the Slice.
+func (w *Slice) DeleteMetrics() {
+	if w == nil {
+		return
+	}
+
+	for id := range *w {
+		(*w)[id].deleteMetrics()
+	}
+}
+
+// deleteMetrics of the WebHook.
+func (w *WebHook) deleteMetrics() {
+	metric.DeletePrometheusCounter(metric.WebHookMetric,
+		w.ID,
+		*w.ServiceStatus.ServiceID,
+		"",
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.WebHookMetric,
+		w.ID,
+		*w.ServiceStatus.ServiceID,
+		"",
+		"FAIL")
+
+	metric.DeletePrometheusGauge(metric.AckWaiting,
+		*w.ServiceStatus.ServiceID)
 }
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.

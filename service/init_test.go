@@ -20,12 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -53,7 +51,7 @@ func TestService_GetServiceInfo(t *testing.T) {
 	}
 
 	// THEN we get the correct ServiceInfo
-	if got != want {
+	if *got != want {
 		t.Errorf("GetServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
 	}
@@ -177,7 +175,6 @@ func TestService_Init(t *testing.T) {
 			tc.service.ID = name
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
 			tc.service.Init(log, &defaults, &hardDefaults, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 
 			// THEN pointers to those vars are handed out to the Lookup
@@ -215,13 +212,6 @@ func TestService_Init(t *testing.T) {
 			if tc.service.Options.HardDefaults != &hardDefaults.Options {
 				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 					&hardDefaults.Options, tc.service.Options.HardDefaults)
-			}
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-			wantC := 2
-			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), wantC)
 			}
 			// Notify
 			if len(tc.service.Notify) != 0 {

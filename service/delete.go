@@ -27,6 +27,11 @@ func (s *Service) PrepDelete() {
 		ServiceID: s.ID,
 		Delete:    true,
 	}
+	s.LatestVersion.DeleteMetrics()
+	s.DeployedVersionLookup.DeleteMetrics()
+	s.Notify.DeleteMetrics()
+	s.CommandController.DeleteMetrics()
+	s.WebHook.DeleteMetrics()
 
 	// nil the channels so the service doesn't trigger any more events
 	s.Status.AnnounceChannel = nil

@@ -277,7 +277,7 @@ func TestCommand_FormattedString(t *testing.T) {
 	}
 }
 
-func TestController_InitMetrics(t *testing.T) {
+func TestController_Metrics(t *testing.T) {
 	// GIVEN a Controller with multiple Command's
 	controller := Controller{
 		Command: &Slice{
@@ -293,7 +293,7 @@ func TestController_InitMetrics(t *testing.T) {
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.CommandMetric)
 	hadG := testutil.CollectAndCount(metric.AckWaiting)
-	controller.initMetrics()
+	controller.InitMetrics()
 
 	// THEN it can be collected
 	// counters
@@ -309,6 +309,21 @@ func TestController_InitMetrics(t *testing.T) {
 	if (gotG - hadG) != wantG {
 		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
 			(gotG - hadG), wantG)
+	}
+
+	// AND it can be deleted
+	// counters
+	controller.DeleteMetrics()
+	gotC = testutil.CollectAndCount(metric.CommandMetric)
+	if gotC != hadC {
+		t.Errorf("Counter metrics's were deleted, got %d. expecting %d",
+			gotC, hadC)
+	}
+	// gauges
+	gotG = testutil.CollectAndCount(metric.AckWaiting)
+	if gotG != hadG {
+		t.Errorf("Gauge metrics's were deleted, got %d. expecting %d",
+			gotG, hadG)
 	}
 }
 

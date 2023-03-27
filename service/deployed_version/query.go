@@ -47,8 +47,14 @@ func (l *Lookup) Track() {
 		deployedVersion, err := l.Query(&logFrom)
 		// If new release found by ^ query.
 		if err == nil {
-			metric.IncreasePrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-			metric.SetPrometheusGaugeWithID(metric.DeployedVersionQueryLiveness, *l.Status.ServiceID, 1)
+			metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+				*l.Status.ServiceID,
+				"",
+				"",
+				"SUCCESS")
+			metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+				*l.Status.ServiceID,
+				1)
 			// If a new Deployed version was found.
 			if deployedVersion != l.Status.DeployedVersion {
 				// Announce the updated deployment
@@ -82,8 +88,14 @@ func (l *Lookup) Track() {
 				l.Status.AnnounceUpdate()
 			}
 		} else {
-			metric.IncreasePrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
-			metric.SetPrometheusGaugeWithID(metric.DeployedVersionQueryLiveness, *l.Status.ServiceID, 0)
+			metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+				*l.Status.ServiceID,
+				"",
+				"",
+				"FAIL")
+			metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+				*l.Status.ServiceID,
+				0)
 		}
 		// Sleep interval between queries.
 		time.Sleep(l.Options.GetIntervalDuration())

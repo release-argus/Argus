@@ -44,10 +44,11 @@ export const convertAPIServiceDataEditToUI = (
           username: serviceData?.deployed_version?.basic_auth?.username || "",
           password: serviceData?.deployed_version?.basic_auth?.password || "",
         },
-        headers: serviceData?.deployed_version?.headers?.map((header, key) => ({
-          ...header,
-          oldIndex: key,
-        })),
+        headers:
+          serviceData?.deployed_version?.headers?.map((header, key) => ({
+            ...header,
+            oldIndex: key,
+          })) || [],
         json: serviceData?.deployed_version?.json,
         regex: serviceData?.deployed_version?.regex,
       },
@@ -65,53 +66,57 @@ export const convertAPIServiceDataEditToUI = (
       notify: serviceData?.notify?.map((item) => ({
         ...item,
         oldIndex: item.name,
-        params:
-          item.params &&
-          Object.entries(item.params).reduce(
-            (acc, [key, val]) =>
-              Object.assign(acc, {
-                [key]:
-                  item.type !== "opsgenie"
-                    ? val
-                    : ["responders", "visibleto"].includes(key)
-                    ? (JSON.parse(val).map(
-                        (obj: {
-                          id: string;
-                          type: string;
-                          name: string;
-                          username: string;
-                        }) => {
-                          if (obj.id) {
-                            return {
-                              type: obj.type,
-                              sub_type: "id",
-                              value: obj.id,
-                            };
-                          } else {
-                            return {
-                              type: obj.type,
-                              sub_type:
-                                obj.type === "user" ? "username" : "name",
-                              value: obj.name || obj.username,
-                            };
+        params: {
+          avatar: "", // controlled param
+          color: "", // ^
+          icon: "", // ^
+          ...(item.params &&
+            Object.entries(item.params).reduce(
+              (acc, [key, val]) =>
+                Object.assign(acc, {
+                  [key]:
+                    item.type !== "opsgenie"
+                      ? val
+                      : ["responders", "visibleto"].includes(key)
+                      ? (JSON.parse(val).map(
+                          (obj: {
+                            id: string;
+                            type: string;
+                            name: string;
+                            username: string;
+                          }) => {
+                            if (obj.id) {
+                              return {
+                                type: obj.type,
+                                sub_type: "id",
+                                value: obj.id,
+                              };
+                            } else {
+                              return {
+                                type: obj.type,
+                                sub_type:
+                                  obj.type === "user" ? "username" : "name",
+                                value: obj.name || obj.username,
+                              };
+                            }
                           }
-                        }
-                      ) as NotifyOpsGenieTarget[])
-                    : ["details"].includes(key)
-                    ? (Object.entries(JSON.parse(val)).map(([key, value]) => ({
-                        key: key,
-                        value: value,
-                      })) as NotifyOpsGenieDetailType[])
-                    : val,
-              }),
-            {}
-          ),
+                        ) as NotifyOpsGenieTarget[])
+                      : ["details"].includes(key)
+                      ? (Object.entries(JSON.parse(val)).map(
+                          ([key, value]) => ({
+                            key: key,
+                            value: value,
+                          })
+                        ) as NotifyOpsGenieDetailType[])
+                      : val,
+                }),
+              {}
+            )),
+        },
       })),
       dashboard: {
         auto_approve: undefined,
         icon: "",
-        icon_link_to: "",
-        web_url: "",
         ...serviceData?.dashboard,
       },
     };

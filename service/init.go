@@ -106,8 +106,8 @@ func (s *Service) Init(
 }
 
 // GetServiceInfo returns info about the service.
-func (s *Service) GetServiceInfo() util.ServiceInfo {
-	return util.ServiceInfo{
+func (s *Service) GetServiceInfo() *util.ServiceInfo {
+	return &util.ServiceInfo{
 		ID:            s.ID,
 		URL:           s.LatestVersion.GetServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
@@ -122,7 +122,6 @@ func (s *Service) GetIconURL() string {
 		return s.Dashboard.Icon
 	}
 
-	//nolint:typecheck
 	if s.Notify != nil {
 		for key := range s.Notify {
 			// `Params.Icon`
@@ -134,4 +133,28 @@ func (s *Service) GetIconURL() string {
 	}
 
 	return ""
+}
+
+// InitMetrics  of the Service.
+func (s *Service) InitMetrics() {
+	s.LatestVersion.InitMetrics()
+	s.DeployedVersionLookup.InitMetrics()
+	s.Notify.InitMetrics()
+	s.CommandController.InitMetrics()
+	s.WebHook.InitMetrics()
+}
+
+// DeleteMetrics of the Service.
+func (s *Service) DeleteMetrics() {
+	s.LatestVersion.DeleteMetrics()
+	s.DeployedVersionLookup.DeleteMetrics()
+	s.Notify.DeleteMetrics()
+	s.CommandController.DeleteMetrics()
+	s.WebHook.DeleteMetrics()
+}
+
+// ResetMetrics of the Service.
+func (s *Service) ResetMetrics() {
+	s.DeleteMetrics()
+	s.InitMetrics()
 }

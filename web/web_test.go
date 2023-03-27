@@ -66,7 +66,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 
 	// WHEN the Web UI is started with this Config
 	go Run(&config, util.NewJLog("WARN", false))
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// THEN Web UI is accessible
 	url := fmt.Sprintf("http://localhost:%s%s/metrics", *config.Settings.Web.ListenPort, *config.Settings.Web.RoutePrefix)

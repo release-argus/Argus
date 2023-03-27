@@ -129,7 +129,14 @@ func TestWebHook_Send(t *testing.T) {
 			stdoutRegex:   "WebHook received",
 			customHeaders: true,
 		},
-		"does use delay webhook": {
+		"does use delay": {
+			useDelay:    true,
+			delay:       "3s",
+			stdoutRegex: "WebHook received",
+		},
+		"no delay": {
+			useDelay:    true,
+			delay:       "0s",
 			stdoutRegex: "WebHook received",
 		},
 		"failing webhook": {
@@ -190,9 +197,11 @@ func TestWebHook_Send(t *testing.T) {
 				}
 
 				// WHEN try is called with it
-				webhook.Send(util.ServiceInfo{}, tc.useDelay)
+				startAt := time.Now()
+				webhook.Send(&util.ServiceInfo{ID: name}, tc.useDelay)
 
 				// THEN the logs are expected
+				completedAt := time.Now()
 				w.Close()
 				out, _ := io.ReadAll(r)
 				os.Stdout = stdout
@@ -210,6 +219,16 @@ func TestWebHook_Send(t *testing.T) {
 					}
 					t.Errorf("match on %q not found in\n%q",
 						tc.stdoutRegex, output)
+				}
+				// AND the delay is expected
+				if tc.delay != "" {
+					delayDuration, _ := time.ParseDuration(tc.delay)
+					took := completedAt.Sub(startAt)
+					if took < delayDuration {
+						t.Errorf("delay %s not used", tc.delay)
+					} else if took > delayDuration+2*time.Second {
+						t.Errorf("delay %s took too long %s", tc.delay, took)
+					}
 				}
 			}
 		})
@@ -271,7 +290,7 @@ func TestSlice_Send(t *testing.T) {
 					}
 
 					// WHEN try is called with it
-					tc.slice.Send(util.ServiceInfo{}, tc.useDelay)
+					tc.slice.Send(&util.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected
 					w.Close()
@@ -334,7 +353,7 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
 			// WHEN Send is called with them
-			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &util.ServiceInfo{})
+			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &util.ServiceInfo{ID: name})
 
 			// THEN err is as expected
 			e := util.ErrorToString(err)

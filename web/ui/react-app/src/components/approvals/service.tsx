@@ -82,7 +82,13 @@ const Service: FC<Props> = ({ service, editable = false }) => {
         )}
       </Card.Title>
 
-      <Card key={service.id} bg="secondary" className="service-inner">
+      <Card
+        key={service.id}
+        bg="secondary"
+        className={`service-inner ${
+          service.active === false ? "service-disabled" : ""
+        }`}
+      >
         <UpdateInfo
           service={service}
           visible={updateAvailable && showUpdateInfo && !updateSkipped}

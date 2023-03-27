@@ -49,7 +49,6 @@ func (c *Controller) Init(
 	c.NextRunnable = make([]time.Time, len(*c.Command))
 
 	c.ParentInterval = parentInterval
-	c.initMetrics()
 
 	// Command fail notifiers
 	c.Notifiers = Notifiers{
@@ -58,20 +57,58 @@ func (c *Controller) Init(
 }
 
 // initMetrics, giving them all a starting value.
-func (c *Controller) initMetrics() {
+func (c *Controller) InitMetrics() {
+	if c == nil {
+		return
+	}
+
 	// ############
 	// # Counters #
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
-		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
+		metric.InitPrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"SUCCESS")
+		metric.InitPrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metric.SetPrometheusGaugeWithID(metric.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
+	metric.SetPrometheusGauge(metric.AckWaiting,
+		*c.ServiceStatus.ServiceID,
+		float64(0))
+}
+
+// DeleteMetrics for this Controller.
+func (c *Controller) DeleteMetrics() {
+	if c == nil {
+		return
+	}
+
+	for i := range *c.Command {
+		name := (*c.Command)[i].String()
+		metric.DeletePrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"SUCCESS")
+		metric.DeletePrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"FAIL")
+	}
+
+	metric.DeletePrometheusGauge(metric.AckWaiting,
+		*c.ServiceStatus.ServiceID)
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'

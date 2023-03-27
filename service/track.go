@@ -51,10 +51,10 @@ func (s *Slice) Track(ordering *[]string) {
 func (s *Service) Track() {
 	// Skip inactive Services
 	if !s.Options.GetActive() {
+		s.DeleteMetrics()
 		return
 	}
-
-	serviceInfo := s.GetServiceInfo()
+	s.ResetMetrics()
 
 	// Track the deployed version in a infinite loop goroutine.
 	go func() {
@@ -86,12 +86,9 @@ func (s *Service) Track() {
 
 		// If a new version was found and we're not already on it
 		if newVersion {
-			// Get updated serviceInfo
-			serviceInfo = s.GetServiceInfo()
-
 			// Send the Notify Message(s).
 			//nolint:errcheck
-			go s.Notify.Send("", "", &serviceInfo, true)
+			go s.Notify.Send("", "", s.GetServiceInfo(), true)
 
 			// WebHook(s)/Command(s)
 			go s.HandleUpdateActions()
@@ -101,18 +98,36 @@ func (s *Service) Track() {
 		if err != nil {
 			switch e := err.Error(); {
 			case strings.HasPrefix(e, "regex "):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 2)
+				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+					s.ID,
+					2)
 			case strings.HasPrefix(e, "failed converting") && strings.Contains(e, " semantic version."):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 3)
+				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+					s.ID,
+					3)
 			case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 4)
+				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+					s.ID,
+					4)
 			default:
-				metric.IncreasePrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, s.ID, "FAIL")
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 0)
+				metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
+					s.ID,
+					"",
+					"",
+					"FAIL")
+				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+					s.ID,
+					0)
 			}
 		} else {
-			metric.IncreasePrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, s.ID, "SUCCESS")
-			metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 1)
+			metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
+				s.ID,
+				"",
+				"",
+				"SUCCESS")
+			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+				s.ID,
+				1)
 		}
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())

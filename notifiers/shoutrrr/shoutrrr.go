@@ -316,19 +316,27 @@ func (s *Shoutrrr) Send(
 
 		// SUCCESS!
 		if !failed {
-			metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "SUCCESS")
+			metric.IncreasePrometheusCounter(metric.NotifyMetric,
+				s.ID,
+				serviceInfo.ID,
+				s.GetType(),
+				"SUCCESS")
 			failed := false
 			(*s.Failed)[s.ID] = &failed
 			return
 		}
 
 		// FAIL
-		metric.InitPrometheusCounterActions(metric.NotifyMetric, s.ID, serviceInfo.ID, s.GetType(), "FAIL")
+		metric.IncreasePrometheusCounter(metric.NotifyMetric,
+			s.ID,
+			serviceInfo.ID,
+			s.GetType(),
+			"FAIL")
 		triesLeft--
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			msg = fmt.Sprintf("failed %d times to send a %s message for %s to %s", s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
+			msg = fmt.Sprintf("failed %d times to send a %s message for %q to %q", s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
 			(*s.Failed)[s.ID] = &failed
