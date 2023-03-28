@@ -86,16 +86,16 @@ type Header struct {
 }
 
 // UnmarshalYAML, converting map[string]string to {key: "X", val: "Y"}
-func (h *Headers) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (h *Headers) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// try and unmarshal as a Header list
 	var headers []Header
-	err := unmarshal(&headers)
+	err = unmarshal(&headers)
 	if err != nil {
 		// it's not a list, try a map
 		var headers map[string]string
 		err = unmarshal(&headers)
 		if err != nil {
-			return err
+			return
 		}
 		// sort the map keys
 		keys := make([]string, 0, len(headers))
@@ -108,8 +108,8 @@ func (h *Headers) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		for _, key := range keys {
 			*h = append(*h, Header{Key: key, Value: headers[key]})
 		}
-		return nil
+		return
 	}
 	*h = headers
-	return nil
+	return
 }

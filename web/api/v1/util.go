@@ -37,9 +37,9 @@ func convertAndCensorNotifySlice(input *shoutrrr.Slice) *api_type.NotifySlice {
 	}
 
 	// Convert to API Type, censoring secrets
-	notifies := make(api_type.NotifySlice, len(*input))
+	slice := make(api_type.NotifySlice, len(*input))
 	for name := range *input {
-		notifies[name] = (&api_type.Notify{
+		slice[name] = (&api_type.Notify{
 			ID:        name,
 			Type:      (*input)[name].Type,
 			Options:   (*input)[name].Options,
@@ -47,7 +47,7 @@ func convertAndCensorNotifySlice(input *shoutrrr.Slice) *api_type.NotifySlice {
 			Params:    (*input)[name].Params,
 		}).Censor()
 	}
-	return &notifies
+	return &slice
 }
 
 // convertAndCensorWebHookSlice from *webhook.Slice to *api_type.WebHookSlice
@@ -57,21 +57,22 @@ func convertAndCensorWebHookSlice(input *webhook.Slice) *api_type.WebHookSlice {
 	}
 
 	// Convert to API Type, censoring secrets
-	webhooks := make(api_type.WebHookSlice, len(*input))
+	slice := make(api_type.WebHookSlice, len(*input))
 	for name := range *input {
-		webhooks[name] = convertWebHookToAPITypeWebHook((*input)[name]).Censor()
+		slice[name] = convertWebHookToAPITypeWebHook((*input)[name])
+		slice[name].Censor()
 	}
-	return &webhooks
+	return &slice
 }
 
 // convertAndCensorDefaults fromm *config.Defaults to *api_type.Defaults
-func convertAndCensorDefaults(input *config.Defaults) *api_type.Defaults {
+func convertAndCensorDefaults(input *config.Defaults) (defaults *api_type.Defaults) {
 	if input == nil {
-		return nil
+		return
 	}
 
 	// Convert to API Type, censoring secrets
-	defaults := api_type.Defaults{
+	defaults = &api_type.Defaults{
 		Service: api_type.Service{
 			Options: &api_type.ServiceOptions{
 				Interval:           input.Service.Options.Interval,
@@ -98,8 +99,7 @@ func convertAndCensorDefaults(input *config.Defaults) *api_type.Defaults {
 			SilentFails:       input.WebHook.SilentFails,
 		},
 	}
-
-	return &defaults
+	return
 }
 
 // getParam from a URL query string
@@ -167,12 +167,12 @@ func (api *API) announceService(name string, client *Client, logFrom *util.LogFr
 	api.wsSendJSON(client, msg, logFrom)
 }
 
-func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) *api_type.DeployedVersionLookup {
+func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) (apiDVL *api_type.DeployedVersionLookup) {
 	if dvl == nil {
-		return nil
+		return
 	}
 	var headers []api_type.Header
-	apiDVL := api_type.DeployedVersionLookup{
+	apiDVL = &api_type.DeployedVersionLookup{
 		URL:               dvl.URL,
 		AllowInvalidCerts: dvl.AllowInvalidCerts,
 		Headers:           headers,
@@ -194,16 +194,16 @@ func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver
 			Value: "<secret>",
 		}
 	}
-	return &apiDVL
+	return
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) api_type.URLCommandSlice {
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) (slice api_type.URLCommandSlice) {
 	if commands == nil {
-		return api_type.URLCommandSlice{}
+		return
 	}
-	apiSlice := make(api_type.URLCommandSlice, len(*commands))
+	slice = make(api_type.URLCommandSlice, len(*commands))
 	for index := range *commands {
-		apiSlice[index] = api_type.URLCommand{
+		slice[index] = api_type.URLCommand{
 			Type:  (*commands)[index].Type,
 			Regex: (*commands)[index].Regex,
 			Index: (*commands)[index].Index,
@@ -212,47 +212,46 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandS
 			New:   (*commands)[index].New,
 		}
 	}
-	return apiSlice
+	return
 }
 
 func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type.NotifySlice {
 	if notifiers == nil {
 		return nil
 	}
-	apiSlice := make(api_type.NotifySlice, len(*notifiers))
+	slice := make(api_type.NotifySlice, len(*notifiers))
 	for index := range *notifiers {
-		apiSlice[index] = &api_type.Notify{
+		slice[index] = &api_type.Notify{
 			Type:      (*notifiers)[index].Type,
 			Options:   (*notifiers)[index].Options,
 			URLFields: (*notifiers)[index].URLFields,
 			Params:    (*notifiers)[index].Params,
 		}
-		// Assign as it may be a new pointer as the fields are a map rather than individual pointers/vars
-		apiSlice[index] = apiSlice[index].Censor()
+		slice[index].Censor()
 	}
-	return &apiSlice
+	return &slice
 }
 
 func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_type.CommandSlice {
 	if commands == nil {
 		return nil
 	}
-	apiSlice := make(api_type.CommandSlice, len(*commands))
+	slice := make(api_type.CommandSlice, len(*commands))
 	for index := range *commands {
-		apiSlice[index] = api_type.Command((*commands)[index])
+		slice[index] = api_type.Command((*commands)[index])
 	}
-	return &apiSlice
+	return &slice
 }
 
 func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_type.WebHookSlice {
 	if webhooks == nil {
 		return nil
 	}
-	apiSlice := make(api_type.WebHookSlice, len(*webhooks))
+	slice := make(api_type.WebHookSlice, len(*webhooks))
 	for index := range *webhooks {
-		apiSlice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
+		slice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
 	}
-	return &apiSlice
+	return &slice
 }
 
 func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_type.WebHook) {
@@ -283,7 +282,8 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 		Delay:             webhook.Delay,
 		MaxTries:          webhook.MaxTries,
 		SilentFails:       webhook.SilentFails,
-	}).Censor()
+	})
+	apiElement.Censor()
 	return
 }
 

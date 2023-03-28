@@ -33,11 +33,12 @@ type Slice []Command
 type Command []string
 
 // String returns a string representation of the Command in the format of 'arg0 arg1'.
-func (c *Command) String() string {
+func (c *Command) String() (str string) {
 	if c == nil {
-		return ""
+		return
 	}
-	return strings.Join(*c, " ")
+	str = strings.Join(*c, " ")
+	return
 }
 
 type Controller struct {

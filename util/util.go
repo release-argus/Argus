@@ -243,24 +243,24 @@ func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
 }
 
 // LowercaseStringStringMap will convert all lowercase all keys in the map
-func LowercaseStringStringMap(change *map[string]string) map[string]string {
-	lowercasedMap := make(map[string]string, len(*change))
+func LowercaseStringStringMap(change *map[string]string) (lowercasedMap map[string]string) {
+	lowercasedMap = make(map[string]string, len(*change))
 	for i := range *change {
 		lowercasedMap[strings.ToLower(i)] = (*change)[i]
 	}
-	return lowercasedMap
+	return
 }
 
 // Sorted keys will return a sorted list of the keys in a map.
-func SortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, len(m))
+func SortedKeys[V any](m map[string]V) (keys []string) {
+	keys = make([]string, len(m))
 	i := 0
 	for k := range m {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
-	return keys
+	return
 }
 
 // StringToPointer will return a pointer to str, but nil if it's an empty string.
@@ -280,13 +280,13 @@ func GetKeysFromJSON(data string) []string {
 	return getKeysFromJSONBytes([]byte(data), "")
 }
 
-func getKeysFromJSONBytes(data []byte, prefix string) []string {
+func getKeysFromJSONBytes(data []byte, prefix string) (keys []string) {
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {
 		// Unmarshaling fail
 		return []string{}
 	}
-	keys := make([]string, len(obj))
+	keys = make([]string, len(obj))
 
 	// Iterate over the JSON object
 	index := 0
@@ -304,5 +304,5 @@ func getKeysFromJSONBytes(data []byte, prefix string) []string {
 	}
 	// sort keys
 	sort.Strings(keys)
-	return keys
+	return
 }

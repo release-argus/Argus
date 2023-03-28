@@ -78,39 +78,40 @@ type Client struct {
 	lock sync.Mutex
 }
 
-func getIP(r *http.Request) string {
+func getIP(r *http.Request) (ip string) {
 	// Get IP from the CF-Connecting-Ip header
-	ip := r.Header.Get("CF-Connecting-Ip")
+	ip = r.Header.Get("CF-Connecting-Ip")
 	netIP := net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	// Get IP from the X-Real-Ip header
 	ip = r.Header.Get("X-Real-Ip")
 	netIP = net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	// Get IP from X-Forwarded-For header
 	ips := r.Header.Get("X-Forwarded-For")
 	splitIps := strings.Split(ips, ",")
-	for _, ip := range splitIps {
+	for _, ip = range splitIps {
 		netIP := net.ParseIP(ip)
 		if netIP != nil {
-			return ip
+			return
 		}
 	}
 
 	// Get IP from RemoteAddr
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	var err error
+	ip, _, err = net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return ""
 	}
 	netIP = net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	return ""

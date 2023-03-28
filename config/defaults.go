@@ -177,7 +177,7 @@ func (d *Defaults) CheckValues() (errs error) {
 			util.ErrorToString(errs), prefix, err)
 	}
 
-	return errs
+	return
 }
 
 // Print the defaults Strcut.

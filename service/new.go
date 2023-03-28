@@ -328,15 +328,15 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 }
 
 // CheckFetches will check that, if set, the LatestVersion and DeployedVersion can be fetched
-func (s *Service) CheckFetches() error {
+func (s *Service) CheckFetches() (err error) {
 	// Don't check if the service is inactive
 	if !s.Options.GetActive() {
-		return nil
+		return
 	}
 	// All versions carried over from old service
 	if (s.Status.LatestVersion != "" && s.Status.LastQueried != "") &&
 		(s.DeployedVersionLookup == nil || s.Status.DeployedVersion != "") {
-		return nil
+		return
 	}
 
 	// nil the channels so we don't make any updates
@@ -356,21 +356,24 @@ func (s *Service) CheckFetches() error {
 		deployedVersion := s.Status.DeployedVersion
 		s.Status.DeployedVersion = ""
 
-		_, err := s.LatestVersion.Query()
+		_, err = s.LatestVersion.Query()
 		if err != nil {
-			return fmt.Errorf("latest_version - %w", err)
+			err = fmt.Errorf("latest_version - %w", err)
+			return
 		}
 		s.Status.DeployedVersion = deployedVersion
 	}
 
 	// Fetch deployed version
 	if s.DeployedVersionLookup != nil {
-		version, err := s.DeployedVersionLookup.Query(&util.LogFrom{})
+		var version string
+		version, err = s.DeployedVersionLookup.Query(&util.LogFrom{})
 		if err != nil {
-			return fmt.Errorf("deployed_version - %w", err)
+			err = fmt.Errorf("deployed_version - %w", err)
+			return
 		}
 		s.Status.SetDeployedVersion(version)
 	}
 
-	return nil
+	return
 }

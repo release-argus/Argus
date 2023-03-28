@@ -27,7 +27,7 @@ import (
 // Exec will execute all `Command` for the controller and returns all errors encountered
 func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
-		return nil
+		return errs
 	}
 
 	errChan := make(chan error)
@@ -52,9 +52,9 @@ func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	return
 }
 
-func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
+func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 	if index >= len(*c.Command) {
-		return nil
+		return
 	}
 	// block reruns whilst running
 	c.SetNextRunnable(index, true)
@@ -63,7 +63,7 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
 	command := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 
 	// Execute
-	err := command.Exec(logFrom)
+	err = command.Exec(logFrom)
 
 	// Set fail/not
 	failed := err != nil
@@ -103,16 +103,16 @@ func (c *Command) Exec(logFrom *util.LogFrom) error {
 	return err
 }
 
-func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) Command {
+func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) (command Command) {
 	if serviceStatus == nil {
 		return *c
 	}
 
-	command := Command(make([]string, len(*c)))
+	command = Command(make([]string, len(*c)))
 	copy(command, *c)
 	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion}
 	for i := range command {
 		command[i] = util.TemplateString(command[i], serviceInfo)
 	}
-	return command
+	return
 }

@@ -21,9 +21,7 @@ import (
 )
 
 // CheckValues of the Service(s) in the Slice.
-func (s *Slice) CheckValues(prefix string) error {
-	var errs error
-
+func (s *Slice) CheckValues(prefix string) (errs error) {
 	keys := util.SortedKeys(*s)
 	for _, key := range keys {
 		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
@@ -31,7 +29,7 @@ func (s *Slice) CheckValues(prefix string) error {
 				util.ErrorToString(errs), serviceErrs)
 		}
 	}
-	return errs
+	return
 }
 
 // CheckValues of the Service.

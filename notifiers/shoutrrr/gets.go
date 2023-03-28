@@ -88,9 +88,9 @@ func (s *Shoutrrr) GetDelay() string {
 }
 
 // GetDelayDuration before sending.
-func (s *Shoutrrr) GetDelayDuration() time.Duration {
-	d, _ := time.ParseDuration(s.GetDelay())
-	return d
+func (s *Shoutrrr) GetDelayDuration() (duration time.Duration) {
+	duration, _ = time.ParseDuration(s.GetDelay())
+	return
 }
 
 // GetMaxTries allowed for the Gotification.
@@ -105,13 +105,14 @@ func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) string {
 }
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) string {
-	title := util.GetFirstNonDefault(
+func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) (title string) {
+	title = util.GetFirstNonDefault(
 		s.GetSelfParam("title"),
 		s.Main.GetSelfParam("title"),
 		s.Defaults.GetSelfParam("title"),
 		s.HardDefaults.GetSelfParam("title"))
-	return util.TemplateString(title, *serviceInfo)
+	title = util.TemplateString(title, *serviceInfo)
+	return
 }
 
 // GetType of this Shoutrrr

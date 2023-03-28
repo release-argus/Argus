@@ -21,10 +21,11 @@ import (
 )
 
 // TemplateString with pongo2 and `context`.
-func TemplateString(template string, context ServiceInfo) string {
+func TemplateString(template string, context ServiceInfo) (result string) {
 	// If the string isn't a Jinja template
 	if !strings.Contains(template, "{") {
-		return template
+		result = template
+		return
 	}
 
 	// Compile the template.
@@ -34,7 +35,7 @@ func TemplateString(template string, context ServiceInfo) string {
 	}
 
 	// Render the template.
-	out, err := tpl.Execute(pongo2.Context{
+	result, err = tpl.Execute(pongo2.Context{
 		"service_id":  context.ID,
 		"service_url": context.URL,
 		"web_url":     context.WebURL,
@@ -43,7 +44,7 @@ func TemplateString(template string, context ServiceInfo) string {
 	if err != nil {
 		panic(err)
 	}
-	return out
+	return
 }
 
 // CheckTemplate will compile

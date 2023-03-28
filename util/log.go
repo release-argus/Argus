@@ -81,24 +81,27 @@ func (l *JLog) SetTimestamps(enable bool) {
 // from.Primary defined = `from.Primary `
 //
 // from.Secondary defined = `from.Secondary `
-func FormatMessageSource(from LogFrom) string {
+func FormatMessageSource(from LogFrom) (msg string) {
 	// from.Primary defined
 	if from.Primary != "" {
 		// from.Primary and from.Secondary are defined
 		if from.Secondary != "" {
-			return fmt.Sprintf("%s (%s), ", from.Primary, from.Secondary)
+			msg = fmt.Sprintf("%s (%s), ", from.Primary, from.Secondary)
+			return
 		}
 		// Just from.Primary defined
-		return fmt.Sprintf("%s, ", from.Primary)
+		msg = fmt.Sprintf("%s, ", from.Primary)
+		return
 	}
 
 	// Just from.Secondary defined
 	if from.Secondary != "" {
-		return fmt.Sprintf("%s, ", from.Secondary)
+		msg = fmt.Sprintf("%s, ", from.Secondary)
+		return
 	}
 
 	// Neither from.Primary nor from.Secondary defined
-	return ""
+	return
 }
 
 // IsLevel will return whether the `level` of the JLog.

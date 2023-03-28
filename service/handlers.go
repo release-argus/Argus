@@ -242,8 +242,8 @@ func (s *Service) HandleSkip(version string) {
 	}
 }
 
-func (s *Service) shouldRetryAll() bool {
-	retry := true
+func (s *Service) shouldRetryAll() (retry bool) {
+	retry = true
 	// retry all only if every WebHook has been sent successfully
 	if len(s.WebHook) != 0 {
 		for key := range s.WebHook {
@@ -262,5 +262,5 @@ func (s *Service) shouldRetryAll() bool {
 			}
 		}
 	}
-	return retry
+	return
 }

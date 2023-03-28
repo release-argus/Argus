@@ -64,20 +64,20 @@ func (c *URLCommand) String() string {
 // e.g.    URLCommandSlice: { type: "split" }
 //
 // becomes URLCommandSlice: [ { type: "split" } ]
-func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	var multi []URLCommand
-	err := unmarshal(&multi)
+	err = unmarshal(&multi)
 	if err != nil {
 		var single URLCommand
-		err := unmarshal(&single)
+		err = unmarshal(&single)
 		if err != nil {
-			return err
+			return
 		}
 		*s = []URLCommand{single}
 	} else {
 		*s = multi
 	}
-	return nil
+	return
 }
 
 // Init will give the filter package this log.
@@ -224,12 +224,11 @@ func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
 }
 
 // CheckValues of the URLCommand(s) in the URLCommandSlice.
-func (s *URLCommandSlice) CheckValues(prefix string) error {
+func (s *URLCommandSlice) CheckValues(prefix string) (errs error) {
 	if s == nil {
-		return nil
+		return
 	}
 
-	var errs error
 	for index := range *s {
 		if err := (*s)[index].CheckValues(prefix + "    "); err != nil {
 			errs = fmt.Errorf("%s%s  item_%d:\\%w",
@@ -241,7 +240,7 @@ func (s *URLCommandSlice) CheckValues(prefix string) error {
 		errs = fmt.Errorf("%surl_commands:\\%s",
 			prefix, util.ErrorToString(errs))
 	}
-	return errs
+	return
 }
 
 // CheckValues of the URLCommand.

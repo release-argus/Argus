@@ -116,23 +116,24 @@ func (s *Service) GetServiceInfo() *util.ServiceInfo {
 }
 
 // GetIconURL returns the URL Icon for the Service.
-func (s *Service) GetIconURL() string {
+func (s *Service) GetIconURL() (icon string) {
 	// Service.Icon
 	if strings.HasPrefix(s.Dashboard.Icon, "http") {
-		return s.Dashboard.Icon
+		icon = s.Dashboard.Icon
+		return
 	}
 
 	if s.Notify != nil {
 		for key := range s.Notify {
 			// `Params.Icon`
-			icon := s.Notify[key].GetParam("icon")
+			icon = s.Notify[key].GetParam("icon")
 			if icon != "" && strings.HasPrefix(icon, "http") {
-				return icon
+				return
 			}
 		}
 	}
 
-	return ""
+	return
 }
 
 // InitMetrics  of the Service.

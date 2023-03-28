@@ -177,9 +177,9 @@ func (w *WebHook) GetDelay() string {
 }
 
 // GetDelayDuration before auto-approving this WebHook.
-func (w *WebHook) GetDelayDuration() time.Duration {
-	d, _ := time.ParseDuration(w.GetDelay())
-	return d
+func (w *WebHook) GetDelayDuration() (duration time.Duration) {
+	duration, _ = time.ParseDuration(w.GetDelay())
+	return duration
 }
 
 // GetDesiredStatusCode of the WebHook.

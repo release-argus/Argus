@@ -49,9 +49,9 @@ func (c *Controller) AnnounceCommand(index int) {
 }
 
 // Find `command`.
-func (c *Controller) Find(command string) *int {
+func (c *Controller) Find(command string) (index *int) {
 	if c == nil {
-		return nil
+		return
 	}
 
 	// Loop through all the Command(s)
@@ -59,10 +59,11 @@ func (c *Controller) Find(command string) *int {
 		formatted := (*c.Command)[key].ApplyTemplate(c.ServiceStatus)
 		// If this key is the command
 		if formatted.String() == command {
-			return &key
+			index = &key
+			return
 		}
 	}
-	return nil
+	return
 }
 
 // ResetFails of this Controller's Commands

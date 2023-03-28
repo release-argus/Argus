@@ -168,7 +168,12 @@ func (s *Shoutrrr) correctSelf() {
 
 // checkValuesMaster will check that the leading Shoutrrr can access all vars required
 // for its Type
-func (s *Shoutrrr) checkValuesMaster(prefix string, errs *error, errsOptions *error, errsURLFields *error, errsParams *error) {
+func (s *Shoutrrr) checkValuesMaster(
+	prefix string,
+	errs *error,
+	errsOptions *error,
+	errsURLFields *error,
+	errsParams *error) {
 	if util.GetFirstNonDefault(s.Type, s.Main.Type) == "" {
 		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
 			util.ErrorToString(*errs), prefix)

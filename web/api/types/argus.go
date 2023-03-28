@@ -480,7 +480,8 @@ func (slice *WebHookSlice) Flatten() *[]*WebHook {
 	sort.Strings(names)
 
 	for index, name := range names {
-		list[index] = (*slice)[name].Censor()
+		list[index] = (*slice)[name]
+		list[index].Censor()
 		list[index].ID = name
 	}
 
@@ -513,9 +514,9 @@ func (w *WebHook) String() string {
 }
 
 // Censor this WebHook for sending to the web client
-func (w *WebHook) Censor() *WebHook {
+func (w *WebHook) Censor() {
 	if w == nil {
-		return nil
+		return
 	}
 
 	// Secret
@@ -528,8 +529,6 @@ func (w *WebHook) Censor() *WebHook {
 	for i := range w.CustomHeaders {
 		w.CustomHeaders[i].Value = "<secret>"
 	}
-
-	return w
 }
 
 // Notifiers are the notifiers to use when a WebHook fails.
