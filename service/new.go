@@ -144,6 +144,10 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion *latestver.Lookup) {
 			s.LatestVersion.Require.Docker.Token = oldLatestVersion.Require.Docker.Token
 		}
 	}
+	// GitHubData
+	if s.LatestVersion.Type == "github" && oldLatestVersion.Type == "github" {
+		s.LatestVersion.GitHubData = oldLatestVersion.GitHubData
+	}
 }
 
 // giveSecretsDeployedVersion from the oldDeployedVersion

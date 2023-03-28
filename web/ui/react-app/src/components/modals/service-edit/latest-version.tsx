@@ -50,38 +50,39 @@ const EditServiceLatestVersion: FC<Props> = ({
             label={latestVersionType === "github" ? "Repo" : "URL"}
             onRight
           />
-          {latestVersionType === "github" && (
-            <FormItem
-              key="access_token"
-              name="latest_version.access_token"
-              col_sm={12}
-              label="Access Token"
-              placeholder={
-                defaults?.access_token || hard_defaults?.access_token
-              }
-              isURL={latestVersionType !== "github"}
-            />
-          )}
-          <BooleanWithDefault
-            name="latest_version.allow_invalid_certs"
-            label="Allow Invalid Certs"
-            value={original?.allow_invalid_certs}
-            defaultValue={
-              defaults?.allow_invalid_certs ||
-              hard_defaults?.allow_invalid_certs
-            }
-          />
-          {latestVersionType === "github" && (
+          {latestVersionType === "github" ? (
             <>
-              <BooleanWithDefault
-                name="latest_version.use_prerelease"
-                label="Use pre-releases"
-                value={original?.use_prerelease}
-                defaultValue={
-                  defaults?.use_prerelease || hard_defaults?.use_prerelease
+              <FormItem
+                key="access_token"
+                name="latest_version.access_token"
+                col_sm={12}
+                label="Access Token"
+                placeholder={
+                  defaults?.access_token || hard_defaults?.access_token
                 }
+                isURL={latestVersionType !== "github"}
               />
+              <>
+                <BooleanWithDefault
+                  name="latest_version.use_prerelease"
+                  label="Use pre-releases"
+                  value={original?.use_prerelease}
+                  defaultValue={
+                    defaults?.use_prerelease || hard_defaults?.use_prerelease
+                  }
+                />
+              </>
             </>
+          ) : (
+            <BooleanWithDefault
+              name="latest_version.allow_invalid_certs"
+              label="Allow Invalid Certs"
+              value={original?.allow_invalid_certs}
+              defaultValue={
+                defaults?.allow_invalid_certs ||
+                hard_defaults?.allow_invalid_certs
+              }
+            />
           )}
           <FormURLCommands />
           <EditServiceLatestVersionRequire />

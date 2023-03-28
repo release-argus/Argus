@@ -80,10 +80,12 @@ func (r *Require) RegexCheckContent(
 
 	for i := range searchArea {
 		regexMatch := util.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
-		jLog.Debug(
-			fmt.Sprintf("%q RegexContent on %q, match=%t", r.RegexContent, searchArea[i], regexMatch),
-			*logFrom,
-			true)
+		if jLog.IsLevel("DEBUG") {
+			jLog.Debug(
+				fmt.Sprintf("%q RegexContent on %q, match=%t", r.RegexContent, searchArea[i], regexMatch),
+				*logFrom,
+				true)
+		}
 		if !regexMatch {
 			// if we're on the last asset
 			if i == len(searchArea)-1 {

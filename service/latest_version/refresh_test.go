@@ -292,9 +292,12 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 
 func TestLookup_Refresh(t *testing.T) {
 	testLogging("DEBUG")
-	test := testLookup(true, true)
-	test.Query()
-	testVersion := test.Status.LatestVersion
+	testURL := testLookup(true, true)
+	testURL.Query()
+	testVersionURL := testURL.Status.LatestVersion
+	testGitHub := testLookup(false, false)
+	testGitHub.Query()
+	testVersionGitHub := testGitHub.Status.LatestVersion
 
 	// GIVEN a Lookup and various json strings to override parts of it
 	tests := map[string]struct {
@@ -314,7 +317,7 @@ func TestLookup_Refresh(t *testing.T) {
 		"Change of URL": {
 			url:      stringPtr("https://valid.release-argus.io/plain"),
 			previous: testLookup(true, true),
-			want:     testVersion,
+			want:     testVersionURL,
 		},
 		"Removal of URL": {
 			url:      stringPtr(""),
@@ -326,30 +329,50 @@ func TestLookup_Refresh(t *testing.T) {
 			urlCommands:        stringPtr(`[{"type": "regex", "regex": "beta: \"v?([^\"]+)"}]`),
 			semanticVersioning: stringPtr("false"),
 			previous:           testLookup(true, true),
-			want:               testVersion + "-beta",
+			want:               testVersionURL + "-beta",
 		},
 		"Change of vars that fail Query": {
 			allowInvalidCerts: stringPtr("false"),
 			previous:          testLookup(true, true),
 			errRegex:          `x509 \(certificate invalid\)`,
 		},
-		"Refresh new version": {
+		"URL - Refresh new version": {
 			previous: &Lookup{
-				URL:               test.URL,
-				Type:              test.Type,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				URLCommands:       test.URLCommands,
-				Require:           test.Require,
-				Options:           test.Options,
+				URL:               testURL.URL,
+				Type:              testURL.Type,
+				AllowInvalidCerts: testURL.AllowInvalidCerts,
+				URLCommands:       testURL.URLCommands,
+				Require:           testURL.Require,
+				Options:           testURL.Options,
 				Status: &svcstatus.Status{
 					ServiceID:              stringPtr("Refresh new version"),
 					LatestVersion:          "0.0.0",
 					LatestVersionTimestamp: time.Now().UTC().Format(time.RFC3339),
 				},
-				Defaults:     test.Defaults,
-				HardDefaults: test.HardDefaults,
+				Defaults:     testURL.Defaults,
+				HardDefaults: testURL.HardDefaults,
 			},
-			want: testVersion,
+			want: testVersionURL,
+		},
+		"GitHub - Refresh new version": {
+			previous: &Lookup{
+				URL:               testGitHub.URL,
+				Type:              testGitHub.Type,
+				AllowInvalidCerts: testGitHub.AllowInvalidCerts,
+				UsePreRelease:     testGitHub.UsePreRelease,
+				URLCommands:       testGitHub.URLCommands,
+				Require:           testGitHub.Require,
+				Options:           testGitHub.Options,
+				GitHubData:        testGitHub.GitHubData,
+				Status: &svcstatus.Status{
+					ServiceID:              stringPtr("Refresh new version"),
+					LatestVersion:          "0.0.0",
+					LatestVersionTimestamp: time.Now().UTC().Format(time.RFC3339),
+				},
+				Defaults:     testGitHub.Defaults,
+				HardDefaults: testGitHub.HardDefaults,
+			},
+			want: testVersionGitHub,
 		},
 	}
 

@@ -38,6 +38,7 @@ import (
 
 func TestService_GiveSecretsLatestVersion(t *testing.T) {
 	// GIVEN a LatestVersion that may have secrets in it referencing those in another LatestVersion
+	githubData := latestver.GitHubData{ETag: "shazam"}
 	tests := map[string]struct {
 		latestVersion latestver.Lookup
 		otherLV       latestver.Lookup
@@ -135,6 +136,34 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					Docker: &filter.DockerCheck{
 						Token: ""}}},
 		},
+		"GitHubData carried over if type still 'github'": {
+			latestVersion: latestver.Lookup{
+				Type: "github"},
+			otherLV: latestver.Lookup{
+				Type:       "github",
+				GitHubData: &githubData},
+			expected: latestver.Lookup{
+				Type:       "github",
+				GitHubData: &githubData},
+		},
+		"GitHubData not carried over if type wasn't 'github'": {
+			latestVersion: latestver.Lookup{
+				Type: "github"},
+			otherLV: latestver.Lookup{
+				Type:       "url",
+				GitHubData: &githubData}, // would be nil for type url
+			expected: latestver.Lookup{
+				Type: "github"},
+		},
+		"GitHubData not carried over if type no longer 'github'": {
+			latestVersion: latestver.Lookup{
+				Type: "url"},
+			otherLV: latestver.Lookup{
+				Type:       "github",
+				GitHubData: &githubData},
+			expected: latestver.Lookup{
+				Type: "github"},
+		},
 	}
 
 	for name, tc := range tests {
@@ -160,13 +189,19 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			if gotLV.Require == nil && tc.expected.Require != nil {
 				t.Errorf("Expected Require to be non-nil, got nil")
 
-				// newService Require/Docker isn't nil when expected isn't
+				// newService Require/Docker isn't nil when expected is or vice versa
 			} else if gotLV.Require != tc.expected.Require &&
 				gotLV.Require.Docker != tc.expected.Require.Docker &&
 				// newService doesn't have the expected Token
 				gotLV.Require.Docker.Token != tc.expected.Require.Docker.Token {
 				t.Errorf("Expected %q, got %q",
 					tc.expected.Require.Docker.Token, gotLV.Require.Docker.Token)
+			}
+
+			// GitHubData
+			if gotLV.GitHubData != tc.expected.GitHubData {
+				t.Errorf("Expected GitHubData to be %v, got %q",
+					tc.expected.GitHubData, gotLV.GitHubData)
 			}
 		})
 	}

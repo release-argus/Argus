@@ -103,11 +103,13 @@ func (l *Lookup) applyOverrides(
 	}
 
 	if lookup.Type == "github" {
-		// Use the current ETag/releases (if ETag is the same, won't count as a query)
+		// Use the current ETag/releases
+		// (if ETag is the same, won't count towards API limit)
 		if l.Type == "github" {
 			lookup.GitHubData = &GitHubData{
 				ETag: l.GitHubData.ETag,
 			}
+			lookup.GitHubData.ETag = l.GitHubData.ETag
 			lookup.GitHubData.Releases = l.GitHubData.Releases
 
 			// Type changed to github (or new service)
@@ -170,10 +172,20 @@ func (l *Lookup) Refresh(
 		return
 	}
 
+	// Querying the same GitHub repo
+	if url == nil &&
+		lookup.Type == "github" && l.Type == "github" &&
+		lookup.GitHubData.ETag != l.GitHubData.ETag {
+		// Update the ETag and releases
+		l.GitHubData.ETag = lookup.GitHubData.ETag
+		l.GitHubData.Releases = lookup.GitHubData.Releases
+	}
+
 	// If no overrides that may change a successful query were provided
 	// then we can just update the status.
 	if require == nil &&
 		semanticVersioning == nil &&
+		usePreRelease == nil &&
 		url == nil &&
 		urlCommands == nil {
 		// Update the last queried time.

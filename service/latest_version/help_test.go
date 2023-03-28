@@ -49,6 +49,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		Type:              "github",
 		URL:               "release-argus/Argus",
 		AllowInvalidCerts: boolPtr(allowInvalidCerts),
+		UsePreRelease:     boolPtr(false),
 		Require:           &filter.Require{},
 		Options: &opt.Options{
 			SemanticVersioning: boolPtr(true),

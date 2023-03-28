@@ -76,8 +76,11 @@ func (w *WebHook) Init(
 
 	// Give the matching main
 	w.Main = main
-	if main == nil {
+	if main == nil && w.ServiceStatus != nil {
 		w.Main = &WebHook{}
+	} else if w.Type == w.Main.Type {
+		// Remove the type if it's the same as the main
+		w.Type = ""
 	}
 
 	// Give the defaults
