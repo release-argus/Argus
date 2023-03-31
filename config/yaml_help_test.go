@@ -390,3 +390,35 @@ service:
 
 	writeYAML(path, data)
 }
+
+func testYAML_Edit(path string) {
+	data := `
+settings:
+  data:
+    database_file: test-config_edit.db
+service:
+  alpha:
+    latest_version:
+      type: url
+      url: https://valid.release-argus.io/plain
+      url_commands:
+        - type: regex
+          regex: v(.*)
+  bravo:
+    latest_version:
+    type: url
+    url: https://valid.release-argus.io/plain
+    url_commands:
+      - type: regex
+        regex: ([0-9.]+)
+  charlie:
+    latest_version:
+      type: url
+      url: https://valid.release-argus.io/plain
+      url_commands:
+        - type: regex
+          regex: v?([0-9.]+)
+`
+
+	writeYAML(path, data)
+}

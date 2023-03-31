@@ -54,7 +54,9 @@ func (c *Config) GetOrder(data []byte) {
 		}
 	}
 
+	c.OrderMutex.Lock()
 	c.Order = order
+	c.OrderMutex.Unlock()
 }
 
 func getIndentation(line string) (indentation string) {

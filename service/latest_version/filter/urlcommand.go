@@ -80,7 +80,7 @@ func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 	return
 }
 
-// Print will print the URLCommand's in the URLCommandSlice.
+// Print the URLCommand's in the URLCommandSlice.
 func (s *URLCommandSlice) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
 		return
@@ -110,7 +110,7 @@ func (c *URLCommand) Print(prefix string) {
 	}
 }
 
-// Run will run all of the URLCommand(s) in this URLCommandSlice.
+// Run all of the URLCommand(s) in this URLCommandSlice.
 func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) (string, error) {
 	if s == nil {
 		return text, nil
@@ -127,7 +127,7 @@ func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) (string, error)
 	return text, nil
 }
 
-// run will exectue this URLCommand on `text`
+// run this URLCommand on `text`
 func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	var err error
 	// Iterate through the commands to filter the text.
@@ -155,6 +155,7 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	return text, err
 }
 
+// regex `text` with the URLCommand's regex.
 func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 	re := regexp.MustCompile(*c.Regex)
 
@@ -188,6 +189,7 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 	return texts[index][len(texts[index])-1], nil
 }
 
+// split `text` with the URLCommand's text amd return the index specified.
 func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
 	texts := strings.Split(text, *c.Text)
 
@@ -279,6 +281,7 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 	return errs
 }
 
+// URLCommandsFromStr converts a JSON string to a URLCommandSlice.
 func URLCommandsFromStr(jsonStr *string, defaults *URLCommandSlice, logFrom *util.LogFrom) (*URLCommandSlice, error) {
 	// jsonStr == nil when it hasn't been changed, so just use defaults
 	if jsonStr == nil {

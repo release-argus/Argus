@@ -53,7 +53,9 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 				true)
 			// Old service being given a new ID
 		} else {
+			c.OrderMutex.Unlock()
 			c.RenameService(oldServiceID, newService)
+			c.OrderMutex.Lock()
 		}
 	}
 
@@ -82,6 +84,9 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 
 // RenameService renames a service in the config and removes the old service.
 func (c *Config) RenameService(oldService string, newService *service.Service) {
+	c.OrderMutex.Lock()
+	defer c.OrderMutex.Unlock()
+
 	// Check whether the service being renamed doesn't exist
 	// or a rename isn't required (name is the same)
 	// or a service with this new name already exists
@@ -112,6 +117,7 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 func (c *Config) DeleteService(serviceID string) {
 	c.OrderMutex.Lock()
 	defer c.OrderMutex.Unlock()
+
 	if c.Service[serviceID] == nil {
 		return
 	}

@@ -233,6 +233,8 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 
 	// Check if service exists
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		api.Log.Verbose(err, logFrom, true)
@@ -305,6 +307,13 @@ func (api *API) httpEditServiceGetDetail(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 
 	// Find the Service
+	api.Config.OrderMutex.RLock()
+	addFail := true
+	defer func() {
+		if addFail {
+			api.Config.OrderMutex.RUnlock()
+		}
+	}()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
 		api.Log.Verbose(err, logFrom, true)
@@ -312,6 +321,8 @@ func (api *API) httpEditServiceGetDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	service := api.Config.Service[targetService]
+	addFail = false
+	api.Config.OrderMutex.RUnlock()
 
 	// Convert to API Type, censoring secrets
 	serviceConfig := convertServiceToAPITypeService(service)
@@ -364,6 +375,9 @@ func (api *API) httpEditServiceGetOtherDetails(w http.ResponseWriter, r *http.Re
 //
 // ...payload: Service they'd like to create/edit with
 func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+
 	// service to modify (empty for create new)
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
@@ -377,11 +391,14 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	var oldServiceSummary *api_type.ServiceSummary
 	// EDIT the existing service
 	if targetService != "" {
+		api.Config.OrderMutex.RLock()
 		if api.Config.Service[targetService] == nil {
+			api.Config.OrderMutex.RUnlock()
 			failRequest(&w, fmt.Sprintf("edit %q failed, service could not be found", targetService))
 			return
 		}
 		oldServiceSummary = api.Config.Service[targetService].Summary()
+		api.Config.OrderMutex.RUnlock()
 	}
 
 	// Payload
@@ -392,8 +409,11 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	if targetService != "" {
 		reqType = "edit"
 	}
+	api.Config.OrderMutex.RLock()
+	targetServicePtr := api.Config.Service[targetService]
+	api.Config.OrderMutex.RUnlock()
 	newService, err := service.New(
-		api.Config.Service[targetService], // nil if creating new
+		targetServicePtr, // nil if creating new
 		&payload,
 		&api.Config.Defaults.Service,
 		&api.Config.HardDefaults.Service,
@@ -412,11 +432,14 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CREATE a new service, but one with the same name already exists
+	api.Config.OrderMutex.RLock()
 	if targetService == "" && api.Config.Service[newService.ID] != nil {
+		api.Config.OrderMutex.RUnlock()
 		failRequest(&w, fmt.Sprintf("create %q failed, service with this name already exists",
 			newService.ID))
 		return
 	}
+	api.Config.OrderMutex.RUnlock()
 
 	// Check the values
 	err = newService.CheckValues("")

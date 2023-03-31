@@ -151,7 +151,9 @@ func (api *API) announceEdit(old *api_type.ServiceSummary, new *api_type.Service
 // (Broadcast to all WebSocket clients).
 func (api *API) announceService(name string, client *Client, logFrom *util.LogFrom) {
 	// Check Service still exists in this ordering
+	api.Config.OrderMutex.RLock()
 	service := api.Config.Service[name]
+	api.Config.OrderMutex.RUnlock()
 	if service == nil || client == nil {
 		return
 	}

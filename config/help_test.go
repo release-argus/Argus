@@ -55,31 +55,6 @@ func testConfig() Config {
 	}
 }
 
-func testConfigEdit() Config {
-	saveChannel := make(chan bool, 5)
-	databaseChannel := make(chan dbtype.Message, 5)
-
-	return Config{
-		Order: []string{"alpha", "bravo", "charlie"},
-		Service: map[string]*service.Service{
-			"alpha":   testServiceURL("alpha"),
-			"bravo":   testServiceURL("bravo"),
-			"charlie": testServiceURL("charlie"),
-		},
-		// Set defaults so the test doesn't fail
-		Defaults: Defaults{Service: service.Service{Options: opt.Options{}}},
-		HardDefaults: Defaults{
-			Service: service.Service{
-				Options: opt.Options{Interval: "1y"},
-				Status: svcstatus.Status{
-					SaveChannel:     &saveChannel,
-					DatabaseChannel: &databaseChannel,
-				},
-			},
-		},
-	}
-}
-
 func testSettings() Settings {
 	logTimestamps := true
 	logLevel := "DEBUG"

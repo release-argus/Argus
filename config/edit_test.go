@@ -17,6 +17,8 @@
 package config
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -59,36 +61,40 @@ func TestConfig_RenameService(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		config := testConfigEdit()
+		file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
+		testYAML_Edit(file)
+		defer os.Remove(file)
+		cfg := testLoad(file)
+		defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 		newSVC := testServiceURL(tc.newName)
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the service is renamed
-			config.RenameService(tc.oldName, newSVC)
+			cfg.RenameService(tc.oldName, newSVC)
 			time.Sleep(time.Second)
 
 			// THEN the order should be as expected
-			if len(config.Order) != len(tc.wantOrder) {
-				t.Errorf("Order length mismatch: got %d, want %d", len(config.Order), len(tc.wantOrder))
+			if len(cfg.Order) != len(tc.wantOrder) {
+				t.Errorf("Order length mismatch: got %d, want %d", len(cfg.Order), len(tc.wantOrder))
 			}
-			for i, service := range config.Order {
+			for i, service := range cfg.Order {
 				if service != tc.wantOrder[i] {
 					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], config.Order, tc.wantOrder)
+						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
 				}
 			}
 			// AND the service should be removed if it was renamed
-			if !tc.fail && tc.oldName != tc.newName && config.Service[tc.oldName] != nil {
-				t.Errorf("%q should have been removed, got %+v", tc.oldName, config.Service[tc.oldName])
+			if !tc.fail && tc.oldName != tc.newName && cfg.Service[tc.oldName] != nil {
+				t.Errorf("%q should have been removed, got %+v", tc.oldName, cfg.Service[tc.oldName])
 			}
 			// AND the service should be at the address given
-			if !tc.fail && config.Service[tc.newName] != newSVC {
+			if !tc.fail && cfg.Service[tc.newName] != newSVC {
 				if tc.noChange {
 					return
 				}
-				t.Errorf("%q should be at the given address, got\n%+v", tc.newName, config.Service[tc.newName])
+				t.Errorf("%q should be at the given address, got\n%+v", tc.newName, cfg.Service[tc.newName])
 			}
 		})
 	}
@@ -115,24 +121,28 @@ func TestConfig_DeleteService(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			config := testConfigEdit()
+			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
+			testYAML_Edit(file)
+			defer os.Remove(file)
+			cfg := testLoad(file)
+			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 
 			// WHEN the service is deleted
-			config.DeleteService(tc.name)
+			cfg.DeleteService(tc.name)
 
 			// THEN the service was removed
-			if config.Service[tc.name] != nil {
+			if cfg.Service[tc.name] != nil {
 				t.Errorf("%q was not removed", tc.name)
 			}
 			// AND the order was updated
-			if len(config.Order) != len(tc.wantOrder) {
+			if len(cfg.Order) != len(tc.wantOrder) {
 				t.Errorf("Order length mismatch: got %d, want %d",
-					len(config.Order), len(tc.wantOrder))
+					len(cfg.Order), len(tc.wantOrder))
 			}
-			for i, service := range config.Order {
+			for i, service := range cfg.Order {
 				if service != tc.wantOrder[i] {
 					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], config.Order, tc.wantOrder)
+						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
 				}
 			}
 		})
@@ -183,33 +193,37 @@ func TestConfig_AddService(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			config := testConfigEdit()
+			file := fmt.Sprintf("TestConfig_AddService_%s.yml", name)
+			testYAML_Edit(file)
+			defer os.Remove(file)
+			cfg := testLoad(file)
+			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 			if tc.nilMap {
-				config.Service = nil
-				config.Order = []string{}
+				cfg.Service = nil
+				cfg.Order = []string{}
 			}
 
 			// WEHN AddService is called
-			config.AddService(tc.oldService, tc.newService)
+			cfg.AddService(tc.oldService, tc.newService)
 
 			// THEN the service is
 			// added/renamed/replaced
-			if tc.added && config.Service[tc.newService.ID] != tc.newService {
+			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
 				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
 			}
-			if !tc.added && config.Service[tc.newService.ID] == tc.newService {
+			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
 				t.Fatalf("config[%q] shouldn't have been added", tc.newService.ID)
 			}
 			// Added to Order
-			if len(config.Order) != len(tc.wantOrder) {
+			if len(cfg.Order) != len(tc.wantOrder) {
 				t.Errorf("Order length mismatch: got %d, want %d\nwant: %v\ngot: %v",
-					len(config.Order), len(tc.wantOrder), config.Order, tc.wantOrder)
+					len(cfg.Order), len(tc.wantOrder), cfg.Order, tc.wantOrder)
 			}
 			// In the correct spot
-			for i, service := range config.Order {
+			for i, service := range cfg.Order {
 				if service != tc.wantOrder[i] {
 					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], config.Order, tc.wantOrder)
+						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
 				}
 			}
 		})

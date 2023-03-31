@@ -142,6 +142,9 @@ func (api *api) extractServiceStatus() {
 	FROM status;`)
 	jLog.Fatal(err, *logFrom, err != nil)
 	defer rows.Close()
+
+	api.config.OrderMutex.RLock()
+	defer api.config.OrderMutex.RUnlock()
 	for rows.Next() {
 		var (
 			id  string
@@ -183,6 +186,9 @@ func (api *api) convertServiceStatus() {
 				approved_version
 			)
 		VALUES`
+
+	api.config.OrderMutex.RLock()
+	defer api.config.OrderMutex.RUnlock()
 	servicesToConvert := 0
 	for _, id := range api.config.Order {
 		if api.config.Service[id].OldStatus != nil {

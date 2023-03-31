@@ -36,6 +36,9 @@ func LogInit(log *util.JLog) {
 
 // Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s)
 func (c *Config) Init() {
+	c.OrderMutex.RLock()
+	defer c.OrderMutex.RUnlock()
+
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
 

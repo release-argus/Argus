@@ -71,7 +71,9 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 
 	// Check the service exists.
 	id := payload.ServiceData.ID
+	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[id]
+	api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
@@ -133,7 +135,9 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		return
 	}
 	id := payload.ServiceData.ID
+	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[id]
+	api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
@@ -178,7 +182,9 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 		return
 	}
 	id := payload.ServiceData.ID
+	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[id]
+	api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		api.Log.Error(fmt.Sprintf("%q, service not found", id), logFrom, true)
 		return
@@ -375,6 +381,7 @@ func (api *API) wsConfigService(client *Client) {
 
 	// Create and send status page data
 	serviceConfig := make(api_type.ServiceSlice)
+	api.Config.OrderMutex.RLock()
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]
@@ -391,5 +398,6 @@ func (api *API) wsConfigService(client *Client) {
 			Order:   api.Config.Order,
 		},
 	}
+	api.Config.OrderMutex.RUnlock()
 	api.wsSendJSON(client, msg, &logFrom)
 }
