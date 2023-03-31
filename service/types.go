@@ -54,19 +54,19 @@ type Service struct {
 
 	// TODO: Deprecate
 	OldStatus          *svcstatus.OldStatus    `yaml:"status,omitempty" json:"-"`              // For moving version info to argus.db
-	Type               string                  `yaml:"type,omitempty" json:"-"`                // service_name
-	Active             *bool                   `yaml:"active,omitempty" json:"-"`              // option.active
-	Interval           *string                 `yaml:"interval,omitempty" json:"-"`            // option.interval
-	SemanticVersioning *bool                   `yaml:"semantic_versioning,omitempty" json:"-"` // option.semantic_versioning
-	URL                *string                 `yaml:"url,omitempty" json:"-"`                 // latestver.url
-	AllowInvalidCerts  *bool                   `yaml:"allow_invalid_certs,omitempty" json:"-"` // latestver.allow_invalid_certs
-	AccessToken        *string                 `yaml:"access_token,omitempty" json:"-"`        // latestver.access_token
-	UsePreRelease      *bool                   `yaml:"use_prerelease,omitempty" json:"-"`      // latestver.use_prerelease
-	URLCommands        *filter.URLCommandSlice `yaml:"url_commands,omitempty" json:"-"`        // latestver.url_commands
-	AutoApprove        *bool                   `yaml:"auto_approve,omitempty" json:"-"`        // dashboard.auto_approve
-	Icon               *string                 `yaml:"icon,omitempty" json:"-"`                // dashboard.icon
-	IconLinkTo         *string                 `yaml:"icon_link_to,omitempty" json:"-"`        // dashboard.icon_link_to
-	WebURL             *string                 `yaml:"web_url,omitempty" json:"-"`             // dashboard.web_url
+	Type               string                  `yaml:"type,omitempty" json:"-"`                // DEPRECATED - use latestver.type
+	Active             *bool                   `yaml:"active,omitempty" json:"-"`              // DEPRECATED - use option.active
+	Interval           *string                 `yaml:"interval,omitempty" json:"-"`            // DEPRECATED - use option.interval
+	SemanticVersioning *bool                   `yaml:"semantic_versioning,omitempty" json:"-"` // DEPRECATED - use option.semantic_versioning
+	URL                *string                 `yaml:"url,omitempty" json:"-"`                 // DEPRECATED - use latestver.url
+	AllowInvalidCerts  *bool                   `yaml:"allow_invalid_certs,omitempty" json:"-"` // DEPRECATED - use latestver.allow_invalid_certs
+	AccessToken        *string                 `yaml:"access_token,omitempty" json:"-"`        // DEPRECATED - use latestver.access_token
+	UsePreRelease      *bool                   `yaml:"use_prerelease,omitempty" json:"-"`      // DEPRECATED - use latestver.use_prerelease
+	URLCommands        *filter.URLCommandSlice `yaml:"url_commands,omitempty" json:"-"`        // DEPRECATED - use latestver.url_commands
+	AutoApprove        *bool                   `yaml:"auto_approve,omitempty" json:"-"`        // DEPRECATED - use dashboard.auto_approve
+	Icon               *string                 `yaml:"icon,omitempty" json:"-"`                // DEPRECATED - use dashboard.icon
+	IconLinkTo         *string                 `yaml:"icon_link_to,omitempty" json:"-"`        // DEPRECATED - use dashboard.icon_link_to
+	WebURL             *string                 `yaml:"web_url,omitempty" json:"-"`             // DEPRECATED - use dashboard.web_url
 }
 
 // String returns a string representation of the Service.
@@ -168,12 +168,12 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		Command:                  &commands,
 		WebHook:                  &webhooks,
 		Status: &apitype.Status{
-			ApprovedVersion:          s.Status.ApprovedVersion,
-			DeployedVersion:          s.Status.DeployedVersion,
-			DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp,
-			LatestVersion:            s.Status.LatestVersion,
-			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp,
-			LastQueried:              s.Status.LastQueried,
+			ApprovedVersion:          s.Status.GetApprovedVersion(),
+			DeployedVersion:          s.Status.GetDeployedVersion(),
+			DeployedVersionTimestamp: s.Status.GetDeployedVersionTimestamp(),
+			LatestVersion:            s.Status.GetLatestVersion(),
+			LatestVersionTimestamp:   s.Status.GetLatestVersionTimestamp(),
+			LastQueried:              s.Status.GetLastQueried(),
 		},
 	}
 }

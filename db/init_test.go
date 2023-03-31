@@ -205,25 +205,25 @@ func TestAPI_ConvertServiceStatus(t *testing.T) {
 							id, svc.OldStatus)
 					}
 				} else {
-					if (*svc).Status.LatestVersion != lv {
+					if (*svc).Status.GetLatestVersion() != lv {
 						t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.LatestVersion, lv)
+							(*svc).Status.GetLatestVersion(), lv)
 					}
-					if (*svc).Status.LatestVersionTimestamp != lvt {
+					if (*svc).Status.GetLatestVersionTimestamp() != lvt {
 						t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-							(*svc).Status.LatestVersionTimestamp, lvt)
+							(*svc).Status.GetLatestVersionTimestamp(), lvt)
 					}
-					if (*svc).Status.DeployedVersion != dv {
+					if (*svc).Status.GetDeployedVersion() != dv {
 						t.Errorf("DeployedVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.DeployedVersion, dv)
+							(*svc).Status.GetDeployedVersion(), dv)
 					}
-					if (*svc).Status.DeployedVersionTimestamp != dvt {
+					if (*svc).Status.GetDeployedVersionTimestamp() != dvt {
 						t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-							(*svc).Status.DeployedVersionTimestamp, dvt)
+							(*svc).Status.GetDeployedVersionTimestamp(), dvt)
 					}
-					if (*svc).Status.ApprovedVersion != av {
+					if (*svc).Status.GetApprovedVersion() != av {
 						t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.ApprovedVersion, av)
+							(*svc).Status.GetApprovedVersion(), av)
 					}
 				}
 			}
@@ -252,25 +252,25 @@ func TestDBQueryService(t *testing.T) {
 	target := "keep0"
 	got := queryRow(t, api.db, target)
 	svc := api.config.Service[target]
-	if (*svc).Status.LatestVersion != got.LatestVersion {
+	if (*svc).Status.GetLatestVersion() != got.GetLatestVersion() {
 		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersion, got.LatestVersion)
+			(*svc).Status.GetLatestVersion(), got.GetLatestVersion())
 	}
-	if (*svc).Status.LatestVersionTimestamp != got.LatestVersionTimestamp {
+	if (*svc).Status.GetLatestVersionTimestamp() != got.GetLatestVersionTimestamp() {
 		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersionTimestamp, got.LatestVersionTimestamp)
+			(*svc).Status.GetLatestVersionTimestamp(), got.GetLatestVersionTimestamp())
 	}
-	if (*svc).Status.DeployedVersion != got.DeployedVersion {
-		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%v",
-			(*svc).Status.DeployedVersion, got.DeployedVersion, got, (*svc).Status)
+	if (*svc).Status.GetDeployedVersion() != got.GetDeployedVersion() {
+		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%s",
+			(*svc).Status.GetDeployedVersion(), got.GetDeployedVersion(), got, (*svc).Status.String())
 	}
-	if (*svc).Status.DeployedVersionTimestamp != got.DeployedVersionTimestamp {
+	if (*svc).Status.GetDeployedVersionTimestamp() != got.GetDeployedVersionTimestamp() {
 		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.DeployedVersionTimestamp, got.DeployedVersionTimestamp)
+			(*svc).Status.GetDeployedVersionTimestamp(), got.GetDeployedVersionTimestamp())
 	}
-	if (*svc).Status.ApprovedVersion != got.ApprovedVersion {
+	if (*svc).Status.GetApprovedVersion() != got.GetApprovedVersion() {
 		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.ApprovedVersion, got.ApprovedVersion)
+			(*svc).Status.GetApprovedVersion(), got.GetApprovedVersion())
 	}
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -383,16 +383,19 @@ func TestRun(t *testing.T) {
 	api := api{config: &otherCfg}
 	api.initialise()
 	got := queryRow(t, api.db, target)
-	want := svcstatus.Status{
-		LatestVersion:            "9.9.9",
-		LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
-		ApprovedVersion:          "0.0.1",
-		DeployedVersion:          "0.0.0",
-		DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
-	}
-	if got.LatestVersion != want.LatestVersion {
+	want := svcstatus.Status{}
+	want.Init(
+		0, 0, 0,
+		&target,
+		stringPtr("https://example.com"))
+	want.SetLatestVersion("9.9.9", false)
+	want.SetLatestVersionTimestamp("2022-01-01T01:01:01Z")
+	want.SetApprovedVersion("0.0.1")
+	want.SetDeployedVersion("0.0.0", false)
+	want.SetDeployedVersionTimestamp("2020-01-01T01:01:01Z")
+	if got.GetLatestVersion() != want.GetLatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
-			cell.Column, cell.Value, got, want)
+			cell.Column, cell.Value, got, want.String())
 	}
 	api.db.Close()
 	os.Remove(*cfg.Settings.Data.DatabaseFile)

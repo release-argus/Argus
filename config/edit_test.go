@@ -21,10 +21,12 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_RenameService(t *testing.T) {
 	// GIVEN a service to rename and a Config to act on
+	jLog = util.NewJLog("WARN", true)
 	tests := map[string]struct {
 		oldName   string
 		newName   string
@@ -57,10 +59,11 @@ func TestConfig_RenameService(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		config := testConfigEdit()
+		newSVC := testServiceURL(tc.newName)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			config := testConfigEdit()
-			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
 			config.RenameService(tc.oldName, newSVC)
@@ -93,6 +96,7 @@ func TestConfig_RenameService(t *testing.T) {
 
 func TestConfig_DeleteService(t *testing.T) {
 	// GIVEN a service to delete and a Config to act on
+	jLog = util.NewJLog("WARN", true)
 	tests := map[string]struct {
 		name      string
 		wantOrder []string
@@ -137,6 +141,7 @@ func TestConfig_DeleteService(t *testing.T) {
 
 func TestConfig_AddService(t *testing.T) {
 	// GIVEN a service to add/replace/rename and a Config to act on
+	jLog = util.NewJLog("WARN", true)
 	tests := map[string]struct {
 		newService *service.Service
 		oldService string

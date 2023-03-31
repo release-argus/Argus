@@ -19,7 +19,6 @@ package latestver
 import (
 	"os"
 
-	command "github.com/release-argus/Argus/commands"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
@@ -35,10 +34,7 @@ func stringPtr(val string) *string {
 }
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
-	var commandController *command.Controller
-	commandController.Init(jLog, nil, nil, nil, nil)
-	var logURLCommand *filter.URLCommandSlice
-	logURLCommand.Init(jLog)
+	LogInit(jLog)
 }
 
 func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
@@ -49,7 +45,6 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		Type:              "github",
 		URL:               "release-argus/Argus",
 		AllowInvalidCerts: boolPtr(allowInvalidCerts),
-		UsePreRelease:     boolPtr(false),
 		Require:           &filter.Require{},
 		Options: &opt.Options{
 			SemanticVersioning: boolPtr(true),
@@ -77,7 +72,11 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 		lookup.UsePreRelease = boolPtr(false)
 	}
-	lookup.Status.WebURL = stringPtr("")
+	lookup.Status.Init(
+		0, 0, 0,
+		stringPtr("serviceID"),
+		stringPtr("http://example.com"),
+	)
 	lookup.Require.Status = lookup.Status
 	return lookup
 }

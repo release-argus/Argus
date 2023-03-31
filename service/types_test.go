@@ -34,7 +34,7 @@ import (
 
 func TestService_Convert(t *testing.T) {
 	// GIVEN a Service with the old var style
-	serviceType := "url"
+	svcType := "url"
 	active := true
 	interval := "10s"
 	semanticVersioning := true
@@ -47,8 +47,8 @@ func TestService_Convert(t *testing.T) {
 	icon := "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"
 	iconLinkTo := "https://release-argus.io/demo"
 	webURL := "https://release-argus.io/docs"
-	service := Service{
-		Type:               serviceType,
+	svc := Service{
+		Type:               svcType,
 		Active:             &active,
 		Interval:           &interval,
 		SemanticVersioning: &semanticVersioning,
@@ -63,76 +63,76 @@ func TestService_Convert(t *testing.T) {
 		WebURL:             &webURL,
 	}
 	saveChannel := make(chan bool, 5)
-	service.Status.SaveChannel = &saveChannel
+	svc.Status.SaveChannel = &saveChannel
 
 	// WHEN Convert is called
-	service.Convert()
+	svc.Convert()
 
 	// THEN the vars are converted correctly
 	// Active -> Options.Active
-	if service.Options.Active != &active {
+	if svc.Options.Active != &active {
 		t.Errorf("Type not pushed to option.Active correctly\nwant: %t\ngot:  %v",
-			active, service.Options.Active)
+			active, svc.Options.Active)
 	}
 	// Interval -> Options.Interval
-	if service.Options.Interval != interval {
+	if svc.Options.Interval != interval {
 		t.Errorf("Interval not pushed to option.Interval correctly\nwant: %q\ngot:  %v",
-			interval, service.Options.Interval)
+			interval, svc.Options.Interval)
 	}
 	// SemanticVersioning -> Options.SemanticVersioning
-	if *service.Options.SemanticVersioning != semanticVersioning {
+	if *svc.Options.SemanticVersioning != semanticVersioning {
 		t.Errorf("SemanticVersioning not pushed to option.SemanticVersioning correctly\nwant: %t\ngot:  %v",
-			semanticVersioning, service.Options.SemanticVersioning)
+			semanticVersioning, svc.Options.SemanticVersioning)
 	}
 	// Type -> LatestVersion.Type
-	if service.LatestVersion.Type != serviceType {
+	if svc.LatestVersion.Type != svcType {
 		t.Errorf("Type not pushed to LatestVersion.Type correctly\nwant: %q\ngot:  %q",
-			serviceType, service.LatestVersion.Type)
+			svcType, svc.LatestVersion.Type)
 	}
 	// URL -> LatestVersion.URL
-	if service.LatestVersion.URL != url {
+	if svc.LatestVersion.URL != url {
 		t.Errorf("URL not pushed to LatestVersion.URL correctly\nwant: %q\ngot:  %q",
-			url, service.LatestVersion.URL)
+			url, svc.LatestVersion.URL)
 	}
 	// AllowInvalidCerts -> LatestVersion.AllowInvalidCerts
-	if service.LatestVersion.AllowInvalidCerts != &allowInvalidCerts {
+	if svc.LatestVersion.AllowInvalidCerts != &allowInvalidCerts {
 		t.Errorf("AllowInvalidCerts not pushed to LatestVersion.AllowInvalidCerts correctly\nwant: %t\ngot:  %v",
-			allowInvalidCerts, service.LatestVersion.AllowInvalidCerts)
+			allowInvalidCerts, svc.LatestVersion.AllowInvalidCerts)
 	}
 	// AccessToken -> LatestVersion.AccessToken
-	if service.LatestVersion.AccessToken != &accessToken {
+	if svc.LatestVersion.AccessToken != &accessToken {
 		t.Errorf("AccessToken not pushed to LatestVersion.AccessToken correctly\nwant: %q\ngot:  %q",
-			accessToken, util.EvalNilPtr(service.LatestVersion.AccessToken, "nil"))
+			accessToken, util.EvalNilPtr(svc.LatestVersion.AccessToken, "nil"))
 	}
 	// UsePreRelease -> LatestVersion.UsePreRelease
-	if service.LatestVersion.UsePreRelease != &usePreRelease {
+	if svc.LatestVersion.UsePreRelease != &usePreRelease {
 		t.Errorf("UsePreRelease not pushed to LatestVersion.UsePreRelease correctly\nwant: %t\ngot:  %v",
-			usePreRelease, service.LatestVersion.UsePreRelease)
+			usePreRelease, svc.LatestVersion.UsePreRelease)
 	}
 	// URLCommands -> LatestVersion.URLCommands
-	if len(service.LatestVersion.URLCommands) != len(urlCommands) {
+	if len(svc.LatestVersion.URLCommands) != len(urlCommands) {
 		t.Errorf("URLCommands not pushed to LatestVersion.URLCommands correctly\nwant: %v\ngot:  %v",
-			urlCommands, service.LatestVersion.URLCommands)
+			urlCommands, svc.LatestVersion.URLCommands)
 	}
 	// AutoApprove -> Dashboard.AutoApprove
-	if service.Dashboard.AutoApprove != &autoApprove {
+	if svc.Dashboard.AutoApprove != &autoApprove {
 		t.Errorf("AutoApprove not pushed to Dashboard.AutoApprove correctly\nwant: %t\ngot:  %v",
-			autoApprove, service.Dashboard.AutoApprove)
+			autoApprove, svc.Dashboard.AutoApprove)
 	}
 	// Icon -> Dashboard.Icon
-	if service.Dashboard.Icon != icon {
+	if svc.Dashboard.Icon != icon {
 		t.Errorf("Icon not pushed to Dashboard.Icon correctly\nwant: %q\ngot:  %q",
-			icon, service.Dashboard.Icon)
+			icon, svc.Dashboard.Icon)
 	}
 	// IconLinkTo -> Dashboard.IconLinkTo
-	if service.Dashboard.IconLinkTo != iconLinkTo {
+	if svc.Dashboard.IconLinkTo != iconLinkTo {
 		t.Errorf("IconLinkTo not pushed to Dashboard.IconLinkTo correctly\nwant: %q\ngot:  %q",
-			iconLinkTo, service.Dashboard.IconLinkTo)
+			iconLinkTo, svc.Dashboard.IconLinkTo)
 	}
 	// WebURL -> Dashboard.WebURL
-	if service.Dashboard.WebURL != webURL {
+	if svc.Dashboard.WebURL != webURL {
 		t.Errorf("WebURL not pushed to Dashboard.WebURL correctly\nwant: %q\ngot:  %q",
-			webURL, service.Dashboard.WebURL)
+			webURL, svc.Dashboard.WebURL)
 	}
 	// Should have sent a message to the save channel
 	if len(saveChannel) != 1 {
@@ -142,17 +142,19 @@ func TestService_Convert(t *testing.T) {
 
 func TestService_String(t *testing.T) {
 	tests := map[string]struct {
-		service *Service
-		want    string
+		svc  *Service
+		want string
 	}{
 		"nil": {
-			service: nil,
-			want:    "<nil>"},
+			svc:  nil,
+			want: "<nil>",
+		},
 		"empty": {
-			service: &Service{},
-			want:    "{}\n"},
+			svc:  &Service{},
+			want: "{}\n",
+		},
 		"all fields defined": {
-			service: &Service{
+			svc: &Service{
 				Comment: "svc for blah",
 				Options: opt.Options{
 					Active: boolPtr(false)},
@@ -172,8 +174,6 @@ func TestService_String(t *testing.T) {
 						URL:  "https://example.com"}},
 				Dashboard: DashboardOptions{
 					AutoApprove: boolPtr(true)},
-				Status: svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults: &Service{
 					Options: opt.Options{
 						SemanticVersioning: boolPtr(false)}},
@@ -203,7 +203,8 @@ webhook:
         url: https://example.com
 dashboard:
     auto_approve: true
-`},
+`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -212,7 +213,7 @@ dashboard:
 			t.Parallel()
 
 			// WHEN the Service is stringified with String
-			got := tc.service.String()
+			got := tc.svc.String()
 
 			// THEN the result is as expected
 			tc.want = strings.TrimPrefix(tc.want, "\n")
@@ -227,11 +228,17 @@ dashboard:
 func TestService_Summary(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
-		service Service
-		want    apitype.ServiceSummary
+		svc                      *Service
+		approvedVersion          string
+		deployedVersion          string
+		deployedVersionTimestamp string
+		latestVersion            string
+		latestVersionTimestamp   string
+		lastQueried              string
+		want                     apitype.ServiceSummary
 	}{
 		"empty": {
-			service: Service{},
+			svc: &Service{},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
@@ -242,7 +249,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only id": {
-			service: Service{
+			svc: &Service{
 				ID: "foo"},
 			want: apitype.ServiceSummary{
 				ID:                       "foo",
@@ -255,7 +262,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only options.active": {
-			service: Service{
+			svc: &Service{
 				Options: opt.Options{
 					Active: boolPtr(false)}},
 			want: apitype.ServiceSummary{
@@ -269,7 +276,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only latest_version.type": {
-			service: Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "github"}},
 			want: apitype.ServiceSummary{
@@ -282,7 +289,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's a url": {
-			service: Service{
+			svc: &Service{
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
 			want: apitype.ServiceSummary{
@@ -295,7 +302,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's not a url": {
-			service: Service{
+			svc: &Service{
 				Dashboard: DashboardOptions{
 					Icon: "smile"}},
 			want: apitype.ServiceSummary{
@@ -308,7 +315,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, from notify": {
-			service: Service{
+			svc: &Service{
 				Notify: shoutrrr.Slice{
 					"foo": {
 						Params: map[string]string{
@@ -329,7 +336,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, dashboard overrides notify": {
-			service: Service{
+			svc: &Service{
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"},
 				Notify: shoutrrr.Slice{
@@ -352,7 +359,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon_link_to": {
-			service: Service{
+			svc: &Service{
 				Dashboard: DashboardOptions{
 					IconLinkTo: "https://example.com"}},
 			want: apitype.ServiceSummary{
@@ -365,7 +372,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only deployed_version": {
-			service: Service{
+			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
@@ -377,7 +384,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"no commands": {
-			service: Service{
+			svc: &Service{
 				Command: command.Slice{}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
@@ -389,7 +396,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"3 commands": {
-			service: Service{
+			svc: &Service{
 				Command: command.Slice{
 					{"ls", "-la"},
 					{"true"},
@@ -404,7 +411,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"0 webhooks": {
-			service: Service{
+			svc: &Service{
 				WebHook: webhook.Slice{}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
@@ -416,7 +423,7 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"3 webhooks": {
-			service: Service{
+			svc: &Service{
 				WebHook: webhook.Slice{
 					"bish": {Type: "github"},
 					"bash": {Type: "github"},
@@ -431,14 +438,14 @@ func TestService_Summary(t *testing.T) {
 				Status:                   &apitype.Status{}},
 		},
 		"only status": {
-			service: Service{
-				Status: svcstatus.Status{
-					ApprovedVersion:          "1",
-					DeployedVersion:          "2",
-					DeployedVersionTimestamp: "2-",
-					LatestVersion:            "3",
-					LatestVersionTimestamp:   "3-",
-					LastQueried:              "4"}},
+			svc: &Service{
+				Status: svcstatus.Status{}},
+			approvedVersion:          "1",
+			deployedVersion:          "2",
+			deployedVersionTimestamp: "2-",
+			latestVersion:            "3",
+			latestVersionTimestamp:   "3-",
+			lastQueried:              "4",
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
@@ -460,9 +467,22 @@ func TestService_Summary(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			// status
+			tc.svc.Status.Init(
+				len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
+				&tc.svc.ID,
+				&tc.svc.Dashboard.WebURL)
+			if tc.approvedVersion != "" {
+				tc.svc.Status.SetApprovedVersion(tc.approvedVersion)
+				tc.svc.Status.SetDeployedVersion(tc.deployedVersion, false)
+				tc.svc.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
+				tc.svc.Status.SetLatestVersion(tc.latestVersion, false)
+				tc.svc.Status.SetLatestVersionTimestamp(tc.latestVersionTimestamp)
+				tc.svc.Status.SetLastQueried(tc.lastQueried)
+			}
 
 			// WHEN the Service is converted to a ServiceSummary
-			got := tc.service.Summary()
+			got := tc.svc.Summary()
 
 			// THEN the result is as expected
 			if got.String() != tc.want.String() {

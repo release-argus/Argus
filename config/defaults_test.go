@@ -72,11 +72,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 	var defaults Defaults
 	defaults.SetDefaults()
 	tests := map[string]struct {
-		input       Defaults
+		input       *Defaults
 		errContains []string
 	}{
 		"Service.Interval": {
-			input: Defaults{Service: service.Service{
+			input: &Defaults{Service: service.Service{
 				Options: opt.Options{
 					Interval: "10x"}}},
 			errContains: []string{
@@ -84,7 +84,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^      interval: "10x" <invalid>`},
 		},
 		"Service.DeployedVersionLookup.Regex": {
-			input: Defaults{Service: service.Service{
+			input: &Defaults{Service: service.Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					Regex: `^something[0-`}}},
 			errContains: []string{
@@ -93,7 +93,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^      regex: "\^something\[0\-" <invalid>`},
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
-			input: Defaults{Service: service.Service{
+			input: &Defaults{Service: service.Service{
 				Options: opt.Options{
 					Interval: "10x"},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -104,7 +104,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^      regex: "\^something\[0\-" <invalid>`},
 		},
 		"Notify.x.Delay": {
-			input: Defaults{Notify: shoutrrr.Slice{
+			input: &Defaults{Notify: shoutrrr.Slice{
 				"slack": &shoutrrr.Shoutrrr{
 					Options: map[string]string{"delay": "10x"}}}},
 			errContains: []string{
@@ -114,11 +114,12 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^        delay: "10x" <invalid>`},
 		},
 		"WebHook.Delay": {
-			input: Defaults{WebHook: webhook.WebHook{
+			input: &Defaults{WebHook: webhook.WebHook{
 				Delay: "10x"}},
 			errContains: []string{
 				`^  webhook:$`,
-				`^  delay: "10x" <invalid>`}},
+				`^  delay: "10x" <invalid>`},
+		},
 	}
 
 	for name, tc := range tests {

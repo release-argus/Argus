@@ -46,8 +46,7 @@ func TestLookup_String(t *testing.T) {
 				Regex: "v([0-9.]+)",
 				Options: &opt.Options{
 					SemanticVersioning: boolPtr(true)},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
+				Status:       &svcstatus.Status{},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)}},
 			want: `
@@ -132,8 +131,6 @@ func TestLookup_IsEqual(t *testing.T) {
 				Regex: "v([0-9.]+)",
 				Options: &opt.Options{
 					SemanticVersioning: boolPtr(true)},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -149,8 +146,6 @@ func TestLookup_IsEqual(t *testing.T) {
 				Regex: "v([0-9.]+)",
 				Options: &opt.Options{
 					SemanticVersioning: boolPtr(true)},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -169,8 +164,6 @@ func TestLookup_IsEqual(t *testing.T) {
 				Regex: "v([0-9.]+)",
 				Options: &opt.Options{
 					SemanticVersioning: boolPtr(true)},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -186,8 +179,6 @@ func TestLookup_IsEqual(t *testing.T) {
 				Regex: "v([0-9.]+)",
 				Options: &opt.Options{
 					SemanticVersioning: boolPtr(true)},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},

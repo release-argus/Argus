@@ -30,6 +30,12 @@ var (
 	jLog *util.JLog
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+	command.LogInit(log)
+}
+
 // Require for version to be considered valid.
 type Require struct {
 	Status       *svcstatus.Status `yaml:"-" json:"-"`                                             // Service Status
@@ -48,14 +54,10 @@ func (r *Require) String() string {
 	return string(yamlBytes)
 }
 
-// Init will give the filter package the log and the Service's Status.
-func (r *Require) Init(log *util.JLog, status *svcstatus.Status) {
+// Init will give the filter package the Service's Status.
+func (r *Require) Init(status *svcstatus.Status) {
 	if r == nil {
 		return
-	}
-
-	if log != nil {
-		jLog = log
 	}
 
 	r.Status = status
@@ -142,7 +144,7 @@ func RequireFromStr(jsonStr *string, previous *Require, logFrom *util.LogFrom) (
 			fmt.Sprintf("Failed converting JSON - %q\n%s",
 				*jsonStr, util.ErrorToString(err)),
 			*logFrom, true)
-		return nil, err
+		return nil, fmt.Errorf("require - %w", err)
 	}
 
 	// Default the params to the previous values

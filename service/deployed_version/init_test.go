@@ -56,20 +56,19 @@ func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup()
 	log := util.NewJLog("WARN", false)
+	LogInit(log)
 	var defaults *Lookup = &Lookup{}
 	var hardDefaults *Lookup = &Lookup{}
 	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
 	var options opt.Options
 
 	// WHEN Init is called on it
-	lookup.Init(log, defaults, hardDefaults, &status, &options)
+	lookup.Init(
+		defaults, hardDefaults,
+		&status,
+		&options)
 
 	// THEN pointers to those vars are handed out to the Lookup
-	// log
-	if jLog != log {
-		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-			log, jLog)
-	}
 	// defaults
 	if lookup.Defaults != defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
@@ -92,7 +91,10 @@ func TestLookup_Init(t *testing.T) {
 	}
 
 	var nilLookup *Lookup
-	nilLookup.Init(log, defaults, hardDefaults, &status, &options)
+	nilLookup.Init(
+		defaults, hardDefaults,
+		&status,
+		&options)
 	if nilLookup != nil {
 		t.Error("Init on nil shouldn't have initialised the Lookup")
 	}

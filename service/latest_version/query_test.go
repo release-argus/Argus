@@ -236,8 +236,8 @@ func TestLookup_Query(t *testing.T) {
 					lookup.URLCommands[0].Regex = tc.regex
 				}
 				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
-				lookup.Status.LatestVersion = tc.latestVersion
-				lookup.Status.DeployedVersion = tc.deployedVersion
+				lookup.Status.SetLatestVersion(tc.latestVersion, false)
+				lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
 				lookup.Require.RegexContent = tc.requireRegexContent
 				lookup.Require.RegexVersion = tc.requireRegexVersion
 				lookup.Require.Command = tc.requireCommand
@@ -261,9 +261,10 @@ func TestLookup_Query(t *testing.T) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
-				if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
+				if tc.wantLatestVersion != nil &&
+					*tc.wantLatestVersion != lookup.Status.GetLatestVersion() {
 					t.Fatalf("wanted LatestVersion to become %q, not %q",
-						*tc.wantLatestVersion, lookup.Status.LatestVersion)
+						*tc.wantLatestVersion, lookup.Status.GetLatestVersion())
 				}
 			}
 		})

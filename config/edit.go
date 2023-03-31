@@ -39,6 +39,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 		jLog.Info("Adding service", util.LogFrom{Primary: "AddService", Secondary: newService.ID}, true)
 		c.Order = append(c.Order, newService.ID)
 		// Create the service map if it doesn't exist
+		//nolint:typecheck
 		if c.Service == nil {
 			c.Service = make(map[string]*service.Service)
 		}
@@ -59,9 +60,6 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	// Add/Replace the service in the config
 	c.Service[newService.ID] = newService
 
-	// Start tracking the service
-	go c.Service[newService.ID].Track()
-
 	// Trigger save
 	*c.HardDefaults.Service.Status.SaveChannel <- true
 
@@ -69,12 +67,15 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	*c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 		ServiceID: newService.ID,
 		Cells: []dbtype.Cell{
-			{Column: "latest_version", Value: newService.Status.LatestVersion},
-			{Column: "latest_version_timestamp", Value: newService.Status.LatestVersionTimestamp},
-			{Column: "deployed_version", Value: newService.Status.DeployedVersion},
-			{Column: "deployed_version_timestamp", Value: newService.Status.DeployedVersionTimestamp},
+			{Column: "latest_version", Value: newService.Status.GetLatestVersion()},
+			{Column: "latest_version_timestamp", Value: newService.Status.GetLatestVersionTimestamp()},
+			{Column: "deployed_version", Value: newService.Status.GetDeployedVersion()},
+			{Column: "deployed_version_timestamp", Value: newService.Status.GetDeployedVersionTimestamp()},
 		},
 	}
+
+	// Start tracking the service
+	go c.Service[newService.ID].Track()
 
 	return
 }

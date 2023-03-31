@@ -29,20 +29,20 @@ import (
 
 func TestService_GetServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceURL("TestGetServiceInfo")
+	svc := testServiceURL("TestGetServiceInfo")
 	id := "test_id"
-	service.ID = id
+	svc.ID = id
 	url := "https://test_url.com"
-	service.LatestVersion.URL = url
+	svc.LatestVersion.URL = url
 	webURL := "https://test_webURL.com"
-	service.Dashboard.WebURL = webURL
+	svc.Dashboard.WebURL = webURL
 	latestVersion := "latest.version"
-	service.Status.LatestVersion = latestVersion
+	svc.Status.SetLatestVersion(latestVersion, false)
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
 	// When GetServiceInfo is called on it
-	got := service.GetServiceInfo()
+	got := svc.GetServiceInfo()
 	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
@@ -124,14 +124,15 @@ func TestService_GetIconURL(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceGitHub(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceGitHub(name)
-			service.Dashboard.Icon = tc.dashboardIcon
-			service.Notify = tc.notify
+			svc.Dashboard.Icon = tc.dashboardIcon
+			svc.Notify = tc.notify
 
 			// WHEN GetIconURL is called
-			got := service.GetIconURL()
+			got := svc.GetIconURL()
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -144,17 +145,18 @@ func TestService_GetIconURL(t *testing.T) {
 
 func TestService_Init(t *testing.T) {
 	// GIVEN a Service
+	testLogging()
 	tests := map[string]struct {
-		service Service
+		svc *Service
 	}{
 		"bare service": {
-			service: Service{
+			svc: &Service{
 				ID: "Init",
 				LatestVersion: latestver.Lookup{
 					Type: "github", URL: "release-argus/Argus"}},
 		},
 		"service with notify, command and webhook": {
-			service: Service{
+			svc: &Service{
 				ID: "Init",
 				LatestVersion: latestver.Lookup{
 					Type: "github", URL: "release-argus/Argus"},
@@ -169,72 +171,69 @@ func TestService_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := util.NewJLog("WARN", false)
 			var defaults Service
 			var hardDefaults Service
-			tc.service.ID = name
+			tc.svc.ID = name
 
 			// WHEN Init is called on it
-			tc.service.Init(log, &defaults, &hardDefaults, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+			tc.svc.Init(
+				&defaults, &hardDefaults,
+				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 
 			// THEN pointers to those vars are handed out to the Lookup
-			// log
-			if jLog != log {
-				t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-					log, jLog)
-			}
 			// defaults
-			if tc.service.Defaults != &defaults {
+			if tc.svc.Defaults != &defaults {
 				t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults, tc.service.Defaults)
+					&defaults, tc.svc.Defaults)
 			}
 			// dashboard.defaults
-			if tc.service.Dashboard.Defaults != &defaults.Dashboard {
+			if tc.svc.Dashboard.Defaults != &defaults.Dashboard {
 				t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults.Dashboard, tc.service.Dashboard.Defaults)
+					&defaults.Dashboard, tc.svc.Dashboard.Defaults)
 			}
 			// option.defaults
-			if tc.service.Options.Defaults != &defaults.Options {
+			if tc.svc.Options.Defaults != &defaults.Options {
 				t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults.Options, tc.service.Options.Defaults)
+					&defaults.Options, tc.svc.Options.Defaults)
 			}
 			// hardDefaults
-			if tc.service.HardDefaults != &hardDefaults {
+			if tc.svc.HardDefaults != &hardDefaults {
 				t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults, tc.service.HardDefaults)
+					&hardDefaults, tc.svc.HardDefaults)
 			}
 			// dashboard.hardDefaults
-			if tc.service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
+			if tc.svc.Dashboard.HardDefaults != &hardDefaults.Dashboard {
 				t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
+					&hardDefaults.Dashboard, tc.svc.Dashboard.HardDefaults)
 			}
 			// option.hardDefaults
-			if tc.service.Options.HardDefaults != &hardDefaults.Options {
+			if tc.svc.Options.HardDefaults != &hardDefaults.Options {
 				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Options, tc.service.Options.HardDefaults)
+					&hardDefaults.Options, tc.svc.Options.HardDefaults)
 			}
 			// Notify
-			if len(tc.service.Notify) != 0 {
-				for i := range tc.service.Notify {
-					if tc.service.Notify[i].Main == nil {
+			if len(tc.svc.Notify) != 0 {
+				for i := range tc.svc.Notify {
+					if tc.svc.Notify[i].Main == nil {
 						t.Error("Notify init didn't initialise the Main")
 					}
 				}
 			}
 			// Command
-			if len(tc.service.Command) != 0 {
-				if tc.service.CommandController == nil {
+			if len(tc.svc.Command) != 0 {
+				if tc.svc.CommandController == nil {
 					t.Errorf("CommandController is still nil with %v Commands present",
-						tc.service.Command)
+						tc.svc.Command)
 				}
-			} else if tc.service.CommandController != nil {
+			} else if tc.svc.CommandController != nil {
 				t.Errorf("CommandController should be nil with %v Commands present",
-					tc.service.Command)
+					tc.svc.Command)
 			}
 			// WebHook
-			if len(tc.service.WebHook) != 0 {
-				for i := range tc.service.WebHook {
-					if tc.service.WebHook[i].Main == nil {
+			if len(tc.svc.WebHook) != 0 {
+				for i := range tc.svc.WebHook {
+					if tc.svc.WebHook[i].Main == nil {
 						t.Error("WebHook init didn't initialise the Main")
 					}
 				}

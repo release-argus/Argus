@@ -36,8 +36,7 @@ func NotifyTest(
 	if *flag == "" {
 		return
 	}
-	var logSlice *shoutrrr.Slice
-	logSlice.Init(log, nil, nil, nil, nil)
+	shoutrrr.LogInit(log)
 	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test

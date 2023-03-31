@@ -26,8 +26,7 @@ func stringPtr(val string) *string {
 }
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
-	var commandController *command.Controller
-	commandController.Init(jLog, nil, nil, nil, nil)
+	LogInit(jLog)
 }
 
 func testURLCommandRegex() URLCommand {

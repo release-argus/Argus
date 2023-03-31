@@ -21,15 +21,18 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init will initialise the Service metric.
 func (l *Lookup) Init(
-	log *util.JLog,
 	defaults *Lookup,
 	hardDefaults *Lookup,
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {
-	jLog = log
 	if l == nil {
 		return
 	}

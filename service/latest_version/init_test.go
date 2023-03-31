@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -56,7 +55,7 @@ func TestLookup_Metrics(t *testing.T) {
 func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup(false, false)
-	log := util.NewJLog("WARN", false)
+	testLogging("DEBUG")
 	var defaults Lookup
 	var hardDefaults Lookup
 	*lookup.Status.ServiceID += "TestInit"
@@ -64,14 +63,12 @@ func TestLookup_Init(t *testing.T) {
 	var options opt.Options
 
 	// WHEN Init is called on it
-	lookup.Init(log, &defaults, &hardDefaults, &status, &options)
+	lookup.Init(
+		&defaults, &hardDefaults,
+		&status,
+		&options)
 
 	// THEN pointers to those vars are handed out to the Lookup
-	// log
-	if jLog != log {
-		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-			log, jLog)
-	}
 	// defaults
 	if lookup.Defaults != &defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",

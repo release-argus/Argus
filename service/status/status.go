@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -27,16 +28,17 @@ import (
 
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
-	ApprovedVersion          string `yaml:"-" json:"-"` // The version that's been approved
-	DeployedVersion          string `yaml:"-" json:"-"` // Track the deployed version of the service from the last successful WebHook.
-	DeployedVersionTimestamp string `yaml:"-" json:"-"` // UTC timestamp of DeployedVersion being changed.
-	LatestVersion            string `yaml:"-" json:"-"` // Latest version found from query().
-	LatestVersionTimestamp   string `yaml:"-" json:"-"` // UTC timestamp of LatestVersion being changed.
-	LastQueried              string `yaml:"-" json:"-"` // UTC timestamp that version was last queried/checked.
-	RegexMissesContent       uint   `yaml:"-" json:"-"` // Counter for the number of regex misses on URL content.
-	RegexMissesVersion       uint   `yaml:"-" json:"-"` // Counter for the number of regex misses on version.
-	Fails                    Fails  `yaml:"-" json:"-"` // Track the Notify/WebHook fails
-	Deleting                 bool   `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
+	approvedVersion          string       // The version that's been approved
+	deployedVersion          string       // Track the deployed version of the service from the last successful WebHook.
+	deployedVersionTimestamp string       // UTC timestamp of DeployedVersion being changed.
+	latestVersion            string       // Latest version found from query().
+	latestVersionTimestamp   string       // UTC timestamp of LatestVersion being changed.
+	lastQueried              string       // UTC timestamp that version was last queried/checked.
+	RegexMissesContent       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on URL content.
+	RegexMissesVersion       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on version.
+	Fails                    Fails        `yaml:"-" json:"-"` // Track the Notify/WebHook fails
+	Deleting                 bool         `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
+	mutex                    sync.RWMutex `yaml:"-" json:"-"` // Lock for the Status
 
 	// Announces
 	AnnounceChannel *chan []byte         `yaml:"-" json:"-"` // Announce to the WebSocket
@@ -48,17 +50,19 @@ type Status struct {
 
 // String returns a string representation of the Status.
 func (s *Status) String() string {
+	s.mutex.RLock()
 	fields := []util.Field{
-		{Name: "approved_version", Value: s.ApprovedVersion},
-		{Name: "deployed_version", Value: s.DeployedVersion},
-		{Name: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
-		{Name: "latest_version", Value: s.LatestVersion},
-		{Name: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
-		{Name: "last_queried", Value: s.LastQueried},
+		{Name: "approved_version", Value: s.approvedVersion},
+		{Name: "deployed_version", Value: s.deployedVersion},
+		{Name: "deployed_version_timestamp", Value: s.deployedVersionTimestamp},
+		{Name: "latest_version", Value: s.latestVersion},
+		{Name: "latest_version_timestamp", Value: s.latestVersionTimestamp},
+		{Name: "last_queried", Value: s.lastQueried},
 		{Name: "regex_misses_content", Value: s.RegexMissesContent},
 		{Name: "regex_misses_version", Value: s.RegexMissesVersion},
 		{Name: "fails", Value: s.Fails},
 	}
+	s.mutex.RUnlock()
 
 	var buf bytes.Buffer
 	for _, f := range fields {
@@ -79,6 +83,154 @@ func (s *Status) String() string {
 	}
 
 	return strings.TrimSuffix(buf.String(), ", ")
+}
+
+// Init initialises the Status vars when more than the default value is needed.
+func (s *Status) Init(
+	shoutrrrs int,
+	commands int,
+	webhooks int,
+	serviceID *string,
+	webURL *string,
+) {
+	s.Fails.Shoutrrr = make(map[string]*bool, shoutrrrs)
+	s.Fails.Command = make([]*bool, commands)
+	s.Fails.WebHook = make(map[string]*bool, webhooks)
+
+	s.ServiceID = serviceID
+	s.WebURL = webURL
+}
+
+// GetLastQueried.
+func (s *Status) GetLastQueried() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.lastQueried
+}
+
+// SetLastQueried will update LastQueried to `t“, or now if `t` is empty.
+func (s *Status) SetLastQueried(t string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if t == "" {
+		s.lastQueried = time.Now().UTC().Format(time.RFC3339)
+	} else {
+		s.lastQueried = t
+	}
+}
+
+// GetApprovedVersion returns the ApprovedVersion.
+func (s *Status) GetApprovedVersion() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.approvedVersion
+}
+
+// SetApprovedVersion.
+func (s *Status) SetApprovedVersion(version string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.approvedVersion = version
+}
+
+// GetDeployedVersion returns the DeployedVersion.
+func (s *Status) GetDeployedVersion() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.deployedVersion
+}
+
+// SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
+func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
+	s.mutex.Lock()
+	{
+		s.deployedVersion = version
+		s.deployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
+		// Ignore ApprovedVersion if we're on it
+		if version == s.approvedVersion {
+			s.approvedVersion = ""
+		}
+
+		// Clear the fail status of WebHooks/Commands
+		s.Fails.resetFails()
+	}
+	s.mutex.Unlock()
+
+	if writeToDB && s.DatabaseChannel != nil {
+		s.mutex.RLock()
+		defer s.mutex.RUnlock()
+		*s.DatabaseChannel <- dbtype.Message{
+			ServiceID: *s.ServiceID,
+			Cells: []dbtype.Cell{
+				{Column: "deployed_version", Value: s.deployedVersion},
+				{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp},
+			},
+		}
+	}
+}
+
+// GetDeployedVersionTimestamp returns the DeployedVersionTimestamp.
+func (s *Status) GetDeployedVersionTimestamp() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.deployedVersionTimestamp
+}
+
+// SetDeployedVersionTimeestamp will set DeployedVersionTimestamp to `timestamp`.
+func (s *Status) SetDeployedVersionTimestamp(timestamp string) {
+	s.mutex.Lock()
+	{
+		s.deployedVersionTimestamp = timestamp
+	}
+	s.mutex.Unlock()
+}
+
+// GetLatestVersion returns the latest version.
+func (s *Status) GetLatestVersion() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.latestVersion
+}
+
+// SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
+func (s *Status) SetLatestVersion(version string, writeToDB bool) {
+	s.mutex.Lock()
+	{
+		s.latestVersion = version
+		s.latestVersionTimestamp = s.lastQueried
+
+		// Clear the fail status of WebHooks/Commands
+		s.Fails.resetFails()
+	}
+	s.mutex.Unlock()
+
+	if writeToDB && s.DatabaseChannel != nil {
+		s.mutex.RLock()
+		defer s.mutex.RUnlock()
+		*s.DatabaseChannel <- dbtype.Message{
+			ServiceID: *s.ServiceID,
+			Cells: []dbtype.Cell{
+				{Column: "latest_version", Value: s.latestVersion},
+				{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp},
+			},
+		}
+	}
+}
+
+// GetLatestVersionTimestamp returns the timestamp of the latest version.
+func (s *Status) GetLatestVersionTimestamp() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.latestVersionTimestamp
+}
+
+// SetLatestVersionTimeestamp will set LatestVersionTimestamp to `timestamp`.
+func (s *Status) SetLatestVersionTimestamp(timestamp string) {
+	s.mutex.Lock()
+	{
+		s.latestVersionTimestamp = timestamp
+	}
+	s.mutex.Unlock()
 }
 
 // TODO: Deprecate
@@ -175,69 +327,6 @@ func (s *Fails) String() string {
 	return strings.TrimSuffix(buf.String(), ", ")
 }
 
-// Init initialises the Status vars when more than the default value is needed.
-func (s *Status) Init(
-	shoutrrrs int,
-	commands int,
-	webhooks int,
-	serviceID *string,
-	webURL *string,
-) {
-	s.Fails.Shoutrrr = make(map[string]*bool, shoutrrrs)
-	s.Fails.Command = make([]*bool, commands)
-	s.Fails.WebHook = make(map[string]*bool, webhooks)
-
-	s.ServiceID = serviceID
-	s.WebURL = webURL
-}
-
-// SetLastQueried will update LastQueried to now.
-func (s *Status) SetLastQueried() {
-	s.LastQueried = time.Now().UTC().Format(time.RFC3339)
-}
-
-// SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
-func (s *Status) SetDeployedVersion(version string) {
-	s.DeployedVersion = version
-	s.DeployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
-	// Ignore ApprovedVersion if we're on it
-	if version == s.ApprovedVersion {
-		s.ApprovedVersion = ""
-	}
-
-	// Clear the fail status of WebHooks/Commands
-	s.Fails.resetFails()
-
-	if s.DatabaseChannel != nil {
-		*s.DatabaseChannel <- dbtype.Message{
-			ServiceID: *s.ServiceID,
-			Cells: []dbtype.Cell{
-				{Column: "deployed_version", Value: s.DeployedVersion},
-				{Column: "deployed_version_timestamp", Value: s.DeployedVersionTimestamp},
-			},
-		}
-	}
-}
-
-// SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
-func (s *Status) SetLatestVersion(version string) {
-	s.LatestVersion = version
-	s.LatestVersionTimestamp = s.LastQueried
-
-	// Clear the fail status of WebHooks/Commands
-	s.Fails.resetFails()
-
-	if s.DatabaseChannel != nil {
-		*s.DatabaseChannel <- dbtype.Message{
-			ServiceID: *s.ServiceID,
-			Cells: []dbtype.Cell{
-				{Column: "latest_version", Value: s.LatestVersion},
-				{Column: "latest_version_timestamp", Value: s.LatestVersionTimestamp},
-			},
-		}
-	}
-}
-
 // ResetFails of the Status.Fails
 func (f *Fails) resetFails() {
 	for i := range f.Shoutrrr {
@@ -257,19 +346,23 @@ func (s *Status) GetWebURL() string {
 		return ""
 	}
 
-	return util.TemplateString(*s.WebURL, util.ServiceInfo{LatestVersion: s.LatestVersion})
+	return util.TemplateString(
+		*s.WebURL,
+		util.ServiceInfo{LatestVersion: s.GetLatestVersion()})
 }
 
 // Print will print the Status.
 func (s *Status) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.ApprovedVersion,
-		fmt.Sprintf("%sapproved_version: %s", prefix, s.ApprovedVersion))
-	util.PrintlnIfNotDefault(s.DeployedVersion,
-		fmt.Sprintf("%sdeployed_version: %s", prefix, s.DeployedVersion))
-	util.PrintlnIfNotDefault(s.DeployedVersionTimestamp,
-		fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.DeployedVersionTimestamp))
-	util.PrintlnIfNotDefault(s.LatestVersion,
-		fmt.Sprintf("%slatest_version: %s", prefix, s.LatestVersion))
-	util.PrintlnIfNotDefault(s.LatestVersionTimestamp,
-		fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.LatestVersionTimestamp))
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	util.PrintlnIfNotDefault(s.approvedVersion,
+		fmt.Sprintf("%sapproved_version: %s", prefix, s.approvedVersion))
+	util.PrintlnIfNotDefault(s.deployedVersion,
+		fmt.Sprintf("%sdeployed_version: %s", prefix, s.deployedVersion))
+	util.PrintlnIfNotDefault(s.deployedVersionTimestamp,
+		fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.deployedVersionTimestamp))
+	util.PrintlnIfNotDefault(s.latestVersion,
+		fmt.Sprintf("%slatest_version: %s", prefix, s.latestVersion))
+	util.PrintlnIfNotDefault(s.latestVersionTimestamp,
+		fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.latestVersionTimestamp))
 }

@@ -156,11 +156,11 @@ func (api *api) extractServiceStatus() {
 			fmt.Sprintf("extractServiceStatus row: %s", util.ErrorToString(err)),
 			*logFrom,
 			err != nil)
-		api.config.Service[id].Status.LatestVersion = lv
-		api.config.Service[id].Status.LatestVersionTimestamp = lvt
-		api.config.Service[id].Status.DeployedVersion = dv
-		api.config.Service[id].Status.DeployedVersionTimestamp = dvt
-		api.config.Service[id].Status.ApprovedVersion = av
+		api.config.Service[id].Status.SetLatestVersion(lv, false)
+		api.config.Service[id].Status.SetLatestVersionTimestamp(lvt)
+		api.config.Service[id].Status.SetDeployedVersion(dv, false)
+		api.config.Service[id].Status.SetDeployedVersionTimestamp(dvt)
+		api.config.Service[id].Status.SetApprovedVersion(av)
 	}
 	err = rows.Err()
 	jLog.Fatal(
@@ -195,13 +195,16 @@ func (api *api) convertServiceStatus() {
 				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
 				api.config.Service[id].OldStatus.ApprovedVersion,
 			)
-			api.config.Service[id].Status = svcstatus.Status{
-				LatestVersion:            api.config.Service[id].OldStatus.LatestVersion,
-				LatestVersionTimestamp:   api.config.Service[id].OldStatus.LatestVersionTimestamp,
-				DeployedVersion:          api.config.Service[id].OldStatus.DeployedVersion,
-				DeployedVersionTimestamp: api.config.Service[id].OldStatus.DeployedVersionTimestamp,
-				ApprovedVersion:          api.config.Service[id].OldStatus.ApprovedVersion,
-			}
+			api.config.Service[id].Status = svcstatus.Status{}
+			api.config.Service[id].Status.Init(
+				len(api.config.Service[id].Notify), len(api.config.Service[id].Command), len(api.config.Service[id].WebHook),
+				&id,
+				&api.config.Service[id].Dashboard.WebURL)
+			api.config.Service[id].Status.SetLatestVersion(api.config.Service[id].OldStatus.LatestVersion, false)
+			api.config.Service[id].Status.SetLatestVersionTimestamp(api.config.Service[id].OldStatus.LatestVersionTimestamp)
+			api.config.Service[id].Status.SetDeployedVersion(api.config.Service[id].OldStatus.DeployedVersion, false)
+			api.config.Service[id].Status.SetDeployedVersionTimestamp(api.config.Service[id].OldStatus.DeployedVersionTimestamp)
+			api.config.Service[id].Status.SetApprovedVersion(api.config.Service[id].OldStatus.ApprovedVersion)
 		}
 	}
 	if servicesToConvert != 0 {

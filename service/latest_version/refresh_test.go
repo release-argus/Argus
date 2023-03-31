@@ -19,7 +19,6 @@ package latestver
 import (
 	"regexp"
 	"testing"
-	"time"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -294,10 +293,10 @@ func TestLookup_Refresh(t *testing.T) {
 	testLogging("DEBUG")
 	testURL := testLookup(true, true)
 	testURL.Query()
-	testVersionURL := testURL.Status.LatestVersion
+	testVersionURL := testURL.Status.GetLatestVersion()
 	testGitHub := testLookup(false, false)
 	testGitHub.Query()
-	testVersionGitHub := testGitHub.Status.LatestVersion
+	testVersionGitHub := testGitHub.Status.GetLatestVersion()
 
 	// GIVEN a Lookup and various json strings to override parts of it
 	tests := map[string]struct {
@@ -309,8 +308,8 @@ func TestLookup_Refresh(t *testing.T) {
 		url                *string
 		urlCommands        *string
 		usePreRelease      *string
+		latestVersion      string
 		previous           *Lookup
-		previousStatus     svcstatus.Status
 		errRegex           string
 		want               string
 	}{
@@ -345,10 +344,7 @@ func TestLookup_Refresh(t *testing.T) {
 				Require:           testURL.Require,
 				Options:           testURL.Options,
 				Status: &svcstatus.Status{
-					ServiceID:              stringPtr("Refresh new version"),
-					LatestVersion:          "0.0.0",
-					LatestVersionTimestamp: time.Now().UTC().Format(time.RFC3339),
-				},
+					ServiceID: stringPtr("Refresh new version")},
 				Defaults:     testURL.Defaults,
 				HardDefaults: testURL.HardDefaults,
 			},
@@ -365,14 +361,12 @@ func TestLookup_Refresh(t *testing.T) {
 				Options:           testGitHub.Options,
 				GitHubData:        testGitHub.GitHubData,
 				Status: &svcstatus.Status{
-					ServiceID:              stringPtr("Refresh new version"),
-					LatestVersion:          "0.0.0",
-					LatestVersionTimestamp: time.Now().UTC().Format(time.RFC3339),
-				},
+					ServiceID: stringPtr("Refresh new version")},
 				Defaults:     testGitHub.Defaults,
 				HardDefaults: testGitHub.HardDefaults,
 			},
-			want: testVersionGitHub,
+			latestVersion: "0.0.0",
+			want:          testVersionGitHub,
 		},
 	}
 
@@ -380,8 +374,16 @@ func TestLookup_Refresh(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			// Copy tc.PreviousStatus
-			previousStatus := tc.previousStatus
+			// Copy the starting status
+			tc.previous.Status.Init(
+				0, 0, 0,
+				&name,
+				nil)
+			// Set the latest version
+			if tc.latestVersion != "" {
+				tc.previous.Status.SetLatestVersion(tc.latestVersion, false)
+			}
+			previousStatus := tc.previous.Status
 
 			// WHEN we call Refresh
 			got, err := tc.previous.Refresh(
@@ -413,25 +415,25 @@ func TestLookup_Refresh(t *testing.T) {
 				t.Errorf("expected %q but got %q", tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
-			if previousStatus.LatestVersionTimestamp != "" {
+			if previousStatus.GetLatestVersionTimestamp() != "" {
 				// If the possible query-changing overrides are nil
 				if tc.require == nil && tc.semanticVersioning == nil && tc.url == nil && tc.urlCommands == nil {
 					// The timestamp should change only if the version changed
-					if previousStatus.LatestVersion != tc.previous.Status.LatestVersion &&
-						previousStatus.LatestVersionTimestamp == tc.previous.Status.LatestVersionTimestamp {
+					if previousStatus.GetLatestVersion() != tc.previous.Status.GetLatestVersion() &&
+						previousStatus.GetLatestVersionTimestamp() == tc.previous.Status.GetLatestVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.LatestVersionTimestamp, tc.previous.Status.LatestVersionTimestamp)
+							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
 						// The timestamp shouldn't change as the version didn't change
-					} else if previousStatus.LatestVersionTimestamp != tc.previous.Status.LatestVersionTimestamp {
+					} else if previousStatus.GetLatestVersionTimestamp() != tc.previous.Status.GetLatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp, tc.previous.Status.LatestVersionTimestamp)
+							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
 					}
 					// If the overrides are not nil
 				} else {
 					// The timestamp shouldn't change
-					if previousStatus.LatestVersionTimestamp != tc.previous.Status.LatestVersionTimestamp {
+					if previousStatus.GetLatestVersionTimestamp() != tc.previous.Status.GetLatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp, tc.previous.Status.LatestVersionTimestamp)
+							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
 					}
 				}
 			}

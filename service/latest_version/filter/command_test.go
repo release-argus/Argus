@@ -49,6 +49,10 @@ func TestRequire_ExecCommand(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			require := Require{Command: tc.cmd}
 			require.Status = &svcstatus.Status{}
+			require.Status.Init(
+				0, 1, 0,
+				&name,
+				stringPtr("http://example.com"))
 
 			// WHEN ApplyTemplate is called on the Command
 			err := require.ExecCommand(&util.LogFrom{})

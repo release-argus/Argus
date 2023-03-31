@@ -27,13 +27,11 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	opt "github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/util"
 )
 
 func TestCommandTest(t *testing.T) {
 	// GIVEN a Config with a Service containing a Command
-	jLog = util.NewJLog("INFO", false)
-	InitJLog(jLog)
+	testLogging()
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
@@ -124,8 +122,11 @@ func TestCommandTest(t *testing.T) {
 
 			// WHEN CommandTest is called with the test Config
 			if tc.slice[tc.flag] != nil && tc.slice[tc.flag].CommandController != nil {
-				tc.slice[tc.flag].CommandController.Init(jLog, &tc.slice[tc.flag].Status,
-					&tc.slice[tc.flag].Command, nil, &tc.slice[tc.flag].Options.Interval)
+				tc.slice[tc.flag].CommandController.Init(
+					&tc.slice[tc.flag].Status,
+					&tc.slice[tc.flag].Command,
+					nil,
+					&tc.slice[tc.flag].Options.Interval)
 			}
 			order := []string{}
 			for i := range tc.slice {

@@ -245,11 +245,12 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 }
 
 func TestHTTP_VersionRefresh(t *testing.T) {
+	testLogging()
 	testSVC := testService("TestHTTP_VersionRefresh")
-	testSVC.LatestVersion.Status.LatestVersion = "1.0.0"
+	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
 	testSVC.LatestVersion.Query()
 	v, _ := testSVC.DeployedVersionLookup.Query(&util.LogFrom{})
-	testSVC.Status.SetDeployedVersion(v)
+	testSVC.Status.SetDeployedVersion(v, false)
 	// GIVEN an API and a request to refresh the x_version of a service
 	file := "TestHTTP_VersionRefresh.yml"
 	api := testAPI(file)
@@ -274,9 +275,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 		"latest version, no changes": {
 			params: map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.LatestVersion),
+				testSVC.Status.GetLatestVersion()),
 			wantStatusCode:    http.StatusOK,
-			wantLatestVersion: testSVC.Status.LatestVersion,
+			wantLatestVersion: testSVC.Status.GetLatestVersion(),
 		},
 		"latest version, different regex doesn't update service version": {
 			params: map[string]string{
@@ -311,7 +312,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 				"json":                "foo.bar.version",
 				"allow_invalid_certs": "true"},
 			wantBody: fmt.Sprintf(`\{"version":%q`,
-				testSVC.Status.DeployedVersion),
+				testSVC.Status.GetDeployedVersion()),
 			wantStatusCode:      http.StatusOK,
 			wantDeployedVersion: "",
 		},
@@ -319,9 +320,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			deployedVersion: true,
 			params:          map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.DeployedVersion),
+				testSVC.Status.GetDeployedVersion()),
 			wantStatusCode:      http.StatusOK,
-			wantDeployedVersion: testSVC.Status.DeployedVersion,
+			wantDeployedVersion: testSVC.Status.GetDeployedVersion(),
 		},
 		"deployed version, different json doesn't update service version": {
 			deployedVersion: true,
@@ -353,9 +354,10 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testService(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			svc := testService(name)
 			api.Config.Service[svc.ID] = svc
 			if tc.nilDeployedVersion {
 				svc.DeployedVersionLookup = nil
@@ -407,14 +409,14 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 					tc.wantBody, got)
 			}
 			// AND the LatestVersion is expected
-			if svc.Status.LatestVersion != tc.wantLatestVersion {
+			if svc.Status.GetLatestVersion() != tc.wantLatestVersion {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.LatestVersion)
+					tc.wantLatestVersion, svc.Status.GetLatestVersion())
 			}
 			// AND the DeployedVersion is expected
-			if svc.Status.DeployedVersion != tc.wantDeployedVersion {
+			if svc.Status.GetDeployedVersion() != tc.wantDeployedVersion {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.DeployedVersion)
+					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
 			}
 		})
 	}
@@ -454,9 +456,10 @@ func TestHTTP_EditServiceGetDetail(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testService(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			svc := testService(name)
 			api.Config.Service[svc.ID] = svc
 			// service_name
 			serviceName := svc.ID
@@ -517,17 +520,18 @@ func TestHTTP_EditServiceGetOtherDetails(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		file := name + ".test.yml"
+		api := testAPI(file)
+		svc := testService(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			file := name + ".test.yml"
-			api := testAPI(file)
 			defer func() {
 				os.RemoveAll(file)
 				if api.Config.Settings.Data.DatabaseFile != nil {
 					os.RemoveAll(*api.Config.Settings.Data.DatabaseFile)
 				}
 			}()
-			svc := testService(name)
 			api.Config.Service[svc.ID] = svc
 			target := "/api/v1/service/edit/"
 			target += url.QueryEscape(svc.ID)
@@ -563,11 +567,12 @@ func TestHTTP_EditServiceGetOtherDetails(t *testing.T) {
 }
 
 func TestHTTP_EditServiceEdit(t *testing.T) {
+	testLogging()
 	testSVC := testService("TestHTTP_EditServiceEdit")
-	testSVC.LatestVersion.Status.LatestVersion = "1.0.0"
+	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
 	testSVC.LatestVersion.Query()
 	v, _ := testSVC.DeployedVersionLookup.Query(&util.LogFrom{})
-	testSVC.Status.SetDeployedVersion(v)
+	testSVC.Status.SetDeployedVersion(v, false)
 	// GIVEN an API and a request to create/edit a service
 	file := "TestHTTP_EditServiceEdit.yml"
 	api := testAPI(file)
@@ -699,9 +704,10 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testService(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			svc := testService(name)
 			api.Config.Service[svc.ID] = svc
 			api.Config.Order = append(api.Config.Order, svc.ID)
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", name)
@@ -775,17 +781,17 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 			}
 			// AND the LatestVersion is expected
 			re = regexp.MustCompile(tc.wantLatestVersion)
-			match = re.MatchString(svc.Status.LatestVersion)
+			match = re.MatchString(svc.Status.GetLatestVersion())
 			if !match {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.LatestVersion)
+					tc.wantLatestVersion, svc.Status.GetLatestVersion())
 			}
 			// AND the DeployedVersion is expected
 			re = regexp.MustCompile(tc.wantDeployedVersion)
-			match = re.MatchString(svc.Status.DeployedVersion)
+			match = re.MatchString(svc.Status.GetDeployedVersion())
 			if !match {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.DeployedVersion)
+					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
 			}
 		})
 	}

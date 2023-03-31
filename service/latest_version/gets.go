@@ -40,8 +40,11 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
 	if !ignoreWebURL && *l.Status.WebURL != "" {
 		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		if !(l.Status.LatestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
-			return util.TemplateString(*l.Status.WebURL, util.ServiceInfo{LatestVersion: l.Status.LatestVersion})
+		latestVersion := l.Status.GetLatestVersion()
+		if !(latestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
+			return util.TemplateString(
+				*l.Status.WebURL,
+				util.ServiceInfo{LatestVersion: latestVersion})
 		}
 	}
 

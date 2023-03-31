@@ -30,18 +30,19 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func testVerify() *Config {
-	order := []string{"test"}
-	defaults := Defaults{}
-	defaults.SetDefaults()
-	notify := shoutrrr.Slice{
-		"test": defaults.Notify["discord"],
+func testVerify() (cfg *Config) {
+	cfg = &Config{}
+	cfg.Order = []string{"test"}
+	cfg.Defaults = Defaults{}
+	cfg.Defaults.SetDefaults()
+	cfg.Notify = shoutrrr.Slice{
+		"test": cfg.Defaults.Notify["discord"],
 	}
-	webhook := webhook.Slice{
-		"test": &defaults.WebHook,
+	cfg.WebHook = webhook.Slice{
+		"test": &cfg.Defaults.WebHook,
 	}
 	serviceID := "test"
-	service := service.Slice{
+	cfg.Service = service.Slice{
 		serviceID: &service.Service{
 			ID: serviceID,
 			LatestVersion: latestver.Lookup{
@@ -50,13 +51,7 @@ func testVerify() *Config {
 			},
 		},
 	}
-	return &Config{
-		Order:    order,
-		Defaults: defaults,
-		Notify:   notify,
-		WebHook:  webhook,
-		Service:  service,
-	}
+	return
 }
 
 func TestConfig_CheckValues(t *testing.T) {

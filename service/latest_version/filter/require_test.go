@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:built unit
+//go:build unit
 
 package filter
 
@@ -43,26 +43,23 @@ func TestRequire_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			status := svcstatus.Status{DeployedVersion: "1.2.3"}
-			newJLog := util.NewJLog("WARN", false)
+			status := svcstatus.Status{}
+			status.Init(
+				0, 0, 0,
+				stringPtr("test"),
+				stringPtr("http://example.com"))
+			status.SetDeployedVersion("1.2.3", false)
 
 			// WHEN Init is called with it
-			tc.req.Init(newJLog, &status)
+			tc.req.Init(&status)
 
 			// THEN the global JLog is set to its address
 			if tc.req == nil {
-				if jLog == newJLog {
-					t.Fatalf("JLog shouldn't have been initialised to the one we called Init with when Require is %v",
-						tc.req)
-				}
 				// THEN the Require is still nil
 				if tc.req != nil {
 					t.Fatal("Init with a nil require shouldn't inititalise it")
 				}
 			} else {
-				if jLog != newJLog {
-					t.Fatal("JLog should have been initialised to the one we called Init with")
-				}
 				// THEN the status is given to the Require
 				if tc.req.Status != &status {
 					t.Fatalf("Status should be the address of the var given to it %v, not %v",
@@ -265,7 +262,7 @@ func TestRequire_FromStr(t *testing.T) {
 	}{
 		"nil": {
 			jsonStr:  stringPtr(""),
-			errRegex: "^EOF$",
+			errRegex: "EOF$",
 			want:     nil,
 		},
 		"nil with default": {
@@ -283,25 +280,25 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"invalid JSON": {
 			jsonStr:  stringPtr("{"),
-			errRegex: `^unexpected EOF$`,
+			errRegex: `unexpected EOF$`,
 		},
 		"invalid JSON with default": {
 			jsonStr:          stringPtr("{"),
 			dflt:             &dflt,
 			pointerToDefault: true,
-			errRegex:         `^unexpected EOF$`,
+			errRegex:         `unexpected EOF$`,
 		},
 		"invalid data type": {
 			jsonStr: stringPtr(`{
 "regex_content": 1}`),
-			errRegex: `^json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
+			errRegex: `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"invalid data type with default": {
 			jsonStr: stringPtr(`{
 "regex_content": 1}`),
 			dflt:             &dflt,
 			pointerToDefault: true,
-			errRegex:         `^json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
+			errRegex:         `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"RegexContent defined": {
 			jsonStr: stringPtr(`{
@@ -595,8 +592,7 @@ func TestRequire__String(t *testing.T) {
 			want:    "{}\n"},
 		"all fields defined": {
 			require: &Require{
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
+				Status:       &svcstatus.Status{},
 				RegexContent: "abc{{ version }}.tar.gz",
 				RegexVersion: "v([0-9.]+)",
 				Command:      command.Command{"ls", "-la"},

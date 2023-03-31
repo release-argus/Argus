@@ -192,7 +192,13 @@ func TestLookup_GetServiceURL(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			status := svcstatus.Status{LatestVersion: tc.latestVersion, WebURL: &tc.webURL}
+			status := svcstatus.Status{}
+			status.Init(
+				0, 0, 0,
+				&name,
+				stringPtr("http://example.com"))
+			status.SetLatestVersion(tc.latestVersion, false)
+			status.WebURL = &tc.webURL
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called

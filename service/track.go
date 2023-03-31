@@ -56,24 +56,19 @@ func (s *Service) Track() {
 	}
 	s.ResetMetrics()
 
+	// If this Service was last queried less than interval ago, wait until interval has elapsed.
+	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.GetLastQueried())
+	if time.Since(lastQueriedAt) < s.Options.GetIntervalDuration() {
+		time.Sleep(s.Options.GetIntervalDuration() - time.Since(lastQueriedAt))
+	}
+
 	// Track the deployed version in a infinite loop goroutine.
 	go func() {
-		time.Sleep(2 * time.Second) // Give LatestVersion some time to query first
-
-		// If DeployedVersion was queried less than interval ago, wait until it's been long enough.
-		deployedVersionAt, _ := time.Parse(time.RFC3339, s.Status.DeployedVersionTimestamp)
-		if time.Since(deployedVersionAt) < s.Options.GetIntervalDuration() {
-			time.Sleep(s.Options.GetIntervalDuration() - time.Since(deployedVersionAt))
-		}
+		time.Sleep(2 * time.Second) // Give LatestVersion some time to query first.
 
 		go s.DeployedVersionLookup.Track()
 	}()
 
-	// If LatestVersion was queried less than interval ago, wait until it's been long enough.
-	latestVersionAt, _ := time.Parse(time.RFC3339, s.Status.LatestVersionTimestamp)
-	if time.Since(latestVersionAt) < s.Options.GetIntervalDuration() {
-		time.Sleep(s.Options.GetIntervalDuration() - time.Since(latestVersionAt))
-	}
 	// Track forever.
 	for {
 		// If we're deleting this Service, stop tracking it.

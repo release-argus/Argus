@@ -80,13 +80,6 @@ func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 	return
 }
 
-// Init will give the filter package this log.
-func (s *URLCommandSlice) Init(log *util.JLog) {
-	if log != nil {
-		jLog = log
-	}
-}
-
 // Print will print the URLCommand's in the URLCommandSlice.
 func (s *URLCommandSlice) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
@@ -139,7 +132,7 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	var err error
 	// Iterate through the commands to filter the text.
 	textBak := text
-	msg := fmt.Sprintf("Looking through:\n%s", text)
+	msg := fmt.Sprintf("Looking through:\n%q", text)
 	jLog.Debug(msg, *logFrom, true)
 
 	switch c.Type {
@@ -299,7 +292,7 @@ func URLCommandsFromStr(jsonStr *string, defaults *URLCommandSlice, logFrom *uti
 	if err != nil {
 		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
 			*logFrom, err != nil)
-		return defaults, err
+		return defaults, fmt.Errorf("failed converting JSON - %w", err)
 	}
 
 	// Check the URLCommands

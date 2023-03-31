@@ -75,7 +75,7 @@ type Client struct {
 	send chan []byte
 
 	// Lock to prevent concurrent write panics
-	lock sync.Mutex
+	mutex sync.Mutex
 }
 
 func getIP(r *http.Request) (ip string) {

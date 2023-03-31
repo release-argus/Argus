@@ -56,28 +56,32 @@ func (l *Lookup) Track() {
 				*l.Status.ServiceID,
 				1)
 			// If a new Deployed version was found.
-			if deployedVersion != l.Status.DeployedVersion {
+			if deployedVersion != l.Status.GetDeployedVersion() {
 				// Announce the updated deployment
-				l.Status.SetDeployedVersion(deployedVersion)
+				l.Status.SetDeployedVersion(deployedVersion, true)
 
 				// If this new deployedVersion isn't LatestVersion
 				// Check that it's not a later version than LatestVersion
-				if deployedVersion != l.Status.LatestVersion && l.Options.GetSemanticVersioning() && l.Status.LatestVersion != "" {
+				latestVersion := l.Status.GetLatestVersion()
+				if latestVersion == "" {
+					l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), true)
+					l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
+					l.Status.AnnounceQueryNewVersion()
+				} else if deployedVersion != latestVersion &&
+					l.Options.GetSemanticVersioning() {
 					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
-					deployedVersionSV, _ := semver.NewVersion(deployedVersion)
+					deployedVersionSV, e1 := semver.NewVersion(deployedVersion)
 					//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
-					latestVersionSV, _ := semver.NewVersion(l.Status.LatestVersion)
+					latestVersionSV, e2 := semver.NewVersion(latestVersion)
 
+					fmt.Println(e1)
+					fmt.Println(e2)
 					// Update LatestVersion to DeployedVersion if it's newer
 					if latestVersionSV.LessThan(*deployedVersionSV) {
-						l.Status.SetLatestVersion(l.Status.DeployedVersion)
-						l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
+						l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), true)
+						l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
 						l.Status.AnnounceQueryNewVersion()
 					}
-				} else if l.Status.LatestVersion == "" {
-					l.Status.SetLatestVersion(l.Status.DeployedVersion)
-					l.Status.LatestVersionTimestamp = l.Status.DeployedVersionTimestamp
-					l.Status.AnnounceQueryNewVersion()
 				}
 
 				// Announce version change to WebSocket clients.

@@ -141,7 +141,6 @@ func TestController_Find(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			fails := make([]*bool, 4)
 			controller := &Controller{
 				Command: &Slice{
 					Command{"ls", "-lah"},
@@ -150,9 +149,14 @@ func TestController_Find(t *testing.T) {
 					Command{"bash", "upgrade.sh", "{{ version }}"},
 				},
 				ServiceStatus: &svcstatus.Status{
-					ServiceID: stringPtr("some_service_id"), LatestVersion: "1.2.3"},
-				Failed: &fails,
+					ServiceID: stringPtr("some_service_id")},
 			}
+			controller.ServiceStatus.Init(
+				0, len(*controller.Command), 0,
+				&name,
+				nil)
+			controller.Failed = &controller.ServiceStatus.Fails.Command
+			controller.ServiceStatus.SetLatestVersion("1.2.3", false)
 			if tc.nilController {
 				controller = nil
 			}

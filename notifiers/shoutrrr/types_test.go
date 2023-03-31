@@ -25,8 +25,9 @@ import (
 
 func TestShoutrrr_String(t *testing.T) {
 	tests := map[string]struct {
-		shoutrrr *Shoutrrr
-		want     string
+		shoutrrr      *Shoutrrr
+		latestVersion string
+		want          string
 	}{
 		"nil": {
 			shoutrrr: nil,
@@ -35,13 +36,13 @@ func TestShoutrrr_String(t *testing.T) {
 			shoutrrr: &Shoutrrr{},
 			want:     "{}\n"},
 		"all fields defined": {
+			latestVersion: "1.2.3",
 			shoutrrr: &Shoutrrr{
 				Type: "discord",
 				ID:   "foo",
 				Failed: &map[string]*bool{
 					"foo": boolPtr(true)},
-				ServiceStatus: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
+				ServiceStatus: &svcstatus.Status{},
 				Options: map[string]string{
 					"delay": "1h"},
 				URLFields: map[string]string{
@@ -73,6 +74,9 @@ params:
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			if tc.latestVersion != "" {
+				tc.shoutrrr.ServiceStatus.SetLatestVersion(tc.latestVersion, false)
+			}
 
 			// WHEN the Shoutrrr is stringified with String
 			got := tc.shoutrrr.String()

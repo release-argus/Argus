@@ -23,7 +23,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -331,22 +330,10 @@ func TestCommand_Init(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
 		nilController     bool
-		log               *util.JLog
-		serviceStatus     svcstatus.Status
 		command           *Slice
 		shoutrrrNotifiers *shoutrrr.Slice
 		parentInterval    *string
 	}{
-		"nil log": {
-			log: nil,
-			command: &Slice{
-				{"date", "+%m-%d-%Y"}},
-		},
-		"non-nil log": {
-			log: util.NewJLog("INFO", false),
-			command: &Slice{
-				{"date", "+%m-%d-%Y"}},
-		},
 		"nil Controller": {
 			nilController: true,
 		},
@@ -388,16 +375,15 @@ func TestCommand_Init(t *testing.T) {
 			if !tc.nilController {
 				controller = &Controller{}
 			}
-			logBefore := jLog
-			tc.serviceStatus.ServiceID = stringPtr("TestInit")
-			controller.Init(tc.log, &tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
+			serviceStatus := svcstatus.Status{}
+			serviceStatus.ServiceID = stringPtr("TestInit")
+			controller.Init(
+				&serviceStatus,
+				tc.command,
+				tc.shoutrrrNotifiers,
+				tc.parentInterval)
 
 			// THEN the result is expected
-			// log
-			if (tc.log == nil && jLog != logBefore) && jLog != tc.log {
-				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
-					tc.log, jLog)
-			}
 			// nilController
 			if tc.nilController {
 				if controller != nil {
@@ -407,9 +393,9 @@ func TestCommand_Init(t *testing.T) {
 				return
 			}
 			// serviceStatus
-			if controller.ServiceStatus != &tc.serviceStatus {
+			if controller.ServiceStatus != &serviceStatus {
 				t.Errorf("want: ServiceStatus=%v\ngot:  ServiceStatus=%v",
-					controller.ServiceStatus, &tc.serviceStatus)
+					controller.ServiceStatus, &serviceStatus)
 			}
 			// command
 			if controller.Command != tc.command {

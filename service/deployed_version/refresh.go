@@ -76,10 +76,7 @@ func (l *Lookup) applyOverrides(
 			Defaults:           l.Options.Defaults,
 			HardDefaults:       l.Options.HardDefaults,
 		},
-		Status: &svcstatus.Status{
-			DeployedVersion: l.Status.DeployedVersion,
-			ServiceID:       serviceID,
-		},
+		Status:       &svcstatus.Status{},
 		Defaults:     l.Defaults,
 		HardDefaults: l.HardDefaults,
 	}
@@ -87,6 +84,11 @@ func (l *Lookup) applyOverrides(
 		jLog.Error(err, *logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
 	}
+	lookup.Status.Init(
+		0, 0, 0,
+		serviceID,
+		nil,
+	)
 	return &lookup, nil
 }
 
@@ -130,7 +132,7 @@ func (l *Lookup) Refresh(
 	}
 
 	// Update the deployed version if it has changed.
-	if version != l.Status.DeployedVersion &&
+	if version != l.Status.GetDeployedVersion() &&
 		// and no overrides that may change a successful query were provided
 		// then we can just update the status.
 		headers == nil &&
@@ -138,7 +140,7 @@ func (l *Lookup) Refresh(
 		regex == nil &&
 		semanticVersioning == nil &&
 		url == nil {
-		l.Status.SetDeployedVersion(version)
+		l.Status.SetDeployedVersion(version, true)
 		l.Status.AnnounceUpdate()
 	}
 

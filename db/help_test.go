@@ -28,6 +28,10 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+func stringPtr(val string) *string {
+	return &val
+}
+
 func initLogging() {
 	jLog = util.NewJLog("WARN", false)
 	jLog.Testing = true
@@ -37,15 +41,19 @@ func initLogging() {
 func testConfig() config.Config {
 	databaseFile := "test.db"
 	svc := service.Service{
+		ID:     "foo",
 		Status: svcstatus.Status{},
 		OldStatus: &svcstatus.OldStatus{
 			LatestVersion:            "0.0.2",
 			LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
 			DeployedVersion:          "0.0.0",
 			DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
-			ApprovedVersion:          "0.0.1",
-		},
+			ApprovedVersion:          "0.0.1"},
 	}
+	svc.Status.Init(
+		len(svc.Notify), len(svc.Command), len(svc.WebHook),
+		&svc.ID,
+		stringPtr("https://example.com"))
 	databaseChannel := make(chan dbtype.Message, 5)
 	saveChannel := make(chan bool, 16)
 	return config.Config{
@@ -77,7 +85,7 @@ func testConfig() config.Config {
 	}
 }
 
-func queryRow(t *testing.T, db *sql.DB, serviceID string) svcstatus.Status {
+func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
 	sqlStmt := `
 	SELECT
 		id,
@@ -117,11 +125,16 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) svcstatus.Status {
 			t.Fatal(err)
 		}
 	}
-	return svcstatus.Status{
-		LatestVersion:            lv,
-		LatestVersionTimestamp:   lvt,
-		DeployedVersion:          dv,
-		DeployedVersionTimestamp: dvt,
-		ApprovedVersion:          av,
-	}
+	status := svcstatus.Status{}
+	status.Init(
+		0, 0, 0,
+		&id,
+		stringPtr("https://example.com"))
+	status.SetLatestVersion(lv, false)
+	status.SetLatestVersionTimestamp(lvt)
+	status.SetDeployedVersion(dv, false)
+	status.SetDeployedVersionTimestamp(dvt)
+	status.SetApprovedVersion(av)
+
+	return &status
 }

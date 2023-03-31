@@ -33,7 +33,7 @@ import (
 
 func TestLookup_HTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = util.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		url      string
 		errRegex string
@@ -73,7 +73,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = util.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		url                  string
 		allowInvalidCerts    bool
@@ -179,7 +179,7 @@ func TestLookup_Query(t *testing.T) {
 
 func TestLookup_Track(t *testing.T) {
 	// GIVEN a Lookup
-	jLog = util.NewJLog("WARN", false)
+	testLogging()
 	tests := map[string]struct {
 		lookup               *Lookup
 		allowInvalidCerts    bool
@@ -365,9 +365,6 @@ func TestLookup_Track(t *testing.T) {
 			}()
 			if tc.lookup != nil {
 				defaults := &Lookup{}
-				dbChannel := make(chan dbtype.Message, 4)
-				announceChannel := make(chan []byte, 4)
-				webURL := &tc.lookup.URL
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
 				tc.lookup.Defaults = defaults
@@ -378,15 +375,19 @@ func TestLookup_Track(t *testing.T) {
 					Defaults:           &opt.Options{},
 					HardDefaults:       &opt.Options{},
 				}
+				dbChannel := make(chan dbtype.Message, 4)
+				announceChannel := make(chan []byte, 4)
+				webURL := &tc.lookup.URL
 				tc.lookup.Status = &svcstatus.Status{
 					Deleting:        tc.deleting,
 					ServiceID:       stringPtr(name),
-					DeployedVersion: tc.startDeployedVersion,
-					LatestVersion:   tc.startLatestVersion,
 					AnnounceChannel: &announceChannel,
 					DatabaseChannel: &dbChannel,
 					WebURL:          webURL,
 				}
+				tc.lookup.Status.SetDeployedVersion(tc.startDeployedVersion, false)
+				tc.lookup.Status.SetLatestVersion(tc.startLatestVersion, false)
+
 				metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
 					*tc.lookup.Status.ServiceID,
 					"",
@@ -429,16 +430,16 @@ func TestLookup_Track(t *testing.T) {
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			t.Log(string(out))
-			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion {
+			if tc.wantDeployedVersion != tc.lookup.Status.GetDeployedVersion() {
 				t.Errorf("expected DeployedVersion to be %q after query, not %q",
-					tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion)
+					tc.wantDeployedVersion, tc.lookup.Status.GetDeployedVersion())
 			}
 			if tc.wantLatestVersion == "" {
 				tc.wantLatestVersion = tc.wantDeployedVersion
 			}
-			if tc.wantLatestVersion != tc.lookup.Status.LatestVersion {
+			if tc.wantLatestVersion != tc.lookup.Status.GetLatestVersion() {
 				t.Errorf("expected LatestVersion to be %q after query, not %q",
-					tc.wantLatestVersion, tc.lookup.Status.LatestVersion)
+					tc.wantLatestVersion, tc.lookup.Status.GetLatestVersion())
 			}
 			if tc.wantAnnounces != len(*tc.lookup.Status.AnnounceChannel) {
 				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",

@@ -184,13 +184,12 @@ func TestURLCommandsFromStr(t *testing.T) {
 	}
 }
 
-func TestURLCommandSlice_Init(t *testing.T) {
-	// GIVEN URLCommandSlice and a JLog
-	var slice URLCommandSlice
+func TestLogInit(t *testing.T) {
+	// GIVEN a JLog
 	newJLog := util.NewJLog("WARN", false)
 
-	// WHEN Init is called with it
-	slice.Init(newJLog)
+	// WHEN LogInit is called with it
+	LogInit(newJLog)
 
 	// THEN the global JLog is set to its address
 	if jLog != newJLog {

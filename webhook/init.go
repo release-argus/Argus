@@ -27,9 +27,13 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init the Slice metrics and hand out the defaults/notifiers.
 func (w *Slice) Init(
-	log *util.JLog,
 	serviceStatus *svcstatus.Status,
 	mains *Slice,
 	defaults *WebHook,
@@ -37,7 +41,6 @@ func (w *Slice) Init(
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
 ) {
-	jLog = log
 	if w == nil || len(*w) == 0 {
 		return
 	}
@@ -53,9 +56,7 @@ func (w *Slice) Init(
 		(*w)[id].Failed = &serviceStatus.Fails.WebHook
 		(*w)[id].Init(
 			serviceStatus,
-			(*mains)[id],
-			defaults,
-			hardDefaults,
+			(*mains)[id], defaults, hardDefaults,
 			shoutrrrNotifiers,
 			parentInterval,
 		)
@@ -76,8 +77,10 @@ func (w *WebHook) Init(
 
 	// Give the matching main
 	w.Main = main
-	if main == nil && w.ServiceStatus != nil {
-		w.Main = &WebHook{}
+	if w.Main == nil {
+		if w.ServiceStatus != nil {
+			w.Main = &WebHook{}
+		}
 	} else if w.Type == w.Main.Type {
 		// Remove the type if it's the same as the main
 		w.Type = ""
@@ -275,7 +278,10 @@ func (w *WebHook) GetURL() string {
 		w.Main.URL,
 		w.Defaults.URL)
 	if w.ServiceStatus != nil && url != "" && strings.Contains(url, "{") {
-		url = strings.Clone(util.TemplateString(url, util.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion}))
+		url = strings.Clone(
+			util.TemplateString(
+				url,
+				util.ServiceInfo{LatestVersion: w.ServiceStatus.GetLatestVersion()}))
 	}
 	return url
 }

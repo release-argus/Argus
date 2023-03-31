@@ -122,9 +122,17 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
-			webhook := WebHook{ServiceStatus: &svcstatus.Status{ServiceID: &serviceID, LatestVersion: latestVersion},
+			webhook := WebHook{
+				ServiceStatus: &svcstatus.Status{
+					ServiceID: &serviceID},
 				Main:     &WebHook{},
 				Defaults: &WebHook{}}
+			url := "https://example.com"
+			webhook.ServiceStatus.Init(
+				0, 0, 0,
+				&serviceID,
+				&url)
+			webhook.ServiceStatus.SetLatestVersion(latestVersion, false)
 			webhook.CustomHeaders = tc.customHeaders
 			webhook.Main.CustomHeaders = tc.mainCustomHeaders
 			webhook.Defaults.CustomHeaders = tc.defaultCustomHeaders

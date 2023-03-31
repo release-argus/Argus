@@ -14,23 +14,24 @@
 
 //go:build unit || integration
 
-package testing
+package web
 
 import (
-	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/util"
+	"os"
+	"strings"
 )
 
-var jLog *util.JLog
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
+func writeYAML(path string, data string) {
+	data = strings.TrimPrefix(data, "\n")
+	os.WriteFile(path, []byte(data), 0644)
 }
 
-func testLogging() {
-	jLog = util.NewJLog("DEBUG", false)
-	config.LogInit(jLog)
+func testYAML_Argus(path string) {
+	data := `
+settings:
+  data:
+    database_file: test-web.db
+`
+
+	writeYAML(path, data)
 }

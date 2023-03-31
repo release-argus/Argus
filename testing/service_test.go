@@ -32,14 +32,12 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
-	jLog = util.NewJLog("INFO", false)
-	InitJLog(jLog)
+	testLogging()
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
@@ -142,6 +140,7 @@ func TestServiceTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			fmt.Println(name)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -163,7 +162,8 @@ func TestServiceTest(t *testing.T) {
 				defaults := config.Defaults{}
 				defaults.SetDefaults()
 				tc.slice[tc.flag].ID = tc.flag
-				tc.slice[tc.flag].Init(jLog, &service.Service{}, &defaults.Service,
+				tc.slice[tc.flag].Init(
+					&service.Service{}, &defaults.Service,
 					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
 					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*

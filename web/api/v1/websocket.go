@@ -25,8 +25,8 @@ import (
 )
 
 func (api *API) wsSendJSON(client *Client, msg api_type.WebSocketMessage, logFrom *util.LogFrom) {
-	client.lock.Lock()
-	defer client.lock.Unlock()
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
 	if err := client.conn.WriteJSON(msg); err != nil {
 		api.Log.Error(err, *logFrom, true)
 	}
@@ -83,7 +83,8 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
-		msg := fmt.Sprintf("%s release skip - %q", id, payload.ServiceData.Status.LatestVersion)
+		msg := fmt.Sprintf("%s release skip - %q",
+			id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		svc.HandleSkip(payload.ServiceData.Status.LatestVersion)
 		return
@@ -97,7 +98,7 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 	// Send the WebHook(s).
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
 		id,
-		svc.Status.LatestVersion,
+		svc.Status.GetLatestVersion(),
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,

@@ -27,23 +27,28 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func testStatus() Status {
+func testStatus() (status *Status) {
 	var (
 		announceChannel chan []byte         = make(chan []byte, 2)
 		saveChannel     chan bool           = make(chan bool, 5)
 		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 	)
-	return Status{
-		ServiceID:                stringPtr("test"),
-		ApprovedVersion:          "1.1.1",
-		LatestVersion:            "2.2.2",
-		LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
-		DeployedVersion:          "0.0.0",
-		DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
-		LastQueried:              "2002-02-02T00:00:00Z",
-		WebURL:                   stringPtr(""),
-		AnnounceChannel:          &announceChannel,
-		SaveChannel:              &saveChannel,
-		DatabaseChannel:          &databaseChannel,
+	status = &Status{
+		ServiceID:       stringPtr("test"),
+		WebURL:          stringPtr(""),
+		AnnounceChannel: &announceChannel,
+		SaveChannel:     &saveChannel,
+		DatabaseChannel: &databaseChannel,
 	}
+	status.Init(
+		0, 0, 0,
+		stringPtr("test-service"),
+		stringPtr("http://example.com"))
+	status.SetApprovedVersion("1.1.1")
+	status.SetLatestVersion("2.2.2", false)
+	status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
+	status.SetDeployedVersion("0.0.0", false)
+	status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
+	status.SetLastQueried("2002-02-02T00:00:00Z")
+	return status
 }

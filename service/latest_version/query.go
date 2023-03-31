@@ -41,11 +41,12 @@ func (l *Lookup) Query() (bool, error) {
 		return false, err
 	}
 
-	l.Status.SetLastQueried()
+	l.Status.SetLastQueried("")
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 
 	// If this version is different (new?).
-	if version != l.Status.LatestVersion {
+	latestVersion := l.Status.GetLatestVersion()
+	if version != latestVersion {
 		if wantSemanticVersioning {
 			// Check it's a valid semnatic version
 			newVersion, err := semver.NewVersion(version)
@@ -57,8 +58,8 @@ func (l *Lookup) Query() (bool, error) {
 			}
 
 			// Check for a progressive change in version.
-			if l.Status.LatestVersion != "" {
-				oldVersion, err := semver.NewVersion(l.Status.DeployedVersion)
+			if latestVersion != "" {
+				oldVersion, err := semver.NewVersion(l.Status.GetDeployedVersion())
 				// If the old version is not a semantic version, then we can't compare it.
 				// (if we switched to semantic versioning with non-semantic versions tracked)
 				if err == nil {
@@ -68,7 +69,7 @@ func (l *Lookup) Query() (bool, error) {
 					// return false (don't notify anything and stay on oldVersion)
 					if newVersion.LessThan(*oldVersion) {
 						err := fmt.Errorf("queried version %q is less than the deployed version %q",
-							version, l.Status.LatestVersion)
+							version, l.Status.GetLatestVersion())
 						jLog.Warn(err, logFrom, true)
 						return false, err
 					}
@@ -81,10 +82,10 @@ func (l *Lookup) Query() (bool, error) {
 		l.Status.RegexMissesVersion = 0
 
 		// First version found.
-		if l.Status.LatestVersion == "" {
-			l.Status.SetLatestVersion(version)
-			if l.Status.DeployedVersion == "" {
-				l.Status.SetDeployedVersion(version)
+		if l.Status.GetLatestVersion() == "" {
+			l.Status.SetLatestVersion(version, true)
+			if l.Status.GetDeployedVersion() == "" {
+				l.Status.SetDeployedVersion(version, true)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
 			jLog.Info(msg, logFrom, true)
@@ -96,7 +97,7 @@ func (l *Lookup) Query() (bool, error) {
 		}
 
 		// New version found.
-		l.Status.SetLatestVersion(version)
+		l.Status.SetLatestVersion(version, true)
 		msg := fmt.Sprintf("New Release - %q", version)
 		jLog.Info(msg, logFrom, true)
 		return true, nil
@@ -232,7 +233,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 		// Check all `Require` filters for this version
 		if err = l.Require.RegexCheckVersion(version, logFrom); err == nil {
 			// regexCheckContent if it's a newer version
-			if version != l.Status.LatestVersion {
+			if version != l.Status.GetLatestVersion() {
 				var body interface{}
 				if l.Type == "github" {
 					// GitHub service

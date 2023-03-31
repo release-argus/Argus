@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -38,7 +39,11 @@ func stringListPtr(val []string) *[]string {
 	return &val
 }
 
+var resetLock sync.Mutex
+
 func reset() {
+	resetLock.Lock()
+	defer resetLock.Unlock()
 	config = cfg.Config{}
 	configFile = stringPtr("")
 	configCheckFlag = boolPtr(false)
@@ -49,16 +54,15 @@ func reset() {
 
 func TestTheMain(t *testing.T) {
 	// GIVEN different Config's to test
+	jLog = *util.NewJLog("WARN", false)
 	tests := map[string]struct {
-		file               func(path string)
-		panicShouldContain *string
-		outputContains     *[]string
-		db                 string
+		file           func(path string)
+		outputContains *[]string
+		db             string
 	}{
 		"config with no services": {
-			file:               testYAML_NoServices,
-			db:                 "test-no_services.db",
-			panicShouldContain: stringPtr("No services to monitor"),
+			file: testYAML_NoServices,
+			db:   "test-no_services.db",
 			outputContains: stringListPtr([]string{
 				"Found 0 services to monitor",
 				"Listening on "})},
@@ -83,7 +87,6 @@ func TestTheMain(t *testing.T) {
 			defer os.Remove(file)
 			defer os.Remove(tc.db)
 			reset()
-			jLog = *util.NewJLog("WARN", false)
 			configFile = &file
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

@@ -53,15 +53,20 @@ func stringifyPointer[T comparable](ptr *T) string {
 
 func testLogging(level string, timestamps bool) {
 	jLog = util.NewJLog(level, timestamps)
-	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil)
-	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
-	svcForLog := service.Service{}
-	svcForLog.Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
+	service.LogInit(jLog)
 }
 
-func testConfig() config.Config {
+func testConfig(path string) (cfg *config.Config) {
+	testYAML_Argus(path)
+	cfg = &config.Config{}
+	cfg.Load(
+		path,
+		&map[string]bool{},
+		jLog)
+
+	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
+
+	// Settings.Web
 	port, err := getFreePort()
 	if err != nil {
 		panic(err)
@@ -71,19 +76,19 @@ func testConfig() config.Config {
 		listenPort  string = fmt.Sprint(port)
 		routePrefix string = "/"
 	)
-	webSettings := config.WebSettings{
+	cfg.Settings.Web = config.WebSettings{
 		ListenHost:  &listenHost,
 		ListenPort:  &listenPort,
 		RoutePrefix: &routePrefix,
 	}
-	var (
-		logLevel string = "WARN"
-	)
-	logSettings := config.LogSettings{
-		Level: &logLevel,
-	}
-	var defaults config.Defaults
-	defaults.SetDefaults()
+
+	// Settings.Log
+	cfg.Settings.Log.Level = stringPtr("DEBUG")
+
+	// Defaults
+	cfg.Defaults.SetDefaults()
+
+	// Service
 	svc := testService("test")
 	dvl := testDeployedVersion()
 	svc.DeployedVersionLookup = &dvl
@@ -96,36 +101,37 @@ func testConfig() config.Config {
 	notify := shoutrrr.Slice{
 		"test": &shoutrrr.Shoutrrr{
 			Options: map[string]string{
-				"message": "{{ service_id }} release",
-			},
+				"message": "{{ service_id }} release"},
 			Params:       map[string]string{},
 			URLFields:    map[string]string{},
 			Main:         &emptyNotify,
 			Defaults:     &emptyNotify,
-			HardDefaults: &emptyNotify,
-		},
+			HardDefaults: &emptyNotify},
 	}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
 	svc.Comment = "test service's comment"
+	cfg.Service = service.Slice{
+		svc.ID: svc,
+	}
+
+	// Notify
+	cfg.Notify = cfg.Defaults.Notify
+
+	// WebHook
 	whPass := testWebHook(false, "pass")
 	whFail := testWebHook(true, "pass")
-	return config.Config{
-		Settings: config.Settings{
-			Web: webSettings,
-			Log: logSettings,
-		},
-		Defaults: defaults,
-		WebHook: webhook.Slice{
-			whPass.ID: whPass,
-			whFail.ID: whFail,
-		},
-		Notify: defaults.Notify,
-		Service: service.Slice{
-			svc.ID: &svc,
-		},
-		Order: []string{svc.ID},
+	cfg.WebHook = webhook.Slice{
+		whPass.ID: whPass,
+		whFail.ID: whFail,
 	}
+
+	// Order
+	cfg.Order = []string{svc.ID}
+
+	// cfg.Init()
+
+	return
 }
 
 func getFreePort() (int, error) {
@@ -140,13 +146,13 @@ func getFreePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func testService(id string) service.Service {
+func testService(id string) (svc *service.Service) {
 	var (
 		sAnnounceChannel chan []byte         = make(chan []byte, 2)
 		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 		sSaveChannel     chan bool           = make(chan bool, 5)
 	)
-	svc := service.Service{
+	svc = &service.Service{
 		ID: id,
 		LatestVersion: latestver.Lookup{
 			URL:               "https://release-argus.io",
@@ -187,10 +193,21 @@ func testService(id string) service.Service {
 			SaveChannel:     &sSaveChannel,
 		},
 	}
-	svc.Status.Init(len(svc.Notify), len(svc.Command), len(svc.WebHook), &svc.ID, &svc.Dashboard.WebURL)
-	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
-	svc.CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
-	return svc
+	svc.Status.Init(
+		len(svc.Notify),
+		len(svc.Command), len(svc.WebHook),
+		&svc.ID,
+		&svc.Dashboard.WebURL)
+	svc.LatestVersion.Init(
+		&latestver.Lookup{}, &latestver.Lookup{},
+		&svc.Status,
+		&svc.Options)
+	svc.CommandController.Init(
+		&svc.Status,
+		&svc.Command,
+		nil,
+		nil)
+	return
 }
 
 func testCommand(failing bool) command.Command {
@@ -202,7 +219,11 @@ func testCommand(failing bool) command.Command {
 
 func testWebHook(failing bool, id string) *webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(util.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	slice.Init(
+		nil,
+		nil, nil, nil,
+		nil,
+		nil)
 
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)

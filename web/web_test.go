@@ -42,16 +42,18 @@ import (
 
 var router *mux.Router
 var port *string
-var cfg config.Config
+var cfg *config.Config
 
 func TestMain(m *testing.M) {
 	// GIVEN a valid config with a Service
-	cfg = testConfig()
-	jLog = util.NewJLog("WARN", false)
+	testLogging("DEBUG", true)
+	cfg = testConfig("TestMain.yml")
+	defer os.Remove(cfg.File)
+	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
 	port = cfg.Settings.Web.ListenPort
 
 	// WHEN the Router is fetched for this Config
-	router = newWebUI(&cfg)
+	router = newWebUI(cfg)
 	go http.ListenAndServe("localhost:"+*port, router)
 
 	// THEN Web UI is accessible for the tests
@@ -61,15 +63,18 @@ func TestMain(m *testing.M) {
 
 func TestMainWithRoutePrefix(t *testing.T) {
 	// GIVEN a valid config with a Service
-	config := testConfig()
-	*config.Settings.Web.RoutePrefix = "/test"
+	cfg := testConfig("TestMainWithRoutePrefix.yml")
+	defer os.Remove(cfg.File)
+	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
+	*cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
-	go Run(&config, util.NewJLog("WARN", false))
+	go Run(cfg, util.NewJLog("WARN", false))
 	time.Sleep(100 * time.Millisecond)
 
 	// THEN Web UI is accessible
-	url := fmt.Sprintf("http://localhost:%s%s/metrics", *config.Settings.Web.ListenPort, *config.Settings.Web.RoutePrefix)
+	url := fmt.Sprintf("http://localhost:%s%s/metrics",
+		*cfg.Settings.Web.ListenPort, *cfg.Settings.Web.RoutePrefix)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	client := &http.Client{}
 	resp, _ := client.Do(req)
@@ -463,7 +468,8 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				{"ls", "-h"},
 				{"false", "2"},
 				{"true"}},
-			approveCommandsIndividually: true},
+			approveCommandsIndividually: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -473,44 +479,71 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			var hadWebHookSlice webhook.Slice
 			var hadDVL deployedver.Lookup
 			var hadStatus svcstatus.Status
-			if cfg.Service[tc.serviceID] != nil {
-				cfg.Service[tc.serviceID].Options.Active = tc.active
-				hadStatus = cfg.Service[tc.serviceID].Status
-				cfg.Service[tc.serviceID].Status.Fails.Command = make([]*bool, len(tc.commands))
-				cfg.Service[tc.serviceID].Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
-				cfg.Service[tc.serviceID].Status.LatestVersion = tc.latestVersion
-				hadDVL = *cfg.Service[tc.serviceID].DeployedVersionLookup
-				if tc.removeDVL {
-					cfg.Service[tc.serviceID].DeployedVersionLookup = nil
+			svc := cfg.Service[tc.serviceID]
+			if svc != nil {
+				svc.Options.Active = tc.active
+				{ // Copy Status
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion())
+					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
+					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
+					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
+					hadStatus.SetLatestVersionTimestamp(svc.Status.GetLatestVersionTimestamp())
+					hadStatus.SetLastQueried(svc.Status.GetLastQueried())
 				}
-				hadCommandSlice = cfg.Service[tc.serviceID].Command
-				cfg.Service[tc.serviceID].Command = tc.commands
-				cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+				svc.Status.Fails.Command = make([]*bool, len(tc.commands))
+				svc.Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
+				svc.Status.SetLatestVersion(tc.latestVersion, false)
+				hadDVL = *svc.DeployedVersionLookup
+				if tc.removeDVL {
+					svc.DeployedVersionLookup = nil
+				}
+				hadCommandSlice = svc.Command
+				svc.Command = tc.commands
+				svc.CommandController.Init(
+					&svc.Status,
+					&svc.Command,
+					nil,
+					stringPtr("10m"))
 				if len(tc.commandFails) != 0 {
 					for i := range tc.commandFails {
-						(*cfg.Service[tc.serviceID].CommandController.Failed)[i] = tc.commandFails[i]
+						(*svc.CommandController.Failed)[i] = tc.commandFails[i]
 					}
 				}
-				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
+				hadWebHookSlice = svc.WebHook
 				if tc.webhooks != nil {
 					for i := range tc.webhooks {
-						tc.webhooks[i].ServiceStatus = &cfg.Service[tc.serviceID].Status
+						tc.webhooks[i].ServiceStatus = &svc.Status
 					}
 				}
-				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				svc.WebHook = tc.webhooks
+				svc.WebHook.Init(
+					&svc.Status,
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+					nil,
+					&svc.Options.Interval)
 				if len(tc.webhookFails) != 0 {
 					for key := range tc.webhookFails {
-						(*cfg.Service[tc.serviceID].WebHook[key].Failed)[key] = tc.webhookFails[key]
+						(*svc.WebHook[key].Failed)[key] = tc.webhookFails[key]
 					}
 				}
 				// revert Service
 				defer func() {
-					cfg.Service[tc.serviceID].Status = hadStatus
-					cfg.Service[tc.serviceID].DeployedVersionLookup = &hadDVL
-					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
-					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
+					{ // Status
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion())
+						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
+						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
+						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)
+						svc.Status.SetLatestVersionTimestamp(hadStatus.GetLatestVersionTimestamp())
+						svc.Status.SetLastQueried(hadStatus.GetLastQueried())
+					}
+					svc.DeployedVersionLookup = &hadDVL
+					svc.Command = hadCommandSlice
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+					svc.WebHook = hadWebHookSlice
 				}()
 			}
 			ws := connectToWebSocket(t)
@@ -520,11 +553,15 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			os.Stdout = w
 
 			// WHEN we send a message to the server (wsServiceInit)
-			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
-				Target: tc.target, ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
-			if cfg.Service[tc.serviceID] != nil {
+			msg := api_type.WebSocketMessage{
+				Version:     intPtr(1),
+				Page:        "APPROVALS",
+				Type:        "VERSION",
+				Target:      tc.target,
+				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
+			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
+					LatestVersion: svc.Status.GetLatestVersion(),
 				}
 			}
 			sends := 1
@@ -589,8 +626,9 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					output := string(out)
 					t.Log(output)
 					t.Log(time.Now())
-					t.Fatalf("expecting %d more messages but got %v",
+					t.Errorf("expecting %d more messages but got %v",
 						expecting, message)
+					return
 				}
 				messages[got] = *message
 				raw, _ := json.Marshal(*message)
@@ -622,9 +660,12 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			t.Log(output)
 			// Check version was skipped
 			if util.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
-				if tc.wantSkipMessage && messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+cfg.Service[tc.serviceID].Status.LatestVersion {
+				if tc.wantSkipMessage &&
+					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.GetLatestVersion() {
 					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
-						cfg.Service[tc.serviceID].Status.LatestVersion, cfg.Service[tc.serviceID].Status.ApprovedVersion, messages[0].ServiceData.Status.ApprovedVersion)
+						svc.Status.GetLatestVersion(),
+						svc.Status.GetApprovedVersion(),
+						messages[0].ServiceData.Status.ApprovedVersion)
 				}
 			} else {
 				// expecting = commands + webhooks that have not failed=false
@@ -679,16 +720,16 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					if !receivedForAnAction {
 						//  IF we're expecting a message about approvedVersion
 						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
-							if message.ServiceData.Status.ApprovedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+							if message.ServiceData.Status.ApprovedVersion != svc.Status.GetLatestVersion() {
 								t.Fatalf("expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-									message, message.ServiceData.Status.ApprovedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+									message, message.ServiceData.Status.ApprovedVersion, svc.Status.GetLatestVersion())
 							}
 							continue
 						}
 						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
-							if message.ServiceData.Status.DeployedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+							if message.ServiceData.Status.DeployedVersion != svc.Status.GetLatestVersion() {
 								t.Fatalf("expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-									message, message.ServiceData.Status.DeployedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+									message, message.ServiceData.Status.DeployedVersion, svc.Status.GetLatestVersion())
 							}
 							continue
 						}
@@ -765,24 +806,51 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			var hadStatus svcstatus.Status
 			ws := connectToWebSocket(t)
 			defer ws.Close()
-			if cfg.Service[tc.serviceID] != nil {
-				hadStatus = cfg.Service[tc.serviceID].Status
-				hadCommandSlice = cfg.Service[tc.serviceID].Command
-				cfg.Service[tc.serviceID].Command = tc.commands
-				if tc.commands == nil {
-					cfg.Service[tc.serviceID].CommandController = nil
-				} else {
-					cfg.Service[tc.serviceID].CommandController = &command.Controller{}
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+			svc := cfg.Service[tc.serviceID]
+			if svc != nil {
+				{ // Copy Status
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion())
+					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
+					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
+					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
+					hadStatus.SetLatestVersionTimestamp(svc.Status.GetLatestVersionTimestamp())
+					hadStatus.SetLastQueried(svc.Status.GetLastQueried())
 				}
-				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
-				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				hadCommandSlice = svc.Command
+				svc.Command = tc.commands
+				if tc.commands == nil {
+					svc.CommandController = nil
+				} else {
+					svc.CommandController = &command.Controller{}
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+				}
+				hadWebHookSlice = svc.WebHook
+				svc.WebHook = tc.webhooks
+				svc.WebHook.Init(
+					&svc.Status,
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+					nil,
+					&svc.Options.Interval)
 				defer func() {
-					cfg.Service[tc.serviceID].Status = hadStatus
-					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
-					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
+					{ // Status
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion())
+						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
+						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
+						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)
+						svc.Status.SetLatestVersionTimestamp(hadStatus.GetLatestVersionTimestamp())
+						svc.Status.SetLastQueried(hadStatus.GetLastQueried())
+					}
+					svc.Command = hadCommandSlice
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+					svc.WebHook = hadWebHookSlice
 				}()
 			}
 			stdout := os.Stdout
@@ -792,9 +860,9 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
 				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
-			if cfg.Service[tc.serviceID] != nil {
+			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
+					LatestVersion: svc.Status.GetLatestVersion(),
 				}
 			}
 			data, _ := json.Marshal(msg)
@@ -958,40 +1026,56 @@ func TestWebSocketConfigINIT(t *testing.T) {
 		"no Service WebHook": {
 			nilServiceWH: true},
 	}
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// backup changes
 			hadService := make(service.Slice, len(cfg.Service))
 			for i := range cfg.Service {
-				svc := *cfg.Service[i]
+				s := cfg.Service[i]
+				svc := service.Service{
+					ID:            s.ID,
+					Comment:       s.Comment,
+					Options:       s.Options,
+					LatestVersion: s.LatestVersion,
+					Dashboard:     s.Dashboard,
+					Status:        svcstatus.Status{},
+					Defaults:      s.Defaults,
+					HardDefaults:  s.HardDefaults,
+					Type:          s.Type,
+				}
 				hadService[i] = &svc
+				dvl := *cfg.Service[i].DeployedVersionLookup
+				hadService[i].DeployedVersionLookup = &dvl
 				if tc.nilServiceDVL {
-					dvl := *cfg.Service[i].DeployedVersionLookup
 					cfg.Service[i].DeployedVersionLookup = nil
-					hadService[i].DeployedVersionLookup = &dvl
 				}
+				urlc := cfg.Service[i].LatestVersion.URLCommands
+				hadService[i].LatestVersion.URLCommands = urlc
 				if tc.nilServiceURLC {
-					urlc := cfg.Service[i].LatestVersion.URLCommands
 					cfg.Service[i].LatestVersion.URLCommands = nil
-					hadService[i].LatestVersion.URLCommands = urlc
 				}
+				notify := cfg.Service[i].Notify
+				hadService[i].Notify = notify
 				if tc.nilServiceNotify {
-					notify := cfg.Service[i].Notify
 					cfg.Service[i].Notify = nil
-					hadService[i].Notify = notify
 				}
 				wh := cfg.Service[i].WebHook
 				hadService[i].WebHook = wh
 				if tc.nilServiceWH {
 					cfg.Service[i].WebHook = nil
 				}
+				command := cfg.Service[i].Command
+				hadService[i].Command = command
 				if tc.nilServiceC {
-					command := cfg.Service[i].Command
 					cfg.Service[i].Command = nil
-					hadService[i].Command = command
 					cfg.Service[i].CommandController = nil
 				} else {
-					cfg.Service[i].CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
+					cfg.Service[i].CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						nil)
 				}
 				// restore possible changes
 				defer func() {

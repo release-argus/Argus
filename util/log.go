@@ -182,6 +182,12 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level == 4 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+
+		// limit size of msgString to 10000 chars
+		if len(msgString) > 10000 {
+			msgString = msgString[:10000] + "..."
+		}
+
 		// DEBUG: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("DEBUG: %s\n", msgString)

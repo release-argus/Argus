@@ -35,11 +35,13 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 		input         Command
 		want          Command
 		serviceStatus *svcstatus.Status
+		latestVersion string
 	}{
 		"command with no templating and non-nil service status": {
 			input:         Command{"ls", "-lah"},
 			want:          Command{"ls", "-lah"},
-			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"}},
+			serviceStatus: &svcstatus.Status{},
+			latestVersion: "1.2.3"},
 		"command with no templating and nil service status": {
 			input: Command{"ls", "-lah"},
 			want:  Command{"ls", "-lah"}},
@@ -49,13 +51,17 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 		"command with templating and non-nil service status": {
 			input:         Command{"ls", "-lah", "{{ version }}"},
 			want:          Command{"ls", "-lah", "1.2.3"},
-			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"}},
+			serviceStatus: &svcstatus.Status{},
+			latestVersion: "1.2.3"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			if tc.latestVersion != "" {
+				tc.serviceStatus.SetLatestVersion(tc.latestVersion, false)
+			}
 
 			// WHEN ApplyTemplate is called on the Command
 			got := tc.input.ApplyTemplate(tc.serviceStatus)

@@ -197,11 +197,11 @@ func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver
 	return
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) (slice api_type.URLCommandSlice) {
+func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) *api_type.URLCommandSlice {
 	if commands == nil {
-		return
+		return nil
 	}
-	slice = make(api_type.URLCommandSlice, len(*commands))
+	slice := make(api_type.URLCommandSlice, len(*commands))
 	for index := range *commands {
 		slice[index] = api_type.URLCommand{
 			Type:  (*commands)[index].Type,
@@ -212,7 +212,7 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandS
 			New:   (*commands)[index].New,
 		}
 	}
-	return
+	return &slice
 }
 
 func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type.NotifySlice {
@@ -298,14 +298,13 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 		SemanticVersioning: service.Options.SemanticVersioning,
 	}
 
-	urlCommands := convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands)
 	apiService.LatestVersion = &api_type.LatestVersion{
 		Type:              service.LatestVersion.Type,
 		URL:               service.LatestVersion.URL,
 		AccessToken:       util.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 		AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 		UsePreRelease:     service.LatestVersion.UsePreRelease,
-		URLCommands:       &urlCommands,
+		URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands),
 	}
 	if service.LatestVersion.Require != nil {
 		var docker *api_type.RequireDockerCheck

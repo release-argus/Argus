@@ -95,12 +95,17 @@ func (l *Lookup) applyOverrides(
 			HardDefaults:       l.Options.HardDefaults,
 		},
 		Status: &svcstatus.Status{
-			ServiceID:     serviceID,
-			LatestVersion: l.Status.LatestVersion,
+			ServiceID: serviceID,
 		},
 		Defaults:     l.Defaults,
 		HardDefaults: l.HardDefaults,
 	}
+	lookup.Status.Init(
+		0, 0, 0,
+		serviceID,
+		nil,
+	)
+	lookup.Status.SetLatestVersion(l.Status.GetLatestVersion(), false)
 
 	if lookup.Type == "github" {
 		// Use the current ETag/releases
@@ -189,13 +194,14 @@ func (l *Lookup) Refresh(
 		url == nil &&
 		urlCommands == nil {
 		// Update the last queried time.
-		l.Status.LastQueried = lookup.Status.LastQueried
+		l.Status.SetLastQueried(lookup.Status.GetLastQueried())
 		// Update the latest version if it has changed.
-		if lookup.Status.LatestVersion != l.Status.LatestVersion {
-			l.Status.SetLatestVersion(lookup.Status.LatestVersion)
+		mewLatestVersion := lookup.Status.GetLatestVersion()
+		if mewLatestVersion != l.Status.GetLatestVersion() {
+			l.Status.SetLatestVersion(mewLatestVersion, true)
 			l.Status.AnnounceUpdate()
 		}
 	}
 
-	return lookup.Status.LatestVersion, nil
+	return lookup.Status.GetLatestVersion(), nil
 }

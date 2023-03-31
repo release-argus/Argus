@@ -26,7 +26,7 @@ import (
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
 func (s *Service) UpdatedVersion() {
-	if s.Status.DeployedVersion == s.Status.LatestVersion {
+	if s.Status.GetDeployedVersion() == s.Status.GetLatestVersion() {
 		return
 	}
 
@@ -46,7 +46,9 @@ func (s *Service) UpdatedVersion() {
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
-		if s.Command != nil || s.WebHook != nil {
+		//nolint:typecheck
+		if (s.Command != nil && len(s.Command) != 0) ||
+			s.WebHook != nil {
 			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
 			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
 			// They should have all ran/sent successfully at this point
@@ -54,7 +56,7 @@ func (s *Service) UpdatedVersion() {
 		}
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.LatestVersion)
+	s.Status.SetDeployedVersion(s.Status.GetLatestVersion(), true)
 
 	// Announce version change to WebSocket clients
 	s.Status.AnnounceUpdate()
@@ -64,8 +66,8 @@ func (s *Service) UpdatedVersion() {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
-	if s.Status.ApprovedVersion != s.Status.LatestVersion {
-		s.Status.ApprovedVersion = s.Status.LatestVersion
+	if s.Status.GetApprovedVersion() != s.Status.GetLatestVersion() {
+		s.Status.SetApprovedVersion(s.Status.GetLatestVersion())
 		s.Status.AnnounceApproved()
 	}
 }
@@ -74,9 +76,11 @@ func (s *Service) UpdateLatestApproved() {
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions() {
+	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
 		if s.Dashboard.GetAutoApprove() {
-			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
+			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
+				s.Status.GetLatestVersion())
 			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s)
@@ -205,6 +209,7 @@ func (s *Service) HandleCommand(command string) {
 // HandleWebHook will handle sending the WebHook for this service
 // to the WebHook with a matching ID.
 func (s *Service) HandleWebHook(webhookID string) {
+	//nolint:typecheck
 	if s.WebHook == nil || s.WebHook[webhookID] == nil {
 		return
 	}
@@ -223,11 +228,11 @@ func (s *Service) HandleWebHook(webhookID string) {
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
 func (s *Service) HandleSkip(version string) {
-	if version != s.Status.LatestVersion {
+	if version != s.Status.GetLatestVersion() {
 		return
 	}
 
-	s.Status.ApprovedVersion = "SKIP_" + version
+	s.Status.SetApprovedVersion("SKIP_" + version)
 	s.Status.AnnounceApproved()
 
 	// Update the database
@@ -236,7 +241,7 @@ func (s *Service) HandleSkip(version string) {
 			ServiceID: s.ID,
 			Cells: []dbtype.Cell{
 				{Column: "approved_version",
-					Value: s.Status.ApprovedVersion},
+					Value: s.Status.GetApprovedVersion()},
 			},
 		}
 	}

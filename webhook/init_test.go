@@ -25,7 +25,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -152,7 +151,11 @@ func TestWebHook_Init(t *testing.T) {
 	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
 
 	// WHEN Init is called on it
-	webhook.Init(&status, &main, &defaults, &hardDefaults, &notifiers, webhook.ParentInterval)
+	webhook.Init(
+		&status,
+		&main, &defaults, &hardDefaults,
+		&notifiers,
+		webhook.ParentInterval)
 	webhook.ID = "TestInit"
 
 	// THEN pointers to those vars are handed out to the WebHook
@@ -185,6 +188,7 @@ func TestWebHook_Init(t *testing.T) {
 
 func TestSlice_Init(t *testing.T) {
 	// GIVEN a Slice and vars for the Init
+	testLogging("DEBUG")
 	var notifiers shoutrrr.Slice
 	tests := map[string]struct {
 		slice        *Slice
@@ -231,7 +235,6 @@ func TestSlice_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := util.NewJLog("WARN", false)
 			status := svcstatus.Status{ServiceID: &name}
 			if !tc.nilSlice {
 				for i := range *tc.slice {
@@ -251,13 +254,13 @@ func TestSlice_Init(t *testing.T) {
 			parentInterval := "10s"
 
 			// WHEN Init is called on it
-			tc.slice.Init(log, &status, tc.mains, &tc.defaults, &tc.hardDefaults, &notifiers, &parentInterval)
+			tc.slice.Init(
+				&status,
+				tc.mains, &tc.defaults, &tc.hardDefaults,
+				&notifiers,
+				&parentInterval)
 
 			// THEN pointers to those vars are handed out to the WebHook
-			if jLog != log {
-				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
-					log, jLog)
-			}
 			if tc.nilSlice {
 				if tc.slice != nil {
 					t.Fatalf("expecting the Slice to be nil, not %v",
@@ -990,7 +993,7 @@ func TestWebHook_GetURL(t *testing.T) {
 			webhook.Main.URL = tc.urlMain
 			webhook.Defaults.URL = tc.urlDefault
 			webhook.HardDefaults.URL = tc.urlHardDefault
-			webhook.ServiceStatus.LatestVersion = tc.latestVersion
+			webhook.ServiceStatus.SetLatestVersion(tc.latestVersion, false)
 
 			// WHEN GetURL is called
 			got := webhook.GetURL()

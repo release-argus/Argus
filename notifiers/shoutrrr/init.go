@@ -20,15 +20,18 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init the Slice metrics amd hand out the defaults.
 func (s *Slice) Init(
-	log *util.JLog,
 	serviceStatus *svcstatus.Status,
 	mains *Slice,
 	defaults *Slice,
 	hardDefaults *Slice,
 ) {
-	jLog = log
 	if s == nil {
 		return
 	}

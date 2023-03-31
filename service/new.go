@@ -54,7 +54,7 @@ type oldSecretRefs struct {
 	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
 }
 
-// New will create/edit a Service.
+// New will create a new/edited Service.
 func New(
 	oldService *Service,
 	payload *io.ReadCloser,
@@ -102,15 +102,10 @@ func New(
 	newService.Status.DatabaseChannel = serviceHardDefaults.Status.DatabaseChannel
 	newService.Status.SaveChannel = serviceHardDefaults.Status.SaveChannel
 
-	newService.Init(jLog,
-		serviceDefaults,
-		serviceHardDefaults,
-		notifyGlobals,
-		notifyDefaults,
-		notifyHardDefaults,
-		webhookGlobals,
-		webhookDefaults,
-		webhookHardDefaults)
+	newService.Init(
+		serviceDefaults, serviceHardDefaults,
+		notifyGlobals, notifyDefaults, notifyHardDefaults,
+		webhookGlobals, webhookDefaults, webhookHardDefaults)
 	// Turn Active true into nil
 	if newService.Options.GetActive() {
 		newService.Options.Active = nil
@@ -237,6 +232,7 @@ func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map
 
 // giveSecretsWebHook from the oldWebHooks
 func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map[string]whSecretRef) {
+	//nolint:typecheck
 	if s.WebHook == nil || oldWebHooks == nil ||
 		secretRefs == nil || len(*secretRefs) == 0 {
 		return
@@ -287,6 +283,9 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 		}
 
 		// failed
+		fmt.Println("old", oldWebHook.String())
+		fmt.Println("new", s.WebHook[i].String())
+		fmt.Println("equal", oldWebHook.String() == s.WebHook[i].String())
 		if oldWebHook.Failed != nil && (*oldWebHook.Failed)[oldWebHook.ID] != nil &&
 			oldWebHook.String() == s.WebHook[i].String() {
 			failed := *(*oldWebHook.Failed)[oldWebHook.ID]
@@ -304,6 +303,22 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 		return
 	}
 
+	// First as SetDeployedVersion will call resetFails
+	// Keep LatestVersion if the LatestVersion lookup is unchanged
+	if s.LatestVersion.IsEqual(&oldService.LatestVersion) &&
+		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		s.Status.SetApprovedVersion(oldService.Status.GetApprovedVersion())
+		s.Status.SetLatestVersion(oldService.Status.GetLatestVersion(), false)
+		s.Status.SetLatestVersionTimestamp(oldService.Status.GetLatestVersionTimestamp())
+		s.Status.SetLastQueried(oldService.Status.GetLastQueried())
+	}
+	// Keep DeployedVersion if the DeployedVersionLookup is unchanged
+	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
+		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		s.Status.SetDeployedVersion(oldService.Status.GetDeployedVersion(), false)
+		s.Status.SetDeployedVersionTimestamp(oldService.Status.GetDeployedVersionTimestamp())
+	}
+
 	// Latest Version
 	s.giveSecretsLatestVersion(&oldService.LatestVersion)
 	// Deployed Version
@@ -314,21 +329,6 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	s.giveSecretsWebHook(&oldService.WebHook, &secretRefs.WebHook)
 	// Command
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
-
-	// Keep LatestVersion if the LatestVersion lookup is unchanged
-	if s.LatestVersion.IsEqual(&oldService.LatestVersion) &&
-		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-		s.Status.ApprovedVersion = oldService.Status.ApprovedVersion
-		s.Status.LatestVersion = oldService.Status.LatestVersion
-		s.Status.LatestVersionTimestamp = oldService.Status.LatestVersionTimestamp
-		s.Status.LastQueried = oldService.Status.LastQueried
-	}
-	// Keep DeployedVersion if the DeployedVersionLookup is unchanged
-	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
-		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-		s.Status.DeployedVersion = oldService.Status.DeployedVersion
-		s.Status.DeployedVersionTimestamp = oldService.Status.DeployedVersionTimestamp
-	}
 }
 
 // CheckFetches will check that, if set, the LatestVersion and DeployedVersion can be fetched
@@ -338,8 +338,8 @@ func (s *Service) CheckFetches() (err error) {
 		return
 	}
 	// All versions carried over from old service
-	if (s.Status.LatestVersion != "" && s.Status.LastQueried != "") &&
-		(s.DeployedVersionLookup == nil || s.Status.DeployedVersion != "") {
+	if (s.Status.GetLatestVersion() != "" && s.Status.GetLastQueried() != "") &&
+		(s.DeployedVersionLookup == nil || s.Status.GetDeployedVersion() != "") {
 		return
 	}
 
@@ -357,15 +357,15 @@ func (s *Service) CheckFetches() (err error) {
 	// Fetch latest version
 	{
 		// Erase DeployedVersion so that 'require' is checked
-		deployedVersion := s.Status.DeployedVersion
-		s.Status.DeployedVersion = ""
+		deployedVersion := s.Status.GetDeployedVersion()
+		s.Status.SetDeployedVersion("", false)
 
 		_, err = s.LatestVersion.Query()
 		if err != nil {
 			err = fmt.Errorf("latest_version - %w", err)
 			return
 		}
-		s.Status.DeployedVersion = deployedVersion
+		s.Status.SetDeployedVersion(deployedVersion, false)
 	}
 
 	// Fetch deployed version
@@ -376,7 +376,7 @@ func (s *Service) CheckFetches() (err error) {
 			err = fmt.Errorf("deployed_version - %w", err)
 			return
 		}
-		s.Status.SetDeployedVersion(version)
+		s.Status.SetDeployedVersion(version, false)
 	}
 
 	return

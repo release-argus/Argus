@@ -965,17 +965,15 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		newService := &Service{Notify: tc.notify}
+		// Give empty defaults and hardDefaults to the NotifySlice
+		newService.Notify.Init(
+			&svcstatus.Status{ServiceID: &name},
+			&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+		)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			newService := &Service{Notify: tc.notify}
-			// Give empty defaults and hardDefaults to the NotifySlice
-			newService.Notify.Init(
-				jLog,
-				&svcstatus.Status{ServiceID: &name},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-			)
 
 			// WHEN we call giveSecretsNotify
 			newService.giveSecretsNotify(tc.otherNotify, tc.secretRefs)
@@ -1354,13 +1352,21 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 func TestService_GiveSecrets(t *testing.T) {
 	// GIVEN a Service that may have secrets in it referencing those in another Service
 	tests := map[string]struct {
-		service    *Service
-		oldService *Service
-		secretRefs oldSecretRefs
-		expected   *Service
+		svc                              *Service
+		oldService                       *Service
+		oldLatestVersion                 string
+		expectedLatestVersion            string
+		oldLatestVersionTimestamp        string
+		expectedLatestVersionTimestamp   string
+		oldDeployedVersion               string
+		expectedDeployedVersion          string
+		oldDeployedVersionTimestamp      string
+		expectedDeployedVersionTimestamp string
+		secretRefs                       oldSecretRefs
+		expected                         *Service
 	}{
 		"no secrets": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					AccessToken: stringPtr("something")},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -1426,13 +1432,13 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{},
 		},
 		"minimal CREATE": {
-			service:    &Service{},
+			svc:        &Service{},
 			oldService: nil,
 			expected:   &Service{},
 			secretRefs: oldSecretRefs{},
 		},
 		"no oldService (CREATE)": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					AccessToken: stringPtr("<secret>")},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -1478,7 +1484,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{},
 		},
 		"no secretRefs": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					AccessToken: stringPtr("<secret>")},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -1546,7 +1552,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{},
 		},
 		"matching secretRefs": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					AccessToken: stringPtr("somethingelse")},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -1628,7 +1634,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 		},
 		"unchanged LatestVersion.URL retains Status.LatestVersion": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "URL",
 					URL:  "https://example.com",
@@ -1639,50 +1645,40 @@ func TestService_GiveSecrets(t *testing.T) {
 					Type: "URL",
 					URL:  "https://example.com",
 				},
-				Status: svcstatus.Status{
-					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: time.Now().Format(time.RFC3339),
-				},
 			},
+			oldLatestVersion:               "1.2.3",
+			expectedLatestVersion:          "1.2.3",
+			oldLatestVersionTimestamp:      time.Now().Format(time.RFC3339),
+			expectedLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			expected: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "URL",
-					URL:  "https://example.com",
-				},
-				Status: svcstatus.Status{
-					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: time.Now().Format(time.RFC3339),
-				},
+					URL:  "https://example.com"},
 			},
 			secretRefs: oldSecretRefs{},
 		},
 		"changed LatestVersion.URL loses Status.LatestVersion": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "URL",
-					URL:  "https://example.com",
-				},
+					URL:  "https://example.com"},
 			},
 			oldService: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "URL",
-					URL:  "https://example.com",
-				},
-				Status: svcstatus.Status{
-					LatestVersion:          "1.2.3",
-					LatestVersionTimestamp: time.Now().Format(time.RFC3339),
-				},
+					URL:  "https://example.com"},
 			},
+			oldLatestVersion:          "1.2.3",
+			oldLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			expected: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "URL",
-					URL:  "https://example.com",
-				},
+					URL:  "https://example.com"},
 			},
 			secretRefs: oldSecretRefs{},
 		},
 		"unchanged DeployedVersion.URL retains Status.DeployedVersion": {
-			service: &Service{
+			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com",
 				},
@@ -1691,24 +1687,20 @@ func TestService_GiveSecrets(t *testing.T) {
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com",
 				},
-				Status: svcstatus.Status{
-					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: time.Now().Format(time.RFC3339),
-				},
 			},
+			oldDeployedVersion:               "1.2.3",
+			expectedDeployedVersion:          "1.2.3",
+			oldDeployedVersionTimestamp:      time.Now().Format(time.RFC3339),
+			expectedDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			expected: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com",
-				},
-				Status: svcstatus.Status{
-					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 				},
 			},
 			secretRefs: oldSecretRefs{},
 		},
 		"changed DeployedVersion.URL loses Status.DeployedVersion": {
-			service: &Service{
+			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com",
 				},
@@ -1716,18 +1708,17 @@ func TestService_GiveSecrets(t *testing.T) {
 			oldService: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com/somewhere-else"},
-				Status: svcstatus.Status{
-					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: time.Now().Format(time.RFC3339)},
 			},
+			oldDeployedVersion:          "1.2.3",
+			oldDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			expected: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://example.com"},
 			},
 			secretRefs: oldSecretRefs{},
 		},
-		"unchanged WebHook keeps Failed": {
-			service: &Service{
+		"unchanged WebHook retains Failed": {
+			svc: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						URL:    "http://example.com",
@@ -1750,7 +1741,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
 		},
 		"changed WebHook loses Failed": {
-			service: &Service{
+			svc: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						URL:    "http://example.com/other",
@@ -1771,8 +1762,8 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{
 				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
 		},
-		"unchanged Command keeps Failed": {
-			service: &Service{
+		"unchanged Command retains Failed": {
+			svc: &Service{
 				Command: command.Slice{
 					{"ls", "-la"}}},
 			oldService: &Service{
@@ -1790,7 +1781,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			secretRefs: oldSecretRefs{},
 		},
 		"changed Command loses Failed": {
-			service: &Service{
+			svc: &Service{
 				Command: command.Slice{
 					{"ls", "-lah"}}},
 			oldService: &Service{
@@ -1808,24 +1799,15 @@ func TestService_GiveSecrets(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			tc.service.Init(
-				jLog,
-				&Service{},
-				&Service{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&webhook.Slice{},
-				&webhook.WebHook{},
-				&webhook.WebHook{},
+			tc.svc.Init(
+				&Service{}, &Service{},
+				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
 			)
-			if tc.oldService != nil && tc.oldService.Command != nil {
-				tc.oldService.CommandController.Command = &tc.oldService.Command
-				tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
-			}
-			// preserve fails that'd be lost in the Init
+			// Preserve fails that'd be lost in the Init
 			var webhookFails map[string]*map[string]*bool
 			if tc.expected.WebHook != nil {
 				webhookFails = make(map[string]*map[string]*bool, len(tc.expected.WebHook))
@@ -1834,27 +1816,26 @@ func TestService_GiveSecrets(t *testing.T) {
 				}
 			}
 			tc.expected.Init(
-				jLog,
-				&Service{},
-				&Service{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&webhook.Slice{},
-				&webhook.WebHook{},
-				&webhook.WebHook{},
+				&Service{}, &Service{},
+				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
 			)
+			// Restore the fails lost
 			if tc.expected.WebHook != nil {
 				for name, wh := range tc.expected.WebHook {
 					wh.Failed = webhookFails[name]
 				}
 			}
+			if tc.oldService != nil && tc.oldService.Command != nil {
+				tc.oldService.CommandController.Command = &tc.oldService.Command
+				tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
+			}
 
 			// WHEN we call giveSecrets
-			tc.service.giveSecrets(tc.oldService, tc.secretRefs)
+			tc.svc.giveSecrets(tc.oldService, tc.secretRefs)
 
 			// THEN we should get a Service with the secrets from the old Service
-			gotService := tc.service
+			gotService := tc.svc
 			if gotService.String() != tc.expected.String() {
 				t.Errorf("Want:\n%v\n\nGot:\n%v",
 					tc.expected, gotService)
@@ -1925,16 +1906,16 @@ func TestNew(t *testing.T) {
 		oldService *Service
 		payload    string
 
-		serviceDefaults     Service
-		serviceHardDefaults Service
+		serviceDefaults     *Service
+		serviceHardDefaults *Service
 
-		notifyGlobals      shoutrrr.Slice
-		notifyDefaults     shoutrrr.Slice
-		notifyHardDefaults shoutrrr.Slice
+		notifyGlobals      *shoutrrr.Slice
+		notifyDefaults     *shoutrrr.Slice
+		notifyHardDefaults *shoutrrr.Slice
 
-		webhookGlobals      webhook.Slice
-		webhookDefaults     webhook.WebHook
-		webhookHardDefaults webhook.WebHook
+		webhookGlobals      *webhook.Slice
+		webhookDefaults     *webhook.WebHook
+		webhookHardDefaults *webhook.WebHook
 
 		want     *Service
 		errRegex string
@@ -2411,25 +2392,36 @@ func TestNew(t *testing.T) {
 			// Convert the string payload to a ReadCloser
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := ioutil.NopCloser(reader)
+			if tc.serviceHardDefaults == nil {
+				tc.serviceHardDefaults = &Service{}
+				tc.serviceHardDefaults.Status.Init(
+					0, 0, 0,
+					stringPtr("serviceID"),
+					stringPtr("https://example.com"),
+				)
+			}
+			if tc.serviceDefaults == nil {
+				tc.serviceDefaults = &Service{}
+			}
 			if tc.notifyDefaults == nil {
-				tc.notifyDefaults = shoutrrr.Slice{}
+				tc.notifyDefaults = &shoutrrr.Slice{}
 			}
 			if tc.notifyHardDefaults == nil {
-				tc.notifyHardDefaults = shoutrrr.Slice{}
+				tc.notifyHardDefaults = &shoutrrr.Slice{}
 			}
 
 			// WHEN we call New
 			got, err := New(
 				tc.oldService,
 				&payload,
-				&tc.serviceDefaults,
-				&tc.serviceHardDefaults,
-				&tc.notifyGlobals,
-				&tc.notifyDefaults,
-				&tc.notifyHardDefaults,
-				&tc.webhookGlobals,
-				&tc.webhookDefaults,
-				&tc.webhookHardDefaults,
+				tc.serviceDefaults,
+				tc.serviceHardDefaults,
+				tc.notifyGlobals,
+				tc.notifyDefaults,
+				tc.notifyHardDefaults,
+				tc.webhookGlobals,
+				tc.webhookDefaults,
+				tc.webhookHardDefaults,
 				&util.LogFrom{Primary: name})
 
 			// THEN we get an error if the payload is invalid
@@ -2457,111 +2449,97 @@ func TestNew(t *testing.T) {
 }
 
 func TestService_CheckFetches(t *testing.T) {
-	testLogging()
 	// GIVEN a Service
+	testLogging()
+	testLV := testLatestVersionLookupURL(false)
+	testLV.Query()
+	testDVL := testDeployedVersionLookup(false)
+	v, _ := testDVL.Query(&util.LogFrom{})
+	testDVL.Status.SetDeployedVersion(v, false)
 	tests := map[string]struct {
-		service             *Service
-		wantLatestVersion   string
-		wantDeployedVersion string
-		errRegex            string
+		svc                  *Service
+		startLatestVersion   string
+		wantLatestVersion    string
+		startDeployedVersion string
+		wantDeployedVersion  string
+		errRegex             string
 	}{
 		"Already have LatestVersion, nil DeployedVersionLookup": {
-			service: &Service{
-				LatestVersion:         testLatestVersionLookupURL(true),
-				DeployedVersionLookup: nil,
-				Status: svcstatus.Status{
-					LatestVersion:   "foo",
-					DeployedVersion: "bar"}},
-			wantLatestVersion:   "foo",
-			wantDeployedVersion: "bar",
-			errRegex:            "^$",
+			svc: &Service{
+				LatestVersion:         testLatestVersionLookupURL(false),
+				DeployedVersionLookup: nil},
+			startLatestVersion:   "foo",
+			wantLatestVersion:    testLV.Status.GetLatestVersion(),
+			startDeployedVersion: "bar",
+			wantDeployedVersion:  "bar",
+			errRegex:             "^$",
 		},
 		"Already have LatestVersion and DeployedVersionLookup": {
-			service: &Service{
-				LatestVersion:         testLatestVersionLookupURL(true),
-				DeployedVersionLookup: testDeployedVersionLookup(true),
-				Status: svcstatus.Status{
-					LatestVersion:   "foo",
-					DeployedVersion: "bar"}},
-			wantLatestVersion:   "foo",
-			wantDeployedVersion: "bar",
-			errRegex:            "^$",
+			svc: &Service{
+				LatestVersion:         testLatestVersionLookupURL(false),
+				DeployedVersionLookup: testDeployedVersionLookup(false)},
+			startLatestVersion:   "foo",
+			wantLatestVersion:    testLV.Status.GetLatestVersion(),
+			wantDeployedVersion:  testDVL.Status.GetDeployedVersion(),
+			startDeployedVersion: "bar",
+			errRegex:             "^$",
 		},
 		"latest_version query fails": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion:         testLatestVersionLookupURL(true),
-				DeployedVersionLookup: testDeployedVersionLookup(true),
-				Status: svcstatus.Status{
-					LatestVersion:   "",
-					DeployedVersion: ""}},
-			wantLatestVersion:   "",
-			wantDeployedVersion: "",
-			errRegex:            `latest_version - x509 \(certificate invalid\)`,
+				DeployedVersionLookup: testDeployedVersionLookup(false)},
+			errRegex: `latest_version - x509 \(certificate invalid\)`,
 		},
 		"deployed_version query fails": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion:         testLatestVersionLookupURL(false),
-				DeployedVersionLookup: testDeployedVersionLookup(true),
-				Status: svcstatus.Status{
-					LatestVersion:   "",
-					DeployedVersion: ""}},
-			wantLatestVersion:   "1.2.2",
-			wantDeployedVersion: "",
-			errRegex:            `deployed_version - x509 \(certificate invalid\)`,
+				DeployedVersionLookup: testDeployedVersionLookup(true)},
+			wantLatestVersion: "1.2.2",
+			errRegex:          `deployed_version - x509 \(certificate invalid\)`,
 		},
 		"both queried": {
-			service: &Service{
+			svc: &Service{
 				LatestVersion:         testLatestVersionLookupURL(false),
-				DeployedVersionLookup: testDeployedVersionLookup(false),
-				Status: svcstatus.Status{
-					LatestVersion:   "",
-					DeployedVersion: ""}},
+				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			wantLatestVersion:   "1.2.2",
 			wantDeployedVersion: "1.2.3",
 			errRegex:            "^$",
 		},
 		"inactive queries neither": {
-			service: &Service{
+			svc: &Service{
 				Options: opt.Options{
 					Active: boolPtr(false)},
 				LatestVersion:         testLatestVersionLookupURL(false),
-				DeployedVersionLookup: testDeployedVersionLookup(false),
-				Status: svcstatus.Status{
-					LatestVersion:   "",
-					DeployedVersion: ""}},
-			wantLatestVersion:   "",
-			wantDeployedVersion: "",
-			errRegex:            "^$",
+				DeployedVersionLookup: testDeployedVersionLookup(false)},
+			errRegex: "^$",
 		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		tc.svc.Init(
+			&Service{
+				LatestVersion:         latestver.Lookup{},
+				DeployedVersionLookup: &deployedver.Lookup{},
+				Options:               opt.Options{}},
+			&Service{
+				LatestVersion:         latestver.Lookup{},
+				DeployedVersionLookup: &deployedver.Lookup{},
+				Options: opt.Options{
+					SemanticVersioning: boolPtr(true)}},
+			&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+			&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+		)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			tc.service.Init(
-				jLog,
-				&Service{
-					LatestVersion:         latestver.Lookup{},
-					DeployedVersionLookup: &deployedver.Lookup{},
-					Options:               opt.Options{}},
-				&Service{
-					LatestVersion:         latestver.Lookup{},
-					DeployedVersionLookup: &deployedver.Lookup{},
-					Options: opt.Options{
-						SemanticVersioning: boolPtr(true)}},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&shoutrrr.Slice{},
-				&webhook.Slice{},
-				&webhook.WebHook{},
-				&webhook.WebHook{},
-			)
 			announceChannel := make(chan []byte, 5)
-			tc.service.Status.AnnounceChannel = &announceChannel
+			tc.svc.Status.AnnounceChannel = &announceChannel
+			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, false)
+			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, false)
 
 			// WHEN we call CheckFetches
-			err := tc.service.CheckFetches()
+			err := tc.svc.CheckFetches()
 
 			// THEN we get the err we expect
 			e := util.ErrorToString(err)
@@ -2572,18 +2550,18 @@ func TestService_CheckFetches(t *testing.T) {
 					tc.errRegex, e)
 			}
 			// AND we get the expected LatestVersion
-			if tc.service.Status.LatestVersion != tc.wantLatestVersion {
-				t.Errorf("LatestVersion\nWant: %q\nGot: %q",
-					tc.wantLatestVersion, tc.service.Status.LatestVersion)
+			if tc.svc.Status.GetLatestVersion() != tc.wantLatestVersion {
+				t.Errorf("LatestVersion\nWant: %q, got: %q",
+					tc.wantLatestVersion, tc.svc.Status.GetLatestVersion())
 			}
 			// AND we get the expected DeployedVersion
-			if tc.service.Status.DeployedVersion != tc.wantDeployedVersion {
-				t.Errorf("DeployedVersion\nWant: %q\nGot: %q",
-					tc.wantDeployedVersion, tc.service.Status.DeployedVersion)
+			if tc.svc.Status.GetDeployedVersion() != tc.wantDeployedVersion {
+				t.Errorf("DeployedVersion\nWant: %q, got: %q",
+					tc.wantDeployedVersion, tc.svc.Status.GetDeployedVersion())
 			}
-			if len(*tc.service.Status.AnnounceChannel) != 0 {
+			if len(*tc.svc.Status.AnnounceChannel) != 0 {
 				t.Errorf("AnnounceChannel should be empty, got %d",
-					len(*tc.service.Status.AnnounceChannel))
+					len(*tc.svc.Status.AnnounceChannel))
 			}
 		})
 	}

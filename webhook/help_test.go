@@ -48,8 +48,7 @@ func stringifyPointer[T comparable](ptr *T) string {
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
 	jLog.Testing = true
-	var shoutrrrLogs *shoutrrr.Slice
-	shoutrrrLogs.Init(jLog, nil, nil, nil, nil)
+	shoutrrr.LogInit(jLog)
 }
 
 func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeaders bool) *WebHook {
@@ -68,14 +67,19 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if forService {
 		webhook.ID = "test"
 		webhook.ParentInterval = stringPtr("12m")
-		webhook.ServiceStatus = &svcstatus.Status{
-			ServiceID: stringPtr("testServiceID")}
+		webhook.ServiceStatus = &svcstatus.Status{}
 		webhook.ServiceStatus.Fails.WebHook = make(map[string]*bool, 1)
 		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 		webhook.Main = &WebHook{}
 		webhook.Defaults = &WebHook{}
 		webhook.HardDefaults = &WebHook{}
 	}
+	serviceName := "testServiceID"
+	webURL := "https://example.com"
+	webhook.ServiceStatus.Init(
+		0, 1, 0,
+		&serviceName,
+		&webURL)
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
 	}

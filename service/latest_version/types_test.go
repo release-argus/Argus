@@ -54,9 +54,6 @@ func TestLookup_String(t *testing.T) {
 				GitHubData: &GitHubData{
 					ETag: "etag",
 				},
-				Status: &svcstatus.Status{
-					ApprovedVersion: "1.2.3",
-				},
 				Defaults: &Lookup{
 					Type: "gitlab",
 				},
@@ -181,8 +178,6 @@ func TestLookup_IsEqual(t *testing.T) {
 					SemanticVersioning: boolPtr(true)},
 				GitHubData: &GitHubData{
 					ETag: "etag"},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -198,8 +193,6 @@ func TestLookup_IsEqual(t *testing.T) {
 					SemanticVersioning: boolPtr(true)},
 				GitHubData: &GitHubData{
 					ETag: "etag"},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -218,8 +211,6 @@ func TestLookup_IsEqual(t *testing.T) {
 					SemanticVersioning: boolPtr(true)},
 				GitHubData: &GitHubData{
 					ETag: "etag"},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -235,8 +226,6 @@ func TestLookup_IsEqual(t *testing.T) {
 					SemanticVersioning: boolPtr(true)},
 				GitHubData: &GitHubData{
 					ETag: "etag"},
-				Status: &svcstatus.Status{
-					LatestVersion: "1.2.3"},
 				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
 			},
@@ -254,6 +243,15 @@ func TestLookup_IsEqual(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			// Set Status vars just to ensure they're not printed
+			if tc.a != nil {
+				tc.a.Status = &svcstatus.Status{}
+				tc.a.Status.Init(
+					0, 0, 0,
+					&name,
+					stringPtr("http://example.com"))
+				tc.a.Status.SetLatestVersion("foo", false)
+			}
 
 			// WHEN the two Lookups are compared
 			got := tc.a.IsEqual(tc.b)

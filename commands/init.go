@@ -25,17 +25,18 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init the Command Controller.
 func (c *Controller) Init(
-	log *util.JLog,
 	serviceStatus *svcstatus.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
 ) {
-	if log != nil {
-		jLog = log
-	}
 	if c == nil || len(*command) == 0 {
 		return
 	}

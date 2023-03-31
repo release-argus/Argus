@@ -46,26 +46,27 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.ApprovedVersion = tc.startApprovedVersion
-			service.Status.LatestVersion = tc.latestVersion
+			svc.Status.SetApprovedVersion(tc.startApprovedVersion)
+			svc.Status.SetLatestVersion(tc.latestVersion, false)
 
 			// WHEN UpdateLatestApproved is called on it
-			want := service.Status.LatestVersion
-			service.UpdateLatestApproved()
+			want := svc.Status.GetLatestVersion()
+			svc.UpdateLatestApproved()
 
 			// THEN ApprovedVersion becomes LatestVersion
-			got := service.Status.ApprovedVersion
+			got := svc.Status.GetApprovedVersion()
 			if got != want {
 				t.Errorf("LatestVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 		})
 	}
@@ -199,37 +200,38 @@ func TestService_UpdatedVersion(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Command = tc.commands
-			service.WebHook = tc.webhooks
-			service.DeployedVersionLookup = tc.deployedVersion
-			service.Status.Fails = tc.fails
+			svc.Command = tc.commands
+			svc.WebHook = tc.webhooks
+			svc.DeployedVersionLookup = tc.deployedVersion
+			svc.Status.Fails = tc.fails
 			if tc.latestIsDeployed {
-				service.Status.DeployedVersion = service.Status.LatestVersion
+				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
 
 			// WHEN UpdatedVersion is called on it
-			want := service.Status.LatestVersion
-			service.UpdatedVersion()
+			want := svc.Status.GetLatestVersion()
+			svc.UpdatedVersion()
 
 			// THEN ApprovedVersion becomes LatestVersion if there's a dvl and commands/webhooks
-			got := service.Status.ApprovedVersion
+			got := svc.Status.GetApprovedVersion()
 			if (tc.approvedBecomesLatest && got != want) || (!tc.approvedBecomesLatest && got == want) {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN DeployedVersion becomes LatestVersion if there's no dvl
-			got = service.Status.DeployedVersion
+			got = svc.Status.GetDeployedVersion()
 			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 		})
 	}
@@ -289,23 +291,35 @@ func TestService_HandleUpdateActions(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+		svc.Command = tc.commands
+		svc.WebHook = tc.webhooks
+		svc.Status.Init(
+			len(svc.Notify), len(svc.Command), len(svc.WebHook),
+			&svc.ID,
+			&svc.Dashboard.WebURL)
+		if len(tc.commands) != 0 {
+			svc.CommandController = &command.Controller{}
+		}
+		svc.CommandController.Init(
+			&svc.Status,
+			&svc.Command,
+			nil,
+			&svc.Options.Interval)
+		svc.WebHook.Init(
+			&svc.Status,
+			&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+			nil,
+			&svc.Options.Interval)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.Init(len(service.Notify), len(tc.commands), len(tc.webhooks), &service.ID, &service.Dashboard.WebURL)
-			service.Command = tc.commands
-			if len(tc.commands) != 0 {
-				service.CommandController = &command.Controller{}
-			}
-			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
-			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
-			service.Dashboard.AutoApprove = &tc.autoApprove
-			service.DeployedVersionLookup = nil
+			svc.Dashboard.AutoApprove = &tc.autoApprove
+			svc.DeployedVersionLookup = nil
 
 			// WHEN HandleUpdateActions is called on it
-			want := service.Status.LatestVersion
-			service.HandleUpdateActions()
+			want := svc.Status.GetLatestVersion()
+			svc.HandleUpdateActions()
 			// wait until all commands/webhooks have run
 			if tc.deployedBecomesLatest {
 				time.Sleep(2 * time.Second)
@@ -314,19 +328,19 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			for i := 1; i < 500; i++ {
 				actionsRan = true
 				time.Sleep(10 * time.Millisecond)
-				if service.Command != nil {
-					for j := range service.Command {
-						if (tc.deployedBecomesLatest && service.Status.Fails.Command[j] != nil) ||
-							(!tc.deployedBecomesLatest && service.Status.Fails.Command[j] == nil) {
+				if svc.Command != nil {
+					for j := range svc.Command {
+						if (tc.deployedBecomesLatest && svc.Status.Fails.Command[j] != nil) ||
+							(!tc.deployedBecomesLatest && svc.Status.Fails.Command[j] == nil) {
 							actionsRan = false
 							break
 						}
 					}
 				}
-				if service.WebHook != nil {
-					for j := range service.WebHook {
-						if (tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] != nil) ||
-							(!tc.deployedBecomesLatest && service.Status.Fails.WebHook[j] == nil) {
+				if svc.WebHook != nil {
+					for j := range svc.WebHook {
+						if (tc.deployedBecomesLatest && svc.Status.Fails.WebHook[j] != nil) ||
+							(!tc.deployedBecomesLatest && svc.Status.Fails.WebHook[j] == nil) {
 							actionsRan = false
 							break
 						}
@@ -339,9 +353,9 @@ func TestService_HandleUpdateActions(t *testing.T) {
 				}
 			}
 			if !tc.autoApprove {
-				if actionsRan && (len(service.Status.Fails.Command) != 0 || len(service.Status.Fails.WebHook) != 0) {
+				if actionsRan && (len(svc.Status.Fails.Command) != 0 || len(svc.Status.Fails.WebHook) != 0) {
 					t.Fatalf("no actions should have run as auto_approve is %t\n%#v",
-						tc.autoApprove, service.Status.Fails)
+						tc.autoApprove, svc.Status.Fails)
 				}
 			} else if !actionsRan {
 				t.Fatal("actions didn't finish running")
@@ -349,31 +363,31 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := service.Status.DeployedVersion
+			got := svc.Status.GetDeployedVersion()
 			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(service.Status.Fails.Command) != 0 {
-					for i := range service.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%t, ", i, *service.Status.Fails.Command[i])
+				if len(svc.Status.Fails.Command) != 0 {
+					for i := range svc.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%t, ", i, *svc.Status.Fails.Command[i])
 					}
 					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
 				}
 				fails = ""
-				if len(service.Status.Fails.WebHook) != 0 {
-					for i := range service.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+				if len(svc.Status.Fails.WebHook) != 0 {
+					for i := range svc.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
 					}
 					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
 				}
-				for len(*service.Status.AnnounceChannel) != 0 {
-					msg := <-*service.Status.AnnounceChannel
+				for len(*svc.Status.AnnounceChannel) != 0 {
+					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
 						string(msg))
 				}
@@ -538,48 +552,60 @@ func TestService_HandleFailedActions(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.Init(len(service.Notify), len(tc.commands), len(tc.webhooks), &service.ID, &service.Dashboard.WebURL)
-			service.Status.Fails = tc.fails
+			svc.Status.Init(
+				len(svc.Notify), len(tc.commands), len(tc.webhooks),
+				&svc.ID,
+				&svc.Dashboard.WebURL)
+			svc.Status.Fails = tc.fails
 			if tc.deployedLatest {
-				service.Status.DeployedVersion = service.Status.LatestVersion
+				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
-			service.Command = tc.commands
+			svc.Command = tc.commands
 			if len(tc.commands) != 0 {
-				service.CommandController = &command.Controller{}
+				svc.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
-			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
-			service.DeployedVersionLookup = nil
+			svc.CommandController.Init(
+				&svc.Status,
+				&svc.Command,
+				nil,
+				&svc.Options.Interval)
+			svc.WebHook = tc.webhooks
+			svc.WebHook.Init(
+				&svc.Status,
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+				nil,
+				&svc.Options.Interval)
+			svc.DeployedVersionLookup = nil
 			for i := range tc.commandNextRunnables {
-				service.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
+				svc.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
 			}
 			for i := range tc.webhookNextRunnables {
-				service.WebHook[i].NextRunnable = tc.webhookNextRunnables[i]
+				svc.WebHook[i].NextRunnable = tc.webhookNextRunnables[i]
 			}
 
 			// WHEN HandleFailedActions is called on it
-			want := service.Status.LatestVersion
-			service.HandleFailedActions()
+			want := svc.Status.GetLatestVersion()
+			svc.HandleFailedActions()
 			// wait until all commands/webhooks have run
 			var actionsRan bool
 			for i := 1; i < 500; i++ {
 				actionsRan = true
 				time.Sleep(10 * time.Millisecond)
-				if service.Command != nil {
-					for j := range service.Command {
-						if stringifyPointer(service.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails.Command[j]) {
+				if svc.Command != nil {
+					for j := range svc.Command {
+						if stringifyPointer(svc.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails.Command[j]) {
 							actionsRan = false
 							break
 						}
 					}
 				}
-				if service.WebHook != nil {
-					for j := range service.WebHook {
-						if stringifyPointer(service.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails.WebHook[j]) {
+				if svc.WebHook != nil {
+					for j := range svc.WebHook {
+						if stringifyPointer(svc.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails.WebHook[j]) {
 							actionsRan = false
 							break
 						}
@@ -597,47 +623,47 @@ func TestService_HandleFailedActions(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := service.Status.DeployedVersion
+			got := svc.Status.GetDeployedVersion()
 			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(service.Status.Fails.Command) != 0 {
-					for i := range service.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(service.Status.Fails.Command[i]))
+				if len(svc.Status.Fails.Command) != 0 {
+					for i := range svc.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(svc.Status.Fails.Command[i]))
 					}
 					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
 				}
 				fails = ""
-				if len(service.Status.Fails.WebHook) != 0 {
-					for i := range service.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+				if len(svc.Status.Fails.WebHook) != 0 {
+					for i := range svc.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
 					}
 					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
 				}
-				for len(*service.Status.AnnounceChannel) != 0 {
-					msg := <-*service.Status.AnnounceChannel
+				for len(*svc.Status.AnnounceChannel) != 0 {
+					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
 						string(msg))
 				}
 			}
 			// THEN the Command fails are as expected
 			for i := range tc.wantFails.Command {
-				if stringifyPointer(service.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails.Command[i]) {
+				if stringifyPointer(svc.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails.Command[i]) {
 					t.Errorf("got, command[%d]=%s, want %s",
-						i, stringifyPointer(service.Status.Fails.Command[i]), stringifyPointer(tc.wantFails.Command[i]))
+						i, stringifyPointer(svc.Status.Fails.Command[i]), stringifyPointer(tc.wantFails.Command[i]))
 				}
 			}
 			// THEN the WebHook fails are as expected
 			for i := range tc.wantFails.WebHook {
-				if stringifyPointer(service.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails.WebHook[i]) {
+				if stringifyPointer(svc.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails.WebHook[i]) {
 					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, stringifyPointer(service.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails.WebHook[i]))
+						i, stringifyPointer(svc.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails.WebHook[i]))
 				}
 			}
 		})
@@ -714,35 +740,39 @@ func TestService_HandleCommand(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.Init(len(service.Notify), len(tc.commands), 0, &service.ID, &service.Dashboard.WebURL)
-			service.Status.Fails.Command = tc.fails
 			if tc.deployedLatest {
-				service.Status.DeployedVersion = service.Status.LatestVersion
+				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
-			service.Command = tc.commands
+			svc.Status.Fails.Command = tc.fails
+			svc.Command = tc.commands
 			if len(tc.commands) != 0 {
-				service.CommandController = &command.Controller{}
+				svc.CommandController = &command.Controller{}
 			}
-			service.CommandController.Init(jLog, &service.Status, &service.Command, nil, &service.Options.Interval)
-			service.DeployedVersionLookup = nil
-			for i := range service.Command {
-				service.CommandController.NextRunnable[i] = tc.nextRunnable
+			svc.CommandController.Init(
+				&svc.Status,
+				&svc.Command,
+				nil,
+				&svc.Options.Interval)
+			svc.DeployedVersionLookup = nil
+			for i := range svc.Command {
+				svc.CommandController.NextRunnable[i] = tc.nextRunnable
 			}
 
 			// WHEN HandleCommand is called on it
-			want := service.Status.LatestVersion
-			service.HandleCommand(tc.command)
+			want := svc.Status.GetLatestVersion()
+			svc.HandleCommand(tc.command)
 			// wait until all commands have run
 			var actionsRan bool
 			for i := 1; i < 500; i++ {
 				actionsRan = true
 				time.Sleep(10 * time.Millisecond)
-				if service.Command != nil {
-					for j := range service.Command {
-						if stringifyPointer(service.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails[j]) {
+				if svc.Command != nil {
+					for j := range svc.Command {
+						if stringifyPointer(svc.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails[j]) {
 							actionsRan = false
 							break
 						}
@@ -760,33 +790,33 @@ func TestService_HandleCommand(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := service.Status.DeployedVersion
+			got := svc.Status.GetDeployedVersion()
 			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(service.Status.Fails.Command) != 0 {
-					for i := range service.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%t, ", i, *service.Status.Fails.Command[i])
+				if len(svc.Status.Fails.Command) != 0 {
+					for i := range svc.Status.Fails.Command {
+						fails += fmt.Sprintf("%d=%t, ", i, *svc.Status.Fails.Command[i])
 					}
 					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
 				}
-				for len(*service.Status.AnnounceChannel) != 0 {
-					msg := <-*service.Status.AnnounceChannel
+				for len(*svc.Status.AnnounceChannel) != 0 {
+					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
 						string(msg))
 				}
 			}
 			// THEN the Command fails are as expected
 			for i := range tc.wantFails {
-				if stringifyPointer(service.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails[i]) {
+				if stringifyPointer(svc.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails[i]) {
 					t.Errorf("got, command[%d]=%s, want %s",
-						i, stringifyPointer(service.Status.Fails.Command[i]), stringifyPointer(tc.wantFails[i]))
+						i, stringifyPointer(svc.Status.Fails.Command[i]), stringifyPointer(tc.wantFails[i]))
 				}
 			}
 		})
@@ -866,32 +896,40 @@ func TestService_HandleWebHook(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+		svc.Status.Init(
+			len(svc.Notify), len(tc.webhooks), 0,
+			&svc.ID,
+			&svc.Dashboard.WebURL)
+		svc.WebHook = tc.webhooks
+		svc.WebHook.Init(
+			&svc.Status,
+			&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+			nil,
+			&svc.Options.Interval)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.Init(len(service.Notify), len(tc.webhooks), 0, &service.ID, &service.Dashboard.WebURL)
-			service.Status.Fails.WebHook = tc.fails
 			if tc.deployedLatest {
-				service.Status.DeployedVersion = service.Status.LatestVersion
+				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
-			service.WebHook = tc.webhooks
-			service.WebHook.Init(jLog, &service.Status, &service.WebHook, &webhook.WebHook{}, &webhook.WebHook{}, nil, &service.Options.Interval)
-			service.DeployedVersionLookup = nil
-			for i := range service.WebHook {
-				service.WebHook[i].NextRunnable = tc.nextRunnable
+			svc.Status.Fails.WebHook = tc.fails
+			svc.DeployedVersionLookup = nil
+			for i := range svc.WebHook {
+				svc.WebHook[i].NextRunnable = tc.nextRunnable
 			}
 
 			// WHEN HandleWebHook is called on it
-			want := service.Status.LatestVersion
-			service.HandleWebHook(tc.webhook)
+			want := svc.Status.GetLatestVersion()
+			svc.HandleWebHook(tc.webhook)
 			// wait until all webhooks have run
 			var actionsRan bool
 			for i := 1; i < 500; i++ {
 				actionsRan = true
 				time.Sleep(10 * time.Millisecond)
-				if service.WebHook != nil {
-					for j := range service.WebHook {
-						if stringifyPointer(service.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails[j]) {
+				if svc.WebHook != nil {
+					for j := range svc.WebHook {
+						if stringifyPointer(svc.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails[j]) {
 							actionsRan = false
 							break
 						}
@@ -909,33 +947,33 @@ func TestService_HandleWebHook(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := service.Status.DeployedVersion
+			got := svc.Status.GetDeployedVersion()
 			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
 			}
 			// THEN the correct number of changes are announced to the channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(service.Status.Fails.WebHook) != 0 {
-					for i := range service.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *service.Status.Fails.WebHook[i])
+				if len(svc.Status.Fails.WebHook) != 0 {
+					for i := range svc.Status.Fails.WebHook {
+						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
 					}
 					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
 				}
-				for len(*service.Status.AnnounceChannel) != 0 {
-					msg := <-*service.Status.AnnounceChannel
+				for len(*svc.Status.AnnounceChannel) != 0 {
+					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
 						string(msg))
 				}
 			}
 			// THEN the WebHook fails are as expected
 			for i := range tc.wantFails {
-				if stringifyPointer(service.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails[i]) {
+				if stringifyPointer(svc.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails[i]) {
 					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, stringifyPointer(service.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails[i]))
+						i, stringifyPointer(svc.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails[i]))
 				}
 			}
 		})
@@ -970,39 +1008,40 @@ func TestService_HandleSkip(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			service := testServiceURL(name)
-			service.Status.ApprovedVersion = ""
-			service.Status.LatestVersion = latestVersion
+			// t.Parallel()
+			svc.Status.SetApprovedVersion("")
+			svc.Status.SetLatestVersion(latestVersion, false)
 			if tc.prepDelete {
-				service.PrepDelete()
+				svc.PrepDelete()
 			}
 
 			// WHEN HandleSkip is called on it
-			service.HandleSkip(tc.skipVersion)
+			svc.HandleSkip(tc.skipVersion)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := service.Status.ApprovedVersion
-			if tc.approvedVersion != got {
+			if tc.approvedVersion != svc.Status.GetApprovedVersion() {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
-					tc.approvedVersion, got)
+					tc.approvedVersion, svc.Status.GetApprovedVersion())
 			}
 			// AND the correct number of changes are announced to the announce channel
-			if tc.prepDelete && (service.Status.AnnounceChannel != nil || service.Status.DatabaseChannel != nil) {
-				t.Errorf("AnnounceChannel and DatabaseChannel should be nil but are not")
-			} else if tc.prepDelete {
+			if tc.prepDelete {
+				if svc.Status.AnnounceChannel != nil || svc.Status.DatabaseChannel != nil {
+					t.Errorf("AnnounceChannel and DatabaseChannel should be nil but are not")
+				}
 				return
 			}
 			// AND the correct number of changes are announced to the announce channel
-			if len(*service.Status.AnnounceChannel) != tc.wantAnnounces {
+			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantAnnounces, len(*service.Status.AnnounceChannel))
+					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 			}
 			// AND the correct number of messages are announced to the database channel
-			if len(*service.Status.DatabaseChannel) != tc.wantDatabaseMessages {
+			if len(*svc.Status.DatabaseChannel) != tc.wantDatabaseMessages {
 				t.Errorf("Expecting %d announce message but got %d",
-					tc.wantDatabaseMessages, len(*service.Status.DatabaseChannel))
+					tc.wantDatabaseMessages, len(*svc.Status.DatabaseChannel))
 			}
 		})
 	}
@@ -1103,26 +1142,27 @@ func TestService_ShouldRetryAll(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceURL(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceURL(name)
 			commands := len(tc.command)
-			service.Command = command.Slice{}
+			svc.Command = command.Slice{}
 			for commands != 0 {
-				service.Command = append(service.Command, command.Command{})
+				svc.Command = append(svc.Command, command.Command{})
 				commands--
 			}
 			webhooks := len(tc.webhook)
-			service.WebHook = webhook.Slice{}
+			svc.WebHook = webhook.Slice{}
 			for webhooks != 0 {
-				service.WebHook[fmt.Sprint(webhooks)] = &webhook.WebHook{}
+				svc.WebHook[fmt.Sprint(webhooks)] = &webhook.WebHook{}
 				webhooks--
 			}
-			service.Status.Fails.Command = tc.command
-			service.Status.Fails.WebHook = tc.webhook
+			svc.Status.Fails.Command = tc.command
+			svc.Status.Fails.WebHook = tc.webhook
 
 			// WHEN shouldRetryAll is called on it
-			got := service.shouldRetryAll()
+			got := svc.shouldRetryAll()
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
 			if tc.want != got {

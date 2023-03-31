@@ -40,7 +40,11 @@ func TestAPI_UpdateRow(t *testing.T) {
 				{Column: "latest_version",
 					Value: "9.9.9"}},
 		},
-		// "trailing 0 is kept":        {target: "keep0", cells: []dbtype.Cell{{Column: "latest_version", Value: "1.20"}}},
+		// "trailing 0 is kept": {
+		// 	target: "keep0",
+		// 	cells: []dbtype.Cell{
+		// 		{Column: "latest_version",
+		// 			Value: "1.20"}}},
 		"update multiple columns of a row": {
 			target: "keep0",
 			cells: []dbtype.Cell{
@@ -72,6 +76,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
+			defer os.Remove(*api.config.Settings.Data.DatabaseFile)
 			api.initialise()
 			api.convertServiceStatus()
 
@@ -82,26 +87,25 @@ func TestAPI_UpdateRow(t *testing.T) {
 			// THEN those cell(s) are changed in the DB
 			row := queryRow(t, api.db, tc.target)
 			for _, cell := range tc.cells {
-				var got *string
+				var got string
 				switch cell.Column {
 				case "latest_version":
-					got = &row.LatestVersion
+					got = row.GetLatestVersion()
 				case "latest_version_timestamp":
-					got = &row.LatestVersionTimestamp
+					got = row.GetLatestVersionTimestamp()
 				case "deployed_version":
-					got = &row.DeployedVersion
+					got = row.GetDeployedVersion()
 				case "deployed_version_timestamp":
-					got = &row.DeployedVersionTimestamp
+					got = row.GetDeployedVersionTimestamp()
 				case "approved_version":
-					got = &row.ApprovedVersion
+					got = row.GetApprovedVersion()
 				}
-				if *got != cell.Value {
+				if got != cell.Value {
 					t.Errorf("expecting %s to have been updated to %q. got %q",
-						cell.Column, cell.Value, *got)
+						cell.Column, cell.Value, got)
 				}
 			}
 			api.db.Close()
-			os.Remove(*api.config.Settings.Data.DatabaseFile)
 			time.Sleep(100 * time.Millisecond)
 		})
 	}
@@ -140,7 +144,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 			}
 			// Check the row existance before the test
 			row := queryRow(t, api.db, tc.serviceID)
-			if tc.exists && (row.LatestVersion == "" || row.DeployedVersion == "") {
+			if tc.exists && (row.GetLatestVersion() == "" || row.GetDeployedVersion() == "") {
 				t.Errorf("expecting row to exist. got %#v", row)
 			}
 
@@ -150,7 +154,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 			// THEN the row is deleted from the DB
 			row = queryRow(t, api.db, tc.serviceID)
-			if row.LatestVersion != "" || row.DeployedVersion != "" {
+			if row.GetLatestVersion() != "" || row.GetDeployedVersion() != "" {
 				t.Errorf("expecting row to be deleted. got %#v", row)
 			}
 			api.db.Close()
@@ -177,7 +181,7 @@ func TestHandler(t *testing.T) {
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	want := queryRow(t, api.db, target)
-	want.LatestVersion = cell.Value
+	want.SetLatestVersion(cell.Value, false)
 	msg := dbtype.Message{
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell},
@@ -187,7 +191,7 @@ func TestHandler(t *testing.T) {
 
 	// THEN the cell was changed in the DB
 	got := queryRow(t, api.db, target)
-	if got.LatestVersion != want.LatestVersion {
+	if got.GetLatestVersion() != want.GetLatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
 	}
@@ -201,7 +205,7 @@ func TestHandler(t *testing.T) {
 
 	// THEN the row is deleted from the DB
 	got = queryRow(t, api.db, target)
-	if got.LatestVersion != "" || got.DeployedVersion != "" {
+	if got.GetLatestVersion() != "" || got.GetDeployedVersion() != "" {
 		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
 	}
 
@@ -214,7 +218,7 @@ func TestHandler(t *testing.T) {
 
 	// THEN the last message is the one that is applied
 	got = queryRow(t, api.db, target)
-	if got.LatestVersion != wantLatestVersion {
+	if got.GetLatestVersion() != wantLatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell.Column, cell.Value, got, want)
 	}

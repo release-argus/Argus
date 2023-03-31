@@ -47,6 +47,12 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 
+func testLogging() {
+	jLog := util.NewJLog("DEBUG", false)
+	jLog.Testing = true
+	service.LogInit(jLog)
+}
+
 func testClient() Client {
 	hub := NewHub()
 	api := API{}
@@ -101,17 +107,12 @@ func testService(id string) *service.Service {
 			AnnounceChannel: &announceChannel,
 			DatabaseChannel: &databaseChannel}}
 	svc.Init(
-		util.NewJLog("DEBUG", false),
 		&service.Service{
 			Options: opt.Options{}},
 		&service.Service{
 			Options:               opt.Options{},
 			DeployedVersionLookup: &deployedver.Lookup{}},
-		&shoutrrr.Slice{},
-		&shoutrrr.Slice{},
-		&shoutrrr.Slice{},
-		&webhook.Slice{},
-		&webhook.WebHook{},
-		&webhook.WebHook{})
+		&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+		&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 	return &svc
 }

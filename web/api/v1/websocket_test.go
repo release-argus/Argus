@@ -33,7 +33,14 @@ import (
 func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T) {
 	// GIVEN a DeployedVersionLookup
 	tests := map[string]struct {
-		dvl  *deployedver.Lookup
+		dvl                      *deployedver.Lookup
+		approvedVersion          string
+		deployedVersion          string
+		deployedVersionTimestamp string
+		latestVersion            string
+		latestVersionTimestamp   string
+		lastQueried              string
+
 		want *api_type.DeployedVersionLookup
 	}{
 		"nil": {
@@ -96,18 +103,12 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 					Defaults:           &opt.Options{},
 					HardDefaults:       &opt.Options{}},
 				Status: &svcstatus.Status{
-					ApprovedVersion:          "1.2.3",
-					DeployedVersion:          "1.2.3",
-					DeployedVersionTimestamp: time.Now().Format(time.RFC3339),
-					LatestVersion:            "1.2.3",
-					LatestVersionTimestamp:   time.Now().Format(time.RFC3339),
-					LastQueried:              time.Now().Format(time.RFC3339),
-					RegexMissesContent:       1,
-					RegexMissesVersion:       3,
-					Fails:                    svcstatus.Fails{},
-					Deleting:                 false,
-					ServiceID:                stringPtr("service-id"),
-					WebURL:                   stringPtr("https://release-argus.io")},
+					RegexMissesContent: 1,
+					RegexMissesVersion: 3,
+					Fails:              svcstatus.Fails{},
+					Deleting:           false,
+					ServiceID:          stringPtr("service-id"),
+					WebURL:             stringPtr("https://release-argus.io")},
 				Defaults:     &deployedver.Lookup{},
 				HardDefaults: &deployedver.Lookup{}},
 			want: &api_type.DeployedVersionLookup{
@@ -128,6 +129,14 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			if tc.approvedVersion != "" {
+				tc.dvl.Status.SetApprovedVersion("1.2.3")
+				tc.dvl.Status.SetDeployedVersion("1.2.3", false)
+				tc.dvl.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
+				tc.dvl.Status.SetLatestVersion("1.2.3", false)
+				tc.dvl.Status.SetLatestVersionTimestamp(time.Now().Format(time.RFC3339))
+				tc.dvl.Status.SetLastQueried(time.Now().Format(time.RFC3339))
+			}
 
 			// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
 			got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(tc.dvl)
@@ -145,32 +154,32 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	// GIVEN a URL Command slice
 	tests := map[string]struct {
 		slice *filter.URLCommandSlice
-		want  api_type.URLCommandSlice
+		want  *api_type.URLCommandSlice
 	}{
 		"nil": {
 			slice: nil,
-			want:  api_type.URLCommandSlice{},
+			want:  nil,
 		},
 		"empty": {
 			slice: &filter.URLCommandSlice{},
-			want:  api_type.URLCommandSlice{},
+			want:  &api_type.URLCommandSlice{},
 		},
 		"regex": {
 			slice: &filter.URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("[0-9.]+")}},
-			want: api_type.URLCommandSlice{
+			want: &api_type.URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("[0-9.]+")}},
 		},
 		"replace": {
 			slice: &filter.URLCommandSlice{
 				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")}},
-			want: api_type.URLCommandSlice{
+			want: &api_type.URLCommandSlice{
 				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")}},
 		},
 		"split": {
 			slice: &filter.URLCommandSlice{
 				{Type: "split", Index: 7}},
-			want: api_type.URLCommandSlice{
+			want: &api_type.URLCommandSlice{
 				{Type: "split", Index: 7}},
 		},
 		"one of each": {
@@ -178,7 +187,7 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 				{Type: "regex", Regex: stringPtr("[0-9.]+")},
 				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")},
 				{Type: "split", Index: 7}},
-			want: api_type.URLCommandSlice{
+			want: &api_type.URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("[0-9.]+")},
 				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")},
 				{Type: "split", Index: 7}},
@@ -195,7 +204,7 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 
 			// THEN the WebHookSlice is converted correctly
 			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
+				t.Errorf("want: %q, got: %q",
 					tc.want.String(), got.String())
 			}
 		})

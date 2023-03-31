@@ -21,7 +21,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -388,7 +387,7 @@ func TestShoutrrr_Init(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.ID = tc.id
-			serviceStatus := *shoutrrr.ServiceStatus
+			serviceStatus := shoutrrr.ServiceStatus
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
 			if tc.giveMain {
@@ -401,7 +400,9 @@ func TestShoutrrr_Init(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			shoutrrr.Init(&serviceStatus, tc.main, &tc.defaults, &tc.hardDefaults)
+			shoutrrr.Init(
+				serviceStatus,
+				tc.main, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
 			if tc.nilShoutrrr {
@@ -429,7 +430,7 @@ func TestShoutrrr_Init(t *testing.T) {
 					&tc.hardDefaults, shoutrrr.HardDefaults)
 			}
 			// status
-			if shoutrrr.ServiceStatus != &serviceStatus {
+			if shoutrrr.ServiceStatus != serviceStatus {
 				t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					&serviceStatus, shoutrrr.ServiceStatus)
 			}
@@ -497,10 +498,10 @@ func TestSlice_Init(t *testing.T) {
 				"pass":  testShoutrrr(true, true, false)},
 		},
 	}
+	testLogging("DEBUG")
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := util.NewJLog("WARN", false)
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -530,7 +531,9 @@ func TestSlice_Init(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			tc.slice.Init(log, &serviceStatus, tc.mains, &tc.defaults, &tc.hardDefaults)
+			tc.slice.Init(
+				&serviceStatus,
+				tc.mains, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
 			if tc.nilSlice {

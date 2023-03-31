@@ -326,54 +326,55 @@ func TestLookup_Refresh(t *testing.T) {
 
 	// GIVEN a Lookup and various json strings to override parts of it
 	tests := map[string]struct {
-		allowInvalidCerts  *string
-		basicAuth          *string
-		headers            *string
-		json               *string
-		regex              *string
-		semanticVersioning *string
-		url                *string
-		previous           *Lookup
-		previousStatus     svcstatus.Status
-		errRegex           string
-		want               string
+		allowInvalidCerts        *string
+		basicAuth                *string
+		headers                  *string
+		json                     *string
+		regex                    *string
+		semanticVersioning       *string
+		url                      *string
+		lookup                   *Lookup
+		deployedVersion          string
+		deployedVersionTimestamp string
+		errRegex                 string
+		want                     string
 	}{
 		"Change of URL": {
-			url:      stringPtr("https://valid.release-argus.io/json"),
-			previous: testLookup(),
-			want:     testVersion,
+			url:    stringPtr("https://valid.release-argus.io/json"),
+			lookup: testLookup(),
+			want:   testVersion,
 		},
 		"Removal of URL": {
 			url:      stringPtr(""),
-			previous: testLookup(),
+			lookup:   testLookup(),
 			errRegex: "url: <missing>",
 			want:     "",
 		},
 		"Change of a few vars": {
 			json:               stringPtr("otherVersion"),
 			semanticVersioning: stringPtr("false"),
-			previous:           testLookup(),
+			lookup:             testLookup(),
 			want:               testVersion + "-beta",
 		},
 		"Change of vars that fail Query": {
 			allowInvalidCerts: stringPtr("false"),
-			previous:          testLookup(),
+			lookup:            testLookup(),
 			errRegex:          `x509 \(certificate invalid\)`,
 		},
 		"Refresh new version": {
-			previous: &Lookup{
+			lookup: &Lookup{
 				URL:               test.URL,
 				AllowInvalidCerts: test.AllowInvalidCerts,
 				JSON:              test.JSON,
 				Options:           test.Options,
 				Status: &svcstatus.Status{
-					ServiceID:                stringPtr("Refresh new version"),
-					DeployedVersion:          "0.0.0",
-					DeployedVersionTimestamp: time.Now().UTC().Format(time.RFC3339),
+					ServiceID: stringPtr("Refresh new version"),
 				},
 				Defaults:     test.Defaults,
 				HardDefaults: test.HardDefaults},
-			want: testVersion,
+			deployedVersion:          "0.0.0",
+			deployedVersionTimestamp: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
+			want:                     testVersion,
 		},
 	}
 
@@ -381,11 +382,23 @@ func TestLookup_Refresh(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			// Copy tc.PreviousStatus
-			previousStatus := tc.previousStatus
+			// Copy the starting status
+			previousStatus := svcstatus.Status{}
+			if tc.lookup != nil {
+				previousStatus.SetApprovedVersion(tc.lookup.Status.GetApprovedVersion())
+				previousStatus.SetDeployedVersion(tc.lookup.Status.GetDeployedVersion(), false)
+				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.GetDeployedVersionTimestamp())
+				previousStatus.SetLatestVersion(tc.lookup.Status.GetLatestVersion(), false)
+				previousStatus.SetLatestVersionTimestamp(tc.lookup.Status.GetLatestVersionTimestamp())
+				previousStatus.SetLastQueried(tc.lookup.Status.GetLastQueried())
+				if tc.deployedVersion != "" {
+					tc.lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
+					tc.lookup.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
+				}
+			}
 
 			// WHEN we call Refresh
-			got, err := tc.previous.Refresh(
+			got, err := tc.lookup.Refresh(
 				tc.allowInvalidCerts,
 				tc.basicAuth,
 				tc.headers,
@@ -413,26 +426,26 @@ func TestLookup_Refresh(t *testing.T) {
 				t.Errorf("expected %q but got %q", tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
-			if previousStatus.DeployedVersionTimestamp != "" {
-				// If the possible query-changing overrides are nil
-				if tc.headers == nil && tc.json == nil && tc.regex == nil && tc.semanticVersioning == nil && tc.url == nil {
-					// The timestamp should change only if the version changed
-					if previousStatus.DeployedVersion != tc.previous.Status.DeployedVersion &&
-						previousStatus.DeployedVersionTimestamp == tc.previous.Status.DeployedVersionTimestamp {
+			// and the possible query-changing overrides are nil
+			if tc.headers == nil && tc.json == nil && tc.regex == nil && tc.semanticVersioning == nil && tc.url == nil {
+				// If the version changed
+				if previousStatus.GetDeployedVersion() != tc.lookup.Status.GetDeployedVersion() {
+					// then so should the timestamp
+					if previousStatus.GetDeployedVersionTimestamp() == tc.lookup.Status.GetDeployedVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.DeployedVersionTimestamp, tc.previous.Status.DeployedVersionTimestamp)
-						// The timestamp shouldn't change as the version didn't change
-					} else if previousStatus.DeployedVersionTimestamp != tc.previous.Status.DeployedVersionTimestamp {
-						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.DeployedVersionTimestamp, tc.previous.Status.DeployedVersionTimestamp)
+							previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
 					}
-					// If the overrides are not nil
-				} else {
-					// The timestamp shouldn't change
-					if previousStatus.DeployedVersionTimestamp != tc.previous.Status.DeployedVersionTimestamp {
-						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.DeployedVersionTimestamp, tc.previous.Status.DeployedVersionTimestamp)
-					}
+					// otherwise, the timestamp should remain unchanged
+				} else if previousStatus.GetDeployedVersionTimestamp() != tc.lookup.Status.GetDeployedVersionTimestamp() {
+					t.Errorf("expected timestamp %q but got %q",
+						previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
+				}
+				// If the overrides are not nil
+			} else {
+				// The timestamp shouldn't change
+				if previousStatus.GetDeployedVersionTimestamp() != tc.lookup.Status.GetDeployedVersionTimestamp() {
+					t.Errorf("expected timestamp %q but got %q",
+						previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
 				}
 			}
 		})

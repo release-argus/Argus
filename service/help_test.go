@@ -47,14 +47,9 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 func testLogging() {
-	jLog = util.NewJLog("WARN", false)
+	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
-	var webhookLogs *webhook.Slice
-	webhookLogs.Init(jLog, nil, nil, nil, nil, nil, nil)
-	var latestVersion latestver.Lookup
-	latestVersion.Init(jLog, nil, nil, &svcstatus.Status{ServiceID: stringPtr("foo")}, nil)
-	var deployedVersion *deployedver.Lookup
-	deployedVersion.Init(jLog, nil, nil, &svcstatus.Status{ServiceID: stringPtr("foo")}, nil)
+	LogInit(jLog)
 }
 
 func testServiceGitHub(id string) *Service {
@@ -83,14 +78,10 @@ func testServiceGitHub(id string) *Service {
 			WebURL:      "https://release-argus.io",
 		},
 		Status: svcstatus.Status{
-			ApprovedVersion:          "1.1.1",
-			LatestVersion:            "2.2.2",
-			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
-			DeployedVersion:          "0.0.0",
-			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
-			AnnounceChannel:          &announceChannel,
-			DatabaseChannel:          &databaseChannel,
-			SaveChannel:              &saveChannel,
+			ServiceID:       stringPtr("test"),
+			AnnounceChannel: &announceChannel,
+			DatabaseChannel: &databaseChannel,
+			SaveChannel:     &saveChannel,
 		},
 		Options: opt.Options{
 			Interval:           "5s",
@@ -102,34 +93,20 @@ func testServiceGitHub(id string) *Service {
 				Active: boolPtr(true)},
 		},
 	}
-	svc.Init(jLog, &Service{}, &Service{}, nil, nil, nil, nil, nil, nil)
+	// Status
+	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetLatestVersion("2.2.2", false)
+	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
+	svc.Status.SetDeployedVersion("0.0.0", false)
+	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
+
+	svc.Init(
+		&Service{}, &Service{},
+		nil, nil, nil,
+		nil, nil, nil)
 	svc.Status.ServiceID = &svc.ID
 	svc.Status.WebURL = &svc.Dashboard.WebURL
 	return svc
-}
-
-func testLatestVersionLookupURL(fail bool) latestver.Lookup {
-	return latestver.Lookup{
-		Type: "url",
-		URL:  "https://invalid.release-argus.io/plain",
-		Require: &filter.Require{
-			RegexContent: "{{ version }}-beta",
-			RegexVersion: "[0-9]+",
-		},
-		URLCommands: filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
-		},
-		AllowInvalidCerts: boolPtr(!fail),
-		UsePreRelease:     boolPtr(false),
-	}
-}
-
-func testDeployedVersionLookup(fail bool) *deployedver.Lookup {
-	return &deployedver.Lookup{
-		URL:               "https://invalid.release-argus.io/json",
-		JSON:              "version",
-		AllowInvalidCerts: boolPtr(!fail),
-	}
 }
 
 func testServiceURL(id string) *Service {
@@ -151,15 +128,10 @@ func testServiceURL(id string) *Service {
 			HardDefaults: &DashboardOptions{},
 		},
 		Status: svcstatus.Status{
-			ServiceID:                stringPtr("test"),
-			ApprovedVersion:          "1.1.1",
-			LatestVersion:            "2.2.2",
-			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
-			DeployedVersion:          "0.0.0",
-			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
-			AnnounceChannel:          &announceChannel,
-			DatabaseChannel:          &databaseChannel,
-			SaveChannel:              &saveChannel,
+			ServiceID:       stringPtr("test"),
+			AnnounceChannel: &announceChannel,
+			DatabaseChannel: &databaseChannel,
+			SaveChannel:     &saveChannel,
 		},
 		Options: opt.Options{
 			Interval:           "5s",
@@ -174,11 +146,69 @@ func testServiceURL(id string) *Service {
 			DeployedVersionLookup: &deployedver.Lookup{},
 		},
 	}
+
+	// Status
 	svc.Status.ServiceID = &svc.ID
-	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
-	svc.DeployedVersionLookup.Init(jLog, &deployedver.Lookup{}, &deployedver.Lookup{}, &svc.Status, &svc.Options)
+	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetLatestVersion("2.2.2", false)
+	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
+	svc.Status.SetDeployedVersion("0.0.0", false)
+	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
+
+	svc.LatestVersion.Init(
+		&latestver.Lookup{}, &latestver.Lookup{},
+		&svc.Status,
+		&svc.Options)
+	svc.DeployedVersionLookup.Init(
+		&deployedver.Lookup{}, &deployedver.Lookup{},
+		&svc.Status,
+		&svc.Options)
 	svc.Status.WebURL = &svc.Dashboard.WebURL
 	return svc
+}
+
+func testLatestVersionLookupURL(fail bool) latestver.Lookup {
+	return latestver.Lookup{
+		Type:        "url",
+		URL:         "https://invalid.release-argus.io/plain",
+		AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
+		URLCommands: filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
+		},
+		AllowInvalidCerts: boolPtr(!fail),
+		UsePreRelease:     boolPtr(false),
+		Require: &filter.Require{
+			RegexContent: "{{ version }}-beta",
+			RegexVersion: "[0-9]+",
+		},
+		Options: &opt.Options{
+			SemanticVersioning: boolPtr(true),
+			Defaults: &opt.Options{
+				SemanticVersioning: boolPtr(true)},
+			HardDefaults: &opt.Options{
+				SemanticVersioning: boolPtr(true)}},
+		Status: &svcstatus.Status{
+			ServiceID: stringPtr("foo")},
+		Defaults:     &latestver.Lookup{},
+		HardDefaults: &latestver.Lookup{},
+	}
+}
+
+func testDeployedVersionLookup(fail bool) *deployedver.Lookup {
+	return &deployedver.Lookup{
+		URL:               "https://invalid.release-argus.io/json",
+		JSON:              "version",
+		AllowInvalidCerts: boolPtr(!fail),
+		Options: &opt.Options{
+			SemanticVersioning: boolPtr(true),
+			Defaults: &opt.Options{
+				SemanticVersioning: boolPtr(true)},
+			HardDefaults: &opt.Options{
+				SemanticVersioning: boolPtr(true)}},
+		Status:       &svcstatus.Status{},
+		Defaults:     &deployedver.Lookup{},
+		HardDefaults: &deployedver.Lookup{},
+	}
 }
 
 func testWebHook(failing bool) *webhook.WebHook {

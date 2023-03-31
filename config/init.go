@@ -27,6 +27,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// LogInit for Argus.
+func LogInit(log *util.JLog) {
+	jLog = log
+
+	service.LogInit(jLog)
+}
+
 // Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s)
 func (c *Config) Init() {
 	c.HardDefaults.SetDefaults()
@@ -46,15 +53,9 @@ func (c *Config) Init() {
 		i++
 		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), util.LogFrom{}, true)
 		c.Service[key].Init(
-			jLog,
-			&c.Defaults.Service,
-			&c.HardDefaults.Service,
-			&c.Notify,
-			&c.Defaults.Notify,
-			&c.HardDefaults.Notify,
-			&c.WebHook,
-			&c.Defaults.WebHook,
-			&c.HardDefaults.WebHook,
+			&c.Defaults.Service, &c.HardDefaults.Service,
+			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
+			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook,
 		)
 	}
 
@@ -77,21 +78,15 @@ func (c *Config) Init() {
 	// Give the log to the other packages
 	svc := service.Service{Command: command.Slice{}}
 	svc.Init(
-		jLog,
-		&c.Defaults.Service,
-		&c.HardDefaults.Service,
-		&c.Notify,
-		&c.Defaults.Notify,
-		&c.HardDefaults.Notify,
-		&c.WebHook,
-		&c.Defaults.WebHook,
-		&c.HardDefaults.WebHook)
+		&c.Defaults.Service, &c.HardDefaults.Service,
+		&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
+		&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
 }
 
 // Load `file` as Config.
 func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.File = file
-	jLog = log
+	LogInit(log)
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user

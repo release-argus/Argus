@@ -15,22 +15,33 @@
 package latestver
 
 import (
+	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/webhook"
 )
+
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+
+	filter.LogInit(log)
+	command.LogInit(log)
+	shoutrrr.LogInit(log)
+	webhook.LogInit(log)
+}
 
 // Init the Lookup, assigning Defaults and initialising child structs.
 func (l *Lookup) Init(
-	log *util.JLog,
 	defaults *Lookup,
 	hardDefaults *Lookup,
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {
-	jLog = log
-
 	if l.Type == "github" {
 		l.GitHubData = &GitHubData{}
 	}
@@ -39,8 +50,6 @@ func (l *Lookup) Init(
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
-	l.URLCommands.Init(jLog)
-	l.Require.Init(log, status)
 }
 
 // initMetrics for this Lookup.

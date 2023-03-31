@@ -33,11 +33,9 @@ func (s *Status) AnnounceFirstVersion() {
 			ID:     *s.ServiceID,
 			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
-				LatestVersion:          s.LatestVersion,
-				LatestVersionTimestamp: s.LatestVersionTimestamp,
-			},
-		},
-	})
+				LatestVersion:          s.GetLatestVersion(),
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}},
+	)
 
 	if s.AnnounceChannel != nil {
 		*s.AnnounceChannel <- payloadData
@@ -56,10 +54,8 @@ func (s *Status) AnnounceQuery() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				LastQueried: s.LastQueried,
-			},
-		},
-	})
+				LastQueried: s.GetLastQueried()}}},
+	)
 
 	if s.AnnounceChannel != nil {
 		*s.AnnounceChannel <- payloadData
@@ -80,11 +76,9 @@ func (s *Status) AnnounceQueryNewVersion() {
 			ID:     *s.ServiceID,
 			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
-				LatestVersion:          s.LatestVersion,
-				LatestVersionTimestamp: s.LatestVersionTimestamp,
-			},
-		},
-	})
+				LatestVersion:          s.GetLatestVersion(),
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}},
+	)
 
 	if s.AnnounceChannel != nil {
 		*s.AnnounceChannel <- payloadData
@@ -104,8 +98,8 @@ func (s *Status) AnnounceUpdate() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				DeployedVersion:          s.DeployedVersion,
-				DeployedVersionTimestamp: s.DeployedVersionTimestamp,
+				DeployedVersion:          s.GetDeployedVersion(),
+				DeployedVersionTimestamp: s.GetDeployedVersionTimestamp(),
 			},
 		},
 	})
@@ -128,7 +122,7 @@ func (s *Status) AnnounceApproved() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				ApprovedVersion: s.ApprovedVersion,
+				ApprovedVersion: s.GetApprovedVersion(),
 			},
 		},
 	})

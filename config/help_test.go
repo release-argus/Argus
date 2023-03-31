@@ -17,8 +17,6 @@
 package config
 
 import (
-	"time"
-
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -42,20 +40,22 @@ func testConfig() Config {
 	databaseChannel := make(chan dbtype.Message, 5)
 
 	return Config{
-		File:            "/root/inaccessible",
-		DatabaseChannel: &databaseChannel,
-		SaveChannel:     &saveChannel,
+		File: "/root/inaccessible",
 		Settings: Settings{
 			Indentation: 4,
 			Log: LogSettings{
-				Level: &logLevel,
-			},
-		},
+				Level: &logLevel}},
+		HardDefaults: Defaults{
+			Service: service.Service{
+				Status: svcstatus.Status{
+					DatabaseChannel: &databaseChannel,
+					SaveChannel:     &saveChannel}}},
+		DatabaseChannel: &databaseChannel,
+		SaveChannel:     &saveChannel,
 	}
 }
 
 func testConfigEdit() Config {
-	jLog = util.NewJLog("WARN", true)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
 
@@ -77,7 +77,6 @@ func testConfigEdit() Config {
 				},
 			},
 		},
-		DatabaseChannel: &databaseChannel,
 	}
 }
 
@@ -153,16 +152,10 @@ func testServiceURL(id string) *service.Service {
 			HardDefaults: &service.DashboardOptions{},
 		},
 		Status: svcstatus.Status{
-			ServiceID:                stringPtr("test"),
-			ApprovedVersion:          "1.1.1",
-			LatestVersion:            "2.2.2",
-			LatestVersionTimestamp:   "2002-02-02T02:02:02Z",
-			DeployedVersion:          "0.0.0",
-			DeployedVersionTimestamp: "2001-01-01T01:01:01Z",
-			AnnounceChannel:          &announceChannel,
-			DatabaseChannel:          &databaseChannel,
-			SaveChannel:              &saveChannel,
-			LastQueried:              time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			ServiceID:       stringPtr("test"),
+			AnnounceChannel: &announceChannel,
+			DatabaseChannel: &databaseChannel,
+			SaveChannel:     &saveChannel,
 		},
 		Options: opt.Options{
 			Interval:           "5s",
@@ -178,8 +171,25 @@ func testServiceURL(id string) *service.Service {
 		},
 	}
 	svc.Status.ServiceID = &svc.ID
-	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
-	svc.DeployedVersionLookup.Init(jLog, &deployedver.Lookup{}, &deployedver.Lookup{}, &svc.Status, &svc.Options)
+	svc.Status.Init(
+		len(svc.Notify), len(svc.Command), len(svc.WebHook),
+		&svc.ID,
+		&svc.Dashboard.WebURL)
+	svc.LatestVersion.Init(
+		&latestver.Lookup{}, &latestver.Lookup{},
+		&svc.Status,
+		&svc.Options)
+	svc.DeployedVersionLookup.Init(
+		&deployedver.Lookup{}, &deployedver.Lookup{},
+		&svc.Status,
+		&svc.Options)
 	svc.Status.WebURL = &svc.Dashboard.WebURL
+
+	svc.Status.SetLastQueried("")
+	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetLatestVersion("2.2.2", false)
+	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
+	svc.Status.SetDeployedVersion("0.0.0", false)
+	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 	return svc
 }

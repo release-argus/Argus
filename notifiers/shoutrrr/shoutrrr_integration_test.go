@@ -88,13 +88,12 @@ func TestShoutrrr_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		tc.shoutrrr.Init(
+			tc.svcStatus,
+			&Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			tc.shoutrrr.Init(
-				tc.svcStatus,
-				&Shoutrrr{},
-				&Shoutrrr{},
-				&Shoutrrr{})
 			if tc.shoutrrr.Failed == nil &&
 				tc.shoutrrr.ServiceStatus != nil {
 				tc.shoutrrr.Failed = &map[string]*bool{

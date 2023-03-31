@@ -142,6 +142,12 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	queryParams := r.URL.Query()
 
+	status := svcstatus.Status{}
+	status.Init(
+		0, 0, 0,
+		&logFromPrimary,
+		nil)
+
 	var (
 		version string
 		err     error
@@ -150,11 +156,8 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 		deployedVersionLookup := deployedver.Lookup{
 			Options: &opt.Options{
 				Defaults:     &api.Config.Defaults.Service.Options,
-				HardDefaults: &api.Config.HardDefaults.Service.Options,
-			},
-			Status: &svcstatus.Status{
-				ServiceID: &logFromPrimary,
-			},
+				HardDefaults: &api.Config.HardDefaults.Service.Options},
+			Status:       &status,
 			Defaults:     api.Config.Defaults.Service.DeployedVersionLookup,
 			HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup,
 		}
@@ -174,9 +177,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 				Defaults:     &api.Config.Defaults.Service.Options,
 				HardDefaults: &api.Config.HardDefaults.Service.Options,
 			},
-			Status: &svcstatus.Status{
-				ServiceID: &logFromPrimary,
-			},
+			Status:       &status,
 			Defaults:     &api.Config.Defaults.Service.LatestVersion,
 			HardDefaults: &api.Config.HardDefaults.Service.LatestVersion,
 		}
@@ -439,8 +440,8 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// Set DeployedVersion to the LatestVersion if there's no DeployedVersionLookup
 	if newService.DeployedVersionLookup == nil {
-		newService.Status.DeployedVersion = newService.Status.LatestVersion
-		newService.Status.DeployedVersionTimestamp = newService.Status.LatestVersionTimestamp
+		newService.Status.SetDeployedVersion(newService.Status.GetLatestVersion(), false)
+		newService.Status.SetDeployedVersionTimestamp(newService.Status.GetLatestVersionTimestamp())
 	}
 
 	// Add the new service to the config
