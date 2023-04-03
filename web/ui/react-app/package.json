@@ -5,14 +5,14 @@
   "homepage": "https://release-argus.io",
   "private": true,
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.3.0",
-    "@fortawesome/free-brands-svg-icons": "^6.3.0",
-    "@fortawesome/free-solid-svg-icons": "^6.3.0",
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-brands-svg-icons": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@tanstack/react-query": "^4.28.0",
     "@types/bootstrap": "^5.2.6",
     "@types/jest": "^29.5.0",
-    "@types/react": "^18.0.29",
+    "@types/react": "^18.0.33",
     "@types/react-dom": "^18.0.11",
     "bootstrap": "^5.2.3",
     "date-fns": "^2.29.3",
@@ -20,12 +20,12 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.2",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.43.8",
-    "react-router-dom": "^6.9.0",
+    "react-hook-form": "^7.43.9",
+    "react-router-dom": "^6.10.0",
     "react-scripts": "^5.0.1",
     "reconnecting-websocket": "^4.4.0",
     "styled-components": "^5.3.9",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.3"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -53,8 +53,8 @@
     ]
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^4.28.0",
-    "@types/node": "^18.15.9",
+    "@tanstack/react-query-devtools": "^4.29.0",
+    "@types/node": "^18.15.11",
     "@types/styled-components": "^5.1.26"
   }
 }
