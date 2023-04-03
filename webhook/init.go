@@ -287,31 +287,55 @@ func (w *WebHook) GetURL() string {
 	return url
 }
 
-// IsRunnable will return whether the current time is before NextRunnable
-func (w *WebHook) IsRunnable() bool {
-	return time.Now().UTC().After(w.NextRunnable)
+// GetNextRunnable returns the time that the WebHook can be re-run.
+func (w *WebHook) GetNextRunnable() time.Time {
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
+
+	return w.nextRunnable
 }
 
-// SetNextRunnable time that the WebHook can be re-run.
+// IsRunnable will return whether the current time is before NextRunnable
+func (w *WebHook) IsRunnable() bool {
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
+
+	return time.Now().UTC().After(w.nextRunnable)
+}
+
+// SetExecuting will set a time that the WebHook can be re-run.
 //
 // addDelay - only used on auto_approved releases
-func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
+func (w *WebHook) SetExecuting(addDelay bool, sending bool) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
 	// Different times depending on pass/fail
 	// pass
 	if !util.EvalNilPtr(w.Failed.Get(w.ID), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
-		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
+		w.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil
 	} else {
-		w.NextRunnable = time.Now().UTC().Add(15 * time.Second)
+		w.nextRunnable = time.Now().UTC().Add(15 * time.Second)
 	}
+
 	// block for delay
 	if addDelay {
-		w.NextRunnable = w.NextRunnable.Add(w.GetDelayDuration())
+		w.nextRunnable = w.nextRunnable.Add(w.GetDelayDuration())
 	}
+
 	// Block reruns whilst sending
 	if sending {
-		w.NextRunnable = w.NextRunnable.Add(time.Hour)
-		w.NextRunnable = w.NextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
+		w.nextRunnable = w.nextRunnable.Add(time.Hour)
+		w.nextRunnable = w.nextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
 	}
+}
+
+// SetNextRunnable time that the WebHook can be re-run.
+func (w *WebHook) SetNextRunnable(time *time.Time) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	w.nextRunnable = *time
 }

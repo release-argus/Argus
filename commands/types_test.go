@@ -125,7 +125,7 @@ func TestController_CopyFailsFrom(t *testing.T) {
 					}
 				}
 				for i, v := range tc.fromNextRunnable {
-					tc.from.NextRunnable[i] = v
+					tc.from.nextRunnable[i] = v
 				}
 			}
 			if tc.to != nil && tc.to.Command != nil {
@@ -161,11 +161,11 @@ func TestController_CopyFailsFrom(t *testing.T) {
 			}
 			// AND the next_runnables are copied to the Controller
 			for i := range tc.toNextRunnable {
-				if (tc.toNextRunnable)[i] != (tc.to.NextRunnable)[i] {
+				if (tc.toNextRunnable)[i] != (tc.to.nextRunnable)[i] {
 					t.Errorf("Fail %d: expected %q, got %q",
 						i,
 						tc.toNextRunnable[i],
-						tc.to.NextRunnable[i])
+						tc.to.nextRunnable[i])
 				}
 			}
 		})

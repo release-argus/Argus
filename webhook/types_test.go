@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -149,7 +148,6 @@ func TestWebHook_String(t *testing.T) {
 				Delay:             "1h1mm1s",
 				MaxTries:          uintPtr(4),
 				SilentFails:       boolPtr(true),
-				NextRunnable:      time.Time{},
 				Main:              &WebHook{},
 				Defaults:          &WebHook{AllowInvalidCerts: boolPtr(false)},
 				HardDefaults:      &WebHook{AllowInvalidCerts: boolPtr(false)},

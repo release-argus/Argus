@@ -57,7 +57,7 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 		return
 	}
 	// block reruns whilst running
-	c.SetNextRunnable(index, true)
+	c.SetExecuting(index, true)
 
 	// Copy Command and apply Jinja templating
 	command := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)

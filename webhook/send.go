@@ -69,10 +69,10 @@ func (w *WebHook) Send(
 		// Delay sending the WebHook message by the defined interval.
 		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
 		jLog.Info(msg, logFrom, true)
-		w.SetNextRunnable(true, true) // disable sending of auto_approved w/ delay
+		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay
 		time.Sleep(w.GetDelayDuration())
 	} else {
-		w.SetNextRunnable(false, true)
+		w.SetExecuting(false, true)
 	}
 
 	for {

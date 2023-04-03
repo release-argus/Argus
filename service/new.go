@@ -288,7 +288,8 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 			s.WebHook[i].Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
 		}
 		// next_runnable
-		s.WebHook[i].NextRunnable = oldWebHook.NextRunnable
+		nextRunnable := oldWebHook.GetNextRunnable()
+		s.WebHook[i].SetNextRunnable(&nextRunnable)
 	}
 }
 

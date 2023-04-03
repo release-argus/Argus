@@ -48,7 +48,7 @@ func (c *Controller) Init(
 	if c.Failed.Length() != commandCount {
 		c.Failed.Init(commandCount)
 	}
-	c.NextRunnable = make([]time.Time, commandCount)
+	c.nextRunnable = make([]time.Time, commandCount)
 
 	c.ParentInterval = parentInterval
 
@@ -118,41 +118,58 @@ func (c *Command) FormattedString() string {
 	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
-// GetNextRunnable returns the NextRunnable of this WebHook as time.time.
+// GetNextRunnable returns the nextRunnable of the Command at `index`.
 func (c *Controller) GetNextRunnable(index int) (at time.Time) {
-	if index < len(c.NextRunnable) {
-		at = c.NextRunnable[index]
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if index < len(c.nextRunnable) {
+		at = c.nextRunnable[index]
 	}
 	return
 }
 
-// IsRunnable will return whether the current time is before NextRunnable
+// IsRunnable will return whether the current time is before nextRunnable at `index`.
 func (c *Controller) IsRunnable(index int) bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// If out of range
-	if index >= len(c.NextRunnable) {
+	if index >= len(c.nextRunnable) {
 		return false
 	}
 
-	return time.Now().UTC().After(c.NextRunnable[index])
+	return time.Now().UTC().After(c.nextRunnable[index])
 }
 
-// SetNextRunnable time that the Command at index can be re-run.
-func (c *Controller) SetNextRunnable(index int, executing bool) {
+// SetNextRunnable will set the `time` that the Command at `index` can be re-run.
+func (c *Controller) SetNextRunnable(index int, time *time.Time) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.nextRunnable[index] = *time
+}
+
+// SetExecuting time that the Command at `index` can be re-run. (longer if it's `executing`)
+func (c *Controller) SetExecuting(index int, executing bool) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// If out of range
-	if index >= len(c.NextRunnable) {
+	if index >= len(c.nextRunnable) {
 		return
 	}
 
 	// Different times depending on pass/fail
 	if !util.EvalNilPtr(c.Failed.Get(index), true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
-		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
+		c.nextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {
-		c.NextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
+		c.nextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
 	}
 
 	// Block reruns whilst running for up to an hour
 	if executing {
-		c.NextRunnable[index] = c.NextRunnable[index].Add(time.Hour)
+		c.nextRunnable[index] = c.nextRunnable[index].Add(time.Hour)
 	}
 }

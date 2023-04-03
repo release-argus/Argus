@@ -16,6 +16,7 @@ package command
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -43,11 +44,12 @@ func (c *Command) String() (str string) {
 
 type Controller struct {
 	Command        *Slice                  `yaml:"-" json:"-"` // command(s) to run (with args)
-	NextRunnable   []time.Time             `yaml:"-" json:"-"` // Time the Commands can next be run (for staggering)
+	nextRunnable   []time.Time             `yaml:"-" json:"-"` // Time the Commands can next be run (for staggering)
 	Failed         *svcstatus.FailsCommand `yaml:"-" json:"-"` // Whether the last execution attempt failed
 	Notifiers      Notifiers               `yaml:"-" json:"-"` // The Notify's to notify on failures
 	ServiceStatus  *svcstatus.Status       `yaml:"-" json:"-"` // Status of the Service (used for templating commands)
 	ParentInterval *string                 `yaml:"-" json:"-"` // Interval between the parent Service's queries
+	mutex          sync.RWMutex            ``                  // Mutex for concurrent access.
 }
 
 // Notifiers to use when their WebHook fails.
@@ -63,6 +65,11 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 		return
 	}
 
+	target.mutex.RLock()
+	defer target.mutex.RUnlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// Loop through old fails
 	for i := 0; i < target.Failed.Length(); i++ {
 		// Loop through new fails to find try and find this command
@@ -75,7 +82,7 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 				if failed != nil {
 					c.Failed.Set(j, *failed)
 				}
-				c.NextRunnable[j] = target.NextRunnable[i]
+				c.nextRunnable[j] = target.nextRunnable[i]
 				break
 			}
 		}

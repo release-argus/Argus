@@ -23,12 +23,12 @@ import (
 // AnnounceCommand will announce the Command fail status to `c.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (c *Controller) AnnounceCommand(index int) {
-	c.SetNextRunnable(index, false)
+	c.SetExecuting(index, false)
 	commandSummary := make(map[string]*api_type.CommandSummary, 1)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_type.CommandSummary{
 		Failed:       c.Failed.Get(index),
-		NextRunnable: c.NextRunnable[index],
+		NextRunnable: c.GetNextRunnable(index),
 	}
 
 	// Command success/fail

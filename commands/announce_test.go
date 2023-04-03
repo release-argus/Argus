@@ -59,7 +59,6 @@ func TestController_AnnounceCommand(t *testing.T) {
 			t.Parallel()
 
 			controller := Controller{
-				NextRunnable:   make([]time.Time, 3),
 				ParentInterval: stringPtr("11m"),
 				ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
 			controller.Init(

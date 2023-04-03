@@ -152,7 +152,7 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		command := (*svc.CommandController.Command)[i].ApplyTemplate(&svc.Status)
 		commandSummary[command.String()] = &api_type.CommandSummary{
 			Failed:       svc.Status.Fails.Command.Get(i),
-			NextRunnable: svc.CommandController.NextRunnable[i],
+			NextRunnable: svc.CommandController.GetNextRunnable(i),
 		}
 	}
 
@@ -199,7 +199,7 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 	for key := range svc.WebHook {
 		webhookSummary[key] = &api_type.WebHookSummary{
 			Failed:       svc.Status.Fails.WebHook.Get(key),
-			NextRunnable: svc.WebHook[key].NextRunnable,
+			NextRunnable: svc.WebHook[key].GetNextRunnable(),
 		}
 	}
 

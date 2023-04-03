@@ -93,12 +93,12 @@ func TestController_SetNextRunnable(t *testing.T) {
 
 			// WHEN SetNextRunnable is called
 			ranAt := time.Now().UTC()
-			controller.SetNextRunnable(tc.index, tc.executing)
+			controller.SetExecuting(tc.index, tc.executing)
 
 			// THEN the result is expected
 			got := ranAt
-			if tc.index < len(controller.NextRunnable) {
-				got = (controller.NextRunnable[tc.index])
+			if tc.index < len(*controller.Command) {
+				got = (controller.GetNextRunnable(tc.index))
 			}
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
@@ -123,7 +123,13 @@ func TestController_IsRunnable(t *testing.T) {
 		stringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
-	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
+	}
 	tests := map[string]struct {
 		index int
 		want  bool
@@ -169,7 +175,13 @@ func TestController_GetNextRunnable(t *testing.T) {
 		stringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
-	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
+	}
 	tests := map[string]struct {
 		index      int
 		setTo      time.Time
@@ -201,9 +213,9 @@ func TestController_GetNextRunnable(t *testing.T) {
 					t.Fatalf("want: %s\ngot:\n%s",
 						defaultTime, got)
 				}
-			} else if got != controller.NextRunnable[tc.index] {
+			} else if got != controller.GetNextRunnable(tc.index) {
 				t.Fatalf("want: %s\ngot:\n%s",
-					controller.NextRunnable[tc.index], got)
+					controller.GetNextRunnable(tc.index), got)
 			}
 		})
 	}
@@ -296,7 +308,13 @@ func TestController_Metrics(t *testing.T) {
 		stringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
-	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
+	}
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.CommandMetric)

@@ -593,10 +593,12 @@ func TestService_HandleFailedActions(t *testing.T) {
 			}
 			svc.DeployedVersionLookup = nil
 			for i := range tc.commandNextRunnables {
-				svc.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
+				nextRunnable := tc.commandNextRunnables[i]
+				svc.CommandController.SetNextRunnable(i, &nextRunnable)
 			}
 			for i := range tc.webhookNextRunnables {
-				svc.WebHook[i].NextRunnable = tc.webhookNextRunnables[i]
+				nextRunnable := tc.webhookNextRunnables[i]
+				svc.WebHook[i].SetNextRunnable(&nextRunnable)
 			}
 
 			// WHEN HandleFailedActions is called on it
@@ -767,7 +769,7 @@ func TestService_HandleCommand(t *testing.T) {
 				&svc.Options.Interval)
 			svc.DeployedVersionLookup = nil
 			for i := range svc.Command {
-				svc.CommandController.NextRunnable[i] = tc.nextRunnable
+				svc.CommandController.SetNextRunnable(i, &tc.nextRunnable)
 			}
 
 			// WHEN HandleCommand is called on it
@@ -925,7 +927,7 @@ func TestService_HandleWebHook(t *testing.T) {
 			}
 			svc.DeployedVersionLookup = nil
 			for i := range svc.WebHook {
-				svc.WebHook[i].NextRunnable = tc.nextRunnable
+				svc.WebHook[i].SetNextRunnable(&tc.nextRunnable)
 			}
 
 			// WHEN HandleWebHook is called on it

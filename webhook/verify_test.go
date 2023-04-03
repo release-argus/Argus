@@ -29,15 +29,15 @@ import (
 func TestWebHookPrint(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
-		webhook WebHook
+		webhook *WebHook
 		lines   int
 	}{
 		"all fields": {
 			lines:   10,
-			webhook: *testWebHook(true, true, false, true)},
+			webhook: testWebHook(true, true, false, true)},
 		"partial fields": {
 			lines: 2,
-			webhook: WebHook{
+			webhook: &WebHook{
 				Type: "github",
 				URL:  "https://release-argus.io"}},
 	}

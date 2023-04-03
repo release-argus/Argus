@@ -1864,7 +1864,6 @@ func TestService_GiveSecrets(t *testing.T) {
 				)
 				if tc.oldService.Command != nil {
 					tc.oldService.CommandController.Command = &tc.oldService.Command
-					tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
 				}
 				for k, v := range tc.oldCommandFails {
 					if v != nil {

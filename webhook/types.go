@@ -16,6 +16,7 @@ package webhook
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -56,13 +57,14 @@ type WebHook struct {
 	MaxTries          *uint                   `yaml:"max_tries,omitempty" json:"max_tries,omitempty"`                     // Number of times to attempt sending the WebHook if the desired status code is not received.
 	SilentFails       *bool                   `yaml:"silent_fails,omitempty" json:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
 	Failed            *svcstatus.FailsWebHook `yaml:"-" json:"-"`                                                         // Whether the last send attempt failed
-	NextRunnable      time.Time               `yaml:"-" json:"-"`                                                         // Time the WebHook can next be run (for staggering)
+	nextRunnable      time.Time               `yaml:"-" json:"-"`                                                         // Time the WebHook can next be run (for staggering)
 	Main              *WebHook                `yaml:"-" json:"-"`                                                         // The Webhook that this Webhook is calling (and may override parts of)
 	Defaults          *WebHook                `yaml:"-" json:"-"`                                                         // Default values
 	HardDefaults      *WebHook                `yaml:"-" json:"-"`                                                         // Hardcoded default values
 	Notifiers         *Notifiers              `yaml:"-" json:"-"`                                                         // The Notify's to notify on failures
 	ServiceStatus     *svcstatus.Status       `yaml:"-" json:"-"`                                                         // Status of the Service (used for templating vars and Announce channel)
 	ParentInterval    *string                 `yaml:"-" json:"-"`                                                         // Interval between the parent Service's queries
+	mutex             sync.RWMutex            ``                                                                          // Mutex for concurrent access.
 }
 
 // String returns a string representation of the WebHook.

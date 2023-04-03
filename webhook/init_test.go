@@ -200,8 +200,8 @@ func TestSlice_Init(t *testing.T) {
 		slice        *Slice
 		nilSlice     bool
 		mains        *Slice
-		defaults     WebHook
-		hardDefaults WebHook
+		defaults     *WebHook
+		hardDefaults *WebHook
 	}{
 		"nil slice": {
 			slice: nil, nilSlice: true,
@@ -273,7 +273,7 @@ func TestSlice_Init(t *testing.T) {
 			// WHEN Init is called on it
 			tc.slice.Init(
 				&serviceStatus,
-				tc.mains, &tc.defaults, &tc.hardDefaults,
+				tc.mains, tc.defaults, tc.hardDefaults,
 				&notifiers,
 				&parentInterval)
 
@@ -295,12 +295,12 @@ func TestSlice_Init(t *testing.T) {
 						(*tc.mains)[webhook.ID], webhook.Main)
 				}
 				// defaults
-				if webhook.Defaults != &tc.defaults {
+				if webhook.Defaults != tc.defaults {
 					t.Errorf("Defaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
 						&tc.defaults, webhook.Defaults)
 				}
 				// hardDefaults
-				if webhook.HardDefaults != &tc.hardDefaults {
+				if webhook.HardDefaults != tc.hardDefaults {
 					t.Errorf("HardDefaults were not handed to the WebHook correctly\n want: %v\ngot:  %v",
 						&tc.hardDefaults, webhook.HardDefaults)
 				}
@@ -1021,7 +1021,7 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, true, false, false)
-			webhook.NextRunnable = tc.nextRunnable
+			webhook.SetNextRunnable(&tc.nextRunnable)
 			time.Sleep(time.Nanosecond)
 
 			// WHEN GetIsRunnable is called
@@ -1036,7 +1036,7 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 	}
 }
 
-func TestWebHook_SetNextRunnable(t *testing.T) {
+func TestWebHook_SetExecuting(t *testing.T) {
 	// GIVEN a WebHook in different fail states
 	tests := map[string]struct {
 		failed         *bool
@@ -1091,15 +1091,15 @@ func TestWebHook_SetNextRunnable(t *testing.T) {
 			maxTries := uint(tc.maxTries)
 			webhook.MaxTries = &maxTries
 
-			// WHEN SetNextRunnable is run
-			webhook.SetNextRunnable(tc.addDelay, tc.sending)
+			// WHEN SetExecuting is run
+			webhook.SetExecuting(tc.addDelay, tc.sending)
 
 			// THEN the correct response is received
 			// next runnable is within expectred range
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
-			gotTime := webhook.NextRunnable
+			gotTime := webhook.GetNextRunnable()
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
 				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
 					now, minTime, maxTime, gotTime)
