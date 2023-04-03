@@ -170,6 +170,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			newService := &Service{LatestVersion: tc.latestVersion}
 			oldService := &Service{LatestVersion: tc.otherLV}
 
@@ -495,6 +496,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			newService := &Service{DeployedVersionLookup: tc.deployedVersion}
 			oldService := &Service{DeployedVersionLookup: tc.otherDV}
 
@@ -966,9 +968,13 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		newService := &Service{Notify: tc.notify}
+		newService.Status.Init(
+			len(newService.Notify), len(newService.Command), len(newService.WebHook),
+			&name,
+			nil)
 		// Give empty defaults and hardDefaults to the NotifySlice
 		newService.Notify.Init(
-			&svcstatus.Status{ServiceID: &name},
+			&newService.Status,
 			&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
 		)
 
@@ -1334,7 +1340,33 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			newService := &Service{WebHook: tc.webhook}
+
+			newService := &Service{
+				ID:      name,
+				WebHook: tc.webhook}
+			// New Service Status.Fails
+			newService.Status.Init(
+				len(newService.Notify), len(newService.Command), len(newService.WebHook),
+				&newService.ID,
+				nil)
+			newService.Init(
+				&Service{}, &Service{},
+				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+			)
+			// Other Service Status.Fails
+			if tc.otherWebhook != nil {
+				otherServiceStatus := svcstatus.Status{}
+				otherServiceStatus.Init(
+					len(*tc.otherWebhook), 0, 0,
+					stringPtr("otherService"),
+					nil)
+				tc.otherWebhook.Init(
+					&otherServiceStatus,
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+					nil,
+					stringPtr("10m"))
+			}
 
 			// WHEN we call giveSecretsWebHook
 			newService.giveSecretsWebHook(tc.otherWebhook, tc.secretRefs)
@@ -1362,6 +1394,10 @@ func TestService_GiveSecrets(t *testing.T) {
 		expectedDeployedVersion          string
 		oldDeployedVersionTimestamp      string
 		expectedDeployedVersionTimestamp string
+		oldCommandFails                  []*bool
+		expectedCommandFails             []*bool
+		oldWebHookFails                  map[string]*bool
+		expectedWebHookFails             map[string]*bool
 		secretRefs                       oldSecretRefs
 		expected                         *Service
 	}{
@@ -1383,8 +1419,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "https://example.com"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "bar", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "foo", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "bar"},
+					"bar": {URL: "http://bar.com", Secret: "foo"},
 				},
 			},
 			oldService: &Service{
@@ -1425,8 +1461,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "https://example.com"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "bar", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "foo", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "bar"},
+					"bar": {URL: "http://bar.com", Secret: "foo"},
 				},
 			},
 			secretRefs: oldSecretRefs{},
@@ -1455,8 +1491,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "<secret>", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "<secret>", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "<secret>"},
+					"bar": {URL: "http://bar.com", Secret: "<secret>"},
 				},
 			},
 			oldService: nil,
@@ -1477,8 +1513,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "<secret>", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "<secret>", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "<secret>"},
+					"bar": {URL: "http://bar.com", Secret: "<secret>"},
 				},
 			},
 			secretRefs: oldSecretRefs{},
@@ -1501,8 +1537,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "<secret>", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "<secret>", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "<secret>"},
+					"bar": {URL: "http://bar.com", Secret: "<secret>"},
 				},
 			},
 			oldService: &Service{
@@ -1522,12 +1558,13 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "https://example.com/logo.png"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "foo", Failed: &map[string]*bool{
-						"foo": boolPtr(false), "bar": boolPtr(true)}},
-					"bar": {URL: "http://bar.com", Secret: "bar", Failed: &map[string]*bool{
-						"foo": boolPtr(false), "bar": boolPtr(true)}},
+					"foo": {URL: "http://foo.com", Secret: "foo"},
+					"bar": {URL: "http://bar.com", Secret: "bar"},
 				},
 			},
+			oldWebHookFails: map[string]*bool{
+				"foo": boolPtr(false),
+				"bar": boolPtr(true)},
 			expected: &Service{
 				LatestVersion: latestver.Lookup{
 					AccessToken: stringPtr("somethingelse")},
@@ -1545,8 +1582,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "<secret>", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "<secret>", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "<secret>"},
+					"bar": {URL: "http://bar.com", Secret: "<secret>"},
 				},
 			},
 			secretRefs: oldSecretRefs{},
@@ -1573,8 +1610,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "<secret>", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "<secret>", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "<secret>"},
+					"bar": {URL: "http://bar.com", Secret: "<secret>"},
 				},
 			},
 			oldService: &Service{
@@ -1623,8 +1660,8 @@ func TestService_GiveSecrets(t *testing.T) {
 							"avatar": "<secret>"}},
 				},
 				WebHook: webhook.Slice{
-					"foo": {URL: "http://foo.com", Secret: "foo", Failed: &map[string]*bool{}},
-					"bar": {URL: "http://bar.com", Secret: "bar", Failed: &map[string]*bool{}},
+					"foo": {URL: "http://foo.com", Secret: "foo"},
+					"bar": {URL: "http://bar.com", Secret: "bar"},
 				},
 			},
 			secretRefs: oldSecretRefs{
@@ -1721,22 +1758,21 @@ func TestService_GiveSecrets(t *testing.T) {
 			svc: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
-						URL:    "http://example.com",
-						Failed: &map[string]*bool{}}}},
+						URL: "http://example.com"}}},
 			oldService: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						ID:  "test",
-						URL: "http://example.com",
-						Failed: &map[string]*bool{
-							"test": boolPtr(true)}}}},
+						URL: "http://example.com"}}},
 			expected: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						ID:  "test",
-						URL: "http://example.com",
-						Failed: &map[string]*bool{
-							"test": boolPtr(true)}}}},
+						URL: "http://example.com"}}},
+			oldWebHookFails: map[string]*bool{
+				"test": boolPtr(true)},
+			expectedWebHookFails: map[string]*bool{
+				"test": boolPtr(true)},
 			secretRefs: oldSecretRefs{
 				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
 		},
@@ -1744,21 +1780,19 @@ func TestService_GiveSecrets(t *testing.T) {
 			svc: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
-						URL:    "http://example.com/other",
-						Failed: &map[string]*bool{}}}},
+						URL: "http://example.com/other"}}},
 			oldService: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						ID:  "test",
-						URL: "http://example.com",
-						Failed: &map[string]*bool{
-							"test": boolPtr(true)}}}},
+						URL: "http://example.com"}}},
 			expected: &Service{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
-						ID:     "test",
-						URL:    "http://example.com/other",
-						Failed: &map[string]*bool{}}}},
+						ID:  "test",
+						URL: "http://example.com/other"}}},
+			oldWebHookFails: map[string]*bool{
+				"test": boolPtr(true)},
 			secretRefs: oldSecretRefs{
 				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
 		},
@@ -1769,15 +1803,15 @@ func TestService_GiveSecrets(t *testing.T) {
 			oldService: &Service{
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{
-					Failed: &[]*bool{
-						boolPtr(true)}}},
+				CommandController: &command.Controller{}},
 			expected: &Service{
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{
-					Failed: &[]*bool{
-						boolPtr(true)}}},
+				CommandController: &command.Controller{}},
+			oldCommandFails: []*bool{
+				boolPtr(true)},
+			expectedCommandFails: []*bool{
+				boolPtr(true)},
 			secretRefs: oldSecretRefs{},
 		},
 		"changed Command loses Failed": {
@@ -1787,48 +1821,59 @@ func TestService_GiveSecrets(t *testing.T) {
 			oldService: &Service{
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{
-					Failed: &[]*bool{
-						boolPtr(true)}}},
+				CommandController: &command.Controller{}},
 			expected: &Service{
 				Command: command.Slice{
 					{"ls", "-lah"}}},
+			oldCommandFails: []*bool{
+				boolPtr(true)},
 			secretRefs: oldSecretRefs{},
 		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			tc.svc.Init(
 				&Service{}, &Service{},
 				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
 				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
 			)
-			// Preserve fails that'd be lost in the Init
-			var webhookFails map[string]*map[string]*bool
-			if tc.expected.WebHook != nil {
-				webhookFails = make(map[string]*map[string]*bool, len(tc.expected.WebHook))
-				for name, wh := range tc.expected.WebHook {
-					webhookFails[name] = wh.Failed
-				}
-			}
 			tc.expected.Init(
 				&Service{}, &Service{},
 				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
 				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
 			)
-			// Restore the fails lost
-			if tc.expected.WebHook != nil {
-				for name, wh := range tc.expected.WebHook {
-					wh.Failed = webhookFails[name]
+			if tc.expected != nil {
+				for k, v := range tc.expectedCommandFails {
+					if v != nil {
+						tc.expected.Status.Fails.Command.Set(k, *v)
+					}
+				}
+				for k, v := range tc.expectedWebHookFails {
+					tc.expected.Status.Fails.WebHook.Set(k, v)
 				}
 			}
-			if tc.oldService != nil && tc.oldService.Command != nil {
-				tc.oldService.CommandController.Command = &tc.oldService.Command
-				tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
+			if tc.oldService != nil {
+				tc.oldService.Init(
+					&Service{}, &Service{},
+					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+				)
+				if tc.oldService.Command != nil {
+					tc.oldService.CommandController.Command = &tc.oldService.Command
+					tc.oldService.CommandController.NextRunnable = make([]time.Time, len(tc.oldService.Command))
+				}
+				for k, v := range tc.oldCommandFails {
+					if v != nil {
+						tc.oldService.Status.Fails.Command.Set(k, *v)
+					}
+				}
+				for k, v := range tc.oldWebHookFails {
+					tc.oldService.Status.Fails.WebHook.Set(k, v)
+				}
 			}
 
 			// WHEN we call giveSecrets
@@ -1851,11 +1896,11 @@ func TestService_GiveSecrets(t *testing.T) {
 				// Get failed state being copied
 				var wantFailed *bool
 				for name, wh := range tc.expected.WebHook {
-					wantFailed = (*wh.Failed)[name]
+					wantFailed = wh.Failed.Get(name)
 					break
 				}
 				// Get carried over state
-				gotFailed := (*gotService.WebHook[expectedWH].Failed)[expectedWH]
+				gotFailed := gotService.WebHook[expectedWH].Failed.Get(expectedWH)
 				if gotFailed == wantFailed {
 					return
 				}
@@ -2389,6 +2434,7 @@ func TestNew(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// Convert the string payload to a ReadCloser
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := ioutil.NopCloser(reader)
@@ -2408,6 +2454,12 @@ func TestNew(t *testing.T) {
 			}
 			if tc.notifyHardDefaults == nil {
 				tc.notifyHardDefaults = &shoutrrr.Slice{}
+			}
+			if tc.oldService != nil {
+				tc.oldService.Init(
+					&Service{}, &Service{},
+					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 			}
 
 			// WHEN we call New
@@ -2533,6 +2585,7 @@ func TestService_CheckFetches(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			announceChannel := make(chan []byte, 5)
 			tc.svc.Status.AnnounceChannel = &announceChannel
 			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, false)

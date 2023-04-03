@@ -27,7 +27,7 @@ func (w *WebHook) AnnounceSend() {
 	w.SetNextRunnable(false, false)
 	webhookSummary := make(map[string]*api_type.WebHookSummary)
 	webhookSummary[w.ID] = &api_type.WebHookSummary{
-		Failed:       (*w.Failed)[w.ID],
+		Failed:       w.Failed.Get(w.ID),
 		NextRunnable: w.NextRunnable,
 	}
 

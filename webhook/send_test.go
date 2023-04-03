@@ -70,6 +70,7 @@ func TestWebHook_Try(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
@@ -174,6 +175,7 @@ func TestWebHook_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
@@ -270,6 +272,7 @@ func TestSlice_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
@@ -350,6 +353,7 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
 			// WHEN Send is called with them
@@ -391,6 +395,7 @@ func TestCheckWebHookBody(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN checkWebHookBody is called on it
 			got := checkWebHookBody(tc.body)
 

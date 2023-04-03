@@ -322,7 +322,7 @@ func (s *Shoutrrr) Send(
 				s.GetType(),
 				"SUCCESS")
 			failed := false
-			(*s.Failed)[s.ID] = &failed
+			s.Failed.Set(s.ID, &failed)
 			return
 		}
 
@@ -336,10 +336,11 @@ func (s *Shoutrrr) Send(
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			msg = fmt.Sprintf("failed %d times to send a %s message for %q to %q", s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
+			msg = fmt.Sprintf("failed %d times to send a %s message for %q to %q",
+				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
-			(*s.Failed)[s.ID] = &failed
+			s.Failed.Set(s.ID, &failed)
 			for key := range combinedErrs {
 				errs = fmt.Errorf("%s%s x %d",
 					util.ErrorToString(errs), key, combinedErrs[key])

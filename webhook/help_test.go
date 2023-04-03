@@ -68,7 +68,10 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 		webhook.ID = "test"
 		webhook.ParentInterval = stringPtr("12m")
 		webhook.ServiceStatus = &svcstatus.Status{}
-		webhook.ServiceStatus.Fails.WebHook = make(map[string]*bool, 1)
+		webhook.ServiceStatus.Init(
+			0, 0, 1,
+			stringPtr("testServiceID"),
+			nil)
 		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 		webhook.Main = &WebHook{}
 		webhook.Defaults = &WebHook{}
@@ -106,20 +109,22 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
 	notifier := &shoutrrr.Shoutrrr{
-		Type:   "gotify",
-		ID:     "test",
-		Failed: nil,
-		ServiceStatus: &svcstatus.Status{
-			ServiceID: stringPtr("service"),
-			Fails:     svcstatus.Fails{Shoutrrr: make(map[string]*bool, 1)}},
-		Main:         &shoutrrr.Shoutrrr{},
-		Defaults:     &shoutrrr.Shoutrrr{},
-		HardDefaults: &shoutrrr.Shoutrrr{},
-		Options:      map[string]string{"max_tries": "1"},
+		Type:          "gotify",
+		ID:            "test",
+		Failed:        nil,
+		ServiceStatus: &svcstatus.Status{},
+		Main:          &shoutrrr.Shoutrrr{},
+		Defaults:      &shoutrrr.Shoutrrr{},
+		HardDefaults:  &shoutrrr.Shoutrrr{},
+		Options:       map[string]string{"max_tries": "1"},
 		// trunk-ignore(gitleaks/generic-api-key)
 		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
 		Params:    map[string]string{},
 	}
+	notifier.ServiceStatus.Init(
+		0, 1, 0,
+		stringPtr("testServiceID"),
+		stringPtr("https://example.com"))
 	notifier.Failed = &notifier.ServiceStatus.Fails.Shoutrrr
 	if failing {
 		notifier.URLFields["token"] = "invalid"

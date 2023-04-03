@@ -51,6 +51,7 @@ func TestSetGitLabParameter(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/approvals%s", tc.queryParams), nil)
 
 			// WHEN SetGitLabParameter is called

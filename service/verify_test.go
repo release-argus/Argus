@@ -126,6 +126,7 @@ func TestService_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -189,6 +190,7 @@ func TestSlice_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -385,6 +387,7 @@ func TestService_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			tc.svc.ID = "test"
 			tc.svc.Defaults = tc.defaults
 			tc.svc.Options = tc.options
@@ -475,6 +478,7 @@ func TestSlice_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 

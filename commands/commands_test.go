@@ -23,7 +23,6 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-	"time"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -59,6 +58,7 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.latestVersion != "" {
 				tc.serviceStatus.SetLatestVersion(tc.latestVersion, false)
 			}
@@ -95,6 +95,7 @@ func TestCommand_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -125,15 +126,15 @@ func TestController_ExecIndex(t *testing.T) {
 	// GIVEN a Controller with different Command's to execute
 	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
-		Failed:         &[]*bool{nil, nil},
-		NextRunnable:   make([]time.Time, 2),
-		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
-	}
+		nil,
+		stringPtr("13m"),
+	)
 	tests := map[string]struct {
 		index       int
 		err         error
@@ -158,6 +159,7 @@ func TestController_ExecIndex(t *testing.T) {
 	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -228,6 +230,7 @@ func TestController_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			announce := make(chan []byte, 8)
 			controller := testController(&announce)
 			stdout := os.Stdout

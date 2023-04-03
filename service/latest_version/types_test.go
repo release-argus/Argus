@@ -92,6 +92,7 @@ url_commands:
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the Lookup is stringified with String
 			got := tc.lookup.String()
 
@@ -128,6 +129,7 @@ func TestGitHubData_String(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the GitHubData is stringified with String
 			got := tc.githubData.String()
 
@@ -243,6 +245,7 @@ func TestLookup_IsEqual(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// Set Status vars just to ensure they're not printed
 			if tc.a != nil {
 				tc.a.Status = &svcstatus.Status{}

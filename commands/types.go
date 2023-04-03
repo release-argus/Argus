@@ -42,12 +42,12 @@ func (c *Command) String() (str string) {
 }
 
 type Controller struct {
-	Command        *Slice            `yaml:"-" json:"-"` // command(s) to run (with args)
-	NextRunnable   []time.Time       `yaml:"-" json:"-"` // Time the Commands can next be run (for staggering)
-	Failed         *[]*bool          `yaml:"-" json:"-"` // Whether the last execution attempt failed
-	Notifiers      Notifiers         `yaml:"-" json:"-"` // The Notify's to notify on failures
-	ServiceStatus  *svcstatus.Status `yaml:"-" json:"-"` // Status of the Service (used for templating commands)
-	ParentInterval *string           `yaml:"-" json:"-"` // Interval between the parent Service's queries
+	Command        *Slice                  `yaml:"-" json:"-"` // command(s) to run (with args)
+	NextRunnable   []time.Time             `yaml:"-" json:"-"` // Time the Commands can next be run (for staggering)
+	Failed         *svcstatus.FailsCommand `yaml:"-" json:"-"` // Whether the last execution attempt failed
+	Notifiers      Notifiers               `yaml:"-" json:"-"` // The Notify's to notify on failures
+	ServiceStatus  *svcstatus.Status       `yaml:"-" json:"-"` // Status of the Service (used for templating commands)
+	ParentInterval *string                 `yaml:"-" json:"-"` // Interval between the parent Service's queries
 }
 
 // Notifiers to use when their WebHook fails.
@@ -58,26 +58,23 @@ type Notifiers struct {
 // CopyFailsFrom target
 func (c *Controller) CopyFailsFrom(target *Controller) {
 	if c == nil || c.Command == nil ||
-		target == nil || target.Failed == nil {
+		//nolint:typecheck // target has no CommandController
+		target == nil {
 		return
 	}
 
-	if c.Failed == nil {
-		fails := make([]*bool, len(*c.Command))
-		c.Failed = &fails
-		c.NextRunnable = make([]time.Time, len(*c.Command))
-	}
-
 	// Loop through old fails
-	for i := range *target.Failed {
+	for i := 0; i < target.Failed.Length(); i++ {
 		// Loop through new fails to find try and find this command
-		for j := range *c.Failed {
+		for j := 0; j < c.Failed.Length(); j++ {
 			// If the command has been run (has a failed state)
 			// and the commands match, copy the failed status
-			if (*target.Failed)[i] != nil &&
+			if target.Failed.Get(i) != nil &&
 				(*target.Command)[i].FormattedString() == (*c.Command)[j].FormattedString() {
-				failed := *(*target.Failed)[i]
-				(*c.Failed)[j] = &failed
+				failed := target.Failed.Get(i)
+				if failed != nil {
+					c.Failed.Set(j, *failed)
+				}
 				c.NextRunnable[j] = target.NextRunnable[i]
 				break
 			}

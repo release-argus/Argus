@@ -50,6 +50,7 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			for i := range tc.args {
 				tc.args[i] += "---" + name
 			}
@@ -191,6 +192,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			for i := range tc.args {
 				tc.args[i] += name
 			}

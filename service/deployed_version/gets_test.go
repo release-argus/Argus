@@ -49,6 +49,7 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup()
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault

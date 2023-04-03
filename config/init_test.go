@@ -52,6 +52,7 @@ func TestConfig_Load(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.got != tc.want {
 				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
 					name, tc.want, tc.got)

@@ -42,6 +42,7 @@ func TestContains(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN Contains is run on this list with a element inside it
 			var found bool
 			found = Contains(tc.list, tc.contain)
@@ -74,6 +75,7 @@ func TestEvalNilPtr(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN EvalNilPtr is run on a pointer
 			got := EvalNilPtr(tc.ptr, tc.nilStr)
 
@@ -105,6 +107,7 @@ func TestPtrOrValueToPtr(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN PtrOrValueToPtr is run on pointer and a value
 			got := PtrOrValueToPtr(tc.a, tc.b)
 
@@ -136,6 +139,7 @@ func TestValueIfNotNil(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN ValueIfNotNil is run on pointer and a value
 			got := ValueIfNotNil(tc.check, tc.value)
 
@@ -178,6 +182,7 @@ func TestValueIfNotDefault(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN ValueIfNotDefault is run on pointer and a value
 			got := ValueIfNotDefault(tc.check, tc.value)
 
@@ -209,6 +214,7 @@ func TestDefaultIfNil(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN DefaultIfNil is run on pointer and a value
 			got := DefaultIfNil(tc.check)
 
@@ -262,6 +268,7 @@ func TestGetFirstNonNilPtr(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetFirstNonNilPtr is run on a slice of pointers
 			got := GetFirstNonNilPtr(tc.pointers...)
 
@@ -300,6 +307,7 @@ func TestValueIfTrue(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN Contains is run on this list with a element inside it
 			var found bool
 			found = Contains(tc.list, tc.contain)
@@ -354,6 +362,7 @@ func TestGetFirstNonDefault(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetFirstNonDefault is run on a slice of slice
 			got := GetFirstNonDefault(tc.slice...)
 
@@ -389,6 +398,7 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
+
 			msg := "var is not default from PrintlnIfNotDefault"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -432,7 +442,7 @@ func TestPrintlnIfNotNil(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+
 			msg := "var is not default from PrintlnIfNotNil"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -476,7 +486,7 @@ func TestPrintlnIfNil(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+
 			msg := "var is not default from PrintlnIfNil"
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -522,6 +532,7 @@ func TestDefaultOrValue(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN DefaultOrValue is called
 			got := DefaultOrValue(tc.element, tc.value)
 
@@ -565,6 +576,7 @@ func TestGetValue(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetValue is called
 			var got interface{}
 			switch v := tc.ptr.(type) {
@@ -600,6 +612,7 @@ func TestErrorToString(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN ErrorToString is called
 			got := ErrorToString(tc.err)
 
@@ -1073,6 +1086,7 @@ func TestStringToBoolPtr(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN StringToBoolPtr is called
 			got := StringToBoolPtr(tc.input)
 

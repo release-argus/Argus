@@ -507,6 +507,7 @@ func TestServiceSummary_String(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the Summary is stringified with String
 			got := tc.summary.String()
 
@@ -734,6 +735,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// Give them non-nil Status'
 			if tc.old != nil && tc.old.Status == nil {
 				tc.old.Status = &Status{}
@@ -786,6 +788,7 @@ func TestStatus_String(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the Status is stringified with String
 			got := tc.status.String()
 

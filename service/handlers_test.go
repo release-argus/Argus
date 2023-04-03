@@ -23,7 +23,6 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -50,6 +49,7 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			svc.Status.SetApprovedVersion(tc.startApprovedVersion)
 			svc.Status.SetLatestVersion(tc.latestVersion, false)
 
@@ -76,8 +76,9 @@ func TestService_UpdatedVersion(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		commands              command.Slice
+		commandFails          []*bool
 		webhooks              webhook.Slice
-		fails                 svcstatus.Fails
+		webhookFails          map[string]*bool
 		latestIsDeployed      bool
 		deployedVersion       *deployedver.Lookup
 		approvedBecomesLatest bool
@@ -98,27 +99,24 @@ func TestService_UpdatedVersion(t *testing.T) {
 			deployedBecomesLatest: true,
 			commands: command.Slice{
 				{"true"}, {"false"}},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false)}},
+			commandFails: []*bool{
+				boolPtr(false), boolPtr(false)},
 		},
 		"commands that haven't run fails doesn't announce or update deployed_version": {
 			wantAnnounces:         0,
 			deployedBecomesLatest: false,
 			commands: command.Slice{
 				{"true"}, {"false"}},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), nil}},
+			commandFails: []*bool{
+				boolPtr(false), nil},
 		},
 		"commands that have failed doesn't announce or update deployed_version": {
 			wantAnnounces:         0,
 			deployedBecomesLatest: false,
 			commands: command.Slice{
 				{"true"}, {"false"}},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(true)}},
+			commandFails: []*bool{
+				boolPtr(false), boolPtr(true)},
 		},
 		"webhooks that have no fails does announce and update deployed_version": {
 			wantAnnounces:         1,
@@ -126,10 +124,9 @@ func TestService_UpdatedVersion(t *testing.T) {
 			webhooks: webhook.Slice{
 				"0": {},
 				"1": {}},
-			fails: svcstatus.Fails{
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": boolPtr(false)}},
+			webhookFails: map[string]*bool{
+				"0": boolPtr(false),
+				"1": boolPtr(false)},
 		},
 		"webhooks that haven't run fails doesn't announce or update deployed_version": {
 			wantAnnounces:         0,
@@ -137,10 +134,9 @@ func TestService_UpdatedVersion(t *testing.T) {
 			webhooks: webhook.Slice{
 				"0": {},
 				"1": {}},
-			fails: svcstatus.Fails{
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": nil}},
+			webhookFails: map[string]*bool{
+				"0": boolPtr(false),
+				"1": nil},
 		},
 		"webhooks that have failed doesn't announce or update deployed_version": {
 			wantAnnounces:         0,
@@ -148,10 +144,9 @@ func TestService_UpdatedVersion(t *testing.T) {
 			webhooks: webhook.Slice{
 				"0": {},
 				"1": {}},
-			fails: svcstatus.Fails{
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": boolPtr(true)}},
+			webhookFails: map[string]*bool{
+				"0": boolPtr(false),
+				"1": boolPtr(true)},
 		},
 		"commands and webhooks that have no fails does announce and update deployed_version": {
 			wantAnnounces:         1,
@@ -161,12 +156,11 @@ func TestService_UpdatedVersion(t *testing.T) {
 			webhooks: webhook.Slice{
 				"0": {},
 				"1": {}},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false)},
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": boolPtr(false)}},
+			commandFails: []*bool{
+				boolPtr(false), boolPtr(false)},
+			webhookFails: map[string]*bool{
+				"0": boolPtr(false),
+				"1": boolPtr(false)},
 		},
 		"commands and webhooks that have no fails with deployedVersionLookup does announce and only update approved_version": {
 			wantAnnounces:         1,
@@ -178,55 +172,61 @@ func TestService_UpdatedVersion(t *testing.T) {
 				"0": {},
 				"1": {}},
 			deployedVersion: &deployedver.Lookup{},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false)},
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": boolPtr(false)}},
+			commandFails: []*bool{
+				boolPtr(false), boolPtr(false)},
+			webhookFails: map[string]*bool{
+				"0": boolPtr(false),
+				"1": boolPtr(false)},
 		},
 		"deployedVersionLookup with no commands/webhooks doesn't announce or update deployed_version/approved_version": {
 			wantAnnounces:         0,
 			deployedBecomesLatest: false,
 			deployedVersion:       &deployedver.Lookup{},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false)},
-				WebHook: map[string]*bool{
-					"0": boolPtr(false),
-					"1": boolPtr(false)}},
 		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		svc := testServiceURL(name)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			svc := testServiceURL(name)
 			svc.Command = tc.commands
 			svc.WebHook = tc.webhooks
+			svc.Status.Init(
+				0, len(svc.Command), len(svc.WebHook),
+				&svc.ID,
+				&svc.Dashboard.WebURL)
 			svc.DeployedVersionLookup = tc.deployedVersion
-			svc.Status.Fails = tc.fails
+			for i := range tc.commandFails {
+				if tc.commandFails[i] != nil {
+					svc.Status.Fails.Command.Set(i, *tc.commandFails[i])
+				}
+			}
+			for i := range tc.webhookFails {
+				svc.Status.Fails.WebHook.Set(i, tc.webhookFails[i])
+			}
 			if tc.latestIsDeployed {
 				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
 
 			// WHEN UpdatedVersion is called on it
-			want := svc.Status.GetLatestVersion()
+			startLV := svc.Status.GetLatestVersion()
 			svc.UpdatedVersion()
 
 			// THEN ApprovedVersion becomes LatestVersion if there's a dvl and commands/webhooks
-			got := svc.Status.GetApprovedVersion()
-			if (tc.approvedBecomesLatest && got != want) || (!tc.approvedBecomesLatest && got == want) {
+			gotAV := svc.Status.GetApprovedVersion()
+			if (tc.approvedBecomesLatest && gotAV != startLV) ||
+				(!tc.approvedBecomesLatest && gotAV == startLV) {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
-					want, got)
+					startLV, gotAV)
 			}
 			// THEN DeployedVersion becomes LatestVersion if there's no dvl
-			got = svc.Status.GetDeployedVersion()
-			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
+			gotDV := svc.Status.GetDeployedVersion()
+			if (tc.deployedBecomesLatest && gotDV != startLV) ||
+				(!tc.deployedBecomesLatest && gotDV == startLV) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
-					want, got)
+					startLV, gotDV)
 			}
 			// THEN the correct number of changes are announced to the channel
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
@@ -314,6 +314,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			svc.Dashboard.AutoApprove = &tc.autoApprove
 			svc.DeployedVersionLookup = nil
 
@@ -330,8 +331,9 @@ func TestService_HandleUpdateActions(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				if svc.Command != nil {
 					for j := range svc.Command {
-						if (tc.deployedBecomesLatest && svc.Status.Fails.Command[j] != nil) ||
-							(!tc.deployedBecomesLatest && svc.Status.Fails.Command[j] == nil) {
+						commandFailed := svc.Status.Fails.Command.Get(j)
+						if (tc.deployedBecomesLatest && commandFailed != nil) ||
+							(!tc.deployedBecomesLatest && commandFailed == nil) {
 							actionsRan = false
 							break
 						}
@@ -339,8 +341,9 @@ func TestService_HandleUpdateActions(t *testing.T) {
 				}
 				if svc.WebHook != nil {
 					for j := range svc.WebHook {
-						if (tc.deployedBecomesLatest && svc.Status.Fails.WebHook[j] != nil) ||
-							(!tc.deployedBecomesLatest && svc.Status.Fails.WebHook[j] == nil) {
+						webhookFailed := svc.Status.Fails.WebHook.Get(j)
+						if (tc.deployedBecomesLatest && webhookFailed != nil) ||
+							(!tc.deployedBecomesLatest && webhookFailed == nil) {
 							actionsRan = false
 							break
 						}
@@ -353,9 +356,24 @@ func TestService_HandleUpdateActions(t *testing.T) {
 				}
 			}
 			if !tc.autoApprove {
-				if actionsRan && (len(svc.Status.Fails.Command) != 0 || len(svc.Status.Fails.WebHook) != 0) {
-					t.Fatalf("no actions should have run as auto_approve is %t\n%#v",
-						tc.autoApprove, svc.Status.Fails)
+				if actionsRan {
+					ranCommand := false
+					for i := range svc.Command {
+						if svc.Status.Fails.Command.Get(i) != nil {
+							ranCommand = true
+							break
+						}
+					}
+					for i := range svc.WebHook {
+						if svc.Status.Fails.WebHook.Get(i) != nil {
+							ranCommand = true
+							break
+						}
+					}
+					if ranCommand {
+						t.Fatalf("no actions should have run as auto_approve is %t\n%#v",
+							tc.autoApprove, svc.Status.Fails.String())
+					}
 				}
 			} else if !actionsRan {
 				t.Fatal("actions didn't finish running")
@@ -372,20 +390,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
-				fails := ""
-				if len(svc.Status.Fails.Command) != 0 {
-					for i := range svc.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%t, ", i, *svc.Status.Fails.Command[i])
-					}
-					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
-				}
-				fails = ""
-				if len(svc.Status.Fails.WebHook) != 0 {
-					for i := range svc.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
-					}
-					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
-				}
+				t.Logf("Fails: %s", svc.Status.Fails.String())
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
@@ -404,43 +409,44 @@ func TestService_HandleFailedActions(t *testing.T) {
 		commandNextRunnables  []time.Time
 		webhooks              webhook.Slice
 		webhookNextRunnables  map[string]time.Time
-		fails                 svcstatus.Fails
-		wantFails             svcstatus.Fails
+		startFailsComand      []*bool
+		wantFailsCommand      []*bool
+		startFailsWebHook     map[string]*bool
+		wantFailsWebHook      map[string]*bool
 		deployedBecomesLatest bool
 		deployedLatest        bool
 		wantAnnounces         int
 	}{
 		"no command or webhooks fails retries all": {
-			wantAnnounces: 2, // 2 = 1 command fail, 1 webhook fail
-			commands:      command.Slice{{"false"}},
+			wantAnnounces: 3, // 3 = 2 command fail, 1 webhook fail
+			commands: command.Slice{
+				{"false"}, {"false"}},
 			webhooks: webhook.Slice{
 				"will_fail": testWebHook(true)},
-			fails: svcstatus.Fails{
-				Command: []*bool{boolPtr(false)},
-				WebHook: map[string]*bool{
-					"will_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{boolPtr(true)},
-				WebHook: map[string]*bool{
-					"will_fail": boolPtr(true)}},
+			startFailsComand: []*bool{
+				nil, nil},
+			wantFailsCommand: []*bool{
+				boolPtr(true), boolPtr(true)},
+			startFailsWebHook: map[string]*bool{
+				"will_fail": nil},
+			wantFailsWebHook: map[string]*bool{
+				"will_fail": boolPtr(true)},
 		},
 		"have command fails and no webhook fails retries only the failed commands": {
-			wantAnnounces:  3, // 2 = 2 command runs
+			wantAnnounces:  3, // 3 = 2 command pass, 1 command fail
 			deployedLatest: false,
 			commands: command.Slice{
 				{"true"}, {"false"}, {"true"}, {"false"}},
 			webhooks: webhook.Slice{
 				"pass": testWebHook(false)},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
-				WebHook: map[string]*bool{
-					"pass": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)},
-				WebHook: map[string]*bool{
-					"pass": boolPtr(false)}},
+			startFailsComand: []*bool{
+				boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
+			wantFailsCommand: []*bool{
+				boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(true)},
+			startFailsWebHook: map[string]*bool{
+				"pass": boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"pass": boolPtr(false)},
 		},
 		"command fails before their next_runnable don't run": {
 			wantAnnounces:  1, // 0 = no runs
@@ -449,16 +455,14 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"true"}, {"false"}, {"true"}, {"false"}},
 			webhooks: webhook.Slice{
 				"pass": testWebHook(false)},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
-				WebHook: map[string]*bool{
-					"pass": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)},
-				WebHook: map[string]*bool{
-					"pass": boolPtr(false)}},
+			startFailsComand: []*bool{
+				boolPtr(true), boolPtr(false), boolPtr(true), boolPtr(true)},
+			wantFailsCommand: []*bool{
+				boolPtr(false), boolPtr(false), boolPtr(true), boolPtr(true)},
+			startFailsWebHook: map[string]*bool{
+				"pass": boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"pass": boolPtr(false)},
 			commandNextRunnables: []time.Time{
 				time.Now().UTC(),
 				time.Now().UTC(),
@@ -468,17 +472,17 @@ func TestService_HandleFailedActions(t *testing.T) {
 		"have command fails no webhook fails and retries only the failed commands and updates deployed_version": {
 			wantAnnounces:         2, // 2 = 1 command, 1 deployed
 			deployedBecomesLatest: true,
-			commands:              command.Slice{{"true"}, {"false"}},
+			commands: command.Slice{
+				{"true"}, {"false"}},
 			webhooks: webhook.Slice{
 				"pass": testWebHook(false)},
-			fails: svcstatus.Fails{
-				Command: []*bool{boolPtr(true), boolPtr(false)},
-				WebHook: map[string]*bool{
-					"pass": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{nil, nil},
-				WebHook: map[string]*bool{
-					"pass": nil}},
+			startFailsComand: []*bool{boolPtr(true), boolPtr(false)},
+			wantFailsCommand: []*bool{
+				nil, nil},
+			startFailsWebHook: map[string]*bool{
+				"pass": boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"pass": nil},
 		},
 		"have webhook fails and no command fails retries only the failed commands": {
 			wantAnnounces:  2, // 2 = 2 webhook runs
@@ -488,18 +492,18 @@ func TestService_HandleFailedActions(t *testing.T) {
 				"will_fail":  testWebHook(true),
 				"will_pass":  testWebHook(false),
 				"would_fail": testWebHook(true)},
-			fails: svcstatus.Fails{
-				Command: []*bool{boolPtr(false)},
-				WebHook: map[string]*bool{
-					"will_fail":  boolPtr(true),
-					"will_pass":  boolPtr(true),
-					"would_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{boolPtr(false)},
-				WebHook: map[string]*bool{
-					"will_fail":  boolPtr(true),
-					"will_pass":  boolPtr(false),
-					"would_fail": boolPtr(false)}},
+			startFailsComand: []*bool{
+				boolPtr(false)},
+			wantFailsCommand: []*bool{
+				boolPtr(false)},
+			startFailsWebHook: map[string]*bool{
+				"will_fail":  boolPtr(true),
+				"will_pass":  boolPtr(true),
+				"would_fail": boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"will_fail":  boolPtr(true),
+				"will_pass":  boolPtr(false),
+				"would_fail": boolPtr(false)},
 		},
 		"webhook fails before their next_runnable don't run": {
 			wantAnnounces:  1, // 0 runs
@@ -510,19 +514,21 @@ func TestService_HandleFailedActions(t *testing.T) {
 				"is_runnable":  testWebHook(false),
 				"not_runnable": testWebHook(true),
 				"would_fail":   testWebHook(true)},
-			fails: svcstatus.Fails{
-				Command: []*bool{boolPtr(false)},
-				WebHook: map[string]*bool{
-					"is_runnable":  boolPtr(true),
-					"not_runnable": boolPtr(true),
-					"would_fail":   boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{boolPtr(false)},
-				WebHook: map[string]*bool{
-					"is_runnable":  boolPtr(false),
-					"not_runnable": boolPtr(true),
-					"would_fail":   boolPtr(false)}},
-			webhookNextRunnables: map[string]time.Time{"is_runnable": time.Now().UTC(), "not_runnable": time.Now().UTC().Add(time.Minute)},
+			startFailsComand: []*bool{
+				boolPtr(false)},
+			wantFailsCommand: []*bool{
+				boolPtr(false)},
+			startFailsWebHook: map[string]*bool{
+				"is_runnable":  boolPtr(true),
+				"not_runnable": boolPtr(true),
+				"would_fail":   boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"is_runnable":  boolPtr(false),
+				"not_runnable": boolPtr(true),
+				"would_fail":   boolPtr(false)},
+			webhookNextRunnables: map[string]time.Time{
+				"is_runnable":  time.Now().UTC(),
+				"not_runnable": time.Now().UTC().Add(time.Minute)},
 		},
 		"have webhook fails and no command fails retries only the failed commands and updates deployed_version": {
 			wantAnnounces:         3, // 2 webhook runs
@@ -533,20 +539,18 @@ func TestService_HandleFailedActions(t *testing.T) {
 				"will_pass0": testWebHook(false),
 				"will_pass1": testWebHook(false),
 				"would_fail": testWebHook(true)},
-			fails: svcstatus.Fails{
-				Command: []*bool{
-					boolPtr(false)},
-				WebHook: map[string]*bool{
-					"will_pass0": boolPtr(true),
-					"will_pass1": boolPtr(true),
-					"would_fail": boolPtr(false)}},
-			wantFails: svcstatus.Fails{
-				Command: []*bool{
-					nil},
-				WebHook: map[string]*bool{
-					"will_pass0": nil,
-					"will_pass1": nil,
-					"would_fail": nil}},
+			startFailsComand: []*bool{
+				boolPtr(false)},
+			wantFailsCommand: []*bool{
+				nil},
+			startFailsWebHook: map[string]*bool{
+				"will_pass0": boolPtr(true),
+				"will_pass1": boolPtr(true),
+				"would_fail": boolPtr(false)},
+			wantFailsWebHook: map[string]*bool{
+				"will_pass0": nil,
+				"will_pass1": nil,
+				"would_fail": nil},
 		},
 	}
 
@@ -556,11 +560,11 @@ func TestService_HandleFailedActions(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
 				&svc.ID,
 				&svc.Dashboard.WebURL)
-			svc.Status.Fails = tc.fails
 			if tc.deployedLatest {
 				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
@@ -573,12 +577,20 @@ func TestService_HandleFailedActions(t *testing.T) {
 				&svc.Command,
 				nil,
 				&svc.Options.Interval)
+			for k, v := range tc.startFailsComand {
+				if v != nil {
+					svc.Status.Fails.Command.Set(k, *v)
+				}
+			}
 			svc.WebHook = tc.webhooks
 			svc.WebHook.Init(
 				&svc.Status,
 				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
 				nil,
 				&svc.Options.Interval)
+			for k, v := range tc.startFailsWebHook {
+				svc.Status.Fails.WebHook.Set(k, v)
+			}
 			svc.DeployedVersionLookup = nil
 			for i := range tc.commandNextRunnables {
 				svc.CommandController.NextRunnable[i] = tc.commandNextRunnables[i]
@@ -597,7 +609,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				if svc.Command != nil {
 					for j := range svc.Command {
-						if stringifyPointer(svc.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails.Command[j]) {
+						if stringifyPointer(svc.Status.Fails.Command.Get(j)) != stringifyPointer(tc.wantFailsCommand[j]) {
 							actionsRan = false
 							break
 						}
@@ -605,7 +617,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				}
 				if svc.WebHook != nil {
 					for j := range svc.WebHook {
-						if stringifyPointer(svc.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails.WebHook[j]) {
+						if stringifyPointer(svc.Status.Fails.WebHook.Get(j)) != stringifyPointer(tc.wantFailsWebHook[j]) {
 							actionsRan = false
 							break
 						}
@@ -632,20 +644,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			if len(*svc.Status.AnnounceChannel) != tc.wantAnnounces {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
-				fails := ""
-				if len(svc.Status.Fails.Command) != 0 {
-					for i := range svc.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(svc.Status.Fails.Command[i]))
-					}
-					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
-				}
-				fails = ""
-				if len(svc.Status.Fails.WebHook) != 0 {
-					for i := range svc.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
-					}
-					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
-				}
+				t.Logf("Fails: {%s}", svc.Status.Fails.String())
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
@@ -653,17 +652,17 @@ func TestService_HandleFailedActions(t *testing.T) {
 				}
 			}
 			// THEN the Command fails are as expected
-			for i := range tc.wantFails.Command {
-				if stringifyPointer(svc.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails.Command[i]) {
+			for i := range tc.wantFailsCommand {
+				if stringifyPointer(svc.Status.Fails.Command.Get(i)) != stringifyPointer(tc.wantFailsCommand[i]) {
 					t.Errorf("got, command[%d]=%s, want %s",
-						i, stringifyPointer(svc.Status.Fails.Command[i]), stringifyPointer(tc.wantFails.Command[i]))
+						i, stringifyPointer(svc.Status.Fails.Command.Get(i)), stringifyPointer(tc.wantFailsCommand[i]))
 				}
 			}
 			// THEN the WebHook fails are as expected
-			for i := range tc.wantFails.WebHook {
-				if stringifyPointer(svc.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails.WebHook[i]) {
+			for i := range tc.wantFailsWebHook {
+				if stringifyPointer(svc.Status.Fails.WebHook.Get(i)) != stringifyPointer(tc.wantFailsWebHook[i]) {
 					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, stringifyPointer(svc.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails.WebHook[i]))
+						i, stringifyPointer(svc.Status.Fails.WebHook.Get(i)), stringifyPointer(tc.wantFailsWebHook[i]))
 				}
 			}
 		})
@@ -744,13 +743,22 @@ func TestService_HandleCommand(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.deployedLatest {
 				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
-			svc.Status.Fails.Command = tc.fails
 			svc.Command = tc.commands
 			if len(tc.commands) != 0 {
 				svc.CommandController = &command.Controller{}
+			}
+			svc.Status.Init(
+				len(svc.Notify), len(svc.Command), len(svc.WebHook),
+				&svc.ID,
+				&svc.Dashboard.WebURL)
+			for k, v := range tc.fails {
+				if v != nil {
+					svc.Status.Fails.Command.Set(k, *v)
+				}
 			}
 			svc.CommandController.Init(
 				&svc.Status,
@@ -772,7 +780,7 @@ func TestService_HandleCommand(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				if svc.Command != nil {
 					for j := range svc.Command {
-						if stringifyPointer(svc.Status.Fails.Command[j]) != stringifyPointer(tc.wantFails[j]) {
+						if stringifyPointer(svc.Status.Fails.Command.Get(j)) != stringifyPointer(tc.wantFails[j]) {
 							actionsRan = false
 							break
 						}
@@ -800,12 +808,10 @@ func TestService_HandleCommand(t *testing.T) {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(svc.Status.Fails.Command) != 0 {
-					for i := range svc.Status.Fails.Command {
-						fails += fmt.Sprintf("%d=%t, ", i, *svc.Status.Fails.Command[i])
-					}
-					t.Logf("commandFails: {%s}", fails[:len(fails)-2])
+				for i := range svc.Command {
+					fails += fmt.Sprintf("%d=%s, ", i, stringifyPointer(svc.Status.Fails.Command.Get(i)))
 				}
+				t.Logf("commandFails: {%s}", fails[:len(fails)-2])
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
@@ -814,9 +820,9 @@ func TestService_HandleCommand(t *testing.T) {
 			}
 			// THEN the Command fails are as expected
 			for i := range tc.wantFails {
-				if stringifyPointer(svc.Status.Fails.Command[i]) != stringifyPointer(tc.wantFails[i]) {
+				if stringifyPointer(svc.Status.Fails.Command.Get(i)) != stringifyPointer(tc.wantFails[i]) {
 					t.Errorf("got, command[%d]=%s, want %s",
-						i, stringifyPointer(svc.Status.Fails.Command[i]), stringifyPointer(tc.wantFails[i]))
+						i, stringifyPointer(svc.Status.Fails.Command.Get(i)), stringifyPointer(tc.wantFails[i]))
 				}
 			}
 		})
@@ -910,10 +916,13 @@ func TestService_HandleWebHook(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.deployedLatest {
 				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
 			}
-			svc.Status.Fails.WebHook = tc.fails
+			for k, v := range tc.fails {
+				svc.Status.Fails.WebHook.Set(k, v)
+			}
 			svc.DeployedVersionLookup = nil
 			for i := range svc.WebHook {
 				svc.WebHook[i].NextRunnable = tc.nextRunnable
@@ -929,7 +938,7 @@ func TestService_HandleWebHook(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				if svc.WebHook != nil {
 					for j := range svc.WebHook {
-						if stringifyPointer(svc.Status.Fails.WebHook[j]) != stringifyPointer(tc.wantFails[j]) {
+						if stringifyPointer(svc.Status.Fails.WebHook.Get(j)) != stringifyPointer(tc.wantFails[j]) {
 							actionsRan = false
 							break
 						}
@@ -957,12 +966,10 @@ func TestService_HandleWebHook(t *testing.T) {
 				t.Errorf("Expecting %d announce message but got %d",
 					tc.wantAnnounces, len(*svc.Status.AnnounceChannel))
 				fails := ""
-				if len(svc.Status.Fails.WebHook) != 0 {
-					for i := range svc.Status.Fails.WebHook {
-						fails += fmt.Sprintf("%s=%t, ", i, *svc.Status.Fails.WebHook[i])
-					}
-					t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
+				for i := range svc.WebHook {
+					fails += fmt.Sprintf("%s=%s, ", i, stringifyPointer(svc.Status.Fails.WebHook.Get(i)))
 				}
+				t.Logf("webhookFails: {%s}", fails[:len(fails)-2])
 				for len(*svc.Status.AnnounceChannel) != 0 {
 					msg := <-*svc.Status.AnnounceChannel
 					t.Logf("%#v",
@@ -971,9 +978,9 @@ func TestService_HandleWebHook(t *testing.T) {
 			}
 			// THEN the WebHook fails are as expected
 			for i := range tc.wantFails {
-				if stringifyPointer(svc.Status.Fails.WebHook[i]) != stringifyPointer(tc.wantFails[i]) {
+				if stringifyPointer(svc.Status.Fails.WebHook.Get(i)) != stringifyPointer(tc.wantFails[i]) {
 					t.Errorf("got, webhook[%s]=%s, want %s",
-						i, stringifyPointer(svc.Status.Fails.WebHook[i]), stringifyPointer(tc.wantFails[i]))
+						i, stringifyPointer(svc.Status.Fails.WebHook.Get(i)), stringifyPointer(tc.wantFails[i]))
 				}
 			}
 		})
@@ -1012,6 +1019,7 @@ func TestService_HandleSkip(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
+
 			svc.Status.SetApprovedVersion("")
 			svc.Status.SetLatestVersion(latestVersion, false)
 			if tc.prepDelete {
@@ -1146,6 +1154,7 @@ func TestService_ShouldRetryAll(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			commands := len(tc.command)
 			svc.Command = command.Slice{}
 			for commands != 0 {
@@ -1158,8 +1167,18 @@ func TestService_ShouldRetryAll(t *testing.T) {
 				svc.WebHook[fmt.Sprint(webhooks)] = &webhook.WebHook{}
 				webhooks--
 			}
-			svc.Status.Fails.Command = tc.command
-			svc.Status.Fails.WebHook = tc.webhook
+			svc.Status.Init(
+				0, len(svc.Command), len(svc.WebHook),
+				&name,
+				nil)
+			for k, v := range tc.command {
+				if v != nil {
+					svc.Status.Fails.Command.Set(k, *v)
+				}
+			}
+			for k, v := range tc.webhook {
+				svc.Status.Fails.WebHook.Set(k, v)
+			}
 
 			// WHEN shouldRetryAll is called on it
 			got := svc.shouldRetryAll()

@@ -371,6 +371,7 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.Type = tc.sType
 			shoutrrr.URLFields = tc.urlFields
@@ -444,6 +445,7 @@ func TestShoutrrr_GetParams(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.paramsRoot != nil {

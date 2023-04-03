@@ -62,6 +62,7 @@ func TestCheckFile(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			os.RemoveAll(tc.removeBefore)
 			os.RemoveAll(tc.createDirBefore)
 			if tc.createDirBefore != "" {
@@ -160,6 +161,7 @@ func TestAPI_ConvertServiceStatus(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatus" + name + ".db"

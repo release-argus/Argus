@@ -28,17 +28,18 @@ import (
 
 func TestController_SetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"},
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"}},
-		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed: &[]*bool{
-			nil, boolPtr(false), boolPtr(true),
-			nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   make([]time.Time, 6),
-		ParentInterval: stringPtr("11m"),
-	}
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	controller.Failed.Set(4, false)
+	controller.Failed.Set(5, true)
 	tests := map[string]struct {
 		index             int
 		executing         bool
@@ -111,16 +112,18 @@ func TestController_SetNextRunnable(t *testing.T) {
 
 func TestController_IsRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
-	}
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
 	tests := map[string]struct {
 		index int
 		want  bool
@@ -155,16 +158,18 @@ func TestController_IsRunnable(t *testing.T) {
 
 func TestController_GetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
-	}
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
 	tests := map[string]struct {
 		index      int
 		setTo      time.Time
@@ -231,6 +236,7 @@ func TestCommand_String(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the command is stringified with String()
 			got := tc.cmd.String()
 
@@ -264,6 +270,7 @@ func TestCommand_FormattedString(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the command is stringified with FormattedString
 			got := tc.cmd.FormattedString()
 
@@ -278,16 +285,18 @@ func TestCommand_FormattedString(t *testing.T) {
 
 func TestController_Metrics(t *testing.T) {
 	// GIVEN a Controller with multiple Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("TestController_Metrics")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("InitMetrics")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
-	}
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	controller.NextRunnable = []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)}
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.CommandMetric)
@@ -369,7 +378,10 @@ func TestCommand_Init(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			// WHEN a controller is initialised with Init
 			var controller *Controller
 			if !tc.nilController {

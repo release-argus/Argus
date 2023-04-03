@@ -53,7 +53,8 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			(*webhook.Failed)[webhook.ID] = tc.failed
+
+			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.ServiceStatus.AnnounceChannel = nil
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
@@ -78,7 +79,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 
 			// if they failed status matches
 			got := stringifyPointer(parsed.WebHookData[webhook.ID].Failed)
-			want := stringifyPointer((*webhook.Failed)[webhook.ID])
+			want := stringifyPointer(webhook.Failed.Get(webhook.ID))
 			if got != want {
 				t.Errorf("want failed=%s\ngot  failed=%s",
 					want, got)

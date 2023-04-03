@@ -83,6 +83,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN String is called on it
 			got := tc.slice.String()
 
@@ -224,6 +225,7 @@ func TestURLCommandSlice_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -332,6 +334,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN run is called on it
 			text := testText
 			if tc.text != "" {
@@ -395,6 +398,7 @@ text: this
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN String is called on it
 			got := tc.cmd.String()
 
@@ -482,6 +486,7 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN CheckValues is called on it
 			err := tc.slice.CheckValues("")
 
@@ -558,6 +563,7 @@ new: now`,
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			var slice URLCommandSlice
 
 			// WHEN Unmarshalled

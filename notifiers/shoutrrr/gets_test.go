@@ -64,6 +64,7 @@ func TestShoutrrr_GetOption(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -151,6 +152,7 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -238,6 +240,7 @@ func TestShoutrrr_GetParam(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -329,6 +332,7 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -396,6 +400,7 @@ func TestShoutrrr_GetDelayDuration(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -463,6 +468,7 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "max_tries"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.maxTriesRoot != nil {
@@ -549,6 +555,7 @@ func TestShoutrrr_GetMessage(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "message"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.messageRoot != nil {
@@ -635,6 +642,7 @@ func TestShoutrrr_GetTitle(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "title"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.titleRoot != nil {
@@ -702,6 +710,7 @@ func TestShoutrrr_GetType(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.Type = tc.typeRoot
 			shoutrrr.Main.Type = tc.typeMain

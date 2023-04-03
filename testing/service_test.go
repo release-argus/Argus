@@ -140,6 +140,7 @@ func TestServiceTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			fmt.Println(name)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

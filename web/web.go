@@ -74,8 +74,16 @@ func Run(cfg *config.Config, log *util.JLog) {
 	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), util.LogFrom{}, true)
 
 	if cfg.Settings.GetWebCertFile() != nil && cfg.Settings.GetWebKeyFile() != nil {
-		jLog.Fatal(http.ListenAndServeTLS(listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router), util.LogFrom{}, true)
+		jLog.Fatal(
+			http.ListenAndServeTLS(
+				listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router),
+			util.LogFrom{},
+			true)
 	} else {
-		jLog.Fatal(http.ListenAndServe(listenAddress, router), util.LogFrom{}, true)
+		jLog.Fatal(
+			http.ListenAndServe(
+				listenAddress, router),
+			util.LogFrom{},
+			true)
 	}
 }

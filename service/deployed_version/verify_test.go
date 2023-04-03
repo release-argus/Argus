@@ -93,6 +93,7 @@ func TestLookup_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -164,6 +165,7 @@ func TestLookup_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := &Lookup{}
 			lookup = testLookup()
 			lookup.URL = tc.url

@@ -31,18 +31,12 @@ func (s *Service) UpdatedVersion() {
 	}
 
 	// Check that no WebHook(s) failed
-	for key := range s.WebHook {
-		// Default nil to true = failed
-		if util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
-			return
-		}
+	if !s.Status.Fails.WebHook.AllPassed() {
+		return
 	}
 	// Check that no Command(s) failed
-	for key := range s.Command {
-		// Default nil to true = failed
-		if util.EvalNilPtr(s.Status.Fails.Command[key], true) {
-			return
-		}
+	if !s.Status.Fails.Command.AllPassed() {
+		return
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
@@ -126,7 +120,7 @@ func (s *Service) HandleFailedActions() {
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key := range s.WebHook {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
+			if retryAll || util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
 				// Skip if it's before NextRunnable
 				if !s.WebHook[key].IsRunnable() {
 					potentialErrors--
@@ -149,7 +143,7 @@ func (s *Service) HandleFailedActions() {
 		potentialErrors += len(s.Command)
 		logFrom := util.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.Command[key], true) {
+			if retryAll || util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
 				// Skip if it's before NextRunnable
 				if !s.CommandController.IsRunnable(key) {
 					potentialErrors--
@@ -252,7 +246,7 @@ func (s *Service) shouldRetryAll() (retry bool) {
 	// retry all only if every WebHook has been sent successfully
 	if len(s.WebHook) != 0 {
 		for key := range s.WebHook {
-			if util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
+			if util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
 				retry = false
 				break
 			}
@@ -261,7 +255,7 @@ func (s *Service) shouldRetryAll() (retry bool) {
 	// AND every Command has been run successfully
 	if retry && len(s.Command) != 0 {
 		for key := range s.Command {
-			if util.EvalNilPtr(s.Status.Fails.Command[key], true) {
+			if util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
 				retry = false
 				break
 			}

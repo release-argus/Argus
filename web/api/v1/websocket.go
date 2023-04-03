@@ -151,7 +151,7 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 	for i := range *svc.CommandController.Command {
 		command := (*svc.CommandController.Command)[i].ApplyTemplate(&svc.Status)
 		commandSummary[command.String()] = &api_type.CommandSummary{
-			Failed:       svc.Status.Fails.Command[i],
+			Failed:       svc.Status.Fails.Command.Get(i),
 			NextRunnable: svc.CommandController.NextRunnable[i],
 		}
 	}
@@ -198,7 +198,7 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 
 	for key := range svc.WebHook {
 		webhookSummary[key] = &api_type.WebHookSummary{
-			Failed:       svc.Status.Fails.WebHook[key],
+			Failed:       svc.Status.Fails.WebHook.Get(key),
 			NextRunnable: svc.WebHook[key].NextRunnable,
 		}
 	}
@@ -380,8 +380,9 @@ func (api *API) wsConfigService(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	serviceConfig := make(api_type.ServiceSlice)
 	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+	serviceConfig := make(api_type.ServiceSlice, len(api.Config.Order))
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]
@@ -398,6 +399,5 @@ func (api *API) wsConfigService(client *Client) {
 			Order:   api.Config.Order,
 		},
 	}
-	api.Config.OrderMutex.RUnlock()
 	api.wsSendJSON(client, msg, &logFrom)
 }

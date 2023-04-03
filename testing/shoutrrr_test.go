@@ -75,6 +75,7 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			cfg := config.Config{
 				Service: tc.service,
 				Notify:  tc.rootNotifiers,
@@ -341,6 +342,7 @@ func TestFindShoutrrr(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -508,14 +510,23 @@ func TestNotifyTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 			jLog.Testing = true
 			for i := range tc.slice {
-				(*tc.slice[i]).Status.Fails.Shoutrrr = make(map[string]*bool, len((*tc.slice[i]).Notify))
+				(*tc.slice[i]).Status.Init(
+					len((*tc.slice[i]).Notify), 0, 0,
+					&name,
+					nil)
 				for j := range (*tc.slice[i]).Notify {
-					(*tc.slice[i]).Notify[j].Failed = &(*tc.slice[i]).Status.Fails.Shoutrrr
+					(*tc.slice[i]).Notify[j].Init(
+						&(*tc.slice[i]).Status,
+						(*tc.slice[i]).Notify[j].Main,
+						(*tc.slice[i]).Notify[j].Defaults,
+						(*tc.slice[i]).Notify[j].HardDefaults,
+					)
 				}
 			}
 			if tc.panicRegex != nil {

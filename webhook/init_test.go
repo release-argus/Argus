@@ -60,6 +60,7 @@ func TestSlice_Metrics(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
+
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
@@ -108,6 +109,7 @@ func TestWebHook_Metrics(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, tc.forService, false, false)
 			if tc.forService {
 				webhook.ID = name + "TestInitMetrics"
@@ -149,6 +151,10 @@ func TestWebHook_Init(t *testing.T) {
 	var defaults WebHook
 	var hardDefaults WebHook
 	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
+	status.Init(
+		0, 0, 1,
+		stringPtr("TestInit"),
+		stringPtr("https://example.com"))
 
 	// WHEN Init is called on it
 	webhook.Init(
@@ -234,8 +240,10 @@ func TestSlice_Init(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			status := svcstatus.Status{ServiceID: &name}
+			t.Parallel()
+
 			if !tc.nilSlice {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -243,6 +251,15 @@ func TestSlice_Init(t *testing.T) {
 					}
 				}
 			}
+			serviceStatus := svcstatus.Status{ServiceID: &name}
+			mainCount := 0
+			if tc.mains != nil {
+				mainCount = len(*tc.mains)
+			}
+			serviceStatus.Init(
+				0, 0, mainCount,
+				&name,
+				nil)
 			if tc.mains != nil {
 				for i := range *tc.mains {
 					(*tc.mains)[i].ID = ""
@@ -255,7 +272,7 @@ func TestSlice_Init(t *testing.T) {
 
 			// WHEN Init is called on it
 			tc.slice.Init(
-				&status,
+				&serviceStatus,
 				tc.mains, &tc.defaults, &tc.hardDefaults,
 				&notifiers,
 				&parentInterval)
@@ -288,9 +305,9 @@ func TestSlice_Init(t *testing.T) {
 						&tc.hardDefaults, webhook.HardDefaults)
 				}
 				// status
-				if webhook.ServiceStatus != &status {
+				if webhook.ServiceStatus != &serviceStatus {
 					t.Errorf("Status was not handed to the WebHook correctly\n want: %v\ngot:  %v",
-						&status, webhook.ServiceStatus)
+						&serviceStatus, webhook.ServiceStatus)
 				}
 				// notifiers
 				if webhook.Notifiers.Shoutrrr != &notifiers {
@@ -345,6 +362,7 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			webhook.Main.AllowInvalidCerts = tc.allowInvalidCertsMain
@@ -406,6 +424,7 @@ func TestWebHook_GetDelay(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
@@ -467,6 +486,7 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.Delay = tc.delayRoot
 			webhook.Main.Delay = tc.delayMain
@@ -528,6 +548,7 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.DesiredStatusCode = tc.desiredStatusCodeRoot
 			webhook.Main.DesiredStatusCode = tc.desiredStatusCodeMain
@@ -541,39 +562,6 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("want: %d\ngot:  %d",
 					tc.want, got)
-			}
-		})
-	}
-}
-
-func TestWebHook_GetFailStatus(t *testing.T) {
-	// GIVEN a WebHook
-	tests := map[string]struct {
-		failed *bool
-	}{
-		"failed=true": {
-			failed: boolPtr(true)},
-		"failed=false": {
-			failed: boolPtr(false)},
-		"failed=nil": {
-			failed: nil},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			webhook := testWebHook(true, true, false, false)
-			want := stringifyPointer(tc.failed)
-			(*webhook.Failed)[webhook.ID] = tc.failed
-
-			// WHEN GetFailStatus is called
-			got := stringifyPointer(webhook.GetFailStatus())
-
-			// THEN the function returns the correct result
-			if got != want {
-				t.Errorf("want: %s\ngot:  %s",
-					want, got)
 			}
 		})
 	}
@@ -622,6 +610,7 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.MaxTries = tc.maxTriesRoot
 			webhook.Main.MaxTries = tc.maxTriesMain
@@ -684,6 +673,7 @@ func TestWebHook_GetRequest(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.webhookType
 			webhook.URL = tc.url
@@ -789,6 +779,7 @@ func TestWebHook_GetType(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.Type = tc.typeRoot
 			webhook.Main.Type = tc.typeMain
@@ -850,6 +841,7 @@ func TestWebHook_GetSecret(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.Secret = tc.secretRoot
 			webhook.Main.Secret = tc.secretMain
@@ -911,6 +903,7 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.SilentFails = tc.silentFailsRoot
 			webhook.Main.SilentFails = tc.silentFailsMain
@@ -988,6 +981,7 @@ func TestWebHook_GetURL(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.URL = tc.urlRoot
 			webhook.Main.URL = tc.urlMain
@@ -1025,6 +1019,7 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
 			webhook.NextRunnable = tc.nextRunnable
 			time.Sleep(time.Nanosecond)
@@ -1036,39 +1031,6 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.want, got)
-			}
-		})
-	}
-}
-
-func TestWebHook_SetFailStatus(t *testing.T) {
-	// GIVEN a WebHook in a fail state
-	tests := map[string]struct {
-		failed *bool
-	}{
-		"failed=true": {
-			failed: boolPtr(true)},
-		"failed=false": {
-			failed: boolPtr(false)},
-		"failed=nil": {
-			failed: nil},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			webhook := testWebHook(true, true, false, false)
-			want := stringifyPointer(tc.failed)
-			webhook.SetFailStatus(tc.failed)
-
-			// WHEN GetFailStatus is called
-			got := stringifyPointer(webhook.GetFailStatus())
-
-			// THEN the function returns whether the WebHook failed the last send
-			if got != want {
-				t.Errorf("want: %s\ngot:  %s",
-					want, got)
 			}
 		})
 	}
@@ -1122,8 +1084,9 @@ func TestWebHook_SetNextRunnable(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			webhook := testWebHook(true, true, false, false)
-			webhook.SetFailStatus(tc.failed)
+			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.Delay = tc.delay
 			maxTries := uint(tc.maxTries)
 			webhook.MaxTries = &maxTries
@@ -1140,65 +1103,6 @@ func TestWebHook_SetNextRunnable(t *testing.T) {
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
 				t.Fatalf("ran at\n%s\nwant between:\n%s and\n%s\ngot\n%s",
 					now, minTime, maxTime, gotTime)
-			}
-		})
-	}
-}
-
-func TestSlice_ResetFails(t *testing.T) {
-	// GIVEN a Slice
-	tests := map[string]struct {
-		slice *Slice
-		fails map[string]*bool
-	}{
-		"nil slice does nothing": {
-			slice: nil,
-		},
-		"slice with nil fails": {
-			slice: &Slice{
-				"0": &WebHook{},
-				"1": &WebHook{},
-				"2": &WebHook{}},
-			fails: map[string]*bool{
-				"0": nil,
-				"1": nil,
-				"2": nil},
-		},
-		"slice with all fail states": {
-			slice: &Slice{
-				"0": &WebHook{},
-				"1": &WebHook{},
-				"2": &WebHook{}},
-			fails: map[string]*bool{
-				"0": nil,
-				"1": boolPtr(true),
-				"2": boolPtr(false)},
-		},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if tc.slice != nil {
-				for i := range *tc.slice {
-					(*tc.slice)[i].Failed = &tc.fails
-				}
-			}
-
-			// WHEN ResetFails is called
-			tc.slice.ResetFails()
-
-			// THEN the all the fails have been reset to nil
-			if tc.slice == nil {
-				return
-			}
-			for id := range *tc.slice {
-				got := (*tc.slice)[id].GetFailStatus()
-				if got != nil {
-					t.Fatalf("fail status wasn't reset for %q. got %t",
-						id, *got)
-				}
 			}
 		})
 	}

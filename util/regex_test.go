@@ -35,6 +35,7 @@ func TestRegexCheck(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN RegexCheck is called
 			got := RegexCheck(tc.regex, str)
 
@@ -69,6 +70,7 @@ func TestRegexCheckWithParams(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN RegexCheck is called
 			got := RegexCheckWithParams(tc.regex, str, tc.version)
 

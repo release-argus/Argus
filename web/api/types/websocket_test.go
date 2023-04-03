@@ -95,6 +95,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the GitHubData is stringified with String
 			got := tc.websocketMessage.String()
 

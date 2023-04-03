@@ -17,7 +17,6 @@ package svcstatus
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -60,7 +59,7 @@ func (s *Status) String() string {
 		{Name: "last_queried", Value: s.lastQueried},
 		{Name: "regex_misses_content", Value: s.RegexMissesContent},
 		{Name: "regex_misses_version", Value: s.RegexMissesVersion},
-		{Name: "fails", Value: s.Fails},
+		{Name: "fails", Value: &s.Fails},
 	}
 	s.mutex.RUnlock()
 
@@ -75,7 +74,7 @@ func (s *Status) String() string {
 			if v != 0 {
 				fmt.Fprint(&buf, f.Name, ": ", v, ", ")
 			}
-		case Fails:
+		case *Fails:
 			if fails := v.String(); fails != "" {
 				fmt.Fprint(&buf, f.Name, ": {", fails, "}, ")
 			}
@@ -93,9 +92,9 @@ func (s *Status) Init(
 	serviceID *string,
 	webURL *string,
 ) {
-	s.Fails.Shoutrrr = make(map[string]*bool, shoutrrrs)
-	s.Fails.Command = make([]*bool, commands)
-	s.Fails.WebHook = make(map[string]*bool, webhooks)
+	s.Fails.Shoutrrr.Init(shoutrrrs)
+	s.Fails.Command.Init(commands)
+	s.Fails.WebHook.Init(webhooks)
 
 	s.ServiceID = serviceID
 	s.WebURL = webURL
@@ -241,103 +240,6 @@ type OldStatus struct {
 	DeployedVersionTimestamp string `yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp of DeployedVersion being changed.
 	LatestVersion            string `yaml:"latest_version,omitempty"`             // Latest version found from query().
 	LatestVersionTimestamp   string `yaml:"latest_version_timestamp,omitempty"`   // UTC timestamp of LatestVersion being changed.
-}
-
-// Fails keeps track of whether any of the notifications failed on the last version change.
-type Fails struct {
-	Shoutrrr map[string]*bool `yaml:"-" json:"-"` // Shoutrrr unsent/fail/pass.
-	Command  []*bool          `yaml:"-" json:"-"` // Command unsent/fail/pass.
-	WebHook  map[string]*bool `yaml:"-" json:"-"` // WebHook unsent/fail/pass.
-}
-
-// String returns a string representation of the Fails.
-func (s *Fails) String() string {
-	fields := []util.Field{
-		{Name: "shoutrrr", Value: s.Shoutrrr},
-		{Name: "command", Value: s.Command},
-		{Name: "webhook", Value: s.WebHook},
-	}
-
-	var buf bytes.Buffer
-	for _, f := range fields {
-		switch v := f.Value.(type) {
-		case map[string]*bool:
-			if len(v) == 0 {
-				continue
-			}
-			// Check for fails in the map.
-			hasFail := false
-			for i := range v {
-				if util.DefaultIfNil(v[i]) {
-					hasFail = true
-					break
-				}
-			}
-			// If there are no fails, skip this field.
-			if !hasFail {
-				continue
-			}
-
-			fmt.Fprint(&buf, f.Name, ": {")
-
-			// Create a slice of keys and sort them
-			keys := make([]string, 0, len(v))
-			for k := range v {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-
-			// Iterate over the sorted keys
-			for _, key := range keys {
-				if util.DefaultIfNil(v[key]) {
-					fmt.Fprint(&buf, key, ": ", *v[key], ", ")
-				}
-			}
-			// Remove the trailing ", "
-			buf.Truncate(buf.Len() - 2)
-			fmt.Fprint(&buf, "}, ")
-		case []*bool:
-			if len(v) > 0 {
-				// Check for fails in the list.
-				hasFail := false
-				for i := range v {
-					if util.DefaultIfNil(v[i]) {
-						hasFail = true
-						break
-					}
-				}
-				// If there are no fails, skip this field.
-				if !hasFail {
-					continue
-				}
-
-				fmt.Fprint(&buf, f.Name, ": [")
-				for i, v := range v {
-					if util.DefaultIfNil(v) {
-						fmt.Fprint(&buf, i, ": ", *v, ", ")
-					}
-				}
-				// Remove the trailing ", "
-				buf.Truncate(buf.Len() - 2)
-				fmt.Fprint(&buf, "], ")
-			}
-		}
-	}
-
-	return strings.TrimSuffix(buf.String(), ", ")
-}
-
-// ResetFails of the Status.Fails
-func (f *Fails) resetFails() {
-	for i := range f.Shoutrrr {
-		f.Shoutrrr[i] = nil
-	}
-	for i := range f.Command {
-		f.Command[i] = nil
-	}
-	for i := range f.WebHook {
-		f.WebHook[i] = nil
-	}
 }
 
 // GetWebURL returns the Web URL.

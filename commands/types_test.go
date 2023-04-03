@@ -19,87 +19,91 @@ package command
 import (
 	"testing"
 	"time"
+
+	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
 func TestController_CopyFailsFrom(t *testing.T) {
 	// GIVEN a Controller with fails and a Controller to copy them to
 	tests := map[string]struct {
-		from         *Controller
-		to           *Controller
-		fails        *[]*bool
-		nextRunnable []time.Time
+		from             *Controller
+		to               *Controller
+		fromFails        []*bool
+		toFails          []*bool
+		fromNextRunnable []time.Time
+		toNextRunnable   []time.Time
 	}{
 		"both nil": {
-			from:  nil,
-			to:    nil,
-			fails: nil,
+			from:    nil,
+			to:      nil,
+			toFails: nil,
 		},
 		"from nil": {
-			from:  nil,
-			to:    &Controller{},
-			fails: nil,
+			from:    nil,
+			to:      &Controller{},
+			toFails: nil,
 		},
 		"to nil": {
-			from:  &Controller{},
-			to:    nil,
-			fails: nil,
+			from:    &Controller{},
+			to:      nil,
+			toFails: nil,
 		},
 		"doesn't copy if no commands": {
-			from: &Controller{
-				Failed: &[]*bool{
-					boolPtr(true),
-					boolPtr(false),
-					nil}},
-			to:    &Controller{},
-			fails: nil,
+			from: &Controller{},
+			to:   &Controller{},
+			fromFails: []*bool{
+				boolPtr(true),
+				boolPtr(false),
+				nil},
+			toFails: nil,
 		},
 		"doesn't copy to new commands": {
 			from: &Controller{
 				Command: &Slice{
-					{"ls", "-la"}},
-				Failed: &[]*bool{
-					boolPtr(true)},
-				NextRunnable: []time.Time{
-					time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)}},
+					{"ls", "-la"}}},
 			to: &Controller{
 				Command: &Slice{
 					{"ls", "-lah"}}},
-			fails: &[]*bool{
+			fromFails: []*bool{
+				boolPtr(true)},
+			toFails: []*bool{
 				nil},
+			fromNextRunnable: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
 		},
 		"does copy to retained commands": {
 			from: &Controller{
 				Command: &Slice{
-					{"ls", "-lah"}},
-				Failed: &[]*bool{
-					boolPtr(true)},
-				NextRunnable: []time.Time{
-					time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)}},
+					{"ls", "-lah"}}},
 			to: &Controller{
 				Command: &Slice{
 					{"ls", "-lah"}}},
-			fails: &[]*bool{
+			fromFails: []*bool{
 				boolPtr(true)},
-			nextRunnable: []time.Time{
+			toFails: []*bool{
+				boolPtr(true)},
+			fromNextRunnable: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
+			toNextRunnable: []time.Time{
 				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
 		},
 		"does copy to reordered retained commands": {
 			from: &Controller{
 				Command: &Slice{
 					{"false"},
-					{"ls", "-lah"}},
-				Failed: &[]*bool{
-					boolPtr(true),
-					boolPtr(false)},
-				NextRunnable: []time.Time{
-					time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC),
-					time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)}},
+					{"ls", "-lah"}}},
 			to: &Controller{
 				Command: &Slice{
 					{"ls", "-lah"}}},
-			fails: &[]*bool{
+			fromFails: []*bool{
+				boolPtr(true),
 				boolPtr(false)},
-			nextRunnable: []time.Time{
+			toFails: []*bool{
+				boolPtr(false)},
+			fromNextRunnable: []time.Time{
+				time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
+			toNextRunnable: []time.Time{
 				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
 		},
 	}
@@ -109,38 +113,58 @@ func TestController_CopyFailsFrom(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			if tc.from != nil && tc.from.Command != nil {
+				tc.from.Init(
+					&svcstatus.Status{},
+					tc.from.Command,
+					nil,
+					nil)
+				for k, v := range tc.fromFails {
+					if v != nil {
+						tc.from.ServiceStatus.Fails.Command.Set(k, *v)
+					}
+				}
+				for i, v := range tc.fromNextRunnable {
+					tc.from.NextRunnable[i] = v
+				}
+			}
+			if tc.to != nil && tc.to.Command != nil {
+				tc.to.Init(
+					&svcstatus.Status{},
+					tc.to.Command,
+					nil,
+					nil)
+			}
+
 			// WHEN CopyFailsFrom is called
 			tc.to.CopyFailsFrom(tc.from)
 
 			// THEN the fails aren't copied to a nil Controller
-			if tc.fails == nil && (tc.to == nil || tc.to.Failed == nil) {
+			if tc.toFails == nil && (tc.to == nil || tc.to.Failed == nil) {
 				return
 			} else if tc.to == nil {
 				t.Fatalf("expected to.fails to be %v, but got %v tc.to",
-					tc.fails, tc.to)
+					tc.toFails, tc.to)
 			}
-			if tc.to.Failed == nil {
-				t.Fatalf("expected to.fails to be %v, but got %v tc.to.Failed",
-					tc.fails, tc.to.Failed)
-			} else if len(*tc.to.Failed) != len(*tc.fails) {
+			if tc.to.Failed.Length() != len(tc.toFails) {
 				t.Fatalf("expected fails to be %v, but got %v",
-					tc.fails, tc.to.Failed)
+					tc.toFails, tc.to.Failed)
 			}
 			// AND the matching fails are copied to the Controller
-			for i := range *tc.fails {
-				if stringifyPointer((*tc.fails)[i]) != stringifyPointer((*tc.to.Failed)[i]) {
+			for i := range tc.toFails {
+				if stringifyPointer(tc.toFails[i]) != stringifyPointer(tc.to.Failed.Get(i)) {
 					t.Errorf("Fail %d: expected %q, got %q",
 						i,
-						stringifyPointer((*tc.fails)[i]),
-						stringifyPointer((*tc.to.Failed)[i]))
+						stringifyPointer(tc.toFails[i]),
+						stringifyPointer(tc.to.Failed.Get(i)))
 				}
 			}
 			// AND the next_runnables are copied to the Controller
-			for i := range tc.nextRunnable {
-				if (tc.nextRunnable)[i] != (tc.to.NextRunnable)[i] {
+			for i := range tc.toNextRunnable {
+				if (tc.toNextRunnable)[i] != (tc.to.NextRunnable)[i] {
 					t.Errorf("Fail %d: expected %q, got %q",
 						i,
-						tc.nextRunnable[i],
+						tc.toNextRunnable[i],
 						tc.to.NextRunnable[i])
 				}
 			}

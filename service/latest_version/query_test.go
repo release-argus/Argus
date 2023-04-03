@@ -56,6 +56,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(!tc.githubType, false)
 			if tc.githubType && util.DefaultIfNil(lookup.AccessToken) == "" {
 				lookup.AccessToken = &tc.accessToken
@@ -214,6 +215,7 @@ func TestLookup_Query(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
@@ -297,6 +299,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			lookup := testLookup(false, false)
 			lookup.GitHubData.ETag = "foo"
 			lookup.Status.ServiceID = &name

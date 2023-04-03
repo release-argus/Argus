@@ -183,6 +183,7 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Loo
 
 // giveSecretsNotify from the oldNotifies
 func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map[string]oldStringIndex) {
+	//nolint:typecheck
 	if s.Notify == nil || oldNotifies == nil ||
 		secretRefs == nil || len(*secretRefs) == 0 {
 		return
@@ -283,13 +284,8 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 		}
 
 		// failed
-		fmt.Println("old", oldWebHook.String())
-		fmt.Println("new", s.WebHook[i].String())
-		fmt.Println("equal", oldWebHook.String() == s.WebHook[i].String())
-		if oldWebHook.Failed != nil && (*oldWebHook.Failed)[oldWebHook.ID] != nil &&
-			oldWebHook.String() == s.WebHook[i].String() {
-			failed := *(*oldWebHook.Failed)[oldWebHook.ID]
-			(*s.WebHook[i].Failed)[i] = &failed
+		if oldWebHook.String() == s.WebHook[i].String() {
+			s.WebHook[i].Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
 		}
 		// next_runnable
 		s.WebHook[i].NextRunnable = oldWebHook.NextRunnable
@@ -335,11 +331,6 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 func (s *Service) CheckFetches() (err error) {
 	// Don't check if the service is inactive
 	if !s.Options.GetActive() {
-		return
-	}
-	// All versions carried over from old service
-	if (s.Status.GetLatestVersion() != "" && s.Status.GetLastQueried() != "") &&
-		(s.DeployedVersionLookup == nil || s.Status.GetDeployedVersion() != "") {
 		return
 	}
 

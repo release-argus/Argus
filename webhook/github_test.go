@@ -42,6 +42,7 @@ func TestSetGitHubHeaders(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			payload, _ := json.Marshal(GitHub{
 				Ref:    "refs/heads/master",
 				Before: "0123456789012345678901234567890123456789",

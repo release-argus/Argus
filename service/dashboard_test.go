@@ -53,6 +53,7 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			dashboard := DashboardOptions{}
 			dashboard.AutoApprove = tc.autoApproveRoot
 			dashboard.Defaults = &DashboardOptions{AutoApprove: tc.autoApproveDefault}
@@ -128,6 +129,7 @@ dashboard:
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -169,6 +171,7 @@ func TestDashboardOptions_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN CheckValues is called on it
 			err := tc.dashboardOptions.CheckValues("-")
 

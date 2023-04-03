@@ -148,7 +148,10 @@ func testServiceURL(id string) *Service {
 	}
 
 	// Status
-	svc.Status.ServiceID = &svc.ID
+	svc.Status.Init(
+		0, 0, 0,
+		&svc.ID,
+		&svc.Dashboard.WebURL)
 	svc.Status.SetApprovedVersion("1.1.1")
 	svc.Status.SetLatestVersion("2.2.2", false)
 	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
@@ -163,7 +166,6 @@ func testServiceURL(id string) *Service {
 		&deployedver.Lookup{}, &deployedver.Lookup{},
 		&svc.Status,
 		&svc.Options)
-	svc.Status.WebURL = &svc.Dashboard.WebURL
 	return svc
 }
 

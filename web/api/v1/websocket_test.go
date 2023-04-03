@@ -129,6 +129,7 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.approvedVersion != "" {
 				tc.dvl.Status.SetApprovedVersion("1.2.3")
 				tc.dvl.Status.SetDeployedVersion("1.2.3", false)
@@ -380,6 +381,7 @@ func TestConvertCommandSliceToAPITypeCommandSlice(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN convertCommandSliceToAPITypeCommandSlice is called on it
 			got := convertCommandSliceToAPITypeCommandSlice(tc.slice)
 
@@ -494,6 +496,7 @@ func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN convertWebHookSliceToAPITypeWebHookSlice is called on it
 			got := convertWebHookSliceToAPITypeWebHookSlice(tc.slice)
 

@@ -47,6 +47,7 @@ func TestRequire_ExecCommand(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			require := Require{Command: tc.cmd}
 			require.Status = &svcstatus.Status{}
 			require.Status.Init(

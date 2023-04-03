@@ -27,6 +27,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -96,6 +97,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			cfg := config.Config{}
 			cfg.Settings.Web.BasicAuth = tc.basicAuth
 			cfg.Settings.Web.RoutePrefix = stringPtr("")
@@ -204,6 +206,7 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			target := "/api/v1/deployed_version/refresh"
 			if !tc.deployedVersion {
 				target = "/api/v1/latest_version/refresh"
@@ -254,6 +257,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 	// GIVEN an API and a request to refresh the x_version of a service
 	file := "TestHTTP_VersionRefresh.yml"
 	api := testAPI(file)
+	apiMutex := sync.RWMutex{}
 	defer func() {
 		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != nil {
@@ -354,11 +358,13 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		svc := testService(name)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			svc := testService(name)
+			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
+			apiMutex.Unlock()
 			if tc.nilDeployedVersion {
 				svc.DeployedVersionLookup = nil
 			}
@@ -386,7 +392,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
+			apiMutex.Lock()
 			api.httpVersionRefresh(w, req)
+			apiMutex.Unlock()
 			res := w.Result()
 			defer res.Body.Close()
 
@@ -427,6 +435,7 @@ func TestHTTP_EditServiceGetDetail(t *testing.T) {
 	// GIVEN an API and a request for detail of a service
 	file := "TestHTTP_EditServiceGetDetail.yml"
 	api := testAPI(file)
+	apiMutex := sync.RWMutex{}
 	defer func() {
 		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != nil {
@@ -456,11 +465,13 @@ func TestHTTP_EditServiceGetDetail(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		svc := testService(name)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			svc := testService(name)
+			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
+			apiMutex.Unlock()
 			// service_name
 			serviceName := svc.ID
 			if tc.serviceName != nil {
@@ -476,7 +487,9 @@ func TestHTTP_EditServiceGetDetail(t *testing.T) {
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
+			apiMutex.RLock()
 			api.httpEditServiceGetDetail(w, req)
+			apiMutex.RLocker()
 			res := w.Result()
 			defer res.Body.Close()
 
@@ -522,10 +535,10 @@ func TestHTTP_EditServiceGetOtherDetails(t *testing.T) {
 		name, tc := name, tc
 		file := name + ".test.yml"
 		api := testAPI(file)
-		svc := testService(name)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			svc := testService(name)
 			defer func() {
 				os.RemoveAll(file)
 				if api.Config.Settings.Data.DatabaseFile != nil {
@@ -576,6 +589,7 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 	// GIVEN an API and a request to create/edit a service
 	file := "TestHTTP_EditServiceEdit.yml"
 	api := testAPI(file)
+	apiMutex := sync.RWMutex{}
 	defer func() {
 		os.RemoveAll(file)
 		if api.Config.Settings.Data.DatabaseFile != nil {
@@ -598,11 +612,11 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 	}{
 		"invalid json": {
 			payload: `
-"name": "__name__-",
-"latest_version": {
-    "type":"github",
-    "url":"release-argus/Argus"
-`,
+		"name": "__name__-",
+		"latest_version": {
+		    "type":"github",
+		    "url":"release-argus/Argus"
+		`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* cannot unmarshal.*"\}`,
 		},
@@ -618,44 +632,44 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 		},
 		"create new service, but name already taken": {
 			payload: `{
-"name": "` + svcName + `",
-"latest_version": {
-  "type":"github",
-  "url":"release-argus/Argus"
-}}`,
+		"name": "` + svcName + `",
+		"latest_version": {
+		  "type":"github",
+		  "url":"release-argus/Argus"
+		}}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* failed.*"\}`,
 		},
 		"create new service, but invalid interval": {
 			payload: `{
-"name": "__name__-",
-"latest_version": {
-    "type":"github",
-    "url":"release-argus/Argus"
-},
-"options": {
-	"interval": "foo"
-}}`,
+		"name": "__name__-",
+		"latest_version": {
+		    "type":"github",
+		    "url":"release-argus/Argus"
+		},
+		"options": {
+			"interval": "foo"
+		}}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* failed.*options:.*interval:.*invalid.*"\}`,
 		},
 		"edit service": {
 			serviceName: stringPtr("__name__"),
 			payload: `{
-"name": "__name__",
-"latest_version": {
-    "type":"url",
-    "url":"https://valid.release-argus.io/plain",
-    "url_commands": [
-        {
-            "type":"regex",
-            "regex":"stable version: \"v?([0-9.]+)\""
-        }
-    ]
-},
-"options": {
-    "interval": "99m"
-}}`,
+		"name": "__name__",
+		"latest_version": {
+		    "type":"url",
+		    "url":"https://valid.release-argus.io/plain",
+		    "url_commands": [
+		        {
+		            "type":"regex",
+		            "regex":"stable version: \"v?([0-9.]+)\""
+		        }
+		    ]
+		},
+		"options": {
+		    "interval": "99m"
+		}}`,
 			wantStatusCode:      http.StatusOK,
 			wantBody:            "^$",
 			wantLatestVersion:   "[0-9.]+",
@@ -664,39 +678,39 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 		"edit service that doesn't exist": {
 			serviceName: stringPtr("service that doesn't exist"),
 			payload: `{
-"latest_version": {
-    "type":"url",
-    "url":"https://valid.release-argus.io/plain",
-    "url_commands": [
-        {
-            "type":"regex",
-            "regex":"stable version: \"v?([0-9.]+)\""
-        }
-    ]
-},
-"options": {
-	"interval": "99m"
-}}`,
+		"latest_version": {
+		    "type":"url",
+		    "url":"https://valid.release-argus.io/plain",
+		    "url_commands": [
+		        {
+		            "type":"regex",
+		            "regex":"stable version: \"v?([0-9.]+)\""
+		        }
+		    ]
+		},
+		"options": {
+			"interval": "99m"
+		}}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `^\{"message":"edit .* failed.*"\}`,
 		},
 		"edit service that doesn't query successfully": {
 			serviceName: stringPtr("__name__"),
 			payload: `{
-"name": "__name__",
-"latest_version": {
-    "type":"url",
-    "url":"https://valid.release-argus.io/plain",
-    "url_commands": [
-        {
-            "type":"regex",
-            "regex":"stable version: \"v-([0-9.]+)\""
-        }
-    ]
-},
-"options": {
-	"interval": "99m"
-}}`,
+		"name": "__name__",
+		"latest_version": {
+		    "type":"url",
+		    "url":"https://valid.release-argus.io/plain",
+		    "url_commands": [
+		        {
+		            "type":"regex",
+		            "regex":"stable version: \"v-([0-9.]+)\""
+		        }
+		    ]
+		},
+		"options": {
+			"interval": "99m"
+		}}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `^\{"message":"edit .* failed.*didn't return any matches"\}`,
 		},
@@ -704,12 +718,14 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		svc := testService(name)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			svc := testService(name)
+			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			api.Config.Order = append(api.Config.Order, svc.ID)
+			apiMutex.Unlock()
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", name)
 			tc.payload = strings.ReplaceAll(tc.payload, "\n", "")
 			payload := bytes.NewReader([]byte(tc.payload))
@@ -732,7 +748,9 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 
 			// WHEN that HTTP request is sent
 			w := httptest.NewRecorder()
+			apiMutex.Lock()
 			api.httpEditServiceEdit(w, req)
+			apiMutex.Unlock()
 			res := w.Result()
 			defer res.Body.Close()
 
@@ -770,7 +788,9 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 				t.Errorf("service %q not created",
 					*tc.serviceName)
 			}
+			apiMutex.RLock()
 			svc = api.Config.Service[serviceName]
+			apiMutex.RUnlock()
 			if svc == nil {
 				if tc.wantLatestVersion != tc.wantDeployedVersion &&
 					tc.wantLatestVersion != "" {
@@ -840,6 +860,7 @@ func TestHTTP_EditServiceDelete(t *testing.T) {
 	for _, tc := range tests {
 		name, tc := tc.name, tc
 		t.Run(name, func(t *testing.T) {
+
 			svc := testService(name)
 			api.Config.Service[svc.ID] = svc
 			target := "/api/v1/service/delete/"

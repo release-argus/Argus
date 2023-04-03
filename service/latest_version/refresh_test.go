@@ -374,6 +374,7 @@ func TestLookup_Refresh(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// Copy the starting status
 			tc.previous.Status.Init(
 				0, 0, 0,

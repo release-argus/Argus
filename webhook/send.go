@@ -92,7 +92,7 @@ func (w *WebHook) Send(
 				"",
 				"SUCCESS")
 			failed := false
-			(*w.Failed)[w.ID] = &failed
+			w.Failed.Set(w.ID, &failed)
 			w.AnnounceSend()
 			return nil
 		}
@@ -114,7 +114,7 @@ func (w *WebHook) Send(
 				w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
-			(*w.Failed)[w.ID] = &failed
+			w.Failed.Set(w.ID, &failed)
 			w.AnnounceSend()
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL

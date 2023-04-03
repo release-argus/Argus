@@ -18,7 +18,6 @@ package command
 
 import (
 	"fmt"
-	"time"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
 )
@@ -40,11 +39,14 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 
-func testController(announce *chan []byte) *Controller {
-	return &Controller{
-		Failed:         &[]*bool{nil, nil},
-		NextRunnable:   make([]time.Time, 2),
-		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: announce},
-	}
+func testController(announce *chan []byte) (control *Controller) {
+	control = &Controller{}
+	control.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: announce},
+		&Slice{{}, {}},
+		nil,
+		stringPtr("14m"),
+	)
+
+	return
 }

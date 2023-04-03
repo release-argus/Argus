@@ -128,6 +128,7 @@ func TestService_GetIconURL(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
@@ -171,6 +172,7 @@ func TestService_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			var defaults Service
 			var hardDefaults Service
 			tc.svc.ID = name

@@ -45,7 +45,6 @@ func (s *Slice) Init(
 			(*s)[key] = &Shoutrrr{}
 		}
 		(*s)[key].ID = id
-		(*s)[key].Failed = &serviceStatus.Fails.Shoutrrr
 
 		if len(*mains) == 0 {
 			mains = &Slice{}
@@ -71,7 +70,9 @@ func (s *Slice) Init(
 			(*hardDefaults)[notifyType] = &Shoutrrr{}
 		}
 
-		(*s)[key].Init(serviceStatus, (*mains)[key], (*defaults)[notifyType], (*hardDefaults)[notifyType])
+		(*s)[key].Init(
+			serviceStatus,
+			(*mains)[key], (*defaults)[notifyType], (*hardDefaults)[notifyType])
 	}
 }
 
@@ -91,21 +92,31 @@ func (s *Shoutrrr) Init(
 
 	// Give the matching main
 	s.Main = main
+	// Create a new main if it's nil and attached to a service
 	if main == nil && s.ServiceStatus != nil {
 		s.Main = &Shoutrrr{}
-	} else if s.Type == s.Main.Type {
-		// Remove the type if it's the same as the main
-		s.Type = ""
 	}
-	s.Main.InitMaps()
 
-	// Give Defaults
-	s.Defaults = defaults
-	s.Defaults.InitMaps()
+	// Shoutrrr is attached to a Service
+	if s.Main != nil {
+		s.Failed = &s.ServiceStatus.Fails.Shoutrrr
+		s.Failed.Set(s.ID, nil)
 
-	// Give Hard Defaults
-	s.HardDefaults = hardDefaults
-	s.HardDefaults.InitMaps()
+		// Remove the type if it's the same as the main
+		if s.Type == s.Main.Type {
+			s.Type = ""
+		}
+
+		s.Main.InitMaps()
+
+		// Give Defaults
+		s.Defaults = defaults
+		s.Defaults.InitMaps()
+
+		// Give Hard Defaults
+		s.HardDefaults = hardDefaults
+		s.HardDefaults.InitMaps()
+	}
 }
 
 // initOptions mapping, converting all keys to lowercase.

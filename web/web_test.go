@@ -108,8 +108,71 @@ func TestWebAccessible(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN we make a request to path
 			req, _ := http.NewRequest("GET", tc.path, nil)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+
+			// THEN we get a Status OK
+			if response.Code != http.StatusOK {
+				t.Errorf("Expected a 200, got %d",
+					response.Code)
+			}
+			if tc.bodyRegex != "" {
+				body := response.Body.String()
+				re := regexp.MustCompile(tc.bodyRegex)
+				match := re.MatchString(body)
+				if !match {
+					t.Errorf("expected %q in body\ngot: %q",
+						tc.bodyRegex, response.Body.String())
+				}
+			}
+		})
+	}
+}
+
+func TestAccessibleHTTPS(t *testing.T) {
+	// GIVEN a bunch of URLs to test and the webserver is running with HTTPS
+	tests := map[string]struct {
+		path      string
+		bodyRegex string
+	}{
+		"/approvals": {
+			path: "/approvals"},
+		"/metrics": {
+			path:      "/metrics",
+			bodyRegex: "go_gc_duration_"},
+		"/api/v1/healthcheck": {
+			path:      "/api/v1/healthcheck",
+			bodyRegex: fmt.Sprintf(`^Alive$`)},
+		"/api/v1/version": {
+			path: "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
+				util.GoVersion)},
+	}
+	testLogging("DEBUG", true)
+	cfg := testConfig("TestAccessibleHTTPS.yml")
+	cfg.Settings.Web.CertFile = stringPtr("TestAccessibleHTTPS_cert.pem")
+	cfg.Settings.Web.KeyFile = stringPtr("TestAccessibleHTTPS_key.pem")
+	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile)
+	defer os.Remove(cfg.File)
+	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
+	defer os.Remove(*cfg.Settings.Web.CertFile)
+	defer os.Remove(*cfg.Settings.Web.KeyFile)
+
+	router = newWebUI(cfg)
+	go Run(cfg, util.NewJLog("WARN", false))
+	time.Sleep(250 * time.Millisecond)
+	address := fmt.Sprintf("https://localhost:%s", *cfg.Settings.Web.ListenPort)
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN we make a HTTPS request to path
+			req, _ := http.NewRequest("GET", address+tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
@@ -153,7 +216,7 @@ func connectToWebSocket(t *testing.T) *websocket.Conn {
 }
 
 // seeIfMessage will try and get a message from the WebSocket
-// if it receives no message withing 100ms, it will give up and return nil
+// if it receives no message within 120*50ms (6s), it will give up and return nil
 func seeIfMessage(t *testing.T, ws *websocket.Conn) *api_type.WebSocketMessage {
 	var message api_type.WebSocketMessage
 	msgChan := make(chan api_type.WebSocketMessage, 1)
@@ -219,6 +282,7 @@ func TestWebSocket(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 			stdout := os.Stdout
@@ -260,6 +324,7 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			order := cfg.Order
 			cfg.Order = tc.order
 			ws := connectToWebSocket(t)
@@ -474,6 +539,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
@@ -490,8 +556,10 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					hadStatus.SetLatestVersionTimestamp(svc.Status.GetLatestVersionTimestamp())
 					hadStatus.SetLastQueried(svc.Status.GetLastQueried())
 				}
-				svc.Status.Fails.Command = make([]*bool, len(tc.commands))
-				svc.Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
+				svc.Status.Init(
+					0, len(tc.commands), len(tc.webhooks),
+					&tc.serviceID,
+					stringPtr("https://example.com"))
 				svc.Status.SetLatestVersion(tc.latestVersion, false)
 				hadDVL = *svc.DeployedVersionLookup
 				if tc.removeDVL {
@@ -506,7 +574,9 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					stringPtr("10m"))
 				if len(tc.commandFails) != 0 {
 					for i := range tc.commandFails {
-						(*svc.CommandController.Failed)[i] = tc.commandFails[i]
+						if tc.commandFails[i] != nil {
+							svc.CommandController.Failed.Set(i, *tc.commandFails[i])
+						}
 					}
 				}
 				hadWebHookSlice = svc.WebHook
@@ -523,7 +593,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					&svc.Options.Interval)
 				if len(tc.webhookFails) != 0 {
 					for key := range tc.webhookFails {
-						(*svc.WebHook[key].Failed)[key] = tc.webhookFails[key]
+						svc.WebHook[key].Failed.Set(key, tc.webhookFails[key])
 					}
 				}
 				// revert Service
@@ -800,6 +870,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
@@ -1029,6 +1100,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
+			fmt.Println(name)
 			// backup changes
 			hadService := make(service.Slice, len(cfg.Service))
 			for i := range cfg.Service {
@@ -1088,7 +1161,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 
-			// WHEN we send a message to get the Commands+WebHooks
+			// WHEN we send a message to get the Config
 			var (
 				msgVersion int    = 1
 				msgPage    string = "CONFIG"
@@ -1105,7 +1178,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					err)
 			}
 
-			// THEN it passes and we only receive a response with the WebHooks
+			// THEN it passes and we receive the config
 			message := seeIfMessage(t, ws)
 			if message == nil {
 				t.Error("SETTINGS - expecting another message but didn't get one")

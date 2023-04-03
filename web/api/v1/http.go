@@ -391,14 +391,11 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	var oldServiceSummary *api_type.ServiceSummary
 	// EDIT the existing service
 	if targetService != "" {
-		api.Config.OrderMutex.RLock()
 		if api.Config.Service[targetService] == nil {
-			api.Config.OrderMutex.RUnlock()
 			failRequest(&w, fmt.Sprintf("edit %q failed, service could not be found", targetService))
 			return
 		}
 		oldServiceSummary = api.Config.Service[targetService].Summary()
-		api.Config.OrderMutex.RUnlock()
 	}
 
 	// Payload
@@ -409,9 +406,7 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	if targetService != "" {
 		reqType = "edit"
 	}
-	api.Config.OrderMutex.RLock()
 	targetServicePtr := api.Config.Service[targetService]
-	api.Config.OrderMutex.RUnlock()
 	newService, err := service.New(
 		targetServicePtr, // nil if creating new
 		&payload,
@@ -432,14 +427,11 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// CREATE a new service, but one with the same name already exists
-	api.Config.OrderMutex.RLock()
 	if targetService == "" && api.Config.Service[newService.ID] != nil {
-		api.Config.OrderMutex.RUnlock()
 		failRequest(&w, fmt.Sprintf("create %q failed, service with this name already exists",
 			newService.ID))
 		return
 	}
-	api.Config.OrderMutex.RUnlock()
 
 	// Check the values
 	err = newService.CheckValues("")
@@ -468,8 +460,10 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the new service to the config
+	api.Config.OrderMutex.RUnlock() // Locked above
 	//nolint:errcheck // Fail for duplicate service name is handled above
 	api.Config.AddService(targetService, newService)
+	api.Config.OrderMutex.RLock() // Lock again for the defer
 
 	newServiceSummary := newService.Summary()
 	// Announce the edit

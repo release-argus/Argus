@@ -17,8 +17,16 @@
 package web
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
 	"net"
+	"time"
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
@@ -128,8 +136,6 @@ func testConfig(path string) (cfg *config.Config) {
 
 	// Order
 	cfg.Order = []string{svc.ID}
-
-	// cfg.Init()
 
 	return
 }
@@ -278,4 +284,46 @@ func testURLCommandRegex() filter.URLCommand {
 		Regex: &regex,
 		Index: index,
 	}
+}
+func generateCertFiles(certFile, keyFile string) error {
+	// Generate the certificate and private key
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	// Create a self-signed certificate
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "localhost"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(1, 0, 0),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		return err
+	}
+
+	// Convert the certificate and private key to PEM format
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	if err != nil {
+		return err
+	}
+
+	// Write the certificate and private key to files
+	if err := ioutil.WriteFile(certFile, certPEM, 0644); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(keyFile, keyPEM, 0600); err != nil {
+		return err
+	}
+
+	return nil
 }

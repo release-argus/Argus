@@ -53,7 +53,6 @@ func (w *Slice) Init(
 			(*w)[id] = &WebHook{}
 		}
 		(*w)[id].ID = id
-		(*w)[id].Failed = &serviceStatus.Fails.WebHook
 		(*w)[id].Init(
 			serviceStatus,
 			(*mains)[id], defaults, hardDefaults,
@@ -77,13 +76,20 @@ func (w *WebHook) Init(
 
 	// Give the matching main
 	w.Main = main
-	if w.Main == nil {
-		if w.ServiceStatus != nil {
-			w.Main = &WebHook{}
-		}
-	} else if w.Type == w.Main.Type {
+	// Create a new main if it's nil and attached to a Service
+	if w.Main == nil && w.ServiceStatus != nil {
+		w.Main = &WebHook{}
+	}
+
+	// WebHook is attached to a Service
+	if w.Main != nil {
+		w.Failed = &w.ServiceStatus.Fails.WebHook
+		w.Failed.Set(w.ID, nil)
+
 		// Remove the type if it's the same as the main
-		w.Type = ""
+		if w.Type == w.Main.Type {
+			w.Type = ""
+		}
 	}
 
 	// Give the defaults
@@ -197,11 +203,6 @@ func (w *WebHook) GetDesiredStatusCode() int {
 		w.HardDefaults.DesiredStatusCode)
 }
 
-// GetFailStatus of this WebHook.
-func (w *WebHook) GetFailStatus() *bool {
-	return (*w.Failed)[w.ID]
-}
-
 // GetMaxTries allowed for the WebHook.
 func (w *WebHook) GetMaxTries() uint {
 	return *util.GetFirstNonNilPtr(
@@ -291,18 +292,13 @@ func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.NextRunnable)
 }
 
-// SetFailStatus of this WebHook.
-func (w *WebHook) SetFailStatus(status *bool) {
-	(*w.Failed)[w.ID] = status
-}
-
 // SetNextRunnable time that the WebHook can be re-run.
 //
 // addDelay - only used on auto_approved releases
 func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	// Different times depending on pass/fail
 	// pass
-	if !util.EvalNilPtr(w.GetFailStatus(), true) {
+	if !util.EvalNilPtr(w.Failed.Get(w.ID), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.NextRunnable = time.Now().UTC().Add(2 * parentInterval)
 		// fail/nil
@@ -317,15 +313,5 @@ func (w *WebHook) SetNextRunnable(addDelay bool, sending bool) {
 	if sending {
 		w.NextRunnable = w.NextRunnable.Add(time.Hour)
 		w.NextRunnable = w.NextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
-	}
-}
-
-// ResetFails of this Slice
-func (w *Slice) ResetFails() {
-	if w == nil {
-		return
-	}
-	for i := range *w {
-		(*w)[i].SetFailStatus(nil)
 	}
 }

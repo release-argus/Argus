@@ -42,6 +42,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			file := fmt.Sprintf("%s.yml", name)
 			defer os.Remove(file)
 			tc.file(file)
@@ -95,6 +96,7 @@ func TestGetIndentationW(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN getIndentation is called on it
 			got := getIndentation(tc.input)
 

@@ -121,6 +121,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			webhook := WebHook{
 				ServiceStatus: &svcstatus.Status{

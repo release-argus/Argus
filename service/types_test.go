@@ -467,6 +467,7 @@ func TestService_Summary(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// status
 			tc.svc.Status.Init(
 				len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),

@@ -50,6 +50,7 @@ func TestDockerCheck_GetTag(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetTag is called on it
 			got := tc.dockerCheck.GetTag(tc.version)
 
@@ -149,6 +150,7 @@ func TestDockerCheck_GetToken(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -254,6 +256,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -378,6 +381,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -438,6 +442,7 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.onlyIfEnvToken && tc.dockerCheck.Token == "" {
 				t.Skip("ENV VAR undefined")
 			}
@@ -533,6 +538,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called on it
 			err := tc.dockerCheck.CheckValues("-")
 
@@ -607,6 +613,7 @@ func TestDockerCheck_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -683,6 +690,7 @@ username: '>123'
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the DockerCheck is stringified with String
 			got := tc.docker.String()
 

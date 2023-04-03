@@ -67,7 +67,7 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 
 	// Set fail/not
 	failed := err != nil
-	(*c.Failed)[index] = &failed
+	c.Failed.Set(index, failed)
 
 	// Announce
 	c.AnnounceCommand(index)

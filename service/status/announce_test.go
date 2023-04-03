@@ -38,6 +38,7 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -87,6 +88,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -131,6 +133,7 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -180,6 +183,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
@@ -229,6 +233,7 @@ func TestStatus_AnnounceApproved(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := testStatus()
 			if tc.nilChannel {
 				status.AnnounceChannel = nil

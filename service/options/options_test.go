@@ -48,6 +48,7 @@ func TestOptions_GetActive(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			options := testOptions()
 			options.Active = tc.active
 
@@ -95,6 +96,7 @@ func TestOptions_GetInterval(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			options := testOptions()
 			options.Interval = tc.intervalRoot
 			options.Defaults.Interval = tc.intervalDefault
@@ -144,6 +146,7 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			options := testOptions()
 			options.SemanticVersioning = tc.semanticVersioningRoot
 			options.Defaults.SemanticVersioning = tc.semanticVersioningDefault
@@ -259,6 +262,7 @@ func TestOptions_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -314,6 +318,7 @@ func TestOptions_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called
 			err := tc.options.CheckValues("")
 
@@ -412,6 +417,7 @@ semantic_versioning: true
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the Options is stringified with String
 			got := tc.options.String()
 

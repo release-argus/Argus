@@ -53,6 +53,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup()
 			lookup.URL = tc.url
 
@@ -145,6 +146,7 @@ func TestLookup_Query(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			dvl := testLookup()
 			dvl.URL = tc.url
 			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
@@ -357,6 +359,7 @@ func TestLookup_Track(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - can't run in parallel because of stdout
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

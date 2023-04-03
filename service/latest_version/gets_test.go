@@ -51,6 +51,7 @@ func TestLookup_GetAccessToken(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.AccessToken = tc.accessTokenRoot
 			lookup.Defaults.AccessToken = tc.accessTokenDefault
@@ -100,6 +101,7 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
@@ -192,6 +194,7 @@ func TestLookup_GetServiceURL(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := svcstatus.Status{}
 			status.Init(
 				0, 0, 0,
@@ -242,6 +245,7 @@ func TestLookup_GetUsePreRelease(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.UsePreRelease = tc.usePreReleaseRoot
 			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault

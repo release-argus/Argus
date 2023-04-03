@@ -73,6 +73,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
@@ -130,6 +131,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
@@ -179,21 +181,28 @@ func TestHandler(t *testing.T) {
 
 	// WHEN a message is sent to the DatabaseChannel targeting latest_version
 	target := "keep0"
-	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
+	cell1 := dbtype.Cell{
+		Column: "latest_version", Value: "9.9.9"}
+	cell2 := dbtype.Cell{
+		Column: cell1.Column, Value: cell1.Value + "-dev"}
 	want := queryRow(t, api.db, target)
-	want.SetLatestVersion(cell.Value, false)
-	msg := dbtype.Message{
+	want.SetLatestVersion(cell1.Value, false)
+	msg1 := dbtype.Message{
 		ServiceID: target,
-		Cells:     []dbtype.Cell{cell},
+		Cells:     []dbtype.Cell{cell1},
 	}
-	*api.config.DatabaseChannel <- msg
+	msg2 := dbtype.Message{
+		ServiceID: target,
+		Cells:     []dbtype.Cell{cell2},
+	}
+	*api.config.DatabaseChannel <- msg1
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the cell was changed in the DB
 	got := queryRow(t, api.db, target)
 	if got.GetLatestVersion() != want.GetLatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
-			cell.Column, cell.Value, got, want)
+			cell1.Column, cell1.Value, got, want)
 	}
 
 	// WHEN a message is sent to the DatabaseChannel deleting a row
@@ -210,16 +219,15 @@ func TestHandler(t *testing.T) {
 	}
 
 	// WHEN multiple messages are targeting the same row in quick succession
-	*api.config.DatabaseChannel <- msg
-	msg.Cells[0].Value = msg.Cells[0].Value + "-dev"
-	wantLatestVersion := msg.Cells[0].Value
-	*api.config.DatabaseChannel <- msg
+	*api.config.DatabaseChannel <- msg1
+	wantLatestVersion := msg2.Cells[0].Value
+	*api.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the last message is the one that is applied
 	got = queryRow(t, api.db, target)
 	if got.GetLatestVersion() != wantLatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
-			cell.Column, cell.Value, got, want)
+			cell2.Column, cell2.Value, got, want)
 	}
 }

@@ -48,6 +48,7 @@ func TestRequire_RegexCheckVersion(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			if tc.require != nil {
 				tc.require.Status = &svcstatus.Status{}
 			}
@@ -123,6 +124,7 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			if tc.require != nil {
 				tc.require.Status = &svcstatus.Status{}
 			}

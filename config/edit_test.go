@@ -61,15 +61,15 @@ func TestConfig_RenameService(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
-		testYAML_Edit(file)
-		defer os.Remove(file)
-		cfg := testLoad(file)
-		defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
-		newSVC := testServiceURL(tc.newName)
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
+			testYAML_Edit(file)
+			defer os.Remove(file)
+			cfg := testLoad(file) // Global vars could otherwise DATA RACE
+			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
+			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
 			cfg.RenameService(tc.oldName, newSVC)
@@ -121,10 +121,11 @@ func TestConfig_DeleteService(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
 			testYAML_Edit(file)
 			defer os.Remove(file)
-			cfg := testLoad(file)
+			cfg := testLoad(file) // Global vars could otherwise DATA RACE
 			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 
 			// WHEN the service is deleted
@@ -193,10 +194,11 @@ func TestConfig_AddService(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", name)
 			testYAML_Edit(file)
 			defer os.Remove(file)
-			cfg := testLoad(file)
+			cfg := testLoad(file) // Global vars could otherwise DATA RACE
 			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 			if tc.nilMap {
 				cfg.Service = nil

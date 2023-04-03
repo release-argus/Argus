@@ -27,7 +27,6 @@ import (
 
 func TestController_AnnounceCommand(t *testing.T) {
 	// GIVEN Controllers with various failed Command announces
-	fails := make([]*bool, 3)
 	tests := map[string]struct {
 		nilChannel     bool
 		index          int
@@ -58,21 +57,27 @@ func TestController_AnnounceCommand(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			controller := Controller{
-				Command: &Slice{
+				NextRunnable:   make([]time.Time, 3),
+				ParentInterval: stringPtr("11m"),
+				ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
+			controller.Init(
+				&svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil},
+				&Slice{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
 					{"ls", "-lah", "a"},
 				},
-				Failed:         &fails,
-				NextRunnable:   make([]time.Time, 3),
-				ParentInterval: stringPtr("11m"),
-				ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
+				nil,
+				stringPtr("11m"))
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
 				controller.ServiceStatus.AnnounceChannel = &announceChannel
 			}
-			(*controller.Failed)[tc.index] = tc.failed
+			if tc.failed != nil {
+				controller.Failed.Set(tc.index, *tc.failed)
+			}
 			time.Sleep(time.Millisecond)
 
 			// WHEN AnnounceCommand is run
@@ -93,7 +98,7 @@ func TestController_AnnounceCommand(t *testing.T) {
 
 			// if they failed status matches
 			got := stringifyPointer(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
-			want := stringifyPointer((*controller.Failed)[tc.index])
+			want := stringifyPointer(controller.Failed.Get(tc.index))
 			if got != want {
 				t.Errorf("want failed=%s\ngot  failed=%s",
 					want, got)
@@ -141,6 +146,7 @@ func TestController_Find(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			controller := &Controller{
 				Command: &Slice{
 					Command{"ls", "-lah"},
@@ -178,27 +184,24 @@ func TestController_Find(t *testing.T) {
 func TestController_ResetFails(t *testing.T) {
 	// GIVEN we have a Controller
 	tests := map[string]struct {
-		controller *Controller
+		nilController bool
+		fails         []*bool
 	}{
 		"nil controller": {
-			controller: nil,
+			nilController: true,
 		},
 		"controller with all fails": {
-			controller: &Controller{
-				Failed: &[]*bool{
-					boolPtr(true), boolPtr(true)}}},
+			fails: []*bool{
+				boolPtr(true), boolPtr(true)}},
 		"controller with no fails": {
-			controller: &Controller{
-				Failed: &[]*bool{
-					boolPtr(false), boolPtr(false)}}},
+			fails: []*bool{
+				boolPtr(false), boolPtr(false)}},
 		"controller with some fails": {
-			controller: &Controller{
-				Failed: &[]*bool{
-					boolPtr(true), boolPtr(false)}}},
+			fails: []*bool{
+				boolPtr(true), boolPtr(false)}},
 		"controller with nil fails": {
-			controller: &Controller{
-				Failed: &[]*bool{
-					nil, nil}}},
+			fails: []*bool{
+				nil, nil}},
 	}
 
 	for name, tc := range tests {
@@ -206,17 +209,34 @@ func TestController_ResetFails(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			controller := &Controller{}
+			commands := make(Slice, len(tc.fails))
+			controller.Init(
+				&svcstatus.Status{},
+				&commands,
+				nil,
+				stringPtr("12m"))
+			for i := range tc.fails {
+				if tc.fails[i] != nil {
+					controller.Failed.Set(i, *tc.fails[i])
+				}
+			}
+			if tc.nilController {
+				controller = nil
+			}
+
 			// WHEN ResetFails is run on this controller
-			tc.controller.ResetFails()
+			controller.ResetFails()
 
 			// THEN all the Failed's are reset to nil
-			if tc.controller == nil {
+			if controller == nil {
 				return
 			}
-			for i := range *tc.controller.Failed {
-				if (*tc.controller.Failed)[i] != nil {
+			for i := 0; i < controller.Failed.Length(); i++ {
+				if controller.Failed.Get(i) != nil {
 					t.Errorf("fails weren't reset to nil. got %v",
-						tc.controller.Failed)
+						controller.Failed)
+					return
 				}
 			}
 		})

@@ -43,6 +43,7 @@ func TestRequire_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			status := svcstatus.Status{}
 			status.Init(
 				0, 0, 0,
@@ -112,6 +113,7 @@ func TestRequire_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -224,6 +226,7 @@ func TestRequire_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN CheckValues is called on it
 			err := tc.require.CheckValues("")
 
@@ -537,6 +540,7 @@ func TestRequire_FromStr(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
+
 			if tc.errRegex == "" {
 				tc.errRegex = "^$"
 			}

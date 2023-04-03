@@ -126,6 +126,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called on it
 			err := util.ErrorToString(tc.input.CheckValues())
 

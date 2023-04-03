@@ -58,6 +58,7 @@ func TestStatus_Init(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			var status Status
 
 			// WHEN Init is called
@@ -78,36 +79,38 @@ func TestStatus_Init(t *testing.T) {
 					tc.webURL, &tc.webURL, status.WebURL)
 			}
 			// Shoutrrr
-			got := len(status.Fails.Shoutrrr)
+			got := status.Fails.Shoutrrr.Length()
 			if got != 0 {
 				t.Errorf("Fails.Shoutrrr was initialised to %d. Want %d",
 					got, 0)
 			} else {
 				for i := 0; i < tc.shoutrrrs; i++ {
-					status.Fails.Shoutrrr[fmt.Sprint(i)] = boolPtr(false)
+					failed := false
+					status.Fails.Shoutrrr.Set(fmt.Sprint(i), &failed)
 				}
-				got := len(status.Fails.Shoutrrr)
+				got := status.Fails.Shoutrrr.Length()
 				if got != tc.shoutrrrs {
 					t.Errorf("Fails.Shoutrrr wanted capacity for %d, but only got to %d",
 						tc.shoutrrrs, got)
 				}
 			}
 			// Command
-			got = len(status.Fails.Command)
+			got = status.Fails.Command.Length()
 			if got != tc.commands {
 				t.Errorf("Fails.Command was initialised to %d. Want %d",
 					got, tc.commands)
 			}
 			// WebHook
-			got = len(status.Fails.WebHook)
+			got = status.Fails.WebHook.Length()
 			if got != 0 {
 				t.Errorf("Fails.WebHook was initialised to %d. Want %d",
 					got, 0)
 			} else {
 				for i := 0; i < tc.webhooks; i++ {
-					status.Fails.WebHook[fmt.Sprint(i)] = boolPtr(false)
+					failed := false
+					status.Fails.WebHook.Set(fmt.Sprint(i), &failed)
 				}
-				got := len(status.Fails.WebHook)
+				got := status.Fails.WebHook.Length()
 				if got != tc.webhooks {
 					t.Errorf("Fails.WebHook wanted capacity for %d, but only got to %d",
 						tc.webhooks, got)
@@ -141,6 +144,7 @@ func TestStatus_GetWebURL(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			status := Status{}
 			status.Init(
 				0, 0, 0,
@@ -203,6 +207,7 @@ func TestStatus_SetDeployedVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			dbChannel := make(chan dbtype.Message, 4)
 			status := Status{
 				DatabaseChannel: &dbChannel}
@@ -244,43 +249,44 @@ func TestStatus_SetDeployedVersion(t *testing.T) {
 func TestFails_ResetFails(t *testing.T) {
 	// GIVEN a Fails struct
 	tests := map[string]struct {
-		fails Fails
+		commandFails  *[]*bool
+		shoutrrrFails *map[string]*bool
+		webhookFails  *map[string]*bool
 	}{
+		"all default": {},
 		"all empty": {
-			fails: Fails{},
+			commandFails:  &[]*bool{},
+			shoutrrrFails: &map[string]*bool{},
+			webhookFails:  &map[string]*bool{},
 		},
 		"only notifies": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"0": nil,
-					"1": boolPtr(false),
-					"3": boolPtr(true)}},
+			shoutrrrFails: &map[string]*bool{
+				"0": nil,
+				"1": boolPtr(false),
+				"3": boolPtr(true)},
 		},
 		"only commands": {
-			fails: Fails{
-				Command: []*bool{
-					nil,
-					boolPtr(false),
-					boolPtr(true)}},
+			commandFails: &[]*bool{
+				nil,
+				boolPtr(false),
+				boolPtr(true)},
 		},
 		"only webhooks": {
-			fails: Fails{
-				WebHook: map[string]*bool{
-					"0": nil,
-					"1": boolPtr(false),
-					"3": boolPtr(true)}},
+			webhookFails: &map[string]*bool{
+				"0": nil,
+				"1": boolPtr(false),
+				"3": boolPtr(true)},
 		},
 		"all filled": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"0": nil,
-					"1": boolPtr(false),
-					"3": boolPtr(true)},
-				Command: []*bool{nil, boolPtr(false), boolPtr(true)},
-				WebHook: map[string]*bool{
-					"0": nil,
-					"1": boolPtr(false),
-					"3": boolPtr(true)}},
+			shoutrrrFails: &map[string]*bool{
+				"0": nil,
+				"1": boolPtr(false),
+				"3": boolPtr(true)},
+			commandFails: &[]*bool{nil, boolPtr(false), boolPtr(true)},
+			webhookFails: &map[string]*bool{
+				"0": nil,
+				"1": boolPtr(false),
+				"3": boolPtr(true)},
 		},
 	}
 
@@ -288,26 +294,44 @@ func TestFails_ResetFails(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			fails := Fails{}
+			if tc.commandFails != nil {
+				fails.Command.Init(len(*tc.commandFails))
+			}
+			if tc.shoutrrrFails != nil {
+				fails.Shoutrrr.Init(len(*tc.shoutrrrFails))
+			}
+			if tc.webhookFails != nil {
+				fails.WebHook.Init(len(*tc.webhookFails))
+			}
+
 			// WHEN resetFails is called on it
-			tc.fails.resetFails()
+			fails.resetFails()
 
 			// THEN all the fails become nil
-			for i := range tc.fails.Shoutrrr {
-				if tc.fails.Shoutrrr[i] != nil {
-					t.Errorf("Shoutrrr.Failed[%s] should have been reset to nil and not be %t",
-						i, *tc.fails.Shoutrrr[i])
+			if tc.shoutrrrFails != nil {
+				for i := range *tc.shoutrrrFails {
+					if fails.Shoutrrr.Get(i) != nil {
+						t.Errorf("Shoutrrr.Failed[%s] should have been reset to nil and not be %t",
+							i, *fails.Shoutrrr.Get(i))
+					}
 				}
 			}
-			for i := range tc.fails.Command {
-				if tc.fails.Command[i] != nil {
-					t.Errorf("Command.Failed[%d] should have been reset to nil and not be %t",
-						i, *tc.fails.Command[i])
+			if tc.commandFails != nil {
+				for i := range *tc.commandFails {
+					if fails.Command.Get(i) != nil {
+						t.Errorf("Command.Failed[%d] should have been reset to nil and not be %t",
+							i, *fails.Command.Get(i))
+					}
 				}
 			}
-			for i := range tc.fails.WebHook {
-				if tc.fails.WebHook[i] != nil {
-					t.Errorf("WebHook.Failed[%s] should have been reset to nil and not be %t",
-						i, *tc.fails.WebHook[i])
+			if tc.webhookFails != nil {
+				for i := range *tc.webhookFails {
+					if fails.WebHook.Get(i) != nil {
+						t.Errorf("WebHook.Failed[%s] should have been reset to nil and not be %t",
+							i, *fails.WebHook.Get(i))
+					}
 				}
 			}
 		})
@@ -336,6 +360,7 @@ func TestStatus_SetLatestVersion(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			dbChannel := make(chan dbtype.Message, 4)
 			status := Status{
 				DatabaseChannel: &dbChannel,
@@ -428,6 +453,9 @@ func TestStatus_String(t *testing.T) {
 		latestVersion            string
 		latestVersionTimestamp   string
 		lastQueried              *string
+		commandFails             []*bool
+		shoutrrrFails            map[string]*bool
+		webhookFails             map[string]*bool
 		want                     string
 	}{
 		"empty status": {
@@ -435,43 +463,41 @@ func TestStatus_String(t *testing.T) {
 			want:   "",
 		},
 		"only fails": {
-			status: &Status{
-				Fails: Fails{
-					Shoutrrr: map[string]*bool{
-						"bish": nil,
-						"bash": boolPtr(false),
-						"bosh": boolPtr(true)},
-					Command: []*bool{
-						nil,
-						boolPtr(false),
-						boolPtr(true)},
-					WebHook: map[string]*bool{
-						"foo": boolPtr(false),
-						"bar": nil},
-				}},
+			commandFails: []*bool{
+				nil,
+				boolPtr(false),
+				boolPtr(true)},
+			shoutrrrFails: map[string]*bool{
+				"bash": boolPtr(false),
+				"bish": nil,
+				"bosh": boolPtr(true)},
+			webhookFails: map[string]*bool{
+				"bar": nil,
+				"foo": boolPtr(false)},
+			status: &Status{},
 			want: `
-fails: {shoutrrr:
- {bosh: true},
- command: [2: true]}`,
+fails: {
+shoutrrr: {bash: false, bish: nil, bosh: true},
+ command: [0: nil, 1: false, 2: true],
+ webhook: {bar: nil, foo: false}
+}`,
 		},
 		"all fields": {
 			status: &Status{
 				RegexMissesContent: 1,
 				RegexMissesVersion: 2,
-				Fails: Fails{
-					Shoutrrr: map[string]*bool{
-						"bish": nil,
-						"bash": boolPtr(false),
-						"bosh": boolPtr(true)},
-					Command: []*bool{
-						nil,
-						boolPtr(false),
-						boolPtr(true)},
-					WebHook: map[string]*bool{
-						"foo": boolPtr(false),
-						"bar": nil},
-				},
 			},
+			shoutrrrFails: map[string]*bool{
+				"bish": nil,
+				"bash": boolPtr(false),
+				"bosh": boolPtr(true)},
+			commandFails: []*bool{
+				nil,
+				boolPtr(false),
+				boolPtr(true)},
+			webhookFails: map[string]*bool{
+				"foo": boolPtr(false),
+				"bar": nil},
 			approvedVersion:          "1.2.4",
 			deployedVersion:          "1.2.3",
 			deployedVersionTimestamp: "2022-01-01T01:01:02Z",
@@ -488,8 +514,10 @@ approved_version: 1.2.4,
  regex_misses_content: 1,
  regex_misses_version: 2,
  fails: {
-shoutrrr: {bosh: true},
- command: [2: true]}`,
+shoutrrr: {bash: false, bish: nil, bosh: true},
+ command: [0: nil, 1: false, 2: true],
+ webhook: {bar: nil, foo: false}
+}`,
 		},
 	}
 
@@ -497,30 +525,7 @@ shoutrrr: {bosh: true},
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
-			fails := Fails{}
-			{ // Backup Fails (SetDeployedVersion calls resetFails)
-				fails.Shoutrrr = make(map[string]*bool)
-				for k, v := range tc.status.Fails.Shoutrrr {
-					if v != nil {
-						val := *v
-						fails.Shoutrrr[k] = &val
-					}
-				}
-				fails.Command = make([]*bool, len(tc.status.Fails.Command))
-				for i, v := range tc.status.Fails.Command {
-					if v != nil {
-						val := *v
-						fails.Command[i] = &val
-					}
-				}
-				fails.WebHook = make(map[string]*bool)
-				for k, v := range tc.status.Fails.WebHook {
-					if v != nil {
-						val := *v
-						fails.WebHook[k] = &val
-					}
-				}
-			}
+
 			tc.status.SetApprovedVersion(tc.approvedVersion)
 			tc.status.SetDeployedVersion(tc.deployedVersion, false)
 			tc.status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
@@ -529,110 +534,29 @@ shoutrrr: {bosh: true},
 			if tc.lastQueried != nil {
 				tc.status.SetLastQueried(*tc.lastQueried)
 			}
-			tc.status.Fails = fails
+			{ // Fails
+				tc.status.Init(
+					len(tc.shoutrrrFails), len(tc.commandFails), len(tc.webhookFails),
+					tc.status.ServiceID,
+					&name)
+				for k, v := range tc.commandFails {
+					if v != nil {
+						tc.status.Fails.Command.Set(k, *v)
+					}
+				}
+				for k, v := range tc.shoutrrrFails {
+					tc.status.Fails.Shoutrrr.Set(k, v)
+				}
+				for k, v := range tc.webhookFails {
+					tc.status.Fails.WebHook.Set(k, v)
+				}
+			}
 
 			// WHEN the Status is stringified with String
 			got := tc.status.String()
 
 			// THEN the result is as expected
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
-			}
-		})
-	}
-}
-
-func TestFails_String(t *testing.T) {
-	// GIVEN a Fails
-	tests := map[string]struct {
-		fails Fails
-		want  string
-	}{
-		"empty fails": {
-			fails: Fails{}, want: "",
-		},
-		"no fails": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"foo": nil,
-					"bar": boolPtr(false)},
-				Command: []*bool{
-					nil, boolPtr(false)},
-				WebHook: map[string]*bool{
-					"foo": boolPtr(false),
-					"bar": nil},
-			}, want: "",
-		},
-		"only shoutrrr": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"bish": nil,
-					"bash": boolPtr(false),
-					"bosh": boolPtr(true)}},
-			want: "shoutrrr: {bosh: true}",
-		},
-		"only command": {
-			fails: Fails{
-				Command: []*bool{
-					nil,
-					boolPtr(false),
-					boolPtr(true)}},
-			want: "command: [2: true]",
-		},
-		"only webhook": {
-			fails: Fails{
-				WebHook: map[string]*bool{
-					"bish": boolPtr(false),
-					"bash": boolPtr(true),
-					"bosh": nil}},
-			want: "webhook: {bash: true}",
-		},
-		"all": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"bish": boolPtr(true),
-					"bash": boolPtr(false),
-					"bosh": nil},
-				Command: []*bool{
-					nil,
-					boolPtr(false),
-					boolPtr(true)},
-				WebHook: map[string]*bool{
-					"bish": nil,
-					"bash": boolPtr(false),
-					"bosh": boolPtr(true)},
-			},
-			want: "shoutrrr: {bish: true}, command: [2: true], webhook: {bosh: true}",
-		},
-		"maps are alphabetical": {
-			fails: Fails{
-				Shoutrrr: map[string]*bool{
-					"bish": boolPtr(true),
-					"bash": boolPtr(true),
-					"bosh": boolPtr(true)},
-				Command: []*bool{
-					nil,
-					boolPtr(true),
-					boolPtr(false)},
-				WebHook: map[string]*bool{
-					"zip":  boolPtr(true),
-					"zap":  boolPtr(true),
-					"zoop": boolPtr(true)},
-			},
-			want: "shoutrrr: {bash: true, bish: true, bosh: true}, command: [1: true], webhook: {zap: true, zip: true, zoop: true}",
-		},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			// WHEN the Fails is stringified with String
-			got := tc.fails.String()
-
-			// THEN the result is as expected
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)

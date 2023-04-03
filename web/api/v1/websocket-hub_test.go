@@ -60,6 +60,7 @@ func TestHub_RunWithRegister(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// THEN that client is registered to the Hub
+	// DATA RACE, but just for testing
 	if !hub.clients[&client] {
 		t.Error("Client wasn't registerd to the Hub")
 	}

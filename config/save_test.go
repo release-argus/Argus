@@ -71,6 +71,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			config := testConfig()
 
 			// WHEN those messages are sent to the channel mid-way through the wait
@@ -115,22 +116,23 @@ func TestConfig_Save(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		file := name
+		tc.file(file)
+		defer os.Remove(file)
+		t.Log(file)
+		config := Config{File: file}
+		originalData, err := os.ReadFile(config.File)
+		had := string(originalData)
+		if err != nil {
+			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
+				err.Error())
+		}
+		flags := make(map[string]bool)
+		config.Load(config.File, &flags, &util.JLog{}) // Global vars could otherwise DATA RACE
+		defer os.Remove(*config.Settings.GetDataDatabaseFile())
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			file := name
-			tc.file(file)
-			defer os.Remove(file)
-			t.Log(file)
-			config := Config{File: file}
-			originalData, err := os.ReadFile(config.File)
-			had := string(originalData)
-			if err != nil {
-				t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-					err.Error())
-			}
-			flags := make(map[string]bool)
-			config.Load(config.File, &flags, &util.JLog{})
-			defer os.Remove(*config.Settings.GetDataDatabaseFile())
 
 			// WHEN we Save it to a new location
 			config.File += ".test"

@@ -253,6 +253,7 @@ func TestService_Track(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			svc := testServiceURL(name)
 			svc.Status.Deleting = tc.deleting
 			svc.Options.Active = tc.active

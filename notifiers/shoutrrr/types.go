@@ -38,13 +38,13 @@ func (s *Slice) String() string {
 }
 
 type Shoutrrr struct {
-	Type          string            `yaml:"type,omitempty" json:"type,omitempty"` // Notification type, e.g. slack
-	ID            string            `yaml:"-" json:"-"`                           // ID for this Shoutrrr sender
-	Failed        *map[string]*bool `yaml:"-" json:"-"`                           // Whether the last send attempt failed
-	ServiceStatus *svcstatus.Status `yaml:"-" json:"-"`                           // Status of the Service (used for templating commands)
-	Main          *Shoutrrr         `yaml:"-" json:"-"`                           // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
-	Defaults      *Shoutrrr         `yaml:"-" json:"-"`                           // Default values
-	HardDefaults  *Shoutrrr         `yaml:"-" json:"-"`                           // Harcoded default values
+	Type          string                   `yaml:"type,omitempty" json:"type,omitempty"` // Notification type, e.g. slack
+	ID            string                   `yaml:"-" json:"-"`                           // ID for this Shoutrrr sender
+	Failed        *svcstatus.FailsShoutrrr `yaml:"-" json:"-"`                           // Whether the last send attempt failed
+	ServiceStatus *svcstatus.Status        `yaml:"-" json:"-"`                           // Status of the Service (used for templating commands)
+	Main          *Shoutrrr                `yaml:"-" json:"-"`                           // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
+	Defaults      *Shoutrrr                `yaml:"-" json:"-"`                           // Default values
+	HardDefaults  *Shoutrrr                `yaml:"-" json:"-"`                           // Harcoded default values
 
 	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
 	// Thinking this may be preferable as it makes adding new services much quicker/easier

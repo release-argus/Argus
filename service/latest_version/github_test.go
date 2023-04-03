@@ -45,6 +45,7 @@ func TestInsertionSort(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			releases := []github_types.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0"},
@@ -97,6 +98,7 @@ func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			body := []byte(tc.body)
 			lv := Lookup{}
 
@@ -186,6 +188,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lv := Lookup{
 				Options: &opt.Options{
 					SemanticVersioning: &tc.semanticVersioning,

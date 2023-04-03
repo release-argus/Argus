@@ -68,7 +68,7 @@ func NotifyTest(
 	}
 }
 
-// findShoutrrr with name from cfg.Service.Notify || cfg.Notify
+// findShoutrrr with `name` from cfg.Service.Notify || cfg.Notify
 func findShoutrrr(
 	name string,
 	cfg *config.Config,
@@ -90,13 +90,12 @@ func findShoutrrr(
 			emptyShoutrrs := shoutrrr.Shoutrrr{}
 			emptyShoutrrs.InitMaps()
 			slice["test"] = cfg.Notify[name]
+			slice["test"].InitMaps()
 			slice["test"].ID = name
 			slice["test"].Main = cfg.Notify[name]
+			slice["test"].Main.InitMaps()
 			slice["test"].Defaults = &emptyShoutrrs
 			slice["test"].HardDefaults = &emptyShoutrrs
-			slice["test"].InitMaps()
-			slice["test"].Main.InitMaps()
-			slice["test"].Failed = &map[string]*bool{}
 
 			notifyType := slice["test"].GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
@@ -105,6 +104,14 @@ func findShoutrrr(
 			slice["test"].Defaults.InitMaps()
 			slice["test"].HardDefaults = hardDefaults.Notify[notifyType]
 			slice["test"].HardDefaults.InitMaps()
+
+			serviceID := ""
+			slice["test"].ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
+			slice["test"].ServiceStatus.Init(
+				1, 0, 0,
+				slice["test"].ServiceStatus.ServiceID,
+				slice["test"].ServiceStatus.WebURL)
+			slice["test"].Failed = &slice["test"].ServiceStatus.Fails.Shoutrrr
 
 			if err := slice["test"].CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))

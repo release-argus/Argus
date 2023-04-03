@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
@@ -35,12 +36,13 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 		"flag set": {
 			flagSet: true, setTo: stringPtr("test")},
 		"flag not set": {
-			flagSet: false, setTo: stringPtr("test")},
+			flagSet: false, setTo: stringPtr("foo")},
 	}
 	flagset := map[string]bool{
 		"log.level": false,
 	}
 	flag := "log.level"
+	var flagLock sync.Mutex
 
 	for name, tc := range tests {
 		name, tc := name, tc
@@ -48,15 +50,18 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 			t.Parallel()
 
 			// WHEN a flag is set/unset and NilUndefinedFlags is called
+			flagLock.Lock()
 			flagset[flag] = tc.flagSet
 			LogLevel = tc.setTo
 			settings.NilUndefinedFlags(&flagset)
 
 			// THEN the flag is defined/undefined correctly
-			if (tc.flagSet && LogLevel == nil) ||
-				(!tc.flagSet && LogLevel != nil) {
+			got := LogLevel
+			flagLock.Unlock()
+			if (tc.flagSet && got == nil) ||
+				(!tc.flagSet && got != nil) {
 				t.Errorf("%s %s:\nwant: %s\ngot:  %v",
-					flag, name, *tc.setTo, util.EvalNilPtr(LogLevel, "<nil>"))
+					flag, name, *tc.setTo, util.EvalNilPtr(got, "<nil>"))
 			}
 		})
 	}
@@ -175,7 +180,9 @@ func TestSettings_GetString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+
 			*tc.flag = tc.flagVal
 			jLog = util.NewJLog("ERROR", false)
 
@@ -232,6 +239,7 @@ func TestSettings_GetBool(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			*tc.flag = tc.flagVal
 
 			// WHEN SetDefaults is called on it
@@ -296,6 +304,7 @@ func TestSettings_GetWebFileNotExist(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// Switch Fatal to panic and disable this panic.
 			jLog.Testing = true
 			defer func() {

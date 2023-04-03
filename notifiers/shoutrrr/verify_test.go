@@ -55,6 +55,7 @@ func TestShoutrrr_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -136,6 +137,7 @@ notify:
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -746,6 +748,7 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.sType != nil {
 				shoutrrr.Type = *tc.sType
@@ -944,6 +947,7 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := Shoutrrr{Type: tc.sType}
 			shoutrrr.InitMaps()
 			if tc.mapTarget == "url_fields" {
@@ -1076,6 +1080,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, tc.serviceShoutrrr, false)
 			if tc.sType != "" {
 				shoutrrr.Type = tc.sType
@@ -1146,6 +1151,7 @@ func TestSlice_CheckValues(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called
 			eer := tc.slice.CheckValues("")
 

@@ -38,10 +38,8 @@ func TestShoutrrr_String(t *testing.T) {
 		"all fields defined": {
 			latestVersion: "1.2.3",
 			shoutrrr: &Shoutrrr{
-				Type: "discord",
-				ID:   "foo",
-				Failed: &map[string]*bool{
-					"foo": boolPtr(true)},
+				Type:          "discord",
+				ID:            "foo",
 				ServiceStatus: &svcstatus.Status{},
 				Options: map[string]string{
 					"delay": "1h"},
@@ -74,6 +72,7 @@ params:
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.latestVersion != "" {
 				tc.shoutrrr.ServiceStatus.SetLatestVersion(tc.latestVersion, false)
 			}

@@ -53,6 +53,7 @@ func TestNewJLog(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN NewJLog is called
 			jLog := NewJLog(tc.level, tc.timestamps)
 
@@ -89,6 +90,7 @@ func TestSetLevel(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog("INFO", false)
 			if tc.panicRegex != nil {
 				jLog.Testing = true
@@ -133,6 +135,7 @@ func TestJLog_SetTimestamps(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog("INFO", tc.start)
 
 			// WHEN SetTimestamps is called
@@ -171,6 +174,7 @@ func TestFormatMessageSource(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN FormatMessageSource is called with this LogFrom
 			got := FormatMessageSource(tc.logFrom)
 
@@ -248,6 +252,7 @@ func TestJLog_IsLevel(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog(tc.startLevel, false)
 
 			// WHEN IsLevel is called to check the given level
@@ -306,6 +311,7 @@ func TestJLog_Error(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -383,6 +389,7 @@ func TestJLog_Warn(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -460,6 +467,7 @@ func TestJLog_Info(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -537,6 +545,7 @@ func TestJLog_Verbose(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -614,6 +623,7 @@ func TestJLog_Debug(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -691,6 +701,7 @@ func TestJLog_Fatal(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

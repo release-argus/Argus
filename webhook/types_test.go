@@ -86,6 +86,7 @@ bosh: boom`,
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+
 			// WHEN the string is unmarshaled
 			var headers Headers
 			err := yaml.Unmarshal([]byte(tc.input), &headers)
@@ -148,12 +149,10 @@ func TestWebHook_String(t *testing.T) {
 				Delay:             "1h1mm1s",
 				MaxTries:          uintPtr(4),
 				SilentFails:       boolPtr(true),
-				Failed: &map[string]*bool{
-					"sommething": boolPtr(true)},
-				NextRunnable: time.Time{},
-				Main:         &WebHook{},
-				Defaults:     &WebHook{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &WebHook{AllowInvalidCerts: boolPtr(false)},
+				NextRunnable:      time.Time{},
+				Main:              &WebHook{},
+				Defaults:          &WebHook{AllowInvalidCerts: boolPtr(false)},
+				HardDefaults:      &WebHook{AllowInvalidCerts: boolPtr(false)},
 				Notifiers: &Notifiers{
 					Shoutrrr: &shoutrrr.Slice{
 						"foo": &shoutrrr.Shoutrrr{Type: "discord"}}},

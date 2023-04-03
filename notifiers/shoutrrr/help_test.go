@@ -66,8 +66,8 @@ func testShoutrrr(failing bool, forService bool, selfSignedCert bool) *Shoutrrr 
 		shoutrrr.ID = "test"
 		shoutrrr.ServiceStatus = &svcstatus.Status{
 			ServiceID: stringPtr("service"),
-			Fails:     svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)},
 		}
+		shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 		shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 		shoutrrr.Main = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}
 		shoutrrr.Defaults = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}

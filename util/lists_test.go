@@ -72,6 +72,7 @@ func TestSwap(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN Swap is called on a list
 			Swap(&tc.had, tc.aStart, tc.aEnd, tc.bStart, tc.bEnd)
 
@@ -125,6 +126,7 @@ func TestRemoveIndex(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN RemoveIndex is called on a list
 			RemoveIndex(&tc.had, tc.index)
 
@@ -245,6 +247,7 @@ func TestGetIndentation(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetIndentation is called on a string
 			got := GetIndentation(tc.text, uint8(tc.indentSize))
 

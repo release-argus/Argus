@@ -29,14 +29,13 @@ func TestShoutrrr_Send(t *testing.T) {
 	// GIVEN a Shoutrrr to try and send
 	testLogging("DEBUG")
 	tests := map[string]struct {
-		shoutrrr  *Shoutrrr
-		svcStatus *svcstatus.Status
-		delay     string
-		useDelay  bool
-		message   string
-		retries   int
-		deleting  bool
-		errRegex  string
+		shoutrrr *Shoutrrr
+		delay    string
+		useDelay bool
+		message  string
+		retries  int
+		deleting bool
+		errRegex string
 	}{
 		"empty": {
 			shoutrrr: &Shoutrrr{},
@@ -44,21 +43,15 @@ func TestShoutrrr_Send(t *testing.T) {
 		},
 		"valid, empty message": {
 			shoutrrr: testShoutrrr(false, false, false),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			errRegex: "",
 		},
 		"valid, with message": {
 			shoutrrr: testShoutrrr(false, false, false),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			message:  "__name__",
 			errRegex: "",
 		},
 		"valid, with message, with delay": {
 			shoutrrr: testShoutrrr(false, false, false),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			message:  "__name__",
 			useDelay: true,
 			delay:    "1s",
@@ -66,21 +59,15 @@ func TestShoutrrr_Send(t *testing.T) {
 		},
 		"invalid https cert": {
 			shoutrrr: testShoutrrr(false, false, true),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			errRegex: "x509",
 		},
 		"failing": {
 			shoutrrr: testShoutrrr(true, false, true),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			retries:  1,
 			errRegex: "invalid gotify token .* x 2",
 		},
 		"deleting": {
 			shoutrrr: testShoutrrr(true, false, true),
-			svcStatus: &svcstatus.Status{
-				ServiceID: stringPtr("Testing")},
 			deleting: true,
 			errRegex: "",
 		},
@@ -88,17 +75,17 @@ func TestShoutrrr_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		tc.shoutrrr.Init(
-			tc.svcStatus,
-			&Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if tc.shoutrrr.Failed == nil &&
-				tc.shoutrrr.ServiceStatus != nil {
-				tc.shoutrrr.Failed = &map[string]*bool{
-					*tc.shoutrrr.ServiceStatus.ServiceID: boolPtr(false)}
-			}
+
+			svcStatus := svcstatus.Status{}
+			svcStatus.Init(
+				1, 0, 0,
+				&name,
+				nil)
+			tc.shoutrrr.Init(
+				&svcStatus,
+				&Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
 			if tc.shoutrrr.ServiceStatus != nil {
 				tc.shoutrrr.ServiceStatus.Deleting = tc.deleting
 			}

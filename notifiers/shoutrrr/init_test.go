@@ -47,6 +47,7 @@ func TestSlice_Metrics(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
+
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
@@ -101,6 +102,7 @@ func TestShoutrrr_Metrics(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			if !tc.serviceShoutrrr {
@@ -158,6 +160,7 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -202,6 +205,7 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.URLFields = tc.had
@@ -246,6 +250,7 @@ func TestShoutrrr_InitParams(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Params = tc.had
@@ -293,6 +298,7 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -385,6 +391,7 @@ func TestShoutrrr_Init(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.ID = tc.id
 			serviceStatus := shoutrrr.ServiceStatus
@@ -501,7 +508,10 @@ func TestSlice_Init(t *testing.T) {
 	testLogging("DEBUG")
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -510,10 +520,15 @@ func TestSlice_Init(t *testing.T) {
 					}
 				}
 			}
-			serviceStatus := svcstatus.Status{
-				Fails:     svcstatus.Fails{Shoutrrr: map[string]*bool{}},
-				ServiceID: stringPtr(name),
+			serviceStatus := svcstatus.Status{}
+			mainCount := 0
+			if tc.mains != nil {
+				mainCount = len(*tc.mains)
 			}
+			serviceStatus.Init(
+				mainCount, 0, 0,
+				&name,
+				nil)
 			for i := range tc.defaults {
 				tc.defaults[i].URLFields = tc.had
 			}
