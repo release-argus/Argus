@@ -149,13 +149,13 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 		if version == s.approvedVersion {
 			s.approvedVersion = ""
 		}
-
-		// Clear the fail status of WebHooks/Commands
-		s.Fails.resetFails()
 	}
 	s.mutex.Unlock()
 
 	if writeToDB && s.DatabaseChannel != nil {
+		// Clear the fail status of WebHooks/Commands
+		s.Fails.resetFails()
+
 		s.mutex.RLock()
 		defer s.mutex.RUnlock()
 		*s.DatabaseChannel <- dbtype.Message{
@@ -198,12 +198,13 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 		s.latestVersion = version
 		s.latestVersionTimestamp = s.lastQueried
 
-		// Clear the fail status of WebHooks/Commands
-		s.Fails.resetFails()
 	}
 	s.mutex.Unlock()
 
 	if writeToDB && s.DatabaseChannel != nil {
+		// Clear the fail status of WebHooks/Commands
+		s.Fails.resetFails()
+
 		s.mutex.RLock()
 		defer s.mutex.RUnlock()
 		*s.DatabaseChannel <- dbtype.Message{
