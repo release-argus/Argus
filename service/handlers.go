@@ -25,7 +25,7 @@ import (
 
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
-func (s *Service) UpdatedVersion() {
+func (s *Service) UpdatedVersion(writeToDB bool) {
 	if s.Status.GetDeployedVersion() == s.Status.GetLatestVersion() {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *Service) UpdatedVersion() {
 		}
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.GetLatestVersion(), true)
+	s.Status.SetDeployedVersion(s.Status.GetLatestVersion(), writeToDB)
 
 	// Announce version change to WebSocket clients
 	s.Status.AnnounceUpdate()
@@ -69,7 +69,11 @@ func (s *Service) UpdateLatestApproved() {
 // HandleUpdateActions will run all commands and send all WebHooks for this service if it has been called
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
-func (s *Service) HandleUpdateActions() {
+func (s *Service) HandleUpdateActions(writeToDB bool) {
+	// Send the Notify Message(s).
+	//nolint:errcheck
+	go s.Notify.Send("", "", s.GetServiceInfo(), true)
+
 	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
 		if s.Dashboard.GetAutoApprove() {
@@ -81,7 +85,7 @@ func (s *Service) HandleUpdateActions() {
 			go func() {
 				err := s.CommandController.Exec(&util.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
-					s.UpdatedVersion()
+					s.UpdatedVersion(writeToDB)
 				}
 			}()
 
@@ -89,7 +93,7 @@ func (s *Service) HandleUpdateActions() {
 			go func() {
 				err := s.WebHook.Send(s.GetServiceInfo(), true)
 				if err == nil && len(s.WebHook) != 0 {
-					s.UpdatedVersion()
+					s.UpdatedVersion(writeToDB)
 				}
 			}()
 		} else {
@@ -102,7 +106,7 @@ func (s *Service) HandleUpdateActions() {
 		}
 	} else {
 		// Auto-update version for Service(s) without WebHook(s)
-		s.UpdatedVersion()
+		s.UpdatedVersion(writeToDB)
 	}
 }
 
@@ -174,7 +178,7 @@ func (s *Service) HandleFailedActions() {
 	}
 
 	if !errored {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 
@@ -196,7 +200,7 @@ func (s *Service) HandleCommand(command string) {
 	// Send the Command.
 	err := (*s.CommandController).ExecIndex(&util.LogFrom{Primary: "Command", Secondary: s.ID}, *index)
 	if err == nil {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 
@@ -216,7 +220,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 	// Send the WebHook.
 	err := s.WebHook[webhookID].Send(s.GetServiceInfo(), false)
 	if err == nil {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 

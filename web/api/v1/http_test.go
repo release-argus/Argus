@@ -251,8 +251,8 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 	testLogging()
 	testSVC := testService("TestHTTP_VersionRefresh")
 	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
-	testSVC.LatestVersion.Query()
-	v, _ := testSVC.DeployedVersionLookup.Query(&util.LogFrom{})
+	testSVC.LatestVersion.Query(true, &util.LogFrom{})
+	v, _ := testSVC.DeployedVersionLookup.Query(true, &util.LogFrom{})
 	testSVC.Status.SetDeployedVersion(v, false)
 	// GIVEN an API and a request to refresh the x_version of a service
 	file := "TestHTTP_VersionRefresh.yml"
@@ -583,8 +583,8 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 	testLogging()
 	testSVC := testService("TestHTTP_EditServiceEdit")
 	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
-	testSVC.LatestVersion.Query()
-	v, _ := testSVC.DeployedVersionLookup.Query(&util.LogFrom{})
+	testSVC.LatestVersion.Query(true, &util.LogFrom{})
+	v, _ := testSVC.DeployedVersionLookup.Query(true, &util.LogFrom{})
 	testSVC.Status.SetDeployedVersion(v, false)
 	// GIVEN an API and a request to create/edit a service
 	file := "TestHTTP_EditServiceEdit.yml"

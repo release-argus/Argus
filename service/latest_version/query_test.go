@@ -246,7 +246,7 @@ func TestLookup_Query(t *testing.T) {
 				lookup.Require.Docker = tc.requireDockerCheck
 
 				// WHEN Query is called on it
-				_, err := lookup.Query()
+				_, err := lookup.Query(true, &util.LogFrom{})
 
 				// THEN any err is expected
 				e := util.ErrorToString(err)
@@ -317,7 +317,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 					lookup.Require = &filter.Require{}
 				}
 
-				_, err := lookup.Query()
+				_, err := lookup.Query(true, &util.LogFrom{})
 				if err != nil {
 					errors += "--" + err.Error()
 				}

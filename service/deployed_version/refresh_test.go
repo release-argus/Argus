@@ -319,7 +319,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 func TestLookup_Refresh(t *testing.T) {
 	testLogging()
 	test := testLookup()
-	testVersion, _ := test.Query(&util.LogFrom{Primary: "TestRefresh"})
+	testVersion, _ := test.Query(true, &util.LogFrom{Primary: "TestRefresh"})
 	if testVersion == "" {
 		t.Fatalf("test version is empty")
 	}
@@ -338,6 +338,7 @@ func TestLookup_Refresh(t *testing.T) {
 		deployedVersionTimestamp string
 		errRegex                 string
 		want                     string
+		announce                 bool
 	}{
 		"Change of URL": {
 			url:    stringPtr("https://valid.release-argus.io/json"),
@@ -375,6 +376,7 @@ func TestLookup_Refresh(t *testing.T) {
 			deployedVersion:          "0.0.0",
 			deployedVersionTimestamp: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
 			want:                     testVersion,
+			announce:                 true,
 		},
 	}
 
@@ -399,7 +401,7 @@ func TestLookup_Refresh(t *testing.T) {
 			}
 
 			// WHEN we call Refresh
-			got, err := tc.lookup.Refresh(
+			got, gotAnnounce, err := tc.lookup.Refresh(
 				tc.allowInvalidCerts,
 				tc.basicAuth,
 				tc.headers,
@@ -422,9 +424,14 @@ func TestLookup_Refresh(t *testing.T) {
 						tc.errRegex, e)
 				}
 			}
+			// AND announce is only true when expected
+			if tc.announce != gotAnnounce {
+				t.Errorf("expected announce of %t, not %t",
+					tc.announce, gotAnnounce)
+			}
 			// AND we get the expected result otherwise
 			if tc.want != got {
-				t.Errorf("expected %q but got %q", tc.want, got)
+				t.Errorf("expected version %q, not %q", tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
 			// and the possible query-changing overrides are nil

@@ -1101,7 +1101,6 @@ func TestWebSocketConfigINIT(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			fmt.Println(name)
 			// backup changes
 			hadService := make(service.Slice, len(cfg.Service))
 			for i := range cfg.Service {

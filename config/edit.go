@@ -73,6 +73,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 			{Column: "latest_version_timestamp", Value: newService.Status.GetLatestVersionTimestamp()},
 			{Column: "deployed_version", Value: newService.Status.GetDeployedVersion()},
 			{Column: "deployed_version_timestamp", Value: newService.Status.GetDeployedVersionTimestamp()},
+			{Column: "approved_version", Value: newService.Status.GetApprovedVersion()},
 		},
 	}
 

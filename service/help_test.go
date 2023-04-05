@@ -144,6 +144,10 @@ func testServiceURL(id string) *Service {
 			Options: opt.Options{
 				Active: boolPtr(true)},
 			DeployedVersionLookup: &deployedver.Lookup{},
+			Status: svcstatus.Status{
+				AnnounceChannel: &announceChannel,
+				DatabaseChannel: &databaseChannel,
+				SaveChannel:     &saveChannel},
 		},
 	}
 

@@ -2016,8 +2016,7 @@ func TestNew(t *testing.T) {
 				Options:   opt.Options{Defaults: &opt.Options{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptions{}},
 				LatestVersion: latestver.Lookup{
-					Defaults: &latestver.Lookup{},
-					Require:  &filter.Require{}}},
+					Defaults: &latestver.Lookup{}}},
 		},
 		"Require.Docker stays if have Type&Image&Tag": {
 			payload: `{"latest_version":{"require":{"docker":{"type":"ghcr","image":"release-argus-argus","tag":"latest"}}}}`,
@@ -2503,9 +2502,9 @@ func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service
 	testLogging()
 	testLV := testLatestVersionLookupURL(false)
-	testLV.Query()
+	testLV.Query(false, &util.LogFrom{})
 	testDVL := testDeployedVersionLookup(false)
-	v, _ := testDVL.Query(&util.LogFrom{})
+	v, _ := testDVL.Query(false, &util.LogFrom{})
 	testDVL.Status.SetDeployedVersion(v, false)
 	tests := map[string]struct {
 		svc                  *Service

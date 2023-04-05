@@ -68,7 +68,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"github service": {
 			flag:        "argus",
-			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			outputRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					LatestVersion: latestver.Lookup{
@@ -141,7 +141,6 @@ func TestServiceTest(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			fmt.Println(name)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

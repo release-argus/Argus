@@ -137,7 +137,9 @@ func (l *Lookup) applyOverrides(
 }
 
 // Refresh queries the Service source with the provided overrides,
-// returnng the Status after this query
+// returning the `version` found from this query as well, as whether
+// that new version should be announced (no overrides provided),
+// and any errors encountered
 func (l *Lookup) Refresh(
 	accessToken *string,
 	allowInvalidCerts *string,
@@ -147,7 +149,7 @@ func (l *Lookup) Refresh(
 	url *string,
 	urlCommands *string,
 	usePreRelease *string,
-) (version string, err error) {
+) (version string, announceUpdate bool, err error) {
 	serviceID := *l.Status.ServiceID
 	logFrom := util.LogFrom{Primary: "latest_version/refresh", Secondary: serviceID}
 
@@ -171,11 +173,20 @@ func (l *Lookup) Refresh(
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(fmt.Sprintf("Refreshing with:\n%v", lookup), logFrom, false)
 	}
+
+	// Whether overrides were provided or not, we can update the status if not.
+	overrides := require != nil ||
+		semanticVersioning != nil ||
+		usePreRelease != nil ||
+		url != nil ||
+		urlCommands != nil
+
 	// Query the lookup.
-	_, err = lookup.Query()
+	_, err = lookup.Query(!overrides, &logFrom)
 	if err != nil {
 		return
 	}
+	version = lookup.Status.GetLatestVersion()
 
 	// Querying the same GitHub repo
 	if url == nil &&
@@ -187,21 +198,17 @@ func (l *Lookup) Refresh(
 	}
 
 	// If no overrides that may change a successful query were provided
-	// then we can just update the status.
-	if require == nil &&
-		semanticVersioning == nil &&
-		usePreRelease == nil &&
-		url == nil &&
-		urlCommands == nil {
+	// then we can update the Status.
+	if !overrides {
 		// Update the last queried time.
 		l.Status.SetLastQueried(lookup.Status.GetLastQueried())
 		// Update the latest version if it has changed.
 		mewLatestVersion := lookup.Status.GetLatestVersion()
 		if mewLatestVersion != l.Status.GetLatestVersion() {
+			announceUpdate = true
 			l.Status.SetLatestVersion(mewLatestVersion, true)
-			l.Status.AnnounceUpdate()
 		}
 	}
 
-	return lookup.Status.GetLatestVersion(), nil
+	return
 }

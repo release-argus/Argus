@@ -157,7 +157,7 @@ func TestLookup_Query(t *testing.T) {
 			*dvl.Options.SemanticVersioning = !tc.noSemanticVersioning
 
 			// WHEN Query is called on it
-			version, err := dvl.Query(&util.LogFrom{})
+			version, err := dvl.Query(true, &util.LogFrom{})
 
 			// THEN any err is expected
 			if tc.wantVersion != "" {

@@ -125,18 +125,18 @@ func (api *API) announceDelete(serviceID string) {
 
 // announceEdit of a Service to the `s.AnnounceChannel` if data shown to the user has changed.
 // (Broadcast to all WebSocket clients).
-func (api *API) announceEdit(old *api_type.ServiceSummary, new *api_type.ServiceSummary) {
+func (api *API) announceEdit(oldData *api_type.ServiceSummary, newData *api_type.ServiceSummary) {
 	serviceChanged := ""
-	if old != nil {
-		serviceChanged = old.ID
-		new.RemoveUnchanged(old)
+	if oldData != nil {
+		serviceChanged = oldData.ID
+		newData.RemoveUnchanged(oldData)
 	}
 
 	payloadData, _ := json.Marshal(api_type.WebSocketMessage{
 		Page:        "APPROVALS",
 		Type:        "EDIT",
 		SubType:     serviceChanged,
-		ServiceData: new,
+		ServiceData: newData,
 	})
 
 	// If the service has been changed, the payload will have more than 16 double quotes.

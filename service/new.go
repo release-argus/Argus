@@ -116,7 +116,11 @@ func New(
 		newService.LatestVersion.Require.Docker.Type != "" &&
 		newService.LatestVersion.Require.Docker.Image == "" &&
 		newService.LatestVersion.Require.Docker.Tag == "" {
+
 		newService.LatestVersion.Require.Docker = nil
+		if newService.LatestVersion.Require.String() == "{}\n" {
+			newService.LatestVersion.Require = nil
+		}
 	}
 
 	// If EDIT, give the secrets from the oldService
@@ -133,7 +137,7 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion *latestver.Lookup) {
 	}
 	// New service has a Require
 	if s.LatestVersion.Require != nil {
-		// New service has a Require.Docker referencing the oldService's Docker token
+		// with the Require.Docker referencing the oldService's Docker token
 		if oldLatestVersion.Require != nil && oldLatestVersion.Require.Docker != nil &&
 			s.LatestVersion.Require.Docker != nil && s.LatestVersion.Require.Docker.Token == "<secret>" {
 			s.LatestVersion.Require.Docker.Token = oldLatestVersion.Require.Docker.Token
@@ -300,10 +304,19 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 		return
 	}
 
-	// First as SetDeployedVersion will call resetFails
+	// Latest Version
+	s.giveSecretsLatestVersion(&oldService.LatestVersion)
+	// Deployed Version
+	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)
+	// Notify
+	s.giveSecretsNotify(&oldService.Notify, &secretRefs.Notify)
+	// WebHook
+	s.giveSecretsWebHook(&oldService.WebHook, &secretRefs.WebHook)
+	// Command
+	s.CommandController.CopyFailsFrom(oldService.CommandController)
+
 	// Keep LatestVersion if the LatestVersion lookup is unchanged
-	if s.LatestVersion.IsEqual(&oldService.LatestVersion) &&
-		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+	if s.LatestVersion.IsEqual(&oldService.LatestVersion) {
 		s.Status.SetApprovedVersion(oldService.Status.GetApprovedVersion())
 		s.Status.SetLatestVersion(oldService.Status.GetLatestVersion(), false)
 		s.Status.SetLatestVersionTimestamp(oldService.Status.GetLatestVersionTimestamp())
@@ -315,17 +328,6 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 		s.Status.SetDeployedVersion(oldService.Status.GetDeployedVersion(), false)
 		s.Status.SetDeployedVersionTimestamp(oldService.Status.GetDeployedVersionTimestamp())
 	}
-
-	// Latest Version
-	s.giveSecretsLatestVersion(&oldService.LatestVersion)
-	// Deployed Version
-	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)
-	// Notify
-	s.giveSecretsNotify(&oldService.Notify, &secretRefs.Notify)
-	// WebHook
-	s.giveSecretsWebHook(&oldService.WebHook, &secretRefs.WebHook)
-	// Command
-	s.CommandController.CopyFailsFrom(oldService.CommandController)
 }
 
 // CheckFetches will check that, if set, the LatestVersion and DeployedVersion can be fetched
@@ -346,13 +348,17 @@ func (s *Service) CheckFetches() (err error) {
 		s.Status.DatabaseChannel = databaseChannel
 	}()
 
+	logFrom := util.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
+
 	// Fetch latest version
 	{
 		// Erase DeployedVersion so that 'require' is checked
 		deployedVersion := s.Status.GetDeployedVersion()
 		s.Status.SetDeployedVersion("", false)
 
-		_, err = s.LatestVersion.Query()
+		_, err = s.LatestVersion.Query(
+			false,
+			&logFrom)
 		if err != nil {
 			err = fmt.Errorf("latest_version - %w", err)
 			return
@@ -363,7 +369,9 @@ func (s *Service) CheckFetches() (err error) {
 	// Fetch deployed version
 	if s.DeployedVersionLookup != nil {
 		var version string
-		version, err = s.DeployedVersionLookup.Query(&util.LogFrom{})
+		version, err = s.DeployedVersionLookup.Query(
+			false,
+			&logFrom)
 		if err != nil {
 			err = fmt.Errorf("deployed_version - %w", err)
 			return

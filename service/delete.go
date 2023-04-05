@@ -22,19 +22,16 @@ import (
 func (s *Service) PrepDelete() {
 	s.Status.Deleting = true
 
-	// Delete the row for this service in the database
-	*s.Status.DatabaseChannel <- dbtype.Message{
-		ServiceID: s.ID,
-		Delete:    true,
-	}
-	s.LatestVersion.DeleteMetrics()
-	s.DeployedVersionLookup.DeleteMetrics()
-	s.Notify.DeleteMetrics()
-	s.CommandController.DeleteMetrics()
-	s.WebHook.DeleteMetrics()
-
 	// nil the channels so the service doesn't trigger any more events
 	s.Status.AnnounceChannel = nil
 	s.Status.DatabaseChannel = nil
 	s.Status.SaveChannel = nil
+
+	// Delete the row for this service in the database
+	*s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
+		ServiceID: s.ID,
+		Delete:    true,
+	}
+
+	s.DeleteMetrics()
 }

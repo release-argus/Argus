@@ -292,10 +292,10 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 func TestLookup_Refresh(t *testing.T) {
 	testLogging("DEBUG")
 	testURL := testLookup(true, true)
-	testURL.Query()
+	testURL.Query(true, &util.LogFrom{})
 	testVersionURL := testURL.Status.GetLatestVersion()
 	testGitHub := testLookup(false, false)
-	testGitHub.Query()
+	testGitHub.Query(true, &util.LogFrom{})
 	testVersionGitHub := testGitHub.Status.GetLatestVersion()
 
 	// GIVEN a Lookup and various json strings to override parts of it
@@ -312,6 +312,7 @@ func TestLookup_Refresh(t *testing.T) {
 		previous           *Lookup
 		errRegex           string
 		want               string
+		announce           bool
 	}{
 		"Change of URL": {
 			url:      stringPtr("https://valid.release-argus.io/plain"),
@@ -348,7 +349,8 @@ func TestLookup_Refresh(t *testing.T) {
 				Defaults:     testURL.Defaults,
 				HardDefaults: testURL.HardDefaults,
 			},
-			want: testVersionURL,
+			want:     testVersionURL,
+			announce: true,
 		},
 		"GitHub - Refresh new version": {
 			previous: &Lookup{
@@ -367,6 +369,7 @@ func TestLookup_Refresh(t *testing.T) {
 			},
 			latestVersion: "0.0.0",
 			want:          testVersionGitHub,
+			announce:      true,
 		},
 	}
 
@@ -387,7 +390,7 @@ func TestLookup_Refresh(t *testing.T) {
 			previousStatus := tc.previous.Status
 
 			// WHEN we call Refresh
-			got, err := tc.previous.Refresh(
+			got, gotAnnounce, err := tc.previous.Refresh(
 				tc.accessToken,
 				tc.allowInvalidCerts,
 				tc.require,
@@ -411,9 +414,14 @@ func TestLookup_Refresh(t *testing.T) {
 						tc.errRegex, e)
 				}
 			}
+			// AND announce is only true when expected
+			if tc.announce != gotAnnounce {
+				t.Errorf("expected announce of %t, not %t",
+					tc.announce, gotAnnounce)
+			}
 			// AND we get the expected result otherwise
 			if tc.want != got {
-				t.Errorf("expected %q but got %q", tc.want, got)
+				t.Errorf("expected version %q, not %q", tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
 			if previousStatus.GetLatestVersionTimestamp() != "" {

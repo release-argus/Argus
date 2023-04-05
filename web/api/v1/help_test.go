@@ -111,7 +111,10 @@ func testService(id string) *service.Service {
 			Options: opt.Options{}},
 		&service.Service{
 			Options:               opt.Options{},
-			DeployedVersionLookup: &deployedver.Lookup{}},
+			DeployedVersionLookup: &deployedver.Lookup{},
+			Status: svcstatus.Status{
+				AnnounceChannel: &announceChannel,
+				DatabaseChannel: &databaseChannel}},
 		&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
 		&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 	return &svc

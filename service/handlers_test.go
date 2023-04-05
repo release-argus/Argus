@@ -212,7 +212,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 
 			// WHEN UpdatedVersion is called on it
 			startLV := svc.Status.GetLatestVersion()
-			svc.UpdatedVersion()
+			svc.UpdatedVersion(true)
 
 			// THEN ApprovedVersion becomes LatestVersion if there's a dvl and commands/webhooks
 			gotAV := svc.Status.GetApprovedVersion()
@@ -320,7 +320,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 
 			// WHEN HandleUpdateActions is called on it
 			want := svc.Status.GetLatestVersion()
-			svc.HandleUpdateActions()
+			svc.HandleUpdateActions(true)
 			// wait until all commands/webhooks have run
 			if tc.deployedBecomesLatest {
 				time.Sleep(2 * time.Second)

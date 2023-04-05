@@ -102,7 +102,7 @@ func (l *Lookup) Refresh(
 	regex *string,
 	semanticVersioning *string,
 	url *string,
-) (version string, err error) {
+) (version string, announceUpdate bool, err error) {
 	serviceID := *l.Status.ServiceID
 	logFrom := util.LogFrom{Primary: "deployed_version/refresh", Secondary: serviceID}
 
@@ -125,8 +125,16 @@ func (l *Lookup) Refresh(
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(fmt.Sprintf("Refreshing with:\n%v", lookup), logFrom, false)
 	}
+
+	// Whether overrides were provided or not, we can update the status ig not.
+	overrides := headers != nil ||
+		json != nil ||
+		regex != nil ||
+		semanticVersioning != nil ||
+		url != nil
+
 	// Query the lookup.
-	version, err = lookup.Query(&logFrom)
+	version, err = lookup.Query(!overrides, &logFrom)
 	if err != nil {
 		return
 	}
@@ -134,12 +142,8 @@ func (l *Lookup) Refresh(
 	// Update the deployed version if it has changed.
 	if version != l.Status.GetDeployedVersion() &&
 		// and no overrides that may change a successful query were provided
-		// then we can just update the status.
-		headers == nil &&
-		json == nil &&
-		regex == nil &&
-		semanticVersioning == nil &&
-		url == nil {
+		!overrides {
+		announceUpdate = true
 		l.Status.SetDeployedVersion(version, true)
 		l.Status.AnnounceUpdate()
 	}

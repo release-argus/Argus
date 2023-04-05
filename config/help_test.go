@@ -17,6 +17,8 @@
 package config
 
 import (
+	"sync"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -82,11 +84,15 @@ func testSettings() Settings {
 	}
 }
 
+var loadMutex sync.Mutex
+
 func testLoad(file string) *Config {
 	var config Config
 
 	flags := make(map[string]bool)
 	log := util.NewJLog("WARN", true)
+	loadMutex.Lock()
+	defer loadMutex.Unlock()
 	config.Load(file, &flags, log)
 
 	return &config

@@ -16,11 +16,9 @@ package service
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Track will call Track on all Services in this Slice.
@@ -70,6 +68,7 @@ func (s *Service) Track() {
 	}()
 
 	// Track forever.
+	logFrom := util.LogFrom{Primary: s.ID}
 	for {
 		// If we're deleting this Service, stop tracking it.
 		if s.Status.Deleting {
@@ -77,53 +76,13 @@ func (s *Service) Track() {
 		}
 
 		// If new release found by this query.
-		newVersion, err := s.LatestVersion.Query()
+		newVersion, _ := s.LatestVersion.Query(true, &logFrom)
 
-		// If a new version was found and we're not already on it
+		// If a new version was found
 		if newVersion {
-			// Send the Notify Message(s).
-			//nolint:errcheck
-			go s.Notify.Send("", "", s.GetServiceInfo(), true)
-
-			// WebHook(s)/Command(s)
-			go s.HandleUpdateActions()
+			go s.HandleUpdateActions(true)
 		}
 
-		// If it failed
-		if err != nil {
-			switch e := err.Error(); {
-			case strings.HasPrefix(e, "regex "):
-				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
-					s.ID,
-					2)
-			case strings.HasPrefix(e, "failed converting") && strings.Contains(e, " semantic version."):
-				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
-					s.ID,
-					3)
-			case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
-				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
-					s.ID,
-					4)
-			default:
-				metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
-					s.ID,
-					"",
-					"",
-					"FAIL")
-				metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
-					s.ID,
-					0)
-			}
-		} else {
-			metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
-				s.ID,
-				"",
-				"",
-				"SUCCESS")
-			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
-				s.ID,
-				1)
-		}
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())
 	}

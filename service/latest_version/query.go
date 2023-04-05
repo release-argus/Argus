@@ -24,19 +24,19 @@ import (
 	"github.com/coreos/go-semver/semver"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Query queries the Service source, updating Service.LatestVersion
 // and returning true if it has changed (is a new release),
 // otherwise returns false.
-func (l *Lookup) Query() (bool, error) {
-	logFrom := util.LogFrom{Primary: *l.Status.ServiceID}
-	rawBody, err := l.httpRequest(&logFrom)
+func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
+	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
 	}
 
-	version, err := l.GetVersion(rawBody, &logFrom)
+	version, err := l.GetVersion(rawBody, logFrom)
 	if err != nil {
 		return false, err
 	}
@@ -53,7 +53,7 @@ func (l *Lookup) Query() (bool, error) {
 			if err != nil {
 				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
 					version)
-				jLog.Error(err, logFrom, true)
+				jLog.Error(err, *logFrom, true)
 				return false, err
 			}
 
@@ -70,7 +70,7 @@ func (l *Lookup) Query() (bool, error) {
 					if newVersion.LessThan(*oldVersion) {
 						err := fmt.Errorf("queried version %q is less than the deployed version %q",
 							version, l.Status.GetLatestVersion())
-						jLog.Warn(err, logFrom, true)
+						jLog.Warn(err, *logFrom, true)
 						return false, err
 					}
 				}
@@ -88,7 +88,7 @@ func (l *Lookup) Query() (bool, error) {
 				l.Status.SetDeployedVersion(version, true)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
-			jLog.Info(msg, logFrom, true)
+			jLog.Info(msg, *logFrom, true)
 
 			l.Status.AnnounceFirstVersion()
 
@@ -99,7 +99,7 @@ func (l *Lookup) Query() (bool, error) {
 		// New version found.
 		l.Status.SetLatestVersion(version, true)
 		msg := fmt.Sprintf("New Release - %q", version)
-		jLog.Info(msg, logFrom, true)
+		jLog.Info(msg, *logFrom, true)
 		return true, nil
 	}
 
@@ -107,6 +107,59 @@ func (l *Lookup) Query() (bool, error) {
 	l.Status.AnnounceQuery()
 	// No version change.
 	return false, nil
+}
+
+// Query the Lookup, updating Service.Status.LatestVersion
+// and returning true if a new release was found.
+//
+// metrics - if true, set Prometheus metrics based on the query
+func (l *Lookup) Query(metrics bool, logFrom *util.LogFrom) (newVersion bool, err error) {
+	newVersion, err = l.query(logFrom)
+
+	if metrics {
+		l.queryMetrics(err)
+	}
+
+	return
+}
+
+// queryMetrics sets the Prometheus metrics for the LatestVersion query.
+func (l *Lookup) queryMetrics(err error) {
+	// If it failed
+	if err != nil {
+		switch e := err.Error(); {
+		case strings.HasPrefix(e, "regex "):
+			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+				*l.Status.ServiceID,
+				2)
+		case strings.HasPrefix(e, "failed converting") && strings.Contains(e, " semantic version."):
+			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+				*l.Status.ServiceID,
+				3)
+		case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
+			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+				*l.Status.ServiceID,
+				4)
+		default:
+			metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
+				*l.Status.ServiceID,
+				"",
+				"",
+				"FAIL")
+			metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+				*l.Status.ServiceID,
+				0)
+		}
+	} else {
+		metric.IncreasePrometheusCounter(metric.LatestVersionQueryMetric,
+			*l.Status.ServiceID,
+			"",
+			"",
+			"SUCCESS")
+		metric.SetPrometheusGauge(metric.LatestVersionQueryLiveness,
+			*l.Status.ServiceID,
+			1)
+	}
 }
 
 func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {

@@ -162,7 +162,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 			HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup,
 		}
 		// Deployed Version
-		version, err = deployedVersionLookup.Refresh(
+		version, _, err = deployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "basic_auth"),
 			getParam(&queryParams, "headers"),
@@ -182,7 +182,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 			HardDefaults: &api.Config.HardDefaults.Service.LatestVersion,
 		}
 		// Latest Version
-		version, err = latestVersion.Refresh(
+		version, _, err = latestVersion.Refresh(
 			getParam(&queryParams, "access_token"),
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "require"),
@@ -244,8 +244,9 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh the latest/deployed version lookup type
 	var (
-		version string
-		err     error
+		version  string
+		err      error
+		announce bool
 	)
 	if deployedVersionRefresh {
 		if api.Config.Service[targetService].DeployedVersionLookup == nil {
@@ -258,7 +259,7 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Deployed Version
-		version, err = api.Config.Service[targetService].DeployedVersionLookup.Refresh(
+		version, announce, err = api.Config.Service[targetService].DeployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "basic_auth"),
 			getParam(&queryParams, "headers"),
@@ -267,9 +268,13 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 			getParam(&queryParams, "semantic_versioning"),
 			getParam(&queryParams, "url"),
 		)
+
+		if announce {
+			api.Config.Service[targetService].DeployedVersionLookup.HandleNewVersion(version, true)
+		}
 	} else {
 		// Latest Version
-		version, err = api.Config.Service[targetService].LatestVersion.Refresh(
+		version, announce, err = api.Config.Service[targetService].LatestVersion.Refresh(
 			getParam(&queryParams, "access_token"),
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "require"),
@@ -279,6 +284,10 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 			getParam(&queryParams, "url_commands"),
 			getParam(&queryParams, "use_prerelease"),
 		)
+
+		if announce {
+			api.Config.Service[targetService].HandleUpdateActions(true)
+		}
 	}
 
 	err = json.NewEncoder(w).Encode(api_type.RefreshAPI{

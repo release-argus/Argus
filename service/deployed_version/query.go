@@ -44,70 +44,16 @@ func (l *Lookup) Track() {
 		}
 
 		// Query the deployed version.
-		deployedVersion, err := l.Query(&logFrom)
+		deployedVersion, _ := l.Query(true, &logFrom)
 		// If new release found by ^ query.
-		if err == nil {
-			metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
-				*l.Status.ServiceID,
-				"",
-				"",
-				"SUCCESS")
-			metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
-				*l.Status.ServiceID,
-				1)
-			// If a new Deployed version was found.
-			if deployedVersion != l.Status.GetDeployedVersion() {
-				// Announce the updated deployment
-				l.Status.SetDeployedVersion(deployedVersion, true)
-
-				// If this new deployedVersion isn't LatestVersion
-				// Check that it's not a later version than LatestVersion
-				latestVersion := l.Status.GetLatestVersion()
-				if latestVersion == "" {
-					l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), true)
-					l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
-					l.Status.AnnounceQueryNewVersion()
-				} else if deployedVersion != latestVersion &&
-					l.Options.GetSemanticVersioning() {
-					//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
-					deployedVersionSV, e1 := semver.NewVersion(deployedVersion)
-					//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
-					latestVersionSV, e2 := semver.NewVersion(latestVersion)
-
-					fmt.Println(e1)
-					fmt.Println(e2)
-					// Update LatestVersion to DeployedVersion if it's newer
-					if latestVersionSV.LessThan(*deployedVersionSV) {
-						l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), true)
-						l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
-						l.Status.AnnounceQueryNewVersion()
-					}
-				}
-
-				// Announce version change to WebSocket clients.
-				jLog.Info(
-					fmt.Sprintf("Updated to %q", deployedVersion),
-					logFrom,
-					true)
-				l.Status.AnnounceUpdate()
-			}
-		} else {
-			metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
-				*l.Status.ServiceID,
-				"",
-				"",
-				"FAIL")
-			metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
-				*l.Status.ServiceID,
-				0)
-		}
+		l.HandleNewVersion(deployedVersion, true)
 		// Sleep interval between queries.
 		time.Sleep(l.Options.GetIntervalDuration())
 	}
 }
 
-// Query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) Query(logFrom *util.LogFrom) (string, error) {
+// query the deployed version (DeployedVersion) of the Service.
+func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
@@ -185,6 +131,81 @@ func (l *Lookup) Query(logFrom *util.LogFrom) (string, error) {
 	}
 
 	return version, nil
+}
+
+// Query the deployed version (DeployedVersion) of the Service.
+func (l *Lookup) Query(metrics bool, logFrom *util.LogFrom) (version string, err error) {
+	version, err = l.query(logFrom)
+
+	if metrics {
+		l.queryMetrics(err == nil)
+	}
+
+	return
+}
+
+// queryMetrics sets the Prometheus metrics for the DeployedVersion query.
+func (l *Lookup) queryMetrics(successfulQuery bool) {
+	if successfulQuery {
+		metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+			*l.Status.ServiceID,
+			"",
+			"",
+			"SUCCESS")
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+			*l.Status.ServiceID,
+			1)
+	} else {
+		metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+			*l.Status.ServiceID,
+			"",
+			"",
+			"FAIL")
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+			*l.Status.ServiceID,
+			0)
+	}
+}
+
+// HandleNewVersion performs a check for whether this `version` is new, and if so,
+// checks whether this is later than LatestVersion and announces and updates `Status` accordingly.
+func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
+	// If the new version is the same as what we had, do nothing.
+	if version == "" || version == l.Status.GetDeployedVersion() {
+		return
+	}
+
+	// Set the new Deployed version.
+	l.Status.SetDeployedVersion(version, writeToDB)
+
+	// If this new version isn't LatestVersion
+	// Check that it's not a later version than LatestVersion
+	latestVersion := l.Status.GetLatestVersion()
+	if latestVersion == "" {
+		l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), writeToDB)
+		l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
+		l.Status.AnnounceQueryNewVersion()
+	} else if version != latestVersion &&
+		l.Options.GetSemanticVersioning() {
+		//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
+		deployedVersionSV, _ := semver.NewVersion(version)
+		//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
+		latestVersionSV, _ := semver.NewVersion(latestVersion)
+
+		// Update LatestVersion to DeployedVersion if it's newer
+		if latestVersionSV.LessThan(*deployedVersionSV) {
+			l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), writeToDB)
+			l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
+			l.Status.AnnounceQueryNewVersion()
+		}
+	}
+
+	// Announce version change to WebSocket clients.
+	jLog.Info(
+		fmt.Sprintf("Updated to %q", version),
+		util.LogFrom{Primary: *l.Status.ServiceID},
+		true)
+	l.Status.AnnounceUpdate()
 }
 
 func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {
