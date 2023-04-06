@@ -256,7 +256,7 @@ func TestWebSocket(t *testing.T) {
 	}{
 		"no version": {
 			msg:         `{"key": "value"}`,
-			stdoutRegex: "^$"},
+			stdoutRegex: `^DEBUG:[^:]+READ \{"key": "value"\}\n$`},
 		"no version, unknown type": {
 			msg:         `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`,
 			stdoutRegex: "Unknown TYPE"},
@@ -835,7 +835,10 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 		},
 		"known service_id, 0 command, 0 webhooks,": {
 			serviceID:   "test",
-			stdoutRegex: "^$",
+			stdoutRegex: `DEBUG:[^:]+, READ \{[^}]+\}\}\}\nVERBOSE:[^V]+VERBOSE:[^"]+$`,
+			// DEBUG: WebSocket (127.0.0.1), READ {"version":1,"page":"APPROVALS","type":"ACTIONS","service_data":{"id":"test","status":{}}}
+			// VERBOSE: wsCommand (127.0.0.1), -\n
+			// VERBOSE: wsWebHook (127.0.0.1), -\n
 		},
 		"known service_id, 1 command, 0 webhooks,": {
 			serviceID: "test",

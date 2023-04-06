@@ -382,11 +382,13 @@ func TestLookup_Track(t *testing.T) {
 				announceChannel := make(chan []byte, 4)
 				webURL := &tc.lookup.URL
 				tc.lookup.Status = &svcstatus.Status{
-					Deleting:        tc.deleting,
 					ServiceID:       stringPtr(name),
 					AnnounceChannel: &announceChannel,
 					DatabaseChannel: &dbChannel,
 					WebURL:          webURL,
+				}
+				if tc.deleting {
+					tc.lookup.Status.SetDeleting()
 				}
 				tc.lookup.Status.SetDeployedVersion(tc.startDeployedVersion, false)
 				tc.lookup.Status.SetLatestVersion(tc.startLatestVersion, false)
@@ -452,6 +454,7 @@ func TestLookup_Track(t *testing.T) {
 				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
 					tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
 			}
+			tc.lookup.Status.SetDeleting()
 		})
 	}
 }

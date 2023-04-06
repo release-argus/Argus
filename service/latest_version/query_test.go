@@ -211,6 +211,11 @@ func TestLookup_Query(t *testing.T) {
 			regex:         stringPtr("x([0-9.]+)"),
 			errRegex:      "no releases were found matching the url_commands",
 		},
+		"url_command makes all versions non-semmantic": {
+			githubService: true,
+			regex:         stringPtr(`([0-9.]+\.)`),
+			errRegex:      "no releases were found matching the url_commands",
+		},
 	}
 
 	for name, tc := range tests {
@@ -281,6 +286,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 		eTagChanged                int
 		eTagUnchangedUseCache      int
 		initialRequireRegexVersion string
+		urlCommands                filter.URLCommandSlice
 		errRegex                   string
 	}{
 		// Keeps .Releases incase filters change
@@ -295,6 +301,14 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 			eTagUnchangedUseCache:      2,
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex:                   `regex not matched on version`},
+		"invalid url_commands will catch no versions": {
+			attempts:              2,
+			eTagChanged:           1,
+			eTagUnchangedUseCache: 1,
+			urlCommands: filter.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr(`^FOO$`)}},
+			errRegex: `no releases were found matching the url_commands
+no releases were found matching the url_commands and/or require`},
 	}
 
 	for name, tc := range tests {
@@ -304,6 +318,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 			lookup.GitHubData.ETag = "foo"
 			lookup.Status.ServiceID = &name
 			lookup.Require.RegexVersion = tc.initialRequireRegexVersion
+			lookup.URLCommands = tc.urlCommands
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -327,6 +342,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 			w.Close()
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
+			tc.errRegex = strings.ReplaceAll(tc.errRegex, "\n", "--")
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(errors)
 			if !match {

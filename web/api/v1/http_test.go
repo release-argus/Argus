@@ -489,7 +489,7 @@ func TestHTTP_EditServiceGetDetail(t *testing.T) {
 			w := httptest.NewRecorder()
 			apiMutex.RLock()
 			api.httpEditServiceGetDetail(w, req)
-			apiMutex.RLocker()
+			apiMutex.RUnlock()
 			res := w.Result()
 			defer res.Body.Close()
 

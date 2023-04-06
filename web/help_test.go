@@ -67,6 +67,10 @@ func testLogging(level string, timestamps bool) {
 func testConfig(path string) (cfg *config.Config) {
 	testYAML_Argus(path)
 	cfg = &config.Config{}
+
+	// Settings.Log
+	cfg.Settings.Log.Level = stringPtr("DEBUG")
+
 	cfg.Load(
 		path,
 		&map[string]bool{},
@@ -89,9 +93,6 @@ func testConfig(path string) (cfg *config.Config) {
 		ListenPort:  &listenPort,
 		RoutePrefix: &routePrefix,
 	}
-
-	// Settings.Log
-	cfg.Settings.Log.Level = stringPtr("DEBUG")
 
 	// Defaults
 	cfg.Defaults.SetDefaults()

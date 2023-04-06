@@ -106,7 +106,6 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 					RegexMissesContent: 1,
 					RegexMissesVersion: 3,
 					Fails:              svcstatus.Fails{},
-					Deleting:           false,
 					ServiceID:          stringPtr("service-id"),
 					WebURL:             stringPtr("https://release-argus.io")},
 				Defaults:     &deployedver.Lookup{},

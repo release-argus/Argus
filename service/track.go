@@ -71,7 +71,7 @@ func (s *Service) Track() {
 	logFrom := util.LogFrom{Primary: s.ID}
 	for {
 		// If we're deleting this Service, stop tracking it.
-		if s.Status.Deleting {
+		if s.Status.Deleting() {
 			return
 		}
 

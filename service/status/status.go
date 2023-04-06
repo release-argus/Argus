@@ -36,7 +36,7 @@ type Status struct {
 	RegexMissesContent       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on URL content.
 	RegexMissesVersion       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on version.
 	Fails                    Fails        `yaml:"-" json:"-"` // Track the Notify/WebHook fails
-	Deleting                 bool         `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
+	deleting                 bool         `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
 	mutex                    sync.RWMutex `yaml:"-" json:"-"` // Lock for the Status
 
 	// Announces
@@ -231,6 +231,22 @@ func (s *Status) SetLatestVersionTimestamp(timestamp string) {
 		s.latestVersionTimestamp = timestamp
 	}
 	s.mutex.Unlock()
+}
+
+// SetDeleting will set the Service to be deleted.
+func (s *Status) SetDeleting() {
+	s.mutex.Lock()
+	{
+		s.deleting = true
+	}
+	s.mutex.Unlock()
+}
+
+// Deleting returns true if the Service is being deleted.
+func (s *Status) Deleting() bool {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.deleting
 }
 
 // TODO: Deprecate

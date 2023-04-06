@@ -49,7 +49,7 @@ func (d *DockerCheck) String() string {
 	return string(yamlBytes)
 }
 
-// DockerTagCheck
+// DockerTagCheck will verify that Tag exists for Image and return an error if not.
 func (r *Require) DockerTagCheck(
 	version string,
 ) error {

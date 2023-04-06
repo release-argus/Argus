@@ -132,9 +132,13 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	var err error
 	// Iterate through the commands to filter the text.
 	textBak := text
-	msg := fmt.Sprintf("Looking through:\n%q", text)
-	jLog.Debug(msg, *logFrom, true)
+	if jLog.IsLevel("DEBUG") {
+		jLog.Debug(
+			fmt.Sprintf("Looking through:\n%q", text),
+			*logFrom, true)
+	}
 
+	var msg string
 	switch c.Type {
 	case "split":
 		msg = fmt.Sprintf("Splitting on %q with index %d", *c.Text, c.Index)
@@ -151,7 +155,9 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	}
 
 	msg = fmt.Sprintf("%s\nResolved to %s", msg, text)
-	jLog.Debug(msg, *logFrom, true)
+	if jLog.IsLevel("DEBUG") {
+		jLog.Debug(msg, *logFrom, true)
+	}
 	return text, err
 }
 

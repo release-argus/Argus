@@ -19,6 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,6 +59,7 @@ func TestConfig_RenameService(t *testing.T) {
 			fail:      true,
 		},
 	}
+	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
 		name, tc := name, tc
@@ -67,12 +69,14 @@ func TestConfig_RenameService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
 			testYAML_Edit(file)
 			defer os.Remove(file)
+			logMutex.Lock()
 			cfg := testLoad(file) // Global vars could otherwise DATA RACE
 			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
 			cfg.RenameService(tc.oldName, newSVC)
+			logMutex.Unlock()
 			time.Sleep(time.Second)
 
 			// THEN the order should be as expected
@@ -116,6 +120,7 @@ func TestConfig_DeleteService(t *testing.T) {
 			wantOrder: []string{"alpha", "bravo", "charlie"},
 		},
 	}
+	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
 		name, tc := name, tc
@@ -125,11 +130,13 @@ func TestConfig_DeleteService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
 			testYAML_Edit(file)
 			defer os.Remove(file)
+			logMutex.Lock()
 			cfg := testLoad(file) // Global vars could otherwise DATA RACE
 			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 
 			// WHEN the service is deleted
 			cfg.DeleteService(tc.name)
+			logMutex.Unlock()
 
 			// THEN the service was removed
 			if cfg.Service[tc.name] != nil {
@@ -189,6 +196,7 @@ func TestConfig_AddService(t *testing.T) {
 			nilMap:     true,
 		},
 	}
+	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
 		name, tc := name, tc
@@ -198,6 +206,7 @@ func TestConfig_AddService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", name)
 			testYAML_Edit(file)
 			defer os.Remove(file)
+			logMutex.Lock()
 			cfg := testLoad(file) // Global vars could otherwise DATA RACE
 			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
 			if tc.nilMap {
@@ -207,6 +216,7 @@ func TestConfig_AddService(t *testing.T) {
 
 			// WEHN AddService is called
 			cfg.AddService(tc.oldService, tc.newService)
+			logMutex.Unlock()
 
 			// THEN the service is
 			// added/renamed/replaced

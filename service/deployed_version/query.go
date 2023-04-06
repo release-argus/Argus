@@ -39,7 +39,7 @@ func (l *Lookup) Track() {
 	// Track forever.
 	for {
 		// If we're deleting this Service, stop tracking it.
-		if l.Status.Deleting {
+		if l.Status.Deleting() {
 			return
 		}
 

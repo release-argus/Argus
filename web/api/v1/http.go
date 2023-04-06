@@ -237,7 +237,7 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Verbose(err, logFrom, true)
+		api.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -325,7 +325,7 @@ func (api *API) httpEditServiceGetDetail(w http.ResponseWriter, r *http.Request)
 	}()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Verbose(err, logFrom, true)
+		api.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}

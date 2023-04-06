@@ -219,7 +219,10 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 
 // GetVersions will filter out releases from rawBody that are preReleases (if not wanted) and will sort releases if
 // semantic versioning is wanted
-func (l *Lookup) GetVersions(rawBody []byte, logFrom *util.LogFrom) (filteredReleases []github_types.Release, err error) {
+func (l *Lookup) GetVersions(
+	rawBody []byte,
+	logFrom *util.LogFrom,
+) (filteredReleases []github_types.Release, err error) {
 	var releases []github_types.Release
 	body := string(rawBody)
 	// GitHub service.
@@ -236,23 +239,23 @@ func (l *Lookup) GetVersions(rawBody []byte, logFrom *util.LogFrom) (filteredRel
 			l.GitHubData.Releases,
 			logFrom,
 		)
+		if len(filteredReleases) == 0 {
+			err = fmt.Errorf("no releases were found matching the url_commands")
+			jLog.Warn(err, *logFrom, true)
+			return
+		}
 
 		// url service
 	} else {
-		version, err := l.URLCommands.Run(body, *logFrom)
+		var version string
+		version, err = l.URLCommands.Run(body, *logFrom)
 		if err != nil {
 			//nolint:wrapcheck
-			return filteredReleases, err
+			return
 		}
 		filteredReleases = []github_types.Release{{TagName: version}}
 	}
-
-	if len(filteredReleases) == 0 {
-		err = fmt.Errorf("no releases were found matching the url_commands")
-		jLog.Warn(err, *logFrom, true)
-		return
-	}
-	return filteredReleases, nil
+	return
 }
 
 // GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
@@ -283,51 +286,52 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 		if l.Require == nil {
 			break
 		}
+
 		// Check all `Require` filters for this version
-		if err = l.Require.RegexCheckVersion(version, logFrom); err == nil {
-			// regexCheckContent if it's a newer version
-			if version != l.Status.GetLatestVersion() {
-				var body interface{}
-				if l.Type == "github" {
-					// GitHub service
-					body = filteredReleases[i].Assets
-					// Web service
-				} else {
-					body = string(rawBody)
-				}
-				// If the Content doesn't match the provided RegEx
-				if err = l.Require.RegexCheckContent(version, body, logFrom); err != nil {
-					continue
-				}
-
-				// If the Command didn't return successfully
-				if err = l.Require.ExecCommand(logFrom); err != nil {
-					continue
-				}
-
-				// If the docker tag doesn't exist
-				if err = l.Require.DockerTagCheck(version); err != nil {
-					if strings.HasSuffix(err.Error(), "\n") {
-						err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
-					}
-					jLog.Warn(err, *logFrom, true)
-					continue
-					// else if the tag does exist (and we did search for one)
-				} else if l.Require.Docker != nil {
-					jLog.Info(
-						fmt.Sprintf(`found %s container "%s:%s"`,
-							l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
-						*logFrom,
-						true)
-				}
-				break
-
-				// Ignore tags older than the deployed latest.
-			} else {
-				// return LatestVersion
-				return
-			}
+		// Version RegEx
+		if err = l.Require.RegexCheckVersion(version, logFrom); err != nil {
+			continue
 		}
+
+		// Content RegEx
+		var body interface{}
+		if l.Type == "github" {
+			// GitHub service
+			body = filteredReleases[i].Assets
+			// Web service
+		} else {
+			body = string(rawBody)
+		}
+		// If the Content doesn't match the provided RegEx
+		if err = l.Require.RegexCheckContent(version, body, logFrom); err != nil {
+			continue
+		}
+
+		// If the Command didn't return successfully
+		if err = l.Require.ExecCommand(logFrom); err != nil {
+			continue
+		}
+
+		// If the Docker tag doesn't exist
+		if err = l.Require.DockerTagCheck(version); err != nil {
+			if strings.HasSuffix(err.Error(), "\n") {
+				err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
+			}
+			jLog.Warn(err, *logFrom, true)
+			continue
+			// else if the tag does exist (and we did search for one)
+		} else if l.Require.Docker != nil {
+			jLog.Info(
+				fmt.Sprintf(`found %s container "%s:%s"`,
+					l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
+				*logFrom,
+				true)
+		}
+		break
+	}
+	if version == "" {
+		err = fmt.Errorf("no releases were found matching the url_commands and/or require")
+		jLog.Warn(err, *logFrom, true)
 	}
 	return
 }

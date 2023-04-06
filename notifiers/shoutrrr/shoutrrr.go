@@ -295,14 +295,18 @@ func (s *Shoutrrr) Send(
 	combinedErrs := make(map[string]int)
 	for {
 		// Check if we're deleting the Service.
-		if s.ServiceStatus.Deleting {
+		if s.ServiceStatus.Deleting() {
 			return
 		}
 
 		// Try sending the message.
-		msg := fmt.Sprintf("Sending %q to %q", toSend, url)
-		jLog.Verbose(msg, logFrom, !jLog.IsLevel("debug"))
-		jLog.Debug(fmt.Sprintf("%s with params=%q", msg, *params), logFrom, jLog.IsLevel("debug"))
+		if jLog.IsLevel("VERBOSE") || jLog.IsLevel("DEBUG") {
+			msg := fmt.Sprintf("Sending %q to %q", toSend, url)
+			jLog.Verbose(msg, logFrom, !jLog.IsLevel("DEBUG"))
+			jLog.Debug(
+				fmt.Sprintf("%s with params=%q", msg, *params),
+				logFrom, true)
+		}
 		err := sender.Send(toSend, params)
 
 		failed := false
@@ -336,7 +340,7 @@ func (s *Shoutrrr) Send(
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			msg = fmt.Sprintf("failed %d times to send a %s message for %q to %q",
+			msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
 				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true

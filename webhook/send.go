@@ -77,7 +77,7 @@ func (w *WebHook) Send(
 
 	for {
 		// Check if we're deleting the Service.
-		if w.ServiceStatus.Deleting {
+		if w.ServiceStatus.Deleting() {
 			return
 		}
 

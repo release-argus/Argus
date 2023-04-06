@@ -161,11 +161,11 @@ func (c *Client) readPump() {
 			break
 		}
 
-		c.api.Log.Debug(
-			fmt.Sprintf("READ %s", message),
-			util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-			true,
-		)
+		if c.api.Log.IsLevel("DEBUG") {
+			c.api.Log.Debug(
+				fmt.Sprintf("READ %s", message),
+				util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+		}
 
 		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
 		// Check it's not trying to be a server message by omitting the version key

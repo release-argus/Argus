@@ -20,7 +20,7 @@ import (
 
 // PrepDelete prepares a service for deletion by removing all channels and setting the `deleting“ flag.
 func (s *Service) PrepDelete() {
-	s.Status.Deleting = true
+	s.Status.SetDeleting()
 
 	// nil the channels so the service doesn't trigger any more events
 	s.Status.AnnounceChannel = nil

@@ -33,7 +33,7 @@ func stringPtr(val string) *string {
 }
 
 func initLogging() {
-	jLog = util.NewJLog("WARN", false)
+	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	logFrom = &util.LogFrom{}
 }

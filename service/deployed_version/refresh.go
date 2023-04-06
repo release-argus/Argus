@@ -123,7 +123,9 @@ func (l *Lookup) Refresh(
 
 	// Log the lookup being used if debug.
 	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(fmt.Sprintf("Refreshing with:\n%v", lookup), logFrom, false)
+		jLog.Debug(
+			fmt.Sprintf("Refreshing with:\n%v", lookup),
+			logFrom, true)
 	}
 
 	// Whether overrides were provided or not, we can update the status ig not.

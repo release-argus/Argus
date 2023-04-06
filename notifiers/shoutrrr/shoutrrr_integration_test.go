@@ -86,8 +86,8 @@ func TestShoutrrr_Send(t *testing.T) {
 			tc.shoutrrr.Init(
 				&svcStatus,
 				&Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
-			if tc.shoutrrr.ServiceStatus != nil {
-				tc.shoutrrr.ServiceStatus.Deleting = tc.deleting
+			if tc.shoutrrr.ServiceStatus != nil && tc.deleting {
+				tc.shoutrrr.ServiceStatus.SetDeleting()
 			}
 			if tc.shoutrrr.Options == nil {
 				tc.shoutrrr.Options = map[string]string{}

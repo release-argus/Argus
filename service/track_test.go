@@ -255,7 +255,9 @@ func TestService_Track(t *testing.T) {
 			t.Parallel()
 
 			svc := testServiceURL(name)
-			svc.Status.Deleting = tc.deleting
+			if tc.deleting {
+				svc.Status.SetDeleting()
+			}
 			svc.Options.Active = tc.active
 			svc.Status.SetLatestVersion(tc.startLatestVersion, false)
 			svc.Status.SetDeployedVersion(tc.startDeployedVersion, false)
@@ -388,7 +390,7 @@ func TestService_Track(t *testing.T) {
 			if len(didFinish) == 0 && !shouldFinish {
 				t.Fatal("expected Track to finish when not active, or is deleting")
 			}
-			svc.Status.Deleting = true
+			svc.Status.SetDeleting()
 		})
 	}
 }

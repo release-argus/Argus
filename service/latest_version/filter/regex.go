@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// RegexCheckVersion
+// RegexCheckVersion returns whether `version` matches the regex
 func (r *Require) RegexCheckVersion(
 	version string,
 	logFrom *util.LogFrom,
@@ -82,9 +82,9 @@ func (r *Require) RegexCheckContent(
 		regexMatch := util.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
 		if jLog.IsLevel("DEBUG") {
 			jLog.Debug(
-				fmt.Sprintf("%q RegexContent on %q, match=%t", r.RegexContent, searchArea[i], regexMatch),
-				*logFrom,
-				true)
+				fmt.Sprintf("%q RegexContent on %q, match=%t",
+					r.RegexContent, searchArea[i], regexMatch),
+				*logFrom, true)
 		}
 		if !regexMatch {
 			// if we're on the last asset

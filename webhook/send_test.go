@@ -185,7 +185,9 @@ func TestWebHook_Send(t *testing.T) {
 				r, w, _ := os.Pipe()
 				os.Stdout = w
 				webhook := testWebHook(tc.wouldFail, true, false, tc.customHeaders)
-				webhook.ServiceStatus.Deleting = tc.deleting
+				if tc.deleting {
+					webhook.ServiceStatus.SetDeleting()
+				}
 				webhook.Delay = tc.delay
 				maxTries := uint(tc.tries + 1)
 				webhook.MaxTries = &maxTries

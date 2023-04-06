@@ -91,7 +91,7 @@ func TestHub_RunWithBroadcast(t *testing.T) {
 	// and a valid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(util.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("DEBUG", false))
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(2 * time.Second)
