@@ -22,7 +22,7 @@ jobs:
           cache: true
 
       - name: Test
-        run: go test -v ./... -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags testing,unit,integration
+        run: go test -v ./... -timeout 5m -coverpkg=./... -coverprofile ./coverage.out -covermode atomic --tags unit,integration
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
