@@ -100,7 +100,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 func TestConfig_Save(t *testing.T) {
 	// GIVEN we have a bunch of files that want to be Save'd
 	tests := map[string]struct {
-		file        func(path string)
+		file        func(path string, t *testing.T)
 		corrections map[string]string
 	}{
 		"config_test.yml": {file: testYAML_ConfigTest, corrections: map[string]string{
@@ -117,8 +117,7 @@ func TestConfig_Save(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		file := name
-		tc.file(file)
-		defer os.Remove(file)
+		tc.file(file, t)
 		t.Log(file)
 		config := Config{File: file}
 		originalData, err := os.ReadFile(config.File)

@@ -44,8 +44,8 @@ func convertAndCensorNotifySlice(input *shoutrrr.Slice) *api_type.NotifySlice {
 			Type:      (*input)[name].Type,
 			Options:   (*input)[name].Options,
 			URLFields: (*input)[name].URLFields,
-			Params:    (*input)[name].Params,
-		}).Censor()
+			Params:    (*input)[name].Params})
+		slice[name].Censor()
 	}
 	return &slice
 }
@@ -169,22 +169,19 @@ func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver
 		AllowInvalidCerts: dvl.AllowInvalidCerts,
 		Headers:           headers,
 		JSON:              dvl.JSON,
-		Regex:             dvl.Regex,
-	}
+		Regex:             dvl.Regex}
 	// Basic auth
 	if dvl.BasicAuth != nil {
 		apiDVL.BasicAuth = &api_type.BasicAuth{
 			Username: dvl.BasicAuth.Username,
-			Password: "<secret>",
-		}
+			Password: "<secret>"}
 	}
 	// Headers
 	apiDVL.Headers = make([]api_type.Header, len(dvl.Headers))
 	for i := range dvl.Headers {
 		apiDVL.Headers[i] = api_type.Header{
 			Key:   dvl.Headers[i].Key,
-			Value: "<secret>",
-		}
+			Value: "<secret>"}
 	}
 	return
 }
@@ -201,8 +198,7 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandS
 			Index: (*commands)[index].Index,
 			Text:  (*commands)[index].Text,
 			Old:   (*commands)[index].Old,
-			New:   (*commands)[index].New,
-		}
+			New:   (*commands)[index].New}
 	}
 	return &slice
 }
@@ -217,8 +213,7 @@ func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type
 			Type:      (*notifiers)[index].Type,
 			Options:   (*notifiers)[index].Options,
 			URLFields: (*notifiers)[index].URLFields,
-			Params:    (*notifiers)[index].Params,
-		}
+			Params:    (*notifiers)[index].Params}
 		slice[index].Censor()
 	}
 	return &slice
@@ -258,8 +253,7 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 		for index, header := range *webhook.CustomHeaders {
 			customHeaders[index] = api_type.Header{
 				Key:   header.Key,
-				Value: header.Value,
-			}
+				Value: header.Value}
 		}
 	}
 
@@ -273,8 +267,7 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 		DesiredStatusCode: webhook.DesiredStatusCode,
 		Delay:             webhook.Delay,
 		MaxTries:          webhook.MaxTries,
-		SilentFails:       webhook.SilentFails,
-	})
+		SilentFails:       webhook.SilentFails})
 	apiElement.Censor()
 	return
 }
@@ -287,8 +280,7 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 	apiService.Options = &api_type.ServiceOptions{
 		Active:             service.Options.Active,
 		Interval:           service.Options.Interval,
-		SemanticVersioning: service.Options.SemanticVersioning,
-	}
+		SemanticVersioning: service.Options.SemanticVersioning}
 
 	apiService.LatestVersion = &api_type.LatestVersion{
 		Type:              service.LatestVersion.Type,
@@ -296,8 +288,7 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 		AccessToken:       util.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 		AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 		UsePreRelease:     service.LatestVersion.UsePreRelease,
-		URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands),
-	}
+		URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands)}
 	if service.LatestVersion.Require != nil {
 		var docker *api_type.RequireDockerCheck
 		if service.LatestVersion.Require.Docker != nil {
@@ -306,15 +297,13 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 				Image:    service.LatestVersion.Require.Docker.Image,
 				Tag:      service.LatestVersion.Require.Docker.Tag,
 				Username: service.LatestVersion.Require.Docker.Username,
-				Token:    util.ValueIfNotDefault(service.LatestVersion.Require.Docker.Token, "<secret>"),
-			}
+				Token:    util.ValueIfNotDefault(service.LatestVersion.Require.Docker.Token, "<secret>")}
 		}
 		apiService.LatestVersion.Require = &api_type.LatestVersionRequire{
 			Command:      service.LatestVersion.Require.Command,
 			Docker:       docker,
 			RegexContent: service.LatestVersion.Require.RegexContent,
-			RegexVersion: service.LatestVersion.Require.RegexVersion,
-		}
+			RegexVersion: service.LatestVersion.Require.RegexVersion}
 	}
 
 	// DeployedVersionLookup
@@ -330,7 +319,6 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 		AutoApprove: service.Dashboard.AutoApprove,
 		Icon:        service.Dashboard.Icon,
 		IconLinkTo:  service.Dashboard.IconLinkTo,
-		WebURL:      service.Dashboard.WebURL,
-	}
+		WebURL:      service.Dashboard.WebURL}
 	return
 }

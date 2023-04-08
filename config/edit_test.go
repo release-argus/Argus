@@ -18,7 +18,7 @@ package config
 
 import (
 	"fmt"
-	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -67,11 +67,9 @@ func TestConfig_RenameService(t *testing.T) {
 			t.Parallel()
 
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
-			testYAML_Edit(file)
-			defer os.Remove(file)
+			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file) // Global vars could otherwise DATA RACE
-			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
+			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
 			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
@@ -128,11 +126,9 @@ func TestConfig_DeleteService(t *testing.T) {
 			t.Parallel()
 
 			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
-			testYAML_Edit(file)
-			defer os.Remove(file)
+			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file) // Global vars could otherwise DATA RACE
-			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
+			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
 
 			// WHEN the service is deleted
 			cfg.DeleteService(tc.name)
@@ -203,12 +199,10 @@ func TestConfig_AddService(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			file := fmt.Sprintf("TestConfig_AddService_%s.yml", name)
-			testYAML_Edit(file)
-			defer os.Remove(file)
+			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
+			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file) // Global vars could otherwise DATA RACE
-			defer os.Remove(*cfg.Settings.GetDataDatabaseFile())
+			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
 			if tc.nilMap {
 				cfg.Service = nil
 				cfg.Order = []string{}

@@ -19,19 +19,23 @@ package web
 import (
 	"os"
 	"strings"
+	"testing"
 )
 
-func writeYAML(path string, data string) {
+func writeYAML(path string, data string, t *testing.T) {
 	data = strings.TrimPrefix(data, "\n")
 	os.WriteFile(path, []byte(data), 0644)
+	if t != nil {
+		t.Cleanup(func() { os.Remove(path) })
+	}
 }
 
-func testYAML_Argus(path string) {
+func testYAML_Argus(path string, t *testing.T) {
 	data := `
 settings:
   data:
     database_file: test-web.db
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }

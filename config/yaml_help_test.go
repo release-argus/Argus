@@ -19,14 +19,16 @@ package config
 import (
 	"os"
 	"strings"
+	"testing"
 )
 
-func writeYAML(path string, data string) {
+func writeYAML(path string, data string, t *testing.T) {
 	data = strings.TrimPrefix(data, "\n")
 	os.WriteFile(path, []byte(data), 0644)
+	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_Argus(path string) {
+func testYAML_Argus(path string, t *testing.T) {
 	data := `
 settings:
     data:
@@ -40,10 +42,11 @@ service:
             url: release-argus/Argus
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
+	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_ConfigTest(path string) {
+func testYAML_ConfigTest(path string, t *testing.T) {
 	data := `
 settings:
   data:
@@ -171,10 +174,10 @@ service:
       url: release-argus/argus
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }
 
-func testYAML_Ordering_0(path string) {
+func testYAML_Ordering_0(path string, t *testing.T) {
 	data := `
 settings:
   web:
@@ -222,10 +225,11 @@ webhook:
     url: https://awx.main.com/api/v2/job_templates/XX/github/
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
+	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_Ordering_1(path string) {
+func testYAML_Ordering_1(path string, t *testing.T) {
 	data := `
 settings:
     data:
@@ -257,10 +261,11 @@ defaults:
         silent_fails: false
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
+	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_LoadDefaults(path string) {
+func testYAML_LoadDefaults(path string, t *testing.T) {
 	data := `
 settings:
   data:
@@ -388,10 +393,10 @@ service:
       url: release-argus/argus
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }
 
-func testYAML_Edit(path string) {
+func testYAML_Edit(path string, t *testing.T) {
 	data := `
 settings:
   data:
@@ -420,5 +425,6 @@ service:
           regex: v?([0-9.]+)
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
+	t.Cleanup(func() { os.Remove(path) })
 }

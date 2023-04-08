@@ -26,6 +26,8 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
+	"testing"
 	"time"
 
 	command "github.com/release-argus/Argus/commands"
@@ -64,8 +66,8 @@ func testLogging(level string, timestamps bool) {
 	service.LogInit(jLog)
 }
 
-func testConfig(path string) (cfg *config.Config) {
-	testYAML_Argus(path)
+func testConfig(path string, t *testing.T) (cfg *config.Config) {
+	testYAML_Argus(path, t)
 	cfg = &config.Config{}
 
 	// Settings.Log
@@ -75,6 +77,9 @@ func testConfig(path string) (cfg *config.Config) {
 		path,
 		&map[string]bool{},
 		jLog)
+	if t != nil {
+		t.Cleanup(func() { os.Remove(*cfg.Settings.GetDataDatabaseFile()) })
+	}
 
 	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
 
@@ -286,7 +291,7 @@ func testURLCommandRegex() filter.URLCommand {
 		Index: index,
 	}
 }
-func generateCertFiles(certFile, keyFile string) error {
+func generateCertFiles(certFile, keyFile string, t *testing.T) error {
 	// Generate the certificate and private key
 	// Generate a private key
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -325,6 +330,10 @@ func generateCertFiles(certFile, keyFile string) error {
 	if err := ioutil.WriteFile(keyFile, keyPEM, 0600); err != nil {
 		return err
 	}
+	t.Cleanup(func() {
+		os.Remove(certFile)
+		os.Remove(keyFile)
+	})
 
 	return nil
 }

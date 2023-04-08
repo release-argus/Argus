@@ -17,7 +17,9 @@
 package config
 
 import (
+	"os"
 	"sync"
+	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
@@ -86,7 +88,7 @@ func testSettings() Settings {
 
 var loadMutex sync.Mutex
 
-func testLoad(file string) *Config {
+func testLoad(file string, t *testing.T) *Config {
 	var config Config
 
 	flags := make(map[string]bool)
@@ -94,6 +96,7 @@ func testLoad(file string) *Config {
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
 	config.Load(file, &flags, log)
+	t.Cleanup(func() { os.Remove(*config.Settings.GetDataDatabaseFile()) })
 
 	return &config
 }

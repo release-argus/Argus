@@ -59,16 +59,14 @@ func main() {
 	argus_testing.NotifyTest(testNotifyFlag, &config, &jLog)
 	argus_testing.ServiceTest(testServiceFlag, &config, &jLog)
 
-	// Count of active services to monitor
-	serviceCount := len(config.Order)
-	for _, key := range config.Order {
-		if !config.Service[key].Options.GetActive() {
-			serviceCount--
-		}
-	}
-
-	// INFO or above
+	// Count of active services to monitor (if log level INFO or above)
 	if jLog.Level > 1 {
+		serviceCount := len(config.Order)
+		for _, key := range config.Order {
+			if !config.Service[key].Options.GetActive() {
+				serviceCount--
+			}
+		}
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
 		jLog.Info(msg, util.LogFrom{}, true)
 

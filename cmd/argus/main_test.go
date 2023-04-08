@@ -56,7 +56,7 @@ func TestTheMain(t *testing.T) {
 	// GIVEN different Config's to test
 	jLog = *util.NewJLog("WARN", false)
 	tests := map[string]struct {
-		file           func(path string)
+		file           func(path string, t *testing.T)
 		outputContains *[]string
 		db             string
 	}{
@@ -84,8 +84,7 @@ func TestTheMain(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			file := fmt.Sprintf("%s.yml", name)
-			tc.file(file)
-			defer os.Remove(file)
+			tc.file(file, t)
 			defer os.Remove(tc.db)
 			reset()
 			configFile = &file

@@ -17,7 +17,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
@@ -26,10 +25,8 @@ import (
 func TestConfig_Load(t *testing.T) {
 	// GIVEN Load is ran on a config
 	file := "TestConfig_Load.yml"
-	testYAML_ConfigTest(file)
-	defer os.Remove(file)
-	config := testLoad(file)
-	defer os.Remove(*config.Settings.GetDataDatabaseFile())
+	testYAML_ConfigTest(file, t)
+	config := testLoad(file, t)
 
 	// WHEN the vars loaded are inspected
 	tests := map[string]struct {
@@ -65,12 +62,11 @@ func TestConfig_LoadDefaults(t *testing.T) {
 	// GIVEN config to Load
 	var (
 		config     Config
-		configFile func(path string) = testYAML_ConfigTest
+		configFile func(path string, t *testing.T) = testYAML_ConfigTest
 	)
 	flags := make(map[string]bool)
 	file := "TestConfig_LoadDefaults.yml"
-	defer os.Remove(file)
-	configFile(file)
+	configFile(file, t)
 
 	// WHEN Load is called on it
 	config.Load(file, &flags, &util.JLog{})

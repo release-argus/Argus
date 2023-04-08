@@ -387,6 +387,16 @@ func TestStatus_RegexMissesContent(t *testing.T) {
 		t.Errorf("Expected RegexMisses to be 3, not %d",
 			got)
 	}
+
+	// WHEN ResetRegexMisses is called on it
+	status.ResetRegexMisses()
+
+	// THEN RegexMisses is reset
+	got = status.RegexMissesContent()
+	if got != 0 {
+		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
+			got)
+	}
 }
 
 func TestStatus_RegexMissesVersion(t *testing.T) {
@@ -421,6 +431,154 @@ func TestStatus_RegexMissesVersion(t *testing.T) {
 	if got != 3 {
 		t.Errorf("Expected RegexMisses to be 3, not %d",
 			got)
+	}
+
+	// WHEN ResetRegexMisses is called on it
+	status.ResetRegexMisses()
+
+	// THEN RegexMisses is reset
+	got = status.RegexMissesVersion()
+	if got != 0 {
+		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
+			got)
+	}
+}
+
+func TestStatus_SendAnnounce(t *testing.T) {
+	// GIVEN a Status with channels
+	tests := map[string]struct {
+		deleting   bool
+		nilChannel bool
+	}{
+		"not deleting or nil channel": {},
+		"deleting":                    {deleting: true},
+		"nil channel":                 {nilChannel: true},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			announceChannel := make(chan []byte, 4)
+			status := Status{
+				AnnounceChannel: &announceChannel}
+			if tc.nilChannel {
+				status.AnnounceChannel = nil
+			}
+			if tc.deleting {
+				status.SetDeleting()
+			}
+
+			// WHEN SendAnnounce is called on it
+			status.SendAnnounce(&[]byte{})
+
+			// THEN the AnnounceChannel is sent a message if not deleting or nil
+			got := 0
+			if status.AnnounceChannel != nil {
+				got = len(*status.AnnounceChannel)
+			}
+			want := 1
+			if tc.deleting || tc.nilChannel {
+				want = 0
+			}
+			if got != want {
+				t.Errorf("Expected %d messages on AnnounceChannel, not %d",
+					want, got)
+			}
+		})
+	}
+}
+
+func TestStatus_SendDatabase(t *testing.T) {
+	// GIVEN a Status with channels
+	tests := map[string]struct {
+		deleting   bool
+		nilChannel bool
+	}{
+		"not deleting or nil channel": {},
+		"deleting":                    {deleting: true},
+		"nil channel":                 {nilChannel: true},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			databaseChannel := make(chan dbtype.Message, 4)
+			status := Status{
+				DatabaseChannel: &databaseChannel}
+			if tc.nilChannel {
+				status.DatabaseChannel = nil
+			}
+			if tc.deleting {
+				status.SetDeleting()
+			}
+
+			// WHEN SendDatabase is called on it
+			status.SendDatabase(&dbtype.Message{})
+
+			// THEN the DatabaseChannel is sent a message if not deleting or nil
+			got := 0
+			if status.DatabaseChannel != nil {
+				got = len(*status.DatabaseChannel)
+			}
+			want := 1
+			if tc.deleting || tc.nilChannel {
+				want = 0
+			}
+			if got != want {
+				t.Errorf("Expected %d messages on DatabaseChannel, not %d",
+					want, got)
+			}
+		})
+	}
+}
+
+func TestStatus_SendSave(t *testing.T) {
+	// GIVEN a Status with channels
+	tests := map[string]struct {
+		deleting   bool
+		nilChannel bool
+	}{
+		"not deleting or nil channel": {},
+		"deleting":                    {deleting: true},
+		"nil channel":                 {nilChannel: true},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			saveChannel := make(chan bool, 4)
+			status := Status{
+				SaveChannel: &saveChannel}
+			if tc.nilChannel {
+				status.SaveChannel = nil
+			}
+			if tc.deleting {
+				status.SetDeleting()
+			}
+
+			// WHEN SendSave is called on it
+			status.SendSave()
+
+			// THEN the SaveChannel is sent a message if not deleting or nil
+			got := 0
+			if status.SaveChannel != nil {
+				got = len(*status.SaveChannel)
+			}
+			want := 1
+			if tc.deleting || tc.nilChannel {
+				want = 0
+			}
+			if got != want {
+				t.Errorf("Expected %d messages on SaveChannel, not %d",
+					want, got)
+			}
+		})
 	}
 }
 

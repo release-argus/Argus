@@ -47,8 +47,9 @@ var cfg *config.Config
 func TestMain(m *testing.M) {
 	// GIVEN a valid config with a Service
 	testLogging("DEBUG", true)
-	cfg = testConfig("TestMain.yml")
-	defer os.Remove(cfg.File)
+	file := "TestMain.yml"
+	cfg = testConfig(file, nil)
+	os.Remove(file)
 	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
 	port = cfg.Settings.Web.ListenPort
 
@@ -63,9 +64,7 @@ func TestMain(m *testing.M) {
 
 func TestMainWithRoutePrefix(t *testing.T) {
 	// GIVEN a valid config with a Service
-	cfg := testConfig("TestMainWithRoutePrefix.yml")
-	defer os.Remove(cfg.File)
-	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
+	cfg := testConfig("TestMainWithRoutePrefix.yml", t)
 	*cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
@@ -152,14 +151,10 @@ func TestAccessibleHTTPS(t *testing.T) {
 				util.GoVersion)},
 	}
 	testLogging("DEBUG", true)
-	cfg := testConfig("TestAccessibleHTTPS.yml")
+	cfg := testConfig("TestAccessibleHTTPS.yml", t)
 	cfg.Settings.Web.CertFile = stringPtr("TestAccessibleHTTPS_cert.pem")
 	cfg.Settings.Web.KeyFile = stringPtr("TestAccessibleHTTPS_key.pem")
-	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile)
-	defer os.Remove(cfg.File)
-	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
-	defer os.Remove(*cfg.Settings.Web.CertFile)
-	defer os.Remove(*cfg.Settings.Web.KeyFile)
+	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile, t)
 
 	router = newWebUI(cfg)
 	go Run(cfg, util.NewJLog("WARN", false))

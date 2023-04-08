@@ -19,14 +19,16 @@ package main
 import (
 	"os"
 	"strings"
+	"testing"
 )
 
-func writeYAML(path string, data string) {
+func writeYAML(path string, data string, t *testing.T) {
 	data = strings.TrimPrefix(data, "\n")
 	os.WriteFile(path, []byte(data), 0644)
+	t.Cleanup(func() { os.Remove(path) })
 }
 
-func testYAML_NoServices(path string) {
+func testYAML_NoServices(path string, t *testing.T) {
 	data := `
 settings:
     data:
@@ -73,10 +75,10 @@ webhook:
         max_tries: 1
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }
 
-func testYAML_Argus(path string) {
+func testYAML_Argus(path string, t *testing.T) {
 	data := `
 settings:
     data:
@@ -90,10 +92,10 @@ service:
             url: release-argus/argus
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }
 
-func testYAML_Argus_SomeInactive(path string) {
+func testYAML_Argus_SomeInactive(path string, t *testing.T) {
 	data := `
 settings:
     data:
@@ -113,5 +115,5 @@ service:
             url: release-argus/argus
 `
 
-	writeYAML(path, data)
+	writeYAML(path, data, t)
 }

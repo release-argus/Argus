@@ -28,7 +28,7 @@ import (
 func TestConfig_LoadOrdering(t *testing.T) {
 	// GIVEN we have configs to load
 	tests := map[string]struct {
-		file  func(path string)
+		file  func(path string, t *testing.T)
 		order []string
 	}{
 		"with services": {file: testYAML_Ordering_0,
@@ -44,8 +44,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			t.Parallel()
 
 			file := fmt.Sprintf("%s.yml", name)
-			defer os.Remove(file)
-			tc.file(file)
+			tc.file(file, t)
 
 			// WHEN they are loaded
 			flags := make(map[string]bool)
