@@ -61,11 +61,3 @@ func (c *Controller) Find(command string) (index *int) {
 	}
 	return
 }
-
-// ResetFails of this Controller's Commands
-func (c *Controller) ResetFails() {
-	if c == nil {
-		return
-	}
-	c.Failed.Reset()
-}
