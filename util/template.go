@@ -51,8 +51,7 @@ func TemplateString(template string, context ServiceInfo) (result string) {
 		"service_id":  context.ID,
 		"service_url": context.URL,
 		"web_url":     context.WebURL,
-		"version":     context.LatestVersion,
-	})
+		"version":     context.LatestVersion})
 	if err != nil {
 		panic(err)
 	}

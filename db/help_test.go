@@ -134,7 +134,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
 	status.SetLatestVersionTimestamp(lvt)
 	status.SetDeployedVersion(dv, false)
 	status.SetDeployedVersionTimestamp(dvt)
-	status.SetApprovedVersion(av)
+	status.SetApprovedVersion(av, false)
 
 	return &status
 }

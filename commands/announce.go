@@ -38,14 +38,10 @@ func (c *Controller) AnnounceCommand(index int) {
 		Type:    "COMMAND",
 		SubType: "EVENT",
 		ServiceData: &api_type.ServiceSummary{
-			ID: *c.ServiceStatus.ServiceID,
-		},
-		CommandData: commandSummary,
-	})
+			ID: *c.ServiceStatus.ServiceID},
+		CommandData: commandSummary})
 
-	if c.ServiceStatus.AnnounceChannel != nil {
-		*c.ServiceStatus.AnnounceChannel <- payloadData
-	}
+	c.ServiceStatus.SendAnnounce(&payloadData)
 }
 
 // Find `command`.

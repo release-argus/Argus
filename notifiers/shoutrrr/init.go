@@ -56,8 +56,7 @@ func (s *Slice) Init(
 		// Get Type from this or the associated Main
 		notifyType := util.GetFirstNonDefault(
 			(*s)[key].Type,
-			(*mains)[key].Type,
-		)
+			(*mains)[key].Type)
 
 		// Ensure defaults aren't nil
 		if len(*defaults) == 0 {

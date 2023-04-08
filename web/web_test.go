@@ -549,7 +549,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			if svc != nil {
 				svc.Options.Active = tc.active
 				{ // Copy Status
-					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion())
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion(), false)
 					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
 					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
 					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
@@ -599,7 +599,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				// revert Service
 				defer func() {
 					{ // Status
-						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion())
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion(), false)
 						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
 						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
 						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)
@@ -883,7 +883,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			svc := cfg.Service[tc.serviceID]
 			if svc != nil {
 				{ // Copy Status
-					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion())
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion(), false)
 					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
 					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
 					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
@@ -911,7 +911,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 					&svc.Options.Interval)
 				defer func() {
 					{ // Status
-						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion())
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion(), false)
 						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
 						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
 						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)

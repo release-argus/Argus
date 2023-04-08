@@ -23,24 +23,21 @@ import (
 var (
 	LatestVersionQueryMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "latest_version_query_result_total",
-		Help: "Number of times the latest version check has passed/failed.",
-	},
+		Help: "Number of times the latest version check has passed/failed."},
 		[]string{
 			"id",
 			"result",
 		})
 	DeployedVersionQueryMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "deployed_version_query_result_total",
-		Help: "Number of times the deployed version check has passed/failed.",
-	},
+		Help: "Number of times the deployed version check has passed/failed."},
 		[]string{
 			"id",
 			"result",
 		})
 	CommandMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "command_result_total",
-		Help: "Number of times a Command has passed/failed.",
-	},
+		Help: "Number of times a Command has passed/failed."},
 		[]string{
 			"id",
 			"result",
@@ -48,8 +45,7 @@ var (
 		})
 	NotifyMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "notify_result_total",
-		Help: "Number of times a Notify message has passed/failed.",
-	},
+		Help: "Number of times a Notify message has passed/failed."},
 		[]string{
 			"id",
 			"result",
@@ -58,8 +54,7 @@ var (
 		})
 	WebHookMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "webhook_result_total",
-		Help: "Number of times a WebHook has passed/failed.",
-	},
+		Help: "Number of times a WebHook has passed/failed."},
 		[]string{
 			"id",
 			"result",
@@ -67,22 +62,19 @@ var (
 		})
 	LatestVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "latest_version_query_result_last",
-		Help: "Whether this service's last latest version query was successful (0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail).",
-	},
+		Help: "Whether this service's last latest version query was successful (0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail)."},
 		[]string{
 			"id",
 		})
 	DeployedVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "deployed_version_query_result_last",
-		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes).",
-	},
+		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes)."},
 		[]string{
 			"id",
 		})
 	AckWaiting = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "ack_waiting",
-		Help: "Whether a new release is waiting to be acknowledged (skipped/approved; 0=no, 1=yes).",
-	},
+		Help: "Whether a new release is waiting to be acknowledged (skipped/approved; 0=no, 1=yes)."},
 		[]string{
 			"id",
 		})

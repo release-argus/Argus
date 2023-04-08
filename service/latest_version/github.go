@@ -68,7 +68,7 @@ func (l *Lookup) filterGitHubReleases(
 			continue
 		}
 		release.SemanticVersion = semVer
-		// If there's no other versions, just add it without insertions sort
+		// If there's no other versions, just add it without insertion sort
 		if len(filteredReleases) == 0 {
 			filteredReleases = append(filteredReleases, release)
 			continue

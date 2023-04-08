@@ -213,13 +213,13 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 	tests := map[string]struct {
 		deployedVersion *deployedver.Lookup
 		otherDV         *deployedver.Lookup
-		secretRefs      dvlSecretRef
+		secretRefs      dvSecretRef
 		expected        *deployedver.Lookup
 	}{
 		"nil DeployedVersion": {
 			deployedVersion: nil,
 			otherDV:         &deployedver.Lookup{},
-			secretRefs:      dvlSecretRef{},
+			secretRefs:      dvSecretRef{},
 			expected:        nil,
 		},
 		"nil OldDeployedVersion": {
@@ -290,7 +290,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
@@ -306,7 +306,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "bish", Value: "<secret>"},
 					{Key: "bash", Value: "<secret>"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)},
 					{OldIndex: intPtr(1)}}},
@@ -324,7 +324,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "bish", Value: "<secret>"},
 					{Key: "bash", Value: "<secret>"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: nil},
 					{OldIndex: nil}}},
@@ -339,7 +339,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "shazam"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}}},
 		},
@@ -355,7 +355,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
 		},
@@ -371,7 +371,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
 		},
@@ -387,7 +387,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "shazam"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{}},
 		},
 		"referencing old Header value with no refs": {
@@ -402,7 +402,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "<secret>"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{}},
 		},
 		"only new/changed Headers with partial ref (not for all secrets)": {
@@ -420,7 +420,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bang"},
 					{Key: "bosh", Value: "<secret>"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
 		},
@@ -436,7 +436,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
 		},
@@ -452,7 +452,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "<secret>"},
 					{Key: "bish", Value: "bash"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(1)}, {OldIndex: nil}}},
 		},
@@ -469,7 +469,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bang"},
 					{Key: "bish", Value: "bong"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: nil}, {OldIndex: intPtr(1)}}},
 		},
@@ -486,7 +486,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "bish", Value: "bar"},
 					{Key: "foo", Value: "bong"}}},
-			secretRefs: dvlSecretRef{
+			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
 		},
@@ -1665,7 +1665,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				},
 			},
 			secretRefs: oldSecretRefs{
-				DeployedVersionLookup: dvlSecretRef{Headers: []oldIntIndex{{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
+				DeployedVersionLookup: dvSecretRef{Headers: []oldIntIndex{{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
 				Notify:                map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}, "bar": {OldIndex: stringPtr("bar")}},
 				WebHook:               map[string]whSecretRef{"foo": {OldIndex: stringPtr("foo")}, "bar": {OldIndex: stringPtr("bar")}},
 			},

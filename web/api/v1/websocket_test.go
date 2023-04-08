@@ -40,6 +40,8 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 		latestVersion            string
 		latestVersionTimestamp   string
 		lastQueried              string
+		regexMissesContent       int
+		regexMissesVersion       int
 
 		want *api_type.DeployedVersionLookup
 	}{
@@ -85,6 +87,8 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 				}},
 		},
 		"full": {
+			regexMissesContent: 1,
+			regexMissesVersion: 3,
 			dvl: &deployedver.Lookup{
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: boolPtr(true),
@@ -103,11 +107,9 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 					Defaults:           &opt.Options{},
 					HardDefaults:       &opt.Options{}},
 				Status: &svcstatus.Status{
-					RegexMissesContent: 1,
-					RegexMissesVersion: 3,
-					Fails:              svcstatus.Fails{},
-					ServiceID:          stringPtr("service-id"),
-					WebURL:             stringPtr("https://release-argus.io")},
+					Fails:     svcstatus.Fails{},
+					ServiceID: stringPtr("service-id"),
+					WebURL:    stringPtr("https://release-argus.io")},
 				Defaults:     &deployedver.Lookup{},
 				HardDefaults: &deployedver.Lookup{}},
 			want: &api_type.DeployedVersionLookup{
@@ -130,12 +132,18 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 			t.Parallel()
 
 			if tc.approvedVersion != "" {
-				tc.dvl.Status.SetApprovedVersion("1.2.3")
+				tc.dvl.Status.SetApprovedVersion("1.2.3", false)
 				tc.dvl.Status.SetDeployedVersion("1.2.3", false)
 				tc.dvl.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
 				tc.dvl.Status.SetLatestVersion("1.2.3", false)
 				tc.dvl.Status.SetLatestVersionTimestamp(time.Now().Format(time.RFC3339))
 				tc.dvl.Status.SetLastQueried(time.Now().Format(time.RFC3339))
+			}
+			for i := 0; i < tc.regexMissesContent; i++ {
+				tc.dvl.Status.RegexMissContent()
+			}
+			for i := 0; i < tc.regexMissesVersion; i++ {
+				tc.dvl.Status.RegexMissVersion()
 			}
 
 			// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it

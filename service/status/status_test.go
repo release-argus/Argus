@@ -119,6 +119,7 @@ func TestStatus_Init(t *testing.T) {
 		})
 	}
 }
+
 func TestStatus_GetWebURL(t *testing.T) {
 	// GIVEN we have a Status
 	latestVersion := "1.2.3"
@@ -180,7 +181,58 @@ func TestStatus_SetLastQueried(t *testing.T) {
 	}
 }
 
-func TestStatus_SetDeployedVersion(t *testing.T) {
+func TestStatus_ApprovedVersion(t *testing.T) {
+	// GIVEN a Status
+	approvedVersion := "0.0.2"
+	deployedVersion := "0.0.1"
+	latestVersion := "0.0.3"
+	announceChannel := make(chan []byte, 4)
+	databaseChannel := make(chan dbtype.Message, 4)
+	status := Status{
+		AnnounceChannel: &announceChannel,
+		DatabaseChannel: &databaseChannel}
+	status.Init(
+		0, 0, 0,
+		stringPtr("TestStatus_SetApprovedVersion"),
+		stringPtr("https://example.com"))
+	status.SetLatestVersion(latestVersion, false)
+	status.SetDeployedVersion(deployedVersion, false)
+
+	// WHEN SetApprovedVersion is called
+	status.SetApprovedVersion(approvedVersion, true)
+
+	// THEN the Status is as expected
+	// ApprovedVersion
+	got := status.GetApprovedVersion()
+	if got != approvedVersion {
+		t.Errorf("ApprovedVersion not set to %s. Got %s",
+			approvedVersion, got)
+	}
+	// LatestVersion
+	got = status.GetLatestVersion()
+	if got != latestVersion {
+		t.Errorf("LatestVersion not set to %s. Got %s",
+			latestVersion, got)
+	}
+	// DeployedVersion
+	got = status.GetDeployedVersion()
+	if got != deployedVersion {
+		t.Errorf("DeployedVersion not set to %s. Got %s",
+			deployedVersion, got)
+	}
+	// AnnounceChannel
+	if len(*status.AnnounceChannel) != 1 {
+		t.Errorf("AnnounceChannel should have 1 message, but has %d",
+			len(*status.AnnounceChannel))
+	}
+	// DatabaseChannel
+	if len(*status.DatabaseChannel) != 1 {
+		t.Errorf("DatabaseChannel should have 1 message, but has %d",
+			len(*status.DatabaseChannel))
+	}
+}
+
+func TestStatus_DeployedVersion(t *testing.T) {
 	// GIVEN a Status
 	approvedVersion := "0.0.2"
 	deployedVersion := "0.0.1"
@@ -215,7 +267,7 @@ func TestStatus_SetDeployedVersion(t *testing.T) {
 				0, 0, 0,
 				stringPtr("test-service"),
 				stringPtr("http://example.com"))
-			status.SetApprovedVersion(approvedVersion)
+			status.SetApprovedVersion(approvedVersion, false)
 			status.SetDeployedVersion(deployedVersion, false)
 			status.SetLatestVersion(latestVersion, false)
 
@@ -243,6 +295,132 @@ func TestStatus_SetDeployedVersion(t *testing.T) {
 					since)
 			}
 		})
+	}
+}
+
+func TestStatus_LatestVersion(t *testing.T) {
+	// GIVEN a Status
+	approvedVersion := "0.0.2"
+	deployedVersion := "0.0.1"
+	latestVersion := "0.0.3"
+	tests := map[string]struct {
+		deploying       string
+		approvedVersion string
+		deployedVersion string
+		latestVersion   string
+	}{
+		"Sets LatestVersion and LatestVersionTimestamp": {
+			deploying:       "0.0.4",
+			approvedVersion: approvedVersion,
+			deployedVersion: deployedVersion,
+			latestVersion:   "0.0.4"},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dbChannel := make(chan dbtype.Message, 4)
+			status := Status{
+				DatabaseChannel: &dbChannel,
+				ServiceID:       stringPtr("test")}
+			status.SetApprovedVersion(approvedVersion, false)
+			status.SetDeployedVersion(deployedVersion, false)
+			status.SetLatestVersion(latestVersion, false)
+
+			// WHEN SetLatestVersion is called on it
+			status.SetLatestVersion(tc.deploying, false)
+
+			// THEN LatestVersion is set to this version
+			if status.GetLatestVersion() != tc.latestVersion {
+				t.Errorf("Expected LatestVersion to be set to %q, not %q",
+					tc.latestVersion, status.GetLatestVersion())
+			}
+			if status.GetDeployedVersion() != tc.deployedVersion {
+				t.Errorf("Expected DeployedVersion to be set to %q, not %q",
+					tc.deployedVersion, status.GetDeployedVersion())
+			}
+			if status.GetApprovedVersion() != tc.approvedVersion {
+				t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
+					tc.approvedVersion, status.GetApprovedVersion())
+			}
+			// and the current time
+			if status.GetLatestVersionTimestamp() != status.GetLastQueried() {
+				t.Errorf("LatestVersionTimestamp should've been set to LastQueried \n%q, not \n%q",
+					status.GetLastQueried(), status.GetLatestVersionTimestamp())
+			}
+		})
+	}
+}
+
+func TestStatus_RegexMissesContent(t *testing.T) {
+	// GIVEN a Status
+	status := Status{}
+
+	// WHEN RegexMissContent is called on it
+	status.RegexMissContent()
+
+	// THEN RegexMisses is incremented
+	got := status.RegexMissesContent()
+	if got != 1 {
+		t.Errorf("Expected RegexMisses to be 1, not %d",
+			got)
+	}
+
+	// WHEN RegexMissContent is called on it again
+	status.RegexMissContent()
+
+	// THEN RegexMisses is incremented again
+	got = status.RegexMissesContent()
+	if got != 2 {
+		t.Errorf("Expected RegexMisses to be 2, not %d",
+			got)
+	}
+
+	// WHEN RegexMissContent is called on it again
+	status.RegexMissContent()
+
+	// THEN RegexMisses is incremented again
+	got = status.RegexMissesContent()
+	if got != 3 {
+		t.Errorf("Expected RegexMisses to be 3, not %d",
+			got)
+	}
+}
+
+func TestStatus_RegexMissesVersion(t *testing.T) {
+	// GIVEN a Status
+	status := Status{}
+
+	// WHEN RegexMissVersion is called on it
+	status.RegexMissVersion()
+
+	// THEN RegexMisses is incremented
+	got := status.RegexMissesVersion()
+	if got != 1 {
+		t.Errorf("Expected RegexMisses to be 1, not %d",
+			got)
+	}
+
+	// WHEN RegexMissVersion is called on it again
+	status.RegexMissVersion()
+
+	// THEN RegexMisses is incremented again
+	got = status.RegexMissesVersion()
+	if got != 2 {
+		t.Errorf("Expected RegexMisses to be 2, not %d",
+			got)
+	}
+
+	// WHEN RegexMissVersion is called on it again
+	status.RegexMissVersion()
+
+	// THEN RegexMisses is incremented again
+	got = status.RegexMissesVersion()
+	if got != 3 {
+		t.Errorf("Expected RegexMisses to be 3, not %d",
+			got)
 	}
 }
 
@@ -338,66 +516,10 @@ func TestFails_ResetFails(t *testing.T) {
 	}
 }
 
-func TestStatus_SetLatestVersion(t *testing.T) {
-	// GIVEN a Status
-	approvedVersion := "0.0.2"
-	deployedVersion := "0.0.1"
-	latestVersion := "0.0.3"
-	tests := map[string]struct {
-		deploying       string
-		approvedVersion string
-		deployedVersion string
-		latestVersion   string
-	}{
-		"Sets LatestVersion and LatestVersionTimestamp": {
-			deploying:       "0.0.4",
-			approvedVersion: approvedVersion,
-			deployedVersion: deployedVersion,
-			latestVersion:   "0.0.4"},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			dbChannel := make(chan dbtype.Message, 4)
-			status := Status{
-				DatabaseChannel: &dbChannel,
-				ServiceID:       stringPtr("test")}
-			status.SetApprovedVersion(approvedVersion)
-			status.SetDeployedVersion(deployedVersion, false)
-			status.SetLatestVersion(latestVersion, false)
-
-			// WHEN SetLatestVersion is called on it
-			status.SetLatestVersion(tc.deploying, false)
-
-			// THEN LatestVersion is set to this version
-			if status.GetLatestVersion() != tc.latestVersion {
-				t.Errorf("Expected LatestVersion to be set to %q, not %q",
-					tc.latestVersion, status.GetLatestVersion())
-			}
-			if status.GetDeployedVersion() != tc.deployedVersion {
-				t.Errorf("Expected DeployedVersion to be set to %q, not %q",
-					tc.deployedVersion, status.GetDeployedVersion())
-			}
-			if status.GetApprovedVersion() != tc.approvedVersion {
-				t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
-					tc.approvedVersion, status.GetApprovedVersion())
-			}
-			// and the current time
-			if status.GetLatestVersionTimestamp() != status.GetLastQueried() {
-				t.Errorf("LatestVersionTimestamp should've been set to LastQueried \n%q, not \n%q",
-					status.GetLastQueried(), status.GetLatestVersionTimestamp())
-			}
-		})
-	}
-}
-
 func TestStatus_PrintFull(t *testing.T) {
 	// GIVEN we have a Status with everything defined
 	status := Status{}
-	status.SetApprovedVersion("1.2.4")
+	status.SetApprovedVersion("1.2.4", false)
 	status.SetDeployedVersion("1.2.3", false)
 	status.SetDeployedVersionTimestamp("2022-01-01T01:01:01Z")
 	status.SetLatestVersion("1.2.4", false)
@@ -453,6 +575,8 @@ func TestStatus_String(t *testing.T) {
 		latestVersion            string
 		latestVersionTimestamp   string
 		lastQueried              *string
+		regexMissesContent       int
+		regexMissesVersion       int
 		commandFails             []*bool
 		shoutrrrFails            map[string]*bool
 		webhookFails             map[string]*bool
@@ -483,10 +607,9 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 }`,
 		},
 		"all fields": {
-			status: &Status{
-				RegexMissesContent: 1,
-				RegexMissesVersion: 2,
-			},
+			regexMissesContent: 1,
+			regexMissesVersion: 2,
+			status:             &Status{},
 			shoutrrrFails: map[string]*bool{
 				"bish": nil,
 				"bash": boolPtr(false),
@@ -526,13 +649,21 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
 
-			tc.status.SetApprovedVersion(tc.approvedVersion)
+			tc.status.SetApprovedVersion(tc.approvedVersion, false)
 			tc.status.SetDeployedVersion(tc.deployedVersion, false)
 			tc.status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
 			tc.status.SetLatestVersion(tc.latestVersion, false)
 			tc.status.SetLatestVersionTimestamp(tc.latestVersionTimestamp)
 			if tc.lastQueried != nil {
 				tc.status.SetLastQueried(*tc.lastQueried)
+			}
+			{ // RegEz misses
+				for i := 0; i < tc.regexMissesContent; i++ {
+					tc.status.RegexMissContent()
+				}
+				for i := 0; i < tc.regexMissesVersion; i++ {
+					tc.status.RegexMissVersion()
+				}
 			}
 			{ // Fails
 				tc.status.Init(

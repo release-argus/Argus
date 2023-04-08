@@ -167,7 +167,7 @@ func testServiceURL(id string) *service.Service {
 	svc.Status.WebURL = &svc.Dashboard.WebURL
 
 	svc.Status.SetLastQueried("")
-	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", false)
 	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
 	svc.Status.SetDeployedVersion("0.0.0", false)

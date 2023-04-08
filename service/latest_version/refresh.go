@@ -92,19 +92,15 @@ func (l *Lookup) applyOverrides(
 		Options: &opt.Options{
 			SemanticVersioning: useSemanticVersioning,
 			Defaults:           l.Options.Defaults,
-			HardDefaults:       l.Options.HardDefaults,
-		},
+			HardDefaults:       l.Options.HardDefaults},
 		Status: &svcstatus.Status{
-			ServiceID: serviceID,
-		},
+			ServiceID: serviceID},
 		Defaults:     l.Defaults,
-		HardDefaults: l.HardDefaults,
-	}
+		HardDefaults: l.HardDefaults}
 	lookup.Status.Init(
 		0, 0, 0,
 		serviceID,
-		nil,
-	)
+		nil)
 	lookup.Status.SetLatestVersion(l.Status.GetLatestVersion(), false)
 
 	if lookup.Type == "github" {
@@ -112,8 +108,7 @@ func (l *Lookup) applyOverrides(
 		// (if ETag is the same, won't count towards API limit)
 		if l.Type == "github" {
 			lookup.GitHubData = &GitHubData{
-				ETag: l.GitHubData.ETag,
-			}
+				ETag: l.GitHubData.ETag}
 			lookup.GitHubData.ETag = l.GitHubData.ETag
 			lookup.GitHubData.Releases = l.GitHubData.Releases
 
@@ -179,9 +174,9 @@ func (l *Lookup) Refresh(
 	// Whether overrides were provided or not, we can update the status if not.
 	overrides := require != nil ||
 		semanticVersioning != nil ||
-		usePreRelease != nil ||
 		url != nil ||
-		urlCommands != nil
+		urlCommands != nil ||
+		usePreRelease != nil
 
 	// Query the lookup.
 	_, err = lookup.Query(!overrides, &logFrom)

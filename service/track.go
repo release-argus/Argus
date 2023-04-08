@@ -16,13 +16,16 @@ package service
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/release-argus/Argus/util"
 )
 
 // Track will call Track on all Services in this Slice.
-func (s *Slice) Track(ordering *[]string) {
+func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
+	orderMutex.RLock()
+	defer orderMutex.RUnlock()
 	for _, key := range *ordering {
 		// Skip inactive Services (and services that were deleted on startup)
 		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {

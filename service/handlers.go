@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
@@ -61,8 +60,7 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
 	if s.Status.GetApprovedVersion() != s.Status.GetLatestVersion() {
-		s.Status.SetApprovedVersion(s.Status.GetLatestVersion())
-		s.Status.AnnounceApproved()
+		s.Status.SetApprovedVersion(s.Status.GetLatestVersion(), true)
 	}
 }
 
@@ -70,9 +68,11 @@ func (s *Service) UpdateLatestApproved() {
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
+	serviceInfo := s.GetServiceInfo()
+
 	// Send the Notify Message(s).
 	//nolint:errcheck
-	go s.Notify.Send("", "", s.GetServiceInfo(), true)
+	go s.Notify.Send("", "", serviceInfo, true)
 
 	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
@@ -91,7 +91,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 
 			// Send the WebHook(s)
 			go func() {
-				err := s.WebHook.Send(s.GetServiceInfo(), true)
+				err := s.WebHook.Send(serviceInfo, true)
 				if err == nil && len(s.WebHook) != 0 {
 					s.UpdatedVersion(writeToDB)
 				}
@@ -230,19 +230,7 @@ func (s *Service) HandleSkip(version string) {
 		return
 	}
 
-	s.Status.SetApprovedVersion("SKIP_" + version)
-	s.Status.AnnounceApproved()
-
-	// Update the database
-	if s.Status.DatabaseChannel != nil {
-		*s.Status.DatabaseChannel <- dbtype.Message{
-			ServiceID: s.ID,
-			Cells: []dbtype.Cell{
-				{Column: "approved_version",
-					Value: s.Status.GetApprovedVersion()},
-			},
-		}
-	}
+	s.Status.SetApprovedVersion("SKIP_"+version, true)
 }
 
 func (s *Service) shouldRetryAll() (retry bool) {

@@ -392,7 +392,7 @@ func TestRun(t *testing.T) {
 		stringPtr("https://example.com"))
 	want.SetLatestVersion("9.9.9", false)
 	want.SetLatestVersionTimestamp("2022-01-01T01:01:01Z")
-	want.SetApprovedVersion("0.0.1")
+	want.SetApprovedVersion("0.0.1", false)
 	want.SetDeployedVersion("0.0.0", false)
 	want.SetDeployedVersionTimestamp("2020-01-01T01:01:01Z")
 	if got.GetLatestVersion() != want.GetLatestVersion() {

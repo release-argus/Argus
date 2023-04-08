@@ -94,7 +94,7 @@ func testServiceGitHub(id string) *Service {
 		},
 	}
 	// Status
-	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", false)
 	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
 	svc.Status.SetDeployedVersion("0.0.0", false)
@@ -156,7 +156,7 @@ func testServiceURL(id string) *Service {
 		0, 0, 0,
 		&svc.ID,
 		&svc.Dashboard.WebURL)
-	svc.Status.SetApprovedVersion("1.1.1")
+	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", false)
 	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
 	svc.Status.SetDeployedVersion("0.0.0", false)

@@ -28,24 +28,16 @@ func (w *WebHook) AnnounceSend() {
 	webhookSummary := make(map[string]*api_type.WebHookSummary)
 	webhookSummary[w.ID] = &api_type.WebHookSummary{
 		Failed:       w.Failed.Get(w.ID),
-		NextRunnable: w.GetNextRunnable(),
-	}
+		NextRunnable: w.GetNextRunnable()}
 
 	// WebHook pass/fail
-	wsPage := "APPROVALS"
-	wsType := "WEBHOOK"
-	wsSubType := "EVENT"
 	payloadData, _ := json.Marshal(api_type.WebSocketMessage{
-		Page:    wsPage,
-		Type:    wsType,
-		SubType: wsSubType,
+		Page:    "APPROVALS",
+		Type:    "WEBHOOK",
+		SubType: "EVENT",
 		ServiceData: &api_type.ServiceSummary{
-			ID: util.DefaultIfNil(w.ServiceStatus.ServiceID),
-		},
-		WebHookData: webhookSummary,
-	})
+			ID: util.DefaultIfNil(w.ServiceStatus.ServiceID)},
+		WebHookData: webhookSummary})
 
-	if w.ServiceStatus.AnnounceChannel != nil {
-		*w.ServiceStatus.AnnounceChannel <- payloadData
-	}
+	w.ServiceStatus.SendAnnounce(&payloadData)
 }

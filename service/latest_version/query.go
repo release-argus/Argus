@@ -78,8 +78,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 		}
 
 		// Found new version, so reset regex misses.
-		l.Status.RegexMissesContent = 0
-		l.Status.RegexMissesVersion = 0
+		l.Status.ResetRegexMisses()
 
 		// First version found.
 		if l.Status.GetLatestVersion() == "" {
@@ -232,7 +231,6 @@ func (l *Lookup) GetVersions(
 			return
 		}
 		// Store the unfiltered releases to support filter changes without a refetch
-		// Copy as we don't want this slice to be modified by the filter
 		l.GitHubData.Releases = releases
 		// Filter releases
 		filteredReleases = l.filterGitHubReleases(

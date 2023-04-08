@@ -74,16 +74,16 @@ func (c *Config) Save() {
 	// Write and close the file
 	err = yamlEncoder.Encode(c)
 	jLog.Fatal(
-		fmt.Sprintf("error encoding %s:\n%v\n", c.File, err),
+		fmt.Sprintf("error encoding %s:\n%v\n",
+			c.File, err),
 		util.LogFrom{},
-		err != nil,
-	)
+		err != nil)
 	err = file.Close()
 	jLog.Fatal(
-		fmt.Sprintf("error opening %s:\n%v\n", c.File, err),
+		fmt.Sprintf("error opening %s:\n%v\n",
+			c.File, err),
 		util.LogFrom{},
-		err != nil,
-	)
+		err != nil)
 
 	// Read the file to find what needs to be re-arranged
 	data, err := os.ReadFile(c.File)
@@ -137,7 +137,9 @@ func (c *Config) Save() {
 			// Get the index that this service ends on
 			currentOrderIndexEnd[currentServiceNumber] = len(lines) - 1
 			for i := index + 1; i <= len(lines); i++ {
-				if !strings.HasPrefix(lines[i], indentation+" ") && strings.HasPrefix(lines[i], indentation) ||
+				// If the line has only 1 indentation or no indentation, it's the end of the Service
+				if !strings.HasPrefix(lines[i], indentation+" ") &&
+					strings.HasPrefix(lines[i], indentation) ||
 					!strings.HasPrefix(lines[i], " ") {
 					currentOrderIndexEnd[currentServiceNumber] = i - 1
 					break
@@ -151,18 +153,24 @@ func (c *Config) Save() {
 			// <>example:
 			// <><>notify:
 			// <><><>DISCORD: {}
+			// <><><>EMAIL: {}
+			// <><>webhook:
+			// <><><>WH: {}
 			underNotify := false
+			TwoIndents := strings.Repeat(" ", 2*int(c.Settings.Indentation))
+			ThreeIndents := strings.Repeat(" ", 3*int(c.Settings.Indentation))
 			if configType == "service" &&
-				!strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))+" ") &&
-				strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))) {
-				// Check that we're under a notify:
+				!strings.HasPrefix(lines[index], ThreeIndents+" ") &&
+				strings.HasPrefix(lines[index], ThreeIndents) {
+				// Check that we're under a notify/webhook:
 				prevIndex := index
 				for prevIndex > 0 {
 					prevIndex--
-					// line has 2*prefix
-					if !strings.HasPrefix(lines[prevIndex], strings.Repeat(" ", 2*int(c.Settings.Indentation))+" ") &&
-						strings.HasPrefix(lines[prevIndex], strings.Repeat(" ", 2*int(c.Settings.Indentation))) {
-						underNotify = lines[prevIndex] == strings.Repeat(" ", 2*int(c.Settings.Indentation))+"notify:" || lines[prevIndex] == strings.Repeat(" ", 2*int(c.Settings.Indentation))+"webhook:"
+					// line has only 2*indentation
+					if !strings.HasPrefix(lines[prevIndex], TwoIndents+" ") &&
+						strings.HasPrefix(lines[prevIndex], TwoIndents) {
+						underNotify = lines[prevIndex] == TwoIndents+"notify:" ||
+							lines[prevIndex] == TwoIndents+"webhook:"
 						break
 					}
 				}

@@ -165,6 +165,7 @@ func RequireFromStr(jsonStr *string, previous *Require, logFrom *util.LogFrom) (
 
 		// Default the Docker params
 		if previous.Docker != nil {
+			// Have changed a Docker param
 			if util.Contains(jsonKeys, "docker") {
 				// Default params that haven't been changed
 				if !util.Contains(jsonKeys, "docker.type") {

@@ -79,13 +79,10 @@ func (c *Controller) CopyFailsFrom(target *Controller) {
 			if target.Failed.Get(i) != nil &&
 				(*target.Command)[i].FormattedString() == (*c.Command)[j].FormattedString() {
 				failed := target.Failed.Get(i)
-				if failed != nil {
-					c.Failed.Set(j, *failed)
-				}
+				c.Failed.Set(j, *failed)
 				c.nextRunnable[j] = target.nextRunnable[i]
 				break
 			}
 		}
 	}
-
 }

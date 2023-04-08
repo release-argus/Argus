@@ -159,8 +159,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 				HardDefaults: &api.Config.HardDefaults.Service.Options},
 			Status:       &status,
 			Defaults:     api.Config.Defaults.Service.DeployedVersionLookup,
-			HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup,
-		}
+			HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup}
 		// Deployed Version
 		version, _, err = deployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
@@ -169,18 +168,15 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 			getParam(&queryParams, "json"),
 			getParam(&queryParams, "regex"),
 			getParam(&queryParams, "semantic_versioning"),
-			getParam(&queryParams, "url"),
-		)
+			getParam(&queryParams, "url"))
 	} else {
 		latestVersion := latestver.Lookup{
 			Options: &opt.Options{
 				Defaults:     &api.Config.Defaults.Service.Options,
-				HardDefaults: &api.Config.HardDefaults.Service.Options,
-			},
+				HardDefaults: &api.Config.HardDefaults.Service.Options},
 			Status:       &status,
 			Defaults:     &api.Config.Defaults.Service.LatestVersion,
-			HardDefaults: &api.Config.HardDefaults.Service.LatestVersion,
-		}
+			HardDefaults: &api.Config.HardDefaults.Service.LatestVersion}
 		// Latest Version
 		version, _, err = latestVersion.Refresh(
 			getParam(&queryParams, "access_token"),
@@ -190,8 +186,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 			getParam(&queryParams, "type"),
 			getParam(&queryParams, "url"),
 			getParam(&queryParams, "url_commands"),
-			getParam(&queryParams, "use_prerelease"),
-		)
+			getParam(&queryParams, "use_prerelease"))
 	}
 
 	statusCode := http.StatusOK

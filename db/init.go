@@ -163,7 +163,7 @@ func (api *api) extractServiceStatus() {
 		api.config.Service[id].Status.SetLatestVersionTimestamp(lvt)
 		api.config.Service[id].Status.SetDeployedVersion(dv, false)
 		api.config.Service[id].Status.SetDeployedVersionTimestamp(dvt)
-		api.config.Service[id].Status.SetApprovedVersion(av)
+		api.config.Service[id].Status.SetApprovedVersion(av, false)
 	}
 	err = rows.Err()
 	jLog.Fatal(
@@ -199,8 +199,7 @@ func (api *api) convertServiceStatus() {
 				api.config.Service[id].OldStatus.LatestVersionTimestamp,
 				api.config.Service[id].OldStatus.DeployedVersion,
 				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
-				api.config.Service[id].OldStatus.ApprovedVersion,
-			)
+				api.config.Service[id].OldStatus.ApprovedVersion)
 			api.config.Service[id].Status = svcstatus.Status{}
 			api.config.Service[id].Status.Init(
 				len(api.config.Service[id].Notify), len(api.config.Service[id].Command), len(api.config.Service[id].WebHook),
@@ -210,7 +209,7 @@ func (api *api) convertServiceStatus() {
 			api.config.Service[id].Status.SetLatestVersionTimestamp(api.config.Service[id].OldStatus.LatestVersionTimestamp)
 			api.config.Service[id].Status.SetDeployedVersion(api.config.Service[id].OldStatus.DeployedVersion, false)
 			api.config.Service[id].Status.SetDeployedVersionTimestamp(api.config.Service[id].OldStatus.DeployedVersionTimestamp)
-			api.config.Service[id].Status.SetApprovedVersion(api.config.Service[id].OldStatus.ApprovedVersion)
+			api.config.Service[id].Status.SetApprovedVersion(api.config.Service[id].OldStatus.ApprovedVersion, false)
 		}
 	}
 	if servicesToConvert != 0 {

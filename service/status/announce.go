@@ -34,12 +34,9 @@ func (s *Status) AnnounceFirstVersion() {
 			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
 				LatestVersion:          s.GetLatestVersion(),
-				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}},
-	)
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQuery to the `s.AnnounceChannel`
@@ -54,12 +51,9 @@ func (s *Status) AnnounceQuery() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				LastQueried: s.GetLastQueried()}}},
-	)
+				LastQueried: s.GetLastQueried()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQueryNewVersion to the `s.AnnounceChannel`
@@ -77,12 +71,9 @@ func (s *Status) AnnounceQueryNewVersion() {
 			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
 				LatestVersion:          s.GetLatestVersion(),
-				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}},
-	)
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceUpdate being applied to the `s.AnnounceChannel`
@@ -99,14 +90,9 @@ func (s *Status) AnnounceUpdate() {
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
 				DeployedVersion:          s.GetDeployedVersion(),
-				DeployedVersionTimestamp: s.GetDeployedVersionTimestamp(),
-			},
-		},
-	})
+				DeployedVersionTimestamp: s.GetDeployedVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceAction on an update (skip/approve) to the `s.AnnounceChannel`
@@ -122,12 +108,7 @@ func (s *Status) AnnounceApproved() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				ApprovedVersion: s.GetApprovedVersion(),
-			},
-		},
-	})
+				ApprovedVersion: s.GetApprovedVersion()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }

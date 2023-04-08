@@ -33,11 +33,11 @@ type Status struct {
 	latestVersion            string       // Latest version found from query().
 	latestVersionTimestamp   string       // UTC timestamp of LatestVersion being changed.
 	lastQueried              string       // UTC timestamp that version was last queried/checked.
-	RegexMissesContent       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on URL content.
-	RegexMissesVersion       uint         `yaml:"-" json:"-"` // Counter for the number of regex misses on version.
-	Fails                    Fails        `yaml:"-" json:"-"` // Track the Notify/WebHook fails
-	deleting                 bool         `yaml:"-" json:"-"` // Flag to indicate the service is being deleted
-	mutex                    sync.RWMutex `yaml:"-" json:"-"` // Lock for the Status
+	regexMissesContent       uint         // Counter for the number of regex misses on URL content.
+	regexMissesVersion       uint         // Counter for the number of regex misses on version.
+	Fails                    Fails        // Track the Notify/WebHook fails
+	deleting                 bool         // Flag to indicate the service is being deleted
+	mutex                    sync.RWMutex // Lock for the Status
 
 	// Announces
 	AnnounceChannel *chan []byte         `yaml:"-" json:"-"` // Announce to the WebSocket
@@ -57,8 +57,8 @@ func (s *Status) String() string {
 		{Name: "latest_version", Value: s.latestVersion},
 		{Name: "latest_version_timestamp", Value: s.latestVersionTimestamp},
 		{Name: "last_queried", Value: s.lastQueried},
-		{Name: "regex_misses_content", Value: s.RegexMissesContent},
-		{Name: "regex_misses_version", Value: s.RegexMissesVersion},
+		{Name: "regex_misses_content", Value: s.regexMissesContent},
+		{Name: "regex_misses_version", Value: s.regexMissesVersion},
 		{Name: "fails", Value: &s.Fails},
 	}
 	s.mutex.RUnlock()
@@ -107,7 +107,7 @@ func (s *Status) GetLastQueried() string {
 	return s.lastQueried
 }
 
-// SetLastQueried will update LastQueried to `t“, or now if `t` is empty.
+// SetLastQueried will update LastQueried to `t`, or now if `t` is empty.
 func (s *Status) SetLastQueried(t string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -126,10 +126,21 @@ func (s *Status) GetApprovedVersion() string {
 }
 
 // SetApprovedVersion.
-func (s *Status) SetApprovedVersion(version string) {
+func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	s.approvedVersion = version
+	s.mutex.Unlock()
+
+	if writeToDB {
+		// WebSocket
+		s.AnnounceApproved()
+		// Database
+		message := dbtype.Message{
+			ServiceID: *s.ServiceID,
+			Cells: []dbtype.Cell{
+				{Column: "approved_version", Value: s.approvedVersion}}}
+		s.SendDatabase(&message)
+	}
 }
 
 // GetDeployedVersion returns the DeployedVersion.
@@ -152,19 +163,16 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 	}
 	s.mutex.Unlock()
 
-	if writeToDB && s.DatabaseChannel != nil {
+	if writeToDB {
 		// Clear the fail status of WebHooks/Commands
 		s.Fails.resetFails()
 
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
-		*s.DatabaseChannel <- dbtype.Message{
+		message := dbtype.Message{
 			ServiceID: *s.ServiceID,
 			Cells: []dbtype.Cell{
 				{Column: "deployed_version", Value: s.deployedVersion},
-				{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp},
-			},
-		}
+				{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp}}}
+		s.SendDatabase(&message)
 	}
 }
 
@@ -201,19 +209,17 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	}
 	s.mutex.Unlock()
 
-	if writeToDB && s.DatabaseChannel != nil {
+	// Write to the database if we're not deleting and have a channel
+	if writeToDB {
 		// Clear the fail status of WebHooks/Commands
 		s.Fails.resetFails()
 
-		s.mutex.RLock()
-		defer s.mutex.RUnlock()
-		*s.DatabaseChannel <- dbtype.Message{
+		message := dbtype.Message{
 			ServiceID: *s.ServiceID,
 			Cells: []dbtype.Cell{
 				{Column: "latest_version", Value: s.latestVersion},
-				{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp},
-			},
-		}
+				{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp}}}
+		s.SendDatabase(&message)
 	}
 }
 
@@ -233,6 +239,48 @@ func (s *Status) SetLatestVersionTimestamp(timestamp string) {
 	s.mutex.Unlock()
 }
 
+// RegexMissContent will increment the count of RegEx misses on content.
+func (s *Status) RegexMissContent() {
+	s.mutex.Lock()
+	{
+		s.regexMissesContent++
+	}
+	s.mutex.Unlock()
+}
+
+// RegexMissesContent will return the number of RegEx misses on content.
+func (s *Status) RegexMissesContent() uint {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.regexMissesContent
+}
+
+// RegexMissVersion will increment the count of RegEx misses on version.
+func (s *Status) RegexMissVersion() {
+	s.mutex.Lock()
+	{
+		s.regexMissesVersion++
+	}
+	s.mutex.Unlock()
+}
+
+// RegexMissesVersion will return the number of RegEx misses on version.
+func (s *Status) RegexMissesVersion() uint {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.regexMissesVersion
+}
+
+// ResetRegexMisses (the counters for RegEx misses).
+func (s *Status) ResetRegexMisses() {
+	s.mutex.Lock()
+	{
+		s.regexMissesContent = 0
+		s.regexMissesVersion = 0
+	}
+	s.mutex.Unlock()
+}
+
 // SetDeleting will set the Service to be deleted.
 func (s *Status) SetDeleting() {
 	s.mutex.Lock()
@@ -247,6 +295,39 @@ func (s *Status) Deleting() bool {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.deleting
+}
+
+// SendAnnounce payload to the AnnounceChannel.
+func (s *Status) SendAnnounce(payload *[]byte) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if s.deleting || s.AnnounceChannel == nil {
+		return
+	}
+
+	*s.AnnounceChannel <- *payload
+}
+
+// SendDatabase payload to the DatabaseChannel.
+func (s *Status) SendDatabase(payload *dbtype.Message) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if s.deleting || s.DatabaseChannel == nil {
+		return
+	}
+
+	*s.DatabaseChannel <- *payload
+}
+
+// SendSave request to the SaveChannel.
+func (s *Status) SendSave() {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if s.deleting || s.SaveChannel == nil {
+		return
+	}
+
+	*s.SaveChannel <- true
 }
 
 // TODO: Deprecate

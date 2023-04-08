@@ -26,7 +26,7 @@ import (
 type Options struct {
 	Active             *bool    `yaml:"active,omitempty" json:"active,omitempty"`                           // Disable the service.
 	Interval           string   `yaml:"interval,omitempty" json:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning *bool    `yaml:"semantic_versioning,omitempty" json:"semantic_versioning,omitempty"` // default - true  = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
+	SemanticVersioning *bool    `yaml:"semantic_versioning,omitempty" json:"semantic_versioning,omitempty"` // default - true = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
 	Defaults           *Options `yaml:"-" json:"-"`                                                         // Defaults
 	HardDefaults       *Options `yaml:"-" json:"-"`                                                         // Hard Defaults
 }

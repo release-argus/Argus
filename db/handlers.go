@@ -26,13 +26,13 @@ import (
 // incoming messages.
 func (api *api) handler() {
 	for message := range *api.config.DatabaseChannel {
-		// If the message is to delete the row
+		// If the message is to delete a row
 		if message.Delete {
 			api.deleteRow(message.ServiceID)
 			continue
 		}
 
-		// Else, the message is to update the row
+		// Else, the message is to update a row
 		api.updateRow(
 			message.ServiceID,
 			message.Cells,

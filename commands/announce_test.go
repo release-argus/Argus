@@ -60,14 +60,15 @@ func TestController_AnnounceCommand(t *testing.T) {
 
 			controller := Controller{
 				ParentInterval: stringPtr("11m"),
-				ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil}}
+				ServiceStatus: &svcstatus.Status{
+					ServiceID: stringPtr("some_service_id")}}
 			controller.Init(
-				&svcstatus.Status{ServiceID: stringPtr("some_service_id"), AnnounceChannel: nil},
+				&svcstatus.Status{
+					ServiceID: stringPtr("some_service_id")},
 				&Slice{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
-					{"ls", "-lah", "a"},
-				},
+					{"ls", "-lah", "a"}},
 				nil,
 				stringPtr("11m"))
 			if !tc.nilChannel {

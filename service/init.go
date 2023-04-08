@@ -130,7 +130,7 @@ func (s *Service) GetIconURL() (icon string) {
 	return
 }
 
-// InitMetrics  of the Service.
+// InitMetrics of the Service.
 func (s *Service) InitMetrics() {
 	s.LatestVersion.InitMetrics()
 	s.DeployedVersionLookup.InitMetrics()

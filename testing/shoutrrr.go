@@ -48,9 +48,7 @@ func NotifyTest(
 			ID:            "NAME_OF_SERVICE",
 			URL:           "QUERY_URL",
 			WebURL:        "WEB_URL",
-			LatestVersion: "MAJOR.MINOR.PATCH",
-		},
-	)
+			LatestVersion: "MAJOR.MINOR.PATCH"})
 	err := slice.Send(
 		title,
 		message,
@@ -58,11 +56,12 @@ func NotifyTest(
 			ID:            "ID",
 			URL:           "URL",
 			WebURL:        "WebURL",
-			LatestVersion: "MAJOR.MINOR.PATCH",
-		},
+			LatestVersion: "MAJOR.MINOR.PATCH"},
 		false)
+
 	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, util.ErrorToString(err)), logFrom, err != nil)
+
 	if !log.Testing {
 		os.Exit(0)
 	}

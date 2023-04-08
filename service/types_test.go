@@ -474,7 +474,7 @@ func TestService_Summary(t *testing.T) {
 				&tc.svc.ID,
 				&tc.svc.Dashboard.WebURL)
 			if tc.approvedVersion != "" {
-				tc.svc.Status.SetApprovedVersion(tc.approvedVersion)
+				tc.svc.Status.SetApprovedVersion(tc.approvedVersion, false)
 				tc.svc.Status.SetDeployedVersion(tc.deployedVersion, false)
 				tc.svc.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
 				tc.svc.Status.SetLatestVersion(tc.latestVersion, false)

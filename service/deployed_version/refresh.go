@@ -74,12 +74,10 @@ func (l *Lookup) applyOverrides(
 		Options: &opt.Options{
 			SemanticVersioning: useSemanticVersioning,
 			Defaults:           l.Options.Defaults,
-			HardDefaults:       l.Options.HardDefaults,
-		},
+			HardDefaults:       l.Options.HardDefaults},
 		Status:       &svcstatus.Status{},
 		Defaults:     l.Defaults,
-		HardDefaults: l.HardDefaults,
-	}
+		HardDefaults: l.HardDefaults}
 	if err := lookup.CheckValues(""); err != nil {
 		jLog.Error(err, *logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
@@ -87,8 +85,7 @@ func (l *Lookup) applyOverrides(
 	lookup.Status.Init(
 		0, 0, 0,
 		serviceID,
-		nil,
-	)
+		nil)
 	return &lookup, nil
 }
 
@@ -128,12 +125,12 @@ func (l *Lookup) Refresh(
 			logFrom, true)
 	}
 
-	// Whether overrides were provided or not, we can update the status ig not.
+	// Whether overrides were provided or not, we can update the status if not.
 	overrides := headers != nil ||
-		json != nil ||
-		regex != nil ||
 		semanticVersioning != nil ||
-		url != nil
+		url != nil ||
+		json != nil ||
+		regex != nil
 
 	// Query the lookup.
 	version, err = lookup.Query(!overrides, &logFrom)

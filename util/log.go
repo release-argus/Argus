@@ -183,9 +183,9 @@ func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level == 4 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 
-		// limit size of msgString to 10000 chars
-		if len(msgString) > 10000 {
-			msgString = msgString[:10000] + "..."
+		// limit size of msgString to 1000 chars
+		if len(msgString) > 1000 {
+			msgString = msgString[:1000] + "..."
 		}
 
 		// DEBUG: msg from.Primary (from.Secondary)

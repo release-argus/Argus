@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	command "github.com/release-argus/Argus/commands"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -52,14 +51,14 @@ func (c *Config) Init() {
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
 	i := 0
-	for key := range c.Service {
+	for _, name := range c.Order {
 		i++
-		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), util.LogFrom{}, true)
-		c.Service[key].Init(
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), name),
+			util.LogFrom{}, true)
+		c.Service[name].Init(
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
-			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook,
-		)
+			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
 	}
 
 	// c.Notify
@@ -77,18 +76,12 @@ func (c *Config) Init() {
 			c.WebHook[key].HardDefaults = &c.HardDefaults.WebHook
 		}
 	}
-
-	// Give the log to the other packages
-	svc := service.Service{Command: command.Slice{}}
-	svc.Init(
-		&c.Defaults.Service, &c.HardDefaults.Service,
-		&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
-		&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
 }
 
 // Load `file` as Config.
 func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.File = file
+	// Give the log to the other packages
 	LogInit(log)
 	c.Settings.NilUndefinedFlags(flagset)
 
@@ -113,8 +106,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 		c.Service[key].ID = key
 		c.Service[key].Status = svcstatus.Status{
 			DatabaseChannel: c.DatabaseChannel,
-			SaveChannel:     c.SaveChannel,
-		}
+			SaveChannel:     c.SaveChannel}
 	}
 	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel

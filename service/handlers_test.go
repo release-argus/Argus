@@ -50,7 +50,7 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc.Status.SetApprovedVersion(tc.startApprovedVersion)
+			svc.Status.SetApprovedVersion(tc.startApprovedVersion, false)
 			svc.Status.SetLatestVersion(tc.latestVersion, false)
 
 			// WHEN UpdateLatestApproved is called on it
@@ -1022,7 +1022,7 @@ func TestService_HandleSkip(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
 
-			svc.Status.SetApprovedVersion("")
+			svc.Status.SetApprovedVersion("", false)
 			svc.Status.SetLatestVersion(latestVersion, false)
 			if tc.prepDelete {
 				svc.PrepDelete()

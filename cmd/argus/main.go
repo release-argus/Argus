@@ -67,19 +67,22 @@ func main() {
 		}
 	}
 
-	msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-	jLog.Info(msg, util.LogFrom{}, true)
+	// INFO or above
+	if jLog.Level > 1 {
+		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
+		jLog.Info(msg, util.LogFrom{}, true)
 
-	for _, key := range config.Order {
-		if config.Service[key].Options.GetActive() {
-			fmt.Printf("  - %s\n", config.Service[key].ID)
+		for _, key := range config.Order {
+			if config.Service[key].Options.GetActive() {
+				fmt.Printf("  - %s\n", config.Service[key].ID)
+			}
 		}
 	}
 
 	go db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
-	go (&config).Service.Track(&config.Order)
+	go (&config).Service.Track(&config.Order, &config.OrderMutex)
 
 	// Web server
 	web.Run(&config, &jLog)

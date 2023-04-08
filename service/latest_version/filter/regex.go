@@ -38,8 +38,8 @@ func (r *Require) RegexCheckVersion(
 	if !regexMatch {
 		err := fmt.Errorf("regex not matched on version %q",
 			version)
-		r.Status.RegexMissesVersion++
-		jLog.Info(err, *logFrom, r.Status.RegexMissesVersion == 1)
+		r.Status.RegexMissVersion()
+		jLog.Info(err, *logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
 	}
 
@@ -94,8 +94,8 @@ func (r *Require) RegexCheckContent(
 					util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version}),
 					version,
 				)
-				r.Status.RegexMissesContent++
-				jLog.Info(err, *logFrom, r.Status.RegexMissesContent == 1)
+				r.Status.RegexMissContent()
+				jLog.Info(err, *logFrom, r.Status.RegexMissesContent() == 1)
 				return err
 			}
 			// continue searching the other assets

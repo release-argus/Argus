@@ -355,7 +355,7 @@ type Service struct {
 type ServiceOptions struct {
 	Active             *bool  `json:"active,omitempty"`              // Active Service?
 	Interval           string `json:"interval,omitempty"`            // AhBmCs = Sleep A hours, B minutes and C seconds between queries
-	SemanticVersioning *bool  `json:"semantic_versioning,omitempty"` // default - true  = Version has to be greater than the previous to trigger alerts/WebHooks
+	SemanticVersioning *bool  `json:"semantic_versioning,omitempty"` // default - true = Version has to be greater than the previous to trigger alerts/WebHooks
 }
 
 // DashboardOptions.
@@ -443,9 +443,9 @@ type URLCommand struct {
 	Type  string  `json:"type,omitempty"`  // regex/replace/split
 	Regex *string `json:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
 	Index int     `json:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text  *string `json:"text,omitempty"`  // split:                strings.Split(tgtString, "Text")
-	New   *string `json:"new,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
-	Old   *string `json:"old,omitempty"`   // replace:              strings.ReplaceAll(tgtString, "Old", "New")
+	Text  *string `json:"text,omitempty"`  // split:       strings.Split(tgtString, "Text")
+	New   *string `json:"new,omitempty"`   // replace:     strings.ReplaceAll(tgtString, "Old", "New")
+	Old   *string `json:"old,omitempty"`   // replace:     strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 type Command []string

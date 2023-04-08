@@ -44,7 +44,7 @@ func testStatus() (status *Status) {
 		0, 0, 0,
 		stringPtr("test-service"),
 		stringPtr("http://example.com"))
-	status.SetApprovedVersion("1.1.1")
+	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", false)
 	status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
 	status.SetDeployedVersion("0.0.0", false)

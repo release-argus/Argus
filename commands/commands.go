@@ -24,18 +24,17 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// Exec will execute all `Command` for the controller and returns all errors encountered
+// Exec will execute every `Command` for the controller and return all errors encountered.
 func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
-		return errs
+		return
 	}
 
 	errChan := make(chan error)
 	for index := range *c.Command {
-		index := index
-		go func(controller *Controller) {
+		go func(controller *Controller, index int) {
 			errChan <- controller.ExecIndex(logFrom, index)
-		}(c)
+		}(c, index)
 
 		// Space out Command starts.
 		time.Sleep(200 * time.Millisecond)
@@ -52,6 +51,7 @@ func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	return
 }
 
+// ExecIndex will execute the `Command` at the given index and return any errors encountered.
 func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 	if index >= len(*c.Command) {
 		return
@@ -92,6 +92,7 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 	return err
 }
 
+// Exec this Command and return any errors encountered.
 func (c *Command) Exec(logFrom *util.LogFrom) error {
 	jLog.Info(fmt.Sprintf("Executing '%s'", c), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()

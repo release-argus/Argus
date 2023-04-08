@@ -27,29 +27,31 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// Old Index to look at for any <secret> used
+// oldIntIndex to look at for any <secret>'s used
 type oldIntIndex struct {
 	OldIndex *int `json:"oldIndex,omitempty"`
 }
+
+// oldStringIndex to look at for any <secret>'s used
 type oldStringIndex struct {
 	OldIndex *string `json:"oldIndex,omitempty"`
 }
 
-// DeployedVersionLookup <secret>'s
-type dvlSecretRef struct {
+// dvSecretRef contains the reference for the DeployedVersionLookup <secret>'s
+type dvSecretRef struct {
 	Headers []oldIntIndex `json:"headers,omitempty"`
 }
 
-// WebHook <secret>'s
+// whSecretRef contains the reference for the WebHook <secret>'s
 type whSecretRef struct {
 	OldIndex      *string       `json:"oldIndex,omitempty"`
 	CustomHeaders []oldIntIndex `json:"custom_headers,omitempty"`
 }
 
-// oldSecretRefs contains the indexes to use for <secret>
+// oldSecretRefs contains the indexes to use for <secret>'s
 type oldSecretRefs struct {
 	Name                  string                    `json:"name"`
-	DeployedVersionLookup dvlSecretRef              `json:"deployed_version,omitempty"`
+	DeployedVersionLookup dvSecretRef               `json:"deployed_version,omitempty"`
 	Notify                map[string]oldStringIndex `json:"notify,omitempty"`
 	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
 }
@@ -118,6 +120,7 @@ func New(
 		newService.LatestVersion.Require.Docker.Tag == "" {
 
 		newService.LatestVersion.Require.Docker = nil
+		// If that was the only requirement, remove the requirement
 		if newService.LatestVersion.Require.String() == "{}\n" {
 			newService.LatestVersion.Require = nil
 		}
@@ -129,7 +132,7 @@ func New(
 	return newService, nil
 }
 
-// giveSecretsLatestVersion from the oldLatestVersion
+// giveSecretsLatestVersion from the `oldLatestVersion`
 func (s *Service) giveSecretsLatestVersion(oldLatestVersion *latestver.Lookup) {
 	// Referencing oldService's AccessToken
 	if util.DefaultIfNil(s.LatestVersion.AccessToken) == "<secret>" {
@@ -149,8 +152,8 @@ func (s *Service) giveSecretsLatestVersion(oldLatestVersion *latestver.Lookup) {
 	}
 }
 
-// giveSecretsDeployedVersion from the oldDeployedVersion
-func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Lookup, secretRefs *dvlSecretRef) {
+// giveSecretsDeployedVersion from the `oldDeployedVersion`
+func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Lookup, secretRefs *dvSecretRef) {
 	if s.DeployedVersionLookup == nil || oldDeployedVersion == nil {
 		return
 	}
@@ -185,7 +188,7 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Loo
 	}
 }
 
-// giveSecretsNotify from the oldNotifies
+// giveSecretsNotify from the `oldNotifies`
 func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map[string]oldStringIndex) {
 	//nolint:typecheck
 	if s.Notify == nil || oldNotifies == nil ||
@@ -235,7 +238,7 @@ func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map
 	}
 }
 
-// giveSecretsWebHook from the oldWebHooks
+// giveSecretsWebHook from the `oldWebHooks`
 func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map[string]whSecretRef) {
 	//nolint:typecheck
 	if s.WebHook == nil || oldWebHooks == nil ||
@@ -298,7 +301,7 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 }
 
 // giveSecrets will replace <secret> in this Service with that of the oldService and uses secretRefs to find
-// seccrets inside maps/lists
+// secrets inside maps/lists
 func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	if oldService == nil {
 		return
@@ -317,7 +320,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 
 	// Keep LatestVersion if the LatestVersion lookup is unchanged
 	if s.LatestVersion.IsEqual(&oldService.LatestVersion) {
-		s.Status.SetApprovedVersion(oldService.Status.GetApprovedVersion())
+		s.Status.SetApprovedVersion(oldService.Status.GetApprovedVersion(), false)
 		s.Status.SetLatestVersion(oldService.Status.GetLatestVersion(), false)
 		s.Status.SetLatestVersionTimestamp(oldService.Status.GetLatestVersionTimestamp())
 		s.Status.SetLastQueried(oldService.Status.GetLastQueried())

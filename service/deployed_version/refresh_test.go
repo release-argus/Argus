@@ -388,7 +388,7 @@ func TestLookup_Refresh(t *testing.T) {
 			// Copy the starting status
 			previousStatus := svcstatus.Status{}
 			if tc.lookup != nil {
-				previousStatus.SetApprovedVersion(tc.lookup.Status.GetApprovedVersion())
+				previousStatus.SetApprovedVersion(tc.lookup.Status.GetApprovedVersion(), false)
 				previousStatus.SetDeployedVersion(tc.lookup.Status.GetDeployedVersion(), false)
 				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.GetDeployedVersionTimestamp())
 				previousStatus.SetLatestVersion(tc.lookup.Status.GetLatestVersion(), false)

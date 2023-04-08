@@ -18,6 +18,7 @@ package service
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
@@ -73,7 +74,7 @@ func TestSlice_Track(t *testing.T) {
 			t.Parallel()
 
 			// WHEN Track is called on it
-			slice.Track(&tc.ordering)
+			slice.Track(&tc.ordering, &sync.RWMutex{})
 
 			// THEN the function exits straight away
 			time.Sleep(time.Second)

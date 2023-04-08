@@ -76,29 +76,22 @@ func convertAndCensorDefaults(input *config.Defaults) (defaults *api_type.Defaul
 		Service: api_type.Service{
 			Options: &api_type.ServiceOptions{
 				Interval:           input.Service.Options.Interval,
-				SemanticVersioning: input.Service.Options.SemanticVersioning,
-			},
+				SemanticVersioning: input.Service.Options.SemanticVersioning},
 			LatestVersion: &api_type.LatestVersion{
 				AccessToken:       util.DefaultOrValue(input.Service.LatestVersion.AccessToken, "<secret>"),
 				AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
-				UsePreRelease:     input.Service.LatestVersion.UsePreRelease,
-			},
+				UsePreRelease:     input.Service.LatestVersion.UsePreRelease},
 			DeployedVersionLookup: &api_type.DeployedVersionLookup{
-				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts,
-			},
+				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts},
 			Dashboard: &api_type.DashboardOptions{
-				AutoApprove: input.Service.Dashboard.AutoApprove,
-			},
-		},
+				AutoApprove: input.Service.Dashboard.AutoApprove}},
 		Notify: *convertAndCensorNotifySlice(&input.Service.Notify),
 		WebHook: api_type.WebHook{
 			Delay:             input.WebHook.Delay,
 			MaxTries:          input.WebHook.MaxTries,
 			AllowInvalidCerts: input.WebHook.AllowInvalidCerts,
 			DesiredStatusCode: input.WebHook.DesiredStatusCode,
-			SilentFails:       input.WebHook.SilentFails,
-		},
-	}
+			SilentFails:       input.WebHook.SilentFails}}
 	return
 }
 
@@ -118,8 +111,7 @@ func (api *API) announceDelete(serviceID string) {
 		Page:    "APPROVALS",
 		Type:    "DELETE",
 		SubType: serviceID,
-		Order:   &api.Config.Order,
-	})
+		Order:   &api.Config.Order})
 	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
@@ -136,11 +128,10 @@ func (api *API) announceEdit(oldData *api_type.ServiceSummary, newData *api_type
 		Page:        "APPROVALS",
 		Type:        "EDIT",
 		SubType:     serviceChanged,
-		ServiceData: newData,
-	})
+		ServiceData: newData})
 
 	// If the service has been changed, the payload will have more than 16 double quotes.
-	//       2         4      6      8         10               12             14        16
+	//  1    2 3       4 5    6 7    8 9       10 11            12 13          14  15    16
 	// {"page":"SERVICE","type":"EDIT","sub_type":"serviceChanged","service_data":{"status":{}}}
 	if strings.Count(string(payloadData), `"`) >= 16 {
 		*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
@@ -163,8 +154,7 @@ func (api *API) announceService(name string, client *Client, logFrom *util.LogFr
 		Page:        "APPROVALS",
 		Type:        "SERVICE",
 		SubType:     "INIT",
-		ServiceData: service.Summary(),
-	}
+		ServiceData: service.Summary()}
 
 	api.wsSendJSON(client, msg, logFrom)
 }

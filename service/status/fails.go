@@ -225,6 +225,7 @@ func (f *Fails) String() (out string) {
 	}
 
 	if len(out) != 0 {
+		// Trim the trailing ', '
 		out = out[:len(out)-2]
 	}
 	return

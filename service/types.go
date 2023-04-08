@@ -147,7 +147,7 @@ func (s *Service) Convert() {
 	}
 
 	if didConvert {
-		*s.Status.SaveChannel <- true
+		s.Status.SendSave()
 	}
 }
 
@@ -173,7 +173,5 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 			DeployedVersionTimestamp: s.Status.GetDeployedVersionTimestamp(),
 			LatestVersion:            s.Status.GetLatestVersion(),
 			LatestVersionTimestamp:   s.Status.GetLatestVersionTimestamp(),
-			LastQueried:              s.Status.GetLastQueried(),
-		},
-	}
+			LastQueried:              s.Status.GetLastQueried()}}
 }

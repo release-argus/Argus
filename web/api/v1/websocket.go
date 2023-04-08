@@ -41,8 +41,7 @@ func (api *API) wsServiceInit(client *Client) {
 		Page:    "APPROVALS",
 		Type:    "SERVICE",
 		SubType: "ORDERING",
-		Order:   &api.Config.Order,
-	}
+		Order:   &api.Config.Order}
 	api.wsSendJSON(client, msg, &logFrom)
 
 	// Initialise the services
@@ -152,8 +151,7 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		command := (*svc.CommandController.Command)[i].ApplyTemplate(&svc.Status)
 		commandSummary[command.String()] = &api_type.CommandSummary{
 			Failed:       svc.Status.Fails.Command.Get(i),
-			NextRunnable: svc.CommandController.GetNextRunnable(i),
-		}
+			NextRunnable: svc.CommandController.GetNextRunnable(i)}
 	}
 
 	msg := api_type.WebSocketMessage{
@@ -161,10 +159,8 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		Type:    "COMMAND",
 		SubType: "SUMMARY",
 		ServiceData: &api_type.ServiceSummary{
-			ID: id,
-		},
-		CommandData: commandSummary,
-	}
+			ID: id},
+		CommandData: commandSummary}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -208,10 +204,8 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 		Type:    "WEBHOOK",
 		SubType: "SUMMARY",
 		ServiceData: &api_type.ServiceSummary{
-			ID: id,
-		},
-		WebHookData: webhookSummary,
-	}
+			ID: id},
+		WebHookData: webhookSummary}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -225,23 +219,19 @@ func (api *API) wsStatus(client *Client) {
 		Build: api_type.BuildInfo{
 			Version:   util.Version,
 			BuildDate: util.BuildDate,
-			GoVersion: util.GoVersion,
-		},
+			GoVersion: util.GoVersion},
 		Runtime: api_type.RuntimeInfo{
 			StartTime:      util.StartTime,
 			CWD:            util.CWD,
 			GoRoutineCount: runtime.NumGoroutine(),
 			GOMAXPROCS:     runtime.GOMAXPROCS(0),
 			GoGC:           os.Getenv("GOGC"),
-			GoDebug:        os.Getenv("GODEBUG"),
-		},
-	}
+			GoDebug:        os.Getenv("GODEBUG")}}
 
 	msg := api_type.WebSocketMessage{
 		Page:     "RUNTIME_BUILD",
 		Type:     "INIT",
-		InfoData: &info,
-	}
+		InfoData: &info}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -263,9 +253,7 @@ func (api *API) wsFlags(client *Client) {
 			WebListenPort:    api.Config.Settings.GetWebListenPort(),
 			WebCertFile:      api.Config.Settings.GetWebCertFile(),
 			WebPKeyFile:      api.Config.Settings.GetWebKeyFile(),
-			WebRoutePrefix:   api.Config.Settings.GetWebRoutePrefix(),
-		},
-	}
+			WebRoutePrefix:   api.Config.Settings.GetWebRoutePrefix()}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -283,18 +271,13 @@ func (api *API) wsConfigSettings(client *Client) {
 			Settings: &api_type.Settings{
 				Log: api_type.LogSettings{
 					Timestamps: api.Config.Settings.Log.Timestamps,
-					Level:      api.Config.Settings.Log.Level,
-				},
+					Level:      api.Config.Settings.Log.Level},
 				Web: api_type.WebSettings{
 					ListenHost:  api.Config.Settings.Web.ListenHost,
 					ListenPort:  api.Config.Settings.Web.ListenPort,
 					CertFile:    api.Config.Settings.Web.CertFile,
 					KeyFile:     api.Config.Settings.Web.KeyFile,
-					RoutePrefix: api.Config.Settings.Web.RoutePrefix,
-				},
-			},
-		},
-	}
+					RoutePrefix: api.Config.Settings.Web.RoutePrefix}}}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -316,25 +299,17 @@ func (api *API) wsConfigDefaults(client *Client) {
 				Service: api_type.Service{
 					Options: &api_type.ServiceOptions{
 						Interval:           api.Config.Defaults.Service.Options.Interval,
-						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning,
-					},
+						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning},
 					LatestVersion: &api_type.LatestVersion{
 						AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
 						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
-						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
-					},
+						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease},
 					DeployedVersionLookup: &api_type.DeployedVersionLookup{
-						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts,
-					},
+						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts},
 					Dashboard: &api_type.DashboardOptions{
-						AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove,
-					},
-				},
+						AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove}},
 				Notify:  *notifyDefaults,
-				WebHook: *webhookDefaults,
-			},
-		},
-	}
+				WebHook: *webhookDefaults}}}
 
 	msg.ConfigData.Defaults.Notify = *msg.ConfigData.Defaults.Notify.Censor()
 	api.wsSendJSON(client, msg, &logFrom)
@@ -351,9 +326,7 @@ func (api *API) wsConfigNotify(client *Client) {
 		Type:    "NOTIFY",
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
-			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify),
-		},
-	}
+			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify)}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -368,9 +341,7 @@ func (api *API) wsConfigWebHook(client *Client) {
 		Type:    "WEBHOOK",
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
-			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook),
-		},
-	}
+			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook)}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -396,8 +367,6 @@ func (api *API) wsConfigService(client *Client) {
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
 			Service: &serviceConfig,
-			Order:   api.Config.Order,
-		},
-	}
+			Order:   api.Config.Order}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
