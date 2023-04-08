@@ -30,15 +30,14 @@ type GitHub struct {
 // setCustomHeaders of the req.
 func (w *WebHook) setCustomHeaders(req *http.Request) {
 	var customHeaders *Headers
-	// trunk-ignore(golangci-lint/gocritic)
-	if w.CustomHeaders != nil {
+	switch {
+	case w.CustomHeaders != nil:
 		customHeaders = w.CustomHeaders
-	} else if w.Main.CustomHeaders != nil {
+	case w.Main.CustomHeaders != nil:
 		customHeaders = w.Main.CustomHeaders
-	} else if w.Defaults.CustomHeaders != nil {
+	case w.Defaults.CustomHeaders != nil:
 		customHeaders = w.Defaults.CustomHeaders
-	}
-	if customHeaders == nil {
+	default:
 		return
 	}
 

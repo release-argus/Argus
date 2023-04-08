@@ -154,7 +154,8 @@ func TestService_Track(t *testing.T) {
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
 			urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook: testWebHook(false), autoApprove: true,
+			webhook:            testWebHook(false),
+			autoApprove:        true,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			wantAnnounces:       2, // announce: 1 for latest query, 1 for deployed
