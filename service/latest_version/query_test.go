@@ -336,6 +336,7 @@ no releases were found matching the url_commands and/or require`},
 				if err != nil {
 					errors += "--" + err.Error()
 				}
+				t.Logf("attempt %d, ETag: %s", attempt, lookup.GitHubData.ETag)
 			}
 
 			// THEN any err is expected

@@ -17,6 +17,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 func boolPtr(val bool) *bool {
@@ -86,10 +88,10 @@ func testSettings() Settings {
 	}
 }
 
-var loadMutex sync.Mutex
+var loadMutex sync.RWMutex
 
-func testLoad(file string, t *testing.T) *Config {
-	var config Config
+func testLoad(file string, t *testing.T) (config *Config) {
+	config = &Config{}
 
 	flags := make(map[string]bool)
 	log := util.NewJLog("WARN", true)
@@ -98,7 +100,36 @@ func testLoad(file string, t *testing.T) *Config {
 	config.Load(file, &flags, log)
 	t.Cleanup(func() { os.Remove(*config.Settings.GetDataDatabaseFile()) })
 
-	return &config
+	return
+}
+
+func testLoadBasic(file string, t *testing.T) (config *Config) {
+	config = &Config{}
+
+	config.File = file
+
+	//#nosec G304 -- Loading the test config file
+	data, err := os.ReadFile(file)
+	msg := fmt.Sprintf("Error reading %q\n%s", file, err)
+	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+
+	err = yaml.Unmarshal(data, config)
+	msg = fmt.Sprintf("Unmarshal of %q failed\n%s", file, err)
+	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+
+	saveChannel := make(chan bool, 32)
+	config.SaveChannel = &saveChannel
+	config.HardDefaults.Service.Status.SaveChannel = config.SaveChannel
+
+	databaseChannel := make(chan dbtype.Message, 32)
+	config.DatabaseChannel = &databaseChannel
+	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
+
+	config.GetOrder(data)
+	config.Init()
+	config.CheckValues()
+
+	return
 }
 
 func testServiceURL(id string) *service.Service {
@@ -176,4 +207,9 @@ func testServiceURL(id string) *service.Service {
 	svc.Status.SetDeployedVersion("0.0.0", false)
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 	return svc
+}
+
+func TestMain(m *testing.M) {
+	LogInit(util.NewJLog("DEBUG", true))
+	os.Exit(m.Run())
 }

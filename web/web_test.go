@@ -69,14 +69,17 @@ func TestMainWithRoutePrefix(t *testing.T) {
 
 	// WHEN the Web UI is started with this Config
 	go Run(cfg, util.NewJLog("WARN", false))
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// THEN Web UI is accessible
 	url := fmt.Sprintf("http://localhost:%s%s/metrics",
 		*cfg.Settings.Web.ListenPort, *cfg.Settings.Web.RoutePrefix)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Error making request: %s", err)
+	}
 	if resp.StatusCode != 200 {
 		t.Errorf("Should have got a 200 from a GET on %s",
 			url)

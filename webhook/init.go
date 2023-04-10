@@ -214,6 +214,9 @@ func (w *WebHook) GetMaxTries() uint {
 
 // GetRequest will return the WebHook http.request ready to be sent.
 func (w *WebHook) GetRequest() (req *http.Request) {
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
+
 	var err error
 	switch w.GetType() {
 	case "github":

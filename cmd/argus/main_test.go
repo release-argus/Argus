@@ -91,6 +91,25 @@ func TestTheMain(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
+			go func() {
+				accessToken := os.Getenv("GITHUB_TOKEN")
+				if accessToken == "" {
+					return
+				}
+				for {
+					config.OrderMutex.RLock()
+					done := false
+					if len(config.Order) != 0 {
+						config.Defaults.Service.AccessToken = &accessToken
+						done = true
+					}
+					if done {
+						return
+					}
+					config.OrderMutex.RUnlock()
+					time.Sleep(100 * time.Millisecond)
+				}
+			}()
 
 			// WHEN Main is called
 			go func() {

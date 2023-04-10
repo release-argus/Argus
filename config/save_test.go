@@ -116,26 +116,26 @@ func TestConfig_Save(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		file := name
-		tc.file(file, t)
-		t.Log(file)
-		config := Config{File: file}
-		originalData, err := os.ReadFile(config.File)
-		had := string(originalData)
-		if err != nil {
-			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-				err.Error())
-		}
-		flags := make(map[string]bool)
-		config.Load(config.File, &flags, &util.JLog{}) // Global vars could otherwise DATA RACE
-		defer os.Remove(*config.Settings.GetDataDatabaseFile())
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			file := name
+			tc.file(file, t)
+			t.Log(file)
+			originalData, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
+					err.Error())
+			}
+			had := string(originalData)
+			config := testLoadBasic(file, t)
+
 			// WHEN we Save it to a new location
 			config.File += ".test"
+			t.Cleanup(func() { os.Remove(config.File) })
+			loadMutex.RLock()
 			config.Save()
+			loadMutex.RUnlock()
 
 			// THEN it's the same as the original file
 			failed := false

@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/release-argus/Argus/config"
@@ -79,6 +80,10 @@ func testLoad(file string) *config.Config {
 func testAPI(name string) API {
 	testYAML_Argus(name)
 	cfg := testLoad(name)
+	accessToken := os.Getenv("GITHUB_TOKEN")
+	if accessToken != "" {
+		cfg.HardDefaults.Service.AccessToken = &accessToken
+	}
 	return API{
 		Config: cfg,
 		Log:    util.NewJLog("WARN", false),

@@ -176,8 +176,7 @@ func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
 	}
 
 	return fmt.Errorf(
-		"%sWebHook gave %d, not %s:\n%s\n%s",
-		util.FormatMessageSource(*logFrom),
+		"WebHook gave %d, not %s:\n%s\n%s",
 		resp.StatusCode,
 		prettyStatusCode,
 		resp.Status,

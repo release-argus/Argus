@@ -69,7 +69,7 @@ func TestConfig_RenameService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
 			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
@@ -78,6 +78,8 @@ func TestConfig_RenameService(t *testing.T) {
 			time.Sleep(time.Second)
 
 			// THEN the order should be as expected
+			cfg.OrderMutex.RLock()
+			defer cfg.OrderMutex.RUnlock()
 			if len(cfg.Order) != len(tc.wantOrder) {
 				t.Errorf("Order length mismatch: got %d, want %d", len(cfg.Order), len(tc.wantOrder))
 			}
@@ -128,13 +130,15 @@ func TestConfig_DeleteService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
 
 			// WHEN the service is deleted
 			cfg.DeleteService(tc.name)
 			logMutex.Unlock()
 
 			// THEN the service was removed
+			cfg.OrderMutex.RLock()
+			defer cfg.OrderMutex.RUnlock()
 			if cfg.Service[tc.name] != nil {
 				t.Errorf("%q was not removed", tc.name)
 			}
@@ -155,7 +159,6 @@ func TestConfig_DeleteService(t *testing.T) {
 
 func TestConfig_AddService(t *testing.T) {
 	// GIVEN a service to add/replace/rename and a Config to act on
-	jLog = util.NewJLog("WARN", true)
 	tests := map[string]struct {
 		newService *service.Service
 		oldService string
@@ -202,18 +205,22 @@ func TestConfig_AddService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoad(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
 			if tc.nilMap {
 				cfg.Service = nil
 				cfg.Order = []string{}
 			}
 
 			// WEHN AddService is called
+			loadMutex.RLock()
 			cfg.AddService(tc.oldService, tc.newService)
+			loadMutex.RUnlock()
 			logMutex.Unlock()
 
 			// THEN the service is
 			// added/renamed/replaced
+			cfg.OrderMutex.RLock()
+			defer cfg.OrderMutex.RUnlock()
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
 				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
 			}

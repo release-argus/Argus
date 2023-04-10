@@ -156,7 +156,7 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 	{
 		s.deployedVersion = version
 		s.deployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
-		// Ignore ApprovedVersion if we're on it
+		// Reset ApprovedVersion if we're on it
 		if version == s.approvedVersion {
 			s.approvedVersion = ""
 		}

@@ -167,6 +167,12 @@ func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level > 2 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+
+		// limit size of msgString to 1000 chars
+		if len(msgString) > 1000 {
+			msgString = msgString[:1000] + "..."
+		}
+
 		// VERBOSE: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("VERBOSE: %s\n", msgString)

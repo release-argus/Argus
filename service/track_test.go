@@ -321,7 +321,7 @@ func TestService_Track(t *testing.T) {
 				}
 				time.Sleep(50 * time.Millisecond)
 			}
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			// Check that we waited until interval had gone since the last latestVersionLookup
 			if tc.wantQueryIn != "" {
 				// When we'd expect the query to be done after

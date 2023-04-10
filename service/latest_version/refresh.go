@@ -118,11 +118,6 @@ func (l *Lookup) applyOverrides(
 		}
 	}
 
-	// require
-	if lookup.Require != nil {
-		lookup.Require.Status = lookup.Status
-	}
-
 	if err := lookup.CheckValues(""); err != nil {
 		jLog.Error(err, *logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)

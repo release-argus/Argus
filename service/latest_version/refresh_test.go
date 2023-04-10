@@ -17,6 +17,7 @@
 package latestver
 
 import (
+	"os"
 	"regexp"
 	"testing"
 
@@ -278,7 +279,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			}
 			// AND we get the expected result otherwise
 			if tc.want.String() != got.String() {
-				t.Errorf("expected:\n%v\nbut got:\n%v", tc.want, got)
+				t.Errorf("expected:\n%v\nbut got:\n%v",
+					tc.want, got)
 			}
 			// AND the GitHubData is only carried over to github types
 			if tc.want.GitHubData.String() != got.GitHubData.String() {
@@ -295,6 +297,7 @@ func TestLookup_Refresh(t *testing.T) {
 	testURL.Query(true, &util.LogFrom{})
 	testVersionURL := testURL.Status.GetLatestVersion()
 	testGitHub := testLookup(false, false)
+	testGitHub.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 	testGitHub.Query(true, &util.LogFrom{})
 	testVersionGitHub := testGitHub.Status.GetLatestVersion()
 
@@ -361,7 +364,7 @@ func TestLookup_Refresh(t *testing.T) {
 				URLCommands:       testGitHub.URLCommands,
 				Require:           testGitHub.Require,
 				Options:           testGitHub.Options,
-				GitHubData:        testGitHub.GitHubData,
+				GitHubData:        &GitHubData{},
 				Status: &svcstatus.Status{
 					ServiceID: stringPtr("Refresh new version")},
 				Defaults:     testGitHub.Defaults,
@@ -378,6 +381,7 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.previous.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 			// Copy the starting status
 			tc.previous.Status.Init(
 				0, 0, 0,

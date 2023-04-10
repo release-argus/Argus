@@ -28,8 +28,11 @@ import (
 
 // LogInit for Argus.
 func LogInit(log *util.JLog) {
-	jLog = log
+	if jLog != nil {
+		return
+	}
 
+	jLog = log
 	service.LogInit(jLog)
 }
 

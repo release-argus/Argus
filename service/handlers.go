@@ -59,8 +59,9 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
-	if s.Status.GetApprovedVersion() != s.Status.GetLatestVersion() {
-		s.Status.SetApprovedVersion(s.Status.GetLatestVersion(), true)
+	lv := s.Status.GetLatestVersion()
+	if s.Status.GetApprovedVersion() != lv {
+		s.Status.SetApprovedVersion(lv, true)
 	}
 }
 

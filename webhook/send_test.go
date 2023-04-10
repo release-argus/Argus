@@ -24,8 +24,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestWebHook_Try(t *testing.T) {
@@ -118,7 +120,7 @@ func TestWebHook_Send(t *testing.T) {
 		useDelay      bool
 		delay         string
 		stdoutRegex   string
-		tries         int
+		retries       int
 		silentFails   bool
 		notifiers     shoutrrr.Slice
 		deleting      bool
@@ -149,9 +151,9 @@ func TestWebHook_Send(t *testing.T) {
 			customHeaders: true,
 			stdoutRegex:   `failed \d times to send`,
 		},
-		"tries multiple times": {
+		"retries multiple times": {
 			wouldFail:   true,
-			tries:       2,
+			retries:     2,
 			stdoutRegex: `(WebHook gave 500.*){2}WebHook received`,
 		},
 		"does try notifiers on fail": {
@@ -189,20 +191,30 @@ func TestWebHook_Send(t *testing.T) {
 					webhook.ServiceStatus.SetDeleting()
 				}
 				webhook.Delay = tc.delay
-				maxTries := uint(tc.tries + 1)
+				maxTries := uint(tc.retries + 1)
 				webhook.MaxTries = &maxTries
 				webhook.SilentFails = &tc.silentFails
 				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
-				if tc.tries > 0 {
+				serviceInfo := &util.ServiceInfo{ID: name}
+				if tc.retries > 0 {
 					go func() {
-						time.Sleep(time.Duration(6*(tc.tries-1))*time.Second + time.Second)
+						fails := testutil.ToFloat64(metric.WebHookMetric.WithLabelValues(
+							webhook.ID, "FAIL", serviceInfo.ID))
+						for fails < float64(tc.retries) {
+							fails = testutil.ToFloat64(metric.WebHookMetric.WithLabelValues(
+								webhook.ID, "FAIL", serviceInfo.ID))
+							time.Sleep(time.Millisecond * 200)
+						}
+						t.Logf("Failed %d times", tc.retries)
+						webhook.mutex.Lock()
 						webhook.Secret = "argus"
+						webhook.mutex.Unlock()
 					}()
 				}
 
 				// WHEN try is called with it
 				startAt := time.Now()
-				webhook.Send(&util.ServiceInfo{ID: name}, tc.useDelay)
+				webhook.Send(serviceInfo, tc.useDelay)
 
 				// THEN the logs are expected
 				completedAt := time.Now()
