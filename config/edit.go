@@ -51,6 +51,8 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 		// Keeping the same ID
 		if oldServiceID == newService.ID {
 			jLog.Info("Replacing service", logFrom, true)
+			// Delete the old service
+			c.Service[oldServiceID].PrepDelete()
 
 			// Old service being given a new ID
 		} else {
