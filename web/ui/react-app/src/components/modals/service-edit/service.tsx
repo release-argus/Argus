@@ -60,7 +60,7 @@ const EditService: FC<Props> = ({ name }) => {
   }, [isFetchedServiceData, isFetchedOtherOptionsData]);
 
   return loading ? (
-    <Loading />
+    <Loading name={name} />
   ) : (
     <Stack gap={3}>
       <Form.Group className="mb-2">

@@ -553,3 +553,7 @@ code {
 .error-msg {
   color: var(--alert-danger-color);
 }
+
+.bg-transparent {
+  background-color: transparent;
+}

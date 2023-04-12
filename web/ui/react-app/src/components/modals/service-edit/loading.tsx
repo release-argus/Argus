@@ -1,10 +1,16 @@
-import { Accordion, Form, Placeholder, Stack } from "react-bootstrap";
+import { Accordion, Container, Form, Stack } from "react-bootstrap";
 
+import { FC } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
+import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 
-export const Loading = () => {
-  const delayedRender = useDelayedRender(250);
+interface Props {
+  name: string;
+}
+export const Loading: FC<Props> = ({ name }) => {
+  const delayedRender = useDelayedRender(500);
   const accordionHeaders = [
     "Options:",
     "Latest Version:",
@@ -19,18 +25,24 @@ export const Loading = () => {
       <Form.Group className="mb-2">
         <Form.Group className="mb-2">
           <FormLabel text="Name" required />
-          {delayedRender(() => (
-            <Placeholder xs={12} style={{ fontSize: "2rem" }} />
-          ))}
+          <Form.Control
+            autoFocus={false}
+            defaultValue={name}
+            disabled
+            className="bg-transparent"
+          />
         </Form.Group>
         <Form.Group className="mb-2">
           <FormLabel text="Comment" />
-          {delayedRender(() => (
-            <Placeholder xs={12} style={{ fontSize: "2rem" }} />
-          ))}
+          <Form.Control autoFocus={false} disabled className="bg-transparent" />
         </Form.Group>
+        {delayedRender(() => (
+          <Container className="empty">
+            <FontAwesomeIcon icon={faCircleNotch} className={"fa-spin"} />
+            <span style={{ paddingLeft: "0.5rem" }}>Loading...</span>
+          </Container>
+        ))}
       </Form.Group>
-      <br />
       {accordionHeaders.map((title) => {
         return (
           <Accordion key={title}>
