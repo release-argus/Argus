@@ -29,8 +29,10 @@ func (l *Lookup) Print(prefix string) {
 	fmt.Printf("%sdeployed_version:\n", prefix)
 	prefix += "  "
 
-	util.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	util.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
+	util.PrintlnIfNotDefault(l.URL,
+		fmt.Sprintf("%surl: %s", prefix, l.URL))
+	util.PrintlnIfNotNil(l.AllowInvalidCerts,
+		fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
 	if l.BasicAuth != nil {
 		fmt.Printf("%sbasic_auth:\n", prefix)
 		fmt.Printf("%s  username: %s\n", prefix, l.BasicAuth.Username)
@@ -43,8 +45,10 @@ func (l *Lookup) Print(prefix string) {
 			fmt.Printf("%s    value: <secret>\n", prefix)
 		}
 	}
-	util.PrintlnIfNotDefault(l.JSON, fmt.Sprintf("%sjson: %q", prefix, l.JSON))
-	util.PrintlnIfNotDefault(l.Regex, fmt.Sprintf("%sregex: %q", prefix, l.Regex))
+	util.PrintlnIfNotDefault(l.JSON,
+		fmt.Sprintf("%sjson: %q", prefix, l.JSON))
+	util.PrintlnIfNotDefault(l.Regex,
+		fmt.Sprintf("%sregex: %q", prefix, l.Regex))
 }
 
 // CheckValues of the Lookup.

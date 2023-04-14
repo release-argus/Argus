@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -72,41 +73,45 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	// Lock to prevent concurrent write panics
+	mutex sync.Mutex
 }
 
-func getIP(r *http.Request) string {
+func getIP(r *http.Request) (ip string) {
 	// Get IP from the CF-Connecting-Ip header
-	ip := r.Header.Get("CF-Connecting-Ip")
+	ip = r.Header.Get("CF-Connecting-Ip")
 	netIP := net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	// Get IP from the X-Real-Ip header
 	ip = r.Header.Get("X-Real-Ip")
 	netIP = net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	// Get IP from X-Forwarded-For header
 	ips := r.Header.Get("X-Forwarded-For")
 	splitIps := strings.Split(ips, ",")
-	for _, ip := range splitIps {
+	for _, ip = range splitIps {
 		netIP := net.ParseIP(ip)
 		if netIP != nil {
-			return ip
+			return
 		}
 	}
 
 	// Get IP from RemoteAddr
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	var err error
+	ip, _, err = net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return ""
 	}
 	netIP = net.ParseIP(ip)
 	if netIP != nil {
-		return ip
+		return
 	}
 
 	return ""
@@ -156,11 +161,11 @@ func (c *Client) readPump() {
 			break
 		}
 
-		c.api.Log.Debug(
-			fmt.Sprintf("READ %s", message),
-			util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-			true,
-		)
+		if c.api.Log.IsLevel("DEBUG") {
+			c.api.Log.Debug(
+				fmt.Sprintf("READ %s", message),
+				util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+		}
 
 		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
 		// Check it's not trying to be a server message by omitting the version key
@@ -230,7 +235,7 @@ func (c *Client) writePump() {
 			// If message is from the server (doesn't use version)
 			if msg.Version == nil {
 				switch msg.Type {
-				case "VERSION", "WEBHOOK", "COMMAND":
+				case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
 					err := c.conn.WriteJSON(msg)
 					c.api.Log.Error(
 						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, util.ErrorToString(err)),
@@ -252,7 +257,7 @@ func (c *Client) writePump() {
 					switch msg.Type {
 					case "VERSION":
 						// Approval/Skip
-						go c.api.wsServiceAction(c, msg)
+						c.api.wsServiceAction(c, msg)
 					case "ACTIONS":
 						// Get Command data for a service
 						c.api.wsCommand(c, msg)
@@ -260,7 +265,7 @@ func (c *Client) writePump() {
 						c.api.wsWebHook(c, msg)
 					case "INIT":
 						// Get all Service data
-						go c.api.wsService(c)
+						c.api.wsServiceInit(c)
 					default:
 						c.api.Log.Error(
 							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", msg.Type, string(message)),

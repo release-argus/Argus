@@ -42,7 +42,7 @@ jobs:
 
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date -u +"%FT%TZ")"
+        run: echo "date=$(date -u +"%FT%TZ")" >> $GITHUB_OUTPUT
 
       - name: Build
         run: >-

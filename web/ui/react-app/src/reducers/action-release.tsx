@@ -1,10 +1,10 @@
 import { ActionModalData } from "types/summary";
-import { isAfterDate } from "utils/is_after_date";
-import { websocketResponse } from "types/websocket";
+import { WebSocketResponse } from "types/websocket";
+import { isAfterDate } from "utils";
 
 export default function reducerActionModal(
   state: ActionModalData,
-  action: websocketResponse
+  action: WebSocketResponse
 ): ActionModalData {
   // eslint-disable-next-line prefer-const
   let newState: ActionModalData = JSON.parse(JSON.stringify(state));
@@ -27,12 +27,12 @@ export default function reducerActionModal(
         case "SUMMARY":
           newState.commands = state.commands;
 
-          action.webhook_data
-            ? (newState.webhooks = action.webhook_data)
-            : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              (newState.commands = action.command_data!);
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          newState.service_id = action.service_data!.id;
+          if (action.webhook_data !== undefined) {
+            newState.webhooks = action.webhook_data;
+          } else if (action.command_data !== undefined) {
+            newState.commands = action.command_data;
+          }
+          newState.service_id = action.service_data.id;
           break;
         case "EVENT":
           if (action.webhook_data) {
@@ -40,15 +40,13 @@ export default function reducerActionModal(
               // Remove them from the sending list
               newState.sentWH.splice(
                 newState.sentWH.indexOf(
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  `${action.service_data!.id} ${webhook_id}`
+                  `${action.service_data.id} ${webhook_id}`
                 ),
                 1
               );
 
               // Record the success/fail
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              if (newState.service_id === action.service_data!.id) {
+              if (newState.service_id === action.service_data.id) {
                 newState.webhooks[webhook_id] = {
                   failed: action.webhook_data[webhook_id].failed,
                   next_runnable: action.webhook_data[webhook_id].next_runnable,
@@ -56,17 +54,15 @@ export default function reducerActionModal(
               }
             }
           } else {
-            for (const command in action?.command_data) {
+            for (const command in action.command_data) {
               // Remove them from the sending list
               newState.sentC.splice(
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                newState.sentC.indexOf(`${action.service_data!.id} ${command}`),
+                newState.sentC.indexOf(`${action.service_data.id} ${command}`),
                 1
               );
 
               // Record the success/fail
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              if (newState.service_id === action.service_data!.id) {
+              if (newState.service_id === action.service_data.id) {
                 newState.commands[command] = {
                   failed: action.command_data[command].failed,
                   next_runnable: action.command_data[command].next_runnable,

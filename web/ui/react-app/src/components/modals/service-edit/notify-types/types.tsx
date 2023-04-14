@@ -1,0 +1,18 @@
+export const TYPE_OPTIONS = [
+  { value: "discord", label: "Discord" },
+  { value: "smtp", label: "Email (SMTP)" },
+  { value: "googlechat", label: "Google Chat" },
+  { value: "gotify", label: "Gotify" },
+  { value: "ifttt", label: "IFTTT" },
+  { value: "join", label: "Join" },
+  { value: "mattermost", label: "MatterMost" },
+  { value: "matrix", label: "Matrix" },
+  { value: "opsgenie", label: "OpsGenie" },
+  { value: "pushbullet", label: "PushBullet" },
+  { value: "pushover", label: "PushOver" },
+  { value: "rocketchat", label: "Rocket.Chat" },
+  { value: "slack", label: "Slack" },
+  { value: "teams", label: "Teams" },
+  { value: "telegram", label: "Telegram" },
+  { value: "zulip", label: "Zulip Chat" },
+];

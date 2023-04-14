@@ -52,16 +52,17 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 	return
 }
 
-func (c *Command) CheckValues() error {
+func (c *Command) CheckValues() (err error) {
 	if c == nil {
-		return nil
+		return
 	}
 
 	for i := range *c {
 		if !util.CheckTemplate((*c)[i]) {
-			return fmt.Errorf("%s (%q) <invalid> (didn't pass templating)\\",
+			err = fmt.Errorf("%s (%q) <invalid> (didn't pass templating)\\",
 				c.String(), (*c)[i])
+			return
 		}
 	}
-	return nil
+	return
 }

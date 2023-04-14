@@ -1,4 +1,5 @@
 import { Button, Toast } from "react-bootstrap";
+import { FC, useEffect } from "react";
 import {
   faCheckCircle,
   faExclamationCircle,
@@ -11,17 +12,16 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotificationType } from "types/notification";
 import { formatRelative } from "date-fns";
-import { useEffect } from "react";
 import useNotification from "hooks/notifications";
 
-const Notification = ({
+const Notification: FC<NotificationType> = ({
   id,
   title,
   type,
   body,
   small,
   delay,
-}: NotificationType) => {
+}) => {
   const { removeNotification } = useNotification();
 
   useEffect(() => {

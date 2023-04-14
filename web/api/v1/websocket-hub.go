@@ -69,11 +69,12 @@ func (h *Hub) Run(jLog *util.JLog) {
 		case message := <-h.Broadcast:
 			n := len(h.Broadcast) + 1
 			for n != 0 {
-				jLog.Debug(
-					fmt.Sprintf("Broadcast %s", string(message)),
-					util.LogFrom{Primary: "WebSocket"},
-					len(h.clients) > 0,
-				)
+				if jLog.IsLevel("DEBUG") {
+					jLog.Debug(
+						fmt.Sprintf("Broadcast %s", string(message)),
+						util.LogFrom{Primary: "WebSocket"},
+						len(h.clients) > 0)
+				}
 				var msg AnnounceMSG
 				if err := json.Unmarshal(message, &msg); err != nil {
 					jLog.Warn(

@@ -28,7 +28,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestHTTPRequest(t *testing.T) {
+func TestLookup_HTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
 	testLogging("WARN")
 	tests := map[string]struct {
@@ -37,16 +37,26 @@ func TestHTTPRequest(t *testing.T) {
 		accessToken string
 		errRegex    string
 	}{
-		"invalid url":  {url: "invalid://	test", errRegex: "invalid control character in URL"},
-		"unknown url":  {url: "https://release-argus.invalid-tld", errRegex: "no such host"},
-		"valid url":    {url: "https://release-argus.io", errRegex: "^$"},
-		"github token": {url: "release-argus/Argus", accessToken: "foo", errRegex: "^$", githubType: true},
+		"invalid url": {
+			url:      "invalid://	test",
+			errRegex: "invalid control character in URL"},
+		"unknown url": {
+			url:      "https://release-argus.invalid-tld",
+			errRegex: "no such host"},
+		"valid url": {
+			url:      "https://release-argus.io",
+			errRegex: "^$"},
+		"github token": {
+			url:         "release-argus/Argus",
+			accessToken: "foo", githubType: true,
+			errRegex: "^$"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(!tc.githubType, false)
 			if tc.githubType && util.DefaultIfNil(lookup.AccessToken) == "" {
 				lookup.AccessToken = &tc.accessToken
@@ -54,7 +64,7 @@ func TestHTTPRequest(t *testing.T) {
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it
-			_, err := lookup.httpRequest(util.LogFrom{})
+			_, err := lookup.httpRequest(&util.LogFrom{})
 
 			// THEN any err is expected
 			e := util.ErrorToString(err)
@@ -68,7 +78,7 @@ func TestHTTPRequest(t *testing.T) {
 	}
 }
 
-func TestQuery(t *testing.T) {
+func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup
 	testLogging("WARN")
 	tests := map[string]struct {
@@ -77,6 +87,7 @@ func TestQuery(t *testing.T) {
 		url                   string
 		regex                 *string
 		latestVersion         string
+		deployedVersion       string
 		nonSemanticVersioning bool
 		allowInvalidCerts     bool
 		wantLatestVersion     *string
@@ -86,40 +97,138 @@ func TestQuery(t *testing.T) {
 		requireDockerCheck    *filter.DockerCheck
 		errRegex              string
 	}{
-		"invalid url": {url: "invalid://	test", errRegex: "invalid control character in URL"},
-		"query that gets a non-semantic version": {url: "https://valid.release-argus.io/plain", regex: stringPtr("v[0-9.]+"),
-			errRegex: "failed converting .* to a semantic version"},
-		"query on self-signed https works when allowed":     {url: "https://invalid.release-argus.io/plain", regex: stringPtr("v[0-9.]+"), errRegex: "failed converting .* to a semantic version", allowInvalidCerts: true},
-		"query on self-signed https fails when not allowed": {url: "https://invalid.release-argus.io/plain", regex: stringPtr("v[0-9.]+"), errRegex: "x509", allowInvalidCerts: false},
-		"changed to semantic_versioning but had a non-semantic latest_version": {latestVersion: "1.2.3.4",
-			errRegex: "failed converting .* to a semantic version .* old version"}, "regex content mismatch": {requireRegexContent: "argus[0-9]+.exe", errRegex: "regex .* not matched on content for version"},
-		"regex content match":                         {requireRegexContent: "v{{ version }}", errRegex: "^$"},
-		"regex version mismatch":                      {requireRegexVersion: "^v[0-9]+$", errRegex: "regex not matched on version"},
-		"command fail":                                {requireCommand: []string{"false"}, errRegex: "exit status 1"},
-		"command pass":                                {requireCommand: []string{"true"}, errRegex: "^$"},
-		"docker tag mismatch":                         {requireDockerCheck: &filter.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0-beta", Token: os.Getenv("GH_TOKEN")}, errRegex: "manifest unknown"},
-		"docker tag match":                            {requireDockerCheck: &filter.DockerCheck{Type: "ghcr", Image: "release-argus/argus", Tag: "0.9.0", Token: os.Getenv("GH_TOKEN")}, errRegex: "^$"},
-		"regex version match":                         {requireRegexVersion: "v([0-9.]+)", errRegex: "regex not matched on version"},
-		"urlCommand regex mismatch":                   {regex: stringPtr("^[0-9]+$"), errRegex: "regex .* didn't return any matches"},
-		"valid semantic version query":                {regex: stringPtr("v([0-9.]+)"), errRegex: "^$"},
-		"older version found":                         {regex: stringPtr("([0-9.]+)"), latestVersion: "9.9.9", errRegex: "queried version .* is less than the deployed version"},
-		"newer version found":                         {regex: stringPtr("([0-9.]+)"), latestVersion: "0.0.0", errRegex: "^$"},
-		"same version found":                          {regex: stringPtr("([0-9.]+)"), latestVersion: "1.2.1", errRegex: "^$"},
-		"no deployed version lookup":                  {regex: stringPtr("([0-9.]+)-beta"), errRegex: "^$", wantLatestVersion: stringPtr("1.2.2")},
-		"non-semantic version lookup":                 {regex: stringPtr("v[0-9.]+"), errRegex: "^$", wantLatestVersion: stringPtr("v1.2.2"), nonSemanticVersioning: true},
-		"github lookup":                               {githubService: true, errRegex: "^$"},
-		"github lookup with no access token":          {githubService: true, noAccessToken: true, errRegex: "^$"},
-		"github lookup with failing urlCommand match": {githubService: true, regex: stringPtr("x([0-9.]+)"), errRegex: "no releases were found matching the url_commands"},
+		"invalid url": {
+			url:      "invalid://	test",
+			errRegex: "invalid control character in URL",
+		},
+		"query that gets a non-semantic version": {
+			url:      "https://valid.release-argus.io/plain",
+			regex:    stringPtr("v[0-9.]+"),
+			errRegex: "failed converting .* to a semantic version",
+		},
+		"query on self-signed https works when allowed": {
+			url:               "https://invalid.release-argus.io/plain",
+			regex:             stringPtr("v[0-9.]+"),
+			allowInvalidCerts: true,
+			errRegex:          "failed converting .* to a semantic version",
+		},
+		"query on self-signed https fails when not allowed": {
+			url:               "https://invalid.release-argus.io/plain",
+			regex:             stringPtr("v[0-9.]+"),
+			allowInvalidCerts: false,
+			errRegex:          "x509",
+		},
+		"changed to semantic_versioning but had a non-semantic deployed_version": {
+			deployedVersion: "1.2.3.4",
+			errRegex:        `^$`,
+		},
+		"regex content mismatch": {
+			requireRegexContent: "argus[0-9]+.exe",
+			errRegex:            "regex .* not matched on content for version",
+		},
+		"regex content match": {
+			requireRegexContent: "v{{ version }}",
+			errRegex:            "^$",
+		},
+		"regex version mismatch": {
+			requireRegexVersion: "^v[0-9]+$",
+			errRegex:            "regex not matched on version",
+		},
+		"command fail": {
+			requireCommand: []string{"false"},
+			errRegex:       "exit status 1",
+		},
+		"command pass": {
+			requireCommand: []string{"true"},
+			errRegex:       "^$",
+		},
+		"docker tag mismatch": {
+			requireDockerCheck: &filter.DockerCheck{
+				Type:  "ghcr",
+				Image: "release-argus/argus",
+				Tag:   "0.9.0-beta",
+				Token: os.Getenv("GH_TOKEN")},
+			errRegex: "manifest unknown",
+		},
+		"docker tag match": {
+			requireDockerCheck: &filter.DockerCheck{
+				Type:  "ghcr",
+				Image: "release-argus/argus",
+				Tag:   "0.9.0",
+				Token: os.Getenv("GH_TOKEN")},
+			errRegex: "^$",
+		},
+		"regex version match": {
+			requireRegexVersion: "v([0-9.]+)",
+			errRegex:            "regex not matched on version",
+		},
+		"urlCommand regex mismatch": {
+			regex:    stringPtr("^[0-9]+$"),
+			errRegex: "regex .* didn't return any matches",
+		},
+		"valid semantic version query": {
+			regex:    stringPtr("v([0-9.]+)"),
+			errRegex: "^$",
+		},
+		"older version found": {
+			regex:           stringPtr("([0-9.]+)"),
+			latestVersion:   "0.0.0",
+			deployedVersion: "9.9.9",
+			errRegex:        "queried version .* is less than the deployed version",
+		},
+		"newer version found": {
+			regex:           stringPtr("([0-9.]+)"),
+			deployedVersion: "0.0.0",
+			errRegex:        "^$",
+		},
+		"same version found": {
+			regex:           stringPtr("([0-9.]+)"),
+			deployedVersion: "1.2.1",
+			errRegex:        "^$",
+		},
+		"no deployed version lookup": {
+			regex:             stringPtr("([0-9.]+)-beta"),
+			errRegex:          "^$",
+			wantLatestVersion: stringPtr("1.2.2"),
+		},
+		"non-semantic version lookup": {
+			regex:                 stringPtr("v[0-9.]+"),
+			errRegex:              "^$",
+			wantLatestVersion:     stringPtr("v1.2.2"),
+			nonSemanticVersioning: true,
+		},
+		"github lookup": {
+			githubService: true,
+			errRegex:      "^$",
+		},
+		"github lookup with no access token": {
+			githubService: true,
+			noAccessToken: true,
+			errRegex:      "^$",
+		},
+		"github lookup with failing urlCommand match": {
+			githubService: true,
+			regex:         stringPtr("x([0-9.]+)"),
+			errRegex:      "no releases were found matching the url_commands",
+		},
+		"url_command makes all versions non-semmantic": {
+			githubService: true,
+			regex:         stringPtr(`([0-9.]+\.)`),
+			errRegex:      "no releases were found matching the url_commands",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(!tc.githubService, tc.allowInvalidCerts)
+				// switch to LetsEncrypt cert
+				lookup.URL = strings.Replace(lookup.URL, "://invalid", "://valid", 1)
 				if tc.githubService && tc.noAccessToken {
 					lookup.AccessToken = nil
 				}
@@ -134,14 +243,15 @@ func TestQuery(t *testing.T) {
 					lookup.URLCommands[0].Regex = tc.regex
 				}
 				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
-				lookup.Status.LatestVersion = tc.latestVersion
+				lookup.Status.SetLatestVersion(tc.latestVersion, false)
+				lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
 				lookup.Require.RegexContent = tc.requireRegexContent
 				lookup.Require.RegexVersion = tc.requireRegexVersion
 				lookup.Require.Command = tc.requireCommand
 				lookup.Require.Docker = tc.requireDockerCheck
 
 				// WHEN Query is called on it
-				_, err := lookup.Query()
+				_, err := lookup.Query(true, &util.LogFrom{})
 
 				// THEN any err is expected
 				e := util.ErrorToString(err)
@@ -158,36 +268,57 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
-				if tc.wantLatestVersion != nil && *tc.wantLatestVersion != lookup.Status.LatestVersion {
+				if tc.wantLatestVersion != nil &&
+					*tc.wantLatestVersion != lookup.Status.GetLatestVersion() {
 					t.Fatalf("wanted LatestVersion to become %q, not %q",
-						*tc.wantLatestVersion, lookup.Status.LatestVersion)
+						*tc.wantLatestVersion, lookup.Status.GetLatestVersion())
 				}
 			}
 		})
 	}
 }
 
-func TestQueryGitHubETag(t *testing.T) {
+func TestLookup_QueryGitHubETag(t *testing.T) {
 	// GIVEN a Lookup
 	testLogging("VERBOSE")
 	tests := map[string]struct {
 		attempts                   int
 		eTagChanged                int
 		eTagUnchangedUseCache      int
-		eTagUnchangedNilCache      int
 		initialRequireRegexVersion string
+		urlCommands                filter.URLCommandSlice
 		errRegex                   string
 	}{
-		"three requests only uses 1 api limit": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 2, errRegex: `^$`},
-		"if initial request fails filter, cached results will be used": {attempts: 3, eTagChanged: 1, eTagUnchangedNilCache: 1, eTagUnchangedUseCache: 1,
-			initialRequireRegexVersion: `^FOO$`, errRegex: `regex not matched on version`},
+		// Keeps .Releases incase filters change
+		"three requests only uses 1 api limit": {
+			attempts:              3,
+			eTagChanged:           1,
+			eTagUnchangedUseCache: 2,
+			errRegex:              `^$`},
+		"if initial request fails filter, cached results will be used": {
+			attempts:                   3,
+			eTagChanged:                1,
+			eTagUnchangedUseCache:      2,
+			initialRequireRegexVersion: `^FOO$`,
+			errRegex:                   `regex not matched on version`},
+		"invalid url_commands will catch no versions": {
+			attempts:              2,
+			eTagChanged:           1,
+			eTagUnchangedUseCache: 1,
+			urlCommands: filter.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr(`^FOO$`)}},
+			errRegex: `no releases were found matching the url_commands
+no releases were found matching the url_commands and/or require`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			lookup := testLookup(false, false)
+			lookup.GitHubData.ETag = "foo"
 			lookup.Status.ServiceID = &name
 			lookup.Require.RegexVersion = tc.initialRequireRegexVersion
+			lookup.URLCommands = tc.urlCommands
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -201,16 +332,18 @@ func TestQueryGitHubETag(t *testing.T) {
 					lookup.Require = &filter.Require{}
 				}
 
-				_, err := lookup.Query()
+				_, err := lookup.Query(true, &util.LogFrom{})
 				if err != nil {
 					errors += "--" + err.Error()
 				}
+				t.Logf("attempt %d, ETag: %s", attempt, lookup.GitHubData.ETag)
 			}
 
 			// THEN any err is expected
 			w.Close()
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
+			tc.errRegex = strings.ReplaceAll(tc.errRegex, "\n", "--")
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(errors)
 			if !match {
@@ -220,10 +353,6 @@ func TestQueryGitHubETag(t *testing.T) {
 			gotETagChanged := strings.Count(string(out), "ETag changed")
 			if gotETagChanged != tc.eTagChanged {
 				t.Errorf("ETag changed - got=%d, want=%d\n%s", gotETagChanged, tc.eTagChanged, out)
-			}
-			gotETagUnchangedNilCache := strings.Count(string(out), "Latest version already matched all filters")
-			if gotETagUnchangedNilCache != tc.eTagUnchangedNilCache {
-				t.Errorf("ETag unchanged nil cache - got=%d, want=%d\n%s", gotETagUnchangedNilCache, tc.eTagUnchangedNilCache, out)
 			}
 			gotETagUnchangedUseCache := strings.Count(string(out), "Using cached releases")
 			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {

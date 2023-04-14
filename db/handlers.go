@@ -16,6 +16,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/util"
@@ -25,6 +26,13 @@ import (
 // incoming messages.
 func (api *api) handler() {
 	for message := range *api.config.DatabaseChannel {
+		// If the message is to delete a row
+		if message.Delete {
+			api.deleteRow(message.ServiceID)
+			continue
+		}
+
+		// Else, the message is to update a row
 		api.updateRow(
 			message.ServiceID,
 			message.Cells,
@@ -34,33 +42,93 @@ func (api *api) handler() {
 
 // updateRow will update the cells of the serviceID row.
 func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
-	replace := ""
+	// The columns to update
+	setVars := ""
 	for i := range cells {
-		replace += fmt.Sprintf("'%s' = '%s',",
-			cells[i].Column, cells[i].Value)
+		setVars += fmt.Sprintf("`%s` = ?,",
+			cells[i].Column)
 	}
-	sqlStmt := fmt.Sprintf("UPDATE status SET %s WHERE id = '%s'",
-		replace[:len(replace)-1], serviceID)
-	res, err := api.db.Exec(sqlStmt)
-	jLog.Error(
-		fmt.Sprintf("updateRow UPDATE: %q, %s", sqlStmt, util.ErrorToString(err)),
-		*logFrom,
-		err != nil)
+	// Trim the trailing ,
+	setVars = setVars[:len(setVars)-1]
+
+	// Get the vars for the SQL statement
+	params := make([]interface{}, len(cells)+1)
+	params[len(params)-1] = serviceID
+	// The values to update with
+	for i := range cells {
+		params[i] = cells[i].Value
+	}
+
+	// The SQL statement
+	sqlStmt := fmt.Sprintf("UPDATE status SET %s WHERE id = ?",
+		setVars)
+
+	if jLog.IsLevel("DEBUG") {
+		jLog.Debug(
+			fmt.Sprintf("%s, %v", sqlStmt, params),
+			*logFrom, true)
+	}
+	res, err := api.db.Exec(sqlStmt, params...)
+	// Query failed
+	if err != nil {
+		jLog.Error(
+			fmt.Sprintf("updateRow UPDATE: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
+			*logFrom,
+			true)
+		return
+	}
+
 	count, _ := res.RowsAffected()
 	// If this ServiceID wasn't in the DB
-	if err == nil && count == 0 {
-		var columns string
-		var values string
+	if count == 0 {
+		// The columns to insert
+		columns := ""
 		for i := range cells {
 			columns += fmt.Sprintf("'%s',", cells[i].Column)
-			values += fmt.Sprintf("'%s',", cells[i].Value)
 		}
-		sqlStmt = fmt.Sprintf("INSERT INTO status ('id', %s) VALUES ('%s', %s)",
-			columns[:len(columns)-1], serviceID, values[:len(values)-1])
-		_, err = api.db.Exec(sqlStmt)
+		// The values to insert
+		values := strings.Repeat("?,", len(cells))
+		// Trim the trailing ,'s
+		values = values[:len(values)-1]
+		columns = columns[:len(columns)-1]
+
+		// The SQL statement
+		sqlStmt = fmt.Sprintf("INSERT INTO status ('id', %s) VALUES (?,%s)",
+			columns, values)
+
+		// Get the vars for the SQL statement
+		params := make([]interface{}, len(cells)+1)
+		params[0] = serviceID
+		for i := range cells {
+			params[i+1] = cells[i].Value
+		}
+
+		if jLog.IsLevel("DEBUG") {
+			jLog.Debug(
+				fmt.Sprintf("%s, %v", sqlStmt, params),
+				*logFrom, true)
+		}
+		_, err = api.db.Exec(sqlStmt, params...)
 		jLog.Error(
-			fmt.Sprintf("updateRow INSERT: %q, %s", sqlStmt, util.ErrorToString(err)),
+			fmt.Sprintf("updateRow INSERT: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
 			*logFrom,
 			err != nil)
 	}
+}
+
+// deleteRow will remove the row of a service from the db.
+func (api *api) deleteRow(serviceID string) {
+	// The SQL statement
+	sqlStmt := "DELETE FROM status WHERE id = ?"
+
+	if jLog.IsLevel("DEBUG") {
+		jLog.Debug(
+			fmt.Sprintf("%s, %v", sqlStmt, serviceID),
+			*logFrom, true)
+	}
+	_, err := api.db.Exec(sqlStmt, serviceID)
+	jLog.Error(
+		fmt.Sprintf("deleteRow: %q with %q, %s", sqlStmt, serviceID, util.ErrorToString(err)),
+		*logFrom,
+		err != nil)
 }

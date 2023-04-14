@@ -6,8 +6,8 @@ import {
   OverlayTrigger,
   Tooltip,
 } from "react-bootstrap";
+import { FC, useCallback, useContext, useMemo } from "react";
 import { ModalType, ServiceSummaryType } from "types/summary";
-import { ReactElement, useCallback, useContext } from "react";
 import {
   faArrowRotateRight,
   faCheck,
@@ -21,19 +21,19 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
 
-interface ServiceInfoData {
+interface Props {
   service: ServiceSummaryType;
   updateAvailable: boolean;
   updateSkipped: boolean;
   setShowUpdateInfo: () => void;
 }
 
-export const ServiceInfo = ({
+export const ServiceInfo: FC<Props> = ({
   service,
   updateAvailable,
   updateSkipped,
   setShowUpdateInfo,
-}: ServiceInfoData): ReactElement => {
+}) => {
   const { handleModal } = useContext(ModalContext);
 
   const showModal = useCallback(
@@ -44,21 +44,93 @@ export const ServiceInfo = ({
   );
 
   // If version hasn't been found or a new version has been found
-  const serviceWarning =
-    service?.status?.deployed_version === undefined ||
-    service?.status?.deployed_version === "" ||
-    (updateAvailable && !updateSkipped);
+  const serviceWarning = useMemo(
+    () =>
+      service?.status?.deployed_version === undefined ||
+      service?.status?.deployed_version === "" ||
+      (updateAvailable && !updateSkipped),
+    [service, updateAvailable, updateSkipped]
+  );
 
-  const updateApproved =
-    service?.status?.latest_version !== undefined &&
-    service.status.latest_version === service?.status?.approved_version;
+  const updateApproved = useMemo(
+    () =>
+      service?.status?.latest_version !== undefined &&
+      service.status.latest_version === service?.status?.approved_version,
+    [service]
+  );
+
+  const deployedVersionIcon = service.has_deployed_version ? (
+    <OverlayTrigger
+      key="deployed-service"
+      placement="top"
+      delay={{ show: 500, hide: 500 }}
+      overlay={
+        <Tooltip id={`tooltip-deployed-service`}>
+          of the deployed {service.id}
+        </Tooltip>
+      }
+    >
+      <FontAwesomeIcon
+        className="same-color"
+        style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+        icon={faSatelliteDish}
+      />
+    </OverlayTrigger>
+  ) : null;
+
+  const skippedVersionIcon =
+    updateSkipped && service.status?.approved_version ? (
+      <OverlayTrigger
+        key="skipped-version"
+        placement="top"
+        delay={{ show: 500, hide: 500 }}
+        overlay={
+          <Tooltip id={`tooltip-skipped-version`}>
+            Skipped {service.status.approved_version.slice("SKIP_".length)}
+          </Tooltip>
+        }
+      >
+        <FontAwesomeIcon
+          icon={faInfoCircle}
+          style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
+        />
+      </OverlayTrigger>
+    ) : null;
+
+  const actionReleaseButton =
+    (service.webhook || service.command) &&
+    (!updateAvailable || updateSkipped) ? (
+      <OverlayTrigger
+        key="resend"
+        placement="top"
+        delay={{ show: 500, hide: 500 }}
+        overlay={
+          <Tooltip id={`tooltip-resend`}>
+            {updateSkipped
+              ? "Approve this release"
+              : `Resend the ${service.webhook ? "WebHooks" : "Commands"}`}
+          </Tooltip>
+        }
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => showModal(updateSkipped ? "SEND" : "RESEND", service)}
+          disabled={service.loading || service.active === false}
+        >
+          <FontAwesomeIcon
+            icon={updateSkipped ? faCheck : faArrowRotateRight}
+          />
+        </Button>
+      </OverlayTrigger>
+    ) : null;
 
   return (
     <Container
       style={{
         padding: "0px",
       }}
-      className={serviceWarning ? "alert-warning" : "default"}
+      className={serviceWarning ? "alert-warning rounded-bottom" : "default"}
     >
       <ListGroup className="list-group-flush">
         {updateAvailable && !updateSkipped ? (
@@ -126,42 +198,8 @@ export const ServiceInfo = ({
             <div style={{ margin: 0 }}>
               <>
                 Current version:
-                {service.has_deployed_version && (
-                  <OverlayTrigger
-                    key="deployed-service"
-                    placement="top"
-                    delay={{ show: 500, hide: 500 }}
-                    overlay={
-                      <Tooltip id={`tooltip-deployed-service`}>
-                        of the deployed {service.id}
-                      </Tooltip>
-                    }
-                  >
-                    <FontAwesomeIcon
-                      className="same-color"
-                      style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
-                      icon={faSatelliteDish}
-                    />
-                  </OverlayTrigger>
-                )}
-                {updateSkipped && service.status?.approved_version && (
-                  <OverlayTrigger
-                    key="skipped-version"
-                    placement="top"
-                    delay={{ show: 500, hide: 500 }}
-                    overlay={
-                      <Tooltip id={`tooltip-skipped-version`}>
-                        Skipped{" "}
-                        {service.status.approved_version.slice("SKIP_".length)}
-                      </Tooltip>
-                    }
-                  >
-                    <FontAwesomeIcon
-                      icon={faInfoCircle}
-                      style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
-                    />
-                  </OverlayTrigger>
-                )}
+                {deployedVersionIcon}
+                {skippedVersionIcon}
               </>
               <br />
               <div style={{ display: "flex", margin: 0 }}>
@@ -192,49 +230,21 @@ export const ServiceInfo = ({
                 </OverlayTrigger>
               </div>
             </div>
-            {(service.webhook || service.command) &&
-              (!updateAvailable || updateSkipped) && (
-                <OverlayTrigger
-                  key="resend"
-                  placement="top"
-                  delay={{ show: 500, hide: 500 }}
-                  overlay={
-                    <Tooltip id={`tooltip-resend`}>
-                      {updateSkipped
-                        ? "Approve this release"
-                        : `Resend the ${
-                            service.webhook ? "WebHooks" : "Commands"
-                          }`}
-                    </Tooltip>
-                  }
-                >
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      showModal(updateSkipped ? "SEND" : "RESEND", service)
-                    }
-                    disabled={service.loading}
-                  >
-                    <FontAwesomeIcon
-                      icon={updateSkipped ? faCheck : faArrowRotateRight}
-                    />
-                  </Button>
-                </OverlayTrigger>
-              )}
+            {actionReleaseButton}
           </ListGroup.Item>
         )}
       </ListGroup>
       <Card.Footer
         className={
           serviceWarning || !service?.status?.last_queried
-            ? "alert-warning"
+            ? "alert-warning rounded-bottom"
             : ""
         }
       >
         <small
           className={
-            "text-muted same-color" + (serviceWarning ? " alert-warning" : "")
+            "text-muted same-color" +
+            (serviceWarning ? " alert-warning rounded-bottom" : "")
           }
         >
           {service?.status?.last_queried ? (

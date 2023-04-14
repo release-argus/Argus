@@ -23,7 +23,11 @@ import (
 
 // GetOption from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetOption(key string) string {
-	return util.GetFirstNonDefault(s.Options[key], s.Main.Options[key], s.Defaults.Options[key], s.HardDefaults.Options[key])
+	return util.GetFirstNonDefault(
+		s.Options[key],
+		s.Main.Options[key],
+		s.Defaults.Options[key],
+		s.HardDefaults.Options[key])
 }
 
 // GetSelfOption gets Options[key] from this Shoutrrr
@@ -33,7 +37,11 @@ func (s *Shoutrrr) GetSelfOption(key string) string {
 
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetURLField(key string) string {
-	return util.GetFirstNonDefault(s.URLFields[key], s.Main.URLFields[key], s.Defaults.URLFields[key], s.HardDefaults.URLFields[key])
+	return util.GetFirstNonDefault(
+		s.URLFields[key],
+		s.Main.URLFields[key],
+		s.Defaults.URLFields[key],
+		s.HardDefaults.URLFields[key])
 }
 
 // GetSelfURLField gets URLFields[key] from this Shoutrrr
@@ -43,7 +51,11 @@ func (s *Shoutrrr) GetSelfURLField(key string) string {
 
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetParam(key string) string {
-	return util.GetFirstNonDefault(s.Params[key], s.Main.Params[key], s.Defaults.Params[key], s.HardDefaults.Params[key])
+	return util.GetFirstNonDefault(
+		s.Params[key],
+		s.Main.Params[key],
+		s.Defaults.Params[key],
+		s.HardDefaults.Params[key])
 }
 
 // GetSelfParam gets Params[key] from this Shoutrrr
@@ -76,9 +88,9 @@ func (s *Shoutrrr) GetDelay() string {
 }
 
 // GetDelayDuration before sending.
-func (s *Shoutrrr) GetDelayDuration() time.Duration {
-	d, _ := time.ParseDuration(s.GetDelay())
-	return d
+func (s *Shoutrrr) GetDelayDuration() (duration time.Duration) {
+	duration, _ = time.ParseDuration(s.GetDelay())
+	return
 }
 
 // GetMaxTries allowed for the Gotification.
@@ -93,9 +105,14 @@ func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) string {
 }
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) string {
-	title := util.GetFirstNonDefault(s.GetSelfParam("title"), s.Main.GetSelfParam("title"), s.Defaults.GetSelfParam("title"), s.HardDefaults.GetSelfParam("title"))
-	return util.TemplateString(title, *serviceInfo)
+func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) (title string) {
+	title = util.GetFirstNonDefault(
+		s.GetSelfParam("title"),
+		s.Main.GetSelfParam("title"),
+		s.Defaults.GetSelfParam("title"),
+		s.HardDefaults.GetSelfParam("title"))
+	title = util.TemplateString(title, *serviceInfo)
+	return
 }
 
 // GetType of this Shoutrrr

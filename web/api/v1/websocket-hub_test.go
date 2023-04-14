@@ -45,7 +45,7 @@ func TestNewHub(t *testing.T) {
 	}
 }
 
-func TestRunWithRegister(t *testing.T) {
+func TestHub_RunWithRegister(t *testing.T) {
 	// GIVEN a WebSocket Hub and API
 	hub := NewHub()
 	api := API{}
@@ -60,12 +60,13 @@ func TestRunWithRegister(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// THEN that client is registered to the Hub
+	// DATA RACE, but just for testing
 	if !hub.clients[&client] {
 		t.Error("Client wasn't registerd to the Hub")
 	}
 }
 
-func TestRunWithUnregister(t *testing.T) {
+func TestHub_RunWithUnregister(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	client := testClient()
 	hub := client.hub
@@ -85,12 +86,12 @@ func TestRunWithUnregister(t *testing.T) {
 	}
 }
 
-func TestRunWithBroadcast(t *testing.T) {
+func TestHub_RunWithBroadcast(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	// and a valid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(util.NewJLog("WARN", false))
+	go hub.Run(util.NewJLog("DEBUG", false))
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(2 * time.Second)
@@ -114,7 +115,7 @@ func TestRunWithBroadcast(t *testing.T) {
 	}
 }
 
-func TestRunWithInvalidBroadcast(t *testing.T) {
+func TestHub_RunWithInvalidBroadcast(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	// and an invalid message wants to be sent
 	client := testClient()

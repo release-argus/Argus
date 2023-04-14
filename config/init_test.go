@@ -22,9 +22,11 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestLoad(t *testing.T) {
+func TestConfig_Load(t *testing.T) {
 	// GIVEN Load is ran on a config
-	config := testLoad("")
+	file := "TestConfig_Load.yml"
+	testYAML_ConfigTest(file, t)
+	config := testLoad(file, t)
 
 	// WHEN the vars loaded are inspected
 	tests := map[string]struct {
@@ -32,11 +34,14 @@ func TestLoad(t *testing.T) {
 		want string
 	}{
 		"Defaults.Service.Interval": {
-			got: config.Defaults.Service.Options.Interval, want: "123s"},
+			got:  config.Defaults.Service.Options.Interval,
+			want: "123s"},
 		"Notify.discord.username": {
-			got: config.Defaults.Notify["slack"].GetSelfParam("title"), want: "defaultTitle"},
+			got:  config.Defaults.Notify["slack"].GetSelfParam("title"),
+			want: "defaultTitle"},
 		"WebHook.Delay": {
-			got: config.Defaults.WebHook.Delay, want: "2s"},
+			got:  config.Defaults.WebHook.Delay,
+			want: "2s"},
 	}
 
 	// THEN they match the config file
@@ -44,6 +49,7 @@ func TestLoad(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.got != tc.want {
 				t.Errorf("invalid %s:\nwant: %s\ngot:  %s",
 					name, tc.want, tc.got)
@@ -52,16 +58,18 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestLoadDefaults(t *testing.T) {
+func TestConfig_LoadDefaults(t *testing.T) {
 	// GIVEN config to Load
 	var (
 		config     Config
-		configFile string = "../test/config_test.yml"
+		configFile func(path string, t *testing.T) = testYAML_ConfigTest
 	)
 	flags := make(map[string]bool)
+	file := "TestConfig_LoadDefaults.yml"
+	configFile(file, t)
 
 	// WHEN Load is called on it
-	config.Load(configFile, &flags, &util.JLog{})
+	config.Load(file, &flags, &util.JLog{})
 
 	// THEN the defaults are assigned correctly to Services
 	want := false

@@ -12,13 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package web
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
 	"net"
+	"os"
+	"testing"
+	"time"
 
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
@@ -53,15 +63,27 @@ func stringifyPointer[T comparable](ptr *T) string {
 
 func testLogging(level string, timestamps bool) {
 	jLog = util.NewJLog(level, timestamps)
-	var logInitCommands *command.Controller
-	logInitCommands.Init(jLog, nil, nil, nil, nil)
-	var logInitWebHooks *webhook.Slice
-	logInitWebHooks.Init(jLog, nil, nil, nil, nil, nil, nil)
-	svcForLog := service.Service{}
-	svcForLog.Init(jLog, &service.Service{}, &service.Service{}, nil, nil, nil, nil, nil, nil)
+	service.LogInit(jLog)
 }
 
-func testConfig() config.Config {
+func testConfig(path string, t *testing.T) (cfg *config.Config) {
+	testYAML_Argus(path, t)
+	cfg = &config.Config{}
+
+	// Settings.Log
+	cfg.Settings.Log.Level = stringPtr("DEBUG")
+
+	cfg.Load(
+		path,
+		&map[string]bool{},
+		jLog)
+	if t != nil {
+		t.Cleanup(func() { os.Remove(*cfg.Settings.GetDataDatabaseFile()) })
+	}
+
+	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
+
+	// Settings.Web
 	port, err := getFreePort()
 	if err != nil {
 		panic(err)
@@ -71,19 +93,16 @@ func testConfig() config.Config {
 		listenPort  string = fmt.Sprint(port)
 		routePrefix string = "/"
 	)
-	webSettings := config.WebSettings{
+	cfg.Settings.Web = config.WebSettings{
 		ListenHost:  &listenHost,
 		ListenPort:  &listenPort,
 		RoutePrefix: &routePrefix,
 	}
-	var (
-		logLevel string = "WARN"
-	)
-	logSettings := config.LogSettings{
-		Level: &logLevel,
-	}
-	var defaults config.Defaults
-	defaults.SetDefaults()
+
+	// Defaults
+	cfg.Defaults.SetDefaults()
+
+	// Service
 	svc := testService("test")
 	dvl := testDeployedVersion()
 	svc.DeployedVersionLookup = &dvl
@@ -96,37 +115,35 @@ func testConfig() config.Config {
 	notify := shoutrrr.Slice{
 		"test": &shoutrrr.Shoutrrr{
 			Options: map[string]string{
-				"message": "{{ service_id }} release",
-			},
+				"message": "{{ service_id }} release"},
 			Params:       map[string]string{},
 			URLFields:    map[string]string{},
 			Main:         &emptyNotify,
 			Defaults:     &emptyNotify,
-			HardDefaults: &emptyNotify,
-		},
+			HardDefaults: &emptyNotify},
 	}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
 	svc.Comment = "test service's comment"
+	cfg.Service = service.Slice{
+		svc.ID: svc,
+	}
+
+	// Notify
+	cfg.Notify = cfg.Defaults.Notify
+
+	// WebHook
 	whPass := testWebHook(false, "pass")
 	whFail := testWebHook(true, "pass")
-	return config.Config{
-		Settings: config.Settings{
-			Web: webSettings,
-			Log: logSettings,
-		},
-		Defaults: defaults,
-		WebHook: webhook.Slice{
-			whPass.ID: whPass,
-			whFail.ID: whFail,
-		},
-		Notify: defaults.Notify,
-		Service: service.Slice{
-			svc.ID: &svc,
-		},
-		Order: &[]string{svc.ID},
-		All:   []string{svc.ID},
+	cfg.WebHook = webhook.Slice{
+		whPass.ID: whPass,
+		whFail.ID: whFail,
 	}
+
+	// Order
+	cfg.Order = []string{svc.ID}
+
+	return
 }
 
 func getFreePort() (int, error) {
@@ -141,13 +158,13 @@ func getFreePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func testService(id string) service.Service {
+func testService(id string) (svc *service.Service) {
 	var (
 		sAnnounceChannel chan []byte         = make(chan []byte, 2)
 		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 		sSaveChannel     chan bool           = make(chan bool, 5)
 	)
-	svc := service.Service{
+	svc = &service.Service{
 		ID: id,
 		LatestVersion: latestver.Lookup{
 			URL:               "https://release-argus.io",
@@ -157,6 +174,11 @@ func testService(id string) service.Service {
 			Require: &filter.Require{
 				RegexContent: "content",
 				RegexVersion: "version",
+				Docker: &filter.DockerCheck{
+					Type:  "ghcr",
+					Image: "release-argus/argus",
+					Tag:   "{{ version }}",
+				},
 			},
 		},
 		Options: opt.Options{
@@ -183,10 +205,21 @@ func testService(id string) service.Service {
 			SaveChannel:     &sSaveChannel,
 		},
 	}
-	svc.Status.Init(len(svc.Notify), len(svc.Command), len(svc.WebHook), &svc.ID, &svc.Dashboard.WebURL)
-	svc.LatestVersion.Init(jLog, &latestver.Lookup{}, &latestver.Lookup{}, &svc.Status, &svc.Options)
-	svc.CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
-	return svc
+	svc.Status.Init(
+		len(svc.Notify),
+		len(svc.Command), len(svc.WebHook),
+		&svc.ID,
+		&svc.Dashboard.WebURL)
+	svc.LatestVersion.Init(
+		&latestver.Lookup{}, &latestver.Lookup{},
+		&svc.Status,
+		&svc.Options)
+	svc.CommandController.Init(
+		&svc.Status,
+		&svc.Command,
+		nil,
+		nil)
+	return
 }
 
 func testCommand(failing bool) command.Command {
@@ -198,7 +231,11 @@ func testCommand(failing bool) command.Command {
 
 func testWebHook(failing bool, id string) *webhook.WebHook {
 	var slice *webhook.Slice
-	slice.Init(util.NewJLog("WARN", false), nil, nil, nil, nil, nil, nil)
+	slice.Init(
+		nil,
+		nil, nil, nil,
+		nil,
+		nil)
 
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
@@ -253,4 +290,50 @@ func testURLCommandRegex() filter.URLCommand {
 		Regex: &regex,
 		Index: index,
 	}
+}
+func generateCertFiles(certFile, keyFile string, t *testing.T) error {
+	// Generate the certificate and private key
+	// Generate a private key
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	// Create a self-signed certificate
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "localhost"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(1, 0, 0),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		return err
+	}
+
+	// Convert the certificate and private key to PEM format
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	if err != nil {
+		return err
+	}
+
+	// Write the certificate and private key to files
+	if err := ioutil.WriteFile(certFile, certPEM, 0644); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(keyFile, keyPEM, 0600); err != nil {
+		return err
+	}
+	t.Cleanup(func() {
+		os.Remove(certFile)
+		os.Remove(keyFile)
+	})
+
+	return nil
 }

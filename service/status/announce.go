@@ -25,24 +25,18 @@ import (
 func (s *Status) AnnounceFirstVersion() {
 	var payloadData []byte
 
-	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "INIT",
 		ServiceData: &api_type.ServiceSummary{
-			ID:  *s.ServiceID,
-			URL: &serviceWebURL,
+			ID:     *s.ServiceID,
+			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
-				LatestVersion:          s.LatestVersion,
-				LatestVersionTimestamp: s.LatestVersionTimestamp,
-			},
-		},
-	})
+				LatestVersion:          s.GetLatestVersion(),
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQuery to the `s.AnnounceChannel`
@@ -57,14 +51,9 @@ func (s *Status) AnnounceQuery() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				LastQueried: s.LastQueried,
-			},
-		},
-	})
+				LastQueried: s.GetLastQueried()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceQueryNewVersion to the `s.AnnounceChannel`
@@ -73,24 +62,18 @@ func (s *Status) AnnounceQueryNewVersion() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
-	serviceWebURL := s.GetWebURL()
 	payloadData, _ = json.Marshal(api_type.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "VERSION",
 		SubType: "NEW",
 		ServiceData: &api_type.ServiceSummary{
-			ID:  *s.ServiceID,
-			URL: &serviceWebURL,
+			ID:     *s.ServiceID,
+			WebURL: s.GetWebURL(),
 			Status: &api_type.Status{
-				LatestVersion:          s.LatestVersion,
-				LatestVersionTimestamp: s.LatestVersionTimestamp,
-			},
-		},
-	})
+				LatestVersion:          s.GetLatestVersion(),
+				LatestVersionTimestamp: s.GetLatestVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceUpdate being applied to the `s.AnnounceChannel`
@@ -106,15 +89,10 @@ func (s *Status) AnnounceUpdate() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				DeployedVersion:          s.DeployedVersion,
-				DeployedVersionTimestamp: s.DeployedVersionTimestamp,
-			},
-		},
-	})
+				DeployedVersion:          s.GetDeployedVersion(),
+				DeployedVersionTimestamp: s.GetDeployedVersionTimestamp()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }
 
 // AnnounceAction on an update (skip/approve) to the `s.AnnounceChannel`
@@ -130,12 +108,7 @@ func (s *Status) AnnounceApproved() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				ApprovedVersion: s.ApprovedVersion,
-			},
-		},
-	})
+				ApprovedVersion: s.GetApprovedVersion()}}})
 
-	if s.AnnounceChannel != nil {
-		*s.AnnounceChannel <- payloadData
-	}
+	s.SendAnnounce(&payloadData)
 }

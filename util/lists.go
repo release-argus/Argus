@@ -91,6 +91,27 @@ func RemoveIndex[T comparable](list *[]T, index int) {
 	*list = append((*list)[:index], (*list)[index+1:]...)[:len(*list)-1]
 }
 
+// RemoveElement from list
+func RemoveElement[T comparable](s []T, r T) []T {
+	for i, v := range s {
+		if v == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
+// ReplaceElement in the string list
+func ReplaceElement(list []string, old string, new string) []string {
+	for i := range list {
+		if list[i] == old {
+			list[i] = new
+			return list
+		}
+	}
+	return list
+}
+
 // GetIndentation used in line. Test variations on intentationxindentSize
 func GetIndentation(line string, indentSize uint8) (indentation string) {
 	for {

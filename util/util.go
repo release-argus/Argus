@@ -18,11 +18,18 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"sort"
 	"strings"
 )
+
+// Field is a helper struct for String() methods.
+type Field struct {
+	Name  string
+	Value interface{}
+}
 
 // Contains returns whether `s` contains `e`
 func Contains[T comparable](s []T, e T) bool {
@@ -49,6 +56,21 @@ func PtrOrValueToPtr[T comparable](a *T, b T) *T {
 		return &b
 	}
 	return a
+}
+
+// StringToBoolPtr will take a string and convert it to a boolean pointer
+//
+// "" => nil
+//
+// "true" => true
+//
+// "false" => false
+func StringToBoolPtr(str string) *bool {
+	if str == "" {
+		return nil
+	}
+	val := str == "true"
+	return &val
 }
 
 // ValueIfNotNil will take the `check` pointer and return address of `value`
@@ -136,6 +158,14 @@ func DefaultOrValue[T comparable](check *T, value T) T {
 	return value
 }
 
+// GetValue will return the value of `ptr` if it's non-nil, otherwise `fallback`.
+func GetValue[T comparable](ptr *T, fallback T) T {
+	if ptr != nil {
+		return *ptr
+	}
+	return fallback
+}
+
 // ErrorToString accounts for nil errors, returning an empty string for those
 // and err.Error() for non-nil errors.
 func ErrorToString(err error) string {
@@ -213,27 +243,66 @@ func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
 }
 
 // LowercaseStringStringMap will convert all lowercase all keys in the map
-func LowercaseStringStringMap(change *map[string]string) map[string]string {
-	lowercasedMap := make(map[string]string, len(*change))
+func LowercaseStringStringMap(change *map[string]string) (lowercasedMap map[string]string) {
+	lowercasedMap = make(map[string]string, len(*change))
 	for i := range *change {
 		lowercasedMap[strings.ToLower(i)] = (*change)[i]
 	}
-	return lowercasedMap
+	return
 }
 
 // Sorted keys will return a sorted list of the keys in a map.
-func SortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, len(m))
+func SortedKeys[V any](m map[string]V) (keys []string) {
+	keys = make([]string, len(m))
 	i := 0
 	for k := range m {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
-	return keys
+	return
+}
+
+// StringToPointer will return a pointer to str, but nil if it's an empty string.
+func StringToPointer(str string) *string {
+	if str == "" {
+		return nil
+	}
+	return &str
 }
 
 func BasicAuth(username string, password string) string {
 	encode := fmt.Sprintf("%s:%s", username, password)
 	return base64.StdEncoding.EncodeToString([]byte(encode))
+}
+
+func GetKeysFromJSON(data string) []string {
+	return getKeysFromJSONBytes([]byte(data), "")
+}
+
+func getKeysFromJSONBytes(data []byte, prefix string) (keys []string) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil {
+		// Unmarshaling fail
+		return []string{}
+	}
+	keys = make([]string, len(obj))
+
+	// Iterate over the JSON object
+	index := 0
+	for key, value := range obj {
+		// Add the key to the list
+		fullKey := prefix + key
+		keys[index] = fullKey
+		index++
+
+		// If value is a JSON object, recursively get its keys
+		if bytes.HasPrefix(value, []byte("{")) {
+			subKeys := getKeysFromJSONBytes(value, fullKey+".")
+			keys = append(keys, subKeys...)
+		}
+	}
+	// sort keys
+	sort.Strings(keys)
+	return
 }

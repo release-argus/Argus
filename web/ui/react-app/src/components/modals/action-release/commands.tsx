@@ -2,10 +2,10 @@ import { ActionModalData, ModalType } from "types/summary";
 
 import { Command } from "components/modals/action-release/command";
 import { Container } from "react-bootstrap";
+import { FC } from "react";
 import { Loading } from "components/modals/action-release/loading";
-import { ReactElement } from "react";
 
-interface params {
+interface Props {
   modalType: ModalType;
   data: ActionModalData;
   onClickAcknowledge: (target: string) => void;
@@ -14,13 +14,13 @@ interface params {
   delayedRender: any;
 }
 
-export const Commands = ({
+export const Commands: FC<Props> = ({
   modalType,
   data,
   onClickAcknowledge,
   setSendingThisService,
   delayedRender,
-}: params) => {
+}) => {
   return (
     <>
       <strong>Command(s):</strong>
@@ -33,7 +33,7 @@ export const Commands = ({
                 delayedRender={delayedRender}
               />
             ))
-          : Object.entries(data.commands).map(([id, command]): ReactElement => {
+          : Object.entries(data.commands).map(([id, command]) => {
               let sending = false;
               if (data.sentC.includes(`${data.service_id} ${id}`)) {
                 setSendingThisService(true);

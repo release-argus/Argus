@@ -19,45 +19,52 @@ import (
 	"os"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
 
+// LogInit for Argus.
+func LogInit(log *util.JLog) {
+	if jLog != nil {
+		return
+	}
+
+	jLog = log
+	service.LogInit(jLog)
+}
+
 // Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s)
 func (c *Config) Init() {
+	c.OrderMutex.RLock()
+	defer c.OrderMutex.RUnlock()
+
 	c.HardDefaults.SetDefaults()
 	c.Settings.SetDefaults()
 
 	if c.Defaults.Service.DeployedVersionLookup == nil {
 		c.Defaults.Service.DeployedVersionLookup = &deployedver.Lookup{}
 	}
-	c.Defaults.Service.Status.SaveChannel = c.SaveChannel
 	c.Defaults.Service.Convert()
+	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
 	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
 	jLog.SetLevel(c.Settings.GetLogLevel())
 
 	i := 0
-	for key := range c.Service {
+	for _, name := range c.Order {
 		i++
-		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), key), util.LogFrom{}, true)
-		c.Service[key].Init(
-			jLog,
-			&c.Defaults.Service,
-			&c.HardDefaults.Service,
-			&c.Notify,
-			&c.Defaults.Notify,
-			&c.HardDefaults.Notify,
-			&c.WebHook,
-			&c.Defaults.WebHook,
-			&c.HardDefaults.WebHook,
-		)
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), name),
+			util.LogFrom{}, true)
+		c.Service[name].Init(
+			&c.Defaults.Service, &c.HardDefaults.Service,
+			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
+			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
 	}
 
 	// c.Notify
-	//nolint:typecheck
 	if c.Notify != nil {
 		for key := range c.Notify {
 			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
@@ -66,7 +73,6 @@ func (c *Config) Init() {
 		}
 	}
 	// c.WebHook
-	//nolint:typecheck
 	if c.WebHook != nil {
 		for key := range c.WebHook {
 			c.WebHook[key].Defaults = &c.Defaults.WebHook
@@ -78,7 +84,8 @@ func (c *Config) Init() {
 // Load `file` as Config.
 func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.File = file
-	jLog = log
+	// Give the log to the other packages
+	LogInit(log)
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user
@@ -102,9 +109,10 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 		c.Service[key].ID = key
 		c.Service[key].Status = svcstatus.Status{
 			DatabaseChannel: c.DatabaseChannel,
-			SaveChannel:     c.SaveChannel,
-		}
+			SaveChannel:     c.SaveChannel}
 	}
+	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel
+	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
 	// SaveHandler that listens for calls to save config changes.
 	go c.SaveHandler()

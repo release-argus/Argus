@@ -24,17 +24,17 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// Exec will execute all `Command` for the controller and returns all errors encountered
+// Exec will execute every `Command` for the controller and return all errors encountered.
 func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
-		return nil
+		return
 	}
 
 	errChan := make(chan error)
 	for index := range *c.Command {
-		go func(controller *Controller) {
+		go func(controller *Controller, index int) {
 			errChan <- controller.ExecIndex(logFrom, index)
-		}(c)
+		}(c, index)
 
 		// Space out Command starts.
 		time.Sleep(200 * time.Millisecond)
@@ -51,22 +51,23 @@ func (c *Controller) Exec(logFrom *util.LogFrom) (errs error) {
 	return
 }
 
-func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
+// ExecIndex will execute the `Command` at the given index and return any errors encountered.
+func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 	if index >= len(*c.Command) {
-		return nil
+		return
 	}
 	// block reruns whilst running
-	c.SetNextRunnable(index, true)
+	c.SetExecuting(index, true)
 
 	// Copy Command and apply Jinja templating
 	command := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 
 	// Execute
-	err := command.Exec(logFrom)
+	err = command.Exec(logFrom)
 
 	// Set fail/not
 	failed := err != nil
-	(*c.Failed)[index] = &failed
+	c.Failed.Set(index, failed)
 
 	// Announce
 	c.AnnounceCommand(index)
@@ -77,18 +78,23 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) error {
 		//#nosec G104 -- Errors will be logged to CL
 		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(
-			"Command failed for "+*c.ServiceStatus.ServiceID,
+			fmt.Sprintf("Command failed for %q", *c.ServiceStatus.ServiceID),
 			(*c.Command)[index].String()+"\n"+err.Error(),
-			nil,
+			&util.ServiceInfo{ID: *c.ServiceStatus.ServiceID},
 			true)
 	}
-	metric.IncreasePrometheusCounterActions(metric.CommandMetric, (*c.Command)[index].String(), *c.ServiceStatus.ServiceID, "", metricResult)
+	metric.IncreasePrometheusCounter(metric.CommandMetric,
+		(*c.Command)[index].String(),
+		*c.ServiceStatus.ServiceID,
+		"",
+		metricResult)
 
 	return err
 }
 
+// Exec this Command and return any errors encountered.
 func (c *Command) Exec(logFrom *util.LogFrom) error {
-	jLog.Info(fmt.Sprintf("Executing '%s'", c.String()), *logFrom, true)
+	jLog.Info(fmt.Sprintf("Executing '%s'", c), *logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
 	jLog.Error(util.ErrorToString(err), *logFrom, err != nil)
@@ -98,15 +104,16 @@ func (c *Command) Exec(logFrom *util.LogFrom) error {
 	return err
 }
 
-func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) Command {
+func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) (command Command) {
 	if serviceStatus == nil {
 		return *c
 	}
 
-	command := Command(make([]string, len(*c)))
+	command = Command(make([]string, len(*c)))
 	copy(command, *c)
+	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.GetLatestVersion()}
 	for i := range command {
-		command[i] = util.TemplateString(command[i], util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion})
+		command[i] = util.TemplateString(command[i], serviceInfo)
 	}
-	return command
+	return
 }

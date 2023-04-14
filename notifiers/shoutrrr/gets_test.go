@@ -24,7 +24,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestOption(t *testing.T) {
+func TestShoutrrr_GetOption(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		optionRoot        *string
@@ -33,20 +33,38 @@ func TestOption(t *testing.T) {
 		optionHardDefault *string
 		wantString        string
 	}{
-		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
-			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
-			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
-			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
-		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
-			optionHardDefault: stringPtr("this")},
+		"root overrides all": {
+			wantString:        "this",
+			optionRoot:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"main overrides default and hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionMain:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"default overrides hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     stringPtr("this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"hardDefault is last resort": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     nil,
+			optionHardDefault: stringPtr("this"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -94,7 +112,7 @@ func TestOption(t *testing.T) {
 	}
 }
 
-func TestURLField(t *testing.T) {
+func TestShoutrrr_GetURLField(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		optionRoot        *string
@@ -103,20 +121,38 @@ func TestURLField(t *testing.T) {
 		optionHardDefault *string
 		wantString        string
 	}{
-		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
-			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
-			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
-			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
-		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
-			optionHardDefault: stringPtr("this")},
+		"root overrides all": {
+			wantString:        "this",
+			optionRoot:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"main overrides default and hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionMain:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"default overrides hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     stringPtr("this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"hardDefault is last resort": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     nil,
+			optionHardDefault: stringPtr("this"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -164,7 +200,7 @@ func TestURLField(t *testing.T) {
 	}
 }
 
-func TestParam(t *testing.T) {
+func TestShoutrrr_GetParam(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		optionRoot        *string
@@ -173,20 +209,38 @@ func TestParam(t *testing.T) {
 		optionHardDefault *string
 		wantString        string
 	}{
-		"root overrides all": {wantString: "this", optionRoot: stringPtr("this"),
-			optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"main overrides default and hardDefault": {wantString: "this", optionRoot: nil,
-			optionMain: stringPtr("this"), optionDefault: stringPtr("not_this"), optionHardDefault: stringPtr("not_this")},
-		"default overrides hardDefault": {wantString: "this", optionRoot: nil,
-			optionDefault: stringPtr("this"), optionHardDefault: stringPtr("not_this")},
-		"hardDefault is last resort": {wantString: "this", optionRoot: nil, optionDefault: nil,
-			optionHardDefault: stringPtr("this")},
+		"root overrides all": {
+			wantString:        "this",
+			optionRoot:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"main overrides default and hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionMain:        stringPtr("this"),
+			optionDefault:     stringPtr("not_this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"default overrides hardDefault": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     stringPtr("this"),
+			optionHardDefault: stringPtr("not_this"),
+		},
+		"hardDefault is last resort": {
+			wantString:        "this",
+			optionRoot:        nil,
+			optionDefault:     nil,
+			optionHardDefault: stringPtr("this"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "test"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.optionRoot != nil {
@@ -234,7 +288,7 @@ func TestParam(t *testing.T) {
 	}
 }
 
-func TestGetDelay(t *testing.T) {
+func TestShoutrrr_GetDelay(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		delayRoot        *string
@@ -243,22 +297,42 @@ func TestGetDelay(t *testing.T) {
 		delayHardDefault *string
 		wantString       string
 	}{
-		"root overrides all": {wantString: "1s", delayRoot: stringPtr("1s"),
-			delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
-		"main overrides default and hardDefault": {wantString: "1s", delayRoot: nil,
-			delayMain: stringPtr("1s"), delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
-		"default overrides hardDefault": {wantString: "1s", delayRoot: nil,
-			delayDefault: stringPtr("1s"), delayHardDefault: stringPtr("2s")},
-		"hardDefault is last resort": {wantString: "1s", delayRoot: nil, delayDefault: nil,
-			delayHardDefault: stringPtr("1s")},
-		"no delay anywhere defaults to 0s": {wantString: "0s", delayRoot: nil,
-			delayDefault: nil, delayHardDefault: nil},
+		"root overrides all": {
+			wantString:       "1s",
+			delayRoot:        stringPtr("1s"),
+			delayDefault:     stringPtr("2s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"main overrides default and hardDefault": {
+			wantString:       "1s",
+			delayRoot:        nil,
+			delayMain:        stringPtr("1s"),
+			delayDefault:     stringPtr("2s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"default overrides hardDefault": {
+			wantString:       "1s",
+			delayRoot:        nil,
+			delayDefault:     stringPtr("1s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"hardDefault is last resort": {
+			wantString:       "1s",
+			delayRoot:        nil,
+			delayDefault:     nil,
+			delayHardDefault: stringPtr("1s"),
+		},
+		"no delay anywhere defaults to 0s": {wantString: "0s",
+			delayRoot:        nil,
+			delayDefault:     nil,
+			delayHardDefault: nil},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -286,7 +360,7 @@ func TestGetDelay(t *testing.T) {
 	}
 }
 
-func TestGetDelayDuration(t *testing.T) {
+func TestShoutrrr_GetDelayDuration(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		delayRoot        *string
@@ -295,20 +369,38 @@ func TestGetDelayDuration(t *testing.T) {
 		delayHardDefault *string
 		want             time.Duration
 	}{
-		"root overrides all": {want: 1 * time.Second, delayRoot: stringPtr("1s"),
-			delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
-		"main overrides default and hardDefault": {want: 1 * time.Second, delayRoot: nil,
-			delayMain: stringPtr("1s"), delayDefault: stringPtr("2s"), delayHardDefault: stringPtr("2s")},
-		"default overrides hardDefault": {want: 1 * time.Second, delayRoot: nil,
-			delayDefault: stringPtr("1s"), delayHardDefault: stringPtr("2s")},
-		"hardDefault is last resort": {want: 1 * time.Second, delayRoot: nil, delayDefault: nil,
-			delayHardDefault: stringPtr("1s")},
+		"root overrides all": {
+			want:             1 * time.Second,
+			delayRoot:        stringPtr("1s"),
+			delayDefault:     stringPtr("2s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"main overrides default and hardDefault": {
+			want:             1 * time.Second,
+			delayRoot:        nil,
+			delayMain:        stringPtr("1s"),
+			delayDefault:     stringPtr("2s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"default overrides hardDefault": {
+			want:             1 * time.Second,
+			delayRoot:        nil,
+			delayDefault:     stringPtr("1s"),
+			delayHardDefault: stringPtr("2s"),
+		},
+		"hardDefault is last resort": {
+			want:             1 * time.Second,
+			delayRoot:        nil,
+			delayDefault:     nil,
+			delayHardDefault: stringPtr("1s"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "delay"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.delayRoot != nil {
@@ -336,7 +428,7 @@ func TestGetDelayDuration(t *testing.T) {
 	}
 }
 
-func TestGetMaxTries(t *testing.T) {
+func TestShoutrrr_GetMaxTries(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		maxTriesRoot        *string
@@ -345,20 +437,38 @@ func TestGetMaxTries(t *testing.T) {
 		maxTriesHardDefault *string
 		want                int
 	}{
-		"root overrides all": {want: 1, maxTriesRoot: stringPtr("1"),
-			maxTriesDefault: stringPtr("2"), maxTriesHardDefault: stringPtr("2")},
-		"main overrides default and hardDefault": {want: 1, maxTriesRoot: nil,
-			maxTriesMain: stringPtr("1"), maxTriesDefault: stringPtr("2"), maxTriesHardDefault: stringPtr("2")},
-		"default overrides hardDefault": {want: 1, maxTriesRoot: nil,
-			maxTriesDefault: stringPtr("1"), maxTriesHardDefault: stringPtr("2")},
-		"hardDefault is last resort": {want: 1, maxTriesRoot: nil, maxTriesDefault: nil,
-			maxTriesHardDefault: stringPtr("1")},
+		"root overrides all": {
+			want:                1,
+			maxTriesRoot:        stringPtr("1"),
+			maxTriesDefault:     stringPtr("2"),
+			maxTriesHardDefault: stringPtr("2"),
+		},
+		"main overrides default and hardDefault": {
+			want:                1,
+			maxTriesRoot:        nil,
+			maxTriesMain:        stringPtr("1"),
+			maxTriesDefault:     stringPtr("2"),
+			maxTriesHardDefault: stringPtr("2"),
+		},
+		"default overrides hardDefault": {
+			want:                1,
+			maxTriesRoot:        nil,
+			maxTriesDefault:     stringPtr("1"),
+			maxTriesHardDefault: stringPtr("2"),
+		},
+		"hardDefault is last resort": {
+			want:                1,
+			maxTriesRoot:        nil,
+			maxTriesDefault:     nil,
+			maxTriesHardDefault: stringPtr("1"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "max_tries"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.maxTriesRoot != nil {
@@ -386,7 +496,7 @@ func TestGetMaxTries(t *testing.T) {
 	}
 }
 
-func TestGetMessage(t *testing.T) {
+func TestShoutrrr_GetMessage(t *testing.T) {
 	// GIVEN a Shoutrrr
 	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
@@ -401,25 +511,51 @@ func TestGetMessage(t *testing.T) {
 		messageHardDefault *string
 		want               string
 	}{
-		"root overrides all": {want: "New version!", messageRoot: stringPtr("New version!"),
-			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
-		"main overrides default and hardDefault": {want: "New version!", messageRoot: nil,
-			messageMain: stringPtr("New version!"), messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
-		"default overrides hardDefault": {want: "New version!", messageRoot: nil,
-			messageDefault: stringPtr("New version!"), messageHardDefault: stringPtr("something")},
-		"hardDefault is last resort": {want: "New version!", messageRoot: nil, messageDefault: nil,
-			messageHardDefault: stringPtr("New version!")},
-		"jinja templating": {want: "New version!", messageRoot: stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
-		"jinja vars": {want: fmt.Sprintf("%s or %s/%s/releases/tag/%s", serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			messageRoot:    stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			messageDefault: stringPtr("something"), messageHardDefault: stringPtr("something")},
+		"root overrides all": {
+			want:               "New version!",
+			messageRoot:        stringPtr("New version!"),
+			messageDefault:     stringPtr("something"),
+			messageHardDefault: stringPtr("something"),
+		},
+		"main overrides default and hardDefault": {
+			want:               "New version!",
+			messageRoot:        nil,
+			messageMain:        stringPtr("New version!"),
+			messageDefault:     stringPtr("something"),
+			messageHardDefault: stringPtr("something"),
+		},
+		"default overrides hardDefault": {
+			want:               "New version!",
+			messageRoot:        nil,
+			messageDefault:     stringPtr("New version!"),
+			messageHardDefault: stringPtr("something"),
+		},
+		"hardDefault is last resort": {
+			want:               "New version!",
+			messageRoot:        nil,
+			messageDefault:     nil,
+			messageHardDefault: stringPtr("New version!"),
+		},
+		"jinja templating": {
+			want:               "New version!",
+			messageRoot:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			messageDefault:     stringPtr("something"),
+			messageHardDefault: stringPtr("something"),
+		},
+		"jinja vars": {
+			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
+				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+			messageRoot:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			messageDefault:     stringPtr("something"),
+			messageHardDefault: stringPtr("something"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "message"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.messageRoot != nil {
@@ -447,7 +583,7 @@ func TestGetMessage(t *testing.T) {
 	}
 }
 
-func TestGetTitle(t *testing.T) {
+func TestShoutrrr_GetTitle(t *testing.T) {
 	// GIVEN a Shoutrrr
 	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
@@ -462,25 +598,51 @@ func TestGetTitle(t *testing.T) {
 		titleHardDefault *string
 		want             string
 	}{
-		"root overrides all": {want: "New version!", titleRoot: stringPtr("New version!"),
-			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
-		"main overrides default and hardDefault": {want: "New version!", titleRoot: nil,
-			titleMain: stringPtr("New version!"), titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
-		"default overrides hardDefault": {want: "New version!", titleRoot: nil,
-			titleDefault: stringPtr("New version!"), titleHardDefault: stringPtr("something")},
-		"hardDefault is last resort": {want: "New version!", titleRoot: nil, titleDefault: nil,
-			titleHardDefault: stringPtr("New version!")},
-		"jinja templating": {want: "New version!", titleRoot: stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
-		"jinja vars": {want: fmt.Sprintf("%s or %s/%s/releases/tag/%s", serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			titleRoot:    stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			titleDefault: stringPtr("something"), titleHardDefault: stringPtr("something")},
+		"root overrides all": {
+			want:             "New version!",
+			titleRoot:        stringPtr("New version!"),
+			titleDefault:     stringPtr("something"),
+			titleHardDefault: stringPtr("something"),
+		},
+		"main overrides default and hardDefault": {
+			want:             "New version!",
+			titleRoot:        nil,
+			titleMain:        stringPtr("New version!"),
+			titleDefault:     stringPtr("something"),
+			titleHardDefault: stringPtr("something"),
+		},
+		"default overrides hardDefault": {
+			want:             "New version!",
+			titleRoot:        nil,
+			titleDefault:     stringPtr("New version!"),
+			titleHardDefault: stringPtr("something"),
+		},
+		"hardDefault is last resort": {
+			want:             "New version!",
+			titleRoot:        nil,
+			titleDefault:     nil,
+			titleHardDefault: stringPtr("New version!"),
+		},
+		"jinja templating": {
+			want:             "New version!",
+			titleRoot:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			titleDefault:     stringPtr("something"),
+			titleHardDefault: stringPtr("something"),
+		},
+		"jinja vars": {
+			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
+				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+			titleRoot:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			titleDefault:     stringPtr("something"),
+			titleHardDefault: stringPtr("something"),
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			key := "title"
 			shoutrrr := testShoutrrr(false, true, false)
 			if tc.titleRoot != nil {
@@ -508,7 +670,7 @@ func TestGetTitle(t *testing.T) {
 	}
 }
 
-func TestGetType(t *testing.T) {
+func TestShoutrrr_GetType(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		typeRoot        string
@@ -517,20 +679,38 @@ func TestGetType(t *testing.T) {
 		typeHardDefault string
 		want            string
 	}{
-		"root overrides all": {want: "smtp", typeRoot: "smtp",
-			typeDefault: "other", typeHardDefault: "other"},
-		"main overrides default and hardDefault": {want: "smtp", typeRoot: "",
-			typeMain: "smtp", typeDefault: "other", typeHardDefault: "other"},
-		"default is ignored": {want: "", typeRoot: "",
-			typeDefault: "smtp", typeHardDefault: ""},
-		"hardDefault is ignored": {want: "", typeRoot: "", typeDefault: "",
-			typeHardDefault: "smtp"},
+		"root overrides all": {
+			want:            "smtp",
+			typeRoot:        "smtp",
+			typeDefault:     "other",
+			typeHardDefault: "other",
+		},
+		"main overrides default and hardDefault": {
+			want:            "smtp",
+			typeRoot:        "",
+			typeMain:        "smtp",
+			typeDefault:     "other",
+			typeHardDefault: "other",
+		},
+		"default is ignored": {
+			want:            "",
+			typeRoot:        "",
+			typeDefault:     "smtp",
+			typeHardDefault: "",
+		},
+		"hardDefault is ignored": {
+			want:            "",
+			typeRoot:        "",
+			typeDefault:     "",
+			typeHardDefault: "smtp",
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.Type = tc.typeRoot
 			shoutrrr.Main.Type = tc.typeMain

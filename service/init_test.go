@@ -20,31 +20,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestGetServiceInfo(t *testing.T) {
+func TestService_GetServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	service := testServiceURL("TestGetServiceInfo")
+	svc := testServiceURL("TestGetServiceInfo")
 	id := "test_id"
-	service.ID = id
+	svc.ID = id
 	url := "https://test_url.com"
-	service.LatestVersion.URL = url
+	svc.LatestVersion.URL = url
 	webURL := "https://test_webURL.com"
-	service.Dashboard.WebURL = webURL
+	svc.Dashboard.WebURL = webURL
 	latestVersion := "latest.version"
-	service.Status.LatestVersion = latestVersion
+	svc.Status.SetLatestVersion(latestVersion, false)
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
 	// When GetServiceInfo is called on it
-	got := service.GetServiceInfo()
+	got := svc.GetServiceInfo()
 	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
@@ -53,65 +51,89 @@ func TestGetServiceInfo(t *testing.T) {
 	}
 
 	// THEN we get the correct ServiceInfo
-	if got != want {
+	if *got != want {
 		t.Errorf("GetServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
 	}
 }
 
-func TestServiceGetIconURL(t *testing.T) {
+func TestService_GetIconURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		icon   string
-		want   string
-		notify shoutrrr.Slice
+		dashboardIcon string
+		want          string
+		notify        shoutrrr.Slice
 	}{
-		"no icon": {want: "", icon: ""},
-		"no icon anywhere": {want: "", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		}}},
-		"emoji icon": {want: "", icon: ":smile:"},
-		"web icon":   {want: "https://example.com/icon.png", icon: "https://example.com/icon.png"},
-		"notify icon only": {want: "https://example.com/icon.png", notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-			Params: map[string]string{
-				"icon": "https://example.com/icon.png",
-			},
-			Main:         &shoutrrr.Shoutrrr{},
-			Defaults:     &shoutrrr.Shoutrrr{},
-			HardDefaults: &shoutrrr.Shoutrrr{},
-		}}},
-		"notify icon takes precedence over emoji": {want: "https://example.com/icon.png", icon: ":smile:",
+		"no dashboard.icon": {
+			want:          "",
+			dashboardIcon: "",
+		},
+		"no icon anywhere": {
+			want:          "",
+			dashboardIcon: "",
 			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+				Main:         &shoutrrr.Shoutrrr{},
+				Defaults:     &shoutrrr.Shoutrrr{},
+				HardDefaults: &shoutrrr.Shoutrrr{},
+			}},
+		},
+		"emoji icon": {
+			want:          "",
+			dashboardIcon: ":smile:",
+		},
+		"web icon": {
+			want:          "https://example.com/icon.png",
+			dashboardIcon: "https://example.com/icon.png",
+		},
+		"notify icon only": {
+			want: "https://example.com/icon.png",
+			notify: shoutrrr.Slice{"test": {
 				Params: map[string]string{
 					"icon": "https://example.com/icon.png",
 				},
 				Main:         &shoutrrr.Shoutrrr{},
 				Defaults:     &shoutrrr.Shoutrrr{},
 				HardDefaults: &shoutrrr.Shoutrrr{},
-			}}},
-		"dashboard icon takes precedence over notify icon": {want: "https://root.com/icon.png", icon: "https://root.com/icon.png",
-			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
+			}},
+		},
+		"notify icon takes precedence over emoji": {
+			want:          "https://example.com/icon.png",
+			dashboardIcon: ":smile:",
+			notify: shoutrrr.Slice{"test": {
 				Params: map[string]string{
 					"icon": "https://example.com/icon.png",
 				},
 				Main:         &shoutrrr.Shoutrrr{},
 				Defaults:     &shoutrrr.Shoutrrr{},
 				HardDefaults: &shoutrrr.Shoutrrr{},
-			}}},
+			}},
+		},
+		"dashboard icon takes precedence over notify icon": {
+			want:          "https://root.com/icon.png",
+			dashboardIcon: "https://root.com/icon.png",
+			notify: shoutrrr.Slice{"test": {
+				Params: map[string]string{
+					"icon": "https://example.com/icon.png",
+				},
+				Main:         &shoutrrr.Shoutrrr{},
+				Defaults:     &shoutrrr.Shoutrrr{},
+				HardDefaults: &shoutrrr.Shoutrrr{},
+			}},
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		svc := testServiceGitHub(name)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := testServiceGitHub(name)
-			service.Dashboard.Icon = tc.icon
-			service.Notify = tc.notify
+
+			svc.Dashboard.Icon = tc.dashboardIcon
+			svc.Notify = tc.notify
 
 			// WHEN GetIconURL is called
-			got := service.GetIconURL()
+			got := svc.GetIconURL()
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -122,94 +144,98 @@ func TestServiceGetIconURL(t *testing.T) {
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestService_Init(t *testing.T) {
 	// GIVEN a Service
+	testLogging()
 	tests := map[string]struct {
-		service Service
+		svc *Service
 	}{
-		"bare service": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"}}},
-		"service with notify, command and webhook": {service: Service{ID: "Init", LatestVersion: latestver.Lookup{Type: "github", URL: "release-argus/Argus"},
-			Notify:  shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{Type: "discord"}},
-			Command: command.Slice{{"ls"}},
-			WebHook: webhook.Slice{"test": testWebHook(false)}}},
+		"bare service": {
+			svc: &Service{
+				ID: "Init",
+				LatestVersion: latestver.Lookup{
+					Type: "github", URL: "release-argus/Argus"}},
+		},
+		"service with notify, command and webhook": {
+			svc: &Service{
+				ID: "Init",
+				LatestVersion: latestver.Lookup{
+					Type: "github", URL: "release-argus/Argus"},
+				Notify: shoutrrr.Slice{
+					"test": &shoutrrr.Shoutrrr{Type: "discord"}},
+				Command: command.Slice{
+					{"ls"}},
+				WebHook: webhook.Slice{
+					"test": testWebHook(false)}},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			log := util.NewJLog("WARN", false)
+
 			var defaults Service
 			var hardDefaults Service
-			tc.service.ID = name
+			tc.svc.ID = name
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-			tc.service.Init(log, &defaults, &hardDefaults, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{}, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+			tc.svc.Init(
+				&defaults, &hardDefaults,
+				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
+				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
 
 			// THEN pointers to those vars are handed out to the Lookup
-			// log
-			if jLog != log {
-				t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-					log, jLog)
-			}
 			// defaults
-			if tc.service.Defaults != &defaults {
+			if tc.svc.Defaults != &defaults {
 				t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults, tc.service.Defaults)
+					&defaults, tc.svc.Defaults)
 			}
 			// dashboard.defaults
-			if tc.service.Dashboard.Defaults != &defaults.Dashboard {
+			if tc.svc.Dashboard.Defaults != &defaults.Dashboard {
 				t.Errorf("Dashboard defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults.Dashboard, tc.service.Dashboard.Defaults)
+					&defaults.Dashboard, tc.svc.Dashboard.Defaults)
 			}
 			// option.defaults
-			if tc.service.Options.Defaults != &defaults.Options {
+			if tc.svc.Options.Defaults != &defaults.Options {
 				t.Errorf("Options defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&defaults.Options, tc.service.Options.Defaults)
+					&defaults.Options, tc.svc.Options.Defaults)
 			}
 			// hardDefaults
-			if tc.service.HardDefaults != &hardDefaults {
+			if tc.svc.HardDefaults != &hardDefaults {
 				t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults, tc.service.HardDefaults)
+					&hardDefaults, tc.svc.HardDefaults)
 			}
 			// dashboard.hardDefaults
-			if tc.service.Dashboard.HardDefaults != &hardDefaults.Dashboard {
+			if tc.svc.Dashboard.HardDefaults != &hardDefaults.Dashboard {
 				t.Errorf("Dashboard hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Dashboard, tc.service.Dashboard.HardDefaults)
+					&hardDefaults.Dashboard, tc.svc.Dashboard.HardDefaults)
 			}
 			// option.hardDefaults
-			if tc.service.Options.HardDefaults != &hardDefaults.Options {
+			if tc.svc.Options.HardDefaults != &hardDefaults.Options {
 				t.Errorf("Options hardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
-					&hardDefaults.Options, tc.service.Options.HardDefaults)
-			}
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-			wantC := 2
-			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), wantC)
+					&hardDefaults.Options, tc.svc.Options.HardDefaults)
 			}
 			// Notify
-			if len(tc.service.Notify) != 0 {
-				for i := range tc.service.Notify {
-					if tc.service.Notify[i].Main == nil {
+			if len(tc.svc.Notify) != 0 {
+				for i := range tc.svc.Notify {
+					if tc.svc.Notify[i].Main == nil {
 						t.Error("Notify init didn't initialise the Main")
 					}
 				}
 			}
 			// Command
-			if len(tc.service.Command) != 0 {
-				if tc.service.CommandController == nil {
+			if len(tc.svc.Command) != 0 {
+				if tc.svc.CommandController == nil {
 					t.Errorf("CommandController is still nil with %v Commands present",
-						tc.service.Command)
+						tc.svc.Command)
 				}
-			} else if tc.service.CommandController != nil {
+			} else if tc.svc.CommandController != nil {
 				t.Errorf("CommandController should be nil with %v Commands present",
-					tc.service.Command)
+					tc.svc.Command)
 			}
 			// WebHook
-			if len(tc.service.WebHook) != 0 {
-				for i := range tc.service.WebHook {
-					if tc.service.WebHook[i].Main == nil {
+			if len(tc.svc.WebHook) != 0 {
+				for i := range tc.svc.WebHook {
+					if tc.svc.WebHook[i].Main == nil {
 						t.Error("WebHook init didn't initialise the Main")
 					}
 				}

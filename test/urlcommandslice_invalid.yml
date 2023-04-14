@@ -1,7 +1,0 @@
-type: regex
-regex: foo
-regex: foo
-index: 1
-text: hi
-old: was
-new: now

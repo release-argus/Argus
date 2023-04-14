@@ -22,18 +22,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestInitMetrics(t *testing.T) {
+func TestLookup_Metrics(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testLookup(false, false)
 	*lookup.Status.ServiceID += "TestInitMetrics"
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-	lookup.initMetrics()
+	lookup.InitMetrics()
 
 	// THEN it can be collected
 	// counters
@@ -43,12 +42,20 @@ func TestInitMetrics(t *testing.T) {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
 			(gotC - hadC), wantC)
 	}
+
+	// AND it can be deleted
+	lookup.DeleteMetrics()
+	gotC = testutil.CollectAndCount(metric.LatestVersionQueryMetric)
+	if gotC != hadC {
+		t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
+			gotC, hadC)
+	}
 }
 
-func TestInit(t *testing.T) {
+func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup(false, false)
-	log := util.NewJLog("WARN", false)
+	testLogging("DEBUG")
 	var defaults Lookup
 	var hardDefaults Lookup
 	*lookup.Status.ServiceID += "TestInit"
@@ -56,15 +63,12 @@ func TestInit(t *testing.T) {
 	var options opt.Options
 
 	// WHEN Init is called on it
-	hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-	lookup.Init(log, &defaults, &hardDefaults, &status, &options)
+	lookup.Init(
+		&defaults, &hardDefaults,
+		&status,
+		&options)
 
 	// THEN pointers to those vars are handed out to the Lookup
-	// log
-	if jLog != log {
-		t.Errorf("JLog was not initialised from the Init\n want: %v\ngot:  %v",
-			log, jLog)
-	}
 	// defaults
 	if lookup.Defaults != &defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
@@ -84,12 +88,5 @@ func TestInit(t *testing.T) {
 	if lookup.Options != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&options, lookup.Options)
-	}
-	// initMetrics - counters
-	gotC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
-	wantC := 2
-	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics's were initialised, expecting %d",
-			(gotC - hadC), wantC)
 	}
 }

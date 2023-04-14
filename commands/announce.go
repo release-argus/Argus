@@ -23,12 +23,12 @@ import (
 // AnnounceCommand will announce the Command fail status to `c.Announce` channel
 // (Broadcast to all WebSocket clients).
 func (c *Controller) AnnounceCommand(index int) {
-	c.SetNextRunnable(index, false)
-	commandSummary := make(map[string]*api_type.CommandSummary)
+	c.SetExecuting(index, false)
+	commandSummary := make(map[string]*api_type.CommandSummary, 1)
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_type.CommandSummary{
-		Failed:       (*c.Failed)[index],
-		NextRunnable: c.NextRunnable[index],
+		Failed:       c.Failed.Get(index),
+		NextRunnable: c.GetNextRunnable(index),
 	}
 
 	// Command success/fail
@@ -38,20 +38,16 @@ func (c *Controller) AnnounceCommand(index int) {
 		Type:    "COMMAND",
 		SubType: "EVENT",
 		ServiceData: &api_type.ServiceSummary{
-			ID: *c.ServiceStatus.ServiceID,
-		},
-		CommandData: commandSummary,
-	})
+			ID: *c.ServiceStatus.ServiceID},
+		CommandData: commandSummary})
 
-	if c.ServiceStatus.AnnounceChannel != nil {
-		*c.ServiceStatus.AnnounceChannel <- payloadData
-	}
+	c.ServiceStatus.SendAnnounce(&payloadData)
 }
 
 // Find `command`.
-func (c *Controller) Find(command string) *int {
+func (c *Controller) Find(command string) (index *int) {
 	if c == nil {
-		return nil
+		return
 	}
 
 	// Loop through all the Command(s)
@@ -59,18 +55,9 @@ func (c *Controller) Find(command string) *int {
 		formatted := (*c.Command)[key].ApplyTemplate(c.ServiceStatus)
 		// If this key is the command
 		if formatted.String() == command {
-			return &key
+			index = &key
+			return
 		}
 	}
-	return nil
-}
-
-// ResetFails of this Controller's Commands
-func (c *Controller) ResetFails() {
-	if c == nil {
-		return
-	}
-	for i := range *c.Failed {
-		(*c.Failed)[i] = nil
-	}
+	return
 }

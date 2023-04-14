@@ -1,11 +1,11 @@
 import { ActionModalData, ModalType } from "types/summary";
 
 import { Container } from "react-bootstrap";
+import { FC } from "react";
 import { Loading } from "components/modals/action-release/loading";
-import { ReactElement } from "react";
 import { WebHook } from "components/modals/action-release/webhook";
 
-interface params {
+interface Props {
   modalType: ModalType;
   data: ActionModalData;
   onClickAcknowledge: (target: string, isWebHook: boolean) => void;
@@ -14,13 +14,13 @@ interface params {
   delayedRender: any;
 }
 
-export const WebHooks = ({
+export const WebHooks: FC<Props> = ({
   modalType,
   data,
   onClickAcknowledge,
   setSendingThisService,
   delayedRender,
-}: params) => {
+}) => {
   return (
     <>
       <strong>WebHook(s):</strong>
@@ -33,7 +33,7 @@ export const WebHooks = ({
                 delayedRender={delayedRender}
               />
             ))
-          : Object.entries(data.webhooks).map(([id, webhook]): ReactElement => {
+          : Object.entries(data.webhooks).map(([id, webhook]) => {
               let sending = false;
               if (data.sentWH.includes(`${data.service_id} ${id}`)) {
                 setSendingThisService(true);

@@ -25,9 +25,9 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-var TIMEOUT time.Duration = 25 * time.Second
+var TIMEOUT time.Duration = 30 * time.Second
 
-func TestSaveHandler(t *testing.T) {
+func TestConfig_SaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler
 	jLog = util.NewJLog("WARN", false)
 	config := testConfig()
@@ -48,87 +48,68 @@ func TestSaveHandler(t *testing.T) {
 }
 
 func TestWaitChannelTimeout(t *testing.T) {
-	// GIVEN a Config.SaveChannel
-	config := testConfig()
+	// GIVEN a Config.SaveChannel and messages to send/not send
+	tests := map[string]struct {
+		messages  int
+		timeTaken time.Duration
+	}{
+		"no messages": {
+			messages:  0,
+			timeTaken: TIMEOUT,
+		},
+		"one message": {
+			messages:  1,
+			timeTaken: 2 * TIMEOUT,
+		},
+		"two messages": {
+			messages:  2,
+			timeTaken: 2 * TIMEOUT,
+		},
+	}
 
-	// WHEN the waitChannelTimeout is called
-	time.Sleep(time.Second)
-	start := time.Now().UTC()
-	waitChannelTimeout(config.SaveChannel)
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	// THEN after `TIMEOUT`, it would have tried to Save (and failed)
-	elapsed := time.Since(start)
-	if elapsed < TIMEOUT {
-		t.Errorf("waitChannelTimeout should have waited atleast %s, but only waited %s",
-			TIMEOUT, elapsed)
+			config := testConfig()
+
+			// WHEN those messages are sent to the channel mid-way through the wait
+			go func() {
+				for tc.messages != 0 {
+					time.Sleep(10 * time.Second)
+					*config.SaveChannel <- true
+					tc.messages--
+				}
+			}()
+			time.Sleep(time.Second)
+			start := time.Now().UTC()
+			waitChannelTimeout(config.SaveChannel)
+
+			// THEN after `TIMEOUT`, it would have tried to Save
+			elapsed := time.Since(start)
+			if elapsed < tc.timeTaken-100*time.Millisecond ||
+				elapsed > tc.timeTaken+100*time.Millisecond {
+				t.Errorf("waitChannelTimeout should have waited atleast %s, but only waited %s",
+					tc.timeTaken, elapsed)
+			}
+		})
 	}
 }
 
-func TestWaitChannelTimeoutDoesExtend(t *testing.T) {
-	// GIVEN a Config.SaveChannel that is in the waitChannelTimeout
-	config := testConfig()
-	go func() {
-		*config.SaveChannel <- true
-	}()
-
-	// WHEN another message is sent to the channel mid-way through the wait
-	go func() {
-		time.Sleep(10 * time.Second)
-		*config.SaveChannel <- true
-	}()
-	time.Sleep(time.Second)
-	start := time.Now().UTC()
-	waitChannelTimeout(config.SaveChannel)
-
-	// THEN after 2*`TIMEOUT`, it would have tried to Save (and failed)
-	elapsed := time.Since(start)
-	if elapsed < 2*TIMEOUT ||
-		elapsed > 2*TIMEOUT+5*time.Second {
-		t.Errorf("waitChannelTimeout should have waited ~%s, but waited %v",
-			2*TIMEOUT, elapsed)
-	}
-}
-
-func TestWaitChannelTimeoutDoesExtendOnce(t *testing.T) {
-	// GIVEN a Config.SaveChannel that is in the waitChannelTimeout
-	config := testConfig()
-	go func() {
-		*config.SaveChannel <- true
-	}()
-
-	// WHEN two messages are sent to the channel mid-way through the wait
-	go func() {
-		time.Sleep(10 * time.Second)
-		*config.SaveChannel <- true
-		time.Sleep(10 * time.Second)
-		*config.SaveChannel <- true
-	}()
-	time.Sleep(time.Second)
-	start := time.Now().UTC()
-	waitChannelTimeout(config.SaveChannel)
-
-	// THEN after 2*`TIMEOUT`, it would have tried to Save (and failed)
-	elapsed := time.Since(start)
-	if elapsed < 2*TIMEOUT ||
-		elapsed > 2*TIMEOUT+5*time.Second {
-		t.Errorf("waitChannelTimeout should have waited ~%s, but waited %v",
-			2*TIMEOUT, elapsed)
-	}
-}
-
-func TestSave(t *testing.T) {
+func TestConfig_Save(t *testing.T) {
 	// GIVEN we have a bunch of files that want to be Save'd
 	tests := map[string]struct {
-		file        string
+		file        func(path string, t *testing.T)
 		corrections map[string]string
 	}{
-		"config_test.yml": {file: "../test/config_test.yml", corrections: map[string]string{
+		"config_test.yml": {file: testYAML_ConfigTest, corrections: map[string]string{
 			"listen_port: 0\n":         "listen_port: \"0\"\n",
 			"semantic_versioning: n\n": "semantic_versioning: false\n",
 			"interval: 123\n":          "interval: 123s\n",
 			"delay: 2\n":               "delay: 2s\n",
 		}},
-		"argus.yml": {file: "../test/argus.yml", corrections: map[string]string{
+		"argus.yml": {file: testYAML_Argus, corrections: map[string]string{
 			"listen_port: 0\n": "listen_port: \"0\"\n",
 		}},
 	}
@@ -137,20 +118,24 @@ func TestSave(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			t.Log(tc.file)
-			config := Config{File: tc.file}
-			originalData, err := os.ReadFile(config.File)
-			had := string(originalData)
+
+			file := name
+			tc.file(file, t)
+			t.Log(file)
+			originalData, err := os.ReadFile(file)
 			if err != nil {
 				t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
 					err.Error())
 			}
-			flags := make(map[string]bool)
-			config.Load(config.File, &flags, &util.JLog{})
+			had := string(originalData)
+			config := testLoadBasic(file, t)
 
 			// WHEN we Save it to a new location
 			config.File += ".test"
+			t.Cleanup(func() { os.Remove(config.File) })
+			loadMutex.RLock()
 			config.Save()
+			loadMutex.RUnlock()
 
 			// THEN it's the same as the original file
 			failed := false
@@ -161,7 +146,7 @@ func TestSave(t *testing.T) {
 			if string(newData) != had {
 				failed = true
 				t.Errorf("%q is different after Save. Got \n%s\nexpecting:\n%s",
-					tc.file, string(newData), had)
+					file, string(newData), had)
 			}
 			err = os.Remove(config.File)
 			if err != nil {

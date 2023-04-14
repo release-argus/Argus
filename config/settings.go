@@ -165,37 +165,59 @@ func (s *Settings) SetDefaults() {
 
 // GetLogTimestamps.
 func (s *Settings) GetLogTimestamps() *bool {
-	return util.GetFirstNonNilPtr(s.FromFlags.Log.Timestamps, s.Log.Timestamps, s.HardDefaults.Log.Timestamps)
+	return util.GetFirstNonNilPtr(
+		s.FromFlags.Log.Timestamps,
+		s.Log.Timestamps,
+		s.HardDefaults.Log.Timestamps)
 }
 
 // GetLogLevel.
 func (s *Settings) GetLogLevel() string {
-	return strings.ToUpper(*util.GetFirstNonNilPtr(s.FromFlags.Log.Level, s.Log.Level, s.HardDefaults.Log.Level))
+	return strings.ToUpper(*util.GetFirstNonNilPtr(
+		s.FromFlags.Log.Level,
+		s.FromFlags.Log.Level,
+		s.Log.Level,
+		s.HardDefaults.Log.Level))
 }
 
 // GetDataDatabaseFile.
 func (s *Settings) GetDataDatabaseFile() *string {
-	return util.GetFirstNonNilPtr(s.FromFlags.Data.DatabaseFile, s.Data.DatabaseFile, s.HardDefaults.Data.DatabaseFile)
+	return util.GetFirstNonNilPtr(
+		s.FromFlags.Data.DatabaseFile,
+		s.Data.DatabaseFile,
+		s.HardDefaults.Data.DatabaseFile)
 }
 
 // GetWebListenHost.
 func (s *Settings) GetWebListenHost() string {
-	return *util.GetFirstNonNilPtr(s.FromFlags.Web.ListenHost, s.Web.ListenHost, s.HardDefaults.Web.ListenHost)
+	return *util.GetFirstNonNilPtr(
+		s.FromFlags.Web.ListenHost,
+		s.Web.ListenHost,
+		s.HardDefaults.Web.ListenHost)
 }
 
 // GetWebListenPort.
 func (s *Settings) GetWebListenPort() string {
-	return *util.GetFirstNonNilPtr(s.FromFlags.Web.ListenPort, s.Web.ListenPort, s.HardDefaults.Web.ListenPort)
+	return *util.GetFirstNonNilPtr(
+		s.FromFlags.Web.ListenPort,
+		s.Web.ListenPort,
+		s.HardDefaults.Web.ListenPort)
 }
 
 // GetWebRoutePrefix.
 func (s *Settings) GetWebRoutePrefix() string {
-	return *util.GetFirstNonNilPtr(s.FromFlags.Web.RoutePrefix, s.Web.RoutePrefix, s.HardDefaults.Web.RoutePrefix)
+	return *util.GetFirstNonNilPtr(
+		s.FromFlags.Web.RoutePrefix,
+		s.Web.RoutePrefix,
+		s.HardDefaults.Web.RoutePrefix)
 }
 
 // GetWebCertFile.
 func (s *Settings) GetWebCertFile() *string {
-	certFile := util.GetFirstNonNilPtr(s.FromFlags.Web.CertFile, s.Web.CertFile, s.HardDefaults.Web.CertFile)
+	certFile := util.GetFirstNonNilPtr(
+		s.FromFlags.Web.CertFile,
+		s.Web.CertFile,
+		s.HardDefaults.Web.CertFile)
 	if certFile == nil || *certFile == "" {
 		return nil
 	}
@@ -217,7 +239,10 @@ func (s *Settings) GetWebCertFile() *string {
 
 // GetWebKeyFile.
 func (s *Settings) GetWebKeyFile() *string {
-	keyFile := util.GetFirstNonNilPtr(s.FromFlags.Web.KeyFile, s.Web.KeyFile, s.HardDefaults.Web.KeyFile)
+	keyFile := util.GetFirstNonNilPtr(
+		s.FromFlags.Web.KeyFile,
+		s.Web.KeyFile,
+		s.HardDefaults.Web.KeyFile)
 	if keyFile == nil || *keyFile == "" {
 		return nil
 	}

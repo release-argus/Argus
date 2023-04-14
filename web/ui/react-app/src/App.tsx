@@ -5,6 +5,8 @@ import {
   BrowserRouter as Router,
   Routes,
 } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactElement, useMemo } from "react";
 import { Theme, themeLocalStorageKey } from "theme";
 import { ThemeContext, themeName, themeSetting } from "contexts/theme";
 
@@ -12,9 +14,9 @@ import { Container } from "react-bootstrap";
 import Header from "components/header";
 import { ModalProvider } from "contexts/modal";
 import { NotificationProvider } from "contexts/notification";
-import { ReactElement } from "react";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WebSocketProvider } from "contexts/websocket";
-import { getBasename } from "utils/get_basename";
+import { getBasename } from "utils";
 import useLocalStorage from "hooks/local-storage";
 import { useMedia } from "hooks/media";
 
@@ -23,6 +25,15 @@ const App = (): ReactElement => {
   // endpoint suffix from the window location path. It works out of the box for both direct
   // hosting and reverse proxy deployments with no additional configurations required.
   const basename = getBasename();
+
+  const queryClient = new QueryClient();
+  queryClient.setDefaultOptions({
+    queries: {
+      staleTime: Infinity,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    },
+  });
 
   const [userTheme, setUserTheme] = useLocalStorage<themeSetting>(
     themeLocalStorageKey,
@@ -42,33 +53,39 @@ const App = (): ReactElement => {
       : "theme-light";
   }
 
+  const themeContextValue = useMemo(
+    () => ({
+      theme: theme,
+      themePreference: userTheme,
+      setTheme: (t: themeSetting) => setUserTheme(t),
+    }),
+    [theme, userTheme, setUserTheme]
+  );
+
   return (
-    <Router basename={basename}>
-      <ThemeContext.Provider
-        value={{
-          theme: theme,
-          themePreference: userTheme,
-          setTheme: (t: themeSetting) => setUserTheme(t),
-        }}
-      >
-        <Theme />
-        <Header />
-        <WebSocketProvider>
-          <NotificationProvider />
-          <ModalProvider>
-            <Container fluid style={{ padding: "1.25rem" }}>
-              <Routes>
-                <Route path="/approvals" element={<ApprovalsPage />} />
-                <Route path="/status" element={<StatusPage />} />
-                <Route path="/flags" element={<FlagsPage />} />
-                <Route path="/config" element={<ConfigPage />} />
-                <Route path="/" element={<Navigate to="/approvals" />} />
-              </Routes>
-            </Container>
-          </ModalProvider>
-        </WebSocketProvider>
-      </ThemeContext.Provider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router basename={basename}>
+        <ThemeContext.Provider value={themeContextValue}>
+          <Theme />
+          <Header />
+          <WebSocketProvider>
+            <NotificationProvider />
+            <ModalProvider>
+              <Container fluid style={{ padding: "1.25rem" }}>
+                <Routes>
+                  <Route path="/approvals" element={<ApprovalsPage />} />
+                  <Route path="/status" element={<StatusPage />} />
+                  <Route path="/flags" element={<FlagsPage />} />
+                  <Route path="/config" element={<ConfigPage />} />
+                  <Route path="/" element={<Navigate to="/approvals" />} />
+                </Routes>
+              </Container>
+            </ModalProvider>
+          </WebSocketProvider>
+        </ThemeContext.Provider>
+      </Router>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 };
 

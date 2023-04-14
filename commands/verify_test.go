@@ -26,21 +26,32 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestPrint(t *testing.T) {
-	// GIVEN a Lookup
+func TestSlice_Print(t *testing.T) {
+	// GIVEN a Slice
 	tests := map[string]struct {
 		slice *Slice
 		lines int
 	}{
-		"nil Slice":                 {lines: 0, slice: nil},
-		"non-nil zero length Slice": {lines: 0, slice: &Slice{}},
-		"single arg Command":        {lines: 2, slice: &Slice{{"ls"}}},
-		"single multi-arg Command":  {lines: 2, slice: &Slice{{"ls", "-lah", "/root"}}},
-		"multiple Commands":         {lines: 4, slice: &Slice{{"ls"}, {"true"}, {"bash", "something.sh"}}},
+		"nil Slice": {
+			lines: 0,
+			slice: nil},
+		"non-nil zero length Slice": {
+			lines: 0,
+			slice: &Slice{}},
+		"single arg Command": {
+			lines: 2,
+			slice: &Slice{{"ls"}}},
+		"single multi-arg Command": {
+			lines: 2,
+			slice: &Slice{{"ls", "-lah", "/root"}}},
+		"multiple Commands": {
+			lines: 4,
+			slice: &Slice{{"ls"}, {"true"}, {"bash", "something.sh"}}},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -61,21 +72,28 @@ func TestPrint(t *testing.T) {
 	}
 }
 
-func TestCommandCheckValues(t *testing.T) {
+func TestCommand_CheckValues(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
 		command  *Command
 		errRegex string
 	}{
-		"nil command":              {errRegex: `^$`, command: nil},
-		"valid command":            {errRegex: `^$`, command: &Command{"ls", "-la"}},
-		"invalid command template": {errRegex: `^.+ (.+) <invalid>`, command: &Command{"ls", "-la", "{{ version }"}},
+		"nil command": {
+			errRegex: `^$`,
+			command:  nil},
+		"valid command": {
+			errRegex: `^$`,
+			command:  &Command{"ls", "-la"}},
+		"invalid command template": {
+			errRegex: `^.+ (.+) <invalid>`,
+			command:  &Command{"ls", "-la", "{{ version }"}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called
 			err := tc.command.CheckValues()
 
@@ -90,21 +108,33 @@ func TestCommandCheckValues(t *testing.T) {
 		})
 	}
 }
-func TestSliceCheckValues(t *testing.T) {
+func TestCommandSlice_CheckValues(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		slice    *Slice
 		errRegex []string
 	}{
-		"nil slice":          {errRegex: []string{`^$`}, slice: nil},
-		"valid slice":        {errRegex: []string{`^$`}, slice: &Slice{{"ls", "-la"}}},
-		"invalid templating": {errRegex: []string{`^command:$`, `^  item_1: .+ (.+) <invalid>`}, slice: &Slice{{"ls"}, {"ls", "-la", "{{ version }"}}},
+		"nil slice": {
+			errRegex: []string{`^$`},
+			slice:    nil},
+		"valid slice": {
+			errRegex: []string{`^$`},
+			slice: &Slice{
+				{"ls", "-la"}}},
+		"invalid templating": {
+			errRegex: []string{
+				`^command:$`,
+				`^  item_1: .+ (.+) <invalid>`},
+			slice: &Slice{
+				{"ls"},
+				{"ls", "-la", "{{ version }"}}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 

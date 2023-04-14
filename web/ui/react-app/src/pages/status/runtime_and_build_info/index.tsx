@@ -9,10 +9,10 @@ import {
 import { Dictionary } from "types/util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Info } from "types/info";
+import { WebSocketResponse } from "types/websocket";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useTheme } from "contexts/theme";
-import { websocketResponse } from "types/websocket";
 
 const titleMappings: Dictionary<string> = {
   cwd: "Working directory",
@@ -34,7 +34,7 @@ export const Status = (): ReactElement => {
     );
 
     // Handler to listen to WebSocket messages
-    const handler = (event: websocketResponse) => {
+    const handler = (event: WebSocketResponse) => {
       if (event.page === "RUNTIME_BUILD" && event.info_data) {
         setInfo({
           build: event.info_data.build,

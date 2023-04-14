@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package filter
 
@@ -26,8 +26,7 @@ func stringPtr(val string) *string {
 }
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
-	var commandController *command.Controller
-	commandController.Init(jLog, nil, nil, nil, nil)
+	LogInit(jLog)
 }
 
 func testURLCommandRegex() URLCommand {
@@ -57,5 +56,18 @@ func testURLCommandSplit() URLCommand {
 		Type:  "split",
 		Text:  &text,
 		Index: index,
+	}
+}
+
+func testRequire() Require {
+	return Require{
+		Command:      command.Command{"echo", "foo"},
+		RegexContent: "bish",
+		RegexVersion: "bash",
+		Docker: &DockerCheck{
+			Type:  "ghcr",
+			Image: "releaseargus/argus",
+			Tag:   "latest",
+		},
 	}
 }

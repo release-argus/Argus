@@ -23,7 +23,9 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -36,35 +38,44 @@ type Slice map[string]*Service
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {
-	ID                    string              `yaml:"-"`                          // service_name
-	Comment               string              `yaml:"comment,omitempty"`          // Comment on the Service
-	Options               opt.Options         `yaml:"options,omitempty"`          // Options to give the Service
-	LatestVersion         latestver.Lookup    `yaml:"latest_version,omitempty"`   // Vars to getting the latest version of the Service
-	DeployedVersionLookup *deployedver.Lookup `yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
-	CommandController     *command.Controller `yaml:"-"`                          // The controller for the OS Commands that tracks fails and has the announce channel
-	Notify                shoutrrr.Slice      `yaml:"notify,omitempty"`           // Service-specific Shoutrrr vars
-	Command               command.Slice       `yaml:"command,omitempty"`          // OS Commands to run on new release
-	WebHook               webhook.Slice       `yaml:"webhook,omitempty"`          // Service-specific WebHook vars
-	Dashboard             DashboardOptions    `yaml:"dashboard,omitempty"`        // Options for the dashboard
-	Status                svcstatus.Status    `yaml:"-"`                          // Track the Status of this source (version and regex misses)
-	HardDefaults          *Service            `yaml:"-"`                          // Hardcoded default values
-	Defaults              *Service            `yaml:"-"`                          // Default values
+	ID                    string              `yaml:"-" json:"name"`                                                // service_name
+	Comment               string              `yaml:"comment,omitempty" json:"comment,omitempty"`                   // Comment on the Service
+	Options               opt.Options         `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service
+	LatestVersion         latestver.Lookup    `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to getting the latest version of the Service
+	DeployedVersionLookup *deployedver.Lookup `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
+	Notify                shoutrrr.Slice      `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Service-specific Shoutrrr vars
+	CommandController     *command.Controller `yaml:"-" json:"-"`                                                   // The controller for the OS Commands that tracks fails and has the announce channel
+	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"`                   // OS Commands to run on new release
+	WebHook               webhook.Slice       `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Service-specific WebHook vars
+	Dashboard             DashboardOptions    `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Options for the dashboard
+	Status                svcstatus.Status    `yaml:"-" json:"-"`                                                   // Track the Status of this source (version and regex misses)
+	Defaults              *Service            `yaml:"-" json:"-"`                                                   // Default values
+	HardDefaults          *Service            `yaml:"-" json:"-"`                                                   // Hardcoded default values
 
 	// TODO: Deprecate
-	OldStatus          *svcstatus.OldStatus    `yaml:"status,omitempty"`              // For moving version info to argus.db
-	Type               string                  `yaml:"type,omitempty"`                // service_name
-	Active             *bool                   `yaml:"active,omitempty"`              // option.active
-	Interval           *string                 `yaml:"interval,omitempty"`            // option.interval
-	SemanticVersioning *bool                   `yaml:"semantic_versioning,omitempty"` // option.semantic_versioning
-	URL                *string                 `yaml:"url,omitempty"`                 // latestver.url
-	AllowInvalidCerts  *bool                   `yaml:"allow_invalid_certs,omitempty"` // latestver.allow_invalid_certs
-	AccessToken        *string                 `yaml:"access_token,omitempty"`        // latestver.access_token
-	UsePreRelease      *bool                   `yaml:"use_prerelease,omitempty"`      // latestver.use_prerelease
-	URLCommands        *filter.URLCommandSlice `yaml:"url_commands,omitempty"`        // latestver.url_commands
-	AutoApprove        *bool                   `yaml:"auto_approve,omitempty"`        // dashboard.auto_approve
-	Icon               *string                 `yaml:"icon,omitempty"`                // dashboard.icon
-	IconLinkTo         *string                 `yaml:"icon_link_to,omitempty"`        // dashboard.icon_link_to
-	WebURL             *string                 `yaml:"web_url,omitempty"`             // dashboard.web_url
+	OldStatus          *svcstatus.OldStatus    `yaml:"status,omitempty" json:"-"`              // For moving version info to argus.db
+	Type               string                  `yaml:"type,omitempty" json:"-"`                // DEPRECATED - use latestver.type
+	Active             *bool                   `yaml:"active,omitempty" json:"-"`              // DEPRECATED - use option.active
+	Interval           *string                 `yaml:"interval,omitempty" json:"-"`            // DEPRECATED - use option.interval
+	SemanticVersioning *bool                   `yaml:"semantic_versioning,omitempty" json:"-"` // DEPRECATED - use option.semantic_versioning
+	URL                *string                 `yaml:"url,omitempty" json:"-"`                 // DEPRECATED - use latestver.url
+	AllowInvalidCerts  *bool                   `yaml:"allow_invalid_certs,omitempty" json:"-"` // DEPRECATED - use latestver.allow_invalid_certs
+	AccessToken        *string                 `yaml:"access_token,omitempty" json:"-"`        // DEPRECATED - use latestver.access_token
+	UsePreRelease      *bool                   `yaml:"use_prerelease,omitempty" json:"-"`      // DEPRECATED - use latestver.use_prerelease
+	URLCommands        *filter.URLCommandSlice `yaml:"url_commands,omitempty" json:"-"`        // DEPRECATED - use latestver.url_commands
+	AutoApprove        *bool                   `yaml:"auto_approve,omitempty" json:"-"`        // DEPRECATED - use dashboard.auto_approve
+	Icon               *string                 `yaml:"icon,omitempty" json:"-"`                // DEPRECATED - use dashboard.icon
+	IconLinkTo         *string                 `yaml:"icon_link_to,omitempty" json:"-"`        // DEPRECATED - use dashboard.icon_link_to
+	WebURL             *string                 `yaml:"web_url,omitempty" json:"-"`             // DEPRECATED - use dashboard.web_url
+}
+
+// String returns a string representation of the Service.
+func (s *Service) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+	yamlBytes, _ := yaml.Marshal(s)
+	return string(yamlBytes)
 }
 
 func (s *Service) Convert() {
@@ -136,6 +147,31 @@ func (s *Service) Convert() {
 	}
 
 	if didConvert {
-		*s.Status.SaveChannel <- true
+		s.Status.SendSave()
 	}
+}
+
+// Summary returns a ServiceSummary for the Service.
+func (s *Service) Summary() *apitype.ServiceSummary {
+	icon := s.GetIconURL()
+	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
+	commands := len(s.Command)
+	webhooks := len(s.WebHook)
+	return &apitype.ServiceSummary{
+		ID:                       s.ID,
+		Active:                   s.Options.Active,
+		Type:                     &s.LatestVersion.Type,
+		WebURL:                   s.Status.GetWebURL(),
+		Icon:                     &icon,
+		IconLinkTo:               &s.Dashboard.IconLinkTo,
+		HasDeployedVersionLookup: &hasDeployedVersionLookup,
+		Command:                  &commands,
+		WebHook:                  &webhooks,
+		Status: &apitype.Status{
+			ApprovedVersion:          s.Status.GetApprovedVersion(),
+			DeployedVersion:          s.Status.GetDeployedVersion(),
+			DeployedVersionTimestamp: s.Status.GetDeployedVersionTimestamp(),
+			LatestVersion:            s.Status.GetLatestVersion(),
+			LatestVersionTimestamp:   s.Status.GetLatestVersionTimestamp(),
+			LastQueried:              s.Status.GetLastQueried()}}
 }

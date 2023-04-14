@@ -14,6 +14,8 @@
 
 package apitype
 
+import "encoding/json"
+
 // WebSocketMessage is the message format to send/receive/forward.
 type WebSocketMessage struct {
 	Version     *int                       `json:"version,omitempty"`
@@ -28,4 +30,10 @@ type WebSocketMessage struct {
 	InfoData    *Info                      `json:"info_data,omitempty"`
 	FlagsData   *Flags                     `json:"flags_data,omitempty"`
 	ConfigData  *Config                    `json:"config_data,omitempty"`
+}
+
+// String returns a string representation of the WebSocketMessage.
+func (w *WebSocketMessage) String() string {
+	jsonBytes, _ := json.Marshal(w)
+	return string(jsonBytes)
 }

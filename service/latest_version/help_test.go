@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package latestver
 
 import (
 	"os"
 
-	command "github.com/release-argus/Argus/commands"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
@@ -35,19 +34,14 @@ func stringPtr(val string) *string {
 }
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
-	var commandController *command.Controller
-	commandController.Init(jLog, nil, nil, nil, nil)
-	var logURLCommand *filter.URLCommandSlice
-	logURLCommand.Init(jLog)
+	LogInit(jLog)
 }
 
-func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
-	var (
-		announceChannel chan []byte         = make(chan []byte, 24)
-		saveChannel     chan bool           = make(chan bool, 5)
-		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-	)
-	lookup := Lookup{
+func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
+	announceChannel := make(chan []byte, 24)
+	saveChannel := make(chan bool, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
+	lookup := &Lookup{
 		Type:              "github",
 		URL:               "release-argus/Argus",
 		AllowInvalidCerts: boolPtr(allowInvalidCerts),
@@ -68,15 +62,21 @@ func testLookup(urlType bool, allowInvalidCerts bool) Lookup {
 	}
 	if urlType {
 		lookup.Type = "url"
-		lookup.URL = "https://valid.release-argus.io/plain"
-		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
+		lookup.URL = "https://invalid.release-argus.io/plain"
+		lookup.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
 	} else {
 		lookup.GitHubData = &GitHubData{}
-		lookup.URLCommands = filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
+		lookup.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 		lookup.UsePreRelease = boolPtr(false)
 	}
-	lookup.Status.WebURL = stringPtr("")
+	lookup.Status.Init(
+		0, 0, 0,
+		stringPtr("serviceID"),
+		stringPtr("http://example.com"),
+	)
 	lookup.Require.Status = lookup.Status
 	return lookup
 }

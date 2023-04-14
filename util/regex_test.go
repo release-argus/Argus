@@ -35,6 +35,7 @@ func TestRegexCheck(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN RegexCheck is called
 			got := RegexCheck(tc.regex, str)
 
@@ -55,14 +56,21 @@ func TestRegexCheckWithParams(t *testing.T) {
 		version string
 		match   bool
 	}{
-		"regex match":    {regex: `release": "{{ version }}"`, version: "0.1.1", match: true},
-		"no regex match": {regex: `release": "{{ version }}"`, version: "0.1.2", match: false},
+		"regex match": {
+			regex:   `release": "{{ version }}"`,
+			version: "0.1.1",
+			match:   true},
+		"no regex match": {
+			regex:   `release": "{{ version }}"`,
+			version: "0.1.2",
+			match:   false},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN RegexCheck is called
 			got := RegexCheckWithParams(tc.regex, str, tc.version)
 

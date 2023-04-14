@@ -15,22 +15,33 @@
 package latestver
 
 import (
+	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/webhook"
 )
 
-// Init will initialise the Service metric.
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+
+	filter.LogInit(log)
+	command.LogInit(log)
+	shoutrrr.LogInit(log)
+	webhook.LogInit(log)
+}
+
+// Init the Lookup, assigning Defaults and initialising child structs.
 func (l *Lookup) Init(
-	log *util.JLog,
 	defaults *Lookup,
 	hardDefaults *Lookup,
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {
-	jLog = log
-
 	if l.Type == "github" {
 		l.GitHubData = &GitHubData{}
 	}
@@ -39,16 +50,35 @@ func (l *Lookup) Init(
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
-	l.initMetrics()
-	l.URLCommands.Init(jLog)
-	l.Require.Init(log, status)
 }
 
-// initMetrics will initialise the Prometheus metric.
-func (l *Lookup) initMetrics() {
+// initMetrics for this Lookup.
+func (l *Lookup) InitMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-	metric.InitPrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
+}
+
+// DeleteMetrics for this Lookup.
+func (l *Lookup) DeleteMetrics() {
+	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
 }

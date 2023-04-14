@@ -25,27 +25,36 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestRequireRegexCheckVersion(t *testing.T) {
+func TestRequire_RegexCheckVersion(t *testing.T) {
 	// GIVEN a Require
 	testLogging("WARN")
 	tests := map[string]struct {
 		require  *Require
 		errRegex string
 	}{
-		"nil require":         {require: nil, errRegex: "^$"},
-		"empty regex_version": {require: &Require{}, errRegex: "^$"},
-		"match":               {require: &Require{RegexVersion: "^[0-9.]+-beta$"}, errRegex: "^$"},
-		"no match":            {require: &Require{RegexVersion: "^[0-9.]+$"}, errRegex: "regex not matched on version"},
+		"nil require": {
+			require:  nil,
+			errRegex: "^$"},
+		"empty regex_version": {
+			require:  &Require{},
+			errRegex: "^$"},
+		"match": {
+			require:  &Require{RegexVersion: "^[0-9.]+-beta$"},
+			errRegex: "^$"},
+		"no match": {
+			require:  &Require{RegexVersion: "^[0-9.]+$"},
+			errRegex: "regex not matched on version"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			if tc.require != nil {
 				tc.require.Status = &svcstatus.Status{}
 			}
 
 			// WHEN RegexCheckVersion is called on it
-			err := tc.require.RegexCheckVersion("0.1.1-beta", util.LogFrom{})
+			err := tc.require.RegexCheckVersion("0.1.1-beta", &util.LogFrom{})
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)
@@ -59,36 +68,69 @@ func TestRequireRegexCheckVersion(t *testing.T) {
 	}
 }
 
-func TestRequireRegexCheckContent(t *testing.T) {
+func TestRequire_RegexCheckContent(t *testing.T) {
 	// GIVEN a Require
-	testLogging("WARN")
+	testLogging("DEBUG")
 	tests := map[string]struct {
 		require  *Require
 		body     interface{}
 		errRegex string
 	}{
-		"nil require":         {require: nil, errRegex: "^$"},
-		"empty regex_content": {require: &Require{}, errRegex: "^$"},
-		"invalid body": {require: &Require{RegexContent: `argus-[0-9.]+.linux-amd64`}, errRegex: "invalid body type",
-			body: 123},
-		"string body match": {require: &Require{RegexContent: `argus-[0-9.]+.linux-amd64`}, errRegex: "^$",
-			body: `darwin amd64 - argus-1.2.3.darwin-amd64, linux amd64 - argus-1.2.3.linux-amd64, windows amd64 - argus-1.2.3.windows-amd64,`},
-		"string body no match": {require: &Require{RegexContent: `argus-[0-9.]+.linux-amd64`}, errRegex: "regex .* not matched on content",
-			body: `darwin amd64 - argus-1.2.3.darwin-amd64, linux arm64 - argus-1.2.3.linux-arm64, windows amd64 - argus-1.2.3.windows-amd64,`},
-		"github api body match": {require: &Require{RegexContent: `argus-[0-9.]+.linux-amd64`}, errRegex: "^$",
-			body: []github_types.Asset{{Name: "argus-1.2.3.darwin-amd64"}, {Name: "argus-1.2.3.linux-amd64"}, {Name: "argus-1.2.3.windows-amd64"}}},
-		"github api body no match": {require: &Require{RegexContent: `argus-[0-9.]+.linux-amd64`}, errRegex: "regex .* not matched on content",
-			body: []github_types.Asset{{Name: "argus-1.2.3.darwin-amd64"}, {Name: "argus-1.2.3.linux-arm64"}, {Name: "argus-1.2.3.windows-amd64"}}},
+		"nil require": {
+			require:  nil,
+			errRegex: "^$",
+		},
+		"empty regex_content": {
+			require:  &Require{},
+			errRegex: "^$",
+		},
+		"invalid body": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			errRegex: "invalid body type",
+			body:     123,
+		},
+		"string body match": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			errRegex: "^$",
+			body:     `darwin amd64 - argus-1.2.3.darwin-amd64, linux amd64 - argus-1.2.3.linux-amd64, windows amd64 - argus-1.2.3.windows-amd64,`,
+		},
+		"string body no match": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			errRegex: "regex .* not matched on content",
+			body:     `darwin amd64 - argus-1.2.3.darwin-amd64, linux arm64 - argus-1.2.3.linux-arm64, windows amd64 - argus-1.2.3.windows-amd64,`,
+		},
+		"github api body match": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			errRegex: "^$",
+			body: []github_types.Asset{
+				{Name: "argus-1.2.3.darwin-amd64"},
+				{Name: "argus-1.2.3.linux-amd64"},
+				{Name: "argus-1.2.3.windows-amd64"}},
+		},
+		"github api body no match": {
+			require: &Require{
+				RegexContent: `argus-[0-9.]+.linux-amd64`},
+			errRegex: "regex .* not matched on content",
+			body: []github_types.Asset{
+				{Name: "argus-1.2.3.darwin-amd64"},
+				{Name: "argus-1.2.3.linux-arm64"},
+				{Name: "argus-1.2.3.windows-amd64"}},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			if tc.require != nil {
 				tc.require.Status = &svcstatus.Status{}
 			}
 
 			// WHEN RegexCheckContent is called on it
-			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, util.LogFrom{})
+			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, &util.LogFrom{})
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)

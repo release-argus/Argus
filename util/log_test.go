@@ -33,19 +33,27 @@ func TestNewJLog(t *testing.T) {
 		level      string
 		timestamps bool
 	}{
-		"timestamps JLog":    {level: "INFO", timestamps: true},
-		"no timestamps JLog": {level: "INFO", timestamps: false},
-		"ERROR JLog":         {level: "ERROR", timestamps: false},
-		"WARN JLog":          {level: "WARN", timestamps: false},
-		"INFO JLog":          {level: "INFO", timestamps: false},
-		"VERBOSE JLog":       {level: "VERBOSE", timestamps: false},
-		"DEBUG JLog":         {level: "DEBUG", timestamps: false},
+		"timestamps JLog": {
+			level: "INFO", timestamps: true},
+		"no timestamps JLog": {
+			level: "INFO", timestamps: false},
+		"ERROR JLog": {
+			level: "ERROR", timestamps: false},
+		"WARN JLog": {
+			level: "WARN", timestamps: false},
+		"INFO JLog": {
+			level: "INFO", timestamps: false},
+		"VERBOSE JLog": {
+			level: "VERBOSE", timestamps: false},
+		"DEBUG JLog": {
+			level: "DEBUG", timestamps: false},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN NewJLog is called
 			jLog := NewJLog(tc.level, tc.timestamps)
 
@@ -68,20 +76,21 @@ func TestSetLevel(t *testing.T) {
 		level      string
 		panicRegex *string
 	}{
-		"ERROR":                   {level: "ERROR"},
-		"WARN":                    {level: "WARN"},
-		"INFO":                    {level: "INFO"},
-		"VERBOSE":                 {level: "VERBOSE"},
-		"DEBUG":                   {level: "DEBUG"},
-		"lower-case verbose":      {level: "verbose"},
-		"mixed-case vERbOse":      {level: "vERbOse"},
-		"invalid level PINEAPPLE": {level: "PINEAPPLE", panicRegex: stringPtr(`not a valid log\.level`)},
-	}
+		"ERROR":              {level: "ERROR"},
+		"WARN":               {level: "WARN"},
+		"INFO":               {level: "INFO"},
+		"VERBOSE":            {level: "VERBOSE"},
+		"DEBUG":              {level: "DEBUG"},
+		"lower-case verbose": {level: "verbose"},
+		"mixed-case vERbOse": {level: "vERbOse"},
+		"invalid level PINEAPPLE": {level: "PINEAPPLE",
+			panicRegex: stringPtr(`not a valid log\.level`)}}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog("INFO", false)
 			if tc.panicRegex != nil {
 				jLog.Testing = true
@@ -110,7 +119,7 @@ func TestSetLevel(t *testing.T) {
 	}
 }
 
-func TestSetTimestamps(t *testing.T) {
+func TestJLog_SetTimestamps(t *testing.T) {
 	// GIVEN a JLog and various tests
 	tests := map[string]struct {
 		start    bool
@@ -126,6 +135,7 @@ func TestSetTimestamps(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog("INFO", tc.start)
 
 			// WHEN SetTimestamps is called
@@ -146,16 +156,25 @@ func TestFormatMessageSource(t *testing.T) {
 		logFrom LogFrom
 		want    string
 	}{
-		"primary and secondary": {logFrom: LogFrom{Primary: "foo", Secondary: "bar"}, want: "foo (bar), "},
-		"only primary":          {logFrom: LogFrom{Primary: "foo"}, want: "foo, "},
-		"only secondary":        {logFrom: LogFrom{Secondary: "bar"}, want: "bar, "},
-		"empty logFrom":         {logFrom: LogFrom{}, want: ""},
+		"primary and secondary": {
+			logFrom: LogFrom{Primary: "foo", Secondary: "bar"},
+			want:    "foo (bar), "},
+		"only primary": {
+			logFrom: LogFrom{Primary: "foo"},
+			want:    "foo, "},
+		"only secondary": {
+			logFrom: LogFrom{Secondary: "bar"},
+			want:    "bar, "},
+		"empty logFrom": {
+			logFrom: LogFrom{},
+			want:    ""},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN FormatMessageSource is called with this LogFrom
 			got := FormatMessageSource(tc.logFrom)
 
@@ -168,45 +187,72 @@ func TestFormatMessageSource(t *testing.T) {
 	}
 }
 
-func TestIsLevel(t *testing.T) {
+func TestJLog_IsLevel(t *testing.T) {
 	// GIVEN you have a valid JLog
 	tests := map[string]struct {
 		startLevel string
 		testLevel  string
 		want       bool
 	}{
-		"@ERROR, test ERROR":                  {startLevel: "ERROR", testLevel: "ERROR", want: true},
-		"@ERROR, test WARN":                   {startLevel: "ERROR", testLevel: "WARN", want: false},
-		"@ERROR, test INFO":                   {startLevel: "ERROR", testLevel: "INFO", want: false},
-		"@ERROR, test VERBOSE":                {startLevel: "ERROR", testLevel: "VERBOSE", want: false},
-		"@ERROR, test DEBUG":                  {startLevel: "ERROR", testLevel: "DEBUG", want: false},
-		"@WARN, test ERROR":                   {startLevel: "WARN", testLevel: "ERROR", want: false},
-		"@WARN, test WARN":                    {startLevel: "WARN", testLevel: "WARN", want: true},
-		"@WARN, test INFO":                    {startLevel: "WARN", testLevel: "INFO", want: false},
-		"@WARN, test VERBOSE":                 {startLevel: "WARN", testLevel: "VERBOSE", want: false},
-		"@WARN, test DEBUG":                   {startLevel: "WARN", testLevel: "DEBUG", want: false},
-		"@INFO, test ERROR":                   {startLevel: "INFO", testLevel: "ERROR", want: false},
-		"@INFO, test WARN":                    {startLevel: "INFO", testLevel: "WARN", want: false},
-		"@INFO, test INFO":                    {startLevel: "INFO", testLevel: "INFO", want: true},
-		"@INFO, test VERBOSE":                 {startLevel: "INFO", testLevel: "VERBOSE", want: false},
-		"@INFO, test DEBUG":                   {startLevel: "INFO", testLevel: "DEBUG", want: false},
-		"@VERBOSE, test ERROR":                {startLevel: "VERBOSE", testLevel: "ERROR", want: false},
-		"@VERBOSE, test WARN":                 {startLevel: "VERBOSE", testLevel: "WARN", want: false},
-		"@VERBOSE, test INFO":                 {startLevel: "VERBOSE", testLevel: "INFO", want: false},
-		"@VERBOSE, test VERBOSE":              {startLevel: "VERBOSE", testLevel: "VERBOSE", want: true},
-		"@VERBOSE, test DEBUG":                {startLevel: "VERBOSE", testLevel: "DEBUG", want: false},
-		"@DEBUG, test ERROR":                  {startLevel: "DEBUG", testLevel: "ERROR", want: false},
-		"@DEBUG, test WARN":                   {startLevel: "DEBUG", testLevel: "WARN", want: false},
-		"@DEBUG, test INFO":                   {startLevel: "DEBUG", testLevel: "INFO", want: false},
-		"@DEBUG, test VERBOSE":                {startLevel: "DEBUG", testLevel: "VERBOSE", want: false},
-		"@DEBUG, test DEBUG":                  {startLevel: "DEBUG", testLevel: "DEBUG", want: true},
-		"@DEBUG, test level not in level map": {startLevel: "DEBUG", testLevel: "FOO", want: false},
+		"@ERROR, test ERROR": {
+			startLevel: "ERROR", testLevel: "ERROR", want: true},
+		"@ERROR, test WARN": {
+			startLevel: "ERROR", testLevel: "WARN", want: false},
+		"@ERROR, test INFO": {
+			startLevel: "ERROR", testLevel: "INFO", want: false},
+		"@ERROR, test VERBOSE": {
+			startLevel: "ERROR", testLevel: "VERBOSE", want: false},
+		"@ERROR, test DEBUG": {
+			startLevel: "ERROR", testLevel: "DEBUG", want: false},
+		"@WARN, test ERROR": {
+			startLevel: "WARN", testLevel: "ERROR", want: false},
+		"@WARN, test WARN": {
+			startLevel: "WARN", testLevel: "WARN", want: true},
+		"@WARN, test INFO": {
+			startLevel: "WARN", testLevel: "INFO", want: false},
+		"@WARN, test VERBOSE": {
+			startLevel: "WARN", testLevel: "VERBOSE", want: false},
+		"@WARN, test DEBUG": {
+			startLevel: "WARN", testLevel: "DEBUG", want: false},
+		"@INFO, test ERROR": {
+			startLevel: "INFO", testLevel: "ERROR", want: false},
+		"@INFO, test WARN": {
+			startLevel: "INFO", testLevel: "WARN", want: false},
+		"@INFO, test INFO": {
+			startLevel: "INFO", testLevel: "INFO", want: true},
+		"@INFO, test VERBOSE": {
+			startLevel: "INFO", testLevel: "VERBOSE", want: false},
+		"@INFO, test DEBUG": {
+			startLevel: "INFO", testLevel: "DEBUG", want: false},
+		"@VERBOSE, test ERROR": {
+			startLevel: "VERBOSE", testLevel: "ERROR", want: false},
+		"@VERBOSE, test WARN": {
+			startLevel: "VERBOSE", testLevel: "WARN", want: false},
+		"@VERBOSE, test INFO": {
+			startLevel: "VERBOSE", testLevel: "INFO", want: false},
+		"@VERBOSE, test VERBOSE": {
+			startLevel: "VERBOSE", testLevel: "VERBOSE", want: true},
+		"@VERBOSE, test DEBUG": {
+			startLevel: "VERBOSE", testLevel: "DEBUG", want: false},
+		"@DEBUG, test ERROR": {
+			startLevel: "DEBUG", testLevel: "ERROR", want: false},
+		"@DEBUG, test WARN": {
+			startLevel: "DEBUG", testLevel: "WARN", want: false},
+		"@DEBUG, test INFO": {
+			startLevel: "DEBUG", testLevel: "INFO", want: false},
+		"@DEBUG, test VERBOSE": {
+			startLevel: "DEBUG", testLevel: "VERBOSE", want: false},
+		"@DEBUG, test DEBUG": {
+			startLevel: "DEBUG", testLevel: "DEBUG", want: true},
+		"@DEBUG, test level not in level map": {
+			startLevel: "DEBUG", testLevel: "FOO", want: false},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			jLog := NewJLog(tc.startLevel, false)
 
 			// WHEN IsLevel is called to check the given level
@@ -221,7 +267,7 @@ func TestIsLevel(t *testing.T) {
 	}
 }
 
-func TestError(t *testing.T) {
+func TestJLog_Error(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -230,25 +276,42 @@ func TestError(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {
+
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -283,7 +346,7 @@ func TestError(t *testing.T) {
 	}
 }
 
-func TestWarn(t *testing.T) {
+func TestJLog_Warn(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -292,25 +355,41 @@ func TestWarn(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -345,7 +424,7 @@ func TestWarn(t *testing.T) {
 	}
 }
 
-func TestInfo(t *testing.T) {
+func TestJLog_Info(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -354,25 +433,41 @@ func TestInfo(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -407,7 +502,7 @@ func TestInfo(t *testing.T) {
 	}
 }
 
-func TestVerbose(t *testing.T) {
+func TestJLog_Verbose(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -416,25 +511,41 @@ func TestVerbose(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -469,7 +580,7 @@ func TestVerbose(t *testing.T) {
 	}
 }
 
-func TestDebug(t *testing.T) {
+func TestJLog_Debug(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -478,25 +589,41 @@ func TestDebug(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: false},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: false},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: false},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: false},
+		"VERBOSE log with !otherCondition": {
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -531,7 +658,7 @@ func TestDebug(t *testing.T) {
 	}
 }
 
-func TestFatal(t *testing.T) {
+func TestJLog_Fatal(t *testing.T) {
 	// GIVEN a JLog and message
 	msg := "argus"
 	tests := map[string]struct {
@@ -540,29 +667,48 @@ func TestFatal(t *testing.T) {
 		otherCondition bool
 		shouldPrint    bool
 	}{
-		"ERROR log with timestamps":        {level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
-		"ERROR log no timestamps":          {level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
-		"ERROR log with !otherCondition":   {level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		"WARN log with timestamps":         {level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
-		"WARN log no timestamps":           {level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		"WARN log with !otherCondition":    {level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		"INFO log with timestamps":         {level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		"INFO log no timestamps":           {level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		"INFO log with !otherCondition":    {level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		"VERBOSE log with timestamps":      {level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		"VERBOSE log no timestamps":        {level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		"VERBOSE log with !otherCondition": {level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		"DEBUG log with timestamps":        {level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		"DEBUG log no timestamps":          {level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		"DEBUG log with !otherCondition":   {level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"ERROR log with timestamps": {
+			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
+		"ERROR log no timestamps": {
+			level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
+		"ERROR log with !otherCondition": {
+			level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
+		"WARN log with timestamps": {
+			level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
+		"WARN log no timestamps": {
+			level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
+		"WARN log with !otherCondition": {
+			level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
+		"INFO log with timestamps": {
+			level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
+		"INFO log no timestamps": {
+			level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
+		"INFO log with !otherCondition": {
+			level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
+		"VERBOSE log with timestamps": {
+			level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
+		"VERBOSE log no timestamps": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
+		"VERBOSE log with !otherCondition": {
+			level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
+		"DEBUG log with timestamps": {
+			level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
+		"DEBUG log no timestamps": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
+		"DEBUG log with !otherCondition": {
+			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
+			defer func() {
+				os.Stdout = stdout
+			}()
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 			if tc.shouldPrint {

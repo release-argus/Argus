@@ -21,22 +21,88 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestInitMetrics(t *testing.T) {
+func TestSlice_Metrics(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice *Slice
+	}{
+		"nil": {
+			slice: nil},
+		"empty": {
+			slice: &Slice{}},
+		"with one": {
+			slice: &Slice{
+				"foo": &Shoutrrr{}}},
+		"multiple": {
+			slice: &Slice{
+				"bish": &Shoutrrr{},
+				"bash": &Shoutrrr{},
+				"bosh": &Shoutrrr{}}},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+
+			if tc.slice != nil {
+				for name, s := range *tc.slice {
+					s.ID = name
+					s.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr(name + "-service")}
+					s.Main = &Shoutrrr{}
+					s.Type = "gotify"
+				}
+			}
+
+			// WHEN the Prometheus metrics are initialised with initMetrics
+			had := testutil.CollectAndCount(metric.NotifyMetric)
+			tc.slice.InitMetrics()
+
+			// THEN it can be counted
+			got := testutil.CollectAndCount(metric.NotifyMetric)
+			want := had
+			if tc.slice != nil {
+				want += 2 * len(*tc.slice)
+			}
+			if got != want {
+				t.Errorf("got %d metrics, expecting %d",
+					got, want)
+			}
+
+			// AND the metrics can be deleted
+			tc.slice.DeleteMetrics()
+			got = testutil.CollectAndCount(metric.NotifyMetric)
+			if got != had {
+				t.Errorf("deleted metrics but got %d, expecting %d",
+					got, want)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_Metrics(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		serviceShoutrrr bool
 		wantMetrics     bool
 	}{
-		"service Shoutrrr gives metrics":                         {serviceShoutrrr: true, wantMetrics: true},
-		"hardDefault/default/main Shoutrrr doesn't give metrics": {serviceShoutrrr: false, wantMetrics: false},
+		"service Shoutrrr gives metrics": {
+			serviceShoutrrr: true,
+			wantMetrics:     true},
+		"hardDefault/default/main Shoutrrr doesn't give metrics": {
+			serviceShoutrrr: false,
+			wantMetrics:     false},
+		"service Shoutrrr with nil ServiceStatus doesn't give metrics": {
+			serviceShoutrrr: false,
+			wantMetrics:     false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			if !tc.serviceShoutrrr {
@@ -60,26 +126,41 @@ func TestInitMetrics(t *testing.T) {
 				t.Errorf("%d Counter metrics's were initialised, expecting %d",
 					(got - had), want)
 			}
+
+			// AND it can be deleted
+			shoutrrr.deleteMetrics()
+			got = testutil.CollectAndCount(metric.NotifyMetric)
+			if got != had {
+				t.Errorf("Counter metrics's were deleted, got %d. expecting %d",
+					got, had)
+			}
 		})
 	}
 }
 
-func TestInitOptions(t *testing.T) {
+func TestShoutrrr_InitOptions(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -102,22 +183,29 @@ func TestInitOptions(t *testing.T) {
 	}
 }
 
-func TestInitURLFields(t *testing.T) {
+func TestShoutrrr_InitURLFields(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.URLFields = tc.had
@@ -140,22 +228,29 @@ func TestInitURLFields(t *testing.T) {
 	}
 }
 
-func TestInitParams(t *testing.T) {
+func TestShoutrrr_InitParams(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had  map[string]string
 		want map[string]string
 	}{
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Params = tc.had
@@ -178,24 +273,32 @@ func TestInitParams(t *testing.T) {
 	}
 }
 
-func TestInitMaps(t *testing.T) {
+func TestShoutrrr_InitMaps(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		had         map[string]string
 		want        map[string]string
 		nilShoutrrr bool
 	}{
-		"nil shoutrrr": {nilShoutrrr: true},
-		"all lowercase keys": {had: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {had: map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"nil shoutrrr": {
+			nilShoutrrr: true},
+		"all lowercase keys": {
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			shoutrrr := testShoutrrr(false, true, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
@@ -246,7 +349,7 @@ func TestInitMaps(t *testing.T) {
 	}
 }
 
-func TestShoutrrrInit(t *testing.T) {
+func TestShoutrrr_Init(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		id              string
@@ -257,27 +360,41 @@ func TestShoutrrrInit(t *testing.T) {
 		defaults        Shoutrrr
 		hardDefaults    Shoutrrr
 		serviceShoutrrr bool
-		metricCount     int
 		nilShoutrrr     bool
 	}{
-		"nil shoutrrr": {nilShoutrrr: true, metricCount: 0},
-		"all lowercase keys": {serviceShoutrrr: true, id: "lowercase", metricCount: 2,
-			had:  map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"mixed-case keys": {serviceShoutrrr: true, id: "mixed-case", metricCount: 2,
-			had:  map[string]string{"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
-			want: map[string]string{"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
-		"gives matching main": {serviceShoutrrr: true, id: "matching-main", metricCount: 2,
-			main: &Shoutrrr{}, giveMain: true},
-		"creates new main if none match": {serviceShoutrrr: true, id: "no-matching-main", metricCount: 2,
-			main: nil},
+		"nil shoutrrr": {
+			nilShoutrrr: true},
+		"all lowercase keys": {
+			id:              "lowercase",
+			serviceShoutrrr: true,
+			had: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"mixed-case keys": {
+			id:              "mixed-case",
+			serviceShoutrrr: true,
+			had: map[string]string{
+				"hello": "TEST123", "FOO": "bAr", "bIsh": "bash"},
+			want: map[string]string{
+				"hello": "TEST123", "foo": "bAr", "bish": "bash"}},
+		"gives matching main": {
+			id:              "matching-main",
+			serviceShoutrrr: true,
+			main:            &Shoutrrr{},
+			giveMain:        true},
+		"creates new main if none match": {
+			id:              "no-matching-main",
+			serviceShoutrrr: true,
+			main:            nil},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			shoutrrr := testShoutrrr(false, true, false)
 			shoutrrr.ID = tc.id
-			serviceStatus := *shoutrrr.ServiceStatus
+			serviceStatus := shoutrrr.ServiceStatus
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
 			if tc.giveMain {
@@ -290,16 +407,11 @@ func TestShoutrrrInit(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.NotifyMetric)
-			shoutrrr.Init(&serviceStatus, tc.main, &tc.defaults, &tc.hardDefaults)
+			shoutrrr.Init(
+				serviceStatus,
+				tc.main, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.NotifyMetric)
-			if (gotC - hadC) != tc.metricCount {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), tc.metricCount)
-			}
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",
@@ -325,7 +437,7 @@ func TestShoutrrrInit(t *testing.T) {
 					&tc.hardDefaults, shoutrrr.HardDefaults)
 			}
 			// status
-			if shoutrrr.ServiceStatus != &serviceStatus {
+			if shoutrrr.ServiceStatus != serviceStatus {
 				t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					&serviceStatus, shoutrrr.ServiceStatus)
 			}
@@ -347,7 +459,7 @@ func TestShoutrrrInit(t *testing.T) {
 	}
 }
 
-func TestSliceInit(t *testing.T) {
+func TestSlice_Init(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		nilSlice     bool
@@ -358,20 +470,48 @@ func TestSliceInit(t *testing.T) {
 		defaults     Slice
 		hardDefaults Slice
 	}{
-		"nil slice":   {slice: nil, nilSlice: true},
-		"empty slice": {slice: &Slice{}},
-		"nil mains":   {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)}},
-		"slice with nil element and matching main": {slice: &Slice{"fail": nil},
-			mains: &Slice{"fail": testShoutrrr(false, false, false)}},
-		"have matching mains": {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)},
-			mains: &Slice{"fail": testShoutrrr(false, true, false), "pass": testShoutrrr(true, true, false)}},
-		"some matching mains": {slice: &Slice{"fail": testShoutrrr(true, true, false), "pass": testShoutrrr(false, true, false)},
-			mains: &Slice{"other": testShoutrrr(false, true, false), "pass": testShoutrrr(true, true, false)}},
+		"nil slice": {
+			slice:    nil,
+			nilSlice: true,
+		},
+		"empty slice": {
+			slice: &Slice{},
+		},
+		"nil mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+		},
+		"slice with nil element and matching main": {
+			slice: &Slice{
+				"fail": nil},
+			mains: &Slice{
+				"fail": testShoutrrr(false, false, false)},
+		},
+		"have matching mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+			mains: &Slice{
+				"fail": testShoutrrr(false, true, false),
+				"pass": testShoutrrr(true, true, false)},
+		},
+		"some matching mains": {
+			slice: &Slice{
+				"fail": testShoutrrr(true, true, false),
+				"pass": testShoutrrr(false, true, false)},
+			mains: &Slice{
+				"other": testShoutrrr(false, true, false),
+				"pass":  testShoutrrr(true, true, false)},
+		},
 	}
+	testLogging("DEBUG")
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			log := util.NewJLog("WARN", false)
+			t.Parallel()
+
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
@@ -380,10 +520,15 @@ func TestSliceInit(t *testing.T) {
 					}
 				}
 			}
-			serviceStatus := svcstatus.Status{
-				Fails:     svcstatus.Fails{Shoutrrr: map[string]*bool{}},
-				ServiceID: stringPtr(name),
+			serviceStatus := svcstatus.Status{}
+			mainCount := 0
+			if tc.mains != nil {
+				mainCount = len(*tc.mains)
 			}
+			serviceStatus.Init(
+				mainCount, 0, 0,
+				&name,
+				nil)
 			for i := range tc.defaults {
 				tc.defaults[i].URLFields = tc.had
 			}
@@ -401,20 +546,11 @@ func TestSliceInit(t *testing.T) {
 			}
 
 			// WHEN Init is called on it
-			hadC := testutil.CollectAndCount(metric.NotifyMetric)
-			tc.slice.Init(log, &serviceStatus, tc.mains, &tc.defaults, &tc.hardDefaults)
+			tc.slice.Init(
+				&serviceStatus,
+				tc.mains, &tc.defaults, &tc.hardDefaults)
 
 			// THEN the Shoutrrr is initialised correctly
-			// initMetrics - counters
-			gotC := testutil.CollectAndCount(metric.NotifyMetric)
-			wantMetrics := 0
-			if tc.slice != nil {
-				wantMetrics = 2 * len(*tc.slice)
-			}
-			if (gotC - hadC) != wantMetrics {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
-					(gotC - hadC), wantMetrics)
-			}
 			if tc.nilSlice {
 				if tc.slice != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",

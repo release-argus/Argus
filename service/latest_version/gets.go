@@ -22,11 +22,17 @@ import (
 )
 
 func (l *Lookup) GetAccessToken() *string {
-	return util.GetFirstNonNilPtr(l.AccessToken, l.Defaults.AccessToken, l.HardDefaults.AccessToken)
+	return util.GetFirstNonNilPtr(
+		l.AccessToken,
+		l.Defaults.AccessToken,
+		l.HardDefaults.AccessToken)
 }
 
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *util.GetFirstNonNilPtr(l.AllowInvalidCerts, l.Defaults.AllowInvalidCerts, l.HardDefaults.AllowInvalidCerts)
+	return *util.GetFirstNonNilPtr(
+		l.AllowInvalidCerts,
+		l.Defaults.AllowInvalidCerts,
+		l.HardDefaults.AllowInvalidCerts)
 }
 
 // GetServiceURL returns the service's URL (handles the github type where the URL
@@ -34,8 +40,11 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
 	if !ignoreWebURL && *l.Status.WebURL != "" {
 		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		if !(l.Status.LatestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
-			return util.TemplateString(*l.Status.WebURL, util.ServiceInfo{LatestVersion: l.Status.LatestVersion})
+		latestVersion := l.Status.GetLatestVersion()
+		if !(latestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
+			return util.TemplateString(
+				*l.Status.WebURL,
+				util.ServiceInfo{LatestVersion: latestVersion})
 		}
 	}
 
@@ -52,7 +61,10 @@ func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
 
 // Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
 func (l *Lookup) GetUsePreRelease() bool {
-	return *util.GetFirstNonDefault(l.UsePreRelease, l.Defaults.UsePreRelease, l.HardDefaults.UsePreRelease)
+	return *util.GetFirstNonDefault(
+		l.UsePreRelease,
+		l.Defaults.UsePreRelease,
+		l.HardDefaults.UsePreRelease)
 }
 
 // GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'

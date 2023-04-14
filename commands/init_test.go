@@ -23,49 +23,82 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-func TestSetNextRunnable(t *testing.T) {
+func TestController_SetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   make([]time.Time, 3),
-		ParentInterval: stringPtr("11m"),
-	}
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
+			{"date", "+%m-%d-%Y"}, {"true"}, {"false"},
+			{"date", "+%m-%d-%Y"}, {"true"}, {"false"}},
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	controller.Failed.Set(4, false)
+	controller.Failed.Set(5, true)
 	tests := map[string]struct {
 		index             int
 		executing         bool
 		timeDifferenceMin time.Duration
 		timeDifferenceMax time.Duration
 	}{
-		"index out of range": {index: 3, timeDifferenceMin: -time.Second, timeDifferenceMax: time.Second},
-		"command that hasn't been run and isn't currently running": {index: 0, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
-		"command that hasn't been run and is currently running":    {index: 0, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
-		"command that didn't fail and isn't currently running":     {index: 1, timeDifferenceMin: 22*time.Minute - time.Second, timeDifferenceMax: 22*time.Minute + time.Second},
-		"command that didn't fail and is currently running":        {index: 1, executing: true, timeDifferenceMin: time.Hour + (22*time.Minute - time.Second), timeDifferenceMax: time.Hour + (22*time.Minute + time.Second)},
-		"command that did fail and isn't currently running":        {index: 2, timeDifferenceMin: 14 * time.Second, timeDifferenceMax: 16 * time.Second},
-		"command that did fail and is currently running":           {index: 2, executing: true, timeDifferenceMin: time.Hour + 14*time.Second, timeDifferenceMax: time.Hour + 16*time.Second},
+		"index out of range": {
+			index:             6,
+			timeDifferenceMin: -time.Second,
+			timeDifferenceMax: time.Second,
+		},
+		"command that hasn't been run and isn't currently running": {
+			index:             0,
+			timeDifferenceMin: 14 * time.Second,
+			timeDifferenceMax: 16 * time.Second,
+		},
+		"command that hasn't been run and is currently running": {
+			index:             3,
+			executing:         true,
+			timeDifferenceMin: time.Hour + 14*time.Second,
+			timeDifferenceMax: time.Hour + 16*time.Second,
+		},
+		"command that didn't fail and isn't currently running": {
+			index:             1,
+			timeDifferenceMin: 22*time.Minute - time.Second,
+			timeDifferenceMax: 22*time.Minute + time.Second,
+		},
+		"command that didn't fail and is currently running": {
+			index:             4,
+			executing:         true,
+			timeDifferenceMin: time.Hour + (22*time.Minute - time.Second),
+			timeDifferenceMax: time.Hour + (22*time.Minute + time.Second),
+		},
+		"command that did fail and isn't currently running": {
+			index:             2,
+			timeDifferenceMin: 14 * time.Second,
+			timeDifferenceMax: 16 * time.Second,
+		},
+		"command that did fail and is currently running": {
+			index:             5,
+			executing:         true,
+			timeDifferenceMin: time.Hour + 14*time.Second,
+			timeDifferenceMax: time.Hour + 16*time.Second,
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN SetNextRunnable is called
 			ranAt := time.Now().UTC()
-			controller.SetNextRunnable(tc.index, tc.executing)
+			controller.SetExecuting(tc.index, tc.executing)
 
 			// THEN the result is expected
 			got := ranAt
-			if tc.index < len(controller.NextRunnable) {
-				got = (controller.NextRunnable[tc.index])
+			if tc.index < len(*controller.Command) {
+				got = (controller.GetNextRunnable(tc.index))
 			}
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
@@ -77,26 +110,38 @@ func TestSetNextRunnable(t *testing.T) {
 	}
 }
 
-func TestIsRunnable(t *testing.T) {
+func TestController_IsRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
 	}
 	tests := map[string]struct {
 		index int
 		want  bool
 	}{
-		"NextRunnable just passed":  {index: 0, want: true},
-		"NextRunnable a minute ago": {index: 1, want: true},
-		"NextRunnable in a minute":  {index: 2, want: false},
-		"NextRunnable out of range": {index: 3, want: false},
+		"NextRunnable just passed": {
+			index: 0, want: true},
+		"NextRunnable a minute ago": {
+			index: 1, want: true},
+		"NextRunnable in a minute": {
+			index: 2, want: false},
+		"NextRunnable out of range": {
+			index: 3, want: false},
 	}
 
 	time.Sleep(5 * time.Millisecond)
@@ -104,6 +149,7 @@ func TestIsRunnable(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN IsRunnable is called
 			got := controller.IsRunnable(tc.index)
 
@@ -116,17 +162,25 @@ func TestIsRunnable(t *testing.T) {
 	}
 }
 
-func TestGetNextRunnable(t *testing.T) {
+func TestController_GetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
 	}
 	tests := map[string]struct {
 		index      int
@@ -134,16 +188,21 @@ func TestGetNextRunnable(t *testing.T) {
 		want       bool
 		outOfRange bool
 	}{
-		"NextRunnable just passed":  {index: 0, want: true},
-		"NextRunnable a minute ago": {index: 1, want: true},
-		"NextRunnable in a minute":  {index: 2, want: false},
-		"NextRunnable out of range": {index: 3, outOfRange: true, want: false},
+		"NextRunnable just passed": {
+			index: 0, want: true},
+		"NextRunnable a minute ago": {
+			index: 1, want: true},
+		"NextRunnable in a minute": {
+			index: 2, want: false},
+		"NextRunnable out of range": {
+			index: 3, outOfRange: true, want: false},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN GetNextRunnable is called
 			got := controller.GetNextRunnable(tc.index)
 
@@ -154,33 +213,46 @@ func TestGetNextRunnable(t *testing.T) {
 					t.Fatalf("want: %s\ngot:\n%s",
 						defaultTime, got)
 				}
-			} else if got != controller.NextRunnable[tc.index] {
+			} else if got != controller.GetNextRunnable(tc.index) {
 				t.Fatalf("want: %s\ngot:\n%s",
-					controller.NextRunnable[tc.index], got)
+					controller.GetNextRunnable(tc.index), got)
 			}
 		})
 	}
 }
 
-func TestString(t *testing.T) {
+func TestCommand_String(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
-		cmd  Command
+		cmd  *Command
 		want string
 	}{
-		"command with no args":       {cmd: Command{"ls"}, want: "ls"},
-		"command with one arg":       {cmd: Command{"ls", "-lah"}, want: "ls -lah"},
-		"command with multiple args": {cmd: Command{"ls", "-lah", "/root", "/tmp"}, want: "ls -lah /root /tmp"},
+		"empty command": {
+			cmd:  &Command{},
+			want: ""},
+		"nil command": {
+			cmd:  nil,
+			want: ""},
+		"command with no args": {
+			cmd:  &Command{"ls"},
+			want: "ls"},
+		"command with one arg": {
+			cmd:  &Command{"ls", "-lah"},
+			want: "ls -lah"},
+		"command with multiple args": {
+			cmd:  &Command{"ls", "-lah", "/root", "/tmp"},
+			want: "ls -lah /root /tmp"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			// WHEN the command is stringified with String
+
+			// WHEN the command is stringified with String()
 			got := tc.cmd.String()
 
-			// THEN the result is expected
+			// THEN the result is as expected
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:\n%q",
 					tc.want, got)
@@ -189,21 +261,28 @@ func TestString(t *testing.T) {
 	}
 }
 
-func TestFormattedString(t *testing.T) {
+func TestCommand_FormattedString(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
 		cmd  Command
 		want string
 	}{
-		"command with no args":       {cmd: Command{"ls"}, want: "[ \"ls\" ]"},
-		"command with one arg":       {cmd: Command{"ls", "-lah"}, want: "[ \"ls\", \"-lah\" ]"},
-		"command with multiple args": {cmd: Command{"ls", "-lah", "/root", "/tmp"}, want: "[ \"ls\", \"-lah\", \"/root\", \"/tmp\" ]"},
+		"command with no args": {
+			cmd:  Command{"ls"},
+			want: "[ \"ls\" ]"},
+		"command with one arg": {
+			cmd:  Command{"ls", "-lah"},
+			want: "[ \"ls\", \"-lah\" ]"},
+		"command with multiple args": {
+			cmd:  Command{"ls", "-lah", "/root", "/tmp"},
+			want: "[ \"ls\", \"-lah\", \"/root\", \"/tmp\" ]"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN the command is stringified with FormattedString
 			got := tc.cmd.FormattedString()
 
@@ -216,23 +295,31 @@ func TestFormattedString(t *testing.T) {
 	}
 }
 
-func TestInitMetrics(t *testing.T) {
+func TestController_Metrics(t *testing.T) {
 	// GIVEN a Controller with multiple Command's
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("TestController_Metrics")},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("InitMetrics")},
-		Failed:         &[]*bool{nil, boolPtr(false), boolPtr(true)},
-		NextRunnable:   []time.Time{time.Now().UTC(), time.Now().UTC().Add(-time.Minute), time.Now().UTC().Add(time.Minute)},
-		ParentInterval: stringPtr("11m"),
+		nil,
+		stringPtr("11m"))
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute)}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, &nextRunnables[i])
 	}
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.CommandMetric)
 	hadG := testutil.CollectAndCount(metric.AckWaiting)
-	controller.initMetrics()
+	controller.InitMetrics()
 
 	// THEN it can be collected
 	// counters
@@ -249,49 +336,84 @@ func TestInitMetrics(t *testing.T) {
 		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
 			(gotG - hadG), wantG)
 	}
+
+	// AND it can be deleted
+	// counters
+	controller.DeleteMetrics()
+	gotC = testutil.CollectAndCount(metric.CommandMetric)
+	if gotC != hadC {
+		t.Errorf("Counter metrics's were deleted, got %d. expecting %d",
+			gotC, hadC)
+	}
+	// gauges
+	gotG = testutil.CollectAndCount(metric.AckWaiting)
+	if gotG != hadG {
+		t.Errorf("Gauge metrics's were deleted, got %d. expecting %d",
+			gotG, hadG)
+	}
 }
 
-func TestInit(t *testing.T) {
+func TestCommand_Init(t *testing.T) {
 	// GIVEN a Command
 	tests := map[string]struct {
 		nilController     bool
-		log               *util.JLog
-		serviceStatus     svcstatus.Status
 		command           *Slice
 		shoutrrrNotifiers *shoutrrr.Slice
 		parentInterval    *string
 	}{
-		"nil log":            {log: nil, command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"non-nil log":        {log: util.NewJLog("INFO", false), command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"nil Controller":     {nilController: true},
-		"non-nil Controller": {command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"non-nil Command's": {command: &Slice{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"}}},
-		"nil Notifiers":          {shoutrrrNotifiers: nil, command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"non-nil Notifiers":      {shoutrrrNotifiers: nil, command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"nil parentInterval":     {parentInterval: nil, command: &Slice{{"date", "+%m-%d-%Y"}}},
-		"non-nil parentInterval": {parentInterval: stringPtr("11m"), command: &Slice{{"date", "+%m-%d-%Y"}}},
+		"nil Controller": {
+			nilController: true,
+		},
+		"non-nil Controller": {
+			command: &Slice{
+				{"date", "+%m-%d-%Y"}},
+		},
+		"non-nil Command's": {
+			command: &Slice{
+				{"date", "+%m-%d-%Y"},
+				{"true"},
+				{"false"}},
+		},
+		"nil Notifiers": {
+			shoutrrrNotifiers: nil,
+			command: &Slice{
+				{"date", "+%m-%d-%Y"}},
+		},
+		"non-nil Notifiers": {
+			shoutrrrNotifiers: nil,
+			command: &Slice{
+				{"date", "+%m-%d-%Y"}},
+		},
+		"nil parentInterval": {
+			parentInterval: nil,
+			command: &Slice{
+				{"date", "+%m-%d-%Y"}},
+		},
+		"non-nil parentInterval": {
+			parentInterval: stringPtr("11m"),
+			command: &Slice{
+				{"date", "+%m-%d-%Y"}}},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			// WHEN a controller is initialised with Init
 			var controller *Controller
 			if !tc.nilController {
 				controller = &Controller{}
 			}
-			logBefore := jLog
-			tc.serviceStatus.ServiceID = stringPtr("TestInit")
-			controller.Init(tc.log, &tc.serviceStatus, tc.command, tc.shoutrrrNotifiers, tc.parentInterval)
+			serviceStatus := svcstatus.Status{}
+			serviceStatus.ServiceID = stringPtr("TestInit")
+			controller.Init(
+				&serviceStatus,
+				tc.command,
+				tc.shoutrrrNotifiers,
+				tc.parentInterval)
 
 			// THEN the result is expected
-			// log
-			if (tc.log == nil && jLog != logBefore) && jLog != tc.log {
-				t.Errorf("want: jLog=%v\ngot:  jLog=%v",
-					tc.log, jLog)
-			}
 			// nilController
 			if tc.nilController {
 				if controller != nil {
@@ -301,9 +423,9 @@ func TestInit(t *testing.T) {
 				return
 			}
 			// serviceStatus
-			if controller.ServiceStatus != &tc.serviceStatus {
+			if controller.ServiceStatus != &serviceStatus {
 				t.Errorf("want: ServiceStatus=%v\ngot:  ServiceStatus=%v",
-					controller.ServiceStatus, &tc.serviceStatus)
+					controller.ServiceStatus, &serviceStatus)
 			}
 			// command
 			if controller.Command != tc.command {

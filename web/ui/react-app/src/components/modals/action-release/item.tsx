@@ -5,7 +5,7 @@ import {
   OverlayTrigger,
   Tooltip,
 } from "react-bootstrap";
-import { ReactElement, useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import {
   faCheck,
   faCircleNotch,
@@ -20,7 +20,7 @@ import { ModalType } from "types/summary";
 import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import formatRelative from "date-fns/formatRelative";
 
-interface params {
+interface Props {
   itemType: "COMMAND" | "WEBHOOK";
   modalType: ModalType;
   title: string;
@@ -55,7 +55,7 @@ const sendableTimeout = (
   }
 };
 
-export const Item = ({
+export const Item: FC<Props> = ({
   itemType,
   modalType,
   title,
@@ -63,7 +63,7 @@ export const Item = ({
   sending,
   next_runnable,
   ack,
-}: params): ReactElement => {
+}) => {
   const nextRunnable = new Date(next_runnable);
   const now = new Date();
   const [sendable, setSendable] = useState(!sending && nextRunnable <= now);

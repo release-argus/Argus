@@ -18,6 +18,7 @@ package dbtype
 // e.g. update deployed_version/latest_version_timestamp.
 type Message struct {
 	ServiceID string
+	Delete    bool
 	Cells     []Cell
 }
 

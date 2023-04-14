@@ -46,7 +46,7 @@ func CommandTest(
 		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
-				*flag, strings.Join(*cfg.Order, "\n  - "),
+				*flag, strings.Join(cfg.Order, "\n  - "),
 			),
 			logFrom,
 			true,

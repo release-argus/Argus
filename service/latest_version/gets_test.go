@@ -22,7 +22,7 @@ import (
 	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
-func TestGetAccessToken(t *testing.T) {
+func TestLookup_GetAccessToken(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		accessTokenRoot        *string
@@ -30,11 +30,20 @@ func TestGetAccessToken(t *testing.T) {
 		accessTokenHardDefault *string
 		wantString             string
 	}{
-		"root overrides all": {wantString: "this", accessTokenRoot: stringPtr("this"),
-			accessTokenDefault: stringPtr("not_this"), accessTokenHardDefault: stringPtr("not_this")},
-		"default overrides hardDefault": {wantString: "this", accessTokenRoot: nil,
-			accessTokenDefault: stringPtr("this"), accessTokenHardDefault: stringPtr("not_this")},
-		"hardDefault is last resort": {wantString: "this", accessTokenRoot: nil, accessTokenDefault: nil,
+		"root overrides all": {
+			wantString:             "this",
+			accessTokenRoot:        stringPtr("this"),
+			accessTokenDefault:     stringPtr("not_this"),
+			accessTokenHardDefault: stringPtr("not_this")},
+		"default overrides hardDefault": {
+			wantString:             "this",
+			accessTokenRoot:        nil,
+			accessTokenDefault:     stringPtr("this"),
+			accessTokenHardDefault: stringPtr("not_this")},
+		"hardDefault is last resort": {
+			wantString:             "this",
+			accessTokenRoot:        nil,
+			accessTokenDefault:     nil,
 			accessTokenHardDefault: stringPtr("this")},
 	}
 
@@ -42,6 +51,7 @@ func TestGetAccessToken(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.AccessToken = tc.accessTokenRoot
 			lookup.Defaults.AccessToken = tc.accessTokenDefault
@@ -62,7 +72,7 @@ func TestGetAccessToken(t *testing.T) {
 	}
 }
 
-func TestGetAllowInvalidCerts(t *testing.T) {
+func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		allowInvalidCertsRoot        *bool
@@ -70,11 +80,20 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 		allowInvalidCertsHardDefault *bool
 		wantBool                     bool
 	}{
-		"root overrides all": {wantBool: true, allowInvalidCertsRoot: boolPtr(true),
-			allowInvalidCertsDefault: boolPtr(false), allowInvalidCertsHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, allowInvalidCertsRoot: nil,
-			allowInvalidCertsDefault: boolPtr(true), allowInvalidCertsHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, allowInvalidCertsRoot: nil, allowInvalidCertsDefault: nil,
+		"root overrides all": {
+			wantBool:                     true,
+			allowInvalidCertsRoot:        boolPtr(true),
+			allowInvalidCertsDefault:     boolPtr(false),
+			allowInvalidCertsHardDefault: boolPtr(false)},
+		"default overrides hardDefault": {
+			wantBool:                     true,
+			allowInvalidCertsRoot:        nil,
+			allowInvalidCertsDefault:     boolPtr(true),
+			allowInvalidCertsHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {
+			wantBool:                     true,
+			allowInvalidCertsRoot:        nil,
+			allowInvalidCertsDefault:     nil,
 			allowInvalidCertsHardDefault: boolPtr(true)},
 	}
 
@@ -82,6 +101,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
 			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
@@ -99,7 +119,7 @@ func TestGetAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestGetServiceURL(t *testing.T) {
+func TestLookup_GetServiceURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		serviceType   string
@@ -109,29 +129,79 @@ func TestGetServiceURL(t *testing.T) {
 		latestVersion string
 		want          string
 	}{
-		"github - want repo url address": {want: "https://github.com/release-argus/Argus",
-			serviceType: "github", url: "release-argus/Argus", webURL: "foo", ignoreWebURL: true},
-		"github - want web_url address": {want: "foo",
-			serviceType: "github", url: "release-argus/Argus", webURL: "foo", ignoreWebURL: false},
-		"github - want web_url address with version templating": {want: "foo/1.2.3",
-			serviceType: "github", url: "release-argus/Argus", webURL: "foo/{{ version }}", latestVersion: "1.2.3", ignoreWebURL: false},
-		"github - want web_url address with version templating, but have no latest_version": {want: "https://github.com/release-argus/Argus",
-			serviceType: "github", url: "release-argus/Argus", webURL: "foo/{{ version }}", latestVersion: "", ignoreWebURL: false},
-		"url - want query url": {want: "https://release-argus.io",
-			serviceType: "url", url: "https://release-argus.io", webURL: "foo", ignoreWebURL: true},
-		"url - want web_url address": {want: "foo",
-			serviceType: "url", url: "https://release-argus.io", webURL: "foo", ignoreWebURL: false},
-		"url - want web_url address with version templating": {want: "foo/1.2.3",
-			serviceType: "url", url: "https://release-argus.io", webURL: "foo/{{ version }}", latestVersion: "1.2.3", ignoreWebURL: false},
-		"url - want web_url address with version templating, but have no latest_version": {want: "https://release-argus.io",
-			serviceType: "url", url: "https://release-argus.io", webURL: "foo/{{ version }}", latestVersion: "", ignoreWebURL: false},
+		"github - want repo url address": {
+			want:         "https://github.com/release-argus/Argus",
+			serviceType:  "github",
+			url:          "release-argus/Argus",
+			webURL:       "foo",
+			ignoreWebURL: true,
+		},
+		"github - want web_url address": {
+			want:         "foo",
+			serviceType:  "github",
+			url:          "release-argus/Argus",
+			webURL:       "foo",
+			ignoreWebURL: false,
+		},
+		"github - want web_url address with version templating": {
+			want:          "foo/1.2.3",
+			serviceType:   "github",
+			url:           "release-argus/Argus",
+			webURL:        "foo/{{ version }}",
+			latestVersion: "1.2.3",
+			ignoreWebURL:  false,
+		},
+		"github - want web_url address with version templating, but have no latest_version": {
+			want:          "https://github.com/release-argus/Argus",
+			serviceType:   "github",
+			url:           "release-argus/Argus",
+			webURL:        "foo/{{ version }}",
+			latestVersion: "",
+			ignoreWebURL:  false,
+		},
+		"url - want query url": {
+			want:         "https://release-argus.io",
+			serviceType:  "url",
+			url:          "https://release-argus.io",
+			webURL:       "foo",
+			ignoreWebURL: true,
+		},
+		"url - want web_url address": {
+			want:         "foo",
+			serviceType:  "url",
+			url:          "https://release-argus.io",
+			webURL:       "foo",
+			ignoreWebURL: false,
+		},
+		"url - want web_url address with version templating": {
+			want:          "foo/1.2.3",
+			serviceType:   "url",
+			url:           "https://release-argus.io",
+			webURL:        "foo/{{ version }}",
+			latestVersion: "1.2.3", ignoreWebURL: false,
+		},
+		"url - want web_url address with version templating, but have no latest_version": {
+			want:          "https://release-argus.io",
+			serviceType:   "url",
+			url:           "https://release-argus.io",
+			webURL:        "foo/{{ version }}",
+			latestVersion: "",
+			ignoreWebURL:  false,
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			status := svcstatus.Status{LatestVersion: tc.latestVersion, WebURL: &tc.webURL}
+
+			status := svcstatus.Status{}
+			status.Init(
+				0, 0, 0,
+				&name,
+				stringPtr("http://example.com"))
+			status.SetLatestVersion(tc.latestVersion, false)
+			status.WebURL = &tc.webURL
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called
@@ -146,7 +216,7 @@ func TestGetServiceURL(t *testing.T) {
 	}
 }
 
-func TestGetUsePreRelease(t *testing.T) {
+func TestLookup_GetUsePreRelease(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		usePreReleaseRoot        *bool
@@ -154,11 +224,20 @@ func TestGetUsePreRelease(t *testing.T) {
 		usePreReleaseHardDefault *bool
 		wantBool                 bool
 	}{
-		"root overrides all": {wantBool: true, usePreReleaseRoot: boolPtr(true),
-			usePreReleaseDefault: boolPtr(false), usePreReleaseHardDefault: boolPtr(false)},
-		"default overrides hardDefault": {wantBool: true, usePreReleaseRoot: nil,
-			usePreReleaseDefault: boolPtr(true), usePreReleaseHardDefault: boolPtr(false)},
-		"hardDefault is last resort": {wantBool: true, usePreReleaseRoot: nil, usePreReleaseDefault: nil,
+		"root overrides all": {
+			wantBool:                 true,
+			usePreReleaseRoot:        boolPtr(true),
+			usePreReleaseDefault:     boolPtr(false),
+			usePreReleaseHardDefault: boolPtr(false)},
+		"default overrides hardDefault": {
+			wantBool:                 true,
+			usePreReleaseRoot:        nil,
+			usePreReleaseDefault:     boolPtr(true),
+			usePreReleaseHardDefault: boolPtr(false)},
+		"hardDefault is last resort": {
+			wantBool:                 true,
+			usePreReleaseRoot:        nil,
+			usePreReleaseDefault:     nil,
 			usePreReleaseHardDefault: boolPtr(true)},
 	}
 
@@ -166,6 +245,7 @@ func TestGetUsePreRelease(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := testLookup(false, false)
 			lookup.UsePreRelease = tc.usePreReleaseRoot
 			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault

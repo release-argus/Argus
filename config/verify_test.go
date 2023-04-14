@@ -30,18 +30,19 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func testVerify() Config {
-	allOrder := []string{"test"}
-	defaults := Defaults{}
-	defaults.SetDefaults()
-	notify := shoutrrr.Slice{
-		"test": defaults.Notify["discord"],
+func testVerify() (cfg *Config) {
+	cfg = &Config{}
+	cfg.Order = []string{"test"}
+	cfg.Defaults = Defaults{}
+	cfg.Defaults.SetDefaults()
+	cfg.Notify = shoutrrr.Slice{
+		"test": cfg.Defaults.Notify["discord"],
 	}
-	webhook := webhook.Slice{
-		"test": &defaults.WebHook,
+	cfg.WebHook = webhook.Slice{
+		"test": &cfg.Defaults.WebHook,
 	}
 	serviceID := "test"
-	service := service.Slice{
+	cfg.Service = service.Slice{
 		serviceID: &service.Service{
 			ID: serviceID,
 			LatestVersion: latestver.Lookup{
@@ -50,59 +51,61 @@ func testVerify() Config {
 			},
 		},
 	}
-	return Config{
-		All:      allOrder,
-		Defaults: defaults,
-		Notify:   notify,
-		WebHook:  webhook,
-		Service:  service,
-	}
+	return
 }
 
-func TestConfigCheckValues(t *testing.T) {
+func TestConfig_CheckValues(t *testing.T) {
 	// GIVEN variations of Config to test
 	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
-		config      Config
+		config      *Config
 		errContains string
 		noPanic     bool
 	}{
 		"valid Config": {
-			config: testVerify(), errContains: "", noPanic: true},
+			config:      testVerify(),
+			errContains: "",
+			noPanic:     true,
+		},
 		"invalid Defaults": {
-			config: Config{
+			config: &Config{
 				Defaults: Defaults{
 					Service: service.Service{
 						Options: opt.Options{
 							Interval: "1x"}}}},
-			errContains: `interval: "1x" <invalid>`},
+			errContains: `interval: "1x" <invalid>`,
+		},
 		"invalid Notify": {
-			config: Config{
+			config: &Config{
 				Notify: shoutrrr.Slice{
 					"test": &shoutrrr.Shoutrrr{
 						Options: map[string]string{
 							"delay": "2x",
 						}}}},
-			errContains: `delay: "2x" <invalid>`},
+			errContains: `delay: "2x" <invalid>`,
+		},
 		"invalid WebHook": {
-			config: Config{
+			config: &Config{
 				WebHook: webhook.Slice{
 					"test": &webhook.WebHook{
 						Delay: "3x",
 					}}},
-			errContains: `delay: "3x" <invalid>`},
+			errContains: `delay: "3x" <invalid>`,
+		},
 		"invalid Service": {
-			config: Config{
+			config: &Config{
 				Service: service.Slice{
 					"test": &service.Service{
 						Options: opt.Options{
 							Interval: "4x"},
 					}}},
-			errContains: `interval: "4x" <invalid>`},
+			errContains: `interval: "4x" <invalid>`,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -140,7 +143,7 @@ func TestConfigCheckValues(t *testing.T) {
 	}
 }
 
-func TestConfigPrint(t *testing.T) {
+func TestConfig_Print(t *testing.T) {
 	// GIVEN a Config and print flags of true and false
 	jLog = util.NewJLog("WARN", false)
 	jLog.Testing = true
@@ -149,12 +152,13 @@ func TestConfigPrint(t *testing.T) {
 		flag        bool
 		wantedLines int
 	}{
-		"flag on":  {flag: true, wantedLines: 148},
+		"flag on":  {flag: true, wantedLines: 153},
 		"flag off": {flag: false},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

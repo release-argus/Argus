@@ -45,8 +45,8 @@ func waitChannelTimeout(channel *chan bool) {
 			<-*channel
 		}
 
-		// Sleep 25s
-		time.Sleep(25 * time.Second)
+		// Sleep 30s
+		time.Sleep(30 * time.Second)
 
 		// End if channel is still empty
 		if len(*channel) == 0 {
@@ -57,42 +57,41 @@ func waitChannelTimeout(channel *chan bool) {
 
 // Save `c.File`.
 func (c *Config) Save() {
+	// Lock the config
+	c.OrderMutex.Lock()
+	defer c.OrderMutex.Unlock()
+
 	// Write the config to file (unordered slices, but with an order list)
 	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	errMsg := fmt.Sprintf("error opening/creating file: %v", err)
 	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
+	defer file.Close()
 
+	// Create the yaml encoder and set indentation
 	yamlEncoder := yaml.NewEncoder(file)
 	yamlEncoder.SetIndent(int(c.Settings.Indentation))
 
+	// Write and close the file
 	err = yamlEncoder.Encode(c)
 	jLog.Fatal(
-		fmt.Sprintf(
-			"error encoding %s:\n%v\n",
-			c.File,
-			err,
-		),
+		fmt.Sprintf("error encoding %s:\n%v\n",
+			c.File, err),
 		util.LogFrom{},
-		err != nil,
-	)
+		err != nil)
 	err = file.Close()
 	jLog.Fatal(
-		fmt.Sprintf(
-			"error opening %s:\n%v\n",
-			c.File,
-			err,
-		),
+		fmt.Sprintf("error opening %s:\n%v\n",
+			c.File, err),
 		util.LogFrom{},
-		err != nil,
-	)
+		err != nil)
 
-	// Read the file.
+	// Read the file to find what needs to be re-arranged
 	data, err := os.ReadFile(c.File)
 	msg := fmt.Sprintf("Error reading %q\n%s", c.File, err)
 	jLog.Fatal(msg, util.LogFrom{}, err != nil)
 	lines := strings.Split(string(util.NormaliseNewlines(data)), "\n")
 
-	// Fix the ordering of the read data.
+	// Fix the ordering of the read data
 	var (
 		changed      = true
 		indentation  = strings.Repeat(" ", int(c.Settings.Indentation))
@@ -136,10 +135,11 @@ func (c *Config) Save() {
 			currentOrderIndexStart[currentServiceNumber] = index
 
 			// Get the index that this service ends on
-			currentOrderIndexEnd[currentServiceNumber] = len(lines)
-			// notifyStartIndex := 0
+			currentOrderIndexEnd[currentServiceNumber] = len(lines) - 1
 			for i := index + 1; i <= len(lines); i++ {
-				if !strings.HasPrefix(lines[i], indentation+" ") && strings.HasPrefix(lines[i], indentation) ||
+				// If the line has only 1 indentation or no indentation, it's the end of the Service
+				if !strings.HasPrefix(lines[i], indentation+" ") &&
+					strings.HasPrefix(lines[i], indentation) ||
 					!strings.HasPrefix(lines[i], " ") {
 					currentOrderIndexEnd[currentServiceNumber] = i - 1
 					break
@@ -148,15 +148,35 @@ func (c *Config) Save() {
 		}
 		// Remove empty key:values
 		if strings.HasSuffix(lines[index], ": {}") {
-			// Ignore empty notify mappings under a service as they are using defaults
+			// Ignore empty notify/webhook mappings under a service as they are using defaults
 			// service:
 			// <>example:
 			// <><>notify:
 			// <><><>DISCORD: {}
+			// <><><>EMAIL: {}
+			// <><>webhook:
+			// <><><>WH: {}
+			underNotify := false
+			TwoIndents := strings.Repeat(" ", 2*int(c.Settings.Indentation))
+			ThreeIndents := strings.Repeat(" ", 3*int(c.Settings.Indentation))
 			if configType == "service" &&
-				!strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))+" ") &&
-				strings.HasPrefix(lines[index], strings.Repeat(" ", 3*int(c.Settings.Indentation))) {
-				continue
+				!strings.HasPrefix(lines[index], ThreeIndents+" ") &&
+				strings.HasPrefix(lines[index], ThreeIndents) {
+				// Check that we're under a notify/webhook:
+				prevIndex := index
+				for prevIndex > 0 {
+					prevIndex--
+					// line has only 2*indentation
+					if !strings.HasPrefix(lines[prevIndex], TwoIndents+" ") &&
+						strings.HasPrefix(lines[prevIndex], TwoIndents) {
+						underNotify = lines[prevIndex] == TwoIndents+"notify:" ||
+							lines[prevIndex] == TwoIndents+"webhook:"
+						break
+					}
+				}
+				if underNotify {
+					continue
+				}
 			}
 
 			util.RemoveIndex(&lines, index)
@@ -219,21 +239,24 @@ func (c *Config) Save() {
 
 			// Check if `i-1` should be before `i-2`
 			swap := false
-			for j := range c.All {
+			for j := range c.Order {
 				// Found i-1 (current item)
-				if c.All[j] == currentOrder[i-1] {
+				if c.Order[j] == currentOrder[i-1] {
 					swap = true
 					break
 				}
 				// Found i-2 (previous item)
-				if c.All[j] == currentOrder[i-2] {
+				if c.Order[j] == currentOrder[i-2] {
 					break
 				}
 			}
 
 			if swap {
 				// currentID needs to be moved before previousID
-				util.Swap(&lines, currentOrderIndexStart[i-1], currentOrderIndexEnd[i-1], currentOrderIndexStart[i], currentOrderIndexEnd[i])
+				util.Swap(
+					&lines,
+					currentOrderIndexStart[i-1], currentOrderIndexEnd[i-1],
+					currentOrderIndexStart[i], currentOrderIndexEnd[i])
 				changed = true
 
 				// Update the current ordering values

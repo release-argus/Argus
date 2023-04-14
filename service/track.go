@@ -16,18 +16,19 @@ package service
 
 import (
 	"fmt"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // Track will call Track on all Services in this Slice.
-func (s *Slice) Track(ordering *[]string) {
+func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
+	orderMutex.RLock()
+	defer orderMutex.RUnlock()
 	for _, key := range *ordering {
-		// Skip disabled Services
-		if !(*s)[key].Options.GetActive() {
+		// Skip inactive Services (and services that were deleted on startup)
+		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {
 			continue
 		}
 		(*s)[key].Options.Active = nil
@@ -49,47 +50,42 @@ func (s *Slice) Track(ordering *[]string) {
 // well as WebHooks (Service.WebHook) when a new release is spotted.
 // It sleeps for Service.Interval between each check.
 func (s *Service) Track() {
-	serviceInfo := s.GetServiceInfo()
+	// Skip inactive Services
+	if !s.Options.GetActive() {
+		s.DeleteMetrics()
+		return
+	}
+	s.ResetMetrics()
+
+	// If this Service was last queried less than interval ago, wait until interval has elapsed.
+	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.GetLastQueried())
+	if time.Since(lastQueriedAt) < s.Options.GetIntervalDuration() {
+		time.Sleep(s.Options.GetIntervalDuration() - time.Since(lastQueriedAt))
+	}
 
 	// Track the deployed version in a infinite loop goroutine.
-	go s.DeployedVersionLookup.Track()
+	go func() {
+		time.Sleep(2 * time.Second) // Give LatestVersion some time to query first.
+
+		go s.DeployedVersionLookup.Track()
+	}()
 
 	// Track forever.
-	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first
+	logFrom := util.LogFrom{Primary: s.ID}
 	for {
+		// If we're deleting this Service, stop tracking it.
+		if s.Status.Deleting() {
+			return
+		}
+
 		// If new release found by this query.
-		newVersion, err := s.LatestVersion.Query()
+		newVersion, _ := s.LatestVersion.Query(true, &logFrom)
 
-		// If a new version was found and we're not already on it
+		// If a new version was found
 		if newVersion {
-			// Get updated serviceInfo
-			serviceInfo = s.GetServiceInfo()
-
-			// Send the Notify Message(s).
-			//nolint:errcheck
-			go s.Notify.Send("", "", &serviceInfo, true)
-
-			// WebHook(s)/Command(s)
-			go s.HandleUpdateActions()
+			go s.HandleUpdateActions(true)
 		}
 
-		// If it failed
-		if err != nil {
-			switch e := err.Error(); {
-			case strings.HasPrefix(e, "regex "):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 2)
-			case strings.HasPrefix(e, "failed converting") && strings.Contains(e, " semantic version."):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 3)
-			case strings.HasPrefix(e, "queried version") && strings.Contains(e, " less than "):
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 4)
-			default:
-				metric.IncreasePrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, s.ID, "FAIL")
-				metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 0)
-			}
-		} else {
-			metric.IncreasePrometheusCounterWithIDAndResult(metric.LatestVersionQueryMetric, s.ID, "SUCCESS")
-			metric.SetPrometheusGaugeWithID(metric.LatestVersionQueryLiveness, s.ID, 1)
-		}
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())
 	}

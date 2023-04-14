@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/release-argus/Argus/config"
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -31,25 +32,36 @@ var (
 )
 
 func checkFile(path string) {
+	file := filepath.Base(path)
+	// Check that the directory exists
 	dir := filepath.Dir(path)
-	err := os.Mkdir(dir, os.ModeDir|0755)
-	if err == nil {
-		return
+	fileInfo, err := os.Stat(dir)
+	if err != nil {
+		// directory doesn't exist
+		// create the dir
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(dir, 0755)
+			jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+		} else {
+			// other error
+			jLog.Fatal(util.ErrorToString(err), *logFrom, true)
+		}
+
+		// directory exists but is not a directory
+	} else if fileInfo == nil || !fileInfo.IsDir() {
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is not a directory", dir, file), *logFrom, true)
 	}
-	if os.IsExist(err) {
-		// check that the existing path is a directory
-		info, err := os.Stat(dir)
-		jLog.Fatal(
-			fmt.Sprintf("db path %q exists but is not a directory", dir),
-			*logFrom,
-			!info.IsDir())
-		jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+
+	// Check that the file exists
+	fileInfo, err = os.Stat(path)
+	if err != nil {
+		// file doesn't exist
+		jLog.Fatal(util.ErrorToString(err), *logFrom, os.IsExist(err))
+
+		// item exists but is a directory
+	} else if fileInfo != nil && fileInfo.IsDir() {
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is a directory, not a file", path, file), *logFrom, true)
 	}
-	info, _ := os.Stat(path)
-	jLog.Fatal(
-		fmt.Sprintf("db path %q exists but is a directory, not a file", path),
-		*logFrom,
-		info != nil && info.IsDir())
 }
 
 func Run(cfg *config.Config, log *util.JLog) {
@@ -60,7 +72,7 @@ func Run(cfg *config.Config, log *util.JLog) {
 	api := api{config: cfg}
 	api.initialise()
 	defer api.db.Close()
-	if len(api.config.All) > 0 {
+	if len(api.config.Order) > 0 {
 		api.removeUnknownServices()
 		api.convertServiceStatus()
 		api.extractServiceStatus()
@@ -92,17 +104,24 @@ func (api *api) initialise() {
 	api.db = db
 }
 
-// removeUnknownServices will remove rows with an id not in config.All
+// removeUnknownServices will remove rows with an id not in config.Order
 func (api *api) removeUnknownServices() {
-	var allServices string
-	for _, id := range api.config.All {
-		allServices += fmt.Sprintf(`'%s',`, id)
-	}
+	// ? for each service
+	services := strings.Repeat(`?,`, len(api.config.Order))
+
+	// SQL statement to remove unknown services
 	sqlStmt := fmt.Sprintf(`
 		DELETE FROM status
 		WHERE id NOT IN (%s);`,
-		allServices[:len(allServices)-1])
-	_, err := api.db.Exec(sqlStmt)
+		services[:len(services)-1])
+
+	// Get the vars for the SQL statement
+	params := make([]interface{}, len(api.config.Order))
+	for i, name := range api.config.Order {
+		params[i] = name
+	}
+
+	_, err := api.db.Exec(sqlStmt, params...)
 	jLog.Fatal(
 		fmt.Sprintf("removeUnknownServices: %s", util.ErrorToString(err)),
 		*logFrom,
@@ -123,6 +142,9 @@ func (api *api) extractServiceStatus() {
 	FROM status;`)
 	jLog.Fatal(err, *logFrom, err != nil)
 	defer rows.Close()
+
+	api.config.OrderMutex.RLock()
+	defer api.config.OrderMutex.RUnlock()
 	for rows.Next() {
 		var (
 			id  string
@@ -137,11 +159,11 @@ func (api *api) extractServiceStatus() {
 			fmt.Sprintf("extractServiceStatus row: %s", util.ErrorToString(err)),
 			*logFrom,
 			err != nil)
-		api.config.Service[id].Status.LatestVersion = lv
-		api.config.Service[id].Status.LatestVersionTimestamp = lvt
-		api.config.Service[id].Status.DeployedVersion = dv
-		api.config.Service[id].Status.DeployedVersionTimestamp = dvt
-		api.config.Service[id].Status.ApprovedVersion = av
+		api.config.Service[id].Status.SetLatestVersion(lv, false)
+		api.config.Service[id].Status.SetLatestVersionTimestamp(lvt)
+		api.config.Service[id].Status.SetDeployedVersion(dv, false)
+		api.config.Service[id].Status.SetDeployedVersionTimestamp(dvt)
+		api.config.Service[id].Status.SetApprovedVersion(av, false)
 	}
 	err = rows.Err()
 	jLog.Fatal(
@@ -164,8 +186,11 @@ func (api *api) convertServiceStatus() {
 				approved_version
 			)
 		VALUES`
+
+	api.config.OrderMutex.RLock()
+	defer api.config.OrderMutex.RUnlock()
 	servicesToConvert := 0
-	for _, id := range api.config.All {
+	for _, id := range api.config.Order {
 		if api.config.Service[id].OldStatus != nil {
 			servicesToConvert++
 			sqlStmt += fmt.Sprintf(" ('%s', '%s', '%s', '%s', '%s', '%s'),",
@@ -174,15 +199,17 @@ func (api *api) convertServiceStatus() {
 				api.config.Service[id].OldStatus.LatestVersionTimestamp,
 				api.config.Service[id].OldStatus.DeployedVersion,
 				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
-				api.config.Service[id].OldStatus.ApprovedVersion,
-			)
-			api.config.Service[id].Status = svcstatus.Status{
-				LatestVersion:            api.config.Service[id].OldStatus.LatestVersion,
-				LatestVersionTimestamp:   api.config.Service[id].OldStatus.LatestVersionTimestamp,
-				DeployedVersion:          api.config.Service[id].OldStatus.DeployedVersion,
-				DeployedVersionTimestamp: api.config.Service[id].OldStatus.DeployedVersionTimestamp,
-				ApprovedVersion:          api.config.Service[id].OldStatus.ApprovedVersion,
-			}
+				api.config.Service[id].OldStatus.ApprovedVersion)
+			api.config.Service[id].Status = svcstatus.Status{}
+			api.config.Service[id].Status.Init(
+				len(api.config.Service[id].Notify), len(api.config.Service[id].Command), len(api.config.Service[id].WebHook),
+				&id,
+				&api.config.Service[id].Dashboard.WebURL)
+			api.config.Service[id].Status.SetLatestVersion(api.config.Service[id].OldStatus.LatestVersion, false)
+			api.config.Service[id].Status.SetLatestVersionTimestamp(api.config.Service[id].OldStatus.LatestVersionTimestamp)
+			api.config.Service[id].Status.SetDeployedVersion(api.config.Service[id].OldStatus.DeployedVersion, false)
+			api.config.Service[id].Status.SetDeployedVersionTimestamp(api.config.Service[id].OldStatus.DeployedVersionTimestamp)
+			api.config.Service[id].Status.SetApprovedVersion(api.config.Service[id].OldStatus.ApprovedVersion, false)
 		}
 	}
 	if servicesToConvert != 0 {
@@ -193,7 +220,7 @@ func (api *api) convertServiceStatus() {
 				util.ErrorToString(err), sqlStmt),
 			*logFrom,
 			err != nil)
-		for _, id := range api.config.All {
+		for _, id := range api.config.Order {
 			api.config.Service[id].OldStatus = nil
 		}
 	}

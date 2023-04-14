@@ -1,89 +1,75 @@
 import { NotificationType } from "types/notification";
-import { websocketResponse } from "types/websocket";
+import { WebSocketResponse } from "types/websocket";
 
-export interface notificationsParams {
-  event: websocketResponse;
+export interface Props {
+  event: WebSocketResponse;
   addNotification: (notification: NotificationType) => void;
 }
 
-export const handleNotifications = (params: notificationsParams) => {
-  switch (params.event.page) {
+export const handleNotifications = (props: Props) => {
+  switch (props.event.page) {
     case "APPROVALS":
-      switch (params.event.type) {
-        case "SERVICE":
-          // INIT
-          // ORDERING
-          switch (params.event.sub_type) {
-            case "INIT":
-              break;
-            case "ORDERING":
-              break;
-            case "CHANGE":
-              break;
-            default:
-              break;
-          }
-          break;
+      switch (props.event.type) {
         case "VERSION":
           // QUERY
           // NEW
           // UPDATED
           // INIT
-          switch (params.event.sub_type) {
+          switch (props.event.sub_type) {
             case "QUERY":
               break;
             case "NEW":
-              params.addNotification({
+              props.addNotification({
                 type: "info",
-                title: params.event.service_data?.id || "Unknown",
+                title: props.event.service_data?.id || "Unknown",
                 body: `New version: ${
-                  params.event.service_data?.status?.latest_version || "Unknown"
+                  props.event.service_data?.status?.latest_version || "Unknown"
                 }`,
                 small:
-                  params.event.service_data?.status?.latest_version_timestamp ||
+                  props.event.service_data?.status?.latest_version_timestamp ||
                   new Date().toString(),
                 delay: 0,
               });
               break;
             case "UPDATED":
-              params.addNotification({
+              props.addNotification({
                 type: "success",
-                title: params.event.service_data?.id || "Unknown",
+                title: props.event.service_data?.id || "Unknown",
                 body: `Updated to version '${
-                  params.event.service_data?.status?.deployed_version ||
+                  props.event.service_data?.status?.deployed_version ||
                   "Unknown"
                 }'`,
                 small:
-                  params.event.service_data?.status
+                  props.event.service_data?.status
                     ?.deployed_version_timestamp || new Date().toString(),
                 delay: 30000,
               });
               break;
             case "INIT":
-              params.addNotification({
+              props.addNotification({
                 type: "info",
-                title: params.event.service_data?.id || "Unknown",
+                title: props.event.service_data?.id || "Unknown",
                 body: `Latest version: ${
-                  params.event.service_data?.status?.latest_version || "Unknown"
+                  props.event.service_data?.status?.latest_version || "Unknown"
                 }`,
                 small:
-                  params.event.service_data?.status?.latest_version_timestamp ||
+                  props.event.service_data?.status?.latest_version_timestamp ||
                   "",
                 delay: 5000,
               });
               break;
             case "ACTION":
               // Notify on SKIP, ignore latest version being approved
-              if (params.event.service_data?.status?.approved_version) {
+              if (props.event.service_data?.status?.approved_version) {
                 if (
-                  params.event.service_data.status.approved_version.startsWith(
+                  props.event.service_data.status.approved_version.startsWith(
                     "SKIP_"
                   )
                 ) {
-                  params.addNotification({
+                  props.addNotification({
                     type: "info",
-                    title: params.event.service_data?.id || "Unknown",
-                    body: `Skipped version: ${params.event.service_data.status.approved_version.slice(
+                    title: props.event.service_data?.id || "Unknown",
+                    body: `Skipped version: ${props.event.service_data.status.approved_version.slice(
                       "SKIP_".length
                     )}`,
                     small: new Date().toString(),
@@ -102,22 +88,22 @@ export const handleNotifications = (params: notificationsParams) => {
         case "COMMAND":
           // SUMMARY
           // EVENT
-          switch (params.event.sub_type) {
+          switch (props.event.sub_type) {
             case "SUMMARY":
               break;
             case "EVENT":
-              for (const key in params.event.command_data) {
-                params.event.command_data[key].failed === false
-                  ? params.addNotification({
+              for (const key in props.event.command_data) {
+                props.event.command_data[key].failed === false
+                  ? props.addNotification({
                       type: "success",
-                      title: params.event.service_data?.id || "Unknown",
+                      title: props.event.service_data?.id || "Unknown",
                       body: `'${key}' Command ran successfully`,
                       small: new Date().toString(),
                       delay: 30000,
                     })
-                  : params.addNotification({
+                  : props.addNotification({
                       type: "danger",
-                      title: params.event.service_data?.id || "Unknown",
+                      title: props.event.service_data?.id || "Unknown",
                       body: `'${key}' Command failed`,
                       small: new Date().toString(),
                       delay: 30000,
@@ -129,22 +115,22 @@ export const handleNotifications = (params: notificationsParams) => {
         case "WEBHOOK":
           // SUMMARY
           // EVENT
-          switch (params.event.sub_type) {
+          switch (props.event.sub_type) {
             case "SUMMARY":
               break;
             case "EVENT":
-              for (const key in params.event.webhook_data) {
-                params.event.webhook_data[key].failed === false
-                  ? params.addNotification({
+              for (const key in props.event.webhook_data) {
+                props.event.webhook_data[key].failed === false
+                  ? props.addNotification({
                       type: "success",
-                      title: params.event.service_data?.id || "Unknown",
+                      title: props.event.service_data?.id || "Unknown",
                       body: `'${key}' WebHook sent successfully`,
                       small: new Date().toString(),
                       delay: 30000,
                     })
-                  : params.addNotification({
+                  : props.addNotification({
                       type: "danger",
-                      title: params.event.service_data?.id || "Unknown",
+                      title: props.event.service_data?.id || "Unknown",
                       body: `'${key}' WebHook failed to send`,
                       small: new Date().toString(),
                       delay: 30000,

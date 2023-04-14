@@ -18,6 +18,7 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -26,26 +27,41 @@ var (
 
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL               string            `yaml:"url,omitempty"`                 // URL to query.
-	AllowInvalidCerts *bool             `yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth        `yaml:"basic_auth,omitempty"`          // Basic Auth for the HTTP(S) request.
-	Headers           []Header          `yaml:"headers,omitempty"`             // Headers for the HTTP(S) request.
-	JSON              string            `yaml:"json,omitempty"`                // JSON key to use e.g. version_current.
-	Regex             string            `yaml:"regex,omitempty"`               // Regex to get the DeployedVersion
-	Options           *opt.Options      `yaml:"-"`                             // Options for the lookups
-	Status            *svcstatus.Status `yaml:"-"`                             // Service Status
-	HardDefaults      *Lookup           `yaml:"-"`                             // Hardcoded default values.
-	Defaults          *Lookup           `yaml:"-"`                             // Default values.
+	URL               string            `yaml:"url,omitempty" json:"url,omitempty"`                                 // URL to query.
+	AllowInvalidCerts *bool             `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+	BasicAuth         *BasicAuth        `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`                   // Basic Auth for the HTTP(S) request.
+	Headers           []Header          `yaml:"headers,omitempty" json:"headers,omitempty"`                         // Headers for the HTTP(S) request.
+	JSON              string            `yaml:"json,omitempty" json:"json,omitempty"`                               // JSON key to use e.g. version_current.
+	Regex             string            `yaml:"regex,omitempty" json:"regex,omitempty"`                             // Regex to get the DeployedVersion
+	Options           *opt.Options      `yaml:"-" json:"-"`                                                         // Options for the lookups
+	Status            *svcstatus.Status `yaml:"-" json:"-"`                                                         // Service Status
+	Defaults          *Lookup           `yaml:"-" json:"-"`                                                         // Default values.
+	HardDefaults      *Lookup           `yaml:"-" json:"-"`                                                         // Hardcoded default values.
+}
+
+// String returns a string representation of the Lookup.
+func (l *Lookup) String() string {
+	if l == nil {
+		return "<nil>"
+	}
+
+	yamlBytes, _ := yaml.Marshal(l)
+	return string(yamlBytes)
 }
 
 // BasicAuth to use on the HTTP(s) request.
 type BasicAuth struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
 }
 
 // Header to use in the HTTP request.
 type Header struct {
-	Key   string `yaml:"key"`   // Header key, e.g. X-Sig
-	Value string `yaml:"value"` // Value to give the key
+	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig
+	Value string `yaml:"value" json:"value"` // Value to give the key
+}
+
+// isEqual will return a bool of whether this lookup is the same as `other` (excluding status).
+func (l *Lookup) IsEqual(other *Lookup) bool {
+	return l.String() == other.String()
 }

@@ -21,12 +21,13 @@ export interface ServiceSummaryType {
   status?: StatusSummaryType;
 }
 
-export interface WebHookModal {
-  type: ModalType;
+export interface ServiceModal {
+  actionType: ModalType;
   service: ServiceSummaryType;
 }
 
 export type ModalType =
+  | "EDIT"
   | "RESEND"
   | "RETRY"
   | "SEND"
@@ -49,7 +50,6 @@ export interface StatusSummaryType {
   latest_version?: string;
   latest_version_timestamp?: string;
   last_queried?: string;
-  // fails?: StatusFailsSummaryType;
 }
 
 export interface StatusFailsSummaryType {
@@ -67,10 +67,6 @@ export interface WebHookSummaryListType {
   [id: string]: WebHookSummaryType;
 }
 
-export interface CommandType {
-  parts: string[];
-  failed?: boolean;
-}
 export interface CommandSummaryType {
   // undefined = unsent/sending
   failed?: boolean;

@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestPrint(t *testing.T) {
+func TestLookup_Print(t *testing.T) {
 	// GIVEN a Lookup
 	allowInvalidCerts := false
 	tests := map[string]struct {
@@ -37,22 +37,63 @@ func TestPrint(t *testing.T) {
 		options   opt.Options
 		lines     int
 	}{
-		"nil lookup": {lines: 0, lookup: nil},
-		"lookup with no basicAuth/headers/option": {lines: 5, lookup: &Lookup{
-			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with basicAuth and no headers/option": {lines: 8, basicAuth: &BasicAuth{Username: "foo", Password: "bar"}, lookup: &Lookup{
-			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with headers and no basicAuth/option": {lines: 10, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
-			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with no basicAuth/headers": {lines: 5, options: opt.Options{Interval: "10m"}, lookup: &Lookup{
-			URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
-		"lookup with basicAuth and headers": {lines: 13, basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
-			options: opt.Options{Interval: "10m"}, headers: []Header{{Key: "a", Value: "b"}, {Key: "b", Value: "a"}}, lookup: &Lookup{
-				URL: "https://release-argus.io", AllowInvalidCerts: &allowInvalidCerts, Regex: "[0-9]+", JSON: "version"}},
+		"nil lookup": {
+			lines: 0, lookup: nil,
+		},
+		"lookup with no basicAuth/headers/option": {
+			lines: 5, lookup: &Lookup{
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: &allowInvalidCerts,
+				Regex:             "[0-9]+",
+				JSON:              "version"},
+		},
+		"lookup with basicAuth and no headers/option": {
+			lines:     8,
+			basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
+			lookup: &Lookup{
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: &allowInvalidCerts,
+				Regex:             "[0-9]+",
+				JSON:              "version"},
+		},
+		"lookup with headers and no basicAuth/option": {
+			lines: 10,
+			headers: []Header{
+				{Key: "a", Value: "b"},
+				{Key: "b", Value: "a"}},
+			lookup: &Lookup{
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: &allowInvalidCerts,
+				Regex:             "[0-9]+",
+				JSON:              "version"},
+		},
+		"lookup with no basicAuth/headers": {
+			lines:   5,
+			options: opt.Options{Interval: "10m"},
+			lookup: &Lookup{
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: &allowInvalidCerts,
+				Regex:             "[0-9]+",
+				JSON:              "version"},
+		},
+		"lookup with basicAuth and headers": {
+			lines:     13,
+			basicAuth: &BasicAuth{Username: "foo", Password: "bar"},
+			options:   opt.Options{Interval: "10m"},
+			headers: []Header{
+				{Key: "a", Value: "b"},
+				{Key: "b", Value: "a"}},
+			lookup: &Lookup{
+				URL:               "https://release-argus.io",
+				AllowInvalidCerts: &allowInvalidCerts,
+				Regex:             "[0-9]+",
+				JSON:              "version"},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -78,7 +119,7 @@ func TestPrint(t *testing.T) {
 	}
 }
 
-func TestCheckValues(t *testing.T) {
+func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		url        string
@@ -87,20 +128,46 @@ func TestCheckValues(t *testing.T) {
 		errRegex   string
 		nilService bool
 	}{
-		"nil service":                            {errRegex: `^$`, nilService: true},
-		"valid service":                          {errRegex: `^$`, url: "https://example.com", regex: "[0-9.]+", defaults: &Lookup{}},
-		"no url":                                 {errRegex: `url: <missing>`, url: "", defaults: &Lookup{}},
-		"invalid regex":                          {errRegex: `regex: .* <invalid>`, regex: "[0-", defaults: &Lookup{}},
-		"all errs":                               {errRegex: `url: <missing>`, url: "", regex: "[0-", defaults: &Lookup{}},
-		"no url doesnt fail for Lookup Defaults": {errRegex: `^$`, url: "", defaults: nil},
+		"nil service": {
+			errRegex:   `^$`,
+			nilService: true,
+		},
+		"valid service": {
+			errRegex: `^$`,
+			url:      "https://example.com",
+			regex:    "[0-9.]+",
+			defaults: &Lookup{},
+		},
+		"no url": {
+			errRegex: `url: <missing>`,
+			url:      "",
+			defaults: &Lookup{},
+		},
+		"invalid regex": {
+			errRegex: `regex: .* <invalid>`,
+			regex:    "[0-",
+			defaults: &Lookup{},
+		},
+		"all errs": {
+			errRegex: `url: <missing>`,
+			url:      "",
+			regex:    "[0-",
+			defaults: &Lookup{},
+		},
+		"no url doesnt fail for Lookup Defaults": {
+			errRegex: `^$`,
+			url:      "",
+			defaults: nil,
+		},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			lookup := &Lookup{}
-			*lookup = testDeployedVersion()
+			lookup = testLookup()
 			lookup.URL = tc.url
 			lookup.Regex = tc.regex
 			lookup.Defaults = nil

@@ -15,6 +15,8 @@
 package config
 
 import (
+	"sync"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
@@ -35,8 +37,8 @@ type Config struct {
 	Notify          shoutrrr.Slice       `yaml:"notify,omitempty"`   // Shoutrrr message(s) to send on a new release.
 	WebHook         webhook.Slice        `yaml:"webhook,omitempty"`  // WebHook(s) to send on a new release.
 	Service         service.Slice        `yaml:"service,omitempty"`  // The service(s) to monitor.
-	All             []string             `yaml:"-"`                  // Ordered list of all Service(s).
-	Order           *[]string            `yaml:"-"`                  // Ordered list of all enabled Service(s).
+	Order           []string             `yaml:"-"`                  // Ordered slice of all Service(s).
+	OrderMutex      sync.RWMutex         `yaml:"-"`                  // Mutex for the Order/Service slice.
 	DatabaseChannel *chan dbtype.Message `yaml:"-"`                  // Channel for broadcasts to the Database
 	SaveChannel     *chan bool           `yaml:"-"`                  // Channel for triggering a save of the config.
 }

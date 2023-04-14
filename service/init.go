@@ -20,13 +20,20 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+	deployedver.LogInit(log)
+	latestver.LogInit(log)
+}
+
 // Init will initialise the Service metric.
 func (s *Service) Init(
-	log *util.JLog,
 	defaults *Service,
 	hardDefaults *Service,
 	rootNotifyConfig *shoutrrr.Slice,
@@ -36,9 +43,12 @@ func (s *Service) Init(
 	webhookDefaults *webhook.WebHook,
 	webhookHardDefaults *webhook.WebHook,
 ) {
-	jLog = log
+	// Status
+	s.Status.Init(
+		len(s.Notify), len(s.Command), len(s.WebHook),
+		&s.ID,
+		&s.Dashboard.WebURL)
 
-	s.Status.Init(len(s.Notify), len(s.Command), len(s.WebHook), &s.ID, &s.Dashboard.WebURL)
 	s.Defaults = defaults
 	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Options.Defaults = &s.Defaults.Options
@@ -46,51 +56,100 @@ func (s *Service) Init(
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
-	s.Notify.Init(jLog, &s.Status, rootNotifyConfig, notifyDefaults, notifyHardDefaults)
+	// Notify
+	s.Notify.Init(
+		&s.Status,
+		rootNotifyConfig, notifyDefaults, notifyHardDefaults)
 
+	// Command
 	//nolint:typecheck
 	if s.Command != nil {
 		s.CommandController = &command.Controller{}
-		s.CommandController.Init(jLog, &s.Status, &s.Command, &s.Notify, s.Options.GetIntervalPointer())
+		s.CommandController.Init(
+			&s.Status,
+			&s.Command,
+			&s.Notify,
+			s.Options.GetIntervalPointer())
 	}
 
-	s.WebHook.Init(jLog, &s.Status, rootWebHookConfig, webhookDefaults, webhookHardDefaults, &s.Notify, s.Options.GetIntervalPointer())
+	// WebHook
+	s.WebHook.Init(
+		&s.Status,
+		rootWebHookConfig, webhookDefaults, webhookHardDefaults,
+		&s.Notify,
+		s.Options.GetIntervalPointer())
 
-	s.LatestVersion.Init(jLog, &s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion, &s.Status, &s.Options)
+	// LatestVersion
+	s.LatestVersion.Init(
+		&s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion,
+		&s.Status,
+		&s.Options)
+
+	// DeployedVersionLookup
 	if s.Defaults.DeployedVersionLookup == nil {
 		s.Defaults.DeployedVersionLookup = &deployedver.Lookup{}
 	}
-	s.DeployedVersionLookup.Init(jLog, s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup, &s.Status, &s.Options)
+	s.DeployedVersionLookup.Init(
+		s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup,
+		&s.Status,
+		&s.Options)
+
+	// Convert from old format
 	s.Convert()
 }
 
 // GetServiceInfo returns info about the service.
-func (s *Service) GetServiceInfo() util.ServiceInfo {
-	return util.ServiceInfo{
+func (s *Service) GetServiceInfo() *util.ServiceInfo {
+	return &util.ServiceInfo{
 		ID:            s.ID,
 		URL:           s.LatestVersion.GetServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
-		LatestVersion: s.Status.LatestVersion,
+		LatestVersion: s.Status.GetLatestVersion(),
 	}
 }
 
 // GetIconURL returns the URL Icon for the Service.
-func (s *Service) GetIconURL() string {
+func (s *Service) GetIconURL() (icon string) {
 	// Service.Icon
 	if strings.HasPrefix(s.Dashboard.Icon, "http") {
-		return s.Dashboard.Icon
+		icon = s.Dashboard.Icon
+		return
 	}
 
 	//nolint:typecheck
 	if s.Notify != nil {
 		for key := range s.Notify {
 			// `Params.Icon`
-			icon := s.Notify[key].GetParam("icon")
+			icon = s.Notify[key].GetParam("icon")
 			if icon != "" && strings.HasPrefix(icon, "http") {
-				return icon
+				return
 			}
 		}
 	}
 
-	return ""
+	return
+}
+
+// InitMetrics of the Service.
+func (s *Service) InitMetrics() {
+	s.LatestVersion.InitMetrics()
+	s.DeployedVersionLookup.InitMetrics()
+	s.Notify.InitMetrics()
+	s.CommandController.InitMetrics()
+	s.WebHook.InitMetrics()
+}
+
+// DeleteMetrics of the Service.
+func (s *Service) DeleteMetrics() {
+	s.LatestVersion.DeleteMetrics()
+	s.DeployedVersionLookup.DeleteMetrics()
+	s.Notify.DeleteMetrics()
+	s.CommandController.DeleteMetrics()
+	s.WebHook.DeleteMetrics()
+}
+
+// ResetMetrics of the Service.
+func (s *Service) ResetMetrics() {
+	s.DeleteMetrics()
+	s.InitMetrics()
 }

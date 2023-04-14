@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package webhook
 
@@ -48,8 +48,7 @@ func stringifyPointer[T comparable](ptr *T) string {
 func testLogging(level string) {
 	jLog = util.NewJLog(level, false)
 	jLog.Testing = true
-	var shoutrrrLogs *shoutrrr.Slice
-	shoutrrrLogs.Init(jLog, nil, nil, nil, nil)
+	shoutrrr.LogInit(jLog)
 }
 
 func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeaders bool) *WebHook {
@@ -68,13 +67,22 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if forService {
 		webhook.ID = "test"
 		webhook.ParentInterval = stringPtr("12m")
-		webhook.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr("test")}
-		webhook.ServiceStatus.Fails.WebHook = make(map[string]*bool, 1)
+		webhook.ServiceStatus = &svcstatus.Status{}
+		webhook.ServiceStatus.Init(
+			0, 0, 1,
+			stringPtr("testServiceID"),
+			nil)
 		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 		webhook.Main = &WebHook{}
 		webhook.Defaults = &WebHook{}
 		webhook.HardDefaults = &WebHook{}
 	}
+	serviceName := "testServiceID"
+	webURL := "https://example.com"
+	webhook.ServiceStatus.Init(
+		0, 1, 0,
+		&serviceName,
+		&webURL)
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
 	}
@@ -84,11 +92,14 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	if customHeaders {
 		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
 		if failing {
-			webhook.CustomHeaders = &map[string]string{"X-Test": "invalid"}
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "invalid"}}
 		} else {
-			webhook.CustomHeaders = &map[string]string{"X-Test": "secret"}
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "secret"}}
 		}
 	}
+	webhook.initMetrics()
 	return webhook
 }
 
@@ -101,14 +112,19 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		Type:          "gotify",
 		ID:            "test",
 		Failed:        nil,
-		ServiceStatus: &svcstatus.Status{ServiceID: stringPtr("service"), Fails: svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)}},
+		ServiceStatus: &svcstatus.Status{},
 		Main:          &shoutrrr.Shoutrrr{},
 		Defaults:      &shoutrrr.Shoutrrr{},
 		HardDefaults:  &shoutrrr.Shoutrrr{},
 		Options:       map[string]string{"max_tries": "1"},
-		URLFields:     map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
-		Params:        map[string]string{},
+		// trunk-ignore(gitleaks/generic-api-key)
+		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		Params:    map[string]string{},
 	}
+	notifier.ServiceStatus.Init(
+		0, 1, 0,
+		stringPtr("testServiceID"),
+		stringPtr("https://example.com"))
 	notifier.Failed = &notifier.ServiceStatus.Fails.Shoutrrr
 	if failing {
 		notifier.URLFields["token"] = "invalid"

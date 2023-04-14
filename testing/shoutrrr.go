@@ -36,12 +36,11 @@ func NotifyTest(
 	if *flag == "" {
 		return
 	}
-	var logSlice *shoutrrr.Slice
-	logSlice.Init(log, nil, nil, nil, nil)
+	shoutrrr.LogInit(log)
 	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
-	slice := findShoutrrr(*flag, cfg, log, logFrom)
+	slice := findShoutrrr(*flag, cfg, log, &logFrom)
 
 	title := slice["test"].GetTitle(&util.ServiceInfo{ID: "Test"})
 	message := "TEST - " + slice["test"].GetMessage(
@@ -49,9 +48,7 @@ func NotifyTest(
 			ID:            "NAME_OF_SERVICE",
 			URL:           "QUERY_URL",
 			WebURL:        "WEB_URL",
-			LatestVersion: "MAJOR.MINOR.PATCH",
-		},
-	)
+			LatestVersion: "MAJOR.MINOR.PATCH"})
 	err := slice.Send(
 		title,
 		message,
@@ -59,22 +56,23 @@ func NotifyTest(
 			ID:            "ID",
 			URL:           "URL",
 			WebURL:        "WebURL",
-			LatestVersion: "MAJOR.MINOR.PATCH",
-		},
+			LatestVersion: "MAJOR.MINOR.PATCH"},
 		false)
+
 	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, util.ErrorToString(err)), logFrom, err != nil)
+
 	if !log.Testing {
 		os.Exit(0)
 	}
 }
 
-// findShoutrrr with name from cfg.Service.Notify || cfg.Notify
+// findShoutrrr with `name` from cfg.Service.Notify || cfg.Notify
 func findShoutrrr(
 	name string,
 	cfg *config.Config,
 	log *util.JLog,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) shoutrrr.Slice {
 	slice := shoutrrr.Slice{}
 	for _, svc := range cfg.Service {
@@ -91,13 +89,12 @@ func findShoutrrr(
 			emptyShoutrrs := shoutrrr.Shoutrrr{}
 			emptyShoutrrs.InitMaps()
 			slice["test"] = cfg.Notify[name]
+			slice["test"].InitMaps()
 			slice["test"].ID = name
 			slice["test"].Main = cfg.Notify[name]
+			slice["test"].Main.InitMaps()
 			slice["test"].Defaults = &emptyShoutrrs
 			slice["test"].HardDefaults = &emptyShoutrrs
-			slice["test"].InitMaps()
-			slice["test"].Main.InitMaps()
-			slice["test"].Failed = &map[string]*bool{}
 
 			notifyType := slice["test"].GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
@@ -107,15 +104,23 @@ func findShoutrrr(
 			slice["test"].HardDefaults = hardDefaults.Notify[notifyType]
 			slice["test"].HardDefaults.InitMaps()
 
+			serviceID := ""
+			slice["test"].ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
+			slice["test"].ServiceStatus.Init(
+				1, 0, 0,
+				slice["test"].ServiceStatus.ServiceID,
+				slice["test"].ServiceStatus.WebURL)
+			slice["test"].Failed = &slice["test"].ServiceStatus.Fails.Shoutrrr
+
 			if err := slice["test"].CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))
-				log.Fatal(msg, logFrom, true)
+				log.Fatal(msg, *logFrom, true)
 			}
 		} else {
 			all := getAllShoutrrrNames(cfg)
 			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
 				name, strings.Join(all, "\n  - "))
-			log.Fatal(msg, logFrom, true)
+			log.Fatal(msg, *logFrom, true)
 		}
 	}
 	serviceID := "TESTING"
@@ -125,12 +130,18 @@ func findShoutrrr(
 
 // getAllShoutrrrNames will return a list of all unique shoutrrr names
 func getAllShoutrrrNames(cfg *config.Config) (all []string) {
+	// All global Shoutrrrs
 	if cfg.Notify != nil {
+		all = make([]string, len(cfg.Notify))
+		index := 0
 		for key := range cfg.Notify {
-			all = append(all, key)
+			all[index] = key
+			index++
 		}
 	}
 	sort.Strings(all)
+
+	// All Shoutrrrs in services
 	if cfg.Service != nil {
 		for _, svc := range cfg.Service {
 			for key := range svc.Notify {

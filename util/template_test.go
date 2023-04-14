@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-func TestTemplateString(t *testing.T) {
+func TestTemplate_String(t *testing.T) {
 	// GIVEN a variety of string templates
 	serviceInfo := testServiceInfo()
 	tests := map[string]struct {
@@ -30,7 +30,9 @@ func TestTemplateString(t *testing.T) {
 		panicRegex *string
 		want       string
 	}{
-		"no jinja template": {tmpl: "testing 123", want: "testing 123"},
+		"no jinja template": {
+			tmpl: "testing 123",
+			want: "testing 123"},
 		"valid jinja template": {
 			tmpl: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			want: "-something-example.com-other.com-NEW"},
@@ -43,6 +45,7 @@ func TestTemplateString(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
@@ -84,6 +87,7 @@ func TestCheckTemplate(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN CheckTemplate is called
 			got := CheckTemplate(tc.tmpl)
 

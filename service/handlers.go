@@ -18,36 +18,30 @@ import (
 	"fmt"
 	"time"
 
-	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
 // to `s.Status.LatestVersion`
-func (s *Service) UpdatedVersion() {
-	if s.Status.DeployedVersion == s.Status.LatestVersion {
+func (s *Service) UpdatedVersion(writeToDB bool) {
+	if s.Status.GetDeployedVersion() == s.Status.GetLatestVersion() {
 		return
 	}
 
 	// Check that no WebHook(s) failed
-	for key := range s.WebHook {
-		// Default nil to true = failed
-		if util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
-			return
-		}
+	if !s.Status.Fails.WebHook.AllPassed() {
+		return
 	}
 	// Check that no Command(s) failed
-	for key := range s.Command {
-		// Default nil to true = failed
-		if util.EvalNilPtr(s.Status.Fails.Command[key], true) {
-			return
-		}
+	if !s.Status.Fails.Command.AllPassed() {
+		return
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
 		//nolint:typecheck
-		if s.Command != nil || s.WebHook != nil {
+		if (s.Command != nil && len(s.Command) != 0) ||
+			s.WebHook != nil {
 			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
 			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
 			// They should have all ran/sent successfully at this point
@@ -55,7 +49,7 @@ func (s *Service) UpdatedVersion() {
 		}
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.LatestVersion)
+	s.Status.SetDeployedVersion(s.Status.GetLatestVersion(), writeToDB)
 
 	// Announce version change to WebSocket clients
 	s.Status.AnnounceUpdate()
@@ -65,46 +59,55 @@ func (s *Service) UpdatedVersion() {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
-	if s.Status.ApprovedVersion != s.Status.LatestVersion {
-		s.Status.ApprovedVersion = s.Status.LatestVersion
-		s.Status.AnnounceApproved()
+	lv := s.Status.GetLatestVersion()
+	if s.Status.GetApprovedVersion() != lv {
+		s.Status.SetApprovedVersion(lv, true)
 	}
 }
 
 // HandleUpdateActions will run all commands and send all WebHooks for this service if it has been called
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
-func (s *Service) HandleUpdateActions() {
+func (s *Service) HandleUpdateActions(writeToDB bool) {
+	serviceInfo := s.GetServiceInfo()
+
+	// Send the Notify Message(s).
+	//nolint:errcheck
+	go s.Notify.Send("", "", serviceInfo, true)
+
 	//nolint:typecheck
 	if s.WebHook != nil || s.Command != nil {
 		if s.Dashboard.GetAutoApprove() {
-			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q", s.Status.LatestVersion)
+			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
+				s.Status.GetLatestVersion())
 			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s)
 			go func() {
 				err := s.CommandController.Exec(&util.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
-					s.UpdatedVersion()
+					s.UpdatedVersion(writeToDB)
 				}
 			}()
 
 			// Send the WebHook(s)
 			go func() {
-				err := s.WebHook.Send(s.GetServiceInfo(), true)
+				err := s.WebHook.Send(serviceInfo, true)
 				if err == nil && len(s.WebHook) != 0 {
-					s.UpdatedVersion()
+					s.UpdatedVersion(writeToDB)
 				}
 			}()
 		} else {
 			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
 
-			metric.SetPrometheusGaugeWithID(metric.AckWaiting, s.ID, 1)
+			metric.SetPrometheusGauge(metric.AckWaiting,
+				s.ID,
+				1)
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {
 		// Auto-update version for Service(s) without WebHook(s)
-		s.UpdatedVersion()
+		s.UpdatedVersion(writeToDB)
 	}
 }
 
@@ -122,7 +125,7 @@ func (s *Service) HandleFailedActions() {
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
 		for key := range s.WebHook {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
+			if retryAll || util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
 				// Skip if it's before NextRunnable
 				if !s.WebHook[key].IsRunnable() {
 					potentialErrors--
@@ -145,7 +148,7 @@ func (s *Service) HandleFailedActions() {
 		potentialErrors += len(s.Command)
 		logFrom := util.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.Command[key], true) {
+			if retryAll || util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
 				// Skip if it's before NextRunnable
 				if !s.CommandController.IsRunnable(key) {
 					potentialErrors--
@@ -176,7 +179,7 @@ func (s *Service) HandleFailedActions() {
 	}
 
 	if !errored {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 
@@ -198,7 +201,7 @@ func (s *Service) HandleCommand(command string) {
 	// Send the Command.
 	err := (*s.CommandController).ExecIndex(&util.LogFrom{Primary: "Command", Secondary: s.ID}, *index)
 	if err == nil {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 
@@ -210,7 +213,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 		return
 	}
 
-	// Skip if it's before NextRunnable
+	// Skip if it's before NextRunnable.
 	if !s.WebHook[webhookID].IsRunnable() {
 		return
 	}
@@ -218,33 +221,25 @@ func (s *Service) HandleWebHook(webhookID string) {
 	// Send the WebHook.
 	err := s.WebHook[webhookID].Send(s.GetServiceInfo(), false)
 	if err == nil {
-		s.UpdatedVersion()
+		s.UpdatedVersion(true)
 	}
 }
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
 func (s *Service) HandleSkip(version string) {
-	if version != s.Status.LatestVersion {
+	if version != s.Status.GetLatestVersion() {
 		return
 	}
 
-	s.Status.ApprovedVersion = "SKIP_" + version
-	s.Status.AnnounceApproved()
-
-	*s.Status.DatabaseChannel <- dbtype.Message{
-		ServiceID: s.ID,
-		Cells: []dbtype.Cell{
-			{Column: "approved_version", Value: s.Status.ApprovedVersion},
-		},
-	}
+	s.Status.SetApprovedVersion("SKIP_"+version, true)
 }
 
-func (s *Service) shouldRetryAll() bool {
-	retry := true
+func (s *Service) shouldRetryAll() (retry bool) {
+	retry = true
 	// retry all only if every WebHook has been sent successfully
 	if len(s.WebHook) != 0 {
 		for key := range s.WebHook {
-			if util.EvalNilPtr(s.Status.Fails.WebHook[key], true) {
+			if util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
 				retry = false
 				break
 			}
@@ -253,11 +248,11 @@ func (s *Service) shouldRetryAll() bool {
 	// AND every Command has been run successfully
 	if retry && len(s.Command) != 0 {
 		for key := range s.Command {
-			if util.EvalNilPtr(s.Status.Fails.Command[key], true) {
+			if util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
 				retry = false
 				break
 			}
 		}
 	}
-	return retry
+	return
 }

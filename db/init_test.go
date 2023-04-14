@@ -19,7 +19,7 @@ package db
 import (
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
 	"testing"
 	"time"
 
@@ -37,21 +37,32 @@ func TestCheckFile(t *testing.T) {
 		createDirBefore  string
 		createFileBefore string
 		path             string
-		panicContains    string
+		panicRegex       string
 	}{
-		"file doesn't exist":      {path: "something_doesnt_exist.db", removeBefore: "something_doesnt_exist.db"},
-		"dir doesn't exist":       {path: "dir_doesnt_exist/argus.db", removeBefore: "dir_doesnt_exist"},
-		"dir exists but not file": {path: "dir_does_exist/argus.db", createDirBefore: "dir_does_exist"},
-		"file is dir": {path: "folder.db", createDirBefore: "folder.db",
-			panicContains: " exists but is a directory"},
-		"dir is file": {path: "folder_not_a_dir/argus.db", createFileBefore: "folder_not_a_dir",
-			panicContains: " exists but is not a directory"},
+		"file doesn't exist": {
+			path:         "something_doesnt_exist.db",
+			removeBefore: "something_doesnt_exist.db"},
+		"dir doesn't exist, so is created": {
+			path:         "dir_doesnt_exist/argus.db",
+			removeBefore: "dir_doesnt_exist"},
+		"dir exists but not file": {
+			path:            "dir_does_exist/argus.db",
+			createDirBefore: "dir_does_exist"},
+		"file is dir": {
+			path:            "folder.db",
+			createDirBefore: "folder.db",
+			panicRegex:      "path .* is a directory, not a file"},
+		"dir is file": {
+			path:             "item_not_a_dir/argus.db",
+			createFileBefore: "item_not_a_dir",
+			panicRegex:       "path .* is not a directory"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			os.RemoveAll(tc.removeBefore)
 			os.RemoveAll(tc.createDirBefore)
 			if tc.createDirBefore != "" {
@@ -60,6 +71,7 @@ func TestCheckFile(t *testing.T) {
 					t.Fatalf("%s",
 						err)
 				}
+				defer os.RemoveAll(tc.createDirBefore)
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
@@ -68,16 +80,17 @@ func TestCheckFile(t *testing.T) {
 						err)
 				}
 				file.Close()
+				defer os.Remove(tc.createFileBefore)
 			}
-			if tc.panicContains != "" {
+			if tc.panicRegex != "" {
 				defer func() {
 					r := recover()
 					rStr := fmt.Sprint(r)
-					os.RemoveAll(tc.createDirBefore)
-					os.RemoveAll(tc.createFileBefore)
-					if !strings.Contains(r.(string), tc.panicContains) {
-						t.Errorf("should have panic'd with:\n%q, not:\n%q",
-							tc.panicContains, rStr)
+					re := regexp.MustCompile(tc.panicRegex)
+					match := re.MatchString(rStr)
+					if !match {
+						t.Errorf("want match for %q\nnot: %q",
+							tc.panicRegex, rStr)
 					}
 				}()
 			}
@@ -86,15 +99,15 @@ func TestCheckFile(t *testing.T) {
 			checkFile(tc.path)
 
 			// THEN we get here only when we should
-			if tc.panicContains != "" {
+			if tc.panicRegex != "" {
 				t.Fatalf("Expected panic with %q",
-					tc.panicContains)
+					tc.panicRegex)
 			}
 		})
 	}
 }
 
-func TestInitialise(t *testing.T) {
+func TestAPI_Initialise(t *testing.T) {
 	// GIVEN a config with a database location
 	initLogging()
 	cfg := testConfig()
@@ -132,20 +145,23 @@ func TestInitialise(t *testing.T) {
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
-func TestConvertServiceStatus(t *testing.T) {
+func TestAPI_ConvertServiceStatus(t *testing.T) {
 	// GIVEN a blank DB
 	initLogging()
 	tests := map[string]struct {
 		runs int
 	}{
-		"one run":       {runs: 1},
-		"multiple runs": {runs: 2},
+		"one run": {
+			runs: 1},
+		"multiple runs": {
+			runs: 2},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			cfg := testConfig()
 			api := api{config: &cfg}
 			*api.config.Settings.Data.DatabaseFile = "TestConvertServiceStatus" + name + ".db"
@@ -191,31 +207,31 @@ func TestConvertServiceStatus(t *testing.T) {
 							id, svc.OldStatus)
 					}
 				} else {
-					if (*svc).Status.LatestVersion != lv {
+					if (*svc).Status.GetLatestVersion() != lv {
 						t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.LatestVersion, lv)
+							(*svc).Status.GetLatestVersion(), lv)
 					}
-					if (*svc).Status.LatestVersionTimestamp != lvt {
+					if (*svc).Status.GetLatestVersionTimestamp() != lvt {
 						t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-							(*svc).Status.LatestVersionTimestamp, lvt)
+							(*svc).Status.GetLatestVersionTimestamp(), lvt)
 					}
-					if (*svc).Status.DeployedVersion != dv {
+					if (*svc).Status.GetDeployedVersion() != dv {
 						t.Errorf("DeployedVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.DeployedVersion, dv)
+							(*svc).Status.GetDeployedVersion(), dv)
 					}
-					if (*svc).Status.DeployedVersionTimestamp != dvt {
+					if (*svc).Status.GetDeployedVersionTimestamp() != dvt {
 						t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-							(*svc).Status.DeployedVersionTimestamp, dvt)
+							(*svc).Status.GetDeployedVersionTimestamp(), dvt)
 					}
-					if (*svc).Status.ApprovedVersion != av {
+					if (*svc).Status.GetApprovedVersion() != av {
 						t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-							(*svc).Status.ApprovedVersion, av)
+							(*svc).Status.GetApprovedVersion(), av)
 					}
 				}
 			}
-			if count != len(api.config.All) {
+			if count != len(api.config.Order) {
 				t.Errorf("%d were pushed to the table. Expected %d",
-					count, len(api.config.All))
+					count, len(api.config.Order))
 			}
 			api.db.Close()
 			os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -223,7 +239,7 @@ func TestConvertServiceStatus(t *testing.T) {
 	}
 }
 
-func TestQueryService(t *testing.T) {
+func TestDBQueryService(t *testing.T) {
 	// GIVEN a blank DB
 	initLogging()
 	cfg := testConfig()
@@ -234,35 +250,35 @@ func TestQueryService(t *testing.T) {
 	// WHEN every Service.*.Status is pushed to the DB with convertServiceStatus
 	api.convertServiceStatus()
 
-	// THEN a Services that was copied over can be queried
+	// THEN a Service that was copied over can be queried
 	target := "keep0"
 	got := queryRow(t, api.db, target)
 	svc := api.config.Service[target]
-	if (*svc).Status.LatestVersion != got.LatestVersion {
+	if (*svc).Status.GetLatestVersion() != got.GetLatestVersion() {
 		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersion, got.LatestVersion)
+			(*svc).Status.GetLatestVersion(), got.GetLatestVersion())
 	}
-	if (*svc).Status.LatestVersionTimestamp != got.LatestVersionTimestamp {
+	if (*svc).Status.GetLatestVersionTimestamp() != got.GetLatestVersionTimestamp() {
 		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.LatestVersionTimestamp, got.LatestVersionTimestamp)
+			(*svc).Status.GetLatestVersionTimestamp(), got.GetLatestVersionTimestamp())
 	}
-	if (*svc).Status.DeployedVersion != got.DeployedVersion {
-		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%v",
-			(*svc).Status.DeployedVersion, got.DeployedVersion, got, (*svc).Status)
+	if (*svc).Status.GetDeployedVersion() != got.GetDeployedVersion() {
+		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%s",
+			(*svc).Status.GetDeployedVersion(), got.GetDeployedVersion(), got, (*svc).Status.String())
 	}
-	if (*svc).Status.DeployedVersionTimestamp != got.DeployedVersionTimestamp {
+	if (*svc).Status.GetDeployedVersionTimestamp() != got.GetDeployedVersionTimestamp() {
 		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.DeployedVersionTimestamp, got.DeployedVersionTimestamp)
+			(*svc).Status.GetDeployedVersionTimestamp(), got.GetDeployedVersionTimestamp())
 	}
-	if (*svc).Status.ApprovedVersion != got.ApprovedVersion {
+	if (*svc).Status.GetApprovedVersion() != got.GetApprovedVersion() {
 		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.ApprovedVersion, got.ApprovedVersion)
+			(*svc).Status.GetApprovedVersion(), got.GetApprovedVersion())
 	}
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
 }
 
-func TestRemoveUnknownServices(t *testing.T) {
+func TestAPI_RemoveUnknownServices(t *testing.T) {
 	// GIVEN a DB with loads of service status'
 	initLogging()
 	cfg := testConfig()
@@ -326,14 +342,14 @@ func TestRemoveUnknownServices(t *testing.T) {
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		svc := api.config.Service[id]
-		if svc == nil || !util.Contains(api.config.All, id) {
+		if svc == nil || !util.Contains(api.config.Order, id) {
 			t.Errorf("%q should have been removed from the table",
 				id)
 		}
 	}
-	if count != len(api.config.All) {
+	if count != len(api.config.Order) {
 		t.Errorf("Only %d were left in the table. Expected %d",
-			count, len(api.config.All))
+			count, len(api.config.Order))
 	}
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -369,16 +385,19 @@ func TestRun(t *testing.T) {
 	api := api{config: &otherCfg}
 	api.initialise()
 	got := queryRow(t, api.db, target)
-	want := svcstatus.Status{
-		LatestVersion:            "9.9.9",
-		LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
-		ApprovedVersion:          "0.0.1",
-		DeployedVersion:          "0.0.0",
-		DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
-	}
-	if got.LatestVersion != want.LatestVersion {
+	want := svcstatus.Status{}
+	want.Init(
+		0, 0, 0,
+		&target,
+		stringPtr("https://example.com"))
+	want.SetLatestVersion("9.9.9", false)
+	want.SetLatestVersionTimestamp("2022-01-01T01:01:01Z")
+	want.SetApprovedVersion("0.0.1", false)
+	want.SetDeployedVersion("0.0.0", false)
+	want.SetDeployedVersionTimestamp("2020-01-01T01:01:01Z")
+	if got.GetLatestVersion() != want.GetLatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
-			cell.Column, cell.Value, got, want)
+			cell.Column, cell.Value, got, want.String())
 	}
 	api.db.Close()
 	os.Remove(*cfg.Settings.Data.DatabaseFile)

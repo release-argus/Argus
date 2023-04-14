@@ -25,11 +25,16 @@ import (
 func (l *Lookup) Print(prefix string) {
 	fmt.Printf("%slatest_version:\n", prefix)
 	prefix += "  "
-	util.PrintlnIfNotDefault(l.Type, fmt.Sprintf("%stype: %s", prefix, l.Type))
-	util.PrintlnIfNotDefault(l.URL, fmt.Sprintf("%surl: %s", prefix, l.URL))
-	util.PrintlnIfNotNil(l.AccessToken, fmt.Sprintf("%saccess_token: %q", prefix, util.DefaultIfNil(l.AccessToken)))
-	util.PrintlnIfNotNil(l.AllowInvalidCerts, fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
-	util.PrintlnIfNotNil(l.UsePreRelease, fmt.Sprintf("%suse_prerelease: %t", prefix, util.DefaultIfNil(l.UsePreRelease)))
+	util.PrintlnIfNotDefault(l.Type,
+		fmt.Sprintf("%stype: %s", prefix, l.Type))
+	util.PrintlnIfNotDefault(l.URL,
+		fmt.Sprintf("%surl: %s", prefix, l.URL))
+	util.PrintlnIfNotNil(l.AccessToken,
+		fmt.Sprintf("%saccess_token: %q", prefix, util.DefaultIfNil(l.AccessToken)))
+	util.PrintlnIfNotNil(l.AllowInvalidCerts,
+		fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
+	util.PrintlnIfNotNil(l.UsePreRelease,
+		fmt.Sprintf("%suse_prerelease: %t", prefix, util.DefaultIfNil(l.UsePreRelease)))
 	l.URLCommands.Print(prefix)
 	l.Require.Print(prefix)
 }

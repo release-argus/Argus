@@ -21,10 +21,10 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// RegexCheckVersion
+// RegexCheckVersion returns whether `version` matches the regex
 func (r *Require) RegexCheckVersion(
 	version string,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -38,8 +38,8 @@ func (r *Require) RegexCheckVersion(
 	if !regexMatch {
 		err := fmt.Errorf("regex not matched on version %q",
 			version)
-		r.Status.RegexMissesVersion++
-		jLog.Info(err, logFrom, r.Status.RegexMissesVersion == 1)
+		r.Status.RegexMissVersion()
+		jLog.Info(err, *logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
 	}
 
@@ -50,7 +50,7 @@ func (r *Require) RegexCheckVersion(
 func (r *Require) RegexCheckContent(
 	version string,
 	body interface{},
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -80,10 +80,12 @@ func (r *Require) RegexCheckContent(
 
 	for i := range searchArea {
 		regexMatch := util.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
-		jLog.Debug(
-			fmt.Sprintf("%q RegexContent on %q, match=%t", r.RegexContent, searchArea[i], regexMatch),
-			logFrom,
-			true)
+		if jLog.IsLevel("DEBUG") {
+			jLog.Debug(
+				fmt.Sprintf("%q RegexContent on %q, match=%t",
+					r.RegexContent, searchArea[i], regexMatch),
+				*logFrom, true)
+		}
 		if !regexMatch {
 			// if we're on the last asset
 			if i == len(searchArea)-1 {
@@ -92,8 +94,8 @@ func (r *Require) RegexCheckContent(
 					util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version}),
 					version,
 				)
-				r.Status.RegexMissesContent++
-				jLog.Info(err, logFrom, r.Status.RegexMissesContent == 1)
+				r.Status.RegexMissContent()
+				jLog.Info(err, *logFrom, r.Status.RegexMissesContent() == 1)
 				return err
 			}
 			// continue searching the other assets

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package shoutrrr
 
@@ -55,9 +55,10 @@ func testShoutrrr(failing bool, forService bool, selfSignedCert bool) *Shoutrrr 
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
 	shoutrrr := &Shoutrrr{
-		Type:      "gotify",
-		Failed:    nil,
-		Options:   map[string]string{"max_tries": "1"},
+		Type:    "gotify",
+		Failed:  nil,
+		Options: map[string]string{"max_tries": "1"},
+		// trunk-ignore(gitleaks/generic-api-key)
 		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
 		Params:    map[string]string{},
 	}
@@ -65,8 +66,8 @@ func testShoutrrr(failing bool, forService bool, selfSignedCert bool) *Shoutrrr 
 		shoutrrr.ID = "test"
 		shoutrrr.ServiceStatus = &svcstatus.Status{
 			ServiceID: stringPtr("service"),
-			Fails:     svcstatus.Fails{Shoutrrr: make(map[string]*bool, 2)},
 		}
+		shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 		shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 		shoutrrr.Main = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}
 		shoutrrr.Defaults = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}

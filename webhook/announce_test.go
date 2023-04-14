@@ -24,14 +24,15 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAnnounceSend(t *testing.T) {
+func TestWebHook_AnnounceSend(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
 		nilChannel     bool
 		failed         *bool
 		timeDifference time.Duration
 	}{
-		"no channel": {nilChannel: true},
+		"no channel": {
+			nilChannel: true},
 		"not tried (failed=nil) does delay by 15s": {
 			timeDifference: 15 * time.Second,
 			failed:         nil,
@@ -48,10 +49,12 @@ func TestAnnounceSend(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+		webhook := testWebHook(true, true, false, false)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			webhook := testWebHook(true, true, false, false)
-			(*webhook.Failed)[webhook.ID] = tc.failed
+
+			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.ServiceStatus.AnnounceChannel = nil
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
@@ -76,7 +79,7 @@ func TestAnnounceSend(t *testing.T) {
 
 			// if they failed status matches
 			got := stringifyPointer(parsed.WebHookData[webhook.ID].Failed)
-			want := stringifyPointer((*webhook.Failed)[webhook.ID])
+			want := stringifyPointer(webhook.Failed.Get(webhook.ID))
 			if got != want {
 				t.Errorf("want failed=%s\ngot  failed=%s",
 					want, got)

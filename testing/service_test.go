@@ -32,21 +32,20 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
-	jLog = util.NewJLog("INFO", false)
-	InitJLog(jLog)
+	testLogging()
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
 		outputRegex *string
 		panicRegex  *string
 	}{
-		"flag is empty": {flag: "",
+		"flag is empty": {
+			flag:        "",
 			outputRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
@@ -54,8 +53,10 @@ func TestServiceTest(t *testing.T) {
 					Options: opt.Options{
 						Interval: "0s"},
 				},
-			}},
-		"unknown service": {flag: "test",
+			},
+		},
+		"unknown service": {
+			flag:       "test",
 			panicRegex: stringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			slice: service.Slice{
 				"argus": {
@@ -63,9 +64,11 @@ func TestServiceTest(t *testing.T) {
 					Options: opt.Options{
 						Interval: "0s"},
 				},
-			}},
-		"github service": {flag: "argus",
-			outputRegex: stringPtr(`argus, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			},
+		},
+		"github service": {
+			flag:        "argus",
+			outputRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					LatestVersion: latestver.Lookup{
@@ -81,8 +84,10 @@ func TestServiceTest(t *testing.T) {
 						Interval: "0s",
 					},
 				},
-			}},
-		"url service type but github owner/repo url": {flag: "argus",
+			},
+		},
+		"url service type but github owner/repo url": {
+			flag:        "argus",
 			outputRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
 			slice: service.Slice{
 				"argus": {
@@ -91,16 +96,13 @@ func TestServiceTest(t *testing.T) {
 						Type: "url",
 						URL:  "release-argus/Argus",
 						URLCommands: filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
-						},
-						AllowInvalidCerts: boolPtr(false),
-					},
+							{Type: "regex", Regex: stringPtr("[0-9.]+$")}},
+						AllowInvalidCerts: boolPtr(false)},
 					Options: opt.Options{
-						Interval: "0s",
-					},
-				},
-			}},
-		"url service": {flag: "argus",
+						Interval: "0s"}}},
+		},
+		"url service": {
+			flag:        "argus",
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
@@ -109,16 +111,13 @@ func TestServiceTest(t *testing.T) {
 						Type: "url",
 						URL:  "https://github.com/release-argus/Argus/releases",
 						URLCommands: filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
-						},
+							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
 						AllowInvalidCerts: boolPtr(false),
 						Options: &opt.Options{
-							Interval: "0s",
-						},
-					},
-				},
-			}},
-		"service with deployed version lookup": {flag: "argus",
+							Interval: "0s"}}}},
+		},
+		"service with deployed version lookup": {
+			flag:        "argus",
 			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
@@ -127,25 +126,21 @@ func TestServiceTest(t *testing.T) {
 						Type: "url",
 						URL:  "https://github.com/release-argus/Argus/releases",
 						URLCommands: filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)},
-						},
-						AllowInvalidCerts: boolPtr(false),
-					},
+							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
+						AllowInvalidCerts: boolPtr(false)},
 					DeployedVersionLookup: &deployedver.Lookup{
 						URL:               "https://release-argus.io/demo/api/v1/version",
 						AllowInvalidCerts: boolPtr(true),
-						JSON:              "version",
-					},
+						JSON:              "version"},
 					Options: opt.Options{
 						Interval:           "0s",
-						SemanticVersioning: boolPtr(true),
-					},
-				},
-			}},
+						SemanticVersioning: boolPtr(true)}}},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -167,7 +162,8 @@ func TestServiceTest(t *testing.T) {
 				defaults := config.Defaults{}
 				defaults.SetDefaults()
 				tc.slice[tc.flag].ID = tc.flag
-				tc.slice[tc.flag].Init(jLog, &service.Service{}, &defaults.Service,
+				tc.slice[tc.flag].Init(
+					&service.Service{}, &defaults.Service,
 					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
 					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
@@ -186,7 +182,7 @@ func TestServiceTest(t *testing.T) {
 			}
 			cfg := config.Config{
 				Service: tc.slice,
-				Order:   &order,
+				Order:   order,
 			}
 			ServiceTest(&tc.flag, &cfg, jLog)
 

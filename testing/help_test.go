@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build testing
+//go:build unit || integration
 
 package testing
 
-import "github.com/release-argus/Argus/util"
+import (
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/util"
+)
 
 var jLog *util.JLog
 
@@ -27,6 +30,7 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func InitJLog(log *util.JLog) {
-	jLog = log
+func testLogging() {
+	jLog = util.NewJLog("DEBUG", false)
+	config.LogInit(jLog)
 }

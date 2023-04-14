@@ -25,17 +25,18 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init the Command Controller.
 func (c *Controller) Init(
-	log *util.JLog,
 	serviceStatus *svcstatus.Status,
 	command *Slice,
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
 ) {
-	if log != nil {
-		jLog = log
-	}
 	if c == nil || len(*command) == 0 {
 		return
 	}
@@ -43,13 +44,13 @@ func (c *Controller) Init(
 	c.ServiceStatus = serviceStatus
 	c.Command = command
 	c.Failed = &serviceStatus.Fails.Command
-	if len(*c.Failed) != len(*c.Command) {
-		*c.Failed = make([]*bool, len(*c.Command))
+	commandCount := len(*c.Command)
+	if c.Failed.Length() != commandCount {
+		c.Failed.Init(commandCount)
 	}
-	c.NextRunnable = make([]time.Time, len(*c.Command))
+	c.nextRunnable = make([]time.Time, commandCount)
 
 	c.ParentInterval = parentInterval
-	c.initMetrics()
 
 	// Command fail notifiers
 	c.Notifiers = Notifiers{
@@ -58,20 +59,58 @@ func (c *Controller) Init(
 }
 
 // initMetrics, giving them all a starting value.
-func (c *Controller) initMetrics() {
+func (c *Controller) InitMetrics() {
+	if c == nil {
+		return
+	}
+
 	// ############
 	// # Counters #
 	// ############
 	for i := range *c.Command {
 		name := (*c.Command)[i].String()
-		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "SUCCESS")
-		metric.InitPrometheusCounterActions(metric.CommandMetric, name, *c.ServiceStatus.ServiceID, "", "FAIL")
+		metric.InitPrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"SUCCESS")
+		metric.InitPrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"FAIL")
 	}
 
 	// ##########
 	// # Gauges #
 	// ##########
-	metric.SetPrometheusGaugeWithID(metric.AckWaiting, *c.ServiceStatus.ServiceID, float64(0))
+	metric.SetPrometheusGauge(metric.AckWaiting,
+		*c.ServiceStatus.ServiceID,
+		float64(0))
+}
+
+// DeleteMetrics for this Controller.
+func (c *Controller) DeleteMetrics() {
+	if c == nil {
+		return
+	}
+
+	for i := range *c.Command {
+		name := (*c.Command)[i].String()
+		metric.DeletePrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"SUCCESS")
+		metric.DeletePrometheusCounter(metric.CommandMetric,
+			name,
+			*c.ServiceStatus.ServiceID,
+			"",
+			"FAIL")
+	}
+
+	metric.DeletePrometheusGauge(metric.AckWaiting,
+		*c.ServiceStatus.ServiceID)
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'
@@ -79,46 +118,58 @@ func (c *Command) FormattedString() string {
 	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
-// String will convert Command to a string in the format of 'arg0 arg1'
-func (c *Command) String() string {
-	return strings.Join(*c, " ")
-}
-
-// GetNextRunnable returns the NextRunnable of this WebHook as time.time.
+// GetNextRunnable returns the nextRunnable of the Command at `index`.
 func (c *Controller) GetNextRunnable(index int) (at time.Time) {
-	if index < len(c.NextRunnable) {
-		at = c.NextRunnable[index]
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if index < len(c.nextRunnable) {
+		at = c.nextRunnable[index]
 	}
 	return
 }
 
-// IsRunnable will return whether the current time is before NextRunnable
+// IsRunnable will return whether the current time is before nextRunnable at `index`.
 func (c *Controller) IsRunnable(index int) bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// If out of range
-	if !(index < len(c.NextRunnable)) {
+	if index >= len(c.nextRunnable) {
 		return false
 	}
 
-	return time.Now().UTC().After(c.NextRunnable[index])
+	return time.Now().UTC().After(c.nextRunnable[index])
 }
 
-// SetNextRunnable time that the Command at index can be re-run.
-func (c *Controller) SetNextRunnable(index int, executing bool) {
+// SetNextRunnable will set the `time` that the Command at `index` can be re-run.
+func (c *Controller) SetNextRunnable(index int, time *time.Time) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.nextRunnable[index] = *time
+}
+
+// SetExecuting time that the Command at `index` can be re-run. (longer if it's `executing`)
+func (c *Controller) SetExecuting(index int, executing bool) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	// If out of range
-	if !(index < len(c.NextRunnable)) {
+	if index >= len(c.nextRunnable) {
 		return
 	}
 
 	// Different times depending on pass/fail
-	if !util.EvalNilPtr((*c.Failed)[index], true) {
+	if !util.EvalNilPtr(c.Failed.Get(index), true) {
 		parentInterval, _ := time.ParseDuration(*c.ParentInterval)
-		c.NextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
+		c.nextRunnable[index] = time.Now().UTC().Add(2 * parentInterval)
 	} else {
-		c.NextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
+		c.nextRunnable[index] = time.Now().UTC().Add(15 * time.Second)
 	}
 
 	// Block reruns whilst running for up to an hour
 	if executing {
-		c.NextRunnable[index] = c.NextRunnable[index].Add(time.Hour)
+		c.nextRunnable[index] = c.nextRunnable[index].Add(time.Hour)
 	}
 }

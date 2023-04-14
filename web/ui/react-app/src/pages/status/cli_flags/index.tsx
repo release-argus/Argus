@@ -8,10 +8,10 @@ import {
 
 import { Dictionary } from "types/util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { WebSocketResponse } from "types/websocket";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useTheme } from "contexts/theme";
-import { websocketResponse } from "types/websocket";
 
 export const Flags = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
@@ -28,7 +28,7 @@ export const Flags = (): ReactElement => {
     );
 
     // Handler to listen to WebSocket messages
-    const handler = (event: websocketResponse) => {
+    const handler = (event: WebSocketResponse) => {
       if (event.page === "FLAGS" && event.flags_data) {
         setFlags(event.flags_data);
         removeMessageHandler("flags");

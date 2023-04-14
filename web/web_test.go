@@ -42,16 +42,19 @@ import (
 
 var router *mux.Router
 var port *string
-var cfg config.Config
+var cfg *config.Config
 
 func TestMain(m *testing.M) {
 	// GIVEN a valid config with a Service
-	cfg = testConfig()
-	jLog = util.NewJLog("WARN", false)
+	testLogging("DEBUG", true)
+	file := "TestMain.yml"
+	cfg = testConfig(file, nil)
+	os.Remove(file)
+	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
 	port = cfg.Settings.Web.ListenPort
 
 	// WHEN the Router is fetched for this Config
-	router = newWebUI(&cfg)
+	router = newWebUI(cfg)
 	go http.ListenAndServe("localhost:"+*port, router)
 
 	// THEN Web UI is accessible for the tests
@@ -61,18 +64,22 @@ func TestMain(m *testing.M) {
 
 func TestMainWithRoutePrefix(t *testing.T) {
 	// GIVEN a valid config with a Service
-	config := testConfig()
-	*config.Settings.Web.RoutePrefix = "/test"
+	cfg := testConfig("TestMainWithRoutePrefix.yml", t)
+	*cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
-	go Run(&config, util.NewJLog("WARN", false))
-	time.Sleep(50 * time.Millisecond)
+	go Run(cfg, util.NewJLog("WARN", false))
+	time.Sleep(500 * time.Millisecond)
 
 	// THEN Web UI is accessible
-	url := fmt.Sprintf("http://localhost:%s%s/metrics", *config.Settings.Web.ListenPort, *config.Settings.Web.RoutePrefix)
+	url := fmt.Sprintf("http://localhost:%s%s/metrics",
+		*cfg.Settings.Web.ListenPort, *cfg.Settings.Web.RoutePrefix)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Error making request: %s", err)
+	}
 	if resp.StatusCode != 200 {
 		t.Errorf("Should have got a 200 from a GET on %s",
 			url)
@@ -85,18 +92,85 @@ func TestWebAccessible(t *testing.T) {
 		path      string
 		bodyRegex string
 	}{
-		"/approvals":          {path: "/approvals"},
-		"/metrics":            {path: "/metrics", bodyRegex: "go_gc_duration_"},
-		"/api/v1/healthcheck": {path: "/api/v1/healthcheck", bodyRegex: fmt.Sprintf(`^Alive$`)},
-		"/api/v1/version":     {path: "/api/v1/version", bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, util.GoVersion)},
+		"/approvals": {
+			path: "/approvals"},
+		"/metrics": {
+			path:      "/metrics",
+			bodyRegex: "go_gc_duration_"},
+		"/api/v1/healthcheck": {
+			path:      "/api/v1/healthcheck",
+			bodyRegex: fmt.Sprintf(`^Alive$`)},
+		"/api/v1/version": {
+			path: "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
+				util.GoVersion)},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
 			// WHEN we make a request to path
 			req, _ := http.NewRequest("GET", tc.path, nil)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+
+			// THEN we get a Status OK
+			if response.Code != http.StatusOK {
+				t.Errorf("Expected a 200, got %d",
+					response.Code)
+			}
+			if tc.bodyRegex != "" {
+				body := response.Body.String()
+				re := regexp.MustCompile(tc.bodyRegex)
+				match := re.MatchString(body)
+				if !match {
+					t.Errorf("expected %q in body\ngot: %q",
+						tc.bodyRegex, response.Body.String())
+				}
+			}
+		})
+	}
+}
+
+func TestAccessibleHTTPS(t *testing.T) {
+	// GIVEN a bunch of URLs to test and the webserver is running with HTTPS
+	tests := map[string]struct {
+		path      string
+		bodyRegex string
+	}{
+		"/approvals": {
+			path: "/approvals"},
+		"/metrics": {
+			path:      "/metrics",
+			bodyRegex: "go_gc_duration_"},
+		"/api/v1/healthcheck": {
+			path:      "/api/v1/healthcheck",
+			bodyRegex: fmt.Sprintf(`^Alive$`)},
+		"/api/v1/version": {
+			path: "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
+				util.GoVersion)},
+	}
+	testLogging("DEBUG", true)
+	cfg := testConfig("TestAccessibleHTTPS.yml", t)
+	cfg.Settings.Web.CertFile = stringPtr("TestAccessibleHTTPS_cert.pem")
+	cfg.Settings.Web.KeyFile = stringPtr("TestAccessibleHTTPS_key.pem")
+	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile, t)
+
+	router = newWebUI(cfg)
+	go Run(cfg, util.NewJLog("WARN", false))
+	time.Sleep(250 * time.Millisecond)
+	address := fmt.Sprintf("https://localhost:%s", *cfg.Settings.Web.ListenPort)
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN we make a HTTPS request to path
+			req, _ := http.NewRequest("GET", address+tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
@@ -140,7 +214,7 @@ func connectToWebSocket(t *testing.T) *websocket.Conn {
 }
 
 // seeIfMessage will try and get a message from the WebSocket
-// if it receives no message withing 100ms, it will give up and return nil
+// if it receives no message within 120*50ms (6s), it will give up and return nil
 func seeIfMessage(t *testing.T, ws *websocket.Conn) *api_type.WebSocketMessage {
 	var message api_type.WebSocketMessage
 	msgChan := make(chan api_type.WebSocketMessage, 1)
@@ -178,18 +252,35 @@ func TestWebSocket(t *testing.T) {
 		stdoutRegex string
 		bodyRegex   string
 	}{
-		"no version":                   {msg: `{"key": "value"}`, stdoutRegex: "^$"},
-		"no version, unknown type":     {msg: `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`, stdoutRegex: "Unknown TYPE"},
-		"invalid JSON":                 {msg: `{"version": 1, "key": "value"`, stdoutRegex: "missing/invalid version key"},
-		"unknown page":                 {msg: `{"version": 1, "page": "foo", "type": "value"}`, stdoutRegex: "Unknown PAGE"},
-		"APPROVALS - unknown type":     {msg: `{"version": 1, "page": "APPROVALS", "type": "value"}`, stdoutRegex: "Unknown APPROVALS Type"},
-		"RUNTIME_BUILD - unknown type": {msg: `{"version": 1, "page": "RUNTIME_BUILD", "type": "value"}`, stdoutRegex: "Unknown RUNTIME_BUILD Type"},
-		"FLAGS - unknown type":         {msg: `{"version": 1, "page": "FLAGS", "type": "value"}`, stdoutRegex: "Unknown FLAGS Type"},
-		"CONFIG - unknown type":        {msg: `{"version": 1, "page": "CONFIG", "type": "value"}`, stdoutRegex: "Unknown CONFIG Type"},
+		"no version": {
+			msg:         `{"key": "value"}`,
+			stdoutRegex: `^DEBUG:[^:]+READ \{"key": "value"\}\n$`},
+		"no version, unknown type": {
+			msg:         `{"page": "APPROVALS", "type": "SHAZAM", "key": "value"}`,
+			stdoutRegex: "Unknown TYPE"},
+		"invalid JSON": {
+			msg:         `{"version": 1, "key": "value"`,
+			stdoutRegex: "missing/invalid version key"},
+		"unknown page": {
+			msg:         `{"version": 1, "page": "foo", "type": "value"}`,
+			stdoutRegex: "Unknown PAGE"},
+		"APPROVALS - unknown type": {
+			msg:         `{"version": 1, "page": "APPROVALS", "type": "value"}`,
+			stdoutRegex: "Unknown APPROVALS Type"},
+		"RUNTIME_BUILD - unknown type": {
+			msg:         `{"version": 1, "page": "RUNTIME_BUILD", "type": "value"}`,
+			stdoutRegex: "Unknown RUNTIME_BUILD Type"},
+		"FLAGS - unknown type": {
+			msg:         `{"version": 1, "page": "FLAGS", "type": "value"}`,
+			stdoutRegex: "Unknown FLAGS Type"},
+		"CONFIG - unknown type": {
+			msg:         `{"version": 1, "page": "CONFIG", "type": "value"}`,
+			stdoutRegex: "Unknown CONFIG Type"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 			stdout := os.Stdout
@@ -223,18 +314,21 @@ func TestWebSocketApprovalsINIT(t *testing.T) {
 	tests := map[string]struct {
 		order []string
 	}{
-		"INIT":                                  {order: *cfg.Order},
-		"INIT with nil Service in config.Order": {order: append(*cfg.Order, "nilService")},
+		"INIT": {
+			order: cfg.Order},
+		"INIT with nil Service in config.Order": {
+			order: append(cfg.Order, "nilService")},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			order := cfg.Order
-			cfg.Order = &tc.order
+			cfg.Order = tc.order
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 
-			// WHEN we send a message to the server (wsService)
+			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "INIT"}
 			data, _ := json.Marshal(msg)
 			if err := ws.WriteMessage(websocket.TextMessage, data); err != nil {
@@ -285,6 +379,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 	testLogging("VERBOSE", true)
 	tests := map[string]struct {
 		serviceID                   string
+		active                      *bool
 		target                      *string
 		wantSkipMessage             bool
 		stdoutRegex                 string
@@ -300,95 +395,223 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 		upgradesDeployedVersion     bool
 		approveCommandsIndividually bool
 	}{
-		"ARGUS_SKIP known service_id": {serviceID: "test", target: stringPtr("ARGUS_SKIP"), wantSkipMessage: true},
-		"ARGUS_SKIP unknown service_id": {serviceID: "unknown?", target: stringPtr("ARGUS_SKIP"),
-			stdoutRegex: "service not found"},
-		"ARGUS_SKIP empty service_id": {serviceID: "", target: stringPtr("ARGUS_SKIP"),
-			stdoutRegex: "service_data.id not provided"},
-		"target=nil, known service_id": {serviceID: "test", target: nil,
-			stdoutRegex: "target for command/webhook not provided"},
-		"ARGUS_ALL, known service_id with no commands/webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"), stdoutRegex: "does not have any commands/webhooks to approve"},
-		"ARGUS_ALL, known service_id with command": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"false", "0"}}},
-		"ARGUS_ALL, known service_id with webhook": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")}},
-		"ARGUS_ALL, known service_id with multiple webhooks": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			webhooks: webhook.Slice{"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"), "known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")}},
-		"ARGUS_ALL, known service_id with multiple commands": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands: command.Slice{{"ls", "-a"}, {"false", "1"}}},
-		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"ls", "-b"}},
-			webhooks:                webhook.Slice{"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
-			upgradesApprovedVersion: true, latestVersion: "0.9.0"},
-		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:  command.Slice{{"ls", "-c"}},
-			webhooks:  webhook.Slice{"known-service-upgrade-deployed-version-webhook-0": testWebHook(false, "known-service-upgrade-deployed-version-webhook-0")},
-			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"ls", "-d"}},
-			webhooks:                webhook.Slice{"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
-			latestVersionIsApproved: true},
-		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {serviceID: "test", target: stringPtr("ARGUS_ALL"),
-			commands:                command.Slice{{"fail"}},
-			webhooks:                webhook.Slice{"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
-			latestVersionIsApproved: true},
-		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("webhook_will_pass"),
-			commands: command.Slice{{"ls", "-f"}}, commandFails: []*bool{boolPtr(false)},
-			webhooks:     webhook.Slice{"will_pass": testWebHook(false, "will_pass"), "would_fail": testWebHook(true, "would_fail")},
-			webhookFails: map[string]*bool{"will_pass": boolPtr(true), "would_fail": boolPtr(false)},
-			removeDVL:    true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {serviceID: "test", target: stringPtr("command_ls -g"),
-			commands: command.Slice{{"ls", "/root"}, {"ls", "-g"}}, commandFails: []*bool{boolPtr(false), boolPtr(true)},
-			webhooks: webhook.Slice{"would_fail": testWebHook(true, "would_fail")}, webhookFails: map[string]*bool{"would_fail": boolPtr(false)},
-			removeDVL: true, upgradesDeployedVersion: true, latestVersion: "0.9.0"},
-		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {serviceID: "test",
-			commands: command.Slice{{"ls", "-h"}, {"false", "2"}, {"true"}}, approveCommandsIndividually: true},
+		"ARGUS_SKIP known service_id": {
+			serviceID:       "test",
+			target:          stringPtr("ARGUS_SKIP"),
+			wantSkipMessage: true,
+		},
+		"ARGUS_SKIP inactive service_id": {
+			serviceID:       "test",
+			active:          boolPtr(false),
+			target:          stringPtr("ARGUS_SKIP"),
+			wantSkipMessage: false,
+		},
+		"ARGUS_SKIP unknown service_id": {
+			serviceID:   "unknown?",
+			target:      stringPtr("ARGUS_SKIP"),
+			stdoutRegex: "service not found",
+		},
+		"ARGUS_SKIP empty service_id": {
+			serviceID:   "",
+			target:      stringPtr("ARGUS_SKIP"),
+			stdoutRegex: "service_data.id not provided",
+		},
+		"target=nil, known service_id": {
+			serviceID:   "test",
+			target:      nil,
+			stdoutRegex: "target for command/webhook not provided",
+		},
+		"ARGUS_ALL, known service_id with no commands/webhooks": {
+			serviceID:   "test",
+			target:      stringPtr("ARGUS_ALL"),
+			stdoutRegex: "does not have any commands/webhooks to approve",
+		},
+		"ARGUS_ALL, known service_id with command": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"false", "0"}},
+		},
+		"ARGUS_ALL, known service_id with webhook": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{
+				"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")},
+		},
+		"ARGUS_ALL, known service_id with multiple webhooks": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			webhooks: webhook.Slice{
+				"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"),
+				"known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")},
+		},
+		"ARGUS_ALL, known service_id with multiple commands": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-a"}, {"false", "1"}},
+		},
+		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-b"}},
+			webhooks: webhook.Slice{
+				"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
+			upgradesApprovedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-c"}},
+			webhooks: webhook.Slice{
+				"known-service-upgrade-deployed-version-webhook-0": testWebHook(false,
+					"known-service-upgrade-deployed-version-webhook-0")},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"ls", "-d"}},
+			webhooks: webhook.Slice{
+				"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
+			latestVersionIsApproved: true,
+		},
+		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
+			serviceID: "test",
+			target:    stringPtr("ARGUS_ALL"),
+			commands: command.Slice{
+				{"fail"}},
+			webhooks: webhook.Slice{
+				"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
+			latestVersionIsApproved: true,
+		},
+		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("webhook_will_pass"),
+			commands: command.Slice{
+				{"ls", "-f"}},
+			commandFails: []*bool{
+				boolPtr(false)},
+			webhooks: webhook.Slice{
+				"will_pass":  testWebHook(false, "will_pass"),
+				"would_fail": testWebHook(true, "would_fail")},
+			webhookFails: map[string]*bool{
+				"will_pass":  boolPtr(true),
+				"would_fail": boolPtr(false)},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {
+			serviceID: "test",
+			target:    stringPtr("command_ls -g"),
+			commands: command.Slice{
+				{"ls", "/root"},
+				{"ls", "-g"}},
+			commandFails: []*bool{
+				boolPtr(false),
+				boolPtr(true)},
+			webhooks: webhook.Slice{
+				"would_fail": testWebHook(true, "would_fail")},
+			webhookFails: map[string]*bool{
+				"would_fail": boolPtr(false)},
+			removeDVL:               true,
+			upgradesDeployedVersion: true,
+			latestVersion:           "0.9.0",
+		},
+		"command_NAME, known service_id with multiple commands targeted individually (handle broadcast queue)": {
+			serviceID: "test",
+			commands: command.Slice{
+				{"ls", "-h"},
+				{"false", "2"},
+				{"true"}},
+			approveCommandsIndividually: true,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
 			var hadDVL deployedver.Lookup
 			var hadStatus svcstatus.Status
-			if cfg.Service[tc.serviceID] != nil {
-				hadStatus = cfg.Service[tc.serviceID].Status
-				cfg.Service[tc.serviceID].Status.Fails.Command = make([]*bool, len(tc.commands))
-				cfg.Service[tc.serviceID].Status.Fails.WebHook = make(map[string]*bool, len(tc.webhooks))
-				cfg.Service[tc.serviceID].Status.LatestVersion = tc.latestVersion
-				hadDVL = *cfg.Service[tc.serviceID].DeployedVersionLookup
-				if tc.removeDVL {
-					cfg.Service[tc.serviceID].DeployedVersionLookup = nil
+			svc := cfg.Service[tc.serviceID]
+			if svc != nil {
+				svc.Options.Active = tc.active
+				{ // Copy Status
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion(), false)
+					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
+					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
+					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
+					hadStatus.SetLatestVersionTimestamp(svc.Status.GetLatestVersionTimestamp())
+					hadStatus.SetLastQueried(svc.Status.GetLastQueried())
 				}
-				hadCommandSlice = cfg.Service[tc.serviceID].Command
-				cfg.Service[tc.serviceID].Command = tc.commands
-				cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+				svc.Status.Init(
+					0, len(tc.commands), len(tc.webhooks),
+					&tc.serviceID,
+					stringPtr("https://example.com"))
+				svc.Status.SetLatestVersion(tc.latestVersion, false)
+				hadDVL = *svc.DeployedVersionLookup
+				if tc.removeDVL {
+					svc.DeployedVersionLookup = nil
+				}
+				hadCommandSlice = svc.Command
+				svc.Command = tc.commands
+				svc.CommandController.Init(
+					&svc.Status,
+					&svc.Command,
+					nil,
+					stringPtr("10m"))
 				if len(tc.commandFails) != 0 {
 					for i := range tc.commandFails {
-						(*cfg.Service[tc.serviceID].CommandController.Failed)[i] = tc.commandFails[i]
+						if tc.commandFails[i] != nil {
+							svc.CommandController.Failed.Set(i, *tc.commandFails[i])
+						}
 					}
 				}
-				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
+				hadWebHookSlice = svc.WebHook
 				if tc.webhooks != nil {
 					for i := range tc.webhooks {
-						tc.webhooks[i].ServiceStatus = &cfg.Service[tc.serviceID].Status
+						tc.webhooks[i].ServiceStatus = &svc.Status
 					}
 				}
-				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				svc.WebHook = tc.webhooks
+				svc.WebHook.Init(
+					&svc.Status,
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+					nil,
+					&svc.Options.Interval)
 				if len(tc.webhookFails) != 0 {
 					for key := range tc.webhookFails {
-						(*cfg.Service[tc.serviceID].WebHook[key].Failed)[key] = tc.webhookFails[key]
+						svc.WebHook[key].Failed.Set(key, tc.webhookFails[key])
 					}
 				}
 				// revert Service
 				defer func() {
-					cfg.Service[tc.serviceID].Status = hadStatus
-					cfg.Service[tc.serviceID].DeployedVersionLookup = &hadDVL
-					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
-					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
+					{ // Status
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion(), false)
+						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
+						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
+						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)
+						svc.Status.SetLatestVersionTimestamp(hadStatus.GetLatestVersionTimestamp())
+						svc.Status.SetLastQueried(hadStatus.GetLastQueried())
+					}
+					svc.DeployedVersionLookup = &hadDVL
+					svc.Command = hadCommandSlice
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+					svc.WebHook = hadWebHookSlice
 				}()
 			}
 			ws := connectToWebSocket(t)
@@ -397,12 +620,16 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			// WHEN we send a message to the server (wsService)
-			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "VERSION",
-				Target: tc.target, ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
-			if cfg.Service[tc.serviceID] != nil {
+			// WHEN we send a message to the server (wsServiceInit)
+			msg := api_type.WebSocketMessage{
+				Version:     intPtr(1),
+				Page:        "APPROVALS",
+				Type:        "VERSION",
+				Target:      tc.target,
+				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
+			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
+					LatestVersion: svc.Status.GetLatestVersion(),
 				}
 			}
 			sends := 1
@@ -467,8 +694,9 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					output := string(out)
 					t.Log(output)
 					t.Log(time.Now())
-					t.Fatalf("expecting %d more messages but got %v",
+					t.Errorf("expecting %d more messages but got %v",
 						expecting, message)
+					return
 				}
 				messages[got] = *message
 				raw, _ := json.Marshal(*message)
@@ -500,9 +728,12 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			t.Log(output)
 			// Check version was skipped
 			if util.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
-				if tc.wantSkipMessage && messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+cfg.Service[tc.serviceID].Status.LatestVersion {
+				if tc.wantSkipMessage &&
+					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.GetLatestVersion() {
 					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
-						cfg.Service[tc.serviceID].Status.LatestVersion, cfg.Service[tc.serviceID].Status.ApprovedVersion, messages[0].ServiceData.Status.ApprovedVersion)
+						svc.Status.GetLatestVersion(),
+						svc.Status.GetApprovedVersion(),
+						messages[0].ServiceData.Status.ApprovedVersion)
 				}
 			} else {
 				// expecting = commands + webhooks that have not failed=false
@@ -557,16 +788,16 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					if !receivedForAnAction {
 						//  IF we're expecting a message about approvedVersion
 						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
-							if message.ServiceData.Status.ApprovedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+							if message.ServiceData.Status.ApprovedVersion != svc.Status.GetLatestVersion() {
 								t.Fatalf("expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-									message, message.ServiceData.Status.ApprovedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+									message, message.ServiceData.Status.ApprovedVersion, svc.Status.GetLatestVersion())
 							}
 							continue
 						}
 						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
-							if message.ServiceData.Status.DeployedVersion != cfg.Service[tc.serviceID].Status.LatestVersion {
+							if message.ServiceData.Status.DeployedVersion != svc.Status.GetLatestVersion() {
 								t.Fatalf("expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-									message, message.ServiceData.Status.DeployedVersion, cfg.Service[tc.serviceID].Status.LatestVersion)
+									message, message.ServiceData.Status.DeployedVersion, svc.Status.GetLatestVersion())
 							}
 							continue
 						}
@@ -592,55 +823,118 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 		commands    command.Slice
 		webhooks    webhook.Slice
 	}{
-		"service_id=unknown":                       {serviceID: "unknown?", stdoutRegex: "service not found"},
-		"service_id=nil":                           {serviceID: "", stdoutRegex: "service_data.id not provided"},
-		"known service_id, 0 command, 0 webhooks,": {serviceID: "test", stdoutRegex: "^$"},
-		"known service_id, 1 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true)}},
-		"known service_id, 2 command, 0 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)}},
-		"known service_id, 0 command, 1 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0")}},
-		"known service_id, 0 command, 2 webhooks,": {serviceID: "test", webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
-		"known service_id, 2 command, 2 webhooks,": {serviceID: "test", commands: command.Slice{testCommand(true), testCommand(false)},
-			webhooks: webhook.Slice{"fail0": testWebHook(true, "fail0"), "pass0": testWebHook(false, "pass0")}},
+		"service_id=unknown": {
+			serviceID:   "unknown?",
+			stdoutRegex: "service not found",
+		},
+		"service_id=nil": {
+			serviceID:   "",
+			stdoutRegex: "service_data.id not provided",
+		},
+		"known service_id, 0 command, 0 webhooks,": {
+			serviceID:   "test",
+			stdoutRegex: `DEBUG:[^:]+, READ \{[^}]+\}\}\}\nVERBOSE:[^V]+VERBOSE:[^"]+$`,
+			// DEBUG: WebSocket (127.0.0.1), READ {"version":1,"page":"APPROVALS","type":"ACTIONS","service_data":{"id":"test","status":{}}}
+			// VERBOSE: wsCommand (127.0.0.1), -\n
+			// VERBOSE: wsWebHook (127.0.0.1), -\n
+		},
+		"known service_id, 1 command, 0 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true)},
+		},
+		"known service_id, 2 command, 0 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true), testCommand(false)},
+		},
+		"known service_id, 0 command, 1 webhooks,": {
+			serviceID: "test",
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0")},
+		},
+		"known service_id, 0 command, 2 webhooks,": {
+			serviceID: "test",
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0"),
+				"pass0": testWebHook(false, "pass0")},
+		},
+		"known service_id, 2 command, 2 webhooks,": {
+			serviceID: "test",
+			commands: command.Slice{
+				testCommand(true), testCommand(false)},
+			webhooks: webhook.Slice{
+				"fail0": testWebHook(true, "fail0"),
+				"pass0": testWebHook(false, "pass0")},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// backup Service
 			var hadCommandSlice command.Slice
 			var hadWebHookSlice webhook.Slice
 			var hadStatus svcstatus.Status
 			ws := connectToWebSocket(t)
 			defer ws.Close()
-			if cfg.Service[tc.serviceID] != nil {
-				hadStatus = cfg.Service[tc.serviceID].Status
-				hadCommandSlice = cfg.Service[tc.serviceID].Command
-				cfg.Service[tc.serviceID].Command = tc.commands
-				if tc.commands == nil {
-					cfg.Service[tc.serviceID].CommandController = nil
-				} else {
-					cfg.Service[tc.serviceID].CommandController = &command.Controller{}
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
+			svc := cfg.Service[tc.serviceID]
+			if svc != nil {
+				{ // Copy Status
+					hadStatus.SetApprovedVersion(svc.Status.GetApprovedVersion(), false)
+					hadStatus.SetDeployedVersion(svc.Status.GetDeployedVersion(), false)
+					hadStatus.SetDeployedVersionTimestamp(svc.Status.GetDeployedVersionTimestamp())
+					hadStatus.SetLatestVersion(svc.Status.GetLatestVersion(), false)
+					hadStatus.SetLatestVersionTimestamp(svc.Status.GetLatestVersionTimestamp())
+					hadStatus.SetLastQueried(svc.Status.GetLastQueried())
 				}
-				hadWebHookSlice = cfg.Service[tc.serviceID].WebHook
-				cfg.Service[tc.serviceID].WebHook = tc.webhooks
-				cfg.Service[tc.serviceID].WebHook.Init(jLog, &cfg.Service[tc.serviceID].Status, &webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{}, nil, &cfg.Service[tc.serviceID].Options.Interval)
+				hadCommandSlice = svc.Command
+				svc.Command = tc.commands
+				if tc.commands == nil {
+					svc.CommandController = nil
+				} else {
+					svc.CommandController = &command.Controller{}
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+				}
+				hadWebHookSlice = svc.WebHook
+				svc.WebHook = tc.webhooks
+				svc.WebHook.Init(
+					&svc.Status,
+					&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+					nil,
+					&svc.Options.Interval)
 				defer func() {
-					cfg.Service[tc.serviceID].Status = hadStatus
-					cfg.Service[tc.serviceID].Command = hadCommandSlice
-					cfg.Service[tc.serviceID].CommandController.Init(jLog, &cfg.Service[tc.serviceID].Status, &cfg.Service[tc.serviceID].Command, nil, stringPtr("10m"))
-					cfg.Service[tc.serviceID].WebHook = hadWebHookSlice
+					{ // Status
+						svc.Status.SetApprovedVersion(hadStatus.GetApprovedVersion(), false)
+						svc.Status.SetDeployedVersion(hadStatus.GetDeployedVersion(), false)
+						svc.Status.SetDeployedVersionTimestamp(hadStatus.GetDeployedVersionTimestamp())
+						svc.Status.SetLatestVersion(hadStatus.GetLatestVersion(), false)
+						svc.Status.SetLatestVersionTimestamp(hadStatus.GetLatestVersionTimestamp())
+						svc.Status.SetLastQueried(hadStatus.GetLastQueried())
+					}
+					svc.Command = hadCommandSlice
+					svc.CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						stringPtr("10m"))
+					svc.WebHook = hadWebHookSlice
 				}()
 			}
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			// WHEN we send a message to the server (wsService)
+			// WHEN we send a message to the server (wsServiceInit)
 			msg := api_type.WebSocketMessage{Version: intPtr(1), Page: "APPROVALS", Type: "ACTIONS",
 				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
-			if cfg.Service[tc.serviceID] != nil {
+			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: cfg.Service[tc.serviceID].Status.LatestVersion,
+					LatestVersion: svc.Status.GetLatestVersion(),
 				}
 			}
 			data, _ := json.Marshal(msg)
@@ -653,8 +947,6 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 			message := seeIfMessage(t, ws)
 			w.Close()
 			out, _ := io.ReadAll(r)
-			// fmt.Println(r)
-			// out := []byte{}
 			os.Stdout = stdout
 			output := string(out)
 			// stdout finishes
@@ -793,47 +1085,70 @@ func TestWebSocketConfigINIT(t *testing.T) {
 		nilServiceC      bool
 		nilServiceWH     bool
 	}{
-		"no Service's":                     {nilService: true},
-		"no Service DeployedVersionLookup": {nilServiceDVL: true},
-		"no Service URLCommands":           {nilServiceURLC: true},
-		"no Service Notify":                {nilServiceNotify: true},
-		"no Service Command":               {nilServiceC: true},
-		"no Service WebHook":               {nilServiceWH: true},
+		"no Service's": {
+			nilService: true},
+		"no Service DeployedVersionLookup": {
+			nilServiceDVL: true},
+		"no Service URLCommands": {
+			nilServiceURLC: true},
+		"no Service Notify": {
+			nilServiceNotify: true},
+		"no Service Command": {
+			nilServiceC: true},
+		"no Service WebHook": {
+			nilServiceWH: true},
 	}
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			// backup changes
 			hadService := make(service.Slice, len(cfg.Service))
 			for i := range cfg.Service {
-				svc := *cfg.Service[i]
+				s := cfg.Service[i]
+				svc := service.Service{
+					ID:            s.ID,
+					Comment:       s.Comment,
+					Options:       s.Options,
+					LatestVersion: s.LatestVersion,
+					Dashboard:     s.Dashboard,
+					Status:        svcstatus.Status{},
+					Defaults:      s.Defaults,
+					HardDefaults:  s.HardDefaults,
+					Type:          s.Type,
+				}
 				hadService[i] = &svc
+				dvl := *cfg.Service[i].DeployedVersionLookup
+				hadService[i].DeployedVersionLookup = &dvl
 				if tc.nilServiceDVL {
-					dvl := *cfg.Service[i].DeployedVersionLookup
 					cfg.Service[i].DeployedVersionLookup = nil
-					hadService[i].DeployedVersionLookup = &dvl
 				}
+				urlc := cfg.Service[i].LatestVersion.URLCommands
+				hadService[i].LatestVersion.URLCommands = urlc
 				if tc.nilServiceURLC {
-					urlc := cfg.Service[i].LatestVersion.URLCommands
 					cfg.Service[i].LatestVersion.URLCommands = nil
-					hadService[i].LatestVersion.URLCommands = urlc
 				}
+				notify := cfg.Service[i].Notify
+				hadService[i].Notify = notify
 				if tc.nilServiceNotify {
-					notify := cfg.Service[i].Notify
 					cfg.Service[i].Notify = nil
-					hadService[i].Notify = notify
 				}
 				wh := cfg.Service[i].WebHook
 				hadService[i].WebHook = wh
 				if tc.nilServiceWH {
 					cfg.Service[i].WebHook = nil
 				}
+				command := cfg.Service[i].Command
+				hadService[i].Command = command
 				if tc.nilServiceC {
-					command := cfg.Service[i].Command
 					cfg.Service[i].Command = nil
-					hadService[i].Command = command
 					cfg.Service[i].CommandController = nil
 				} else {
-					cfg.Service[i].CommandController.Init(jLog, &svc.Status, &svc.Command, nil, nil)
+					cfg.Service[i].CommandController.Init(
+						&svc.Status,
+						&svc.Command,
+						nil,
+						nil)
 				}
 				// restore possible changes
 				defer func() {
@@ -846,7 +1161,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 			ws := connectToWebSocket(t)
 			defer ws.Close()
 
-			// WHEN we send a message to get the Commands+WebHooks
+			// WHEN we send a message to get the Config
 			var (
 				msgVersion int    = 1
 				msgPage    string = "CONFIG"
@@ -863,7 +1178,7 @@ func TestWebSocketConfigINIT(t *testing.T) {
 					err)
 			}
 
-			// THEN it passes and we only receive a response with the WebHooks
+			// THEN it passes and we receive the config
 			message := seeIfMessage(t, ws)
 			if message == nil {
 				t.Error("SETTINGS - expecting another message but didn't get one")
@@ -1003,10 +1318,8 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				// deployed version lookup
 				if tc.nilServiceDVL {
 					if receivedTestService.DeployedVersionLookup != nil {
-						if receivedTestService.DeployedVersionLookup != nil {
-							t.Errorf("expecting DeployedVersionLookup to be nil, not \n%#v",
-								receivedTestService.DeployedVersionLookup)
-						}
+						t.Errorf("expecting DeployedVersionLookup to be nil, not \n%#v",
+							receivedTestService.DeployedVersionLookup)
 					}
 				} else {
 					// url
@@ -1037,26 +1350,24 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// url commands
 				if tc.nilServiceURLC {
-					if len(receivedTestService.LatestVersion.URLCommands) != 0 && len(receivedTestService.LatestVersion.URLCommands) != 0 {
-						t.Errorf("expecting URLCommands to be nil, not \n%#v",
-							receivedTestService.LatestVersion.URLCommands)
+					if receivedTestService.LatestVersion.URLCommands == nil || len(*receivedTestService.LatestVersion.URLCommands) != 0 {
+						t.Errorf("expecting URLCommands to be 0, not \n%#v",
+							len(*receivedTestService.LatestVersion.URLCommands))
 					}
 				} else {
 					if receivedTestService.LatestVersion.URLCommands == nil {
 						t.Errorf("ConfigData.Service.test.URLCommands should've been %#v, got %#v",
 							cfgTestService.LatestVersion.URLCommands, receivedTestService.LatestVersion.URLCommands)
-					} else if util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex) != util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
+					} else if util.DefaultIfNil((*receivedTestService.LatestVersion.URLCommands)[0].Regex) != util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex) {
 						t.Errorf("ConfigData.Service.test.URLCommands[0].Regex should've been %q, got %q",
-							util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), util.DefaultIfNil(receivedTestService.LatestVersion.URLCommands[0].Regex))
+							util.DefaultIfNil(cfgTestService.LatestVersion.URLCommands[0].Regex), util.DefaultIfNil((*receivedTestService.LatestVersion.URLCommands)[0].Regex))
 					}
 				}
 				// notify
 				if tc.nilServiceNotify {
-					if receivedTestService.Notify != nil {
-						if receivedTestService.Notify != nil && len(*receivedTestService.Notify) != 0 {
-							t.Errorf("expecting Notify to be nil, not \n%#v",
-								receivedTestService.Notify)
-						}
+					if receivedTestService.Notify != nil && len(*receivedTestService.Notify) != 0 {
+						t.Errorf("expecting Notify to be nil, not \n%#v",
+							receivedTestService.Notify)
 					}
 				} else {
 					if receivedTestService.Notify == nil {
@@ -1069,11 +1380,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// webhook
 				if tc.nilServiceWH {
-					if receivedTestService.WebHook != nil {
-						if receivedTestService.WebHook != nil && len(*receivedTestService.WebHook) != 0 {
-							t.Errorf("expecting WebHook to be nil, not \n%#v",
-								receivedTestService.WebHook)
-						}
+					if receivedTestService.WebHook != nil && len(*receivedTestService.WebHook) != 0 {
+						t.Errorf("expecting WebHook to be nil, not \n%#v",
+							receivedTestService.WebHook)
 					}
 				} else {
 					if receivedTestService.WebHook == nil {
@@ -1086,11 +1395,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 				}
 				// command
 				if tc.nilServiceC {
-					if receivedTestService.Command != nil {
-						if receivedTestService.Command != nil && len(*receivedTestService.Command) != 0 {
-							t.Errorf("expecting Command to be nil, not \n%#v",
-								receivedTestService.Command)
-						}
+					if receivedTestService.Command != nil && len(*receivedTestService.Command) != 0 {
+						t.Errorf("expecting Command to be nil, not \n%#v",
+							receivedTestService.Command)
 					}
 				} else {
 					if receivedTestService.Command == nil {

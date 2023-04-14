@@ -21,9 +21,13 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	jLog = log
+}
+
 // Init will initialise the Service metric.
 func (l *Lookup) Init(
-	log *util.JLog,
 	defaults *Lookup,
 	hardDefaults *Lookup,
 	status *svcstatus.Status,
@@ -32,20 +36,47 @@ func (l *Lookup) Init(
 	if l == nil {
 		return
 	}
-	jLog = log
 
 	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
-	l.initMetrics()
 }
 
-// initMetrics will initialise the Prometheus metric.
-func (l *Lookup) initMetrics() {
+// InitMetrics for this Lookup.
+func (l *Lookup) InitMetrics() {
+	if l == nil {
+		return
+	}
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "SUCCESS")
-	metric.InitPrometheusCounterWithIDAndResult(metric.DeployedVersionQueryMetric, *l.Status.ServiceID, "FAIL")
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
+}
+
+// DeleteMetrics for this Lookup.
+func (l *Lookup) DeleteMetrics() {
+	if l == nil {
+		return
+	}
+
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"SUCCESS")
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+		*l.Status.ServiceID,
+		"",
+		"",
+		"FAIL")
 }

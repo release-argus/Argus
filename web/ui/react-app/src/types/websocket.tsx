@@ -14,7 +14,7 @@ export interface GorillaWebSocketMessage {
   cancelable: boolean;
   composed: boolean;
   currentTarget: null;
-  data: websocketResponse;
+  data: WebSocketResponse;
   defaultPrevented: boolean;
   eventPhase: number;
   explicitOriginalTarget: ExplicitOriginalTarget;
@@ -31,11 +31,12 @@ export interface GorillaWebSocketMessage {
   type: string;
 }
 
-export interface websocketResponse {
+export interface WebSocketResponse {
   page: string;
   type: string;
   sub_type?: string;
   order?: string[];
+  target?: string;
   service_data?: ServiceSummaryType;
   command_data?: CommandSummaryListType;
   webhook_data?: WebHookSummaryListType;

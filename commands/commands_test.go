@@ -23,33 +23,46 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-	"time"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestApplyTemplate(t *testing.T) {
+func TestCommand_ApplyTemplate(t *testing.T) {
 	// GIVEN various Command's
 	tests := map[string]struct {
 		input         Command
 		want          Command
 		serviceStatus *svcstatus.Status
+		latestVersion string
 	}{
 		"command with no templating and non-nil service status": {
-			input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"},
-			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"},
-		},
-		"command with no templating and nil service status": {input: Command{"ls", "-lah"}, want: Command{"ls", "-lah"}},
-		"command with templating and nil service status":    {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "{{ version }}"}},
-		"command with templating and non-nil service status": {input: Command{"ls", "-lah", "{{ version }}"}, want: Command{"ls", "-lah", "1.2.3"},
-			serviceStatus: &svcstatus.Status{LatestVersion: "1.2.3"}},
+			input:         Command{"ls", "-lah"},
+			want:          Command{"ls", "-lah"},
+			serviceStatus: &svcstatus.Status{},
+			latestVersion: "1.2.3"},
+		"command with no templating and nil service status": {
+			input: Command{"ls", "-lah"},
+			want:  Command{"ls", "-lah"}},
+		"command with templating and nil service status": {
+			input: Command{"ls", "-lah", "{{ version }}"},
+			want:  Command{"ls", "-lah", "{{ version }}"}},
+		"command with templating and non-nil service status": {
+			input:         Command{"ls", "-lah", "{{ version }}"},
+			want:          Command{"ls", "-lah", "1.2.3"},
+			serviceStatus: &svcstatus.Status{},
+			latestVersion: "1.2.3"},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			if tc.latestVersion != "" {
+				tc.serviceStatus.SetLatestVersion(tc.latestVersion, false)
+			}
+
 			// WHEN ApplyTemplate is called on the Command
 			got := tc.input.ApplyTemplate(tc.serviceStatus)
 
@@ -62,7 +75,7 @@ func TestApplyTemplate(t *testing.T) {
 	}
 }
 
-func TestCommandExec(t *testing.T) {
+func TestCommand_Exec(t *testing.T) {
 	// GIVEN different Command's to execute
 	jLog = util.NewJLog("INFO", false)
 	tests := map[string]struct {
@@ -70,12 +83,19 @@ func TestCommandExec(t *testing.T) {
 		err         error
 		outputRegex string
 	}{
-		"command that will pass": {cmd: Command{"date", "+%m-%d-%Y"}, err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
-		"command that will fail": {cmd: Command{"false"}, err: fmt.Errorf("exit status 1"), outputRegex: `exit status 1\s+$`},
+		"command that will pass": {
+			cmd:         Command{"date", "+%m-%d-%Y"},
+			err:         nil,
+			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+		"command that will fail": {
+			cmd:         Command{"false"},
+			err:         fmt.Errorf("exit status 1"),
+			outputRegex: `exit status 1\s+$`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -102,33 +122,44 @@ func TestCommandExec(t *testing.T) {
 	}
 }
 
-func TestExecIndex(t *testing.T) {
+func TestController_ExecIndex(t *testing.T) {
 	// GIVEN a Controller with different Command's to execute
 	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
-	controller := Controller{
-		Command: &Slice{
+	controller := Controller{}
+	controller.Init(
+		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
-		Failed:         &[]*bool{nil, nil},
-		NextRunnable:   make([]time.Time, 2),
-		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
-	}
+		nil,
+		stringPtr("13m"),
+	)
 	tests := map[string]struct {
 		index       int
 		err         error
 		outputRegex string
 		noAnnounce  bool
 	}{
-		"command index out of range":   {index: 2, err: nil, outputRegex: `^$`, noAnnounce: true},
-		"command index that will pass": {index: 0, err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
-		"command index that will fail": {index: 1, err: fmt.Errorf("exit status 1"), outputRegex: `exit status 1\s+$`},
+		"command index out of range": {
+			index:       2,
+			err:         nil,
+			outputRegex: `^$`,
+			noAnnounce:  true},
+		"command index that will pass": {
+			index:       0,
+			err:         nil,
+			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+		"command index that will fail": {
+			index:       1,
+			err:         fmt.Errorf("exit status 1"),
+			outputRegex: `exit status 1\s+$`},
 	}
 
 	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -165,16 +196,9 @@ func TestExecIndex(t *testing.T) {
 	}
 }
 
-func TestControllerExec(t *testing.T) {
+func TestController_Exec(t *testing.T) {
 	// GIVEN a Controller
 	jLog = util.NewJLog("INFO", false)
-	announce := make(chan []byte, 8)
-	controller := Controller{
-		Failed:         &[]*bool{nil, nil},
-		NextRunnable:   make([]time.Time, 2),
-		ParentInterval: stringPtr("10m"),
-		ServiceStatus:  &svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
-	}
 	tests := map[string]struct {
 		nilController bool
 		commands      *Slice
@@ -182,33 +206,43 @@ func TestControllerExec(t *testing.T) {
 		outputRegex   string
 		noAnnounce    bool
 	}{
-		"nil Controller": {nilController: true, err: nil, outputRegex: `^$`, noAnnounce: true},
-		"nil Command":    {err: nil, outputRegex: `^$`, noAnnounce: true},
-		"single Command": {err: nil, outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
+		"nil Controller": {
+			nilController: true,
+			err:           nil,
+			outputRegex:   `^$`,
+			noAnnounce:    true},
+		"nil Command": {
+			err:         nil,
+			outputRegex: `^$`,
+			noAnnounce:  true},
+		"single Command": {
+			err:         nil,
+			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
 			commands: &Slice{
 				{"date", "+%m-%d-%Y"}}},
-		"multiple Command's": {err: fmt.Errorf("\nexit status 1"), outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
+		"multiple Command's": {
+			err:         fmt.Errorf("\nexit status 1"),
+			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
 			commands: &Slice{
 				{"date", "+%m-%d-%Y"},
 				{"false"}}},
 	}
 
-	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
+			announce := make(chan []byte, 8)
+			controller := testController(&announce)
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
 			// WHEN the Command @index is exectured
-			var err error
+			controller.Command = tc.commands
 			if tc.nilController {
-				var controller *Controller
-				err = controller.Exec(&util.LogFrom{})
-			} else {
-				controller.Command = tc.commands
-				err = controller.Exec(&util.LogFrom{})
+				controller = nil
 			}
+			err := controller.Exec(&util.LogFrom{})
 
 			// THEN the output is expected
 			// err
@@ -228,8 +262,9 @@ func TestControllerExec(t *testing.T) {
 					tc.outputRegex, output)
 			}
 			// announced
+			runNumber := 0
 			if !tc.noAnnounce {
-				runNumber += len(*controller.Command)
+				runNumber = len(*controller.Command)
 			}
 			if len(announce) != runNumber {
 				t.Fatalf("Command run not announced\nat %d, want %d",

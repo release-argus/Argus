@@ -30,7 +30,7 @@ import (
 
 // Send every WebHook in this Slice with a delay between each webhook.
 func (w *Slice) Send(
-	serviceInfo util.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	if w == nil {
@@ -59,7 +59,7 @@ func (w *Slice) Send(
 
 // Send the WebHook MaxTries number of times until a success.
 func (w *WebHook) Send(
-	serviceInfo util.ServiceInfo,
+	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
 	logFrom := util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID} // For logging
@@ -69,43 +69,57 @@ func (w *WebHook) Send(
 		// Delay sending the WebHook message by the defined interval.
 		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
 		jLog.Info(msg, logFrom, true)
-		w.SetNextRunnable(true, true) // disable sending of auto_approved w/ delay
+		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay
 		time.Sleep(w.GetDelayDuration())
 	} else {
-		w.SetNextRunnable(false, true)
+		w.SetExecuting(false, true)
 	}
 
 	for {
-		err := w.try(logFrom)
+		// Check if we're deleting the Service.
+		if w.ServiceStatus.Deleting() {
+			return
+		}
+
+		// Try sending the WebHook.
+		err := w.try(&logFrom)
 
 		// SUCCESS!
 		if err == nil {
-			metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "SUCCESS")
+			metric.IncreasePrometheusCounter(metric.WebHookMetric,
+				w.ID,
+				serviceInfo.ID,
+				"",
+				"SUCCESS")
 			failed := false
-			(*w.Failed)[w.ID] = &failed
+			w.Failed.Set(w.ID, &failed)
 			w.AnnounceSend()
 			return nil
 		}
 
 		// FAIL!
 		jLog.Error(err, logFrom, true)
-		metric.IncreasePrometheusCounterActions(metric.WebHookMetric, w.ID, serviceInfo.ID, "", "FAIL")
+		metric.IncreasePrometheusCounter(metric.WebHookMetric,
+			w.ID,
+			serviceInfo.ID,
+			"",
+			"FAIL")
 		triesLeft--
 		errs = fmt.Errorf("%s\n%w",
 			util.ErrorToString(errs), err)
 
 		// Give up after MaxTries.
 		if triesLeft == 0 {
-			err := fmt.Errorf("failed %d times to send the WebHook for %s to %s",
+			err := fmt.Errorf("failed %d times to send the WebHook for %s to %q",
 				w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
 			jLog.Error(err, logFrom, true)
 			failed := true
-			(*w.Failed)[w.ID] = &failed
+			w.Failed.Set(w.ID, &failed)
 			w.AnnounceSend()
 			if !w.GetSilentFails() {
 				//#nosec G104 -- Errors will be logged to CL
 				//nolint:errcheck // ^
-				w.Notifiers.Send("WebHook fail", err.Error(), &serviceInfo)
+				w.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
 			}
 			return
 		}
@@ -116,11 +130,11 @@ func (w *WebHook) Send(
 
 // try to send a WebHook to its URL with the body SHA1 and SHA256 encrypted with its Secret.
 // It also simulates other GitHub headers and returns when an error is encountered.
-func (w *WebHook) try(logFrom util.LogFrom) (err error) {
+func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
 	req := w.GetRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, *logFrom, true)
 		return
 	}
 
@@ -139,8 +153,6 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
 	if err != nil {
-		// If verbose or above, print the error every time
-		jLog.Error(err, logFrom, (jLog.Level > 2))
 		return
 	}
 	defer resp.Body.Close()
@@ -152,7 +164,7 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay && (resp.StatusCode == desiredStatusCode || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
 		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
-		jLog.Info(msg, logFrom, true)
+		jLog.Info(msg, *logFrom, true)
 		return
 	}
 
@@ -164,7 +176,7 @@ func (w *WebHook) try(logFrom util.LogFrom) (err error) {
 	}
 
 	return fmt.Errorf(
-		"%sWebHook gave %d, not %s:\n%s\n%s", util.FormatMessageSource(logFrom),
+		"WebHook gave %d, not %s:\n%s\n%s",
 		resp.StatusCode,
 		prettyStatusCode,
 		resp.Status,

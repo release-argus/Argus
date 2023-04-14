@@ -81,24 +81,27 @@ func (l *JLog) SetTimestamps(enable bool) {
 // from.Primary defined = `from.Primary `
 //
 // from.Secondary defined = `from.Secondary `
-func FormatMessageSource(from LogFrom) string {
+func FormatMessageSource(from LogFrom) (msg string) {
 	// from.Primary defined
 	if from.Primary != "" {
 		// from.Primary and from.Secondary are defined
 		if from.Secondary != "" {
-			return fmt.Sprintf("%s (%s), ", from.Primary, from.Secondary)
+			msg = fmt.Sprintf("%s (%s), ", from.Primary, from.Secondary)
+			return
 		}
 		// Just from.Primary defined
-		return fmt.Sprintf("%s, ", from.Primary)
+		msg = fmt.Sprintf("%s, ", from.Primary)
+		return
 	}
 
 	// Just from.Secondary defined
 	if from.Secondary != "" {
-		return fmt.Sprintf("%s, ", from.Secondary)
+		msg = fmt.Sprintf("%s, ", from.Secondary)
+		return
 	}
 
 	// Neither from.Primary nor from.Secondary defined
-	return ""
+	return
 }
 
 // IsLevel will return whether the `level` of the JLog.
@@ -164,6 +167,12 @@ func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level > 2 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+
+		// limit size of msgString to 1000 chars
+		if len(msgString) > 1000 {
+			msgString = msgString[:1000] + "..."
+		}
+
 		// VERBOSE: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("VERBOSE: %s\n", msgString)
@@ -179,6 +188,12 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level == 4 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
+
+		// limit size of msgString to 1000 chars
+		if len(msgString) > 1000 {
+			msgString = msgString[:1000] + "..."
+		}
+
 		// DEBUG: msg from.Primary (from.Secondary)
 		if l.Timestamps {
 			log.Printf("DEBUG: %s\n", msgString)
