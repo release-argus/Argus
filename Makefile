@@ -23,7 +23,7 @@ go-test-coverage:
 
 .PHONY: web-install
 web-install:
-	cd $(UI_PATH) && npm install
+	cd $(UI_PATH) && npx update-browserslist-db@latest && npm install
 
 .PHONY: web-build
 web-build:
