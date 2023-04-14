@@ -1025,7 +1025,7 @@ func TestService_HandleSkip(t *testing.T) {
 			svc.Status.SetApprovedVersion("", false)
 			svc.Status.SetLatestVersion(latestVersion, false)
 			if tc.prepDelete {
-				svc.PrepDelete()
+				svc.PrepDelete(true)
 			}
 
 			// WHEN HandleSkip is called on it

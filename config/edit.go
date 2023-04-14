@@ -36,6 +36,14 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	}
 
 	logFrom.Secondary = newService.ID
+	// Whether we need to save the config
+	changedService := oldServiceID != newService.ID ||
+		c.Service[oldServiceID].String() != newService.String()
+	// Whether we need to update the database
+	changedDB := oldServiceID == "" ||
+		c.Service[oldServiceID].Status.GetApprovedVersion() != newService.Status.GetApprovedVersion() ||
+		c.Service[oldServiceID].Status.GetLatestVersion() != newService.Status.GetLatestVersion() ||
+		c.Service[oldServiceID].Status.GetDeployedVersion() != newService.Status.GetDeployedVersion()
 	// New service
 	if oldServiceID == "" {
 		jLog.Info("Adding service", logFrom, true)
@@ -52,7 +60,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 		if oldServiceID == newService.ID {
 			jLog.Info("Replacing service", logFrom, true)
 			// Delete the old service
-			c.Service[oldServiceID].PrepDelete()
+			c.Service[oldServiceID].PrepDelete(false)
 
 			// Old service being given a new ID
 		} else {
@@ -64,25 +72,18 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	c.Service[newService.ID] = newService
 
 	// Trigger a save if the Service has changed
-	oldService := c.Service[oldServiceID]
-	changedService := oldServiceID != newService.ID ||
-		oldService.String() != c.Service[newService.ID].String()
 	if changedService {
 		*c.HardDefaults.Service.Status.SaveChannel <- true
 	}
 
-	// Update the database if the Service or versions changed
-	newLV := newService.Status.GetLatestVersion()
-	newDV := newService.Status.GetDeployedVersion()
-	if changedService ||
-		newLV != oldService.Status.GetLatestVersion() ||
-		newDV != oldService.Status.GetDeployedVersion() {
+	// Update the database if the service is new, or the versions changed
+	if changedDB {
 		*c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 			ServiceID: newService.ID,
 			Cells: []dbtype.Cell{
-				{Column: "latest_version", Value: newLV},
+				{Column: "latest_version", Value: newService.Status.GetLatestVersion()},
 				{Column: "latest_version_timestamp", Value: newService.Status.GetLatestVersionTimestamp()},
-				{Column: "deployed_version", Value: newDV},
+				{Column: "deployed_version", Value: newService.Status.GetDeployedVersion()},
 				{Column: "deployed_version_timestamp", Value: newService.Status.GetDeployedVersionTimestamp()},
 				{Column: "approved_version", Value: newService.Status.GetApprovedVersion()}}}
 	}
@@ -115,7 +116,7 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 		Cells: []dbtype.Cell{
 			{Column: "id", Value: newService.ID}}}
 	// Remove the old service
-	c.Service[oldService].PrepDelete()
+	c.Service[oldService].PrepDelete(false)
 	delete(c.Service, oldService)
 }
 
@@ -137,7 +138,7 @@ func (c *Config) DeleteService(serviceID string) {
 	c.Order = util.RemoveElement(c.Order, serviceID)
 
 	// nil the channels and set the `deleting` flag
-	c.Service[serviceID].PrepDelete()
+	c.Service[serviceID].PrepDelete(true)
 
 	// Remove the service from the config
 	delete(c.Service, serviceID)

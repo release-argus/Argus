@@ -100,6 +100,19 @@ func TestConfig_RenameService(t *testing.T) {
 				}
 				t.Errorf("%q should be at the given address, got\n%+v", tc.newName, cfg.Service[tc.newName])
 			}
+			// AND the DatabaseChannel should have a message waiting if it didn't fail
+			want := 0
+			if !tc.fail {
+				want = 1
+			}
+			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
+				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
+					want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					t.Log(msg)
+				}
+			}
 		})
 	}
 }
@@ -110,14 +123,17 @@ func TestConfig_DeleteService(t *testing.T) {
 	tests := map[string]struct {
 		name      string
 		wantOrder []string
+		dbMessage bool
 	}{
 		"Delete service": {
 			name:      "bravo",
 			wantOrder: []string{"alpha", "charlie"},
+			dbMessage: true,
 		},
 		"Delete service that doesn't exist": {
 			name:      "test",
 			wantOrder: []string{"alpha", "bravo", "charlie"},
+			dbMessage: false,
 		},
 	}
 	logMutex := sync.Mutex{}
@@ -153,6 +169,19 @@ func TestConfig_DeleteService(t *testing.T) {
 						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
 				}
 			}
+			// AND the DatabaseChannel should have a message waiting if the service was deleted
+			want := 0
+			if tc.dbMessage {
+				want = 1
+			}
+			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
+				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
+					want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					t.Log(msg)
+				}
+			}
 		})
 	}
 }
@@ -164,35 +193,41 @@ func TestConfig_AddService(t *testing.T) {
 		oldService string
 		wantOrder  []string
 		added      bool
+		dbMessages int
 		nilMap     bool
 	}{
 		"New service": {
 			newService: testServiceURL("test"),
 			wantOrder:  []string{"alpha", "bravo", "charlie", "test"},
 			added:      true,
+			dbMessages: 1,
 		},
 		"Replace service": {
 			oldService: "bravo",
 			newService: testServiceURL("bravo"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      true,
+			dbMessages: 1,
 		},
 		"Rename service": {
 			oldService: "bravo",
 			newService: testServiceURL("foo"),
 			wantOrder:  []string{"alpha", "foo", "charlie"},
 			added:      true,
+			dbMessages: 2, // 1 for change of id, 1 for change of versions
 		},
 		"Add service that already exists": {
 			newService: testServiceURL("alpha"),
 			wantOrder:  []string{"alpha", "bravo", "charlie"},
 			added:      false,
+			dbMessages: 0,
 		},
-		"nil service map": {
+		"Add to nil service map": {
 			newService: testServiceURL("test"),
 			wantOrder:  []string{"test"},
 			added:      true,
 			nilMap:     true,
+			dbMessages: 1,
 		},
 	}
 	logMutex := sync.Mutex{}
@@ -237,6 +272,15 @@ func TestConfig_AddService(t *testing.T) {
 				if service != tc.wantOrder[i] {
 					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
 						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
+				}
+			}
+			// AND the DatabaseChannel should have a message waiting if the service was added
+			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
+				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
+					tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					t.Log(msg)
 				}
 			}
 		})

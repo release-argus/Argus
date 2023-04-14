@@ -19,7 +19,7 @@ import (
 )
 
 // PrepDelete prepares a service for deletion by removing all channels and setting the `deleting“ flag.
-func (s *Service) PrepDelete() {
+func (s *Service) PrepDelete(removeFromDB bool) {
 	s.Status.SetDeleting()
 
 	// nil the channels so the service doesn't trigger any more events
@@ -28,9 +28,10 @@ func (s *Service) PrepDelete() {
 	s.Status.SaveChannel = nil
 
 	// Delete the row for this service in the database
-	*s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
-		ServiceID: s.ID,
-		Delete:    true,
+	if removeFromDB {
+		*s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
+			ServiceID: s.ID,
+			Delete:    true}
 	}
 
 	s.DeleteMetrics()
