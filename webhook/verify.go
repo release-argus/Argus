@@ -45,6 +45,13 @@ func (w *Slice) CheckValues(prefix string) (errs error) {
 
 // CheckValues are valid for this WebHook recipient.
 func (w *WebHook) CheckValues(prefix string) (errs error) {
+	// Type
+	types := []string{"github", "gitlab"}
+	if w.Type != "" && !util.Contains(types, w.Type) {
+		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
+			util.ErrorToString(errs), prefix, w.Type, types)
+	}
+
 	// Delay
 	if w.Delay != "" {
 		// Default to seconds when an integer is provided
@@ -52,7 +59,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			w.Delay += "s"
 		}
 		if _, err := time.ParseDuration(w.Delay); err != nil {
-			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
+			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)\\",
 				util.ErrorToString(errs), prefix, w.Delay)
 		}
 	}
@@ -62,10 +69,14 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 			util.ErrorToString(errs), prefix, w.URL)
 	}
 	if w.Main != nil {
-		types := []string{"github", "gitlab"}
-		if !util.Contains(types, w.GetType()) {
+		whType := w.GetType()
+		if whType == "" {
+			errs = fmt.Errorf("%s%stype: <missing> (supported types = %s)\\",
+				util.ErrorToString(errs), prefix, types)
+			// Invalid Type on main/defaults
+		} else if w.Type == "" && !util.Contains(types, whType) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = %s)\\",
-				util.ErrorToString(errs), prefix, w.GetType(), types)
+				util.ErrorToString(errs), prefix, whType, types)
 		}
 		if util.GetFirstNonDefault(
 			w.URL,

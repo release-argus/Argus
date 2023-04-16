@@ -162,10 +162,10 @@ type: github
 url: https://example.com
 allow_invalid_certs: false
 custom_headers:
-- key: X-Header
-  value: val
-- key: X-Another
-  value: val2
+    - key: X-Header
+      value: val
+    - key: X-Another
+      value: val2
 secret: foobar
 desired_status_code: 200
 delay: 1h1mm1s
@@ -179,8 +179,8 @@ silent_fails: true
 					{Key: ">123", Value: "{pass}"}}},
 			want: `
 custom_headers:
-- key: '>123'
-  value: '{pass}'
+    - key: '>123'
+      value: '{pass}'
 `},
 	}
 
@@ -222,8 +222,8 @@ func TestSlice_String(t *testing.T) {
 					URL:  "https://example.com"}},
 			want: `
 one:
-  type: github
-  url: https://example.com
+    type: github
+    url: https://example.com
 `,
 		},
 		"multiple": {
@@ -236,11 +236,11 @@ one:
 					URL:  "https://other.com"}},
 			want: `
 one:
-  type: github
-  url: https://example.com
+    type: github
+    url: https://example.com
 two:
-  type: gitlab
-  url: https://other.com
+    type: gitlab
+    url: https://other.com
 `,
 		},
 		"quotes otherwise invalid yaml strings": {
@@ -249,9 +249,9 @@ two:
 					{Key: ">123", Value: "{pass}"}}}},
 			want: `
 invalid:
-  custom_headers:
-  - key: '>123'
-    value: '{pass}'
+    custom_headers:
+        - key: '>123'
+          value: '{pass}'
 `},
 	}
 
