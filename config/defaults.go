@@ -16,6 +16,10 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -25,6 +29,7 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
+	"gopkg.in/yaml.v3"
 )
 
 // Defaults for the other Structs.
@@ -32,6 +37,16 @@ type Defaults struct {
 	Service service.Service `yaml:"service,omitempty"`
 	Notify  shoutrrr.Slice  `yaml:"notify,omitempty"`
 	WebHook webhook.WebHook `yaml:"webhook,omitempty"`
+}
+
+// String returns a string representation of the Defaults.
+func (d *Defaults) String() string {
+	if d == nil {
+		return "<nil>"
+	}
+
+	yamlBytes, _ := yaml.Marshal(d)
+	return string(yamlBytes)
 }
 
 // SetDefaults (last resort vars).
@@ -122,7 +137,7 @@ func (d *Defaults) SetDefaults() {
 		Options: notifyDefaultOptions,
 		Params: types.Params{
 			"botname": "Argus"}}
-	d.Notify["team"] = &shoutrrr.Shoutrrr{
+	d.Notify["teams"] = &shoutrrr.Shoutrrr{
 		Options: notifyDefaultOptions,
 		Params:  types.Params{}}
 	d.Notify["telegram"] = &shoutrrr.Shoutrrr{
@@ -149,6 +164,160 @@ func (d *Defaults) SetDefaults() {
 	d.WebHook.DesiredStatusCode = &webhookDesiredStatusCode
 	webhookSilentFails := false
 	d.WebHook.SilentFails = &webhookSilentFails
+
+	// Overwrite defaults with environment variables.
+	err := d.MapEnvToStruct()
+	jLog.Fatal(
+		strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
+		util.LogFrom{},
+		err != nil)
+}
+
+// MapEnvToStruct maps environment variables this struct.
+func (d *Defaults) MapEnvToStruct() (err error) {
+	err = mapEnvToStruct(d, "", nil)
+	if err != nil {
+		return
+	}
+	err = d.CheckValues()
+	return
+}
+func mapEnvToStruct(src interface{}, prefix string, envVars *[]string) (err error) {
+	srcV := reflect.ValueOf(src).Elem()
+	if prefix == "" {
+		prefix = "ARGUS_"
+		// All env vars
+		allEnvVars := os.Environ()
+		envVarsTrimmed := make([]string, 0, len(allEnvVars))
+		// TRIM non-ARGUS env vars
+		for _, envVar := range allEnvVars {
+			if strings.HasPrefix(envVar, prefix) {
+				envVarsTrimmed = append(envVarsTrimmed, envVar)
+			}
+		}
+		// Have no pointers to map
+		if len(envVarsTrimmed) == 0 {
+			return
+		}
+		envVars = &envVarsTrimmed
+	}
+
+	for i := 0; i < srcV.NumField(); i++ {
+		fieldType := srcV.Field(i).Type()
+		kind := fieldType.Kind()
+		// Get kind of this pointer
+		if kind == reflect.Ptr {
+			// Skip nil pointers to non-comparable types
+			if !fieldType.Elem().Comparable() && srcV.Field(i).IsNil() {
+				continue
+			}
+			kind = fieldType.Elem().Kind()
+		}
+
+		// YAML tag of this field
+		srcT := reflect.TypeOf(src).Elem()
+		fieldName := srcT.Field(i).Tag.Get("yaml")
+		if strings.Contains(fieldName, ",") {
+			fieldName = strings.Split(fieldName, ",")[0]
+		}
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
+		fieldName = strings.ToUpper(prefix + fieldName)
+		hasEnvVar := false
+		for _, envVar := range *envVars {
+			if strings.HasPrefix(envVar, fieldName) {
+				hasEnvVar = true
+				break
+			}
+		}
+		if !hasEnvVar {
+			continue
+		}
+
+		switch kind {
+		case reflect.Bool, reflect.Int, reflect.String, reflect.Uint:
+			// Check if env var exists for this field
+			if envValueStr, exists := os.LookupEnv(fieldName); exists {
+				isPointer := fieldType.Kind() == reflect.Ptr
+				// Get ENV var in correct type
+				switch kind {
+				// Boolean
+				case reflect.Bool:
+					envValue, err := strconv.ParseBool(envValueStr)
+					if err != nil {
+						return fmt.Errorf("invalid bool for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						srcV.Field(i).Set(reflect.ValueOf(&envValue))
+					}
+
+					// Integer
+				case reflect.Int:
+					envValue, err := strconv.Atoi(envValueStr)
+					if err != nil {
+						return fmt.Errorf("invalid integer for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						srcV.Field(i).Set(reflect.ValueOf(&envValue))
+					}
+
+					// String
+				case reflect.String:
+					envValue := envValueStr
+					if !isPointer {
+						srcV.Field(i).SetString(envValue)
+					}
+
+					// UInt
+				case reflect.Uint:
+					envValue, err := strconv.ParseUint(envValueStr, 10, 64)
+					if err != nil {
+						return fmt.Errorf("invalid uint for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						uInt := uint(envValue)
+						srcV.Field(i).Set(reflect.ValueOf(&uInt))
+					}
+				}
+			}
+		case reflect.Map:
+			// Notify maps
+			if strings.HasPrefix(fieldName, "ARGUS_NOTIFY_") &&
+				!strings.HasSuffix(fieldName, "ARGUS_NOTIFY_") {
+				for _, envVar := range *envVars {
+					if strings.HasPrefix(envVar, fieldName) {
+						// Get key and value
+						keyValue := strings.SplitN(envVar, "=", 2)
+						// Remove fieldName from key
+						keyValue[0] = strings.ToLower(
+							strings.Replace(keyValue[0], fieldName+"_", "", 1))
+						// Set value in map
+						srcV.Field(i).SetMapIndex(reflect.ValueOf(keyValue[0]), reflect.ValueOf(keyValue[1]))
+					}
+				}
+				continue
+			}
+			// Recurse into map
+			for _, key := range srcV.Field(i).MapKeys() {
+				err = mapEnvToStruct(
+					srcV.Field(i).MapIndex(key).Interface(),
+					fmt.Sprintf("%s_%s_", fieldName, strings.ToUpper(key.String())),
+					envVars)
+			}
+		case reflect.Struct:
+			fieldName += "_"
+			if fieldType.Kind() == reflect.Ptr {
+				err = mapEnvToStruct(srcV.Field(i).Interface(), fieldName, envVars)
+			} else {
+				err = mapEnvToStruct(srcV.Field(i).Addr().Interface(), fieldName, envVars)
+			}
+		}
+	}
+	return
 }
 
 // CheckValues are valid.

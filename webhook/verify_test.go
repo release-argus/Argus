@@ -26,7 +26,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestWebHookPrint(t *testing.T) {
+func TestWebHook_Print(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		webhook *WebHook
@@ -65,7 +65,7 @@ func TestWebHookPrint(t *testing.T) {
 	}
 }
 
-func TestSlicePrint(t *testing.T) {
+func TestSlice_Print(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		slice        *Slice
@@ -142,13 +142,14 @@ func TestSlicePrint(t *testing.T) {
 	}
 }
 
-func TestWebHookCheckValues(t *testing.T) {
+func TestWebHook_CheckValues(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
 		delay         string
 		wantDelay     string
 		noMain        bool
-		whType        string
+		whType        *string
+		whMainType    string
 		url           *string
 		secret        *string
 		customHeaders Headers
@@ -167,8 +168,17 @@ func TestWebHookCheckValues(t *testing.T) {
 			wantDelay: "5s",
 		},
 		"invalid type": {
-			errRegex: "type: .* <invalid>",
-			whType:   "foo",
+			errRegex: "type: .*foo.* <invalid>",
+			whType:   stringPtr("foo"),
+		},
+		"invalid main type": {
+			errRegex:   "type: .*bar.* <invalid>",
+			whType:     stringPtr(""),
+			whMainType: "bar",
+		},
+		"no type": {
+			errRegex: "type: <missing>",
+			whType:   stringPtr(""),
 		},
 		"invalid url template": {
 			errRegex: "url: .* <invalid>",
@@ -194,9 +204,9 @@ func TestWebHookCheckValues(t *testing.T) {
 				{Key: "bar", Value: "{{ version }"}},
 		},
 		"all errs": {
-			errRegex: "delay: .* <invalid>.*type: .* <invalid>.*url: <required>.*secret: <required>",
+			errRegex: "type: .* <invalid>.*delay: .* <invalid>.*url: <required>.*secret: <required>",
 			delay:    "5x",
-			whType:   "foo",
+			whType:   stringPtr("foo"),
 			url:      stringPtr(""),
 			secret:   stringPtr(""),
 		},
@@ -208,11 +218,14 @@ func TestWebHookCheckValues(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, !tc.noMain, false, false)
+			if tc.whMainType != "" {
+				webhook.Main.Type = tc.whMainType
+			}
 			if tc.delay != "" {
 				webhook.Delay = tc.delay
 			}
-			if tc.whType != "" {
-				webhook.Type = tc.whType
+			if tc.whType != nil {
+				webhook.Type = *tc.whType
 			}
 			if tc.url != nil {
 				webhook.URL = *tc.url
@@ -241,7 +254,7 @@ func TestWebHookCheckValues(t *testing.T) {
 	}
 }
 
-func TestSliceCheckValues(t *testing.T) {
+func TestSlice_CheckValues(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		slice    *Slice

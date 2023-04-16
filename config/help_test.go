@@ -36,8 +36,15 @@ import (
 func boolPtr(val bool) *bool {
 	return &val
 }
+func intPtr(val int) *int {
+	return &val
+}
 func stringPtr(val string) *string {
 	return &val
+}
+func uintPtr(val int) *uint {
+	converted := uint(val)
+	return &converted
 }
 
 func testConfig() Config {

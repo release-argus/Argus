@@ -22,7 +22,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var (
