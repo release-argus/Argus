@@ -37,8 +37,8 @@ func LogInit(log *util.JLog) {
 
 // Init the Lookup, assigning Defaults and initialising child structs.
 func (l *Lookup) Init(
-	defaults *Lookup,
-	hardDefaults *Lookup,
+	defaults *LookupDefaults,
+	hardDefaults *LookupDefaults,
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {
@@ -50,6 +50,8 @@ func (l *Lookup) Init(
 	l.HardDefaults = hardDefaults
 	l.Status = status
 	l.Options = options
+
+	l.Require.Init(status, &defaults.Require)
 }
 
 // initMetrics for this Lookup.

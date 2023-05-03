@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -74,7 +73,6 @@ func Run(cfg *config.Config, log *util.JLog) {
 	defer api.db.Close()
 	if len(api.config.Order) > 0 {
 		api.removeUnknownServices()
-		api.convertServiceStatus()
 		api.extractServiceStatus()
 	}
 
@@ -170,58 +168,4 @@ func (api *api) extractServiceStatus() {
 		fmt.Sprintf("extractServiceStatus: %s", util.ErrorToString(err)),
 		*logFrom,
 		err != nil)
-}
-
-// TODO: Deprecate
-// convertServiceStatus will push Service.*.OldStatus to the DB
-func (api *api) convertServiceStatus() {
-	sqlStmt := `
-		INSERT OR REPLACE INTO status
-			(
-				id,
-				latest_version,
-				latest_version_timestamp,
-				deployed_version,
-				deployed_version_timestamp,
-				approved_version
-			)
-		VALUES`
-
-	api.config.OrderMutex.RLock()
-	defer api.config.OrderMutex.RUnlock()
-	servicesToConvert := 0
-	for _, id := range api.config.Order {
-		if api.config.Service[id].OldStatus != nil {
-			servicesToConvert++
-			sqlStmt += fmt.Sprintf(" ('%s', '%s', '%s', '%s', '%s', '%s'),",
-				id,
-				api.config.Service[id].OldStatus.LatestVersion,
-				api.config.Service[id].OldStatus.LatestVersionTimestamp,
-				api.config.Service[id].OldStatus.DeployedVersion,
-				api.config.Service[id].OldStatus.DeployedVersionTimestamp,
-				api.config.Service[id].OldStatus.ApprovedVersion)
-			api.config.Service[id].Status = svcstatus.Status{}
-			api.config.Service[id].Status.Init(
-				len(api.config.Service[id].Notify), len(api.config.Service[id].Command), len(api.config.Service[id].WebHook),
-				&id,
-				&api.config.Service[id].Dashboard.WebURL)
-			api.config.Service[id].Status.SetLatestVersion(api.config.Service[id].OldStatus.LatestVersion, false)
-			api.config.Service[id].Status.SetLatestVersionTimestamp(api.config.Service[id].OldStatus.LatestVersionTimestamp)
-			api.config.Service[id].Status.SetDeployedVersion(api.config.Service[id].OldStatus.DeployedVersion, false)
-			api.config.Service[id].Status.SetDeployedVersionTimestamp(api.config.Service[id].OldStatus.DeployedVersionTimestamp)
-			api.config.Service[id].Status.SetApprovedVersion(api.config.Service[id].OldStatus.ApprovedVersion, false)
-		}
-	}
-	if servicesToConvert != 0 {
-		*api.config.SaveChannel <- true
-		_, err := api.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
-		jLog.Fatal(
-			fmt.Sprintf("convertServiceStatus: %s\n%s",
-				util.ErrorToString(err), sqlStmt),
-			*logFrom,
-			err != nil)
-		for _, id := range api.config.Order {
-			api.config.Service[id].OldStatus = nil
-		}
-	}
 }

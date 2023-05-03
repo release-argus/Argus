@@ -32,12 +32,12 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
-	testLogging()
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
@@ -50,8 +50,9 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					Options: opt.Options{
-						Interval: "0s"},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil),
 				},
 			},
 		},
@@ -61,8 +62,9 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					Options: opt.Options{
-						Interval: "0s"},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil),
 				},
 			},
 		},
@@ -71,19 +73,19 @@ func TestServiceTest(t *testing.T) {
 			outputRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					LatestVersion: latestver.Lookup{
-						Type: "github",
-						URL:  "release-argus/Argus",
-						URLCommands: filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr("[0-9.]+$")},
-						},
-						AccessToken:       stringPtr(os.Getenv("GITHUB_TOKEN")),
-						AllowInvalidCerts: boolPtr(false),
-					},
-					Options: opt.Options{
-						Interval: "0s",
-					},
-				},
+					LatestVersion: *latestver.New(
+						stringPtr(os.Getenv("GITHUB_TOKEN")),
+						boolPtr(false),
+						nil,
+						opt.New(
+							nil, "0s", nil,
+							nil, nil),
+						nil, nil,
+						"github",
+						"release-argus/Argus",
+						&filter.URLCommandSlice{
+							{Type: "regex", Regex: stringPtr("[0-9.]+$")}},
+						nil, nil, nil)},
 			},
 		},
 		"url service type but github owner/repo url": {
@@ -92,14 +94,19 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latestver.Lookup{
-						Type: "url",
-						URL:  "release-argus/Argus",
-						URLCommands: filter.URLCommandSlice{
+					LatestVersion: *latestver.New(
+						nil,
+						boolPtr(false),
+						nil,
+						opt.New(
+							nil, "0s", nil,
+							nil, nil),
+						nil, nil,
+						"url",
+						"release-argus/Argus",
+						&filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr("[0-9.]+$")}},
-						AllowInvalidCerts: boolPtr(false)},
-					Options: opt.Options{
-						Interval: "0s"}}},
+						nil, nil, nil)}},
 		},
 		"url service": {
 			flag:        "argus",
@@ -107,14 +114,19 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latestver.Lookup{
-						Type: "url",
-						URL:  "https://github.com/release-argus/Argus/releases",
-						URLCommands: filter.URLCommandSlice{
+					LatestVersion: *latestver.New(
+						nil,
+						boolPtr(false),
+						nil,
+						opt.New(
+							nil, "0s", nil,
+							nil, nil),
+						nil, nil,
+						"url",
+						"https://github.com/release-argus/Argus/releases",
+						&filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
-						AllowInvalidCerts: boolPtr(false),
-						Options: &opt.Options{
-							Interval: "0s"}}}},
+						nil, nil, nil)}},
 		},
 		"service with deployed version lookup": {
 			flag:        "argus",
@@ -122,19 +134,26 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: latestver.Lookup{
-						Type: "url",
-						URL:  "https://github.com/release-argus/Argus/releases",
-						URLCommands: filter.URLCommandSlice{
+					LatestVersion: *latestver.New(
+						nil,
+						boolPtr(false),
+						nil, nil, nil, nil,
+						"url",
+						"https://github.com/release-argus/Argus/releases",
+						&filter.URLCommandSlice{
 							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
-						AllowInvalidCerts: boolPtr(false)},
-					DeployedVersionLookup: &deployedver.Lookup{
-						URL:               "https://release-argus.io/demo/api/v1/version",
-						AllowInvalidCerts: boolPtr(true),
-						JSON:              "version"},
-					Options: opt.Options{
-						Interval:           "0s",
-						SemanticVersioning: boolPtr(true)}}},
+						nil, nil, nil),
+					DeployedVersionLookup: deployedver.New(
+						boolPtr(true),
+						nil, nil,
+						"version",
+						nil, "",
+						&svcstatus.Status{},
+						"https://release-argus.io/demo/api/v1/version",
+						nil, nil),
+					Options: *opt.New(
+						nil, "0s", boolPtr(true),
+						nil, nil)}},
 		},
 	}
 
@@ -163,15 +182,15 @@ func TestServiceTest(t *testing.T) {
 				defaults.SetDefaults()
 				tc.slice[tc.flag].ID = tc.flag
 				tc.slice[tc.flag].Init(
-					&service.Service{}, &defaults.Service,
-					&shoutrrr.Slice{}, &shoutrrr.Slice{}, &defaults.Notify,
-					&webhook.Slice{}, &webhook.WebHook{}, &defaults.WebHook)
+					&service.ServiceDefaults{}, &defaults.Service,
+					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &defaults.Notify,
+					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
 				dbChannel := make(chan dbtype.Message, 4)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
 				if tc.slice[tc.flag].DeployedVersionLookup != nil {
-					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployedver.Lookup{}
-					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployedver.Lookup{}
+					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployedver.LookupDefaults{}
+					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployedver.LookupDefaults{}
 				}
 			}
 

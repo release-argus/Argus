@@ -55,9 +55,8 @@ func TestLookup_Metrics(t *testing.T) {
 func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup(false, false)
-	testLogging("DEBUG")
-	var defaults Lookup
-	var hardDefaults Lookup
+	var defaults LookupDefaults
+	var hardDefaults LookupDefaults
 	*lookup.Status.ServiceID += "TestInit"
 	status := svcstatus.Status{ServiceID: stringPtr("test")}
 	var options opt.Options

@@ -17,106 +17,12 @@
 package latestver
 
 import (
-	"io"
-	"os"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 )
-
-func TestLookup_Print(t *testing.T) {
-	// GIVEN a Lookup
-	tests := map[string]struct {
-		lookup      *Lookup
-		urlCommands filter.URLCommandSlice
-		require     *filter.Require
-		options     opt.Options
-		lines       int
-	}{
-		"minimal github type with no urlCommands/require": {
-			lookup: &Lookup{
-				Type: "github",
-				URL:  "release-argus/Argus"},
-			lines: 3,
-		},
-		"fully defined github type with no urlCommands/require": {
-			lookup: testLookup(false, false),
-			lines:  6,
-		},
-		"url type with no urlCommands/require": {
-			lookup: testLookup(true, false),
-			lines:  4,
-		},
-		"url type with urlCommands and no require": {
-			lookup: testLookup(true, false),
-			lines:  7,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-		},
-		"github type with urlCommands and no require": {
-			lookup: testLookup(false, false),
-			lines:  9,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-		},
-		"url type with require and no urlCommands": {
-			lookup:  testLookup(true, false),
-			lines:   6,
-			require: &filter.Require{RegexContent: "foo"},
-		},
-		"github type with require and no urlCommands": {
-			lookup:  testLookup(false, false),
-			lines:   8,
-			require: &filter.Require{RegexContent: "foo"},
-		},
-		"url type with urlCommands and require": {
-			lookup: testLookup(true, false),
-			lines:  9,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-			require: &filter.Require{
-				RegexContent: "foo"},
-			options: opt.Options{Active: boolPtr(false)},
-		},
-		"github type with urlCommands and require": {
-			lookup: testLookup(false, false),
-			lines:  11,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-			require: &filter.Require{RegexContent: "foo"},
-			options: opt.Options{Active: boolPtr(false)},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			tc.lookup.Require = tc.require
-			tc.lookup.URLCommands = tc.urlCommands
-			tc.lookup.Options = &tc.options
-
-			// WHEN Print is called
-			tc.lookup.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
 
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup

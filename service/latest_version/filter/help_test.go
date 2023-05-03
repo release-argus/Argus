@@ -17,6 +17,10 @@
 package filter
 
 import (
+	"os"
+	"testing"
+	"time"
+
 	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/util"
 )
@@ -24,9 +28,18 @@ import (
 func stringPtr(val string) *string {
 	return &val
 }
-func testLogging(level string) {
-	jLog = util.NewJLog(level, false)
+
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
+	jLog.Testing = true
 	LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
 func testURLCommandRegex() URLCommand {
@@ -35,8 +48,7 @@ func testURLCommandRegex() URLCommand {
 	return URLCommand{
 		Type:  "regex",
 		Regex: &regex,
-		Index: index,
-	}
+		Index: index}
 }
 
 func testURLCommandReplace() URLCommand {
@@ -45,8 +57,7 @@ func testURLCommandReplace() URLCommand {
 	return URLCommand{
 		Type: "replace",
 		Old:  &old,
-		New:  &new,
-	}
+		New:  &new}
 }
 
 func testURLCommandSplit() URLCommand {
@@ -55,8 +66,7 @@ func testURLCommandSplit() URLCommand {
 	return URLCommand{
 		Type:  "split",
 		Text:  &text,
-		Index: index,
-	}
+		Index: index}
 }
 
 func testRequire() Require {
@@ -64,10 +74,9 @@ func testRequire() Require {
 		Command:      command.Command{"echo", "foo"},
 		RegexContent: "bish",
 		RegexVersion: "bash",
-		Docker: &DockerCheck{
-			Type:  "ghcr",
-			Image: "releaseargus/argus",
-			Tag:   "latest",
-		},
-	}
+		Docker: NewDockerCheck(
+			"ghcr",
+			"releaseargus/argus",
+			"latest",
+			"", "", "", time.Now(), nil)}
 }

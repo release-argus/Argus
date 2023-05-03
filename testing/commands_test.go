@@ -31,7 +31,6 @@ import (
 
 func TestCommandTest(t *testing.T) {
 	// GIVEN a Config with a Service containing a Command
-	testLogging()
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
@@ -47,8 +46,9 @@ func TestCommandTest(t *testing.T) {
 					Command: command.Slice{
 						{"true", "0"}},
 					CommandController: &command.Controller{},
-					Options: opt.Options{
-						Interval: "0s"}}},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil)}},
 		},
 		"unknown service in flag": {
 			flag:        "something",
@@ -60,8 +60,9 @@ func TestCommandTest(t *testing.T) {
 					Command: command.Slice{
 						{"true", "0"}},
 					CommandController: &command.Controller{},
-					Options: opt.Options{
-						Interval: "0s"}}},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil)}},
 		},
 		"known service in flag successful command": {
 			flag:        "argus",
@@ -72,8 +73,9 @@ func TestCommandTest(t *testing.T) {
 					Command: command.Slice{
 						{"echo", "command did run"}},
 					CommandController: &command.Controller{},
-					Options: opt.Options{
-						Interval: "0s"}}},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil)}},
 		},
 		"known service in flag failing command": {
 			flag:        "argus",
@@ -84,8 +86,9 @@ func TestCommandTest(t *testing.T) {
 					Command: command.Slice{
 						{"ls", "/root"}},
 					CommandController: &command.Controller{},
-					Options: opt.Options{
-						Interval: "0s"}}},
+					Options: *opt.New(
+						nil, "0s", nil,
+						nil, nil)}},
 		},
 		"service with no commands": {
 			flag:        "argus",

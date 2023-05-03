@@ -19,6 +19,7 @@ package v1
 import (
 	"fmt"
 	"os"
+	"testing"
 
 	"github.com/gorilla/websocket"
 	"github.com/release-argus/Argus/config"
@@ -48,10 +49,17 @@ func stringifyPointer[T comparable](ptr *T) string {
 	return str
 }
 
-func testLogging() {
+func TestMain(m *testing.M) {
+	// initialize jLog
 	jLog := util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	service.LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
 func testClient() Client {
@@ -82,7 +90,7 @@ func testAPI(name string) API {
 	cfg := testLoad(name)
 	accessToken := os.Getenv("GITHUB_TOKEN")
 	if accessToken != "" {
-		cfg.HardDefaults.Service.AccessToken = &accessToken
+		cfg.HardDefaults.Service.LatestVersion.AccessToken = &accessToken
 	}
 	return API{
 		Config: cfg,
@@ -96,31 +104,31 @@ func testService(id string) *service.Service {
 	svc := service.Service{
 		ID:      id,
 		Comment: "foo",
-		LatestVersion: latestver.Lookup{
-			Type:              "url",
-			URL:               "https://valid.release-argus.io/plain",
-			AllowInvalidCerts: boolPtr(false),
-			URLCommands: []filter.URLCommand{
-				{Type: "regex", Regex: stringPtr(`stable version: "v?([0-9.]+)"`)}}},
-		DeployedVersionLookup: &deployedver.Lookup{
-			URL:               "https://valid.release-argus.io/json",
-			AllowInvalidCerts: boolPtr(false),
-			JSON:              "foo.bar.version"},
-		Options: opt.Options{
-			SemanticVersioning: boolPtr(true)},
-		Status: svcstatus.Status{
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel}}
+		LatestVersion: *latestver.New(
+			nil,
+			boolPtr(false),
+			nil, nil, nil, nil,
+			"url",
+			"https://valid.release-argus.io/plain",
+			&filter.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr(`stable version: "v?([0-9.]+)"`)}},
+			nil, nil, nil),
+		DeployedVersionLookup: deployedver.New(
+			boolPtr(false),
+			nil, nil,
+			"foo.bar.version",
+			nil, "",
+			&svcstatus.Status{},
+			"https://valid.release-argus.io/json",
+			nil, nil),
+		Options: *opt.New(
+			nil, "", boolPtr(true),
+			nil, nil)}
 	svc.Init(
-		&service.Service{
-			Options: opt.Options{}},
-		&service.Service{
-			Options:               opt.Options{},
-			DeployedVersionLookup: &deployedver.Lookup{},
-			Status: svcstatus.Status{
-				AnnounceChannel: &announceChannel,
-				DatabaseChannel: &databaseChannel}},
-		&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
-		&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+		&service.ServiceDefaults{}, &service.ServiceDefaults{},
+		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+		&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
+	svc.Status.AnnounceChannel = &announceChannel
+	svc.Status.DatabaseChannel = &databaseChannel
 	return &svc
 }

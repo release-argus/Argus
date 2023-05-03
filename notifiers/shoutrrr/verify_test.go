@@ -23,121 +23,78 @@ import (
 	"strings"
 	"testing"
 
+	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestShoutrrr_Print(t *testing.T) {
-	// GIVEN a Service
+func TestSliceDefaults_Print(t *testing.T) {
+	// GIVEN a SliceDefaults
+	testValid := testShoutrrrDefaults(false, false)
+	testInvalid := testShoutrrrDefaults(true, true)
 	tests := map[string]struct {
-		sType     string
-		options   map[string]string
-		urlFields map[string]string
-		params    map[string]string
-		lines     int
-	}{
-		"all empty": {
-			lines: 0},
-		"only type": {
-			lines: 1, sType: "gotify"},
-		"type and options": {
-			lines: 3, sType: "gotify",
-			options: map[string]string{"foo": "bar"}},
-		"type,options and urlFields": {
-			lines: 5, sType: "gotify",
-			options:   map[string]string{"foo": "bar"},
-			urlFields: map[string]string{"foo": "bar"}},
-		"type,options,urlFields and params": {
-			lines: 7, sType: "gotify",
-			options:   map[string]string{"foo": "bar"},
-			urlFields: map[string]string{"foo": "bar"},
-			params:    map[string]string{"foo": "bar"}},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			shoutrrr := Shoutrrr{
-				Type:      tc.sType,
-				Options:   tc.options,
-				URLFields: tc.urlFields,
-				Params:    tc.params,
-			}
-
-			// WHEN Print is called
-			shoutrrr.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
-
-func TestSlice_Print(t *testing.T) {
-	// GIVEN a Service
-	tests := map[string]struct {
-		slice *Slice
-		lines int
+		slice *SliceDefaults
 		want  string
 	}{
-		"nil slice": {
-			lines: 0, slice: nil,
+		"nil": {
+			slice: nil,
+			want:  "",
+		},
+		"empty": {
+			slice: &SliceDefaults{},
+			want:  "",
+		},
+		"single empty element slice": {
+			slice: &SliceDefaults{
+				"single": {}},
+			want: `
+notify:
+  single: {}`,
 		},
 		"single element slice": {
-			lines: 9,
-			slice: &Slice{
-				"single": testShoutrrr(false, false, false)},
+			slice: &SliceDefaults{
+				"single": testValid},
 			want: `
 notify:
   single:
     type: gotify
     options:
-      max_tries: 1
+      max_tries: "` + testValid.GetSelfOption("max_tries") + `"
     url_fields:
-      host: valid.release-argus.io
-      path: /gotify
-      token: AGE-LlHU89Q56uQ
-`,
+      host: ` + testValid.GetSelfURLField("host") + `
+      path: ` + testValid.GetSelfURLField("path") + `
+      token: ` + testValid.GetSelfURLField("token"),
 		},
 		"multiple element slice": {
-			lines: 17,
-			slice: &Slice{
-				"first":  testShoutrrr(false, false, false),
-				"second": testShoutrrr(true, true, true)},
+			slice: &SliceDefaults{
+				"first":  testValid,
+				"second": testInvalid},
 			want: `
 notify:
   first:
     type: gotify
     options:
-      max_tries: 1
+      max_tries: "` + testValid.GetSelfOption("max_tries") + `"
     url_fields:
-      host: valid.release-argus.io
-      path: /gotify
-      token: AGE-LlHU89Q56uQ
+      host: ` + testValid.GetSelfURLField("host") + `
+      path: ` + testValid.GetSelfURLField("path") + `
+      token: ` + testValid.GetSelfURLField("token") + `
   second:
     type: gotify
     options:
-      max_tries: 1
+      max_tries: "` + testInvalid.GetSelfOption("max_tries") + `"
     url_fields:
-      host: invalid.release-argus.io
-      path: /gotify
-      token: invalid
-`,
+      host: ` + testInvalid.GetSelfURLField("host") + `
+      path: ` + testInvalid.GetSelfURLField("path") + `
+      token: ` + testInvalid.GetSelfURLField("token"),
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
+			if tc.want != "" {
+				tc.want += "\n"
+			}
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -145,16 +102,11 @@ notify:
 			// WHEN Print is called
 			tc.slice.Print("")
 
-			// THEN it prints the expected number of lines
+			// THEN it prints the expected output
 			w.Close()
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			strOut := string(out)
-			got := strings.Count(strOut, "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if strOut != tc.want {
 				t.Errorf("Print should have given\n%q\nbut gave\n%q",
@@ -164,14 +116,14 @@ notify:
 	}
 }
 
-func TestShoutrrr_CheckValuesMaster(t *testing.T) {
+func TestShoutrrr_checkValuesMaster(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		sType              *string
 		options            map[string]string
 		urlFields          map[string]string
 		params             map[string]string
-		main               Shoutrrr
+		main               *ShoutrrrDefaults
 		errsRegex          string
 		errsOptionsRegex   string
 		errsURLFieldsRegex string
@@ -209,10 +161,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"discord - valid with main": {
 			sType: stringPtr("discord"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"token":     "bish",
-					"webhookid": "bash"}},
+					"webhookid": "bash"}),
 		},
 		"smtp - invalid": {
 			sType:              stringPtr("smtp"),
@@ -252,12 +205,13 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"smtp - valid with main": {
 			sType: stringPtr("smtp"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"host": "bish"},
-				Params: map[string]string{
+			main: NewDefaults(
+				"", nil,
+				&map[string]string{
 					"fromaddress": "bash",
-					"toaddresses": "bosh"}},
+					"toaddresses": "bosh"},
+				&map[string]string{
+					"host": "bish"}),
 		},
 		"gotify - invalid": {
 			sType:              stringPtr("gotify"),
@@ -283,10 +237,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"gotify - valid with main": {
 			sType: stringPtr("gotify"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"host":  "bish",
-					"token": "bash"}},
+					"token": "bash"}),
 		},
 		"googlechat - invalid": {
 			sType:              stringPtr("googlechat"),
@@ -299,9 +254,10 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"googlechat - valid with main": {
 			sType: stringPtr("googlechat"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"raw": "bish"}},
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
+					"raw": "bish"}),
 		},
 		"ifttt - invalid": {
 			sType:              stringPtr("ifttt"),
@@ -329,11 +285,12 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"ifttt - valid with main": {
 			sType: stringPtr("ifttt"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"webhookid": "webhookid"},
-				Params: map[string]string{
-					"events": "events"}},
+			main: NewDefaults(
+				"", nil,
+				&map[string]string{
+					"events": "events"},
+				&map[string]string{
+					"webhookid": "webhookid"}),
 		},
 		"join - invalid": {
 			sType:              stringPtr("join"),
@@ -361,11 +318,12 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"join - valid with main": {
 			sType: stringPtr("join"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"apikey": "apikey"},
-				Params: map[string]string{
-					"devices": "devices"}},
+			main: NewDefaults(
+				"", nil,
+				&map[string]string{
+					"devices": "devices"},
+				&map[string]string{
+					"apikey": "apikey"}),
 		},
 		"mattermost - invalid": {
 			sType:              stringPtr("mattermost"),
@@ -391,10 +349,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"mattermost - valid with main": {
 			sType: stringPtr("mattermost"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"host":  "bish",
-					"token": "bash"}},
+					"token": "bash"}),
 		},
 		"matrix - invalid": {
 			sType:              stringPtr("matrix"),
@@ -420,10 +379,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"matrix - valid with main": {
 			sType: stringPtr("matrix"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"host":     "bish",
-					"password": "bash"}},
+					"password": "bash"}),
 		},
 		"opsgenie - invalid": {
 			sType:              stringPtr("opsgenie"),
@@ -436,9 +396,10 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"opsgenie - valid with main": {
 			sType: stringPtr("opsgenie"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"apikey": "apikey"}},
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
+					"apikey": "apikey"}),
 		},
 		"pushbullet - invalid": {
 			sType:              stringPtr("pushbullet"),
@@ -464,10 +425,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"pushbullet - valid with main": {
 			sType: stringPtr("pushbullet"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"token":   "bish",
-					"targets": "bash"}},
+					"targets": "bash"}),
 		},
 		"pushover - invalid": {
 			sType:              stringPtr("pushover"),
@@ -493,10 +455,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"pushover - valid with main": {
 			sType: stringPtr("pushover"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"token": "bish",
-					"user":  "bash"}},
+					"user":  "bash"}),
 		},
 		"rocketchat - invalid": {
 			sType:              stringPtr("rocketchat"),
@@ -544,12 +507,13 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"rocketchat - valid with main": {
 			sType: stringPtr("rocketchat"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"host":    "bish",
 					"tokena":  "bash",
 					"tokenb":  "bosh",
-					"channel": "bing"}},
+					"channel": "bing"}),
 		},
 		"slack - invalid": {
 			sType:              stringPtr("slack"),
@@ -575,10 +539,11 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"slack - valid with main": {
 			sType: stringPtr("slack"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"token":   "bish",
-					"channel": "bash"}},
+					"channel": "bash"}),
 		},
 		"teams - invalid": {
 			sType:              stringPtr("teams"),
@@ -645,14 +610,15 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"teams - valid with main": {
 			sType: stringPtr("teams"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil,
+				&map[string]string{
+					"host": "https://release-argus.io"},
+				&map[string]string{
 					"group":      "bish",
 					"tenant":     "bash",
 					"altid":      "bosh",
-					"groupowner": "bing"},
-				Params: map[string]string{
-					"host": "https://release-argus.io"}},
+					"groupowner": "bing"}),
 		},
 		"telegram - invalid": {
 			sType:              stringPtr("telegram"),
@@ -681,11 +647,12 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"telegram - valid with main": {
 			sType: stringPtr("telegram"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"token": "bish"},
-				Params: map[string]string{
-					"chats": "chats"}},
+			main: NewDefaults(
+				"", nil,
+				&map[string]string{
+					"chats": "chats"},
+				&map[string]string{
+					"token": "bish"}),
 		},
 		"zulip - invalid": {
 			sType:              stringPtr("zulip"),
@@ -721,11 +688,12 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"zulip - valid with main": {
 			sType: stringPtr("zulip"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
 					"host":    "bish",
 					"botmail": "bash",
-					"botkey":  "bosh"}},
+					"botkey":  "bosh"}),
 		},
 		"shoutrrr - invalid": {
 			sType:              stringPtr("shoutrrr"),
@@ -738,9 +706,10 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		},
 		"shoutrrr - valid with main": {
 			sType: stringPtr("shoutrrr"),
-			main: Shoutrrr{
-				URLFields: map[string]string{
-					"raw": "bish"}},
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
+					"raw": "bish"}),
 		},
 	}
 
@@ -749,15 +718,23 @@ func TestShoutrrr_CheckValuesMaster(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.sType != nil {
 				shoutrrr.Type = *tc.sType
 			}
-			shoutrrr.Main = &tc.main
-			shoutrrr.Main.InitMaps()
 			shoutrrr.Options = tc.options
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
+			svcStatus := svcstatus.New(
+				nil, nil, nil,
+				"", "", "", "", "", "")
+			svcStatus.Init(
+				1, 0, 0,
+				stringPtr("serviceID"), nil)
+			shoutrrr.Init(
+				svcStatus,
+				tc.main,
+				&ShoutrrrDefaults{}, &ShoutrrrDefaults{})
 
 			// WHEN checkValuesMaster is called
 			var (
@@ -948,7 +925,10 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			shoutrrr := Shoutrrr{Type: tc.sType}
+			shoutrrr := New(
+				nil, "", nil, nil,
+				tc.sType,
+				nil, nil, nil, nil)
 			shoutrrr.InitMaps()
 			if tc.mapTarget == "url_fields" {
 				shoutrrr.SetURLField(tc.key, tc.startAs)
@@ -974,104 +954,128 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 
 func TestShoutrrr_CheckValues(t *testing.T) {
 	// GIVEN a Shoutrrr
+	test := testShoutrrr(false, false)
 	tests := map[string]struct {
-		nilShoutrrr     bool
-		serviceShoutrrr bool
-		sType           string
-		options         map[string]string
-		wantDelay       string
-		urlFields       map[string]string
-		wantURLFields   map[string]string
-		params          map[string]string
-		main            *Shoutrrr
-		errRegex        string
+		nilShoutrrr   bool
+		sType         string
+		options       map[string]string
+		wantDelay     string
+		urlFields     map[string]string
+		wantURLFields map[string]string
+		params        map[string]string
+		main          *ShoutrrrDefaults
+		errRegex      string
 	}{
 		"nil shoutrrr": {
 			nilShoutrrr: true,
 			errRegex:    "^$",
 		},
+		"empty": {
+			errRegex:  "^type: <required>[^:]+://[^:]+$",
+			urlFields: map[string]string{},
+			params:    map[string]string{},
+		},
 		"invalid delay": {
-			errRegex: "delay: .* <invalid>",
+			errRegex:  "delay: .* <invalid>",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			options: map[string]string{
 				"delay": "5x"},
 		},
 		"fixes delay": {
 			errRegex:  "^$",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			wantDelay: "5s",
 			options: map[string]string{
 				"delay": "5"},
 		},
 		"invalid message template": {
-			errRegex: "message: .* <invalid>",
+			errRegex:  "message: .* <invalid>",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			options: map[string]string{
 				"message": "{{ vesrion }"},
 		},
 		"valid message template": {
-			errRegex: "^$",
+			errRegex:  "^$",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			options: map[string]string{
 				"message": "{{ vesrion }}"},
 		},
 		"invalid title template": {
-			errRegex: "title: .* <invalid>",
+			errRegex:  "title: .* <invalid>",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			params: map[string]string{
 				"title": "{{ version }"},
 		},
 		"valid title template": {
-			errRegex: "^$",
+			errRegex:  "^$",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			params: map[string]string{
 				"title": "{{ version }}"},
 		},
 		"valid param template": {
-			errRegex: "^$",
+			errRegex:  "^$",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			params: map[string]string{
 				"foo": "{{ vesrion }}"},
 		},
 		"invalid param template": {
-			errRegex: "foo: .* <invalid>",
+			errRegex:  "foo: .* <invalid>",
+			sType:     test.Type,
+			urlFields: test.URLFields,
 			params: map[string]string{
 				"foo": "{{ version }"},
 		},
-		"runs correctSelf": {
+		"invalid param and option": {
+			errRegex:  `options:[^ ]+  delay: [^<]+<invalid>.*params:[^ ]+  title: [^<]+<invalid>`,
+			sType:     test.Type,
+			urlFields: test.URLFields,
+			params: map[string]string{
+				"title": "{{ version }"},
+			options: map[string]string{
+				"delay": "2x"},
+		},
+		"does correctSelf": {
 			errRegex: "^$",
+			sType:    test.Type,
 			urlFields: map[string]string{
-				"port": ":8080",
-				"path": "/test"},
+				"host":  "foo",
+				"token": "bar",
+				"port":  ":8080",
+				"path":  "/test"},
 			wantURLFields: map[string]string{
 				"port": "8080",
 				"path": "test"},
 		},
-		"doesn't check non-service url_fields/params": {
+		"valid": {
 			errRegex:  "^$",
 			urlFields: map[string]string{},
-			params:    map[string]string{},
+			main:      testShoutrrrDefaults(false, false),
 		},
-		"does field check service shoutrrrs - valid": {
-			errRegex:        "^$",
-			serviceShoutrrr: true,
-			urlFields:       map[string]string{},
-			main:            testShoutrrr(false, false, false),
-		},
-		"does field check service shoutrrrs - valid with self and main": {
-			errRegex:        "^$",
-			serviceShoutrrr: true,
+		"valid with self and main": {
+			errRegex: "^$",
 			urlFields: map[string]string{
 				"host": "foo"},
-			main: &Shoutrrr{
-				URLFields: map[string]string{
-					"token": "bar"}},
+			main: NewDefaults(
+				test.Type,
+				nil, nil,
+				&map[string]string{
+					"token": "bar"}),
 		},
-		"does field check service shoutrrrs - invalid urlfields": {
-			errRegex:        "host: <required>.*token: <required>",
-			serviceShoutrrr: true,
-			main:            &Shoutrrr{},
-			sType:           "gotify",
+		"invalid url_fields": {
+			errRegex: "^url_fields:.*host: <required>.*token: <required>[^:]+$",
+			sType:    test.Type,
 		},
-		"does field check service shoutrrrs - invalid params + locate fail": {
-			errRegex:        "fromaddress: <required>.*toaddresses: <required>",
-			serviceShoutrrr: true,
+		"invalid params + locate fail": {
+			errRegex: "fromaddress: <required>.*toaddresses: <required>",
 			urlFields: map[string]string{
 				"host": "https://release-argus.io"},
-			main:  &Shoutrrr{},
 			sType: "smtp",
 		},
 	}
@@ -1079,11 +1083,12 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
-			shoutrrr := testShoutrrr(false, tc.serviceShoutrrr, false)
-			if tc.sType != "" {
-				shoutrrr.Type = tc.sType
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type = tc.sType
+			if tc.main == nil {
+				tc.main = &ShoutrrrDefaults{}
 			}
 			shoutrrr.Main = tc.main
 			shoutrrr.Main.InitMaps()
@@ -1095,10 +1100,10 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			}
 
 			// WHEN CheckValues is called
-			eer := shoutrrr.CheckValues("")
+			err := shoutrrr.CheckValues("")
 
 			// THEN it err's when expected
-			e := util.ErrorToString(eer)
+			e := util.ErrorToString(err)
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -1128,23 +1133,110 @@ func TestSlice_CheckValues(t *testing.T) {
 		slice    *Slice
 		errRegex string
 	}{
-		"nil shoutrrr": {
+		"nil slice": {
 			slice: nil, errRegex: "^$"},
 		"valid slice": {
 			errRegex: "^$",
 			slice: &Slice{
-				"valid": testShoutrrr(false, true, false),
-				"other": testShoutrrr(false, true, false)}},
+				"valid": testShoutrrr(false, false),
+				"other": testShoutrrr(false, false)}},
 		"invalid slice": {
 			errRegex: "type: <required>",
 			slice: &Slice{
-				"valid": testShoutrrr(false, true, false),
-				"other": &Shoutrrr{Main: &Shoutrrr{}}}},
+				"valid": testShoutrrr(false, false),
+				"other": New(
+					nil, "", nil, nil, "", nil, nil, nil, nil)}},
 		"ordered errors": {
 			errRegex: "aNotify.*type: <required>.*bNotify.*type: <required>",
 			slice: &Slice{
-				"aNotify": &Shoutrrr{Main: &Shoutrrr{}},
-				"bNotify": &Shoutrrr{Main: &Shoutrrr{}}}},
+				"aNotify": New(
+					nil, "", nil, nil, "", nil, nil, nil, nil),
+				"bNotify": New(
+					nil, "", nil, nil, "", nil, nil, nil, nil)}},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.slice != nil {
+				svcStatus := &svcstatus.Status{}
+				svcStatus.Init(
+					len(*tc.slice), 0, 0, nil, nil)
+				tc.slice.Init(
+					svcStatus,
+					&SliceDefaults{}, &SliceDefaults{}, &SliceDefaults{})
+			}
+
+			// WHEN CheckValues is called
+			eer := tc.slice.CheckValues("")
+
+			// THEN it err's when expected
+			e := util.ErrorToString(eer)
+			re := regexp.MustCompile(tc.errRegex)
+			match := re.MatchString(e)
+			if !match {
+				t.Errorf("want match for %q\nnot: %q",
+					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestSliceDefaults_CheckValues(t *testing.T) {
+	// GIVEN a SliceDefaults
+	tests := map[string]struct {
+		slice    *SliceDefaults
+		errRegex string
+	}{
+		"nil slice": {
+			slice: nil, errRegex: "^$"},
+		"valid slice": {
+			errRegex: "^$",
+			slice: &SliceDefaults{
+				"valid": testShoutrrrDefaults(false, false),
+				"other": testShoutrrrDefaults(false, false)}},
+		"invalid type": {
+			errRegex: `type: "[^"]+" <invalid>`,
+			slice: &SliceDefaults{
+				"valid": testShoutrrrDefaults(false, false),
+				"other": NewDefaults(
+					"sommethingUnknown",
+					nil, nil, nil)}},
+		"delay without unit": {
+			errRegex: `^$`,
+			slice: &SliceDefaults{
+				"foo": NewDefaults(
+					"gotify",
+					&map[string]string{
+						"delay": "1"},
+					nil, nil)}},
+		"invalid delay": {
+			errRegex: `delay: "[^"]+" <invalid>`,
+			slice: &SliceDefaults{
+				"foo": NewDefaults(
+					"gotify",
+					&map[string]string{
+						"delay": "1x"},
+					nil, nil)}},
+		"invalid message template": {
+			errRegex: `message: "[^"]+" <invalid>`,
+			slice: &SliceDefaults{
+				"bar": NewDefaults(
+					"gotify",
+					&map[string]string{
+						"message": "{{ .foo }"},
+					nil, nil)}},
+		"invalid params template": {
+			errRegex: `title: "[^"]+" <invalid>`,
+			slice: &SliceDefaults{
+				"bar": NewDefaults(
+					"gotify",
+					nil,
+					&map[string]string{
+						"title": "{{ .bar }"},
+					nil)}},
 	}
 
 	for name, tc := range tests {

@@ -27,7 +27,6 @@ import (
 
 func TestRequire_ExecCommand(t *testing.T) {
 	// GIVEN a Require with a Command
-	testLogging("WARN")
 	tests := map[string]struct {
 		cmd      command.Command
 		errRegex string

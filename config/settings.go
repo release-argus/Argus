@@ -41,15 +41,15 @@ type Settings struct {
 	Log          LogSettings  `yaml:"log,omitempty"`  // Log settings
 	Data         DataSettings `yaml:"data,omitempty"` // Data settings
 	Web          WebSettings  `yaml:"web,omitempty"`  // Web settings
-	FromFlags    SettingsBase `yaml:"-"`              // Values from flags
-	HardDefaults SettingsBase `yaml:"-"`              // Hard defaults
+	FromFlags    settingsBase `yaml:"-"`              // Values from flags
+	HardDefaults settingsBase `yaml:"-"`              // Hard defaults
 	Indentation  uint8        `yaml:"-"`              // Number of spaces used in the config.yml for indentation
 }
 
-// SettingsBase for the binary.
+// settingsBase for the binary.
 //
 // (Used in Defaults)
-type SettingsBase struct {
+type settingsBase struct {
 	Log  LogSettings  `yaml:"-"`
 	Data DataSettings `yaml:"-"`
 	Web  WebSettings  `yaml:"-"`

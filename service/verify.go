@@ -23,85 +23,86 @@ import (
 // CheckValues of the Service(s) in the Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
 	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		if serviceErrs := (*s)[key].CheckValues(prefix); serviceErrs != nil {
+		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
 			errs = fmt.Errorf("%s%w",
-				util.ErrorToString(errs), serviceErrs)
+				util.ErrorToString(errs), err)
 		}
 	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%sservice:\\%s",
+			prefix, util.ErrorToString(errs))
+	}
+	return
+}
+
+// CheckValues of the ServiceDefaults.
+func (s *ServiceDefaults) CheckValues(prefix string) (errs error) {
+	if optionErrs := s.Options.CheckValues(prefix); optionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			util.ErrorToString(errs), optionErrs)
+	}
+	if latestVersionErrs := s.LatestVersion.CheckValues(prefix); latestVersionErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			util.ErrorToString(errs), latestVersionErrs)
+	}
+
 	return
 }
 
 // CheckValues of the Service.
 func (s *Service) CheckValues(prefix string) (errs error) {
-	if optionErrs := s.Options.CheckValues(prefix + "  "); optionErrs != nil {
+	errPrefix := prefix + "  "
+	if optionErrs := s.Options.CheckValues(errPrefix); optionErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), optionErrs)
 	}
-	if latestVersionErrs := s.LatestVersion.CheckValues(prefix + "  "); latestVersionErrs != nil {
+	if latestVersionErrs := s.LatestVersion.CheckValues(errPrefix); latestVersionErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), latestVersionErrs)
 	}
-	if deployedVersionErrs := s.DeployedVersionLookup.CheckValues(prefix + "  "); deployedVersionErrs != nil {
+	if deployedVersionErrs := s.DeployedVersionLookup.CheckValues(errPrefix); deployedVersionErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), deployedVersionErrs)
 	}
-	if notifyErrs := s.Notify.CheckValues(prefix + "  "); notifyErrs != nil {
+	if notifyErrs := s.Notify.CheckValues(errPrefix); notifyErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), notifyErrs)
 	}
-	if commandErrs := s.Command.CheckValues(prefix + "  "); commandErrs != nil {
+	if commandErrs := s.Command.CheckValues(errPrefix); commandErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), commandErrs)
 	}
-	if webhookErrs := s.WebHook.CheckValues(prefix + "  "); webhookErrs != nil {
+	if webhookErrs := s.WebHook.CheckValues(errPrefix); webhookErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), webhookErrs)
 	}
 
-	if errs != nil && s.Defaults != nil {
-		errs = fmt.Errorf("  %s:\\%w",
-			s.ID, errs)
+	if errs != nil {
+		errs = fmt.Errorf("%s%s:\\%w",
+			prefix, s.ID, errs)
 	}
 	return
 }
 
-// Print will print the Service's in the Slice.
+// Print the Service's in the Slice.
 func (s *Slice) Print(prefix string, order []string) {
 	if s == nil {
 		return
 	}
 
 	fmt.Printf("%sservice:\n", prefix)
+	itemPrefix := prefix + "    "
 	for _, serviceID := range order {
-		fmt.Printf("%s  %s:\n", prefix, serviceID)
-		(*s)[serviceID].Print(prefix + "    ")
+		itemStr := (*s)[serviceID].String(itemPrefix)
+		if itemStr != "" {
+			delim := "\n"
+			if itemStr == "{}\n" {
+				delim = " "
+			}
+			fmt.Printf("%s  %s:%s%s", prefix, serviceID, delim, itemStr)
+		}
 	}
-}
-
-// Print will print the Service.
-func (s *Service) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.Comment,
-		fmt.Sprintf("%scomment: %q", prefix, s.Comment))
-
-	// Options
-	s.Options.Print(prefix)
-
-	// Latest Version
-	s.LatestVersion.Print(prefix)
-
-	// Dashboard
-	s.Dashboard.Print(prefix)
-
-	// Deployed Version
-	s.DeployedVersionLookup.Print(prefix)
-
-	// Notify.
-	s.Notify.Print(prefix)
-
-	// Command.
-	s.Command.Print(prefix)
-
-	// WebHook.
-	s.WebHook.Print(prefix)
 }

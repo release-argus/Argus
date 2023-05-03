@@ -127,8 +127,12 @@ func TestController_ExecIndex(t *testing.T) {
 	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{}
+	svcStatus := svcstatus.New(
+		&announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = stringPtr("service_id")
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		svcStatus,
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},

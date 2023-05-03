@@ -32,7 +32,6 @@ import (
 
 func TestSlice_Track(t *testing.T) {
 	// GIVEN a Slice
-	testLogging()
 	tests := map[string]struct {
 		ordering     []string
 		slice        []string
@@ -100,7 +99,6 @@ func TestSlice_Track(t *testing.T) {
 
 func TestService_Track(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		active               *bool
 		url                  string
@@ -295,8 +293,8 @@ func TestService_Track(t *testing.T) {
 			svc.LatestVersion.AllowInvalidCerts = &allowInvalidCerts
 			svc.Init(
 				svc.Defaults, svc.HardDefaults,
-				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
-				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 			didFinish := make(chan bool, 1)
 
 			// WHEN Track is called on it

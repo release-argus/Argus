@@ -32,8 +32,7 @@ import (
 )
 
 func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		url      string
 		errRegex string
@@ -73,8 +72,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		url                  string
 		allowInvalidCerts    bool
@@ -180,8 +178,7 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_Track(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		lookup               *Lookup
 		allowInvalidCerts    bool
@@ -367,26 +364,21 @@ func TestLookup_Track(t *testing.T) {
 				os.Stdout = stdout
 			}()
 			if tc.lookup != nil {
-				defaults := &Lookup{}
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.Defaults = defaults
-				tc.lookup.HardDefaults = defaults
-				tc.lookup.Options = &opt.Options{
-					Interval:           "2s",
-					SemanticVersioning: boolPtr(tc.semanticVersioning),
-					Defaults:           &opt.Options{},
-					HardDefaults:       &opt.Options{},
-				}
+				tc.lookup.Defaults = &LookupDefaults{}
+				tc.lookup.HardDefaults = &LookupDefaults{}
+				tc.lookup.Options = opt.New(
+					nil, "2s", &tc.semanticVersioning,
+					&opt.OptionsDefaults{}, &opt.OptionsDefaults{})
 				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
-				webURL := &tc.lookup.URL
-				tc.lookup.Status = &svcstatus.Status{
-					ServiceID:       stringPtr(name),
-					AnnounceChannel: &announceChannel,
-					DatabaseChannel: &dbChannel,
-					WebURL:          webURL,
-				}
+				svcStatus := svcstatus.New(
+					&announceChannel, &dbChannel, nil,
+					"", "", "", "", "", "")
+				tc.lookup.Status = svcStatus
+				tc.lookup.Status.ServiceID = stringPtr(name)
+				tc.lookup.Status.WebURL = &tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()
 				}

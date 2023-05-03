@@ -46,7 +46,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
   const [hexColour, setHexColour] = useState(value);
   const setColour = (hex: string) => {
     setHexColour(hex);
-    setValue(name, hex);
+    setValue(name, hex, { shouldDirty: true });
   };
 
   return (

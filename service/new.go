@@ -56,21 +56,21 @@ type oldSecretRefs struct {
 	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
 }
 
-// New will create a new/edited Service.
-func New(
+// FromPayload will create a new/edited Service from a payload.
+func FromPayload(
 	oldService *Service,
 	payload *io.ReadCloser,
 
-	serviceDefaults *Service,
-	serviceHardDefaults *Service,
+	serviceDefaults *ServiceDefaults,
+	serviceHardDefaults *ServiceDefaults,
 
-	notifyGlobals *shoutrrr.Slice,
-	notifyDefaults *shoutrrr.Slice,
-	notifyHardDefaults *shoutrrr.Slice,
+	notifyGlobals *shoutrrr.SliceDefaults,
+	notifyDefaults *shoutrrr.SliceDefaults,
+	notifyHardDefaults *shoutrrr.SliceDefaults,
 
-	webhookGlobals *webhook.Slice,
-	webhookDefaults *webhook.WebHook,
-	webhookHardDefaults *webhook.WebHook,
+	webhookGlobals *webhook.SliceDefaults,
+	webhookDefaults *webhook.WebHookDefaults,
+	webhookHardDefaults *webhook.WebHookDefaults,
 
 	logFrom *util.LogFrom,
 ) (newService *Service, err error) {
@@ -295,7 +295,7 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 			s.WebHook[i].Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
 		}
 		// next_runnable
-		nextRunnable := oldWebHook.GetNextRunnable()
+		nextRunnable := oldWebHook.NextRunnable()
 		s.WebHook[i].SetNextRunnable(&nextRunnable)
 	}
 }

@@ -74,7 +74,7 @@ func findShoutrrr(
 	log *util.JLog,
 	logFrom *util.LogFrom,
 ) shoutrrr.Slice {
-	slice := shoutrrr.Slice{}
+	slice := make(shoutrrr.Slice, 1)
 	for _, svc := range cfg.Service {
 		if svc.Notify != nil && svc.Notify[name] != nil {
 			slice["test"] = svc.Notify[name]
@@ -86,15 +86,21 @@ func findShoutrrr(
 		if cfg.Notify != nil && cfg.Notify[name] != nil {
 			hardDefaults := config.Defaults{}
 			hardDefaults.SetDefaults()
-			emptyShoutrrs := shoutrrr.Shoutrrr{}
+			emptyShoutrrs := shoutrrr.ShoutrrrDefaults{}
 			emptyShoutrrs.InitMaps()
-			slice["test"] = cfg.Notify[name]
+			main := cfg.Notify[name]
+			slice["test"] = shoutrrr.New(
+				nil,
+				name,
+				&main.Options,
+				&main.Params,
+				main.Type,
+				&main.URLFields,
+				&emptyShoutrrs,
+				&emptyShoutrrs,
+				&emptyShoutrrs)
 			slice["test"].InitMaps()
-			slice["test"].ID = name
-			slice["test"].Main = cfg.Notify[name]
 			slice["test"].Main.InitMaps()
-			slice["test"].Defaults = &emptyShoutrrs
-			slice["test"].HardDefaults = &emptyShoutrrs
 
 			notifyType := slice["test"].GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
@@ -132,14 +138,8 @@ func findShoutrrr(
 func getAllShoutrrrNames(cfg *config.Config) (all []string) {
 	// All global Shoutrrrs
 	if cfg.Notify != nil {
-		all = make([]string, len(cfg.Notify))
-		index := 0
-		for key := range cfg.Notify {
-			all[index] = key
-			index++
-		}
+		all = util.SortedKeys(cfg.Notify)
 	}
-	sort.Strings(all)
 
 	// All Shoutrrrs in services
 	if cfg.Service != nil {

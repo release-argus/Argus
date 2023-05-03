@@ -41,8 +41,12 @@ func stringifyPointer[T comparable](ptr *T) string {
 
 func testController(announce *chan []byte) (control *Controller) {
 	control = &Controller{}
+	svcStatus := svcstatus.New(
+		announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = stringPtr("service_id")
 	control.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: announce},
+		svcStatus,
 		&Slice{{}, {}},
 		nil,
 		stringPtr("14m"),

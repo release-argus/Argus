@@ -23,7 +23,6 @@ import (
 
 	"github.com/coreos/go-semver/semver"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
-	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -75,7 +74,6 @@ func TestInsertionSort(t *testing.T) {
 
 func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 	// GIVEN a body
-	testLogging("WARN")
 	tests := map[string]struct {
 		body     string
 		errRegex string
@@ -119,7 +117,6 @@ func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 
 func TestLookup_FilterGitHubReleases(t *testing.T) {
 	// GIVEN a bunch of releases
-	testLogging("WARN")
 	tests := map[string]struct {
 		releases           []github_types.Release
 		semanticVersioning bool
@@ -189,24 +186,19 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lv := Lookup{
-				Options: &opt.Options{
-					SemanticVersioning: &tc.semanticVersioning,
-					Defaults:           &opt.Options{},
-					HardDefaults:       &opt.Options{},
-				},
-				GitHubData:    &GitHubData{},
-				UsePreRelease: &tc.usePreReleases,
-				Defaults:      &Lookup{},
-				HardDefaults:  &Lookup{}}
+			lv := testLookup(false, false)
+			lv.URLCommands = nil
+			lv.UsePreRelease = &tc.usePreReleases
+			lv.Options.SemanticVersioning = &tc.semanticVersioning
+			lv.GitHubData.SetReleases(tc.releases)
 
 			// WHEN filterGitHubReleases is called on this body
-			filteredReleases := lv.filterGitHubReleases(tc.releases, &util.LogFrom{})
+			filteredReleases := lv.filterGitHubReleases(&util.LogFrom{})
 
 			// THEN only the expected releases are kept
 			if len(tc.want) != len(filteredReleases) {
-				t.Fatalf("Length not the same\nwant: %v\ngot:  %v",
-					tc.want, filteredReleases)
+				t.Fatalf("Length not the same\nwant: %v (%d)\ngot:  %v (%d)",
+					tc.want, len(tc.want), filteredReleases, len(filteredReleases))
 			}
 			for i := range tc.want {
 				if tc.want[i] != filteredReleases[i].TagName {

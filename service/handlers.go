@@ -23,7 +23,7 @@ import (
 )
 
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
-// to `s.Status.LatestVersion`
+// to `s.Status.LatestVersion` if there's no DeployedVersionLookup and announce the change.
 func (s *Service) UpdatedVersion(writeToDB bool) {
 	if s.Status.GetDeployedVersion() == s.Status.GetLatestVersion() {
 		return

@@ -98,7 +98,7 @@ func TestController_SetNextRunnable(t *testing.T) {
 			// THEN the result is expected
 			got := ranAt
 			if tc.index < len(*controller.Command) {
-				got = (controller.GetNextRunnable(tc.index))
+				got = (controller.NextRunnable(tc.index))
 			}
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
@@ -162,7 +162,7 @@ func TestController_IsRunnable(t *testing.T) {
 	}
 }
 
-func TestController_GetNextRunnable(t *testing.T) {
+func TestController_NextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{}
 	controller.Init(
@@ -203,8 +203,8 @@ func TestController_GetNextRunnable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetNextRunnable is called
-			got := controller.GetNextRunnable(tc.index)
+			// WHEN NextRunnable is called
+			got := controller.NextRunnable(tc.index)
 
 			// THEN the result is expected
 			if tc.outOfRange {
@@ -213,9 +213,9 @@ func TestController_GetNextRunnable(t *testing.T) {
 					t.Fatalf("want: %s\ngot:\n%s",
 						defaultTime, got)
 				}
-			} else if got != controller.GetNextRunnable(tc.index) {
+			} else if got != controller.NextRunnable(tc.index) {
 				t.Fatalf("want: %s\ngot:\n%s",
-					controller.GetNextRunnable(tc.index), got)
+					controller.NextRunnable(tc.index), got)
 			}
 		})
 	}

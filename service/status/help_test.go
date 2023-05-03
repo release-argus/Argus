@@ -33,13 +33,12 @@ func testStatus() (status *Status) {
 		saveChannel     chan bool           = make(chan bool, 5)
 		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
 	)
-	status = &Status{
-		ServiceID:       stringPtr("test"),
-		WebURL:          stringPtr(""),
-		AnnounceChannel: &announceChannel,
-		SaveChannel:     &saveChannel,
-		DatabaseChannel: &databaseChannel,
-	}
+	svcStatus := New(
+		&announceChannel, &databaseChannel, &saveChannel,
+		"", "", "", "", "", "")
+	status = svcStatus
+	status.ServiceID = stringPtr("test")
+	status.WebURL = stringPtr("")
 	status.Init(
 		0, 0, 0,
 		stringPtr("test-service"),

@@ -18,7 +18,9 @@ package shoutrrr
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -44,35 +46,66 @@ func stringifyPointer[T comparable](ptr *T) string {
 	}
 	return str
 }
-func testLogging(level string) {
-	jLog = util.NewJLog(level, false)
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
+	LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
-func testShoutrrr(failing bool, forService bool, selfSignedCert bool) *Shoutrrr {
+func testShoutrrrDefaults(failing bool, selfSignedCert bool) *ShoutrrrDefaults {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
-	shoutrrr := &Shoutrrr{
-		Type:    "gotify",
-		Failed:  nil,
-		Options: map[string]string{"max_tries": "1"},
+	shoutrrr := NewDefaults(
+		"gotify",
+		&map[string]string{"max_tries": "1"},
+		&map[string]string{},
 		// trunk-ignore(gitleaks/generic-api-key)
-		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
-		Params:    map[string]string{},
+		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+	)
+	if failing {
+		shoutrrr.URLFields["token"] = "invalid"
 	}
-	if forService {
-		shoutrrr.ID = "test"
-		shoutrrr.ServiceStatus = &svcstatus.Status{
-			ServiceID: stringPtr("service"),
-		}
-		shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
-		shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
-		shoutrrr.Main = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}
-		shoutrrr.Defaults = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}
-		shoutrrr.HardDefaults = &Shoutrrr{Options: map[string]string{}, URLFields: map[string]string{}, Params: map[string]string{}}
+	return shoutrrr
+}
+
+func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
+	url := "valid.release-argus.io"
+	if selfSignedCert {
+		url = strings.Replace(url, "valid", "invalid", 1)
 	}
+	shoutrrr := New(
+		nil, "",
+		&map[string]string{"max_tries": "1"},
+		&map[string]string{},
+		"gotify",
+		// trunk-ignore(gitleaks/generic-api-key)
+		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		NewDefaults(
+			"", nil, nil, nil),
+		NewDefaults(
+			"", nil, nil, nil),
+		NewDefaults(
+			"", nil, nil, nil))
+	shoutrrr.Main.InitMaps()
+	shoutrrr.Defaults.InitMaps()
+	shoutrrr.HardDefaults.InitMaps()
+
+	shoutrrr.ID = "test"
+	shoutrrr.ServiceStatus = &svcstatus.Status{
+		ServiceID: stringPtr("service"),
+	}
+	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
+	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
+
 	if failing {
 		shoutrrr.URLFields["token"] = "invalid"
 	}

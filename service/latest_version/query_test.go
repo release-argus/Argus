@@ -30,7 +30,6 @@ import (
 
 func TestLookup_HTTPRequest(t *testing.T) {
 	// GIVEN a Lookup
-	testLogging("WARN")
 	tests := map[string]struct {
 		url         string
 		githubType  bool
@@ -80,7 +79,6 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup
-	testLogging("WARN")
 	tests := map[string]struct {
 		githubService         bool
 		noAccessToken         bool
@@ -143,19 +141,23 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:       "^$",
 		},
 		"docker tag mismatch": {
-			requireDockerCheck: &filter.DockerCheck{
-				Type:  "ghcr",
-				Image: "release-argus/argus",
-				Tag:   "0.9.0-beta",
-				Token: os.Getenv("GH_TOKEN")},
+			requireDockerCheck: filter.NewDockerCheck(
+				"ghcr",
+				"release-argus/argus",
+				"0.9.0-beta",
+				"",
+				os.Getenv("GH_TOKEN"),
+				"", time.Now(), nil),
 			errRegex: "manifest unknown",
 		},
 		"docker tag match": {
-			requireDockerCheck: &filter.DockerCheck{
-				Type:  "ghcr",
-				Image: "release-argus/argus",
-				Tag:   "0.9.0",
-				Token: os.Getenv("GH_TOKEN")},
+			requireDockerCheck: filter.NewDockerCheck(
+				"ghcr",
+				"release-argus/argus",
+				"0.9.0",
+				"",
+				os.Getenv("GH_TOKEN"),
+				"", time.Now(), nil),
 			errRegex: "^$",
 		},
 		"regex version match": {
@@ -280,7 +282,6 @@ func TestLookup_Query(t *testing.T) {
 
 func TestLookup_QueryGitHubETag(t *testing.T) {
 	// GIVEN a Lookup
-	testLogging("VERBOSE")
 	tests := map[string]struct {
 		attempts                   int
 		eTagChanged                int
@@ -315,7 +316,7 @@ no releases were found matching the url_commands and/or require`},
 		t.Run(name, func(t *testing.T) {
 
 			lookup := testLookup(false, false)
-			lookup.GitHubData.ETag = "foo"
+			lookup.GitHubData.SetETag("foo")
 			lookup.Status.ServiceID = &name
 			lookup.Require.RegexVersion = tc.initialRequireRegexVersion
 			lookup.URLCommands = tc.urlCommands
@@ -336,7 +337,8 @@ no releases were found matching the url_commands and/or require`},
 				if err != nil {
 					errors += "--" + err.Error()
 				}
-				t.Logf("attempt %d, ETag: %s", attempt, lookup.GitHubData.ETag)
+				t.Logf("attempt %d, ETag: %s",
+					attempt, lookup.GitHubData.ETag())
 			}
 
 			// THEN any err is expected
@@ -352,11 +354,13 @@ no releases were found matching the url_commands and/or require`},
 			}
 			gotETagChanged := strings.Count(string(out), "ETag changed")
 			if gotETagChanged != tc.eTagChanged {
-				t.Errorf("ETag changed - got=%d, want=%d\n%s", gotETagChanged, tc.eTagChanged, out)
+				t.Errorf("ETag changed - got=%d, want=%d\n%s",
+					gotETagChanged, tc.eTagChanged, out)
 			}
 			gotETagUnchangedUseCache := strings.Count(string(out), "Using cached releases")
 			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
-				t.Errorf("ETag unchanged use cache - got=%d, want=%d\n%s", gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, out)
+				t.Errorf("ETag unchanged use cache - got=%d, want=%d\n%s",
+					gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, out)
 			}
 		})
 	}

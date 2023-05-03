@@ -18,35 +18,83 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 var (
 	jLog *util.JLog
 )
 
+// LookupBase is the base struct for the Lookup struct.
+type LookupBase struct {
+	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+}
+
+// LookupDefaults are the default values for the Lookup struct.
+type LookupDefaults struct {
+	LookupBase `yaml:",inline" json:",inline"`
+}
+
+// NewDefaults returns a new LookupDefaults struct.
+func NewDefaults(
+	allowInvalidCerts *bool,
+) *LookupDefaults {
+	return &LookupDefaults{
+		LookupBase: LookupBase{
+			AllowInvalidCerts: allowInvalidCerts}}
+}
+
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL               string            `yaml:"url,omitempty" json:"url,omitempty"`                                 // URL to query.
-	AllowInvalidCerts *bool             `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth        `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`                   // Basic Auth for the HTTP(S) request.
-	Headers           []Header          `yaml:"headers,omitempty" json:"headers,omitempty"`                         // Headers for the HTTP(S) request.
-	JSON              string            `yaml:"json,omitempty" json:"json,omitempty"`                               // JSON key to use e.g. version_current.
-	Regex             string            `yaml:"regex,omitempty" json:"regex,omitempty"`                             // Regex to get the DeployedVersion
-	Options           *opt.Options      `yaml:"-" json:"-"`                                                         // Options for the lookups
-	Status            *svcstatus.Status `yaml:"-" json:"-"`                                                         // Service Status
-	Defaults          *Lookup           `yaml:"-" json:"-"`                                                         // Default values.
-	HardDefaults      *Lookup           `yaml:"-" json:"-"`                                                         // Hardcoded default values.
+	URL        string `yaml:"url,omitempty" json:"url,omitempty"` // URL to query.
+	LookupBase `yaml:",inline" json:",inline"`
+	BasicAuth  *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"` // Basic Auth for the HTTP(S) request.
+	Headers    []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`       // Headers for the HTTP(S) request.
+	JSON       string     `yaml:"json,omitempty" json:"json,omitempty"`             // JSON key to use e.g. version_current.
+	Regex      string     `yaml:"regex,omitempty" json:"regex,omitempty"`           // Regex to get the DeployedVersion
+
+	Options *opt.Options      `yaml:"-" json:"-"` // Options for the lookups
+	Status  *svcstatus.Status `yaml:"-" json:"-"` // Service Status
+
+	Defaults     *LookupDefaults `yaml:"-" json:"-"` // Default values.
+	HardDefaults *LookupDefaults `yaml:"-" json:"-"` // Hardcoded default values.
+}
+
+// New returns a new Lookup struct.
+func New(
+	allowInvalidCerts *bool,
+	basicAuth *BasicAuth,
+	headers *[]Header,
+	json string,
+	options *opt.Options,
+	regex string,
+	status *svcstatus.Status,
+	url string,
+	defaults *LookupDefaults,
+	hardDefaults *LookupDefaults,
+) (lookup *Lookup) {
+	lookup = &Lookup{
+		LookupBase: LookupBase{
+			AllowInvalidCerts: allowInvalidCerts},
+		BasicAuth:    basicAuth,
+		JSON:         json,
+		Options:      options,
+		Regex:        regex,
+		Status:       status,
+		URL:          url,
+		Defaults:     defaults,
+		HardDefaults: hardDefaults}
+	if headers != nil {
+		lookup.Headers = *headers
+	}
+	return
 }
 
 // String returns a string representation of the Lookup.
-func (l *Lookup) String() string {
-	if l == nil {
-		return "<nil>"
+func (l *Lookup) String(prefix string) (str string) {
+	if l != nil {
+		str = util.ToYAMLString(l, prefix)
 	}
-
-	yamlBytes, _ := yaml.Marshal(l)
-	return string(yamlBytes)
+	return
 }
 
 // BasicAuth to use on the HTTP(s) request.
@@ -63,5 +111,5 @@ type Header struct {
 
 // isEqual will return a bool of whether this lookup is the same as `other` (excluding status).
 func (l *Lookup) IsEqual(other *Lookup) bool {
-	return l.String() == other.String()
+	return l.String("") == other.String("")
 }

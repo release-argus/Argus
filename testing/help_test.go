@@ -17,6 +17,9 @@
 package testing
 
 import (
+	"os"
+	"testing"
+
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/util"
 )
@@ -29,8 +32,15 @@ func boolPtr(val bool) *bool {
 func stringPtr(val string) *string {
 	return &val
 }
-
-func testLogging() {
+func TestMain(m *testing.M) {
+	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
+	jLog.Testing = true
 	config.LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }

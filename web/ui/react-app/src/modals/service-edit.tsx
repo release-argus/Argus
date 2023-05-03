@@ -156,7 +156,7 @@ const ServiceEditModal = () => {
                 type="submit"
                 onClick={form.handleSubmit(onSubmit)}
                 className="ms-2"
-                disabled={err === null}
+                disabled={err === null || !form.formState.isDirty}
               >
                 Confirm
               </Button>

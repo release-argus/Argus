@@ -81,22 +81,25 @@ func (l *Lookup) applyOverrides(
 	}
 
 	// Create a new lookup with the overrides.
-	lookup := Lookup{
-		Type:              useType,
-		URL:               useURL,
-		AccessToken:       useAccessToken,
-		AllowInvalidCerts: useAllowInvalidCerts,
-		UsePreRelease:     useUsePreRelease,
-		URLCommands:       *useURLCommands,
-		Require:           useRequire,
-		Options: &opt.Options{
-			SemanticVersioning: useSemanticVersioning,
-			Defaults:           l.Options.Defaults,
-			HardDefaults:       l.Options.HardDefaults},
-		Status: &svcstatus.Status{
-			ServiceID: serviceID},
-		Defaults:     l.Defaults,
-		HardDefaults: l.HardDefaults}
+	lookup := New(
+		useAccessToken,
+		useAllowInvalidCerts,
+		nil, // GitHubData
+		opt.New(
+			nil, "", useSemanticVersioning,
+			nil, nil),
+		useRequire,
+		nil, // Status
+		useType,
+		useURL,
+		useURLCommands,
+		useUsePreRelease,
+		l.Defaults,
+		l.HardDefaults)
+	lookup.Status = &svcstatus.Status{
+		ServiceID: serviceID}
+	lookup.Options.Defaults = l.Options.Defaults
+	lookup.Options.HardDefaults = l.Options.HardDefaults
 	lookup.Status.Init(
 		0, 0, 0,
 		serviceID,
@@ -106,11 +109,11 @@ func (l *Lookup) applyOverrides(
 	if lookup.Type == "github" {
 		// Use the current ETag/releases
 		// (if ETag is the same, won't count towards API limit)
-		if l.Type == "github" {
-			lookup.GitHubData = &GitHubData{
-				ETag: l.GitHubData.ETag}
-			lookup.GitHubData.ETag = l.GitHubData.ETag
-			lookup.GitHubData.Releases = l.GitHubData.Releases
+		if l.Type == "github" && l.GitHubData != nil {
+			releases := l.GitHubData.Releases()
+			lookup.GitHubData = NewGitHubData(
+				l.GitHubData.ETag(),
+				&releases)
 
 			// Type changed to github (or new service)
 		} else {
@@ -123,13 +126,16 @@ func (l *Lookup) applyOverrides(
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
 	}
 
-	return &lookup, nil
+	return lookup, nil
 }
 
-// Refresh queries the Service source with the provided overrides,
-// returning the `version` found from this query as well, as whether
-// that new version should be announced (no overrides provided),
-// and any errors encountered
+// Refresh queries the Service source with the provided overrides and returns:
+//
+// `version` - found from this query
+//
+// `annoounceUpdate` - Whether that version is new and should be announced (no overrides provided),
+//
+// `err` - any errs encountered
 func (l *Lookup) Refresh(
 	accessToken *string,
 	allowInvalidCerts *string,
@@ -179,28 +185,51 @@ func (l *Lookup) Refresh(
 		return
 	}
 	version = lookup.Status.GetLatestVersion()
+	announceUpdate = l.updateFromRefresh(lookup, overrides)
+	return
+}
 
-	// Querying the same GitHub repo
-	if url == nil &&
-		lookup.Type == "github" && l.Type == "github" &&
-		lookup.GitHubData.ETag != l.GitHubData.ETag {
+// updateFromRefresh updates the current Lookup with the values from a Query on this
+// new Lookup if the values should retrieve the same data.
+//
+// `changingOverrides` - whether the overrides provided to the Refresh method would change the Query.
+//
+// Returns whether a new version was found and should be announced.
+func (l *Lookup) updateFromRefresh(newLookup *Lookup, changingOverrides bool) (announceUpdate bool) {
+	// Querying the same GitHub repo and the ETag has changed
+	if l.Type == "github" && newLookup.Type == "github" &&
+		l.URL == newLookup.URL &&
+		l.GitHubData != nil &&
+		l.GitHubData.ETag() != newLookup.GitHubData.ETag() {
 		// Update the ETag and releases
-		l.GitHubData.ETag = lookup.GitHubData.ETag
-		l.GitHubData.Releases = lookup.GitHubData.Releases
+		l.GitHubData.Set(newLookup.GitHubData.ETag(), newLookup.GitHubData.Releases())
 	}
 
-	// If no overrides that may change a successful query were provided
-	// then we can update the Status.
-	if !overrides {
-		// Update the last queried time.
-		l.Status.SetLastQueried(lookup.Status.GetLastQueried())
-		// Update the latest version if it has changed.
-		mewLatestVersion := lookup.Status.GetLatestVersion()
-		if mewLatestVersion != l.Status.GetLatestVersion() {
-			announceUpdate = true
-			l.Status.SetLatestVersion(mewLatestVersion, true)
-		}
+	// Copy the Docker queryToken if it's what the current would fetch
+	if l.Require != nil && l.Require.Docker != nil &&
+		newLookup.Require != nil && newLookup.Require.Docker != nil &&
+		l.Require.Docker.Type == newLookup.Require.Docker.Type &&
+		l.Require.Docker.Token == newLookup.Require.Docker.Token &&
+		l.Require.Docker.Username == newLookup.Require.Docker.Username &&
+		l.Require.Docker.Image == newLookup.Require.Docker.Image {
+		queryToken, validUntil := newLookup.Require.Docker.CopyQueryToken()
+		l.Require.Docker.SetQueryToken(
+			&newLookup.Require.Docker.Token,
+			&queryToken, &validUntil)
 	}
 
+	// If overrides that may change a successful query were provided
+	if changingOverrides {
+		return
+	}
+
+	// Update the last queried time.
+	l.Status.SetLastQueried(newLookup.Status.GetLastQueried())
+	// Update the latest version if it has changed.
+	newLatestVersion := newLookup.Status.GetLatestVersion()
+	if newLatestVersion != l.Status.GetLatestVersion() {
+		announceUpdate = true
+		l.Status.SetLatestVersion(newLatestVersion, true)
+	}
 	return
 }

@@ -59,10 +59,9 @@ func testConfig() Config {
 			Log: LogSettings{
 				Level: &logLevel}},
 		HardDefaults: Defaults{
-			Service: service.Service{
-				Status: svcstatus.Status{
-					DatabaseChannel: &databaseChannel,
-					SaveChannel:     &saveChannel}}},
+			Service: service.ServiceDefaults{
+				Status: svcstatus.NewStatusDefaults(
+					nil, &databaseChannel, &saveChannel)}},
 		DatabaseChannel: &databaseChannel,
 		SaveChannel:     &saveChannel,
 	}
@@ -110,6 +109,8 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	return
 }
 
+var mutex sync.Mutex
+
 func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config = &Config{}
 
@@ -117,12 +118,12 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
-	msg := fmt.Sprintf("Error reading %q\n%s", file, err)
-	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	jLog.Fatal(fmt.Sprintf("Error reading %q\n%s", file, err),
+		util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, config)
-	msg = fmt.Sprintf("Unmarshal of %q failed\n%s", file, err)
-	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	jLog.Fatal(fmt.Sprintf("Unmarshal of %q failed\n%s", file, err),
+		util.LogFrom{}, err != nil)
 
 	saveChannel := make(chan bool, 32)
 	config.SaveChannel = &saveChannel
@@ -133,7 +134,12 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
+	mutex.Lock()
+	defer mutex.Unlock()
 	config.Init()
+	for name, service := range config.Service {
+		service.ID = name
+	}
 	config.CheckValues()
 
 	return
@@ -147,62 +153,50 @@ func testServiceURL(id string) *service.Service {
 	)
 	svc := &service.Service{
 		ID: id,
-		LatestVersion: latestver.Lookup{
-			Type: "url",
-			URL:  "https://valid.release-argus.io/plain",
-			Require: &filter.Require{
+		LatestVersion: *latestver.New(
+			nil,
+			boolPtr(false),
+			nil,
+			&opt.Options{},
+			&filter.Require{
 				RegexContent: "{{ version }}-beta",
-				RegexVersion: "[0-9]+",
-			},
-			URLCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
-			},
-			AllowInvalidCerts: boolPtr(true),
-			UsePreRelease:     boolPtr(false),
-		},
-		DeployedVersionLookup: &deployedver.Lookup{
-			URL:               "https://valid.release-argus.io/json",
-			JSON:              "version",
-			AllowInvalidCerts: boolPtr(false),
-		},
-		Dashboard: service.DashboardOptions{
-			AutoApprove:  boolPtr(false),
-			Icon:         "test",
-			IconLinkTo:   "https://release-argus.io",
-			WebURL:       "https://release-argus.io",
-			Defaults:     &service.DashboardOptions{},
-			HardDefaults: &service.DashboardOptions{},
-		},
-		Status: svcstatus.Status{
-			ServiceID:       stringPtr("test"),
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel,
-			SaveChannel:     &saveChannel,
-		},
-		Options: opt.Options{
-			Interval:           "5s",
-			SemanticVersioning: boolPtr(true),
-			Defaults:           &opt.Options{},
-			HardDefaults:       &opt.Options{},
-		},
-		Defaults: &service.Service{},
-		HardDefaults: &service.Service{
-			Options: opt.Options{
-				Active: boolPtr(true)},
-			DeployedVersionLookup: &deployedver.Lookup{},
-		},
-	}
+				RegexVersion: "[0-9]+"},
+			nil,
+			"url",
+			"https://valid.release-argus.io/plain",
+			&filter.URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
+			boolPtr(false),
+			&latestver.LookupDefaults{}, &latestver.LookupDefaults{}),
+		DeployedVersionLookup: deployedver.New(
+			boolPtr(false),
+			nil, nil,
+			"version",
+			nil, "", nil,
+			"https://valid.release-argus.io/json",
+			&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{}),
+		Dashboard: *service.NewDashboardOptions(
+			boolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs",
+			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
+		Status: *svcstatus.New(
+			&announceChannel, &databaseChannel, &saveChannel,
+			"", "", "", "", "", ""),
+		Options: *opt.New(
+			boolPtr(true), "5s", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		Defaults:     &service.ServiceDefaults{},
+		HardDefaults: &service.ServiceDefaults{}}
 	svc.Status.ServiceID = &svc.ID
 	svc.Status.Init(
 		len(svc.Notify), len(svc.Command), len(svc.WebHook),
 		&svc.ID,
 		&svc.Dashboard.WebURL)
 	svc.LatestVersion.Init(
-		&latestver.Lookup{}, &latestver.Lookup{},
+		&latestver.LookupDefaults{}, &latestver.LookupDefaults{},
 		&svc.Status,
 		&svc.Options)
 	svc.DeployedVersionLookup.Init(
-		&deployedver.Lookup{}, &deployedver.Lookup{},
+		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
 		&svc.Status,
 		&svc.Options)
 	svc.Status.WebURL = &svc.Dashboard.WebURL

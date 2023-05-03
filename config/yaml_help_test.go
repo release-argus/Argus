@@ -411,11 +411,11 @@ service:
           regex: v(.*)
   bravo:
     latest_version:
-    type: url
-    url: https://valid.release-argus.io/plain
-    url_commands:
-      - type: regex
-        regex: ([0-9.]+)
+      type: url
+      url: https://valid.release-argus.io/plain
+      url_commands:
+        - type: regex
+          regex: ([0-9.]+)
   charlie:
     latest_version:
       type: url

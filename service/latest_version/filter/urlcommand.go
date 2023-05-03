@@ -21,20 +21,17 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 // URLCommandSlice to be used to filter version from the URL Content.
 type URLCommandSlice []URLCommand
 
 // String returns a string representation of the URLCommandSlice.
-func (s *URLCommandSlice) String() string {
-	if s == nil {
-		return ""
+func (s *URLCommandSlice) String() (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, "")
 	}
-
-	yamlBytes, _ := yaml.Marshal(s)
-	return string(yamlBytes)
+	return
 }
 
 // URLCommand is a command to be ran to filter version from the URL body.
@@ -48,13 +45,11 @@ type URLCommand struct {
 }
 
 // String returns a string representation of the URLCommand.
-func (c *URLCommand) String() string {
-	if c == nil {
-		return ""
+func (c *URLCommand) String() (str string) {
+	if c != nil {
+		str = util.ToYAMLString(c, "")
 	}
-
-	yamlBytes, _ := yaml.Marshal(c)
-	return string(yamlBytes)
+	return
 }
 
 // UnmarshalYAML allows handling of a dict as well as a list of dicts.
@@ -78,36 +73,6 @@ func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 		*s = multi
 	}
 	return
-}
-
-// Print the URLCommand's in the URLCommandSlice.
-func (s *URLCommandSlice) Print(prefix string) {
-	if s == nil || len(*s) == 0 {
-		return
-	}
-	fmt.Printf("%surl_commands:\n", prefix)
-
-	for i := range *s {
-		(*s)[i].Print(prefix + "  ")
-	}
-}
-
-// Print will print the URLCommand.
-func (c *URLCommand) Print(prefix string) {
-	fmt.Printf("%s- type: %s\n", prefix, c.Type)
-	switch c.Type {
-	case "regex":
-		fmt.Printf("%s  regex: %q\n", prefix, *c.Regex)
-		util.PrintlnIfNotDefault(c.Index,
-			fmt.Sprintf("%s  index: %d", prefix, c.Index))
-	case "replace":
-		fmt.Printf("%s  new: %q\n", prefix, *c.New)
-		fmt.Printf("%s  old: %q\n", prefix, *c.Old)
-	case "split":
-		fmt.Printf("%s  text: %q\n", prefix, *c.Text)
-		util.PrintlnIfNotDefault(c.Index,
-			fmt.Sprintf("%s  index: %d", prefix, c.Index))
-	}
 }
 
 // Run all of the URLCommand(s) in this URLCommandSlice.

@@ -21,19 +21,18 @@ import (
 	"time"
 
 	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	api_type "github.com/release-argus/Argus/web/api/types"
-	"github.com/release-argus/Argus/webhook"
 )
 
-func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T) {
+func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 	// GIVEN a DeployedVersionLookup
 	tests := map[string]struct {
 		dvl                      *deployedver.Lookup
+		dvlStatus                *svcstatus.Status
 		approvedVersion          string
 		deployedVersion          string
 		deployedVersionTimestamp string
@@ -89,29 +88,28 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 		"full": {
 			regexMissesContent: 1,
 			regexMissesVersion: 3,
-			dvl: &deployedver.Lookup{
-				URL:               "https://release-argus.io",
-				AllowInvalidCerts: boolPtr(true),
-				BasicAuth: &deployedver.BasicAuth{
+			dvl: deployedver.New(
+				boolPtr(true),
+				&deployedver.BasicAuth{
 					Username: "jim",
 					Password: "whoops"},
-				Headers: []deployedver.Header{
+				&[]deployedver.Header{
 					{Key: "X-Test-0", Value: "foo"},
 					{Key: "X-Test-1", Value: "bar"}},
-				JSON:  "version",
-				Regex: `([0-9]+\.[0-9]+\.[0-9]+)`,
-				Options: &opt.Options{
-					Active:             boolPtr(true),
-					Interval:           "10m",
-					SemanticVersioning: boolPtr(true),
-					Defaults:           &opt.Options{},
-					HardDefaults:       &opt.Options{}},
-				Status: &svcstatus.Status{
-					Fails:     svcstatus.Fails{},
-					ServiceID: stringPtr("service-id"),
-					WebURL:    stringPtr("https://release-argus.io")},
-				Defaults:     &deployedver.Lookup{},
-				HardDefaults: &deployedver.Lookup{}},
+				"version",
+				opt.New(
+					boolPtr(true), "10m", boolPtr(true),
+					&opt.OptionsDefaults{},
+					&opt.OptionsDefaults{}),
+				`([0-9]+\.[0-9]+\.[0-9]+)`,
+				&svcstatus.Status{},
+				"https://release-argus.io",
+				&deployedver.LookupDefaults{},
+				&deployedver.LookupDefaults{}),
+			dvlStatus: &svcstatus.Status{
+				Fails:     svcstatus.Fails{},
+				ServiceID: stringPtr("service-id"),
+				WebURL:    stringPtr("https://release-argus.io")},
 			want: &api_type.DeployedVersionLookup{
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: boolPtr(true),
@@ -131,34 +129,37 @@ func TestConvertDeployedVersionLookupToAPITypeDeployedVersionLookup(t *testing.T
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.approvedVersion != "" {
-				tc.dvl.Status.SetApprovedVersion("1.2.3", false)
-				tc.dvl.Status.SetDeployedVersion("1.2.3", false)
-				tc.dvl.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
-				tc.dvl.Status.SetLatestVersion("1.2.3", false)
-				tc.dvl.Status.SetLatestVersionTimestamp(time.Now().Format(time.RFC3339))
-				tc.dvl.Status.SetLastQueried(time.Now().Format(time.RFC3339))
-			}
-			for i := 0; i < tc.regexMissesContent; i++ {
-				tc.dvl.Status.RegexMissContent()
-			}
-			for i := 0; i < tc.regexMissesVersion; i++ {
-				tc.dvl.Status.RegexMissVersion()
+			if tc.dvl != nil {
+				if tc.approvedVersion != "" {
+					tc.dvl.Status.SetApprovedVersion("1.2.3", false)
+					tc.dvl.Status.SetDeployedVersion("1.2.3", false)
+					tc.dvl.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
+					tc.dvl.Status.SetLatestVersion("1.2.3", false)
+					tc.dvl.Status.SetLatestVersionTimestamp(time.Now().Format(time.RFC3339))
+					tc.dvl.Status.SetLastQueried(time.Now().Format(time.RFC3339))
+				}
+				tc.dvl.Status = tc.dvlStatus
+				for i := 0; i < tc.regexMissesContent; i++ {
+					tc.dvl.Status.RegexMissContent()
+				}
+				for i := 0; i < tc.regexMissesVersion; i++ {
+					tc.dvl.Status.RegexMissVersion()
+				}
 			}
 
-			// WHEN convertDeployedVersionLookupToAPITypeDeployedVersionLookup is called on it
-			got := convertDeployedVersionLookupToAPITypeDeployedVersionLookup(tc.dvl)
+			// WHEN convertAndCensorDeployedVersionLookup is called on it
+			got := convertAndCensorDeployedVersionLookup(tc.dvl)
 
 			// THEN the WebHookSlice is converted correctly
 			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
+				t.Errorf("want:\n%q\ngot:\n%q",
 					tc.want.String(), got.String())
 			}
 		})
 	}
 }
 
-func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
+func TestConvertURLCommandSlice(t *testing.T) {
 	// GIVEN a URL Command slice
 	tests := map[string]struct {
 		slice *filter.URLCommandSlice
@@ -207,8 +208,8 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertURLCommandSliceToAPITypeURLCommandSlice is called on it
-			got := convertURLCommandSliceToAPITypeURLCommandSlice(tc.slice)
+			// WHEN convertURLCommandSlice is called on it
+			got := convertURLCommandSlice(tc.slice)
 
 			// THEN the WebHookSlice is converted correctly
 			if got.String() != tc.want.String() {
@@ -219,142 +220,7 @@ func TestConvertURLCommandSliceToAPITypeURLCommandSlice(t *testing.T) {
 	}
 }
 
-func TestConvertNotifySliceToAPITypeNotifySlice(t *testing.T) {
-	// GIVEN a Notify slice
-	tests := map[string]struct {
-		slice *shoutrrr.Slice
-		want  *api_type.NotifySlice
-	}{
-		"nil": {
-			slice: nil,
-			want:  nil,
-		},
-		"empty": {
-			slice: &shoutrrr.Slice{},
-			want:  &api_type.NotifySlice{},
-		},
-		"one": {
-			slice: &shoutrrr.Slice{
-				"test": {
-					Type: "discord",
-					Options: map[string]string{
-						"message": "something {{ version }}"},
-					URLFields: map[string]string{
-						"port":  "25",
-						"other": "something"},
-					Params: map[string]string{
-						"avatar": "fizz"}}},
-			want: &api_type.NotifySlice{
-				"test": {
-					Type: "discord",
-					Options: map[string]string{
-						"message": "something {{ version }}"},
-					URLFields: map[string]string{
-						"port":  "25",
-						"other": "something"},
-					Params: map[string]string{
-						"avatar": "fizz"}}},
-		},
-		"one, does censor": {
-			slice: &shoutrrr.Slice{
-				"test": {
-					Type: "discord",
-					Options: map[string]string{
-						"message": "something {{ version }}"},
-					URLFields: map[string]string{
-						"port":   "25",
-						"other":  "something",
-						"apikey": "shazam"},
-					Params: map[string]string{
-						"avatar":  "fizz",
-						"devices": "shazam"}}},
-			want: &api_type.NotifySlice{
-				"test": {
-					Type: "discord",
-					Options: map[string]string{
-						"message": "something {{ version }}"},
-					URLFields: map[string]string{
-						"port":   "25",
-						"other":  "something",
-						"apikey": "<secret>"},
-					Params: map[string]string{
-						"avatar":  "fizz",
-						"devices": "<secret>"}}},
-		},
-		"multiple": {
-			slice: &shoutrrr.Slice{
-				"test": {
-					URLFields: map[string]string{
-						"port":     "25",
-						"password": "something"}},
-				"test2": {
-					Type: "discord",
-					Params: map[string]string{
-						"avatar":  "fizz",
-						"devices": "shazam"}}},
-			want: &api_type.NotifySlice{
-				"test": {
-					URLFields: map[string]string{
-						"port":     "25",
-						"password": "<secret>"}},
-				"test2": {
-					Type: "discord",
-					Params: map[string]string{
-						"avatar":  "fizz",
-						"devices": "<secret>"}}},
-		},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN convertNotifySliceToAPITypeNotifySlice is called on it
-			got := convertNotifySliceToAPITypeNotifySlice(tc.slice)
-
-			// THEN the WebHookSlice is converted correctly
-			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
-					tc.want.String(), got.String())
-			}
-		})
-	}
-}
-
-func TestConvertNotifySliceToAPITypeNotifySliceDoesCensor(t *testing.T) {
-	// GIVEN a Notify slice
-	slice := shoutrrr.Slice{
-		"test": {
-			Type: "discord",
-			Options: map[string]string{
-				"message": "something {{ version }}",
-			},
-			URLFields: map[string]string{
-				"port":   "25",
-				"apikey": "fizz",
-			},
-			Params: map[string]string{
-				"avatar":  "argus",
-				"devices": "buzz",
-			},
-		},
-	}
-
-	// WHEN convertNotifySliceToAPITypeNotifySlice is called on it
-	got := convertNotifySliceToAPITypeNotifySlice(&slice)
-
-	// THEN the slice was converted correctly
-	if (*got)["test"].URLFields["port"] != slice["test"].URLFields["port"] ||
-		(*got)["test"].URLFields["apikey"] != "<secret>" ||
-		(*got)["test"].Params["avatar"] != slice["test"].Params["avatar"] ||
-		(*got)["test"].Params["devices"] != "<secret>" {
-		t.Errorf("converted incorrectly\nfrom: %v\nto:   %v",
-			slice, got)
-	}
-}
-
-func TestConvertCommandSliceToAPITypeCommandSlice(t *testing.T) {
+func TestConvertCommandSlice(t *testing.T) {
 	// GIVEN a Command slice
 	tests := map[string]struct {
 		slice *command.Slice
@@ -389,8 +255,8 @@ func TestConvertCommandSliceToAPITypeCommandSlice(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN convertCommandSliceToAPITypeCommandSlice is called on it
-			got := convertCommandSliceToAPITypeCommandSlice(tc.slice)
+			// WHEN convertCommandSlice is called on it
+			got := convertCommandSlice(tc.slice)
 
 			// THEN the CommandSlice is converted correctly
 			if got == tc.want { // both nil
@@ -415,102 +281,6 @@ func TestConvertCommandSliceToAPITypeCommandSlice(t *testing.T) {
 							tc.want, got)
 					}
 				}
-			}
-		})
-	}
-}
-
-func TestConvertWebHookToAPITypeWebHook(t *testing.T) {
-	// GIVEN a WebHook
-	tests := map[string]struct {
-		wh   *webhook.WebHook
-		want *api_type.WebHook
-	}{
-		"nil": {
-			wh:   nil,
-			want: nil,
-		},
-		"empty": {
-			wh:   &webhook.WebHook{},
-			want: &api_type.WebHook{},
-		},
-		"censor secret": {
-			wh: &webhook.WebHook{
-				Secret: "shazam"},
-			want: &api_type.WebHook{
-				Secret: stringPtr("<secret>")},
-		},
-		"copy and censor headers": {
-			wh: &webhook.WebHook{
-				CustomHeaders: &webhook.Headers{
-					{Key: "X-Something", Value: "foo"},
-					{Key: "X-Another", Value: "bar"}}},
-			want: &api_type.WebHook{
-				CustomHeaders: []api_type.Header{
-					{Key: "X-Something", Value: "<secret>"},
-					{Key: "X-Another", Value: "<secret>"}}},
-		},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN convertWebHookToAPITypeWebHook is called on it
-			got := convertWebHookToAPITypeWebHook(tc.wh)
-
-			// THEN the WebHook is converted correctly
-			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
-					tc.want.String(), got.String())
-			}
-		})
-	}
-}
-
-func TestConvertWebHookSliceToAPITypeWebHookSlice(t *testing.T) {
-	// GIVEN a WebHook slice
-	tests := map[string]struct {
-		slice *webhook.Slice
-		want  *api_type.WebHookSlice
-	}{
-		"nil": {
-			slice: nil,
-			want:  nil,
-		},
-		"empty": {
-			slice: &webhook.Slice{},
-			want:  &api_type.WebHookSlice{},
-		},
-		"single element": {
-			slice: &webhook.Slice{
-				"test": {URL: "https://example.com"}},
-			want: &api_type.WebHookSlice{
-				"test": {URL: stringPtr("https://example.com")}},
-		},
-		"multiple elements": {
-			slice: &webhook.Slice{
-				"test":  {URL: "https://example.com"},
-				"other": {URL: "https://release-argus.io"}},
-			want: &api_type.WebHookSlice{
-				"test":  {URL: stringPtr("https://example.com")},
-				"other": {URL: stringPtr("https://release-argus.io")}},
-		},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN convertWebHookSliceToAPITypeWebHookSlice is called on it
-			got := convertWebHookSliceToAPITypeWebHookSlice(tc.slice)
-
-			// THEN the WebHookSlice is converted correctly
-			if got.String() != tc.want.String() {
-				t.Errorf("want:\n%q\ngot:%q",
-					tc.want.String(), got.String())
 			}
 		})
 	}

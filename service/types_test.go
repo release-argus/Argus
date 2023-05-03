@@ -24,121 +24,11 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
-
-func TestService_Convert(t *testing.T) {
-	// GIVEN a Service with the old var style
-	svcType := "url"
-	active := true
-	interval := "10s"
-	semanticVersioning := true
-	url := "https://release-argus.io"
-	allowInvalidCerts := true
-	accessToken := "foo"
-	usePreRelease := true
-	urlCommands := filter.URLCommandSlice{{Type: "regex", Regex: stringPtr("foo")}}
-	autoApprove := true
-	icon := "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"
-	iconLinkTo := "https://release-argus.io/demo"
-	webURL := "https://release-argus.io/docs"
-	svc := Service{
-		Type:               svcType,
-		Active:             &active,
-		Interval:           &interval,
-		SemanticVersioning: &semanticVersioning,
-		URL:                &url,
-		AllowInvalidCerts:  &allowInvalidCerts,
-		AccessToken:        &accessToken,
-		UsePreRelease:      &usePreRelease,
-		URLCommands:        &urlCommands,
-		AutoApprove:        &autoApprove,
-		Icon:               &icon,
-		IconLinkTo:         &iconLinkTo,
-		WebURL:             &webURL,
-	}
-	saveChannel := make(chan bool, 5)
-	svc.Status.SaveChannel = &saveChannel
-
-	// WHEN Convert is called
-	svc.Convert()
-
-	// THEN the vars are converted correctly
-	// Active -> Options.Active
-	if svc.Options.Active != &active {
-		t.Errorf("Type not pushed to option.Active correctly\nwant: %t\ngot:  %v",
-			active, svc.Options.Active)
-	}
-	// Interval -> Options.Interval
-	if svc.Options.Interval != interval {
-		t.Errorf("Interval not pushed to option.Interval correctly\nwant: %q\ngot:  %v",
-			interval, svc.Options.Interval)
-	}
-	// SemanticVersioning -> Options.SemanticVersioning
-	if *svc.Options.SemanticVersioning != semanticVersioning {
-		t.Errorf("SemanticVersioning not pushed to option.SemanticVersioning correctly\nwant: %t\ngot:  %v",
-			semanticVersioning, svc.Options.SemanticVersioning)
-	}
-	// Type -> LatestVersion.Type
-	if svc.LatestVersion.Type != svcType {
-		t.Errorf("Type not pushed to LatestVersion.Type correctly\nwant: %q\ngot:  %q",
-			svcType, svc.LatestVersion.Type)
-	}
-	// URL -> LatestVersion.URL
-	if svc.LatestVersion.URL != url {
-		t.Errorf("URL not pushed to LatestVersion.URL correctly\nwant: %q\ngot:  %q",
-			url, svc.LatestVersion.URL)
-	}
-	// AllowInvalidCerts -> LatestVersion.AllowInvalidCerts
-	if svc.LatestVersion.AllowInvalidCerts != &allowInvalidCerts {
-		t.Errorf("AllowInvalidCerts not pushed to LatestVersion.AllowInvalidCerts correctly\nwant: %t\ngot:  %v",
-			allowInvalidCerts, svc.LatestVersion.AllowInvalidCerts)
-	}
-	// AccessToken -> LatestVersion.AccessToken
-	if svc.LatestVersion.AccessToken != &accessToken {
-		t.Errorf("AccessToken not pushed to LatestVersion.AccessToken correctly\nwant: %q\ngot:  %q",
-			accessToken, util.EvalNilPtr(svc.LatestVersion.AccessToken, "nil"))
-	}
-	// UsePreRelease -> LatestVersion.UsePreRelease
-	if svc.LatestVersion.UsePreRelease != &usePreRelease {
-		t.Errorf("UsePreRelease not pushed to LatestVersion.UsePreRelease correctly\nwant: %t\ngot:  %v",
-			usePreRelease, svc.LatestVersion.UsePreRelease)
-	}
-	// URLCommands -> LatestVersion.URLCommands
-	if len(svc.LatestVersion.URLCommands) != len(urlCommands) {
-		t.Errorf("URLCommands not pushed to LatestVersion.URLCommands correctly\nwant: %v\ngot:  %v",
-			urlCommands, svc.LatestVersion.URLCommands)
-	}
-	// AutoApprove -> Dashboard.AutoApprove
-	if svc.Dashboard.AutoApprove != &autoApprove {
-		t.Errorf("AutoApprove not pushed to Dashboard.AutoApprove correctly\nwant: %t\ngot:  %v",
-			autoApprove, svc.Dashboard.AutoApprove)
-	}
-	// Icon -> Dashboard.Icon
-	if svc.Dashboard.Icon != icon {
-		t.Errorf("Icon not pushed to Dashboard.Icon correctly\nwant: %q\ngot:  %q",
-			icon, svc.Dashboard.Icon)
-	}
-	// IconLinkTo -> Dashboard.IconLinkTo
-	if svc.Dashboard.IconLinkTo != iconLinkTo {
-		t.Errorf("IconLinkTo not pushed to Dashboard.IconLinkTo correctly\nwant: %q\ngot:  %q",
-			iconLinkTo, svc.Dashboard.IconLinkTo)
-	}
-	// WebURL -> Dashboard.WebURL
-	if svc.Dashboard.WebURL != webURL {
-		t.Errorf("WebURL not pushed to Dashboard.WebURL correctly\nwant: %q\ngot:  %q",
-			webURL, svc.Dashboard.WebURL)
-	}
-	// Should have sent a message to the save channel
-	if len(saveChannel) != 1 {
-		t.Fatalf("Service was converted so message should have been sent to the save channel")
-	}
-}
 
 func TestService_String(t *testing.T) {
 	tests := map[string]struct {
@@ -147,11 +37,11 @@ func TestService_String(t *testing.T) {
 	}{
 		"nil": {
 			svc:  nil,
-			want: "<nil>",
+			want: "",
 		},
 		"empty": {
 			svc:  &Service{},
-			want: "{}\n",
+			want: "{}",
 		},
 		"all fields defined": {
 			svc: &Service{
@@ -163,47 +53,51 @@ func TestService_String(t *testing.T) {
 				DeployedVersionLookup: &deployedver.Lookup{
 					URL: "https://valid.release-argus.io/plain"},
 				Notify: shoutrrr.Slice{
-					"foo": {
-						Type:      "discord",
-						URLFields: map[string]string{"token": "bar"}}},
+					"foo": shoutrrr.New(
+						nil, "", nil, nil,
+						"discord",
+						&map[string]string{
+							"token": "bar"},
+						nil, nil, nil)},
 				Command: command.Slice{
 					{"ls", "-la"}},
 				WebHook: webhook.Slice{
-					"foo": {
-						Type: "github",
-						URL:  "https://example.com"}},
-				Dashboard: DashboardOptions{
-					AutoApprove: boolPtr(true)},
-				Defaults: &Service{
-					Options: opt.Options{
-						SemanticVersioning: boolPtr(false)}},
-				HardDefaults: &Service{
-					Options: opt.Options{
-						SemanticVersioning: boolPtr(false)}},
-			},
+					"foo": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"https://example.com",
+						nil, nil, nil)},
+				Dashboard: *NewDashboardOptions(
+					boolPtr(true), "", "", "",
+					nil, nil),
+				Defaults: &ServiceDefaults{
+					Options: *opt.NewDefaults(
+						"", boolPtr(false))},
+				HardDefaults: &ServiceDefaults{
+					Options: *opt.NewDefaults(
+						"", boolPtr(false))}},
 			want: `
 comment: svc for blah
 options:
-    active: false
+  active: false
 latest_version:
-    url: release-argus/Argus
+  url: release-argus/Argus
 deployed_version:
-    url: https://valid.release-argus.io/plain
+  url: https://valid.release-argus.io/plain
 notify:
-    foo:
-        type: discord
-        url_fields:
-            token: bar
+  foo:
+    type: discord
+    url_fields:
+      token: bar
 command:
-    - - ls
-      - -la
+  - - ls
+    - -la
 webhook:
-    foo:
-        type: github
-        url: https://example.com
+  foo:
+    type: github
+    url: https://example.com
 dashboard:
-    auto_approve: true
-`,
+  auto_approve: true`,
 		},
 	}
 
@@ -212,14 +106,24 @@ dashboard:
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Service is stringified with String
-			got := tc.svc.String()
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
 
-			// THEN the result is as expected
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				// WHEN the Service is stringified with String
+				got := tc.svc.String(prefix)
+
+				// THEN the result is as expected
+				if got != want {
+					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
 			}
 		})
 	}
@@ -317,15 +221,17 @@ func TestService_Summary(t *testing.T) {
 		"only dashboard.icon, from notify": {
 			svc: &Service{
 				Notify: shoutrrr.Slice{
-					"foo": {
-						Params: map[string]string{
+					"foo": shoutrrr.New(
+						nil, "", nil,
+						&map[string]string{
 							"icon": "https://example.com/notify.png"},
-						Main: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}},
-						Defaults: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}},
-						HardDefaults: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}}}}},
+						"", nil,
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil),
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil),
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil))}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr("https://example.com/notify.png"),
@@ -340,15 +246,17 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"},
 				Notify: shoutrrr.Slice{
-					"foo": {
-						Params: map[string]string{
+					"foo": shoutrrr.New(
+						nil, "", nil,
+						&map[string]string{
 							"icon": "https://example.com/notify.png"},
-						Main: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}},
-						Defaults: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}},
-						HardDefaults: &shoutrrr.Shoutrrr{
-							Params: map[string]string{}}}}},
+						"", nil,
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil),
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil),
+						shoutrrr.NewDefaults(
+							"", nil, nil, nil))}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr("https://example.com/icon.png"),
@@ -425,9 +333,18 @@ func TestService_Summary(t *testing.T) {
 		"3 webhooks": {
 			svc: &Service{
 				WebHook: webhook.Slice{
-					"bish": {Type: "github"},
-					"bash": {Type: "github"},
-					"bosh": {Type: "github"}}},
+					"bish": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil),
+					"bash": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil),
+					"bosh": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"gitlab",
+						"", nil, nil, nil)}},
 			want: apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
@@ -492,5 +409,4 @@ func TestService_Summary(t *testing.T) {
 			}
 		})
 	}
-
 }

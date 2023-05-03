@@ -23,12 +23,8 @@ func stringPtr(val string) *string {
 	return &val
 }
 
-func testOptions() Options {
-	return Options{
-		Active:             boolPtr(true),
-		Interval:           "10m",
-		SemanticVersioning: boolPtr(true),
-		Defaults:           &Options{},
-		HardDefaults:       &Options{},
-	}
+func testOptions() *Options {
+	return New(
+		boolPtr(true), "10m", boolPtr(true),
+		&OptionsDefaults{}, &OptionsDefaults{})
 }

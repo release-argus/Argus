@@ -184,8 +184,9 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 			req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
 		}
 		// Conditional requests - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
-		if l.GitHubData.ETag != "" {
-			req.Header.Set("If-None-Match", l.GitHubData.ETag)
+		eTag := l.GitHubData.ETag()
+		if eTag != "" {
+			req.Header.Set("If-None-Match", eTag)
 		}
 	}
 
@@ -208,10 +209,10 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	jLog.Error(err, *logFrom, err != nil)
 	if l.Type == "github" && err == nil {
 		newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
-		if l.GitHubData.ETag != newETag {
+		if l.GitHubData.ETag() != newETag {
 			jLog.Verbose("Potentially found new releases (ETag changed)", *logFrom, true)
+			l.GitHubData.SetETag(newETag)
 		}
-		l.GitHubData.ETag = newETag
 	}
 	return
 }
@@ -231,12 +232,9 @@ func (l *Lookup) GetVersions(
 			return
 		}
 		// Store the unfiltered releases to support filter changes without a refetch
-		l.GitHubData.Releases = releases
+		l.GitHubData.SetReleases(releases)
 		// Filter releases
-		filteredReleases = l.filterGitHubReleases(
-			l.GitHubData.Releases,
-			logFrom,
-		)
+		filteredReleases = l.filterGitHubReleases(logFrom)
 		if len(filteredReleases) == 0 {
 			err = fmt.Errorf("no releases were found matching the url_commands")
 			jLog.Warn(err, *logFrom, true)
@@ -268,10 +266,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 	} else if l.Type == "github" {
 		// ReCheck this ETag's filteredReleases incase filters/releases changed
 		jLog.Verbose("Using cached releases (ETag unchanged)", *logFrom, true)
-		filteredReleases = l.filterGitHubReleases(
-			l.GitHubData.Releases,
-			logFrom,
-		)
+		filteredReleases = l.filterGitHubReleases(logFrom)
 	}
 
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()

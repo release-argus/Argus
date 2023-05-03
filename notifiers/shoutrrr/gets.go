@@ -21,7 +21,12 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetOption from this/Main/Defaults/HardDefaults on FiFo
+// GetOptions map from this Shoutrrr.
+func (s *ShoutrrrBase) GetOptions() *map[string]string {
+	return &s.Options
+}
+
+// GetOption from this/Main/Defaults/HardDefaults on FiFo.
 func (s *Shoutrrr) GetOption(key string) string {
 	return util.GetFirstNonDefault(
 		s.Options[key],
@@ -31,22 +36,18 @@ func (s *Shoutrrr) GetOption(key string) string {
 }
 
 // GetSelfOption gets Options[key] from this Shoutrrr
-func (s *Shoutrrr) GetSelfOption(key string) string {
+func (s *ShoutrrrBase) GetSelfOption(key string) string {
 	return s.Options[key]
 }
 
-// GetURLField from this/Main/Defaults/HardDefaults on FiFo
-func (s *Shoutrrr) GetURLField(key string) string {
-	return util.GetFirstNonDefault(
-		s.URLFields[key],
-		s.Main.URLFields[key],
-		s.Defaults.URLFields[key],
-		s.HardDefaults.URLFields[key])
+// SetOption[key] to value
+func (s *ShoutrrrBase) SetOption(key string, value string) {
+	s.Options[key] = value
 }
 
-// GetSelfURLField gets URLFields[key] from this Shoutrrr
-func (s *Shoutrrr) GetSelfURLField(key string) string {
-	return s.URLFields[key]
+// GetParams map from this Shoutrrr.
+func (s *ShoutrrrBase) GetParams() *map[string]string {
+	return &s.Params
 }
 
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
@@ -59,23 +60,37 @@ func (s *Shoutrrr) GetParam(key string) string {
 }
 
 // GetSelfParam gets Params[key] from this Shoutrrr
-func (s *Shoutrrr) GetSelfParam(key string) string {
+func (s *ShoutrrrBase) GetSelfParam(key string) string {
 	return s.Params[key]
 }
 
-// SetOption[key] to value
-func (s *Shoutrrr) SetOption(key string, value string) {
-	s.Options[key] = value
+// SetParam[key] to value
+func (s *ShoutrrrBase) SetParam(key string, value string) {
+	s.Params[key] = value
+}
+
+// GetURLFields map from this Shoutrrr.
+func (s *ShoutrrrBase) GetURLFields() *map[string]string {
+	return &s.URLFields
+}
+
+// GetURLField from this/Main/Defaults/HardDefaults on FiFo
+func (s *Shoutrrr) GetURLField(key string) string {
+	return util.GetFirstNonDefault(
+		s.URLFields[key],
+		s.Main.URLFields[key],
+		s.Defaults.URLFields[key],
+		s.HardDefaults.URLFields[key])
+}
+
+// GetSelfURLField gets URLFields[key] from this Shoutrrr
+func (s *ShoutrrrBase) GetSelfURLField(key string) string {
+	return s.URLFields[key]
 }
 
 // SetURLField[key] to value
-func (s *Shoutrrr) SetURLField(key string, value string) {
+func (s *ShoutrrrBase) SetURLField(key string, value string) {
 	s.URLFields[key] = value
-}
-
-// SetParam[key] to value
-func (s *Shoutrrr) SetParam(key string, value string) {
-	s.Params[key] = value
 }
 
 // GetDelay before sending.
@@ -115,7 +130,13 @@ func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) (title string) {
 	return
 }
 
-// GetType of this Shoutrrr
+// GetSelfType of this Shoutrrr.
+func (s *ShoutrrrBase) GetSelfType() string {
+	return s.Type
+}
+
+// GetType of this Shoutrrr.
 func (s *Shoutrrr) GetType() string {
-	return util.GetFirstNonDefault(s.Type, s.Main.Type)
+	// s.ID if the name is the same as the type
+	return util.GetFirstNonDefault(s.Type, s.Main.Type, s.ID)
 }

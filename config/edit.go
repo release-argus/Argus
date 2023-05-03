@@ -38,7 +38,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	logFrom.Secondary = newService.ID
 	// Whether we need to save the config
 	changedService := oldServiceID != newService.ID ||
-		c.Service[oldServiceID].String() != newService.String()
+		c.Service[oldServiceID].String("") != newService.String("")
 	// Whether we need to update the database
 	changedDB := oldServiceID == "" ||
 		c.Service[oldServiceID].Status.GetApprovedVersion() != newService.Status.GetApprovedVersion() ||

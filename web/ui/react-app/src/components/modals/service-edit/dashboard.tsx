@@ -6,16 +6,11 @@ import { BooleanWithDefault } from "components/generic";
 import { ServiceDashboardOptionsType } from "types/config";
 
 interface Props {
-  dashboard?: ServiceDashboardOptionsType;
   defaults?: ServiceDashboardOptionsType;
   hard_defaults?: ServiceDashboardOptionsType;
 }
 
-const EditServiceDashboard: FC<Props> = ({
-  dashboard,
-  defaults,
-  hard_defaults,
-}) => (
+const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => (
   <Accordion>
     <Accordion.Header>Dashboard:</Accordion.Header>
     <Accordion.Body>
@@ -23,7 +18,6 @@ const EditServiceDashboard: FC<Props> = ({
         name={"dashboard.auto_approve"}
         label="Auto-approve"
         tooltip="Send all commands/webhooks when a new release is found"
-        value={dashboard?.auto_approve}
         defaultValue={defaults?.auto_approve || hard_defaults?.auto_approve}
       />
       <FormItemWithPreview

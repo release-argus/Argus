@@ -21,11 +21,9 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	cfg "github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -39,12 +37,7 @@ func stringListPtr(val []string) *[]string {
 	return &val
 }
 
-var resetLock sync.Mutex
-
-func reset() {
-	resetLock.Lock()
-	defer resetLock.Unlock()
-	config = cfg.Config{}
+func resetFlags() {
 	configFile = stringPtr("")
 	configCheckFlag = boolPtr(false)
 	testCommandsFlag = stringPtr("")
@@ -86,30 +79,13 @@ func TestTheMain(t *testing.T) {
 			file := fmt.Sprintf("%s.yml", name)
 			tc.file(file, t)
 			defer os.Remove(tc.db)
-			reset()
+			resetFlags()
 			configFile = &file
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
-			go func() {
-				accessToken := os.Getenv("GITHUB_TOKEN")
-				if accessToken == "" {
-					return
-				}
-				for {
-					config.OrderMutex.RLock()
-					done := false
-					if len(config.Order) != 0 {
-						config.Defaults.Service.AccessToken = &accessToken
-						done = true
-					}
-					if done {
-						return
-					}
-					config.OrderMutex.RUnlock()
-					time.Sleep(100 * time.Millisecond)
-				}
-			}()
+			accessToken := os.Getenv("GITHUB_TOKEN")
+			os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
 
 			// WHEN Main is called
 			go func() {
