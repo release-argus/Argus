@@ -25,9 +25,9 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// GetParams returns the params using everything from master>main>defaults>hardDefaults when
+// BuildParams returns the params using everything from master>main>defaults>hardDefaults when
 // the key is not defined in the lower level
-func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
+func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
 	p := make(shoutrrr_types.Params, len(s.Params)+len(s.Main.Params))
 	params = &p
 
@@ -283,7 +283,7 @@ func (s *Shoutrrr) Send(
 	if err != nil {
 		return fmt.Errorf("failed to create Shoutrrr sender: %w", err)
 	}
-	params := s.GetParams(serviceInfo)
+	params := s.BuildParams(serviceInfo)
 	if title != "" {
 		(*params)["title"] = title
 	}

@@ -23,7 +23,67 @@ import (
 	svcstatus "github.com/release-argus/Argus/service/status"
 )
 
+func TestShoutrrrDefaults_String(t *testing.T) {
+	// GIVEN a ShoutrrrDefaults
+	tests := map[string]struct {
+		shoutrrr *ShoutrrrDefaults
+		want     string
+	}{
+		"nil": {
+			shoutrrr: nil,
+			want:     ""},
+		"empty": {
+			shoutrrr: &ShoutrrrDefaults{},
+			want:     "{}"},
+		"all fields defined": {
+			shoutrrr: NewDefaults(
+				"discord", // type
+				&map[string]string{ // options
+					"delay": "1h"},
+				&map[string]string{ // params
+					"title": "argus"},
+				&map[string]string{ // url_fields
+					"webhookid": "456"}),
+			want: `
+type: discord
+options:
+  delay: 1h
+url_fields:
+  webhookid: "456"
+params:
+  title: argus`},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
+
+				// WHEN the Shoutrrr is stringified with String
+				got := tc.shoutrrr.String(prefix)
+
+				// THEN the result is as expected
+				if got != want {
+					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestShoutrrr_String(t *testing.T) {
+	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		shoutrrr      *Shoutrrr
 		latestVersion string
@@ -31,41 +91,44 @@ func TestShoutrrr_String(t *testing.T) {
 	}{
 		"nil": {
 			shoutrrr: nil,
-			want:     "<nil>"},
+			want:     ""},
 		"empty": {
 			shoutrrr: &Shoutrrr{},
-			want:     "{}\n"},
+			want:     "{}"},
 		"all fields defined": {
 			latestVersion: "1.2.3",
-			shoutrrr: &Shoutrrr{
-				Type:          "discord",
-				ID:            "foo",
-				ServiceStatus: &svcstatus.Status{},
-				Options: map[string]string{
+			shoutrrr: New(
+				nil,   // failed
+				"foo", // id
+				&map[string]string{ // options
 					"delay": "1h"},
-				URLFields: map[string]string{
-					"webhookid": "456"},
-				Params: map[string]string{
+				&map[string]string{ // params
 					"title": "argus"},
-				Main: &Shoutrrr{
-					URLFields: map[string]string{
-						"token": "bar"}},
-				Defaults: &Shoutrrr{
-					Options: map[string]string{
-						"delay": "2h"}},
-				HardDefaults: &Shoutrrr{
-					Options: map[string]string{
-						"delay": "3h"}},
-			},
+				"discord", // type
+				&map[string]string{ // url_fields
+					"webhookid": "456"},
+				NewDefaults( // main
+					"", nil, nil,
+					&map[string]string{
+						"token": "bar"}),
+				NewDefaults( // defaults
+					"",
+					&map[string]string{
+						"delay": "2h"},
+					nil, nil),
+				NewDefaults( // hardDefaults
+					"",
+					&map[string]string{
+						"delay": "3h"},
+					nil, nil)),
 			want: `
 type: discord
 options:
-    delay: 1h
+  delay: 1h
 url_fields:
-    webhookid: "456"
+  webhookid: "456"
 params:
-    title: argus
-`},
+  title: argus`},
 	}
 
 	for name, tc := range tests {
@@ -74,17 +137,98 @@ params:
 			t.Parallel()
 
 			if tc.latestVersion != "" {
+				if tc.shoutrrr.ServiceStatus == nil {
+					tc.shoutrrr.ServiceStatus = &svcstatus.Status{}
+				}
 				tc.shoutrrr.ServiceStatus.SetLatestVersion(tc.latestVersion, false)
 			}
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
 
-			// WHEN the Shoutrrr is stringified with String
-			got := tc.shoutrrr.String()
+				// WHEN the Shoutrrr is stringified with String
+				got := tc.shoutrrr.String(prefix)
 
-			// THEN the result is as expected
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				// THEN the result is as expected
+				if got != want {
+					t.Errorf("(prefix=%q)got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestSliceDefaults_String(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice *SliceDefaults
+		want  string
+	}{
+		"nil": {
+			slice: nil,
+			want:  "",
+		},
+		"empty": {
+			slice: &SliceDefaults{},
+			want:  "{}",
+		},
+		"one element": {
+			slice: &SliceDefaults{
+				"foo": NewDefaults(
+					"discord",
+					nil, nil, nil)},
+			want: `
+foo:
+  type: discord`,
+		},
+		"multiple elements": {
+			slice: &SliceDefaults{
+				"foo": NewDefaults(
+					"discord",
+					nil, nil, nil),
+				"bar": NewDefaults(
+					"gotify",
+					nil, nil, nil),
+			},
+			want: `
+bar:
+  type: gotify
+foo:
+  type: discord`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
+
+				// WHEN the Slice is stringified with String
+				got := tc.slice.String(prefix)
+
+				// THEN the result is as expected
+				want = strings.TrimPrefix(want, "\n")
+				if got != want {
+					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
 			}
 		})
 	}
@@ -98,34 +242,38 @@ func TestSlice_String(t *testing.T) {
 	}{
 		"nil": {
 			slice: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			slice: &Slice{},
-			want:  "{}\n",
+			want:  "{}",
 		},
 		"one element": {
 			slice: &Slice{
-				"foo": &Shoutrrr{
-					Type: "discord"}},
+				"foo": New(
+					nil, "", nil, nil,
+					"discord",
+					nil, nil, nil, nil)},
 			want: `
 foo:
-    type: discord
-`,
+  type: discord`,
 		},
 		"multiple elements": {
 			slice: &Slice{
-				"foo": &Shoutrrr{
-					Type: "discord"},
-				"bar": &Shoutrrr{
-					Type: "gotify"},
+				"foo": New(
+					nil, "", nil, nil,
+					"discord",
+					nil, nil, nil, nil),
+				"bar": New(
+					nil, "", nil, nil,
+					"gotify",
+					nil, nil, nil, nil),
 			},
 			want: `
 bar:
-    type: gotify
+  type: gotify
 foo:
-    type: discord
-`,
+  type: discord`,
 		},
 	}
 
@@ -134,14 +282,24 @@ foo:
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Slice is stringified with String
-			got := tc.slice.String()
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
 
-			// THEN the result is as expected
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				// WHEN the Slice is stringified with String
+				got := tc.slice.String(prefix)
+
+				// THEN the result is as expected
+				if got != want {
+					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
 			}
 		})
 	}

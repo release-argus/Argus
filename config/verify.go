@@ -25,23 +25,23 @@ import (
 // CheckValues are valid.
 func (c *Config) CheckValues() {
 	var errs error
-	if err := c.Defaults.CheckValues(); err != nil {
+	if err := c.Defaults.CheckValues("  "); err != nil {
 		errs = fmt.Errorf("defaults:\\%w",
 			err)
 	}
 
-	if err := c.Notify.CheckValues("  "); err != nil {
+	if err := c.Notify.CheckValues(""); err != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), err)
 	}
 
-	if err := c.WebHook.CheckValues("  "); err != nil {
+	if err := c.WebHook.CheckValues(""); err != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), err)
 	}
 
-	if err := c.Service.CheckValues("  "); err != nil {
-		errs = fmt.Errorf("%sservice:\\%w",
+	if err := c.Service.CheckValues(""); err != nil {
+		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), err)
 	}
 
@@ -57,13 +57,19 @@ func (c *Config) Print(flag *bool) {
 		return
 	}
 
-	c.Service.Print("", c.Order)
-	fmt.Println()
-	c.Notify.Print("")
-	fmt.Println()
-	c.WebHook.Print("")
-	fmt.Println()
-	c.Defaults.Print()
+	if len(c.Order) > 0 {
+		c.Service.Print("", c.Order)
+		fmt.Println("")
+	}
+	if len(c.Notify) > 0 {
+		c.Notify.Print("")
+		fmt.Println()
+	}
+	if len(c.WebHook) > 0 {
+		c.WebHook.Print("")
+		fmt.Println()
+	}
+	c.Defaults.Print("")
 	if !jLog.Testing {
 		os.Exit(0)
 	}

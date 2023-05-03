@@ -28,7 +28,7 @@ export const convertAPIServiceDataEditToUI = (
             })
           ),
           docker: {
-            type: serviceData?.latest_version?.require?.docker?.type || "hub",
+            type: serviceData?.latest_version?.require?.docker?.type || "",
             image: serviceData?.latest_version?.require?.docker?.image,
             tag: serviceData?.latest_version?.require?.docker?.tag,
             username: serviceData?.latest_version?.require?.docker?.username,
@@ -128,7 +128,7 @@ export const convertAPIServiceDataEditToUI = (
     options: { active: true },
     latest_version: {
       type: "github",
-      require: { docker: { type: "hub" } },
+      require: { docker: { type: "" } },
     },
     dashboard: {
       auto_approve: undefined,

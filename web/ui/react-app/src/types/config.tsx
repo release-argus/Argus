@@ -71,13 +71,9 @@ export interface ServiceListType {
 
 export interface DefaultServiceType {
   [key: string]: any;
-  comment?: string;
   options?: ServiceOptionsType;
-  latest_version?: LatestVersionLookupType;
+  latest_version?: DefaultLatestVersionLookupType;
   deployed_version?: DeployedVersionLookupType;
-  command?: string[][];
-  webhook?: WebHookType;
-  notify?: ServiceDict<NotifyType>;
   dashboard?: ServiceDashboardOptionsType;
 }
 
@@ -115,28 +111,53 @@ export interface DockerFilterType {
   token?: string;
 }
 
-export interface LatestVersionFiltersType {
-  [key: string]: string | CommandType | DockerFilterType | undefined;
-  regex_content?: string;
-  regex_version?: string;
-  command?: CommandType;
-  docker?: DockerFilterType;
-}
-
-export interface LatestVersionLookupType {
+export interface BaseLatestVersionLookupType {
   [key: string]:
     | string
     | boolean
     | undefined
     | URLCommandType[]
-    | LatestVersionFiltersType;
+    | LatestVersionFiltersType
+    | DefaultLatestVersionFiltersType;
   type?: "github" | "url";
   url?: string;
   access_token?: string;
   allow_invalid_certs?: boolean;
   use_prerelease?: boolean;
   url_commands?: URLCommandType[];
+}
+export interface DefaultLatestVersionLookupType
+  extends BaseLatestVersionLookupType {
+  require?: DefaultLatestVersionFiltersType;
+}
+
+export interface LatestVersionLookupType extends BaseLatestVersionLookupType {
   require?: LatestVersionFiltersType;
+}
+
+export interface DefaultLatestVersionFiltersType {
+  [key: string]: DefaultDockerFilterType | undefined;
+  docker?: DefaultDockerFilterType;
+}
+export interface DefaultDockerFilterType {
+  [key: string]: string | DefaultDockerFilterRegistryType | undefined;
+  type?: string;
+  ghcr?: DefaultDockerFilterRegistryType;
+  hub?: DefaultDockerFilterRegistryType;
+  quay?: DefaultDockerFilterRegistryType;
+}
+export interface DefaultDockerFilterRegistryType {
+  [key: string]: string | undefined;
+  token?: string;
+  username?: string;
+}
+
+export interface LatestVersionFiltersType {
+  [key: string]: string | CommandType | DockerFilterType | undefined;
+  regex_content?: string;
+  regex_version?: string;
+  command?: CommandType;
+  docker?: DockerFilterType;
 }
 export interface DeployedVersionLookupType {
   [key: string]: string | boolean | undefined | BasicAuthType | HeaderType[];
@@ -261,7 +282,7 @@ export interface NotifySMTPType extends NotifyType {
     username?: string;
   };
   params: {
-    auth?: typeof SMTPAuthOptions[number]["value"];
+    auth?: (typeof SMTPAuthOptions)[number]["value"];
     fromaddress?: string;
     fromname?: string;
     subject?: string;
@@ -451,7 +472,7 @@ export interface NotifyTelegramType extends NotifyType {
   params: {
     chats?: string;
     notification?: boolean | string;
-    parsemode?: typeof TelegramParseModeOptions[number]["value"];
+    parsemode?: (typeof TelegramParseModeOptions)[number]["value"];
     preview?: boolean | string;
     title?: string;
   };

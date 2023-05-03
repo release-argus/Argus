@@ -24,23 +24,29 @@ import (
 
 func TestRelease_String(t *testing.T) {
 	tests := map[string]struct {
-		release Release
+		release *Release
 		want    string
 	}{
-		"empty": {release: Release{},
-			want: "{}"},
-		"only assets": {release: Release{Assets: []Asset{
-			{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
-			{ID: 2, Name: "test2"}}},
+		"nil": {
+			release: nil,
+			want:    ""},
+		"empty": {
+			release: &Release{},
+			want:    "{}"},
+		"only assets": {
+			release: &Release{Assets: []Asset{
+				{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
+				{ID: 2, Name: "test2"}}},
 			want: `{"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"},{"id":2,"name":"test2"}]}`},
-		"all fields defined": {release: Release{
-			URL:             "https://test.com",
-			AssetsURL:       "https://test.com/assets",
-			SemanticVersion: &semver.Version{Major: 1, Minor: 2, Patch: 3},
-			TagName:         "v1.2.3",
-			PreRelease:      true,
-			Assets: []Asset{
-				{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"}}},
+		"all fields defined": {
+			release: &Release{
+				URL:             "https://test.com",
+				AssetsURL:       "https://test.com/assets",
+				SemanticVersion: &semver.Version{Major: 1, Minor: 2, Patch: 3},
+				TagName:         "v1.2.3",
+				PreRelease:      true,
+				Assets: []Asset{
+					{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"}}},
 			want: `{"url":"https://test.com","assets_url":"https://test.com/assets","tag_name":"v1.2.3","prerelease":true,"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}]}`},
 	}
 
@@ -63,13 +69,17 @@ func TestRelease_String(t *testing.T) {
 
 func TestAsset_String(t *testing.T) {
 	tests := map[string]struct {
-		asset Asset
+		asset *Asset
 		want  string
 	}{
-		"empty": {asset: Asset{},
-			want: `{"id":0}`},
+		"nil": {
+			asset: nil,
+			want:  ""},
+		"empty": {
+			asset: &Asset{},
+			want:  `{"id":0}`},
 		"all fields defined": {
-			asset: Asset{
+			asset: &Asset{
 				ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
 			want: `{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}`},
 	}

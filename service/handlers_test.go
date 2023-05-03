@@ -239,7 +239,6 @@ func TestService_UpdatedVersion(t *testing.T) {
 
 func TestService_HandleUpdateActions(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		commands              command.Slice
 		webhooks              webhook.Slice
@@ -308,7 +307,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			&svc.Options.Interval)
 		svc.WebHook.Init(
 			&svc.Status,
-			&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+			&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			nil,
 			&svc.Options.Interval)
 
@@ -403,7 +402,6 @@ func TestService_HandleUpdateActions(t *testing.T) {
 
 func TestService_HandleFailedActions(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		commands              command.Slice
 		commandNextRunnables  []time.Time
@@ -585,7 +583,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			svc.WebHook = tc.webhooks
 			svc.WebHook.Init(
 				&svc.Status,
-				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 				nil,
 				&svc.Options.Interval)
 			for k, v := range tc.startFailsWebHook {
@@ -673,7 +671,6 @@ func TestService_HandleFailedActions(t *testing.T) {
 
 func TestService_HandleCommand(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		command               string
 		commands              command.Slice
@@ -833,7 +830,6 @@ func TestService_HandleCommand(t *testing.T) {
 
 func TestService_HandleWebHook(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		webhook               string
 		webhooks              webhook.Slice
@@ -912,7 +908,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		svc.WebHook = tc.webhooks
 		svc.WebHook.Init(
 			&svc.Status,
-			&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{},
+			&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			nil,
 			&svc.Options.Interval)
 
@@ -991,7 +987,6 @@ func TestService_HandleWebHook(t *testing.T) {
 
 func TestService_HandleSkip(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
 		skipVersion          string
@@ -1059,7 +1054,6 @@ func TestService_HandleSkip(t *testing.T) {
 
 func TestService_ShouldRetryAll(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		command []*bool
 		webhook map[string]*bool

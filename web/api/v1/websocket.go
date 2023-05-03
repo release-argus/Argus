@@ -45,6 +45,8 @@ func (api *API) wsServiceInit(client *Client) {
 	api.wsSendJSON(client, msg, &logFrom)
 
 	// Initialise the services
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
 	for _, key := range api.Config.Order {
 		api.announceService(key, client, &logFrom)
 	}
@@ -84,7 +86,7 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 
 	// SKIP this release
 	if *payload.Target == "ARGUS_SKIP" {
-		msg := fmt.Sprintf("%s release skip - %q",
+		msg := fmt.Sprintf("%q release skip - %q",
 			id, payload.ServiceData.Status.LatestVersion)
 		api.Log.Info(msg, logFrom, true)
 		svc.HandleSkip(payload.ServiceData.Status.LatestVersion)
@@ -151,7 +153,7 @@ func (api *API) wsCommand(client *Client, payload api_type.WebSocketMessage) {
 		command := (*svc.CommandController.Command)[i].ApplyTemplate(&svc.Status)
 		commandSummary[command.String()] = &api_type.CommandSummary{
 			Failed:       svc.Status.Fails.Command.Get(i),
-			NextRunnable: svc.CommandController.GetNextRunnable(i)}
+			NextRunnable: svc.CommandController.NextRunnable(i)}
 	}
 
 	msg := api_type.WebSocketMessage{
@@ -195,7 +197,7 @@ func (api *API) wsWebHook(client *Client, payload api_type.WebSocketMessage) {
 	for key := range svc.WebHook {
 		webhookSummary[key] = &api_type.WebHookSummary{
 			Failed:       svc.Status.Fails.WebHook.Get(key),
-			NextRunnable: svc.WebHook[key].GetNextRunnable(),
+			NextRunnable: svc.WebHook[key].NextRunnable(),
 		}
 	}
 
@@ -287,8 +289,9 @@ func (api *API) wsConfigDefaults(client *Client) {
 	api.Log.Verbose("-", logFrom, true)
 
 	// Create and send status page data
-	notifyDefaults := convertNotifySliceToAPITypeNotifySlice(&api.Config.Defaults.Notify)
-	webhookDefaults := convertWebHookToAPITypeWebHook(&api.Config.Defaults.WebHook)
+	latestVersionRequireDefaults := convertAndCensorLatestVersionRequireDefaults(&api.Config.Defaults.Service.LatestVersion.Require)
+	notifyDefaults := convertAndCensorNotifySliceDefaults(&api.Config.Defaults.Notify)
+	webhookDefaults := convertAndCensorWebHookDefaults(&api.Config.Defaults.WebHook)
 
 	msg := api_type.WebSocketMessage{
 		Page:    "CONFIG",
@@ -296,18 +299,21 @@ func (api *API) wsConfigDefaults(client *Client) {
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
 			Defaults: &api_type.Defaults{
-				Service: api_type.Service{
-					Options: &api_type.ServiceOptions{
-						Interval:           api.Config.Defaults.Service.Options.Interval,
-						SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning},
-					LatestVersion: &api_type.LatestVersion{
-						AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
-						AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
-						UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease},
-					DeployedVersionLookup: &api_type.DeployedVersionLookup{
-						AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts},
-					Dashboard: &api_type.DashboardOptions{
-						AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove}},
+				Service: api_type.ServiceDefaults{
+					Service: api_type.Service{
+						Options: &api_type.ServiceOptions{
+							Interval:           api.Config.Defaults.Service.Options.Interval,
+							SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning},
+						DeployedVersionLookup: &api_type.DeployedVersionLookup{
+							AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts},
+						Dashboard: &api_type.DashboardOptions{
+							AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove}},
+					LatestVersion: &api_type.LatestVersionDefaults{
+						LatestVersion: api_type.LatestVersion{
+							AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
+							AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
+							UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease},
+						Require: latestVersionRequireDefaults}},
 				Notify:  *notifyDefaults,
 				WebHook: *webhookDefaults}}}
 
@@ -326,7 +332,7 @@ func (api *API) wsConfigNotify(client *Client) {
 		Type:    "NOTIFY",
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
-			Notify: convertNotifySliceToAPITypeNotifySlice(&api.Config.Notify)}}
+			Notify: convertAndCensorNotifySliceDefaults(&api.Config.Notify)}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -341,7 +347,7 @@ func (api *API) wsConfigWebHook(client *Client) {
 		Type:    "WEBHOOK",
 		SubType: "INIT",
 		ConfigData: &api_type.Config{
-			WebHook: convertWebHookSliceToAPITypeWebHookSlice(&api.Config.WebHook)}}
+			WebHook: convertAndCensorWebHookSliceDefaults(&api.Config.WebHook)}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 
@@ -357,7 +363,7 @@ func (api *API) wsConfigService(client *Client) {
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]
-			serviceConfig[key] = convertServiceToAPITypeService(service)
+			serviceConfig[key] = convertAndCensorService(service)
 		}
 	}
 

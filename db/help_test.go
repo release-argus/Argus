@@ -18,6 +18,7 @@ package db
 
 import (
 	"database/sql"
+	"os"
 	"testing"
 	"time"
 
@@ -28,48 +29,42 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+var cfg *config.Config
+
+func TestMain(m *testing.M) {
+	log := util.NewJLog("DEBUG", false)
+	log.Testing = true
+
+	cfg = testConfig()
+	*cfg.Settings.Data.DatabaseFile = "TestRun.db"
+	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
+	go Run(cfg, log)
+
+	os.Exit(m.Run())
+}
+
 func stringPtr(val string) *string {
 	return &val
 }
 
-func initLogging() {
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	logFrom = &util.LogFrom{}
-}
-
-func testConfig() config.Config {
+func testConfig() (cfg *config.Config) {
 	databaseFile := "test.db"
-	svc := service.Service{
-		ID:     "foo",
-		Status: svcstatus.Status{},
-		OldStatus: &svcstatus.OldStatus{
-			LatestVersion:            "0.0.2",
-			LatestVersionTimestamp:   "2022-01-01T01:01:01Z",
-			DeployedVersion:          "0.0.0",
-			DeployedVersionTimestamp: "2020-01-01T01:01:01Z",
-			ApprovedVersion:          "0.0.1"},
-	}
-	svc.Status.Init(
-		len(svc.Notify), len(svc.Command), len(svc.WebHook),
-		&svc.ID,
-		stringPtr("https://example.com"))
-	databaseChannel := make(chan dbtype.Message, 5)
+	databaseChannel := make(chan dbtype.Message, 16)
 	saveChannel := make(chan bool, 16)
-	return config.Config{
+	cfg = &config.Config{
 		Settings: config.Settings{
 			Data: config.DataSettings{
 				DatabaseFile: &databaseFile,
 			},
 		},
 		Service: service.Slice{
-			"delete0": &svc,
-			"keep0":   &svc,
-			"delete1": &svc,
-			"keep1":   &svc,
-			"delete2": &svc,
-			"keep2":   &svc,
-			"delete3": &svc,
+			"delete0": nil,
+			"keep0":   nil,
+			"delete1": nil,
+			"keep1":   nil,
+			"delete2": nil,
+			"keep2":   nil,
+			"delete3": nil,
 		},
 		Order: []string{
 			"delete0",
@@ -83,6 +78,27 @@ func testConfig() config.Config {
 		DatabaseChannel: &databaseChannel,
 		SaveChannel:     &saveChannel,
 	}
+	// Services
+	for svcName := range cfg.Service {
+		svc := service.Service{
+			ID:     "foo",
+			Status: svcstatus.Status{},
+		}
+		svc.Status.Init(
+			len(svc.Notify), len(svc.Command), len(svc.WebHook),
+			&svc.ID,
+			stringPtr("https://example.com"))
+		svc.Status.SetApprovedVersion("1.0.0", false)
+		svc.Status.SetDeployedVersion("2.0.0", false)
+		svc.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
+		svc.Status.SetLatestVersion("3.0.0", false)
+		svc.Status.SetLatestVersionTimestamp(time.Now().Add(time.Hour).Format(time.RFC3339))
+
+		// Add service to Config
+		cfg.Service[svcName] = &svc
+	}
+
+	return
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {

@@ -372,7 +372,7 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.Type = tc.sType
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
@@ -389,7 +389,7 @@ func TestShoutrrr_GetURL(t *testing.T) {
 	}
 }
 
-func TestShoutrrr_GetParams(t *testing.T) {
+func TestShoutrrr_BuildParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo
 	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
@@ -447,7 +447,7 @@ func TestShoutrrr_GetParams(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.paramsRoot != nil {
 				shoutrrr.Params[key] = *tc.paramsRoot
 			}
@@ -461,8 +461,8 @@ func TestShoutrrr_GetParams(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.paramsHardDefault
 			}
 
-			// WHEN GetParams is called
-			got := shoutrrr.GetParams(&serviceInfo)
+			// WHEN BuildParams is called
+			got := shoutrrr.BuildParams(&serviceInfo)
 
 			// THEN the function returns the params to use
 			if (*got)[key] != tc.wantString {

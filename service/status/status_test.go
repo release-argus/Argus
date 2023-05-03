@@ -18,8 +18,6 @@ package svcstatus
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -188,9 +186,9 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 	latestVersion := "0.0.3"
 	announceChannel := make(chan []byte, 4)
 	databaseChannel := make(chan dbtype.Message, 4)
-	status := Status{
-		AnnounceChannel: &announceChannel,
-		DatabaseChannel: &databaseChannel}
+	status := New(
+		&announceChannel, &databaseChannel, nil,
+		"", "", "", "", "", "")
 	status.Init(
 		0, 0, 0,
 		stringPtr("TestStatus_SetApprovedVersion"),
@@ -261,8 +259,9 @@ func TestStatus_DeployedVersion(t *testing.T) {
 			t.Parallel()
 
 			dbChannel := make(chan dbtype.Message, 4)
-			status := Status{
-				DatabaseChannel: &dbChannel}
+			status := New(
+				nil, &dbChannel, nil,
+				"", "", "", "", "", "")
 			status.Init(
 				0, 0, 0,
 				stringPtr("test-service"),
@@ -322,9 +321,10 @@ func TestStatus_LatestVersion(t *testing.T) {
 			t.Parallel()
 
 			dbChannel := make(chan dbtype.Message, 4)
-			status := Status{
-				DatabaseChannel: &dbChannel,
-				ServiceID:       stringPtr("test")}
+			status := New(
+				nil, &dbChannel, nil,
+				"", "", "", "", "", "")
+			status.ServiceID = stringPtr("test-service")
 			status.SetApprovedVersion(approvedVersion, false)
 			status.SetDeployedVersion(deployedVersion, false)
 			status.SetLatestVersion(latestVersion, false)
@@ -461,8 +461,9 @@ func TestStatus_SendAnnounce(t *testing.T) {
 			t.Parallel()
 
 			announceChannel := make(chan []byte, 4)
-			status := Status{
-				AnnounceChannel: &announceChannel}
+			status := New(
+				&announceChannel, nil, nil,
+				"", "", "", "", "", "")
 			if tc.nilChannel {
 				status.AnnounceChannel = nil
 			}
@@ -507,8 +508,9 @@ func TestStatus_SendDatabase(t *testing.T) {
 			t.Parallel()
 
 			databaseChannel := make(chan dbtype.Message, 4)
-			status := Status{
-				DatabaseChannel: &databaseChannel}
+			status := New(
+				nil, &databaseChannel, nil,
+				"", "", "", "", "", "")
 			if tc.nilChannel {
 				status.DatabaseChannel = nil
 			}
@@ -553,8 +555,9 @@ func TestStatus_SendSave(t *testing.T) {
 			t.Parallel()
 
 			saveChannel := make(chan bool, 4)
-			status := Status{
-				SaveChannel: &saveChannel}
+			status := New(
+				nil, nil, &saveChannel,
+				"", "", "", "", "", "")
 			if tc.nilChannel {
 				status.SaveChannel = nil
 			}
@@ -671,55 +674,6 @@ func TestFails_ResetFails(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestStatus_PrintFull(t *testing.T) {
-	// GIVEN we have a Status with everything defined
-	status := Status{}
-	status.SetApprovedVersion("1.2.4", false)
-	status.SetDeployedVersion("1.2.3", false)
-	status.SetDeployedVersionTimestamp("2022-01-01T01:01:01Z")
-	status.SetLatestVersion("1.2.4", false)
-	status.SetLatestVersionTimestamp("2022-01-01T01:01:01Z")
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN we SetLastQueried
-	status.Print("")
-
-	// THEN a line would have been printed for each var
-	w.Close()
-	out, _ := io.ReadAll(r)
-	os.Stdout = stdout
-	want := 5
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
-	}
-}
-
-func TestStatus_PrintEmpty(t *testing.T) {
-	// GIVEN we have a Status with nothing defined
-	status := Status{}
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// WHEN we SetLastQueried
-	status.Print("")
-
-	// THEN no lines would have been printed
-	w.Close()
-	out, _ := io.ReadAll(r)
-	os.Stdout = stdout
-	want := 0
-	got := strings.Count(string(out), "\n")
-	if got != want {
-		t.Errorf("Print should have given %d lines, but gave %d\n%s",
-			want, got, out)
 	}
 }
 

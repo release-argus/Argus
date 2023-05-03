@@ -126,8 +126,8 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			webhook := WebHook{
 				ServiceStatus: &svcstatus.Status{
 					ServiceID: &serviceID},
-				Main:     &WebHook{},
-				Defaults: &WebHook{}}
+				Main:     &WebHookDefaults{},
+				Defaults: &WebHookDefaults{}}
 			url := "https://example.com"
 			webhook.ServiceStatus.Init(
 				0, 0, 0,

@@ -1,18 +1,18 @@
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyOptions } from "./generic";
 import { NotifySMTPType } from "types/config";
-import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useGlobalOrDefault } from "./util";
 
 export const SMTPAuthOptions = [
-  { value: "none", label: "None" },
-  { value: "plain", label: "Plain" },
-  { value: "crammd5", label: "CRAM-MD5" },
-  { value: "unknown", label: "Unknown" },
-  { value: "oauth2", label: "OAuth2" },
+  { label: "None", value: "None" },
+  { label: "Plain", value: "Plain" },
+  { label: "CRAM-MD5", value: "CRAMMD5" },
+  { label: "Unknown", value: "Unknown" },
+  { label: "OAuth2", value: "OAuth2" },
 ];
 
 const SMTP = ({
@@ -28,15 +28,35 @@ const SMTP = ({
   defaults?: NotifySMTPType;
   hard_defaults?: NotifySMTPType;
 }) => {
-  const { setValue } = useFormContext();
+  const { getValues, setValue } = useFormContext();
+
   const defaultParamsAuth = useGlobalOrDefault(
     global?.params?.auth,
     defaults?.params?.auth,
     hard_defaults?.params?.auth
-  );
+  ).toLowerCase();
+  const smtpAuthOptions = useMemo(() => {
+    const defaultParamsAuthLabel = SMTPAuthOptions.find(
+      (option) => option.value.toLowerCase() === defaultParamsAuth
+    );
+
+    if (defaultParamsAuthLabel)
+      return [
+        { value: "", label: `${defaultParamsAuthLabel.label} (default)` },
+        ...SMTPAuthOptions,
+      ];
+
+    return SMTPAuthOptions;
+  }, [defaultParamsAuth]);
+
   useEffect(() => {
-    global?.params?.auth && setValue(`${name}.params.auth`, "");
-  }, [global]);
+    if (
+      defaultParamsAuth === "" &&
+      getValues(`${name}.params.auth`) === undefined
+    ) {
+      setValue(`${name}.params.auth`, "Unknown");
+    }
+  }, []);
 
   return (
     <>
@@ -134,11 +154,7 @@ const SMTP = ({
           name={`${name}.params.auth`}
           col_sm={4}
           label="Auth"
-          options={
-            defaultParamsAuth
-              ? [{ value: "", label: defaultParamsAuth }, ...SMTPAuthOptions]
-              : SMTPAuthOptions
-          }
+          options={smtpAuthOptions}
         />
         <FormItem
           name={`${name}.params.subject`}

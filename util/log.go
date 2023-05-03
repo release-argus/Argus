@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 var (
@@ -42,6 +43,8 @@ type JLog struct {
 	Level      uint
 	Timestamps bool // whether to log timestamps with the msg, or just the msg.
 	Testing    bool // Whether we're in tests (don't Fatal)
+
+	mutex sync.RWMutex
 }
 
 type LogFrom struct {
@@ -60,6 +63,8 @@ func NewJLog(level string, timestamps bool) *JLog {
 //
 // If value is out of the range (<0 or >4), then exit.
 func (l *JLog) SetLevel(level string) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	level = strings.ToUpper(level)
 	value := levelMap[level]
 
@@ -71,6 +76,8 @@ func (l *JLog) SetLevel(level string) {
 
 // SetTimestamps on the logs.
 func (l *JLog) SetTimestamps(enable bool) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.Timestamps = enable
 }
 
@@ -107,6 +114,8 @@ func FormatMessageSource(from LogFrom) (msg string) {
 // IsLevel will return whether the `level` of the JLog.
 // is value
 func (l *JLog) IsLevel(level string) bool {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	level = strings.ToUpper(level)
 	value := levelMap[level]
 

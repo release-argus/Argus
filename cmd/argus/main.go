@@ -32,7 +32,6 @@ import (
 
 var (
 	jLog             util.JLog
-	config           cfg.Config
 	configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
 	configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
 	testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
@@ -48,6 +47,7 @@ func main() {
 	flagset := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
+	var config cfg.Config
 	config.Load(*configFile, &flagset, &jLog)
 	jLog.SetTimestamps(*config.Settings.GetLogTimestamps())
 	jLog.SetLevel(config.Settings.GetLogLevel())

@@ -29,7 +29,6 @@ import (
 
 func TestAPI_UpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
-	initLogging()
 	tests := map[string]struct {
 		cells  []dbtype.Cell
 		target string
@@ -75,11 +74,10 @@ func TestAPI_UpdateRow(t *testing.T) {
 			t.Parallel()
 
 			cfg := testConfig()
-			api := api{config: &cfg}
+			api := api{config: cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
 			defer os.Remove(*api.config.Settings.Data.DatabaseFile)
 			api.initialise()
-			api.convertServiceStatus()
 
 			// WHEN updateRow is called targeting single/multiple cells
 			api.updateRow(tc.target, tc.cells)
@@ -114,7 +112,6 @@ func TestAPI_UpdateRow(t *testing.T) {
 
 func TestAPI_DeleteRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
-	initLogging()
 	tests := map[string]struct {
 		serviceID string
 		exists    bool
@@ -133,10 +130,9 @@ func TestAPI_DeleteRow(t *testing.T) {
 			t.Parallel()
 
 			cfg := testConfig()
-			api := api{config: &cfg}
+			api := api{config: cfg}
 			*api.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
 			api.initialise()
-			api.convertServiceStatus()
 
 			// Ensure the row exists if tc.exists
 			if tc.exists {
@@ -166,16 +162,14 @@ func TestAPI_DeleteRow(t *testing.T) {
 	}
 }
 
-func TestHandler(t *testing.T) {
+func TestAPI_Handler(t *testing.T) {
 	// GIVEN a DB with a few service status'
-	initLogging()
 	cfg := testConfig()
-	api := api{config: &cfg}
+	api := api{config: cfg}
 	*api.config.Settings.Data.DatabaseFile = "TestHandler.db"
 	defer os.Remove(*api.config.Settings.Data.DatabaseFile)
 	defer os.Remove(*api.config.Settings.Data.DatabaseFile + "-journal")
 	api.initialise()
-	api.convertServiceStatus()
 	go api.handler()
 	defer api.db.Close()
 
@@ -205,6 +199,8 @@ func TestHandler(t *testing.T) {
 			cell1.Column, cell1.Value, got, want)
 	}
 
+	// ------------------------------
+
 	// WHEN a message is sent to the DatabaseChannel deleting a row
 	*api.config.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
@@ -217,6 +213,8 @@ func TestHandler(t *testing.T) {
 	if got.GetLatestVersion() != "" || got.GetDeployedVersion() != "" {
 		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
 	}
+
+	// ------------------------------
 
 	// WHEN multiple messages are targeting the same row in quick succession
 	*api.config.DatabaseChannel <- msg1

@@ -29,12 +29,12 @@ import (
 // filterGitHubReleases will filter releases that fail the URLCommands, aren't semantic (if wanted),
 // or are pre_release's (when they're not wanted). This list will be returned and be sorted descending.
 func (l *Lookup) filterGitHubReleases(
-	releases []github_types.Release,
 	logFrom *util.LogFrom,
 ) (filteredReleases []github_types.Release) {
 	semanticVerioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.GetUsePreRelease()
 
+	releases := l.GitHubData.Releases()
 	// Make a slice with the same capacity as releases
 	filteredReleases = make([]github_types.Release, 0, len(releases))
 

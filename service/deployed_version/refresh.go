@@ -63,21 +63,25 @@ func (l *Lookup) applyOverrides(
 	// url
 	useURL := util.GetValue(url, l.URL)
 
+	// options
+	options := opt.New(
+		nil, "",
+		useSemanticVersioning,
+		l.Options.Defaults,
+		l.Options.HardDefaults)
+
 	// Create a new lookup with the overrides.
-	lookup := Lookup{
-		URL:               useURL,
-		AllowInvalidCerts: useAllowInvalidCerts,
-		BasicAuth:         useBasicAuth,
-		Headers:           *useHeaders,
-		JSON:              useJSON,
-		Regex:             useRegex,
-		Options: &opt.Options{
-			SemanticVersioning: useSemanticVersioning,
-			Defaults:           l.Options.Defaults,
-			HardDefaults:       l.Options.HardDefaults},
-		Status:       &svcstatus.Status{},
-		Defaults:     l.Defaults,
-		HardDefaults: l.HardDefaults}
+	lookup := New(
+		useAllowInvalidCerts,
+		useBasicAuth,
+		useHeaders,
+		useJSON,
+		options,
+		useRegex,
+		&svcstatus.Status{},
+		useURL,
+		l.Defaults,
+		l.HardDefaults)
 	if err := lookup.CheckValues(""); err != nil {
 		jLog.Error(err, *logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
@@ -86,7 +90,7 @@ func (l *Lookup) applyOverrides(
 		0, 0, 0,
 		serviceID,
 		nil)
-	return &lookup, nil
+	return lookup, nil
 }
 
 // Refresh (query) the Lookup with the provided overrides,

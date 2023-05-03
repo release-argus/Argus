@@ -20,19 +20,6 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Print will print the Slice.
-func (s *Slice) Print(prefix string) {
-	if s == nil || len(*s) == 0 {
-		return
-	}
-
-	fmt.Printf("%scommand:\n", prefix)
-
-	for i := range *s {
-		fmt.Printf("%s  - %s\n", prefix, (*s)[i].FormattedString())
-	}
-}
-
 func (s *Slice) CheckValues(prefix string) (errs error) {
 	if s == nil {
 		return

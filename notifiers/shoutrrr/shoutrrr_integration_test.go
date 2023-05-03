@@ -27,7 +27,6 @@ import (
 
 func TestShoutrrr_Send(t *testing.T) {
 	// GIVEN a Shoutrrr to try and send
-	testLogging("DEBUG")
 	tests := map[string]struct {
 		shoutrrr *Shoutrrr
 		delay    string
@@ -42,32 +41,32 @@ func TestShoutrrr_Send(t *testing.T) {
 			errRegex: "failed to create Shoutrrr sender",
 		},
 		"valid, empty message": {
-			shoutrrr: testShoutrrr(false, false, false),
+			shoutrrr: testShoutrrr(false, false),
 			errRegex: "",
 		},
 		"valid, with message": {
-			shoutrrr: testShoutrrr(false, false, false),
+			shoutrrr: testShoutrrr(false, false),
 			message:  "__name__",
 			errRegex: "",
 		},
 		"valid, with message, with delay": {
-			shoutrrr: testShoutrrr(false, false, false),
+			shoutrrr: testShoutrrr(false, false),
 			message:  "__name__",
 			useDelay: true,
 			delay:    "1s",
 			errRegex: "",
 		},
 		"invalid https cert": {
-			shoutrrr: testShoutrrr(false, false, true),
+			shoutrrr: testShoutrrr(false, true),
 			errRegex: "x509",
 		},
 		"failing": {
-			shoutrrr: testShoutrrr(true, false, true),
+			shoutrrr: testShoutrrr(true, true),
 			retries:  1,
 			errRegex: "invalid gotify token .* x 2",
 		},
 		"deleting": {
-			shoutrrr: testShoutrrr(true, false, true),
+			shoutrrr: testShoutrrr(true, true),
 			deleting: true,
 			errRegex: "",
 		},
@@ -85,7 +84,7 @@ func TestShoutrrr_Send(t *testing.T) {
 				nil)
 			tc.shoutrrr.Init(
 				&svcStatus,
-				&Shoutrrr{}, &Shoutrrr{}, &Shoutrrr{})
+				&ShoutrrrDefaults{}, &ShoutrrrDefaults{}, &ShoutrrrDefaults{})
 			if tc.shoutrrr.ServiceStatus != nil && tc.deleting {
 				tc.shoutrrr.ServiceStatus.SetDeleting()
 			}

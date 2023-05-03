@@ -28,8 +28,8 @@ func LogInit(log *util.JLog) {
 
 // Init will initialise the Service metric.
 func (l *Lookup) Init(
-	defaults *Lookup,
-	hardDefaults *Lookup,
+	defaults *LookupDefaults,
+	hardDefaults *LookupDefaults,
 	status *svcstatus.Status,
 	options *opt.Options,
 ) {

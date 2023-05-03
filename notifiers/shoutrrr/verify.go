@@ -15,6 +15,7 @@
 package shoutrrr
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,6 +25,28 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// CheckValues of this SliceDefaults.
+func (s *SliceDefaults) CheckValues(prefix string) (errs error) {
+	if s == nil {
+		return
+	}
+
+	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "    "
+	for _, key := range keys {
+		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
+			errs = fmt.Errorf("%s%s  %s:\\%w",
+				util.ErrorToString(errs), prefix, key, err)
+		}
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%snotify:\\%w",
+			prefix, errs)
+	}
+	return
+}
+
 // CheckValues of this Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
 	if s == nil {
@@ -31,8 +54,9 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 	}
 
 	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "    "
 	for _, key := range keys {
-		if err := (*s)[key].CheckValues(prefix + "    "); err != nil {
+		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				util.ErrorToString(errs), prefix, key, err)
 		}
@@ -46,18 +70,18 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 }
 
 // CheckValues of this Notification.
-func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
-	if s == nil {
-		return
-	}
-
+func (s *ShoutrrrBase) CheckValues(prefix string) (errs error) {
 	var (
-		errsOptions   error
-		errsURLFields error
-		errsParams    error
-		errsLocate    error
+		errsOptions error
+		errsParams  error
 	)
 	s.InitMaps()
+
+	// Type
+	if s.Type != "" && !util.Contains(supportedTypes, s.Type) {
+		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
+			util.ErrorToString(errs), prefix, s.Type, strings.Join(supportedTypes, ","))
+	}
 
 	// Delay
 	if delay := s.GetSelfOption("delay"); delay != "" {
@@ -73,20 +97,6 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 
 	s.correctSelf()
 
-	if s.Main != nil {
-		s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
-
-		// Exclude matrix since it logs in, so may run into a rate-limit
-		if s.GetType() != "matrix" {
-			//#nosec G104 -- Disregard as we're not giving any rawURLs
-			sender, _ := shoutrrr_lib.CreateSender()
-			if _, err := sender.Locate(s.GetURL()); err != nil {
-				errsLocate = fmt.Errorf("%s%s^ %w\\",
-					util.ErrorToString(errsLocate), prefix, err)
-			}
-		}
-	}
-
 	if !util.CheckTemplate(s.GetSelfOption("message")) {
 		errsOptions = fmt.Errorf("%s%s  message: %q <invalid> (didn't pass templating)\\",
 			util.ErrorToString(errsOptions), prefix, s.GetSelfOption("message"))
@@ -101,14 +111,75 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		errs = fmt.Errorf("%s%soptions:\\%w",
 			util.ErrorToString(errs), prefix, errsOptions)
 	}
-	if errsURLFields != nil {
-		errs = fmt.Errorf("%s%surl_fields:\\%w",
-			util.ErrorToString(errs), prefix, errsURLFields)
-	}
 	if errsParams != nil {
 		errs = fmt.Errorf("%s%sparams:\\%w",
 			util.ErrorToString(errs), prefix, errsParams)
 	}
+	return
+}
+
+// CheckValues of this Notification.
+func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
+	if s == nil {
+		return
+	}
+	var (
+		errsOptions   error
+		errsURLFields error
+		errsParams    error
+		errsLocate    error
+	)
+
+	baseErrs := s.ShoutrrrBase.CheckValues(prefix)
+	// split option and param errs
+	if baseErrs != nil {
+		strErr := baseErrs.Error()
+		paramsStr := fmt.Sprintf("%sparams:\\", prefix)
+		optionsStr := fmt.Sprintf("%soptions:\\", prefix)
+		// Has errParams
+		if strings.Contains(strErr, paramsStr) {
+			splitStrErr := strings.Split(strErr, paramsStr)
+			errsParams = errors.New(splitStrErr[1])
+			// Has errOptions too
+			if strings.Contains(splitStrErr[0], optionsStr) {
+				errsOptions = errors.New(
+					strings.TrimPrefix(splitStrErr[0], optionsStr))
+			}
+			// only errOptions
+		} else {
+			errsOptions = errors.New(
+				strings.TrimPrefix(strErr, optionsStr))
+		}
+	}
+
+	s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
+
+	// Exclude matrix since it logs in, so may run into a rate-limit
+	if errsParams == nil && errsURLFields == nil && s.GetType() != "matrix" {
+		//#nosec G104 -- Disregard as we're not giving any rawURLs
+		sender, _ := shoutrrr_lib.CreateSender()
+		if _, err := sender.Locate(s.GetURL()); err != nil {
+			errsLocate = fmt.Errorf("%s%s^ %w\\",
+				util.ErrorToString(errsLocate), prefix, err)
+		}
+	}
+
+	// options
+	if errsOptions != nil {
+		errs = fmt.Errorf("%s%soptions:\\%w",
+			util.ErrorToString(errs), prefix, errsOptions)
+	}
+	// params
+	if errsParams != nil {
+		errs = fmt.Errorf("%s%sparams:\\%w",
+			util.ErrorToString(errs), prefix, errsParams)
+	}
+	// url_fields
+	if errsURLFields != nil {
+		errs = fmt.Errorf("%s%surl_fields:\\%w",
+			util.ErrorToString(errs), prefix, errsURLFields)
+	}
+	// locate
 	if errsLocate != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), errsLocate)
@@ -118,7 +189,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 
 // correctSelf will do a few corrections to user provided vars
 // e.g. slack color wants $23 instead of #
-func (s *Shoutrrr) correctSelf() {
+func (s *ShoutrrrBase) correctSelf() {
 	// Port, strip leading :
 	if port := strings.TrimPrefix(s.GetSelfURLField("port"), ":"); port != "" {
 		s.SetURLField("port", port)
@@ -166,20 +237,28 @@ func (s *Shoutrrr) correctSelf() {
 	}
 }
 
-// checkValuesMaster will check that the leading Shoutrrr can access all vars required
-// for its Type
+// checkValuesMaster will check that this leading Shoutrrr can access all vars required
+// for its Type and that this Type is valid.
 func (s *Shoutrrr) checkValuesMaster(
 	prefix string,
 	errs *error,
 	errsOptions *error,
 	errsURLFields *error,
-	errsParams *error) {
-	if util.GetFirstNonDefault(s.Type, s.Main.Type) == "" {
-		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
-			util.ErrorToString(*errs), prefix)
+	errsParams *error,
+) {
+	sType := s.GetType()
+	if !util.Contains(supportedTypes, sType) {
+		sTypeWithoutID := util.GetFirstNonDefault(s.Type, s.Main.Type)
+		if sTypeWithoutID == "" {
+			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
+				util.ErrorToString(*errs), prefix)
+		} else {
+			*errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
+				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
+		}
 	}
 
-	switch s.GetType() {
+	switch sType {
 	case "discord":
 		// discord://token@webhookid
 		if s.GetURLField("token") == "" {
@@ -375,51 +454,12 @@ func (s *Shoutrrr) checkValuesMaster(
 	}
 }
 
-// Print the Slice.
-func (s *Slice) Print(prefix string) bool {
+// Print the SliceDefaults.
+func (s *SliceDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
-		return false
+		return
 	}
 
-	keys := util.SortedKeys(*s)
-
-	fmt.Printf("%snotify:\n", prefix)
-	for _, key := range keys {
-		fmt.Printf("%s  %s:\n", prefix, key)
-		(*s)[key].Print(prefix + "    ")
-	}
-	return true
-}
-
-// Print the Shourrr Struct.
-func (s *Shoutrrr) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.Type,
-		fmt.Sprintf("%stype: %s", prefix, s.Type))
-
-	if len(s.Options) != 0 {
-		fmt.Printf("%soptions:\n", prefix)
-		keys := util.SortedKeys(s.Options)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfOption(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
-		}
-	}
-
-	if len(s.URLFields) != 0 {
-		fmt.Printf("%surl_fields:\n", prefix)
-		keys := util.SortedKeys(s.URLFields)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfURLField(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
-		}
-	}
-
-	if len(s.Params) != 0 {
-		fmt.Printf("%sparams:\n", prefix)
-		keys := util.SortedKeys(s.Params)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfParam(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
-		}
-	}
+	str := s.String(prefix + "  ")
+	fmt.Printf("%snotify:\n%s", prefix, str)
 }

@@ -116,19 +116,21 @@ func TestConfig_Save(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
+
+		// Load here as it could DATA RACE with setting the JLog
+		file := name
+		tc.file(file, t)
+		t.Log(file)
+		originalData, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
+				err.Error())
+		}
+		had := string(originalData)
+		config := testLoadBasic(file, t)
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			file := name
-			tc.file(file, t)
-			t.Log(file)
-			originalData, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-					err.Error())
-			}
-			had := string(originalData)
-			config := testLoadBasic(file, t)
 
 			// WHEN we Save it to a new location
 			config.File += ".test"

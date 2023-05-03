@@ -17,8 +17,10 @@
 package deployedver
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,7 +30,6 @@ import (
 )
 
 func TestBasicAuthFromString(t *testing.T) {
-	testLogging()
 	// GIVEN we have a string of basic auth
 	exampleBasicAuth := BasicAuth{
 		Username: "user",
@@ -105,7 +106,6 @@ func TestBasicAuthFromString(t *testing.T) {
 }
 
 func TestHeadersFromString(t *testing.T) {
-	testLogging()
 	// GIVEN we had previous headers and we're given a string of new headers
 	previousHeaders := []Header{
 		{Key: "foo", Value: "bar"}}
@@ -150,7 +150,6 @@ func TestHeadersFromString(t *testing.T) {
 }
 
 func TestLookup_ApplyOverrides(t *testing.T) {
-	testLogging()
 	test := testLookup()
 	// GIVEN various json strings to parse as parts of a Lookup
 	tests := map[string]struct {
@@ -172,104 +171,117 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		"allow invalid certs": {
 			allowInvalidCerts: stringPtr("false"),
 			previous:          testLookup(),
-			want: &Lookup{
-				AllowInvalidCerts: boolPtr(false),
-
-				URL:     test.URL,
-				JSON:    test.JSON,
-				Options: test.Options,
-				Status:  test.Status},
+			want: New(
+				boolPtr(false), // AllowInvalidCerts
+				nil, nil,
+				test.JSON,
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"basic auth": {
 			basicAuth: stringPtr(`{"username": "foo", "password": "bar"}`),
 			previous:  testLookup(),
-			want: &Lookup{
-				BasicAuth: &BasicAuth{
+			want: New(
+				test.AllowInvalidCerts,
+				&BasicAuth{ // BasicAuth
 					Username: "foo",
 					Password: "bar"},
-
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Options:           test.Options,
-				Status:            test.Status},
+				nil,
+				test.JSON,
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"headers": {
 			headers: stringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
 
 			previous: testLookup(),
-			want: &Lookup{
-				Headers: []Header{
+			want: New(
+				test.AllowInvalidCerts,
+				nil,
+				&[]Header{ // Headers
 					{Key: "bish", Value: "bash"},
 					{Key: "bosh", Value: "bosh"}},
-
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Options:           test.Options,
-				Status:            test.Status},
+				"version",
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"json": {
 			json: stringPtr("bish"),
 
 			previous: testLookup(),
-			want: &Lookup{
-				JSON: "bish",
-
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				Options:           test.Options,
-				Status:            test.Status},
+			want: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				"bish", // JSON
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"regex": {
 			regex: stringPtr("bish"),
 
 			previous: testLookup(),
-			want: &Lookup{
-				Regex: "bish",
-
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Options:           test.Options,
-				Status:            test.Status},
+			want: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				"version",
+				test.Options,
+				"bish", // RegEx
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"semantic versioning": {
 			semanticVersioning: stringPtr("false"),
 
 			previous: testLookup(),
-			want: &Lookup{
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(false),
-					Defaults:           test.Options.Defaults,
-					HardDefaults:       test.Options.HardDefaults,
-				},
-
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Status:            test.Status},
+			want: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				test.JSON,
+				opt.New(
+					boolPtr(false), "", nil,
+					nil, nil),
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
 		},
 		"url": {
 			url: stringPtr("https://valid.release-argus.io/json"),
 
 			previous: testLookup(),
-			want: &Lookup{
-				URL: "https://valid.release-argus.io/json",
-
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Options:           test.Options,
-				Status:            test.Status},
+			want: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				test.JSON,
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				"https://valid.release-argus.io/json", // URL
+				nil, nil),
 		},
 		"override with invalid (empty) url": {
-			url:      stringPtr(""),
+			url: stringPtr(""),
+
 			previous: testLookup(),
 			want:     nil,
-			errRegex: "url: <missing>",
+			errRegex: "url: <required>",
 		},
 		"override with invalid regex": {
-			regex:    stringPtr("v([0-9))"),
+			regex: stringPtr("v([0-9))"),
+
 			previous: testLookup(),
 			want:     nil,
 			errRegex: "regex: .+ <invalid>",
@@ -309,7 +321,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				return
 			}
 			// AND we get the expected result otherwise
-			if tc.want.String() != got.String() {
+			if tc.want.String("") != got.String("") {
 				t.Errorf("expected:\n%v\nbut got:\n%v", tc.want, got)
 			}
 		})
@@ -317,7 +329,6 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 }
 
 func TestLookup_Refresh(t *testing.T) {
-	testLogging()
 	test := testLookup()
 	testVersion, _ := test.Query(true, &util.LogFrom{Primary: "TestRefresh"})
 	if testVersion == "" {
@@ -348,7 +359,7 @@ func TestLookup_Refresh(t *testing.T) {
 		"Removal of URL": {
 			url:      stringPtr(""),
 			lookup:   testLookup(),
-			errRegex: "url: <missing>",
+			errRegex: "url: <required>",
 			want:     "",
 		},
 		"Change of a few vars": {
@@ -363,16 +374,16 @@ func TestLookup_Refresh(t *testing.T) {
 			errRegex:          `x509 \(certificate invalid\)`,
 		},
 		"Refresh new version": {
-			lookup: &Lookup{
-				URL:               test.URL,
-				AllowInvalidCerts: test.AllowInvalidCerts,
-				JSON:              test.JSON,
-				Options:           test.Options,
-				Status: &svcstatus.Status{
-					ServiceID: stringPtr("Refresh new version"),
-				},
-				Defaults:     test.Defaults,
-				HardDefaults: test.HardDefaults},
+			lookup: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				test.JSON,
+				test.Options,
+				"",
+				&svcstatus.Status{},
+				test.URL,
+				test.Defaults,
+				test.HardDefaults),
 			deployedVersion:          "0.0.0",
 			deployedVersionTimestamp: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
 			want:                     testVersion,
@@ -388,6 +399,7 @@ func TestLookup_Refresh(t *testing.T) {
 			// Copy the starting status
 			previousStatus := svcstatus.Status{}
 			if tc.lookup != nil {
+				tc.lookup.Status = &svcstatus.Status{ServiceID: stringPtr("serviceID")}
 				previousStatus.SetApprovedVersion(tc.lookup.Status.GetApprovedVersion(), false)
 				previousStatus.SetDeployedVersion(tc.lookup.Status.GetDeployedVersion(), false)
 				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.GetDeployedVersionTimestamp())
@@ -398,6 +410,10 @@ func TestLookup_Refresh(t *testing.T) {
 					tc.lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
 					tc.lookup.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
 				}
+			}
+
+			if strings.HasPrefix(name, "Change of vars that fail Query") || strings.HasPrefix(name, "Refresh new version") {
+				fmt.Println()
 			}
 
 			// WHEN we call Refresh

@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Field is a helper struct for String() methods.
@@ -304,5 +306,38 @@ func getKeysFromJSONBytes(data []byte, prefix string) (keys []string) {
 	}
 	// sort keys
 	sort.Strings(keys)
+	return
+}
+
+// ToYAMLString will return a YAML string representation of the interface.
+func ToYAMLString(iface interface{}, prefix string) (str string) {
+	buf := &bytes.Buffer{}
+	enc := yaml.NewEncoder(buf)
+	enc.SetIndent(2)
+	defer enc.Close()
+
+	err := enc.Encode(iface)
+	if err != nil {
+		return
+	}
+	str = buf.String()
+
+	if prefix != "" && str != "" && str != "{}\n" {
+		str = strings.Replace(str, "\n", "\n"+prefix,
+			strings.Count(str, "\n")-1)
+		str = prefix + str
+	}
+
+	return
+}
+
+// ToJSONString will return a JSON string representation of the interface.
+func ToJSONString(iface interface{}) (str string) {
+	bytes, err := json.Marshal(iface)
+	if err != nil {
+		return
+	}
+	str = string(bytes)
+
 	return
 }

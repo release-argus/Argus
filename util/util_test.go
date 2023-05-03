@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -1265,6 +1266,78 @@ func TestStringToPointer(t *testing.T) {
 			if *got != *tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					*tc.want, *got)
+			}
+		})
+	}
+}
+
+func TestTo____String(t *testing.T) {
+	// GIVEN a struct to print in YAML format
+	tests := map[string]struct {
+		input    interface{}
+		wantYAML string
+		wantJSON string
+	}{
+		"empty struct": {
+			input:    struct{}{},
+			wantYAML: "{}",
+			wantJSON: "{}",
+		},
+		"simple struct": {
+			input: struct {
+				Test string `yaml:"test" json:"test"`
+			}{
+				Test: "test"},
+			wantYAML: "test: test",
+			wantJSON: `{"test":"test"}`,
+		},
+		"nested struct": {
+			input: struct {
+				Test struct {
+					Foo string `yaml:"foo" json:"foo"`
+				} `yaml:"test" json:"test"`
+			}{
+				Test: struct {
+					Foo string `yaml:"foo" json:"foo"`
+				}{
+					Foo: "bar"}},
+			wantYAML: "test:\n  foo: bar",
+			wantJSON: `{"test":{"foo":"bar"}}`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				wantYAML := strings.TrimPrefix(tc.wantYAML, "\n")
+				if wantYAML != "" {
+					if wantYAML != "{}" {
+						wantYAML = prefix + strings.ReplaceAll(wantYAML, "\n", "\n"+prefix)
+					}
+					wantYAML += "\n"
+				}
+
+				// WHEN ToYAMLString is called
+				gotYAML := ToYAMLString(tc.input, prefix)
+
+				// THEN the struct is printed in YAML format
+				if gotYAML != wantYAML {
+					t.Fatalf("(prefix=%q) want:\n%q\ngot:\n%q",
+						prefix, wantYAML, gotYAML)
+				}
+			}
+
+			// WHEN ToJSONString is called
+			gotJSON := ToJSONString(tc.input)
+
+			// THEN the struct is printed in JSON format
+			if gotJSON != tc.wantJSON {
+				t.Fatalf("want:\n%q\ngot:\n%q",
+					tc.wantJSON, gotJSON)
 			}
 		})
 	}

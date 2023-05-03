@@ -30,7 +30,26 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-// convertAndCensorNotifySlice fromm *shoutrrr.Slice to *api_type.NotifySlice
+// convertAndCensorNotifySliceDefaults will convert Slice to NotifySlice and censor secrets.
+func convertAndCensorNotifySliceDefaults(input *shoutrrr.SliceDefaults) *api_type.NotifySlice {
+	if input == nil {
+		return nil
+	}
+
+	// Convert to API Type, censoring secrets
+	slice := make(api_type.NotifySlice, len(*input))
+	for name := range *input {
+		slice[name] = (&api_type.Notify{
+			Type:      (*input)[name].Type,
+			Options:   (*input)[name].Options,
+			URLFields: (*input)[name].URLFields,
+			Params:    (*input)[name].Params})
+		slice[name].Censor()
+	}
+	return &slice
+}
+
+// convertAndCensorNotifySlice will convert Slice to API Type and censor secrets.
 func convertAndCensorNotifySlice(input *shoutrrr.Slice) *api_type.NotifySlice {
 	if input == nil {
 		return nil
@@ -50,8 +69,8 @@ func convertAndCensorNotifySlice(input *shoutrrr.Slice) *api_type.NotifySlice {
 	return &slice
 }
 
-// convertAndCensorWebHookSlice from *webhook.Slice to *api_type.WebHookSlice
-func convertAndCensorWebHookSlice(input *webhook.Slice) *api_type.WebHookSlice {
+// convertAndCensorWebHookSliceDefaults will convert SliceDefaults to API Type and censor secrets.
+func convertAndCensorWebHookSliceDefaults(input *webhook.SliceDefaults) *api_type.WebHookSlice {
 	if input == nil {
 		return nil
 	}
@@ -59,13 +78,12 @@ func convertAndCensorWebHookSlice(input *webhook.Slice) *api_type.WebHookSlice {
 	// Convert to API Type, censoring secrets
 	slice := make(api_type.WebHookSlice, len(*input))
 	for name := range *input {
-		slice[name] = convertWebHookToAPITypeWebHook((*input)[name])
-		slice[name].Censor()
+		slice[name] = convertAndCensorWebHookDefaults((*input)[name])
 	}
 	return &slice
 }
 
-// convertAndCensorDefaults fromm *config.Defaults to *api_type.Defaults
+// convertAndCensorDefaults will convert Defaults to API Type and censor secrets.
 func convertAndCensorDefaults(input *config.Defaults) (defaults *api_type.Defaults) {
 	if input == nil {
 		return
@@ -73,24 +91,33 @@ func convertAndCensorDefaults(input *config.Defaults) (defaults *api_type.Defaul
 
 	// Convert to API Type, censoring secrets
 	defaults = &api_type.Defaults{
-		Service: api_type.Service{
-			Options: &api_type.ServiceOptions{
-				Interval:           input.Service.Options.Interval,
-				SemanticVersioning: input.Service.Options.SemanticVersioning},
-			LatestVersion: &api_type.LatestVersion{
-				AccessToken:       util.DefaultOrValue(input.Service.LatestVersion.AccessToken, "<secret>"),
-				AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
-				UsePreRelease:     input.Service.LatestVersion.UsePreRelease},
-			DeployedVersionLookup: &api_type.DeployedVersionLookup{
-				AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts},
-			Dashboard: &api_type.DashboardOptions{
-				AutoApprove: input.Service.Dashboard.AutoApprove}},
-		Notify: *convertAndCensorNotifySlice(&input.Service.Notify),
+		Service: api_type.ServiceDefaults{
+			Service: api_type.Service{
+				Options: &api_type.ServiceOptions{
+					Interval:           input.Service.Options.Interval,
+					SemanticVersioning: input.Service.Options.SemanticVersioning},
+				DeployedVersionLookup: &api_type.DeployedVersionLookup{
+					AllowInvalidCerts: input.Service.DeployedVersionLookup.AllowInvalidCerts},
+				Dashboard: &api_type.DashboardOptions{
+					AutoApprove: input.Service.Dashboard.AutoApprove}},
+			LatestVersion: &api_type.LatestVersionDefaults{
+				LatestVersion: api_type.LatestVersion{
+					AccessToken:       util.DefaultOrValue(input.Service.LatestVersion.AccessToken, "<secret>"),
+					AllowInvalidCerts: input.Service.LatestVersion.AllowInvalidCerts,
+					UsePreRelease:     input.Service.LatestVersion.UsePreRelease},
+				Require: convertAndCensorLatestVersionRequireDefaults(&input.Service.LatestVersion.Require)}},
+		Notify: *convertAndCensorNotifySliceDefaults(&input.Notify),
 		WebHook: api_type.WebHook{
+			Type:              util.StringToPointer(input.WebHook.Type),
+			URL:               util.StringToPointer(input.WebHook.URL),
+			AllowInvalidCerts: input.WebHook.AllowInvalidCerts,
+			CustomHeaders:     convertWebHookHeaders(input.WebHook.CustomHeaders),
+			Secret: util.StringToPointer(
+				util.ValueIfNotDefault(
+					input.WebHook.Secret, "<secret>")),
+			DesiredStatusCode: input.WebHook.DesiredStatusCode,
 			Delay:             input.WebHook.Delay,
 			MaxTries:          input.WebHook.MaxTries,
-			AllowInvalidCerts: input.WebHook.AllowInvalidCerts,
-			DesiredStatusCode: input.WebHook.DesiredStatusCode,
 			SilentFails:       input.WebHook.SilentFails}}
 	return
 }
@@ -159,7 +186,8 @@ func (api *API) announceService(name string, client *Client, logFrom *util.LogFr
 	api.wsSendJSON(client, msg, logFrom)
 }
 
-func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver.Lookup) (apiDVL *api_type.DeployedVersionLookup) {
+// convertAndCensorDeployedVersionLookup will convert Lookup to API Type and censor secrets.
+func convertAndCensorDeployedVersionLookup(dvl *deployedver.Lookup) (apiDVL *api_type.DeployedVersionLookup) {
 	if dvl == nil {
 		return
 	}
@@ -186,7 +214,42 @@ func convertDeployedVersionLookupToAPITypeDeployedVersionLookup(dvl *deployedver
 	return
 }
 
-func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandSlice) *api_type.URLCommandSlice {
+// convertAndCensorLatestVersionRequireDefaults will convert Require to API Type and censor secrets.
+func convertAndCensorLatestVersionRequireDefaults(require *filter.RequireDefaults) (apiRequire *api_type.LatestVersionRequireDefaults) {
+	if require == nil {
+		return
+	}
+
+	apiRequire = &api_type.LatestVersionRequireDefaults{
+		Docker: api_type.RequireDockerCheckDefaults{
+			Type: require.Docker.Type}}
+
+	// Docker
+	//   GHCR
+	if require.Docker.RegistryGHCR != nil {
+		apiRequire.Docker.GHCR = &api_type.RequireDockerCheckRegistryDefaults{
+			Token: util.ValueIfNotDefault(
+				require.Docker.RegistryGHCR.Token, "<secret>")}
+	}
+	//   Hub
+	if require.Docker.RegistryHub != nil {
+		apiRequire.Docker.Hub = &api_type.RequireDockerCheckRegistryDefaultsWithUsername{
+			Username: require.Docker.RegistryHub.Username,
+			RequireDockerCheckRegistryDefaults: api_type.RequireDockerCheckRegistryDefaults{
+				Token: util.ValueIfNotDefault(
+					require.Docker.RegistryHub.Token, "<secret>")}}
+	}
+	//   Quay
+	if require.Docker.RegistryQuay != nil {
+		apiRequire.Docker.Quay = &api_type.RequireDockerCheckRegistryDefaults{
+			Token: util.ValueIfNotDefault(
+				require.Docker.RegistryQuay.Token, "<secret>")}
+	}
+	return
+}
+
+// convertURLCommandSlice will convert URLCommandSlice to API Type.
+func convertURLCommandSlice(commands *filter.URLCommandSlice) *api_type.URLCommandSlice {
 	if commands == nil {
 		return nil
 	}
@@ -203,23 +266,8 @@ func convertURLCommandSliceToAPITypeURLCommandSlice(commands *filter.URLCommandS
 	return &slice
 }
 
-func convertNotifySliceToAPITypeNotifySlice(notifiers *shoutrrr.Slice) *api_type.NotifySlice {
-	if notifiers == nil {
-		return nil
-	}
-	slice := make(api_type.NotifySlice, len(*notifiers))
-	for index := range *notifiers {
-		slice[index] = &api_type.Notify{
-			Type:      (*notifiers)[index].Type,
-			Options:   (*notifiers)[index].Options,
-			URLFields: (*notifiers)[index].URLFields,
-			Params:    (*notifiers)[index].Params}
-		slice[index].Censor()
-	}
-	return &slice
-}
-
-func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_type.CommandSlice {
+// convertCommandSlice will convert Slice to API type.
+func convertCommandSlice(commands *command.Slice) *api_type.CommandSlice {
 	if commands == nil {
 		return nil
 	}
@@ -230,32 +278,30 @@ func convertCommandSliceToAPITypeCommandSlice(commands *command.Slice) *api_type
 	return &slice
 }
 
-func convertWebHookSliceToAPITypeWebHookSlice(webhooks *webhook.Slice) *api_type.WebHookSlice {
-	if webhooks == nil {
-		return nil
+// convertWebHookHeaders will convert WebHook Headers to API type.
+func convertWebHookHeaders(headers *webhook.Headers) (apiHeaders *[]api_type.Header) {
+	if headers == nil {
+		return
 	}
-	slice := make(api_type.WebHookSlice, len(*webhooks))
-	for index := range *webhooks {
-		slice[index] = convertWebHookToAPITypeWebHook((*webhooks)[index])
+
+	converted := make([]api_type.Header, len(*headers))
+	for i, header := range *headers {
+		converted[i] = api_type.Header{
+			Key:   header.Key,
+			Value: header.Value}
 	}
-	return &slice
+
+	apiHeaders = &converted
+	return
 }
 
-func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_type.WebHook) {
+// convertAndCensorWebHookDefaults will convert WebHookDefaults to API type and censor the secret.
+func convertAndCensorWebHookDefaults(webhook *webhook.WebHookDefaults) (apiElement *api_type.WebHook) {
 	if webhook == nil {
 		return
 	}
 
-	var customHeaders []api_type.Header
-	// Convert CustomHeaders
-	if webhook.CustomHeaders != nil {
-		customHeaders = make([]api_type.Header, len(*webhook.CustomHeaders))
-		for index, header := range *webhook.CustomHeaders {
-			customHeaders[index] = api_type.Header{
-				Key:   header.Key,
-				Value: header.Value}
-		}
-	}
+	customHeaders := convertWebHookHeaders(webhook.CustomHeaders)
 
 	apiElement = (&api_type.WebHook{
 		Type:              util.StringToPointer(webhook.Type),
@@ -272,7 +318,43 @@ func convertWebHookToAPITypeWebHook(webhook *webhook.WebHook) (apiElement *api_t
 	return
 }
 
-func convertServiceToAPITypeService(service *service.Service) (apiService *api_type.Service) {
+// convertAndCensorWebHook will convert WebHook to API type and censor the secret.
+func convertAndCensorWebHook(webhook *webhook.WebHook) (apiElement *api_type.WebHook) {
+	if webhook == nil {
+		return
+	}
+
+	customHeaders := convertWebHookHeaders(webhook.CustomHeaders)
+
+	apiElement = (&api_type.WebHook{
+		Type:              util.StringToPointer(webhook.Type),
+		URL:               util.StringToPointer(webhook.URL),
+		AllowInvalidCerts: webhook.AllowInvalidCerts,
+		Secret: util.ValueIfNotNil(
+			util.StringToPointer(webhook.Secret), "<secret>"),
+		CustomHeaders:     customHeaders,
+		DesiredStatusCode: webhook.DesiredStatusCode,
+		Delay:             webhook.Delay,
+		MaxTries:          webhook.MaxTries,
+		SilentFails:       webhook.SilentFails})
+	apiElement.Censor()
+	return
+}
+
+// convertAndCensorWebHookSlice will convert Slice to API Type and censor secrets.
+func convertAndCensorWebHookSlice(webhooks *webhook.Slice) *api_type.WebHookSlice {
+	if webhooks == nil {
+		return nil
+	}
+	slice := make(api_type.WebHookSlice, len(*webhooks))
+	for index := range *webhooks {
+		slice[index] = convertAndCensorWebHook((*webhooks)[index])
+	}
+	return &slice
+}
+
+// convertAndCensorService will convert Service to API type and censor the secrets.
+func convertAndCensorService(service *service.Service) (apiService *api_type.Service) {
 	apiService = &api_type.Service{}
 
 	apiService.Comment = service.Comment
@@ -288,7 +370,7 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 		AccessToken:       util.DefaultOrValue(service.LatestVersion.AccessToken, "<secret>"),
 		AllowInvalidCerts: service.LatestVersion.AllowInvalidCerts,
 		UsePreRelease:     service.LatestVersion.UsePreRelease,
-		URLCommands:       convertURLCommandSliceToAPITypeURLCommandSlice(&service.LatestVersion.URLCommands)}
+		URLCommands:       convertURLCommandSlice(&service.LatestVersion.URLCommands)}
 	if service.LatestVersion.Require != nil {
 		var docker *api_type.RequireDockerCheck
 		if service.LatestVersion.Require.Docker != nil {
@@ -307,13 +389,13 @@ func convertServiceToAPITypeService(service *service.Service) (apiService *api_t
 	}
 
 	// DeployedVersionLookup
-	apiService.DeployedVersionLookup = convertDeployedVersionLookupToAPITypeDeployedVersionLookup(service.DeployedVersionLookup)
+	apiService.DeployedVersionLookup = convertAndCensorDeployedVersionLookup(service.DeployedVersionLookup)
 	// Notify
-	apiService.Notify = convertNotifySliceToAPITypeNotifySlice(&service.Notify)
+	apiService.Notify = convertAndCensorNotifySlice(&service.Notify)
 	// Command
-	apiService.Command = convertCommandSliceToAPITypeCommandSlice(&service.Command)
+	apiService.Command = convertCommandSlice(&service.Command)
 	// WebHook
-	apiService.WebHook = convertWebHookSliceToAPITypeWebHookSlice(&service.WebHook)
+	apiService.WebHook = convertAndCensorWebHookSlice(&service.WebHook)
 
 	apiService.Dashboard = &api_type.DashboardOptions{
 		AutoApprove: service.Dashboard.AutoApprove,

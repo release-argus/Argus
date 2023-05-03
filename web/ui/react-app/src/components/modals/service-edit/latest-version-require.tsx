@@ -1,21 +1,65 @@
 import { Accordion, Form, Row } from "react-bootstrap";
+import {
+  DefaultDockerFilterRegistryType,
+  DefaultLatestVersionFiltersType,
+} from "types/config";
+import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import Command from "./command";
-import { memo } from "react";
 
-const EditServiceLatestVersionRequire = () => {
-  const { control } = useFormContext();
+const DockerRegistryOptions = [
+  { label: "Docker Hub", value: "hub" },
+  { label: "GHCR", value: "ghcr" },
+  { label: "Quay", value: "quay" },
+];
+
+type Props = {
+  defaults?: DefaultLatestVersionFiltersType;
+  hard_defaults?: DefaultLatestVersionFiltersType;
+};
+
+const EditServiceLatestVersionRequire: FC<Props> = ({
+  defaults,
+  hard_defaults,
+}) => {
+  const { setValue } = useFormContext();
+
+  const defaultDockerRegistry =
+    defaults?.docker?.type || hard_defaults?.docker?.type;
+  const dockerRegistryOptions = useMemo(() => {
+    if (defaultDockerRegistry === undefined) return DockerRegistryOptions;
+
+    const defaultDockerRegistryLabel = DockerRegistryOptions.find(
+      (option) =>
+        option.value.toLowerCase() === defaultDockerRegistry.toLowerCase()
+    );
+
+    if (defaultDockerRegistryLabel)
+      return [
+        {
+          value: "",
+          label: `${defaultDockerRegistryLabel.label} (default)`,
+        },
+        ...DockerRegistryOptions,
+      ];
+
+    // Unknown default registry, return without this default.
+    return DockerRegistryOptions;
+  }, [defaultDockerRegistry]);
   const dockerRegistry = useWatch({
-    control,
     name: "latest_version.require.docker.type",
   });
-  const dockerRegistryOptions = [
-    { label: "Docker Hub", value: "hub" },
-    { label: "GHCR", value: "ghcr" },
-    { label: "Quay", value: "quay" },
-  ];
+  const selectedDockerRegistry = dockerRegistry || defaultDockerRegistry;
+  const showUsernameField = (dockerRegistry || defaultDockerRegistry) === "hub";
+
+  useEffect(() => {
+    // Default to Docker Hub if no registry is selected and no default registry.
+    if ((selectedDockerRegistry || "") === "") {
+      setValue("latest_version.require.docker.type", "hub");
+    }
+  }, []);
 
   return (
     <Accordion style={{ marginBottom: "0.5rem" }}>
@@ -67,20 +111,44 @@ const EditServiceLatestVersionRequire = () => {
             label="Tag"
             onRight
           />
-          {dockerRegistry === "hub" && (
+          {showUsernameField && (
             <FormItem
               key="username"
               name="latest_version.require.docker.username"
               col_sm={4}
               label="Username"
+              placeholder={
+                (
+                  defaults?.docker?.[
+                    selectedDockerRegistry
+                  ] as DefaultDockerFilterRegistryType
+                )?.username ||
+                (
+                  hard_defaults?.docker?.[
+                    selectedDockerRegistry
+                  ] as DefaultDockerFilterRegistryType
+                )?.username
+              }
             />
           )}
           <FormItem
             name="latest_version.require.docker.token"
             key="token"
-            col_sm={dockerRegistry === "hub" ? 8 : 12}
+            col_sm={showUsernameField ? 8 : 12}
             label="Token"
-            onRight={dockerRegistry === "hub"}
+            onRight={showUsernameField}
+            placeholder={
+              (
+                defaults?.docker?.[
+                  selectedDockerRegistry
+                ] as DefaultDockerFilterRegistryType
+              )?.token ||
+              (
+                hard_defaults?.docker?.[
+                  selectedDockerRegistry
+                ] as DefaultDockerFilterRegistryType
+              )?.token
+            }
           />
         </Row>
       </Accordion.Body>

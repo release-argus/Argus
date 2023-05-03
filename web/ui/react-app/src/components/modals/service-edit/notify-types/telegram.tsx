@@ -8,10 +8,10 @@ import { useFormContext } from "react-hook-form";
 import { useGlobalOrDefault } from "./util";
 
 export const TelegramParseModeOptions = [
-  { value: "none", label: "None" },
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "markdown_v2", label: "Markdown v2" },
+  { label: "None", value: "None" },
+  { label: "HTML", value: "HTML" },
+  { label: "Markdown", value: "Markdown" },
+  { label: "Markdown v2", value: "MarkdownV2" },
 ];
 
 const TELEGRAM = ({
@@ -27,25 +27,35 @@ const TELEGRAM = ({
   defaults?: NotifyTelegramType;
   hard_defaults?: NotifyTelegramType;
 }) => {
-  const { setValue } = useFormContext();
+  const { getValues, setValue } = useFormContext();
+
   const defaultParamsParseMode = useGlobalOrDefault(
     global?.params?.parsemode,
     defaults?.params?.parsemode,
     hard_defaults?.params?.parsemode
-  );
-  const telegramParseModeOptions = useMemo(
-    () =>
-      defaultParamsParseMode
-        ? [
-            { value: "", label: `${defaultParamsParseMode} (default)` },
-            ...TelegramParseModeOptions,
-          ]
-        : TelegramParseModeOptions,
-    [defaultParamsParseMode]
-  );
+  ).toLowerCase();
+  const telegramParseModeOptions = useMemo(() => {
+    const defaultParseMode = TelegramParseModeOptions.find(
+      (option) => option.value.toLowerCase() === defaultParamsParseMode
+    );
+
+    if (defaultParseMode)
+      return [
+        { value: "", label: `${defaultParseMode.label} (default)` },
+        ...TelegramParseModeOptions,
+      ];
+
+    return TelegramParseModeOptions;
+  }, [defaultParamsParseMode]);
+
   useEffect(() => {
-    global?.params?.parsemode && setValue(`${name}.params.parsemode`, "");
-  }, [global]);
+    if (
+      defaultParamsParseMode === "" &&
+      getValues(`${name}.params.parsemode`) === undefined
+    ) {
+      setValue(`${name}.params.parsemode`, "None");
+    }
+  }, []);
 
   return (
     <>

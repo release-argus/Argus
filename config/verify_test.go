@@ -19,6 +19,7 @@ package config
 import (
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -35,10 +36,13 @@ func testVerify() (cfg *Config) {
 	cfg.Order = []string{"test"}
 	cfg.Defaults = Defaults{}
 	cfg.Defaults.SetDefaults()
-	cfg.Notify = shoutrrr.Slice{
-		"test": cfg.Defaults.Notify["discord"],
-	}
-	cfg.WebHook = webhook.Slice{
+	cfg.Notify = shoutrrr.SliceDefaults{
+		"test": shoutrrr.NewDefaults(
+			"discord",
+			&cfg.Defaults.Notify["discord"].Options,
+			&cfg.Defaults.Notify["discord"].Params,
+			&cfg.Defaults.Notify["discord"].URLFields)}
+	cfg.WebHook = webhook.SliceDefaults{
 		"test": &cfg.Defaults.WebHook,
 	}
 	serviceID := "test"
@@ -58,48 +62,61 @@ func TestConfig_CheckValues(t *testing.T) {
 	// GIVEN variations of Config to test
 	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
-		config      *Config
-		errContains string
-		noPanic     bool
+		config   *Config
+		errRegex []string
+		noPanic  bool
 	}{
 		"valid Config": {
-			config:      testVerify(),
-			errContains: "",
-			noPanic:     true,
+			config:  testVerify(),
+			noPanic: true,
 		},
 		"invalid Defaults": {
 			config: &Config{
 				Defaults: Defaults{
-					Service: service.Service{
-						Options: opt.Options{
-							Interval: "1x"}}}},
-			errContains: `interval: "1x" <invalid>`,
+					Service: service.ServiceDefaults{
+						Options: *opt.NewDefaults("1x", nil)}}},
+			errRegex: []string{
+				`^defaults:$`,
+				`^  service:$`,
+				`^    options:$`,
+				`^      interval: "[^"]+" <invalid>`},
 		},
 		"invalid Notify": {
 			config: &Config{
-				Notify: shoutrrr.Slice{
-					"test": &shoutrrr.Shoutrrr{
-						Options: map[string]string{
-							"delay": "2x",
-						}}}},
-			errContains: `delay: "2x" <invalid>`,
+				Notify: shoutrrr.SliceDefaults{
+					"test": shoutrrr.NewDefaults(
+						"discord",
+						&map[string]string{
+							"delay": "2x"},
+						nil, nil)}},
+			errRegex: []string{
+				`^notify:$`,
+				`^  test:$`,
+				`^    options:$`,
+				`^      delay: "[^"]+" <invalid>`},
 		},
 		"invalid WebHook": {
 			config: &Config{
-				WebHook: webhook.Slice{
-					"test": &webhook.WebHook{
-						Delay: "3x",
-					}}},
-			errContains: `delay: "3x" <invalid>`,
+				WebHook: webhook.SliceDefaults{
+					"test": webhook.NewDefaults(
+						nil, nil, "3x", nil, nil, "", nil, "", "")}},
+			errRegex: []string{
+				`^webhook:$`,
+				`^  test:$`,
+				`^    delay: "3x" <invalid>`},
 		},
 		"invalid Service": {
 			config: &Config{
 				Service: service.Slice{
 					"test": &service.Service{
-						Options: opt.Options{
-							Interval: "4x"},
-					}}},
-			errContains: `interval: "4x" <invalid>`,
+						Options: *opt.New(
+							nil, "4x", nil,
+							nil, nil)}}},
+			errRegex: []string{
+				`^service:$`,
+				`^  test:$`,
+				`^    options:$`,
+				`^      interval: "4x" <invalid>`},
 		},
 	}
 
@@ -109,6 +126,11 @@ func TestConfig_CheckValues(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
+			if tc.config != nil {
+				for name, svc := range tc.config.Service {
+					svc.ID = name
+				}
+			}
 			// Switch Fatal to panic and disable this panic.
 			if !tc.noPanic {
 				jLog.Testing = true
@@ -119,11 +141,24 @@ func TestConfig_CheckValues(t *testing.T) {
 					out, _ := io.ReadAll(r)
 					os.Stdout = stdout
 					output := string(out)
-					if !strings.Contains(output, tc.errContains) {
-						t.Fatalf("%s should have panic'd with %q, not:\n%s",
-							name, tc.errContains, output)
+					lines := strings.Split(output, "\n")
+					if len(tc.errRegex) == 0 {
+						t.Fatalf("want 0 errors, not %d:\n%v",
+							len(lines), lines)
 					}
-
+					if len(tc.errRegex) > len(lines) {
+						t.Fatalf("want %d errors:\n['%s']\ngot %d errors:\n%v\noutput: %q",
+							len(tc.errRegex), strings.Join(tc.errRegex, `'  '`), len(lines), lines, output)
+					}
+					for i := range tc.errRegex {
+						re := regexp.MustCompile(tc.errRegex[i])
+						match := re.MatchString(lines[i])
+						if !match {
+							t.Errorf("want match for: %q\ngot:  %q",
+								tc.errRegex[i], output)
+							return
+						}
+					}
 				}()
 			}
 
@@ -135,9 +170,20 @@ func TestConfig_CheckValues(t *testing.T) {
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			output := string(out)
-			if !strings.Contains(output, tc.errContains) {
-				t.Fatalf("%s should have panic'd with %q. stdout:\n%s",
-					name, tc.errContains, output)
+			lines := strings.Split(output, `\n`)
+			if len(tc.errRegex) > len(lines) {
+				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+				return
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], output)
+					return
+				}
 			}
 		})
 	}
@@ -152,7 +198,7 @@ func TestConfig_Print(t *testing.T) {
 		flag        bool
 		wantedLines int
 	}{
-		"flag on":  {flag: true, wantedLines: 153},
+		"flag on":  {flag: true, wantedLines: 157},
 		"flag off": {flag: false},
 	}
 

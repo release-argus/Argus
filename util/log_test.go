@@ -504,12 +504,14 @@ func TestJLog_Info(t *testing.T) {
 
 func TestJLog_Verbose(t *testing.T) {
 	// GIVEN a JLog and message
-	msg := "argus"
 	tests := map[string]struct {
 		level          string
 		timestamps     bool
 		otherCondition bool
 		shouldPrint    bool
+
+		customMsg      *string
+		expectedLength int
 	}{
 		"ERROR log with timestamps": {
 			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
@@ -541,10 +543,15 @@ func TestJLog_Verbose(t *testing.T) {
 			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
 		"DEBUG log with !otherCondition": {
 			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"limits VERBOSE message length": {
+			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true,
+			customMsg: stringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+
+			msg := "argus"
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
@@ -552,6 +559,9 @@ func TestJLog_Verbose(t *testing.T) {
 			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
+			if tc.customMsg != nil {
+				msg = *tc.customMsg
+			}
 
 			// WHEN Verbose is called with true
 			jLog.Verbose(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
@@ -562,6 +572,9 @@ func TestJLog_Verbose(t *testing.T) {
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
+			if tc.customMsg != nil && len(*tc.customMsg) > tc.expectedLength {
+				msg = (*tc.customMsg)[:tc.expectedLength] + "..."
+			}
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
@@ -576,6 +589,16 @@ func TestJLog_Verbose(t *testing.T) {
 				t.Errorf("VERBOSE printed didn't match %q\nGot %q",
 					regex, got)
 			}
+			if tc.customMsg != nil {
+				tc.expectedLength += len("VERBOSE: ")
+				if strings.HasSuffix(got, "...\n") {
+					tc.expectedLength += len("...\n")
+				}
+				if len(got) != tc.expectedLength {
+					t.Errorf("VERBOSE message length not limited to %d\nGot %d\n%q",
+						tc.expectedLength, len(got), got)
+				}
+			}
 		})
 	}
 }
@@ -588,6 +611,9 @@ func TestJLog_Debug(t *testing.T) {
 		timestamps     bool
 		otherCondition bool
 		shouldPrint    bool
+
+		customMsg      *string
+		expectedLength int
 	}{
 		"ERROR log with timestamps": {
 			level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
@@ -619,6 +645,9 @@ func TestJLog_Debug(t *testing.T) {
 			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
 		"DEBUG log with !otherCondition": {
 			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		"limits DEBUG message length": {
+			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true,
+			customMsg: stringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
 	}
 
 	for name, tc := range tests {
@@ -630,6 +659,9 @@ func TestJLog_Debug(t *testing.T) {
 			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
+			if tc.customMsg != nil {
+				msg = *tc.customMsg
+			}
 
 			// WHEN Debug is called with true
 			jLog.Debug(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
@@ -640,6 +672,9 @@ func TestJLog_Debug(t *testing.T) {
 			got := string(out)
 			os.Stdout = stdout
 			var regex string
+			if tc.customMsg != nil && len(*tc.customMsg) > tc.expectedLength {
+				msg = (*tc.customMsg)[:tc.expectedLength] + "..."
+			}
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
@@ -653,6 +688,16 @@ func TestJLog_Debug(t *testing.T) {
 			if !match {
 				t.Errorf("DEBUG printed didn't match %q\nGot %q",
 					regex, got)
+			}
+			if tc.customMsg != nil {
+				tc.expectedLength += len("DEBUG: ")
+				if strings.HasSuffix(got, "...\n") {
+					tc.expectedLength += len("...\n")
+				}
+				if len(got) != tc.expectedLength {
+					t.Errorf("DEBUG message length not limited to %d\nGot %d\n%q",
+						tc.expectedLength, len(got), got)
+				}
 			}
 		})
 	}
