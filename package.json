@@ -15,7 +15,7 @@
     "standard-version": "^9.5.0"
   },
   "dependencies": {
-    "@commitlint/cli": "^17.6.1",
+    "@commitlint/cli": "^17.6.3",
     "@commitlint/config-conventional": "^17.6.1"
   }
 }
