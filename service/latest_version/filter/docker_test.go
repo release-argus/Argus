@@ -502,6 +502,13 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				Image: "release-argus/argus",
 				Tag:   "1.2.3"},
 		},
+		"image with period in name": {
+			errRegex: "^$",
+			dockerCheck: &DockerCheck{
+				Type:  "ghcr",
+				Image: "test/image.io",
+				Tag:   "1.2.3"},
+		},
 		"docker hub type with username but no password": {
 			errRegex:  "^-token: <required>",
 			wantImage: "library/ubuntu",
