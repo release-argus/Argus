@@ -1,10 +1,10 @@
 import { Button, ButtonGroup, Col, Row } from "react-bootstrap";
-import { FC, memo } from "react";
+import { FC, memo, useCallback } from "react";
 import { faMinus, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { useFieldArray, useFormContext } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormItem } from "components/generic/form";
+import { useFieldArray } from "react-hook-form";
 
 interface Props {
   name: string;
@@ -12,11 +12,12 @@ interface Props {
 }
 
 const Command: FC<Props> = ({ name, removeMe }) => {
-  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control,
     name: name,
   });
+  const addItem = useCallback(() => {
+    append({ arg: "" }, { shouldFocus: false });
+  }, []);
 
   return (
     <Col xs={12}>
@@ -26,7 +27,6 @@ const Command: FC<Props> = ({ name, removeMe }) => {
             key={id}
             name={`${name}.${argIndex}.arg`}
             required
-            requiredIgnorePlaceholder
             placeholder={
               argIndex === 0
                 ? `e.g. "/bin/bash"`
@@ -48,7 +48,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
         <Button
           className="btn-unchecked mb-3"
           style={{ float: "right" }}
-          onClick={() => append({ arg: "" }, { shouldFocus: false })}
+          onClick={addItem}
         >
           <FontAwesomeIcon icon={faPlus} />
         </Button>

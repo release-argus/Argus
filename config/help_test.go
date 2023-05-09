@@ -56,8 +56,9 @@ func testConfig() Config {
 		File: "/root/inaccessible",
 		Settings: Settings{
 			Indentation: 4,
-			Log: LogSettings{
-				Level: &logLevel}},
+			SettingsBase: SettingsBase{
+				Log: LogSettings{
+					Level: &logLevel}}},
 		HardDefaults: Defaults{
 			Service: service.ServiceDefaults{
 				Status: svcstatus.NewStatusDefaults(
@@ -77,20 +78,21 @@ func testSettings() Settings {
 	webCertFile := "../README.md"
 	webKeyFile := "../LICENSE"
 	return Settings{
-		Log: LogSettings{
-			Timestamps: &logTimestamps,
-			Level:      &logLevel,
-		},
-		Data: DataSettings{
-			DatabaseFile: &dataDatabaseFile,
-		},
-		Web: WebSettings{
-			ListenHost:  &webListenHost,
-			ListenPort:  &webListenPort,
-			RoutePrefix: &webRoutePrefix,
-			CertFile:    &webCertFile,
-			KeyFile:     &webKeyFile,
-		},
+		SettingsBase: SettingsBase{
+			Log: LogSettings{
+				Timestamps: &logTimestamps,
+				Level:      &logLevel,
+			},
+			Data: DataSettings{
+				DatabaseFile: &dataDatabaseFile,
+			},
+			Web: WebSettings{
+				ListenHost:  &webListenHost,
+				ListenPort:  &webListenPort,
+				RoutePrefix: &webRoutePrefix,
+				CertFile:    &webCertFile,
+				KeyFile:     &webKeyFile,
+			}},
 	}
 }
 
@@ -211,6 +213,8 @@ func testServiceURL(id string) *service.Service {
 }
 
 func TestMain(m *testing.M) {
-	LogInit(util.NewJLog("DEBUG", true))
+	log := util.NewJLog("DEBUG", true)
+	log.Testing = true
+	LogInit(log)
 	os.Exit(m.Run())
 }

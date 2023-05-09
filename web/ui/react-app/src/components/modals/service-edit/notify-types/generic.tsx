@@ -1,8 +1,8 @@
 import { FormItem, FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyOptionsType } from "types/config";
+import { globalOrDefault } from "./util";
 import { memo } from "react";
-import { useGlobalOrDefault } from "./util";
 
 export const NotifyOptions = ({
   name,
@@ -24,7 +24,7 @@ export const NotifyOptions = ({
       col_xs={6}
       label="Delay"
       tooltip="e.g. 1h2m3s = 1 hour, 2 minutes and 3 seconds"
-      placeholder={useGlobalOrDefault(
+      defaultVal={globalOrDefault(
         global?.delay,
         defaults?.delay,
         hard_defaults?.delay
@@ -35,7 +35,7 @@ export const NotifyOptions = ({
       col_xs={6}
       type="number"
       label="Max tries"
-      placeholder={useGlobalOrDefault(
+      defaultVal={globalOrDefault(
         global?.max_tries,
         defaults?.max_tries,
         hard_defaults?.max_tries
@@ -47,7 +47,7 @@ export const NotifyOptions = ({
       col_sm={12}
       rows={3}
       label="Message"
-      placeholder={useGlobalOrDefault(
+      defaultVal={globalOrDefault(
         global?.message,
         defaults?.message,
         hard_defaults?.message

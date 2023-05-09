@@ -23,7 +23,7 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
           name="options.interval"
           col_sm={12}
           label="Interval"
-          placeholder={defaults?.interval || hard_defaults?.interval}
+          defaultVal={defaults?.interval || hard_defaults?.interval}
         />
         <Row>
           <BooleanWithDefault

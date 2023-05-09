@@ -106,7 +106,6 @@ func TestCommandTest(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
-			jLog.Testing = true
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {

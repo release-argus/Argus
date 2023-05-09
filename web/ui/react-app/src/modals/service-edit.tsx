@@ -127,10 +127,12 @@ const ServiceEditModal = () => {
             style={{ display: "flex", justifyContent: "space-between" }}
           >
             <ButtonGroup>
-              <DeleteModal
-                onDelete={() => onDelete()}
-                disabled={err === null}
-              />
+              {modal.service.id !== "" && (
+                <DeleteModal
+                  onDelete={() => onDelete()}
+                  disabled={err === null}
+                />
+              )}
             </ButtonGroup>
             {err === null && (
               <FontAwesomeIcon

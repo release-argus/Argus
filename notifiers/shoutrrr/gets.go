@@ -115,8 +115,10 @@ func (s *Shoutrrr) GetMaxTries() uint {
 }
 
 // GetMessage of the Gotification after the context is applied and template evaluated.
-func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) string {
-	return util.TemplateString(s.GetOption("message"), *context)
+func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) (msg string) {
+	msg = s.GetOption("message")
+	msg = util.TemplateString(msg, *context)
+	return
 }
 
 // GetTitle of the Shoutrrr after the context is applied and template evaluated.
@@ -130,13 +132,16 @@ func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) (title string) {
 	return
 }
 
-// GetSelfType of this Shoutrrr.
-func (s *ShoutrrrBase) GetSelfType() string {
+// GetType of this Shoutrrr.
+func (s *ShoutrrrBase) GetType() string {
 	return s.Type
 }
 
 // GetType of this Shoutrrr.
 func (s *Shoutrrr) GetType() string {
 	// s.ID if the name is the same as the type
-	return util.GetFirstNonDefault(s.Type, s.Main.Type, s.ID)
+	return util.GetFirstNonDefault(
+		s.Type,
+		s.Main.Type,
+		s.ID)
 }

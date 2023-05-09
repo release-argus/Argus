@@ -73,6 +73,13 @@ func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_type
 
 func (s *Shoutrrr) GetURL() (url string) {
 	switch s.GetType() {
+	case "bark":
+		// bark://:devicekey@host:port/[path]
+		url = fmt.Sprintf("bark://:%s@%s:%s%s",
+			s.GetURLField("devicekey"),
+			s.GetURLField("host"),
+			s.GetURLField("port"),
+			util.ValueIfNotDefault(s.GetURLField("path"), "/"+s.GetURLField("path")))
 	case "discord":
 		// discord://token@webhookid
 		url = fmt.Sprintf("discord://%s@%s",
@@ -150,6 +157,14 @@ func (s *Shoutrrr) GetURL() (url string) {
 			rooms,
 			disableTLS,
 		)
+	case "ntfy":
+		// ntfy://[username]:[password]@[host][:port]/topic
+		url = fmt.Sprintf("ntfy://%s:%s@%s%s/%s",
+			s.GetURLField("username"),
+			s.GetURLField("password"),
+			s.GetURLField("host"),
+			util.ValueIfNotDefault(s.GetURLField("port"), ":"+s.GetURLField("port")),
+			s.GetURLField("topic"))
 	case "opsgenie":
 		// opsgenie://host[:port][/path]/apikey
 		port := s.GetURLField("port")

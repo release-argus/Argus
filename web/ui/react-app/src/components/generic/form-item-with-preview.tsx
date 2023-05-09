@@ -9,6 +9,7 @@ interface Props {
 
   label: string;
   tooltip?: string;
+  defaultVal?: string;
   placeholder?: string;
 }
 
@@ -17,12 +18,13 @@ const FormItemWithPreview: FC<Props> = ({
 
   label,
   tooltip,
+  defaultVal,
   placeholder,
 }) => {
   const { register } = useFormContext();
   const formValue = useWatch({ name: name });
   const preview = useMemo(() => {
-    const url = formValue || placeholder || "";
+    const url = formValue || defaultVal || "";
     try {
       new URL(url);
       // Render the image if it's a valid URL that resolved
@@ -40,7 +42,7 @@ const FormItemWithPreview: FC<Props> = ({
     } catch (error) {
       return false;
     }
-  }, [formValue, placeholder]);
+  }, [formValue, defaultVal]);
 
   return (
     <Col xs={12} sm={12} className={"pt-1 pb-1 col-form"}>

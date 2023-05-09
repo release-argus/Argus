@@ -54,7 +54,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		&announceChannel, &databaseChannel, &saveChannel,
 		"", "", "", "", "", "")
 	lookup := New(
-		nil,
+		stringPtr(os.Getenv("GITHUB_TOKEN")),
 		boolPtr(allowInvalidCerts),
 		nil,
 		opt.New(

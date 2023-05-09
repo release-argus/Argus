@@ -1,4 +1,5 @@
 import {
+  BARK,
   DISCORD,
   GOOGLE_CHAT,
   GOTIFY,
@@ -6,6 +7,7 @@ import {
   JOIN,
   MATRIX,
   MATTERMOST,
+  NTFY,
   OPSGENIE,
   PUSHBULLET,
   PUSHOVER,
@@ -38,6 +40,7 @@ const RENDER_TYPE_COMPONENTS: {
     hard_defaults: any;
   }>;
 } = {
+  bark: BARK,
   discord: DISCORD,
   smtp: SMTP,
   googlechat: GOOGLE_CHAT,
@@ -46,6 +49,7 @@ const RENDER_TYPE_COMPONENTS: {
   join: JOIN,
   mattermost: MATTERMOST,
   matrix: MATRIX,
+  ntfy: NTFY,
   opsgenie: OPSGENIE,
   pushbullet: PUSHBULLET,
   pushover: PUSHOVER,
@@ -65,13 +69,12 @@ const RenderNotify: FC<RenderTypeProps> = ({
 }) => {
   const RenderTypeComponent =
     RENDER_TYPE_COMPONENTS[(type as NotifyTypes) || "discord"];
-
   return (
     <RenderTypeComponent
       name={name}
       global={globalNotify}
-      defaults={defaults && defaults[type]}
-      hard_defaults={hard_defaults && hard_defaults[type]}
+      defaults={defaults}
+      hard_defaults={hard_defaults}
     />
   );
 };

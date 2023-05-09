@@ -21,18 +21,14 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/release-argus/Argus/util"
 )
 
 var TIMEOUT time.Duration = 30 * time.Second
 
 func TestConfig_SaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler
-	jLog = util.NewJLog("WARN", false)
 	config := testConfig()
-	// Switch Fatal to panic and disable this panic.
-	jLog.Testing = true
+	// Disable fatal panics.
 	defer func() { _ = recover() }()
 	go func() {
 		*config.SaveChannel <- true

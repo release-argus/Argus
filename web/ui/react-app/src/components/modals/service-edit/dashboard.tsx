@@ -24,7 +24,7 @@ const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => (
         name={"dashboard.icon"}
         label="Icon"
         tooltip="e.g. https://example.com/icon.png"
-        placeholder={defaults?.icon || hard_defaults?.icon}
+        defaultVal={defaults?.icon || hard_defaults?.icon}
       />
       <FormItem
         key="icon_link_to"
@@ -32,7 +32,7 @@ const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => (
         col_sm={12}
         label="Icon link to"
         tooltip="Where the Icon will redirect when clicked"
-        placeholder={defaults?.icon_link_to || hard_defaults?.icon_link_to}
+        defaultVal={defaults?.icon_link_to || hard_defaults?.icon_link_to}
         isURL
       />
       <FormItem
@@ -41,7 +41,7 @@ const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => (
         col_sm={12}
         label="Web URL"
         tooltip="Where the 'Service name' will redirect when clicked"
-        placeholder={defaults?.web_url || hard_defaults?.web_url}
+        defaultVal={defaults?.web_url || hard_defaults?.web_url}
         isURL
       />
     </Accordion.Body>

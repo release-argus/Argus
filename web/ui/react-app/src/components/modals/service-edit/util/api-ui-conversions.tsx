@@ -1,14 +1,19 @@
 import {
+  HeaderType,
+  NotifyNtfyAction,
+  NotifyOpsGenieTarget,
+} from "types/config";
+import {
   NotifyOpsGenieDetailType,
   ServiceEditAPIType,
+  ServiceEditOtherData,
   ServiceEditType,
 } from "types/service-edit";
 
-import { NotifyOpsGenieTarget } from "types/config";
-
 export const convertAPIServiceDataEditToUI = (
   name: string,
-  serviceData?: ServiceEditAPIType
+  serviceData?: ServiceEditAPIType,
+  otherOptionsData?: ServiceEditOtherData
 ): ServiceEditType => {
   if (serviceData && name) {
     // Edit service defaults
@@ -70,48 +75,12 @@ export const convertAPIServiceDataEditToUI = (
           avatar: "", // controlled param
           color: "", // ^
           icon: "", // ^
-          ...(item.params &&
-            Object.entries(item.params).reduce(
-              (acc, [key, val]) =>
-                Object.assign(acc, {
-                  [key]:
-                    item.type !== "opsgenie"
-                      ? val
-                      : ["responders", "visibleto"].includes(key)
-                      ? (JSON.parse(val).map(
-                          (obj: {
-                            id: string;
-                            type: string;
-                            name: string;
-                            username: string;
-                          }) => {
-                            if (obj.id) {
-                              return {
-                                type: obj.type,
-                                sub_type: "id",
-                                value: obj.id,
-                              };
-                            } else {
-                              return {
-                                type: obj.type,
-                                sub_type:
-                                  obj.type === "user" ? "username" : "name",
-                                value: obj.name || obj.username,
-                              };
-                            }
-                          }
-                        ) as NotifyOpsGenieTarget[])
-                      : ["details"].includes(key)
-                      ? (Object.entries(JSON.parse(val)).map(
-                          ([key, value]) => ({
-                            key: key,
-                            value: value,
-                          })
-                        ) as NotifyOpsGenieDetailType[])
-                      : val,
-                }),
-              {}
-            )),
+          ...convertNotifyParams(
+            item.name as string,
+            item.type,
+            item.params,
+            otherOptionsData
+          ),
         },
       })),
       dashboard: {
@@ -137,4 +106,121 @@ export const convertAPIServiceDataEditToUI = (
       web_url: "",
     },
   };
+};
+
+export const convertOpsGenieDetailsFromString = (
+  str?: string | NotifyOpsGenieDetailType[]
+): NotifyOpsGenieDetailType[] | undefined => {
+  // already converted
+  if (typeof str === "object") return str as NotifyOpsGenieDetailType[];
+  // undefined/empty
+  if (str === undefined || str === "") return undefined;
+
+  // convert from a JSON string
+  try {
+    return Object.entries(JSON.parse(str)).map(([key, value], i) => ({
+      id: i,
+      key: key,
+      value: value,
+    })) as NotifyOpsGenieDetailType[];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const convertOpsGenieTargetFromString = (
+  str?: string | NotifyOpsGenieTarget[]
+): NotifyOpsGenieTarget[] | undefined => {
+  // already converted
+  if (typeof str === "object") return str as NotifyOpsGenieTarget[];
+  // undefined/empty
+  if (str === undefined || str === "") return undefined;
+
+  // convert from a JSON string
+  try {
+    return JSON.parse(str).map(
+      (
+        obj: { id: string; type: string; name: string; username: string },
+        i: number
+      ) => {
+        // id
+        if (obj.id) {
+          return {
+            id: i,
+            type: obj.type,
+            sub_type: "id",
+            value: obj.id,
+          };
+        } else {
+          // username/name
+          return {
+            id: i,
+            type: obj.type,
+            sub_type: obj.type === "user" ? "username" : "name",
+            value: obj.name || obj.username,
+          };
+        }
+      }
+    ) as NotifyOpsGenieTarget[];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const convertNtfyActionsFromString = (
+  str?: string | NotifyNtfyAction[]
+): NotifyNtfyAction[] | undefined => {
+  // already converted
+  if (typeof str === "object") return str as NotifyNtfyAction[];
+  if (str === undefined || str === "") return undefined;
+
+  // convert from a JSON string
+  try {
+    return JSON.parse(str).map((obj: NotifyNtfyAction, i: number) => ({
+      id: i,
+      ...obj,
+      headers: obj.headers
+        ? convertStringMapToHeaderType(obj.headers as { [key: string]: string })
+        : undefined,
+      extras: obj.extras
+        ? convertStringMapToHeaderType(obj.extras as { [key: string]: string })
+        : undefined,
+    })) as NotifyNtfyAction[];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const convertNotifyParams = (
+  name: string,
+  type?: string,
+  params?: { [key: string]: string },
+  otherOptionsData?: ServiceEditOtherData
+) => {
+  const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
+  switch (notifyType) {
+    case "ntfy":
+      return {
+        ...params,
+        actions: convertNtfyActionsFromString(params?.actions),
+      };
+    case "opsgenie":
+      return {
+        ...params,
+        details: convertOpsGenieDetailsFromString(params?.details),
+        targets: convertOpsGenieTargetFromString(params?.targets),
+      };
+    default:
+      return params;
+  }
+};
+
+const convertStringMapToHeaderType = (headers?: {
+  [key: string]: string;
+}): HeaderType[] | undefined => {
+  if (!headers) return undefined;
+  return Object.keys(headers).map((key) => ({
+    key: key,
+    value: headers[key],
+  }));
 };

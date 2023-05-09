@@ -32,6 +32,23 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		params    map[string]string
 		want      string
 	}{
+		"bark - base": {
+			sType: "bark",
+			want:  "bark://:KEY@HOST:8080",
+			urlFields: map[string]string{
+				"devicekey": "KEY",
+				"host":      "HOST",
+				"port":      "8080"},
+		},
+		"bark - base + path": {
+			sType: "bark",
+			want:  "bark://:KEY@HOST:8080/shazam",
+			urlFields: map[string]string{
+				"devicekey": "KEY",
+				"host":      "HOST",
+				"port":      "8080",
+				"path":      "shazam"},
+		},
 		"discord - base": {
 			sType: "discord",
 			want:  "discord://TOKEN@WEBHOOKID",
@@ -221,6 +238,46 @@ func TestShoutrrr_GetURL(t *testing.T) {
 				"rooms":      "ROOMS",
 				"disabletls": "yes"},
 		},
+		"ntfy - base": {
+			sType: "ntfy",
+			want:  "ntfy://:@/TOPIC",
+			urlFields: map[string]string{
+				"topic": "TOPIC"},
+		},
+		"ntfy - base + username": {
+			sType: "ntfy",
+			want:  "ntfy://USER:@/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER"},
+		},
+		"ntfy - base + username + password": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS"},
+		},
+		"ntfy - base + username + password + host": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@HOST/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS",
+				"host":     "HOST"},
+		},
+		"ntfy - base + username + password + host + port": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@HOST:8443/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS",
+				"host":     "HOST",
+				"port":     "8443"},
+		},
 		"opsgenie - base": {
 			sType: "opsgenie",
 			want:  "opsgenie://DEFAULT_HOST/APIKEY",
@@ -364,7 +421,8 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		"shoutrrr - base": {
 			sType:     "shoutrrr",
 			want:      "RAW",
-			urlFields: map[string]string{"raw": "RAW"}},
+			urlFields: map[string]string{"raw": "RAW"},
+		},
 	}
 
 	for name, tc := range tests {

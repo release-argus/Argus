@@ -15,7 +15,7 @@ interface FormItemColourProps {
   rows?: number;
   options?: JSX.Element[];
   value?: string;
-  placeholder?: string;
+  defaultVal?: string;
   onRight?: boolean;
   onMiddle?: boolean;
 }
@@ -30,7 +30,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
   label,
   tooltip,
   value,
-  placeholder,
+  defaultVal,
   onRight,
   onMiddle,
 }) => {
@@ -61,7 +61,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
             style={{ width: "50%" }}
             type="text"
             value={hexColour}
-            placeholder={placeholder}
+            placeholder={defaultVal}
             autoFocus={false}
             {...register(name, {
               pattern: required ? /^#[\da-f]{6}$/ : /^#[\da-f]{6}$|^$/,
@@ -73,7 +73,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
             style={{ width: "50%" }}
             type="color"
             title="Choose your color"
-            value={hexColour || placeholder}
+            value={hexColour || defaultVal}
             onChange={(event) => setColour(event.target.value)}
             autoFocus={false}
           />

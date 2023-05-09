@@ -1,6 +1,6 @@
 import { Button, ButtonGroup, Col } from "react-bootstrap";
 import { Controller, useFormContext } from "react-hook-form";
-import { FC, memo } from "react";
+import { FC, memo, useEffect } from "react";
 import {
   faCheckCircle,
   faCircleXmark,
@@ -8,6 +8,7 @@ import {
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { HelpTooltip } from "components/generic";
+import { strToBool } from "utils";
 
 interface Props {
   name: string;
@@ -29,7 +30,7 @@ const BooleanWithDefault: FC<Props> = ({
   tooltip,
   onRight,
 }) => {
-  const { control } = useFormContext();
+  const { getValues, setValue } = useFormContext();
   const options = [
     {
       value: true,
@@ -45,11 +46,15 @@ const BooleanWithDefault: FC<Props> = ({
     },
   ];
   const optionsDefault = {
-    value: undefined,
+    value: null,
     text: "Default: ",
     icon: defaultValue ? faCheckCircle : faCircleXmark,
     class: defaultValue ? "success" : "danger",
   };
+  // on load, convert the value if it's a string
+  useEffect(() => {
+    setValue(name, strToBool(getValues(name)));
+  }, []);
 
   const leftPadding = [
     col_sm !== 12 && onRight ? "ps-2" : "",
@@ -76,7 +81,6 @@ const BooleanWithDefault: FC<Props> = ({
         style={{ marginLeft: "auto", paddingLeft: "0.5rem", float: "right" }}
       >
         <Controller
-          control={control}
           name={name}
           render={({ field: { onChange, value } }) => (
             <>
@@ -113,7 +117,7 @@ const BooleanWithDefault: FC<Props> = ({
                 onClick={() => onChange(optionsDefault.value)}
                 variant="secondary"
               >
-                {`${optionsDefault.text} `}
+                {optionsDefault.text}
                 <FontAwesomeIcon
                   icon={optionsDefault.icon}
                   style={{

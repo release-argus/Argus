@@ -53,21 +53,26 @@ func (d *Defaults) SetDefaults() {
 	d.WebHook.SetDefaults()
 
 	// Overwrite defaults with environment variables.
-	err := d.MapEnvToStruct()
-	jLog.Fatal(
-		"One or more 'ARGUS_' environment variables are incorrect:\n"+
-			strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
-		util.LogFrom{},
-		err != nil)
+	d.MapEnvToStruct()
+
+	// Notify Types
+	for notifyType, notify := range d.Notify {
+		notify.Type = notifyType
+	}
 }
 
-// MapEnvToStruct maps environment variables this struct.
-func (d *Defaults) MapEnvToStruct() (err error) {
-	err = mapEnvToStruct(d, "", nil)
+// MapEnvToStruct maps environment variables to this struct.
+func (d *Defaults) MapEnvToStruct() {
+	err := mapEnvToStruct(d, "", nil)
 	if err == nil {
 		err = d.CheckValues("")
 	}
-	return
+	if err != nil {
+		jLog.Fatal(
+			"One or more 'ARGUS_' environment variables are incorrect:\n"+
+				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
+			util.LogFrom{}, true)
+	}
 }
 
 // mapEnvToStruct maps environment variables to a struct.
@@ -81,7 +86,9 @@ func mapEnvToStruct(src interface{}, prefix string, envVars *[]string) (err erro
 		envVarsTrimmed := make([]string, 0, len(allEnvVars))
 		// TRIM non-ARGUS env vars
 		for _, envVar := range allEnvVars {
-			if strings.HasPrefix(envVar, prefix) {
+			parts := strings.SplitN(envVar, "=", 2)
+			// Skip empty env vars
+			if strings.HasPrefix(envVar, prefix) && parts[1] != "" {
 				envVarsTrimmed = append(envVarsTrimmed, envVar)
 			}
 		}
@@ -251,7 +258,8 @@ func (d *Defaults) CheckValues(prefix string) (errs error) {
 
 // Print the defaults Strcut.
 func (d *Defaults) Print(prefix string) {
-	str := d.String(prefix)
+	itemPrefix := prefix + "  "
+	str := d.String(itemPrefix)
 	delim := "\n"
 	if str == "{}\n" {
 		delim = " "

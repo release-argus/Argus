@@ -77,13 +77,11 @@ func Run(cfg *config.Config, log *util.JLog) {
 		jLog.Fatal(
 			http.ListenAndServeTLS(
 				listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router),
-			util.LogFrom{},
-			true)
+			util.LogFrom{}, true)
 	} else {
 		jLog.Fatal(
 			http.ListenAndServe(
 				listenAddress, router),
-			util.LogFrom{},
-			true)
+			util.LogFrom{}, true)
 	}
 }

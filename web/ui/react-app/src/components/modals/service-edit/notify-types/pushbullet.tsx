@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyOptions } from "./generic";
 import { NotifyPushbulletType } from "types/config";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const PUSHBULLET = ({
   name,
@@ -31,7 +31,7 @@ const PUSHBULLET = ({
         required
         col_sm={12}
         label="Access Token"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -43,7 +43,7 @@ const PUSHBULLET = ({
         col_sm={12}
         label="Targets"
         tooltip="e.g. DEVICE1,DEVICE2..."
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.targets,
           defaults?.url_fields?.targets,
           hard_defaults?.url_fields?.targets
@@ -56,7 +56,7 @@ const PUSHBULLET = ({
         name={`${name}.params.title`}
         col_sm={12}
         label="Title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

@@ -200,6 +200,22 @@ func (s *ShoutrrrBase) correctSelf() {
 		s.SetURLField("path", path)
 	}
 
+	// Host
+	host := s.GetSelfURLField("host")
+	if strings.Contains(host, ":") {
+		// Trim leading http(s)://
+		host = strings.TrimPrefix(host, "http://")
+		host = strings.TrimPrefix(host, "https://")
+		s.SetURLField("host", host)
+
+		// Move port from "host" to "port"
+		split := strings.Split(host, ":")
+		if len(split) > 1 {
+			s.SetURLField("host", split[0])
+			s.SetURLField("port", split[1])
+		}
+	}
+
 	switch s.Type {
 	case "matrix":
 		// Remove #'s in channel aliases
@@ -246,6 +262,7 @@ func (s *Shoutrrr) checkValuesMaster(
 	errsURLFields *error,
 	errsParams *error,
 ) {
+	// Check that the Type is valid
 	sType := s.GetType()
 	if !util.Contains(supportedTypes, sType) {
 		sTypeWithoutID := util.GetFirstNonDefault(s.Type, s.Main.Type)
@@ -257,8 +274,23 @@ func (s *Shoutrrr) checkValuesMaster(
 				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
 		}
 	}
+	// Check that the Type doesn't differ in the Main
+	if s.Main.Type != "" && sType != s.Main.Type {
+		*errs = fmt.Errorf("%s%stype: %q != %q <invalid> (omit the type, or make it the same as the root notify.%s.type)\\",
+			util.ErrorToString(*errs), prefix, sType, s.Main.Type, s.ID)
+	}
 
 	switch sType {
+	case "bark":
+		// bark://:devicekey@host:port/[path]
+		if s.GetURLField("devicekey") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  devicekey: <required>\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
+		if s.GetURLField("host") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  host: <required>\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
 	case "discord":
 		// discord://token@webhookid
 		if s.GetURLField("token") == "" {
@@ -337,6 +369,12 @@ func (s *Shoutrrr) checkValuesMaster(
 		}
 		if s.GetURLField("password") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  password: <required> e.g. 'pass123' (with user) OR 'access_token' (no user)\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
+	case "ntfy":
+		// ntfy://[username]:[password]@[host][:port][/path]/topic
+		if s.GetURLField("topic") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  topic: <required>\\",
 				util.ErrorToString(*errsURLFields), prefix)
 		}
 	case "opsgenie":

@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyIFTTTType } from "types/config";
 import { NotifyOptions } from "./generic";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const IFTTT = ({
   name,
@@ -31,7 +31,7 @@ const IFTTT = ({
         required
         col_sm={12}
         label="WebHook ID"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
@@ -46,7 +46,7 @@ const IFTTT = ({
         col_sm={12}
         label="Events"
         tooltip="e.g. event1,event2..."
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.events,
           defaults?.params?.events,
           hard_defaults?.params?.events
@@ -57,7 +57,7 @@ const IFTTT = ({
         col_sm={12}
         label="Title"
         tooltip="Optional notification title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
@@ -68,7 +68,7 @@ const IFTTT = ({
         type="number"
         label="Use Message As Value"
         tooltip="Set the corresponding value field to the message"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.usemessageasvalue,
           defaults?.params?.usemessageasvalue,
           hard_defaults?.params?.usemessageasvalue
@@ -79,7 +79,7 @@ const IFTTT = ({
         type="number"
         label="Use Title As Value"
         tooltip="Set the corresponding value field to the title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.usetitleasvalue,
           defaults?.params?.usetitleasvalue,
           hard_defaults?.params?.usetitleasvalue
@@ -90,7 +90,7 @@ const IFTTT = ({
         name={`${name}.params.value1`}
         col_sm={4}
         label="Value1"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.value1,
           defaults?.params?.value1,
           hard_defaults?.params?.value1
@@ -100,7 +100,7 @@ const IFTTT = ({
         name={`${name}.params.value2`}
         col_sm={4}
         label="Value2"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.value2,
           defaults?.params?.value2,
           hard_defaults?.params?.value2
@@ -111,7 +111,7 @@ const IFTTT = ({
         name={`${name}.params.value3`}
         col_sm={4}
         label="Value3"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.value3,
           defaults?.params?.value3,
           hard_defaults?.params?.value3

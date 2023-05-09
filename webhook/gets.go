@@ -184,16 +184,16 @@ func (w *WebHook) GetType() string {
 }
 
 // GetURL of the WebHook.
-func (w *WebHook) GetURL() string {
-	url := util.GetFirstNonDefault(
-		w.URL,
-		w.Main.URL,
-		w.Defaults.URL,
-		w.HardDefaults.URL)
-
+func (w *WebHook) GetURL() (url string) {
 	url = strings.Clone(
-		util.TemplateString(
-			url,
-			util.ServiceInfo{LatestVersion: w.ServiceStatus.GetLatestVersion()}))
-	return url
+		util.GetFirstNonDefault(
+			w.URL,
+			w.Main.URL,
+			w.Defaults.URL,
+			w.HardDefaults.URL))
+
+	url = util.TemplateString(
+		url,
+		util.ServiceInfo{LatestVersion: w.ServiceStatus.GetLatestVersion()})
+	return
 }

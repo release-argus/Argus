@@ -317,8 +317,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 			jLog.Info(
 				fmt.Sprintf(`found %s container "%s:%s"`,
 					l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
-				*logFrom,
-				true)
+				*logFrom, true)
 		}
 		break
 	}

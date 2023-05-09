@@ -113,7 +113,6 @@ func TestService_CheckValues(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		svc              *Service
-		defaults         *ServiceDefaults
 		options          opt.Options
 		latestVersion    latestver.Lookup
 		deployedVersion  *deployedver.Lookup
@@ -264,10 +263,9 @@ func TestService_CheckValues(t *testing.T) {
 				`^    wh:$`,
 				`^      delay: "[^"]+" <invalid>`},
 		},
-		"has defaults. latest_version+deployed_version, webhook with errs": {
+		"has latest_version+deployed_version, webhook with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			defaults: &ServiceDefaults{},
 			options: *opt.New(
 				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
@@ -314,46 +312,17 @@ func TestService_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			tc.svc.ID = "test"
-			tc.svc.Defaults = tc.defaults
 			tc.svc.Options = tc.options
-			if tc.latestVersion.Defaults == nil {
-				tc.latestVersion.Defaults = &latestver.LookupDefaults{}
-			}
-			if tc.latestVersion.HardDefaults == nil {
-				tc.latestVersion.HardDefaults = &latestver.LookupDefaults{}
-			}
-			if tc.deployedVersion != nil {
-				if tc.deployedVersion.Defaults == nil {
-					tc.deployedVersion.Defaults = &deployedver.LookupDefaults{}
-				}
-				if tc.deployedVersion.HardDefaults == nil {
-					tc.deployedVersion.HardDefaults = &deployedver.LookupDefaults{}
-				}
-			}
 			tc.svc.LatestVersion = tc.latestVersion
 			tc.svc.DeployedVersionLookup = tc.deployedVersion
 			tc.svc.Command = tc.commands
-			if tc.webhooks != nil {
-				for _, wh := range tc.webhooks {
-					if wh.Main == nil {
-						wh.Main = &webhook.WebHookDefaults{}
-					}
-					if wh.Defaults == nil {
-						wh.Defaults = &webhook.WebHookDefaults{}
-					}
-					if wh.HardDefaults == nil {
-						wh.HardDefaults = &webhook.WebHookDefaults{}
-					}
-				}
-			}
 			tc.svc.WebHook = tc.webhooks
 			tc.svc.Notify = tc.notifies
-			for i := range tc.notifies {
-				tc.notifies[i].Main = &shoutrrr.ShoutrrrDefaults{}
-				tc.notifies[i].Defaults = &shoutrrr.ShoutrrrDefaults{}
-				tc.notifies[i].HardDefaults = &shoutrrr.ShoutrrrDefaults{}
-			}
 			tc.svc.Dashboard = tc.dashboardOptions
+			tc.svc.Init(
+				&ServiceDefaults{}, &ServiceDefaults{},
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 
 			// WHEN CheckValues is called
 			err := tc.svc.CheckValues("")

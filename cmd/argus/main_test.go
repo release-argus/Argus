@@ -48,6 +48,7 @@ func resetFlags() {
 func TestTheMain(t *testing.T) {
 	// GIVEN different Config's to test
 	jLog = *util.NewJLog("WARN", false)
+	jLog.Testing = true
 	tests := map[string]struct {
 		file           func(path string, t *testing.T)
 		outputContains *[]string
@@ -89,7 +90,6 @@ func TestTheMain(t *testing.T) {
 
 			// WHEN Main is called
 			go func() {
-				jLog.Testing = true
 				main()
 			}()
 			time.Sleep(3 * time.Second)

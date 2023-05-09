@@ -38,21 +38,39 @@ var (
 
 // Settings for the binary.
 type Settings struct {
-	Log          LogSettings  `yaml:"log,omitempty"`  // Log settings
-	Data         DataSettings `yaml:"data,omitempty"` // Data settings
-	Web          WebSettings  `yaml:"web,omitempty"`  // Web settings
-	FromFlags    settingsBase `yaml:"-"`              // Values from flags
-	HardDefaults settingsBase `yaml:"-"`              // Hard defaults
-	Indentation  uint8        `yaml:"-"`              // Number of spaces used in the config.yml for indentation
+	SettingsBase `yaml:",inline"` // SettingsBase for the binary
+
+	FromFlags    SettingsBase `yaml:"-"` // Values from flags
+	HardDefaults SettingsBase `yaml:"-"` // Hard defaults
+	Indentation  uint8        `yaml:"-"` // Number of spaces used in the config.yml for indentation
 }
 
-// settingsBase for the binary.
+// String returns a string representation of the Settings.
+func (s *Settings) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
+}
+
+// SettingsBase for the binary.
 //
 // (Used in Defaults)
-type settingsBase struct {
-	Log  LogSettings  `yaml:"-"`
-	Data DataSettings `yaml:"-"`
-	Web  WebSettings  `yaml:"-"`
+type SettingsBase struct {
+	Log  LogSettings  `yaml:"log,omitempty"`  // Log settings
+	Data DataSettings `yaml:"data,omitempty"` // Data settings
+	Web  WebSettings  `yaml:"web,omitempty"`  // Web settings
+}
+
+// MapEnvToStruct maps environment variables to this struct.
+func (s *SettingsBase) MapEnvToStruct() {
+	err := mapEnvToStruct(s, "", nil)
+	if err != nil {
+		jLog.Fatal(
+			"One or more 'ARGUS_' environment variables are incorrect:\n"+
+				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
+			util.LogFrom{}, true)
+	}
 }
 
 // LogSettings for the binary.
@@ -109,7 +127,7 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 	}
 }
 
-// SetDefaults initialises to the defaults.
+// SetDefaults initialises the Settings to the defaults.
 func (s *Settings) SetDefaults() {
 	// #######
 	// # LOG #

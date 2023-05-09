@@ -2,7 +2,7 @@
 const isAfterDate = (thenString: string) => {
   const then = new Date(thenString);
   const now = new Date();
-  return then <= now;
+  return then > now;
 };
 
 export default isAfterDate;

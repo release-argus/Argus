@@ -33,6 +33,7 @@ var cfg *config.Config
 
 func TestMain(m *testing.M) {
 	log := util.NewJLog("DEBUG", false)
+	logFrom = &util.LogFrom{}
 	log.Testing = true
 
 	cfg = testConfig()
@@ -53,9 +54,10 @@ func testConfig() (cfg *config.Config) {
 	saveChannel := make(chan bool, 16)
 	cfg = &config.Config{
 		Settings: config.Settings{
-			Data: config.DataSettings{
-				DatabaseFile: &databaseFile,
-			},
+			SettingsBase: config.SettingsBase{
+				Data: config.DataSettings{
+					DatabaseFile: &databaseFile,
+				}},
 		},
 		Service: service.Slice{
 			"delete0": nil,

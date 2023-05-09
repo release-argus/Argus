@@ -43,11 +43,6 @@ type ServiceDefaults struct {
 	Status svcstatus.StatusDefaults `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses)
 }
 
-// String returns a string representation of the ServiceDefaults in YAML format.
-func (s *ServiceDefaults) String(prefix string) string {
-	return util.ToYAMLString(s, prefix)
-}
-
 // Service is a source to be serviceed and provides everything needed to extract
 // the latest version from the URL provided.
 type Service struct {

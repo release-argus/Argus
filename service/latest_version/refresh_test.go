@@ -73,7 +73,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			allowInvalidCerts: stringPtr("false"),
 			previous:          testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				boolPtr(false),
 				nil,
 				test.Options,
@@ -90,7 +90,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			require:  stringPtr(`{"docker":{"type": "ghcr", "image": "release-argus/Argus", "tag": "latest"}}`),
 			previous: testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -122,7 +122,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			semanticVersioning: stringPtr("false"),
 			previous:           testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				opt.New(
@@ -141,7 +141,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			url:      stringPtr("https://valid.release-argus.io/json"),
 			previous: testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -158,7 +158,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			urlCommands: stringPtr(`[{"type": "regex", "regex": "v?([0-9.]})"}]`),
 			previous:    testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -182,7 +182,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			usePreRelease: stringPtr("true"),
 			previous:      testLookup(true, true),
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -209,7 +209,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		"type github carries over Releases and ETag": {
 			url: stringPtr("release-argus/other"),
 			previous: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -227,7 +227,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				releases: []github_types.Release{
 					{TagName: "v1.0.0"}}},
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -244,7 +244,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			url:     stringPtr("https://valid.release-argus.io/json"),
 			typeStr: stringPtr("url"),
 			previous: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -262,7 +262,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				releases: []github_types.Release{
 					{TagName: "v1.0.0"}}},
 			want: New(
-				nil,
+				test.AccessToken,
 				test.AllowInvalidCerts,
 				nil,
 				test.Options,
@@ -329,7 +329,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			}
 			// AND the GitHubData is only carried over to github types
 			if tc.want.GitHubData.String() != got.GitHubData.String() {
-				t.Errorf("expected:\n%v\nbut got:\n%v",
+				t.Errorf("expected:\n%s\nbut got:\n%s",
 					tc.want.GitHubData, got.GitHubData)
 			}
 		})
