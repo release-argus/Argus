@@ -18,8 +18,11 @@ package command
 
 import (
 	"fmt"
+	"os"
+	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -53,4 +56,16 @@ func testController(announce *chan []byte) (control *Controller) {
 	)
 
 	return
+}
+
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
+	jLog.Testing = true
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }

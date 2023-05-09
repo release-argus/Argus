@@ -117,7 +117,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
               name="latest_version.require.docker.username"
               col_sm={4}
               label="Username"
-              placeholder={
+              defaultVal={
                 (
                   defaults?.docker?.[
                     selectedDockerRegistry
@@ -137,7 +137,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             col_sm={showUsernameField ? 8 : 12}
             label="Token"
             onRight={showUsernameField}
-            placeholder={
+            defaultVal={
               (
                 defaults?.docker?.[
                   selectedDockerRegistry

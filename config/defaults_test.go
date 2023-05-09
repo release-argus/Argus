@@ -82,7 +82,7 @@ func TestDefaults_String(t *testing.T) {
 						&map[string]string{ // params
 							"username": "Argus"},
 						&map[string]string{ // url_params
-							"host": "https://example.com"})},
+							"host": "example.com"})},
 				WebHook: *webhook.NewDefaults(
 					boolPtr(true), // allow_invalid_certs
 					&webhook.Headers{ // custom_headers
@@ -123,7 +123,7 @@ notify:
     options:
       message: foo {{ version }}
     url_fields:
-      host: https://example.com
+      host: example.com
     params:
       username: Argus
 webhook:
@@ -214,6 +214,14 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		want     *Defaults
 		errRegex string
 	}{
+		"empty vars ignored": {
+			env: map[string]string{
+				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99m",
+				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": ""},
+			want: &Defaults{
+				Service: service.ServiceDefaults{
+					Options: *opt.NewDefaults("99m", nil)}},
+		},
 		"service.options": {
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99m",
@@ -375,7 +383,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_SMTP_OPTIONS_DELAY":       "2m",
 				"ARGUS_NOTIFY_SMTP_URL_FIELDS_USERNAME": "user",
 				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PASSWORD": "secret",
-				"ARGUS_NOTIFY_SMTP_URL_FIELDS_HOST":     "https://smtp.example.com",
+				"ARGUS_NOTIFY_SMTP_URL_FIELDS_HOST":     "smtp.example.com",
 				"ARGUS_NOTIFY_SMTP_URL_FIELDS_PORT":     "25",
 				"ARGUS_NOTIFY_SMTP_PARAMS_FROMADDRESS":  "me@example.com",
 				"ARGUS_NOTIFY_SMTP_PARAMS_TOADDRESSES":  "you@somewhere.com",
@@ -407,7 +415,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						&map[string]string{
 							"username": "user",
 							"password": "secret",
-							"host":     "https://smtp.example.com",
+							"host":     "smtp.example.com",
 							"port":     "25"})}},
 		},
 		"notify.gotify": {
@@ -415,7 +423,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MESSAGE":   "shazam",
 				"ARGUS_NOTIFY_GOTIFY_OPTIONS_MAX_TRIES": "3",
 				"ARGUS_NOTIFY_GOTIFY_OPTIONS_DELAY":     "3s",
-				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_HOST":   "https://gotify.example.com",
+				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_HOST":   "gotify.example.com",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_PORT":   "443",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_PATH":   "gotify",
 				"ARGUS_NOTIFY_GOTIFY_URL_FIELDS_TOKEN":  "SuperSecretToken",
@@ -435,7 +443,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"priority":   "0",
 							"title":      "Argus Gotify Notification"},
 						&map[string]string{
-							"host":  "https://gotify.example.com",
+							"host":  "gotify.example.com",
 							"port":  "443",
 							"path":  "gotify",
 							"token": "SuperSecretToken"})}},
@@ -497,7 +505,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_JOIN_OPTIONS_DELAY":     "6s",
 				"ARGUS_NOTIFY_JOIN_URL_FIELDS_APIKEY": "apiKey",
 				"ARGUS_NOTIFY_JOIN_PARAMS_DEVICES":    "device1,device2",
-				"ARGUS_NOTIFY_JOIN_PARAMS_ICON":       "https://example.com/icon.png",
+				"ARGUS_NOTIFY_JOIN_PARAMS_ICON":       "example.com/icon.png",
 				"ARGUS_NOTIFY_JOIN_PARAMS_TITLE":      "Argus Join Notification"},
 			want: &Defaults{
 				Notify: shoutrrr.SliceDefaults{
@@ -509,7 +517,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"delay":     "6s"},
 						&map[string]string{
 							"devices": "device1,device2",
-							"icon":    "https://example.com/icon.png",
+							"icon":    "example.com/icon.png",
 							"title":   "Argus Join Notification"},
 						&map[string]string{
 							"apikey": "apiKey"})}},
@@ -520,7 +528,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES":   "7",
 				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_DELAY":       "7h",
 				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_USERNAME": "Argus",
-				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_HOST":     "https://mattermost.example.com",
+				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_HOST":     "mattermost.example.com",
 				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PORT":     "443",
 				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_PATH":     "mattermost",
 				"ARGUS_NOTIFY_MATTERMOST_URL_FIELDS_TOKEN":    "mattermostToken",
@@ -540,7 +548,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"title": "Argus Mattermost Notification"},
 						&map[string]string{
 							"username": "Argus",
-							"host":     "https://mattermost.example.com",
+							"host":     "mattermost.example.com",
 							"port":     "443",
 							"path":     "mattermost",
 							"token":    "mattermostToken",
@@ -552,7 +560,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_MATRIX_OPTIONS_MAX_TRIES":   "8",
 				"ARGUS_NOTIFY_MATRIX_OPTIONS_DELAY":       "8m",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_USER":     "argus",
-				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_HOST":     "https://matrix.example.com",
+				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_HOST":     "matrix.example.com",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PORT":     "443",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PATH":     "matrix",
 				"ARGUS_NOTIFY_MATRIX_URL_FIELDS_PASSWORD": "matrixPassword",
@@ -573,7 +581,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"title":      "Argus Matrix Notification"},
 						&map[string]string{
 							"user":     "argus",
-							"host":     "https://matrix.example.com",
+							"host":     "matrix.example.com",
 							"port":     "443",
 							"path":     "matrix",
 							"password": "matrixPassword"})}},
@@ -583,7 +591,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MESSAGE":    "pang",
 				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_MAX_TRIES":  "9",
 				"ARGUS_NOTIFY_OPSGENIE_OPTIONS_DELAY":      "9s",
-				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_HOST":    "https://opsgenie.example.com",
+				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_HOST":    "opsgenie.example.com",
 				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PORT":    "443",
 				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_PATH":    "opsgenie",
 				"ARGUS_NOTIFY_OPSGENIE_URL_FIELDS_APIKEY":  "opsGenieApiKey",
@@ -623,7 +631,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"user":        "argus",
 							"visibleto":   "visible1,visible2"},
 						&map[string]string{
-							"host":   "https://opsgenie.example.com",
+							"host":   "opsgenie.example.com",
 							"port":   "443",
 							"path":   "opsgenie",
 							"apikey": "opsGenieApiKey"})}},
@@ -832,7 +840,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEBHOOK_MAX_TRIES":           "88",
 				"ARGUS_WEBHOOK_SILENT_FAILS":        "true",
 				"ARGUS_WEBHOOK_TYPE":                "github",
-				"ARGUS_WEBHOOK_URL":                 "https://webhook.example.com"},
+				"ARGUS_WEBHOOK_URL":                 "webhook.example.com"},
 			want: &Defaults{
 				WebHook: *webhook.NewDefaults(
 					boolPtr(false),
@@ -843,7 +851,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					"",
 					boolPtr(true),
 					"github",
-					"https://webhook.example.com")},
+					"webhook.example.com")},
 		},
 		"webhook - invalid str - type": {
 			env: map[string]string{
@@ -909,28 +917,33 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			}
 			for k, v := range tc.env {
 				os.Setenv(k, v)
+				defer os.Unsetenv(k)
 			}
-			// Cleanup
+			// Catch fatal panics.
 			defer func() {
-				for k := range tc.env {
-					os.Unsetenv(k)
+				r := recover()
+				if r != nil {
+					if tc.errRegex == "" {
+						t.Fatalf("unexpected panic: %v", r)
+					}
+					switch r.(type) {
+					case string:
+						if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
+							t.Errorf("want error matching:\n%v\ngot:\n%v",
+								tc.errRegex, t)
+						}
+					default:
+						t.Fatalf("unexpected panic: %v", r)
+					}
 				}
 			}()
 
 			// WHEN MapEnvToStruct is called on it
-			err := dflts.MapEnvToStruct()
+			dflts.MapEnvToStruct()
 
 			// THEN any error is as expected
-			if tc.errRegex == "" {
-				tc.errRegex = `^$`
-			}
-			errStr := util.ErrorToString(err)
-			if !regexp.MustCompile(tc.errRegex).MatchString(errStr) {
-				t.Errorf("want error matching:\n%v\ngot:\n%v",
-					tc.errRegex, errStr)
-			}
-			if tc.errRegex != `^$` {
-				return // no further checks if there was an error
+			if tc.errRegex != "" { // Expected a FATAL panic to be caught above
+				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
 			}
 			// AND the defaults are set to the appropriate env vars
 			if dflts.String("") != tc.want.String("") {
@@ -1048,9 +1061,9 @@ func TestDefaults_Print(t *testing.T) {
 		input *Defaults
 		lines int
 	}{
-		"unmodified defaults": {
+		"unmodified hard defaults": {
 			input: &defaults,
-			lines: 132},
+			lines: 148 + len(defaults.Notify)},
 		"empty defaults": {
 			input: &Defaults{},
 			lines: 1},

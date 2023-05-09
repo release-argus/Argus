@@ -19,6 +19,7 @@ interface FormItemProps {
   value?: string | number;
 
   isURL?: boolean;
+  defaultVal?: string;
   placeholder?: string;
 
   onRight?: boolean;
@@ -35,6 +36,7 @@ const FormTextArea: FC<FormItemProps> = ({
   label,
   tooltip,
   rows,
+  defaultVal,
   placeholder,
   onRight,
   onMiddle,
@@ -58,12 +60,12 @@ const FormTextArea: FC<FormItemProps> = ({
           type={"textarea"}
           as="textarea"
           rows={rows}
-          placeholder={placeholder}
+          placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
             validate: (value) => {
               let validation = true;
-              const testValue = value || placeholder || "";
+              const testValue = value || defaultVal || "";
               if (required) {
                 validation = /.+/.test(testValue);
                 if (!validation) return "Required";

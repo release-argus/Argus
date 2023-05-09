@@ -137,6 +137,34 @@ func TestShoutrrr_checkValuesMaster(t *testing.T) {
 			errsRegex: "type: .* <invalid>",
 			sType:     stringPtr("argus"),
 		},
+		"invalid type - type in main differs": {
+			errsRegex:          `type: "gotify" != "discord" <invalid>`,
+			errsURLFieldsRegex: `host: <required>.*token: <required>`,
+			sType:              stringPtr("gotify"),
+			main:               NewDefaults("discord", nil, nil, nil),
+		},
+		"bark - invalid": {
+			sType:              stringPtr("bark"),
+			errsURLFieldsRegex: `^  devicekey: <required>[^:]+host: <required>[^:]+$`,
+		},
+		"bark - no devicekey": {
+			sType:              stringPtr("bark"),
+			errsURLFieldsRegex: `^  devicekey: <required>[^:]+$`,
+			urlFields: map[string]string{
+				"host": "https://example.com"},
+		},
+		"bark - no host": {
+			sType:              stringPtr("bark"),
+			errsURLFieldsRegex: `^  host: <required>[^:]+$`,
+			urlFields: map[string]string{
+				"devicekey": "foo"},
+		},
+		"bark - valid": {
+			sType: stringPtr("bark"),
+			urlFields: map[string]string{
+				"devicekey": "foo",
+				"host":      "https://example.com"},
+		},
 		"discord - invalid": {
 			sType:              stringPtr("discord"),
 			errsURLFieldsRegex: "token: <required>.*webhookid: <required>",
@@ -384,6 +412,15 @@ func TestShoutrrr_checkValuesMaster(t *testing.T) {
 				&map[string]string{
 					"host":     "bish",
 					"password": "bash"}),
+		},
+		"ntfy - invalid": {
+			sType:              stringPtr("ntfy"),
+			errsURLFieldsRegex: "topic: <required>",
+		},
+		"ntfy - valid": {
+			sType: stringPtr("ntfy"),
+			urlFields: map[string]string{
+				"topic": "foo"},
 		},
 		"opsgenie - invalid": {
 			sType:              stringPtr("opsgenie"),
@@ -799,124 +836,111 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 	tests := map[string]struct {
 		sType     string
 		mapTarget string
-		key       string
-		startAs   string
-		want      string
+		startAs   map[string]string
+		want      map[string]string
 	}{
 		"port - leading colon": {
 			mapTarget: "url_fields",
-			key:       "port",
-			startAs:   ":8080",
-			want:      "8080",
+			startAs:   map[string]string{"port": ":8080"},
+			want:      map[string]string{"port": "8080"},
 		},
 		"port - valid": {
 			mapTarget: "url_fields",
-			key:       "port",
-			startAs:   "8080",
-			want:      "8080",
+			startAs:   map[string]string{"port": "8080"},
+			want:      map[string]string{"port": "8080"},
 		},
 		"path - leading slash": {
 			mapTarget: "url_fields",
-			key:       "path",
-			startAs:   "/argus",
-			want:      "argus",
+			startAs:   map[string]string{"path": "/argus"},
+			want:      map[string]string{"path": "argus"},
 		},
 		"path - valid": {
 			mapTarget: "url_fields",
-			key:       "path",
-			startAs:   "argus",
-			want:      "argus",
+			startAs:   map[string]string{"path": "argus"},
+			want:      map[string]string{"path": "argus"},
+		},
+		"port - from url": {
+			mapTarget: "url_fields",
+			startAs:   map[string]string{"host": "https://mattermost.example.com:8443", "port": ""},
+			want:      map[string]string{"host": "mattermost.example.com", "port": "8443"},
 		},
 		"matrix - rooms, leading #": {
 			sType:     "matrix",
 			mapTarget: "params",
-			key:       "rooms",
-			startAs:   "#alias:server",
-			want:      "alias:server",
+			startAs:   map[string]string{"rooms": "#alias:server"},
+			want:      map[string]string{"rooms": "alias:server"},
 		},
-		"matrix - rooms, leading encoded #": {
+		"matrix - rooms, leading # already urlEncoded": {
 			sType:     "matrix",
 			mapTarget: "params",
-			key:       "rooms",
-			startAs:   "%23alias:server",
-			want:      "%23alias:server",
+			startAs:   map[string]string{"rooms": "%23alias:server"},
+			want:      map[string]string{"rooms": "%23alias:server"},
 		},
 		"matrix - rooms, valid": {
 			sType:     "matrix",
 			mapTarget: "params",
-			key:       "rooms",
-			startAs:   "alias:server",
-			want:      "alias:server",
+			startAs:   map[string]string{"rooms": "alias:server"},
+			want:      map[string]string{"rooms": "alias:server"},
 		},
 		"mattermost - channel, leading slash": {
 			sType:     "mattermost",
 			mapTarget: "url_fields",
-			key:       "channel",
-			startAs:   "/argus",
-			want:      "argus",
+			startAs:   map[string]string{"channel": "/argus"},
+			want:      map[string]string{"channel": "argus"},
 		},
 		"mattermost - channel, valid": {
 			sType:     "mattermost",
 			mapTarget: "url_fields",
-			key:       "channel",
-			startAs:   "argus",
-			want:      "argus",
+			startAs:   map[string]string{"channel": "argus"},
+			want:      map[string]string{"channel": "argus"},
 		},
-		"slack - color, # instead of %23": {
+		"slack - color, not urlEncoded": {
 			sType:     "slack",
 			mapTarget: "params",
-			key:       "color",
-			startAs:   "#ffffff",
-			want:      "%23ffffff",
+			startAs:   map[string]string{"color": "#ffffff"},
+			want:      map[string]string{"color": "%23ffffff"},
 		},
 		"slack - color, valid": {
 			sType:     "slack",
 			mapTarget: "params",
-			key:       "color",
-			startAs:   "%23ffffff",
-			want:      "%23ffffff",
+			startAs:   map[string]string{"color": "%23ffffff"},
+			want:      map[string]string{"color": "%23ffffff"},
 		},
 		"teams - altid, leading slash": {
 			sType:     "teams",
 			mapTarget: "url_fields",
-			key:       "altid",
-			startAs:   "/argus",
-			want:      "argus",
+			startAs:   map[string]string{"altid": "/argus"},
+			want:      map[string]string{"altid": "argus"},
 		},
 		"teams - altid, valid": {
 			sType:     "teams",
 			mapTarget: "url_fields",
-			key:       "altid",
-			startAs:   "argus",
-			want:      "argus",
+			startAs:   map[string]string{"altid": "argus"},
+			want:      map[string]string{"altid": "argus"},
 		},
 		"teams - groupowner, leading slash": {
 			sType:     "teams",
 			mapTarget: "url_fields",
-			key:       "groupowner",
-			startAs:   "/argus",
-			want:      "argus",
+			startAs:   map[string]string{"groupowner": "/argus"},
+			want:      map[string]string{"groupowner": "argus"},
 		},
 		"teams - groupowner, valid": {
 			sType:     "teams",
 			mapTarget: "url_fields",
-			key:       "groupowner",
-			startAs:   "argus",
-			want:      "argus",
+			startAs:   map[string]string{"groupowner": "argus"},
+			want:      map[string]string{"groupowner": "argus"},
 		},
-		"zulip - botmail, @ instead of %40": {
+		"zulip - botmail, not urlEncoded": {
 			sType:     "zulip",
 			mapTarget: "url_fields",
-			key:       "botmail",
-			startAs:   "foo@bar.com",
-			want:      "foo%40bar.com",
+			startAs:   map[string]string{"botmail": "foo@bar.com"},
+			want:      map[string]string{"botmail": "foo%40bar.com"},
 		},
 		"zulip - botmail, valid": {
 			sType:     "zulip",
 			mapTarget: "url_fields",
-			key:       "botmail",
-			startAs:   "foo%40bar.com",
-			want:      "foo%40bar.com",
+			startAs:   map[string]string{"botmail": "foo%40bar.com"},
+			want:      map[string]string{"botmail": "foo%40bar.com"},
 		},
 	}
 
@@ -931,22 +955,28 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 				nil, nil, nil, nil)
 			shoutrrr.InitMaps()
 			if tc.mapTarget == "url_fields" {
-				shoutrrr.SetURLField(tc.key, tc.startAs)
+				for k, v := range tc.startAs {
+					shoutrrr.SetURLField(k, v)
+				}
 			} else {
-				shoutrrr.SetParam(tc.key, tc.startAs)
+				for k, v := range tc.startAs {
+					shoutrrr.SetParam(k, v)
+				}
 			}
 
 			// WHEN correctSelf is called
 			shoutrrr.correctSelf()
 
-			// THEN the field is corrected when necessary
-			got := shoutrrr.GetSelfURLField(tc.key)
-			if tc.mapTarget != "url_fields" {
-				got = shoutrrr.GetSelfParam(tc.key)
-			}
-			if got != tc.want {
-				t.Errorf("want: %s:%q\ngot:  %s:%q",
-					tc.key, tc.want, tc.key, got)
+			// THEN the fields are corrected as necessary
+			for k, v := range tc.want {
+				got := shoutrrr.GetSelfURLField(k)
+				if tc.mapTarget != "url_fields" {
+					got = shoutrrr.GetSelfParam(k)
+				}
+				if got != v {
+					t.Errorf("want %s:%q, not %q",
+						k, v, got)
+				}
 			}
 		})
 	}

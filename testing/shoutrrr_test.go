@@ -115,7 +115,6 @@ func TestGetAllShoutrrrNames(t *testing.T) {
 
 func TestFindShoutrrr(t *testing.T) {
 	// GIVEN a Config with/without Service containing a Shoutrrr and Root Shoutrrr(s)
-	jLog = util.NewJLog("INFO", false)
 	tests := map[string]struct {
 		flag        string
 		cfg         *config.Config
@@ -387,7 +386,6 @@ func TestFindShoutrrr(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
-			jLog.Testing = true
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
@@ -400,6 +398,13 @@ func TestFindShoutrrr(t *testing.T) {
 							*tc.panicRegex, rStr)
 					}
 				}()
+			}
+			tc.cfg.HardDefaults.Notify.SetDefaults()
+			for _, svc := range tc.cfg.Service {
+				svc.Init(
+					&tc.cfg.Defaults.Service, &tc.cfg.HardDefaults.Service,
+					&tc.cfg.Notify, &tc.cfg.Defaults.Notify, &tc.cfg.HardDefaults.Notify,
+					&tc.cfg.WebHook, &tc.cfg.Defaults.WebHook, &tc.cfg.HardDefaults.WebHook)
 			}
 
 			// WHEN findShoutrrr is called with the test Config
@@ -450,7 +455,7 @@ func identicalNotifiers(a shoutrrr.Notifier, b shoutrrr.Notifier) (identical boo
 		return false
 	}
 
-	identical = a.GetSelfType() == b.GetSelfType() &&
+	identical = a.GetType() == b.GetType() &&
 		len(*a.GetOptions()) == len(*b.GetOptions()) &&
 		len(*a.GetURLFields()) == len(*b.GetURLFields()) &&
 		len(*a.GetParams()) == len(*b.GetParams())
@@ -569,7 +574,6 @@ func TestNotifyTest(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
-			jLog.Testing = true
 			serviceHardDefaults := service.ServiceDefaults{}
 			serviceHardDefaults.SetDefaults()
 			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}

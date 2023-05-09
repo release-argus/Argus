@@ -24,12 +24,12 @@ import (
 var (
 	jLog           *util.JLog
 	supportedTypes = []string{
-		"discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "opsgenie", "pushbullet",
-		"pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "shoutrrr"}
+		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "shoutrrr"}
 )
 
 type Notifier interface {
-	GetSelfType() string
+	GetType() string
 
 	GetParams() *map[string]string
 	GetSelfParam(key string) string

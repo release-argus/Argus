@@ -61,15 +61,16 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
   return diff;
 };
 
+// stringifyQueryParam will return a query param string for a given key/value pair
+// if value is undefined/null, it will return an empty string if omitUndefined is true
 export const stringifyQueryParam = (
   key: string,
   value?: string | number | boolean,
   omitUndefined?: boolean
-) => {
-  if (omitUndefined && value === undefined) return "";
-
-  return `${key}=${encodeURIComponent(value || "")}`;
-};
+) =>
+  omitUndefined && value == null
+    ? ""
+    : `${key}=${encodeURIComponent(value || "")}`;
 
 export const convertToQueryParams = ({
   params,
@@ -137,7 +138,7 @@ const removeEmpty = (obj: any) => {
   const copy = { ...obj };
   Object.keys(copy).forEach((key) => {
     if (
-      copy[key] === undefined ||
+      copy[key] == null ||
       copy[key] === "" ||
       (Array.isArray(copy[key]) && copy[key].length === 0) ||
       (typeof copy[key] === "object" &&

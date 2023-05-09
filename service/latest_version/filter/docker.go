@@ -284,7 +284,7 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 	}
 
 	if d.Tag == "" {
-		errs = fmt.Errorf("%s%stag: <required> (tag to check for existence)",
+		errs = fmt.Errorf("%s%stag: <required> (tag of image to check for existence)",
 			util.ErrorToString(errs), prefix)
 	} else if !util.CheckTemplate(d.Tag) {
 		errs = fmt.Errorf("%s%stag: %q <invalid> (didn't pass templating)\\",

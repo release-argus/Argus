@@ -25,44 +25,48 @@ func notifyDefaultOptions() *map[string]string {
 // SetDefaults for Shoutrrr.
 func (s *SliceDefaults) SetDefaults() {
 	newSlice := make(SliceDefaults, len(supportedTypes))
+	newSlice["bark"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		&map[string]string{
+			"title": "Argus"},
+		&map[string]string{
+			"port": "443"})
 	newSlice["discord"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		&map[string]string{
-			"username": "Argus"},
+			"splitlines": "yes",
+			"username":   "Argus"},
 		nil)
 	newSlice["smtp"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		nil,
-		&map[string]string{
-			"port": "25"})
+		nil, nil)
 	newSlice["googlechat"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		&map[string]string{},
-		nil)
+		nil, nil)
 	newSlice["gotify"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		&map[string]string{
-			"title":    "Argus",
-			"priority": "0"},
+			"disabletls": "no",
+			"priority":   "0",
+			"title":      "Argus"},
 		&map[string]string{
 			"port": "443"})
 	newSlice["ifttt"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		&map[string]string{
-			"title":             "Argus",
 			"usemessageasvalue": "2",
 			"usetitleasvalue":   "0"},
 		nil)
 	newSlice["join"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
-		&map[string]string{},
-		nil)
+		nil, nil)
 	newSlice["mattermost"] = NewDefaults(
 		"",
 		&map[string]string{
@@ -78,7 +82,15 @@ func (s *SliceDefaults) SetDefaults() {
 		notifyDefaultOptions(),
 		nil,
 		&map[string]string{
-			"port": "443"})
+			"disabletls": "no",
+			"port":       "443"})
+	newSlice["ntfy"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		&map[string]string{
+			"title": "Argus"},
+		&map[string]string{
+			"host": "ntfy.sh"})
 	newSlice["opsgenie"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -88,8 +100,7 @@ func (s *SliceDefaults) SetDefaults() {
 		notifyDefaultOptions(),
 		&map[string]string{
 			"title": "Argus"},
-		&map[string]string{
-			"port": "443"})
+		nil)
 	newSlice["pushover"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),

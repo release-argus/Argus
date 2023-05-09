@@ -41,6 +41,7 @@ func (c *Config) Init() {
 	defer c.OrderMutex.RUnlock()
 
 	c.HardDefaults.SetDefaults()
+	// Give the HardDefaults to the Defaults
 	c.Defaults.Service.LatestVersion.Require.Docker.SetDefaults(
 		&c.HardDefaults.Service.LatestVersion.Require.Docker)
 

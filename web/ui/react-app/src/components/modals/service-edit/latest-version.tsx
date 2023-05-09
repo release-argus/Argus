@@ -57,7 +57,7 @@ const EditServiceLatestVersion: FC<Props> = ({
                 name="latest_version.access_token"
                 col_sm={12}
                 label="Access Token"
-                placeholder={
+                defaultVal={
                   defaults?.access_token || hard_defaults?.access_token
                 }
                 isURL={latestVersionType !== "github"}

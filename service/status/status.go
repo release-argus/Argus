@@ -387,12 +387,13 @@ func (s *Status) SendSave() {
 }
 
 // GetWebURL returns the Web URL.
-func (s *Status) GetWebURL() string {
+func (s *Status) GetWebURL() (url string) {
 	if util.DefaultIfNil(s.WebURL) == "" {
-		return ""
+		return
 	}
 
-	return util.TemplateString(
+	url = util.TemplateString(
 		*s.WebURL,
 		util.ServiceInfo{LatestVersion: s.GetLatestVersion()})
+	return
 }

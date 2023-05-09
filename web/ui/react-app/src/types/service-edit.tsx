@@ -3,6 +3,7 @@ import {
   DefaultsType,
   DockerFilterType,
   HeaderType,
+  NotifyNtfyAction,
   NotifyOpsGenieTarget,
   NotifyOptionsType,
   NotifyType,
@@ -103,8 +104,10 @@ export interface NotifyEditType {
           | string
           | number
           | boolean
+          | NotifyNtfyAction[]
           | NotifyOpsGenieTarget[]
-          | NotifyOpsGenieDetailType[];
+          | NotifyOpsGenieDetailType[]
+          | { [key: string]: string };
       };
   name?: string;
   oldIndex?: string;
@@ -118,6 +121,7 @@ export interface NotifyEditType {
       | string
       | number
       | boolean
+      | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
       | NotifyOpsGenieDetailType[];
   };

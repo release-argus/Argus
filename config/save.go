@@ -286,6 +286,5 @@ func (c *Config) Save() {
 	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
 	jLog.Info(
 		fmt.Sprintf("Saved service updates to %s", c.File),
-		util.LogFrom{},
-		true)
+		util.LogFrom{}, true)
 }

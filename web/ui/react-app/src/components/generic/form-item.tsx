@@ -9,7 +9,6 @@ interface FormItemProps {
   name: string;
   registerParams?: Record<string, unknown>;
   required?: boolean;
-  requiredIgnorePlaceholder?: boolean;
   unique?: boolean;
 
   col_xs?: number;
@@ -21,6 +20,7 @@ interface FormItemProps {
 
   isURL?: boolean;
   isRegex?: boolean;
+  defaultVal?: string;
   placeholder?: string;
 
   onRight?: boolean;
@@ -31,7 +31,6 @@ const FormItem: FC<FormItemProps> = ({
   name,
   registerParams = {},
   required,
-  requiredIgnorePlaceholder,
   unique,
 
   col_xs = 12,
@@ -42,18 +41,18 @@ const FormItem: FC<FormItemProps> = ({
   type = "text",
   isURL,
   isRegex,
+  defaultVal,
   placeholder,
 
   onRight,
   onMiddle,
 }) => {
-  const { getValues } = useFormContext();
+  const { getValues, register } = useFormContext();
   const { errors } = useFormState();
   const error =
     (required || isURL || isRegex || registerParams["validate"]) &&
     getNestedError(errors, name);
 
-  const { register } = useFormContext();
   const padding = useMemo(() => {
     return [
       col_sm !== 12
@@ -81,13 +80,12 @@ const FormItem: FC<FormItemProps> = ({
         <Form.Control
           className={error && "form-error"}
           type={type}
-          placeholder={placeholder}
+          placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
             validate: (value) => {
               let validation = true;
-              const testValue =
-                value || (!requiredIgnorePlaceholder && placeholder) || "";
+              const testValue = value || defaultVal || "";
               if (required) {
                 validation = /.+/.test(testValue);
                 if (!validation) return "Required";
@@ -113,7 +111,7 @@ const FormItem: FC<FormItemProps> = ({
                 }
               }
 
-              if (unique) {
+              if (unique && testValue !== defaultVal) {
                 const parts = name.split(".");
                 const parent = parts.slice(0, parts.length - 2).join(".");
                 const values = getValues(parent);
@@ -136,7 +134,7 @@ const FormItem: FC<FormItemProps> = ({
           })}
         />
         {error && (
-          <small className="error-msg">{error["message"] || "Required"}</small>
+          <small className="error-msg">{error["message"] || "err"}</small>
         )}
       </Form.Group>
     </Col>

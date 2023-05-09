@@ -103,7 +103,7 @@ func (s *Shoutrrr) Init(
 	s.Failed.Set(s.ID, nil)
 
 	// Remove the type if it's the same as the main or the type is in the ID
-	if s.Type == s.Main.Type || s.ID == s.Type {
+	if s.Type == s.Main.Type || s.Type == s.ID {
 		s.Type = ""
 	}
 

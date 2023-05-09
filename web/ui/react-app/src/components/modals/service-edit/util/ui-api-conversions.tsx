@@ -1,5 +1,7 @@
-import { ArgType, ServiceEditType } from "types/service-edit";
+import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
 import {
+  HeaderType,
+  NotifyNtfyAction,
   NotifyType,
   ServiceDict,
   ServiceType,
@@ -93,14 +95,7 @@ export const convertUIServiceDataEditToAPI = (
   // Notify
   if (data.notify) {
     payload.notify = data.notify.reduce((acc, notify) => {
-      notify = removeEmptyValues(notify);
-      if (notify.url_fields) {
-        notify.url_fields = convertValuesToString(notify.url_fields);
-      }
-      if (notify.params) {
-        notify.params = convertValuesToString(notify.params);
-      }
-      acc[notify.name as string] = notify as NotifyType;
+      acc[notify.name as string] = convertNotifyToAPI(notify);
       return acc;
     }, {} as ServiceDict<NotifyType>);
   }
@@ -134,4 +129,38 @@ export const urlCommandsTrim = (commands: {
   [key: string]: URLCommandType;
 }) => {
   return Object.values(commands).map((value) => urlCommandTrim(value));
+};
+
+export const convertNotifyToAPI = (notify: NotifyEditType) => {
+  notify = removeEmptyValues(notify);
+  if (notify.url_fields)
+    notify.url_fields = convertValuesToString(notify.url_fields);
+  if (notify.params) {
+    if (notify.type === "ntfy") {
+      notify.params = convertValuesToString(notify.params);
+      // http actions should have headers as {KEY;VAL}, not {key:KEY, val:VAL}
+      notify.params.actions = Array.isArray(notify.params?.actions)
+        ? (notify.params?.actions as NotifyNtfyAction[]).map((action) => ({
+            ...action,
+            headers:
+              action.headers &&
+              convertHeaderTypeToMap(action.headers as HeaderType[]),
+            extras:
+              action.extras &&
+              convertHeaderTypeToMap(action.extras as HeaderType[]),
+          }))
+        : undefined;
+    } else {
+      notify.params = convertValuesToString(notify.params);
+    }
+  }
+
+  return notify as NotifyType;
+};
+
+const convertHeaderTypeToMap = (headers: HeaderType[]) => {
+  return headers.reduce((obj, header) => {
+    obj[header.key] = header.value;
+    return obj;
+  }, {} as { [key: string]: string });
 };

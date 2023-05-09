@@ -1,14 +1,18 @@
 import { Accordion, Button, Col, Form, Row } from "react-bootstrap";
 import { FC, useEffect, useMemo } from "react";
-import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import {
+  FormItem,
+  FormKeyValMap,
+  FormLabel,
+  FormSelect,
+} from "components/generic/form";
 import { ServiceDict, WebHookType } from "types/config";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import FormKeyValMap from "./key-val-map";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { useGlobalOrDefault } from "./notify-types/util";
+import { globalOrDefault } from "./notify-types/util";
 
 interface Props {
   name: string;
@@ -43,14 +47,17 @@ const EditServiceWebHook: FC<Props> = ({
     global?.type && setValue(`${name}.type`, global.type);
   }, [global]);
   useEffect(() => {
-    if (globals && itemName !== "" && globals[itemName]?.type !== undefined) {
+    if (globals?.[itemName]?.type !== undefined) {
       setValue(`${name}.type`, globals[itemName].type);
-      trigger();
     }
+    setTimeout(() => {
+      if (itemName !== "") trigger(`${name}.name`);
+      trigger(`${name}.type`);
+    }, 25);
   }, [itemName]);
 
   const header = useMemo(
-    () => `${Number(name.split(".").slice(-1)) + 1}: (${itemType}) ${itemName}`,
+    () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
     [name, itemName, itemType]
   );
 
@@ -89,6 +96,16 @@ const EditServiceWebHook: FC<Props> = ({
           </Col>
           <FormSelect
             name={`${name}.type`}
+            customValidation={(value) => {
+              if (
+                itemType !== undefined &&
+                globals?.[itemName]?.type &&
+                itemType !== globals?.[itemName]?.type
+              ) {
+                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+              }
+              return true;
+            }}
             col_xs={6}
             label="Type"
             tooltip="Style of WebHook to emulate"
@@ -110,7 +127,7 @@ const EditServiceWebHook: FC<Props> = ({
             type="text"
             label="Target URL"
             tooltip="Where to send the WebHook"
-            placeholder={useGlobalOrDefault(
+            defaultVal={globalOrDefault(
               global?.url,
               defaults?.url,
               hard_defaults?.url
@@ -131,7 +148,7 @@ const EditServiceWebHook: FC<Props> = ({
             required
             col_sm={12}
             label="Secret"
-            placeholder={
+            defaultVal={
               global?.secret || defaults?.secret || hard_defaults?.secret
             }
           />
@@ -141,7 +158,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_xs={6}
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
-            placeholder={useGlobalOrDefault(
+            defaultVal={globalOrDefault(
               global?.desired_status_code,
               defaults?.desired_status_code,
               hard_defaults?.desired_status_code
@@ -151,7 +168,7 @@ const EditServiceWebHook: FC<Props> = ({
             name={`${name}.max_tries`}
             col_xs={6}
             label="Max tries"
-            placeholder={`${
+            defaultVal={`${
               global?.max_tries ||
               defaults?.max_tries ||
               hard_defaults?.max_tries ||
@@ -164,7 +181,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_sm={12}
             label="Delay"
             tooltip="Delay sending by this duration"
-            placeholder={
+            defaultVal={
               global?.delay || defaults?.delay || hard_defaults?.delay
             }
             onRight

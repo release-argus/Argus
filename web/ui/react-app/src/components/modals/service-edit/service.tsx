@@ -47,7 +47,7 @@ const EditService: FC<Props> = ({ name }) => {
   );
 
   const defaultData: ServiceEditType = useMemo(
-    () => convertAPIServiceDataEditToUI(name, serviceData),
+    () => convertAPIServiceDataEditToUI(name, serviceData, otherOptionsData),
     [serviceData, otherOptionsData]
   );
   const { monitorData } = useWebSocket();

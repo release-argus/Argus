@@ -4,10 +4,11 @@ import {
   FormLabel,
 } from "components/generic/form";
 
+import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
 import NotifyOptions from "./generic";
-import { memo } from "react";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
+import { strToBool } from "utils";
 
 const DISCORD = ({
   name,
@@ -42,7 +43,7 @@ const DISCORD = ({
             /token
           </>
         }
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
@@ -58,7 +59,7 @@ const DISCORD = ({
             <span className="bold-underline">token</span>
           </>
         }
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -72,7 +73,7 @@ const DISCORD = ({
         name={`${name}.params.avatar`}
         label="Avatar"
         tooltip="Override WebHook avatar with this URL"
-        placeholder={
+        defaultVal={
           global?.params?.avatar ||
           defaults?.params?.avatar ||
           hard_defaults?.params?.avatar
@@ -82,7 +83,7 @@ const DISCORD = ({
         name={`${name}.params.username`}
         label="Username"
         tooltip="Override the WebHook username"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.username,
           defaults?.params?.username,
           hard_defaults?.params?.username
@@ -91,15 +92,23 @@ const DISCORD = ({
       <FormItem
         name={`${name}.params.title`}
         label="Title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
         onRight
       />
+      <BooleanWithDefault
+        name={`${name}.params.splitlines}`}
+        label="Split Lines"
+        tooltip="Whether to send each line as a separate embedded item"
+        defaultValue={
+          strToBool(defaults?.splitlines || hard_defaults?.splitlines) || true
+        }
+      />
     </>
   </>
 );
 
-export default memo(DISCORD);
+export default DISCORD;

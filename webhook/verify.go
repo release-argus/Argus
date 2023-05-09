@@ -118,33 +118,25 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 	if whType == "" {
 		errs = fmt.Errorf("%s%stype: <required> (supported types = [%s])\\",
 			util.ErrorToString(errs), prefix, strings.Join(supportedTypes, ","))
+		// Check that the Type doesn't differ in the Main
+	} else if w.Main.Type != "" && whType != w.Main.Type {
+		errs = fmt.Errorf("%s%stype: %q != %q <invalid> (omit the type, or make it the same as the root webhook.%s.type)\\",
+			util.ErrorToString(errs), prefix, whType, w.Main.Type, w.ID)
 	}
+
 	// url
 	if util.GetFirstNonDefault(
 		w.URL,
 		w.Main.URL,
-		w.Defaults.URL) == "" {
-		errs = fmt.Errorf("%s%surl: <required> (here, or in the root webhook.%s)\\",
+		w.Defaults.URL,
+		w.HardDefaults.URL) == "" {
+		errs = fmt.Errorf("%s%surl: <required> (here, in the root webhook.%s, or in defaults)\\",
 			util.ErrorToString(errs), prefix, w.ID)
 	}
 	// secret
 	if w.GetSecret() == "" {
-		errs = fmt.Errorf("%s%ssecret: <required> (here, or in the root webhook.%s)\\",
+		errs = fmt.Errorf("%s%ssecret: <required> (here, or in the root webhook.%s, or in defaults)\\",
 			util.ErrorToString(errs), prefix, w.ID)
-	}
-	// custom_headers
-	var headerErrs error
-	if w.CustomHeaders != nil {
-		for i := range *w.CustomHeaders {
-			if !util.CheckTemplate((*w.CustomHeaders)[i].Value) {
-				headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-					util.ErrorToString(headerErrs), prefix, (*w.CustomHeaders)[i].Key, (*w.CustomHeaders)[i].Value)
-			}
-		}
-	}
-	if headerErrs != nil {
-		errs = fmt.Errorf("%s%scustom_headers:\\%w",
-			util.ErrorToString(errs), prefix, headerErrs)
 	}
 
 	return

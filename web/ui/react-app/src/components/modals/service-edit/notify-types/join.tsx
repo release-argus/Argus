@@ -6,7 +6,7 @@ import {
 
 import { NotifyJoinType } from "types/config";
 import { NotifyOptions } from "./generic";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const JOIN = ({
   name,
@@ -35,7 +35,7 @@ const JOIN = ({
         required
         col_sm={12}
         label="API Key"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
@@ -50,7 +50,7 @@ const JOIN = ({
         col_sm={12}
         label="Devices"
         tooltip="e.g. ID1,ID2..."
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
@@ -60,7 +60,7 @@ const JOIN = ({
         name={`${name}.params.icon`}
         label="Icon"
         tooltip="URL of icon to use"
-        placeholder={
+        defaultVal={
           global?.params?.icon ||
           defaults?.params?.icon ||
           hard_defaults?.params?.icon
@@ -71,7 +71,7 @@ const JOIN = ({
         col_sm={12}
         label="Title"
         tooltip="e.g. 'Release - {{ service_id }}'"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

@@ -1,7 +1,7 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
 import { FC, useMemo } from "react";
 import { ServiceDict, WebHookType } from "types/config";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFieldArray } from "react-hook-form";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
 
@@ -16,9 +16,7 @@ const EditServiceWebHooks: FC<Props> = ({
   defaults,
   hard_defaults,
 }) => {
-  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control,
     name: "webhook",
   });
 

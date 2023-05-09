@@ -73,7 +73,6 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 
 func TestDashboardOptions_CheckValues(t *testing.T) {
 	// GIVEN DashboardOptions
-	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		dashboardOptions *DashboardOptions
 		errRegex         []string

@@ -1,13 +1,15 @@
 import { Col, Form } from "react-bootstrap";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormState } from "react-hook-form";
 import { FC, useMemo } from "react";
 
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
+import { getNestedError } from "utils";
 
 interface FormSelectProps {
   name: string;
   required?: boolean;
+  customValidation?: (value: string) => string | boolean;
 
   key?: string;
   col_xs?: number;
@@ -27,6 +29,7 @@ interface FormSelectProps {
 const FormSelect: FC<FormSelectProps> = ({
   name,
   required,
+  customValidation,
 
   key = name,
   col_xs = 12,
@@ -38,7 +41,9 @@ const FormSelect: FC<FormSelectProps> = ({
   onRight,
   onMiddle,
 }) => {
-  const { control } = useFormContext();
+  const { errors } = useFormState();
+  const error = customValidation && getNestedError(errors, name);
+
   const padding = useMemo(() => {
     return [
       col_sm !== 12 && onRight ? "ps-sm-2" : "",
@@ -63,7 +68,6 @@ const FormSelect: FC<FormSelectProps> = ({
           <FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
         )}
         <Controller
-          control={control}
           name={name}
           render={({ field }) => (
             <Form.Select {...field} aria-label={label} required={required}>
@@ -78,7 +82,17 @@ const FormSelect: FC<FormSelectProps> = ({
               ))}
             </Form.Select>
           )}
+          rules={{
+            validate: (value) => {
+              if (customValidation) {
+                return customValidation(value);
+              }
+            },
+          }}
         />
+        {error && (
+          <small className="error-msg">{error["message"] || "err"}</small>
+        )}
       </Form.Group>
     </Col>
   );

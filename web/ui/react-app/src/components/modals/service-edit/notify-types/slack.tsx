@@ -7,7 +7,7 @@ import {
 
 import { NotifyOptions } from "./generic";
 import { NotifySlackType } from "types/config";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const SLACK = ({
   name,
@@ -43,7 +43,7 @@ const SLACK = ({
             <span className="bold-underline">WEBHOOK</span>
           </>
         }
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -53,7 +53,7 @@ const SLACK = ({
         name={`${name}.url_fields.channel`}
         required
         label="Channel"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
@@ -66,7 +66,7 @@ const SLACK = ({
       <FormItem
         name={`${name}.params.botname`}
         label="Bot Name"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.botname,
           defaults?.params?.botname,
           hard_defaults?.params?.botname
@@ -76,7 +76,7 @@ const SLACK = ({
         name={`${name}.params.color`}
         label="Color"
         tooltip="Message left-hand border color in hex, e.g. #ffffff"
-        placeholder={
+        defaultVal={
           global?.params?.color ||
           defaults?.params?.color ||
           hard_defaults?.params?.color
@@ -87,7 +87,7 @@ const SLACK = ({
         name={`${name}.params.icon`}
         label="Icon"
         tooltip="Use emoji or URL as icon (based on presence of http(s):// prefix)"
-        placeholder={
+        defaultVal={
           global?.params?.icon ||
           defaults?.params?.icon ||
           hard_defaults?.params?.icon
@@ -99,7 +99,7 @@ const SLACK = ({
         type="text"
         label="Title"
         tooltip="Text prepended to the message"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

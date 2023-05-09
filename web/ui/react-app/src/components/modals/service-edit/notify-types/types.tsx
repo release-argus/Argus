@@ -1,4 +1,5 @@
 export const TYPE_OPTIONS = [
+  { value: "bark", label: "Bark" },
   { value: "discord", label: "Discord" },
   { value: "smtp", label: "Email (SMTP)" },
   { value: "googlechat", label: "Google Chat" },
@@ -7,6 +8,7 @@ export const TYPE_OPTIONS = [
   { value: "join", label: "Join" },
   { value: "mattermost", label: "MatterMost" },
   { value: "matrix", label: "Matrix" },
+  { value: "ntfy", label: "Ntfy" },
   { value: "opsgenie", label: "OpsGenie" },
   { value: "pushbullet", label: "PushBullet" },
   { value: "pushover", label: "PushOver" },

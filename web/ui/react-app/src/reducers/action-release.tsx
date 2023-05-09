@@ -116,7 +116,7 @@ export default function reducerActionModal(
             if (
               state.webhooks[webhook_id].next_runnable !== undefined &&
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              !isAfterDate(state.webhooks[webhook_id].next_runnable!)
+              isAfterDate(state.webhooks[webhook_id].next_runnable!)
             ) {
               continue;
             }
@@ -134,7 +134,7 @@ export default function reducerActionModal(
             if (
               state.commands[command].next_runnable !== undefined &&
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              !isAfterDate(state.commands[command].next_runnable!)
+              isAfterDate(state.commands[command].next_runnable!)
             ) {
               continue;
             }

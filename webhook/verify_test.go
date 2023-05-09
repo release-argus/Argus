@@ -250,6 +250,12 @@ func TestWebHook_CheckValues(t *testing.T) {
 			whType:     stringPtr(""),
 			whMainType: "bar",
 		},
+		"mismatching type and main type": {
+			errRegex: []string{
+				`^type: "github" != "gitlab" <invalid>`},
+			whType:     stringPtr("github"),
+			whMainType: "gitlab",
+		},
 		"no type": {
 			errRegex: []string{
 				"^type: <required>"},

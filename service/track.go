@@ -34,7 +34,8 @@ func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
 		(*s)[key].Options.Active = nil
 
 		jLog.Verbose(
-			fmt.Sprintf("Tracking %s at %s every %s", (*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
+			fmt.Sprintf("Tracking %s at %s every %s",
+				(*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
 			util.LogFrom{Primary: (*s)[key].ID},
 			true)
 

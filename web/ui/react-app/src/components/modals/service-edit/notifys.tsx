@@ -1,9 +1,9 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
-import { FC, memo, useMemo } from "react";
+import { FC, memo, useCallback, useMemo } from "react";
 import { NotifyType, ServiceDict } from "types/config";
-import { useFieldArray, useFormContext } from "react-hook-form";
 
 import Notify from "./notify";
+import { useFieldArray } from "react-hook-form";
 
 interface Props {
   globals?: ServiceDict<NotifyType>;
@@ -16,17 +16,27 @@ const EditServiceNotifys: FC<Props> = ({
   defaults,
   hard_defaults,
 }) => {
-  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control,
     name: "notify",
   });
+  const addItem = useCallback(() => {
+    append(
+      {
+        type: "discord",
+        name: "",
+        options: {},
+        url_fields: {},
+        params: { avatar: "", color: "", icon: "" },
+      },
+      { shouldFocus: false }
+    );
+  }, []);
 
   const globalNotifyOptions = useMemo(
     () => (
       <>
         <option className="form-select-option" value="">
-          Not global
+          --Not global--
         </option>
         {globals &&
           Object.keys(globals).map((n) => (
@@ -59,18 +69,7 @@ const EditServiceNotifys: FC<Props> = ({
             className={fields.length > 0 ? "" : "mt-2"}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
-            onClick={() => {
-              append(
-                {
-                  type: "discord",
-                  name: "",
-                  options: {},
-                  url_fields: {},
-                  params: { avatar: "", color: "", icon: "" },
-                },
-                { shouldFocus: false }
-              );
-            }}
+            onClick={addItem}
           >
             Add Notify
           </Button>

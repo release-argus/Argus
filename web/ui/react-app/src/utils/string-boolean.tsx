@@ -1,9 +1,8 @@
-// StrToBool will convert str to a boolean
-export const strToBool = (str?: string): boolean | undefined => {
-  return str === "undefined" || str === undefined ? undefined : str === "true";
+export const strToBool = (str?: string | boolean): boolean | null => {
+  if (typeof str === "boolean") return str;
+  if (str == null || str === "") return null;
+  return ["true", "yes"].includes(str.toLowerCase());
 };
 
-// boolToStr will xonvert bool to a string
-export const boolToStr = (bool?: boolean): string => {
-  return `${bool === undefined ? "undefined" : bool}`;
-};
+export const boolToStr = (bool?: boolean) =>
+  bool === undefined ? "" : bool.toString();

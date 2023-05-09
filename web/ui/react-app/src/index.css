@@ -239,6 +239,8 @@ code {
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100%;
+  width: 90%;
 }
 .btn-flex {
   display: flex;
@@ -276,6 +278,28 @@ code {
   box-shadow: none;
 }
 .btn-secondary:disabled {
+  filter: brightness(70%);
+}
+.btn-secondary-outlined {
+  background-color: transparent;
+  border-color: var(--btn-secondary-background-color);
+  border-width: 0.1rem;
+  color: var(--dark-text) !important;
+}
+.btn-secondary-outlined:hover {
+  background-color: var(--btn-secondary-background-color);
+  border-color: var(--btn-secondary-background-color);
+  filter: brightness(120%);
+}
+.btn-secondary-outlined:focus {
+  background-color: var(--btn-secondary-background-color);
+  border-color: var(--btn-secondary-background-color);
+  filter: brightness(80%);
+  box-shadow: none;
+}
+.btn-secondary-outlined:disabled {
+  background-color: var(--btn-secondary-background-color);
+  border-color: var(--btn-secondary-background-color);
   filter: brightness(70%);
 }
 
