@@ -273,7 +273,7 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 		errs = fmt.Errorf("%s%simage: <required> (image to check tags for)",
 			util.ErrorToString(errs), prefix)
 	} else {
-		regex := regexp.MustCompile(`^[\w\-\/]+$`)
+		regex := regexp.MustCompile(`^[\w\-\.\/]+$`)
 		// invalid image
 		if !regex.MatchString(d.Image) {
 			errs = fmt.Errorf("%s%simage: %q <invalid> (non-ASCII)\\",
