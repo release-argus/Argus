@@ -49,8 +49,8 @@ func main() {
 
 	var config cfg.Config
 	config.Load(*configFile, &flagset, &jLog)
-	jLog.SetTimestamps(*config.Settings.GetLogTimestamps())
-	jLog.SetLevel(config.Settings.GetLogLevel())
+	jLog.SetTimestamps(*config.Settings.LogTimestamps())
+	jLog.SetLevel(config.Settings.LogLevel())
 
 	// config.check
 	config.Print(configCheckFlag)

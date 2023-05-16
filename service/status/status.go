@@ -53,7 +53,7 @@ func NewStatusDefaults(
 
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
-	statusBase
+	statusBase `yaml:"-" json:"-"`
 
 	ServiceID *string `yaml:"-" json:"-"` // ID of the Service
 	WebURL    *string `yaml:"-" json:"-"` // Web URL of the Service
@@ -157,8 +157,8 @@ func (s *Status) Init(
 	s.WebURL = webURL
 }
 
-// GetLastQueried.
-func (s *Status) GetLastQueried() string {
+// LastQueried time of the LatestVersion.
+func (s *Status) LastQueried() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.lastQueried
@@ -175,8 +175,8 @@ func (s *Status) SetLastQueried(t string) {
 	}
 }
 
-// GetApprovedVersion returns the ApprovedVersion.
-func (s *Status) GetApprovedVersion() string {
+// ApprovedVersion returns the ApprovedVersion.
+func (s *Status) ApprovedVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.approvedVersion
@@ -200,8 +200,8 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetDeployedVersion returns the DeployedVersion.
-func (s *Status) GetDeployedVersion() string {
+// DeployedVersion returns the DeployedVersion.
+func (s *Status) DeployedVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.deployedVersion
@@ -233,8 +233,8 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetDeployedVersionTimestamp returns the DeployedVersionTimestamp.
-func (s *Status) GetDeployedVersionTimestamp() string {
+// DeployedVersionTimestamp returns the DeployedVersionTimestamp.
+func (s *Status) DeployedVersionTimestamp() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.deployedVersionTimestamp
@@ -249,8 +249,8 @@ func (s *Status) SetDeployedVersionTimestamp(timestamp string) {
 	s.mutex.Unlock()
 }
 
-// GetLatestVersion returns the latest version.
-func (s *Status) GetLatestVersion() string {
+// LatestVersion returns the latest version.
+func (s *Status) LatestVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.latestVersion
@@ -279,8 +279,8 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetLatestVersionTimestamp returns the timestamp of the latest version.
-func (s *Status) GetLatestVersionTimestamp() string {
+// LatestVersionTimestamp returns the timestamp of the latest version.
+func (s *Status) LatestVersionTimestamp() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.latestVersionTimestamp
@@ -387,13 +387,12 @@ func (s *Status) SendSave() {
 }
 
 // GetWebURL returns the Web URL.
-func (s *Status) GetWebURL() (url string) {
+func (s *Status) GetWebURL() string {
 	if util.DefaultIfNil(s.WebURL) == "" {
-		return
+		return ""
 	}
 
-	url = util.TemplateString(
+	return util.TemplateString(
 		*s.WebURL,
-		util.ServiceInfo{LatestVersion: s.GetLatestVersion()})
-	return
+		util.ServiceInfo{LatestVersion: s.LatestVersion()})
 }

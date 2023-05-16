@@ -1742,7 +1742,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				&newService.ID,
 				nil)
 			newService.Init(
-				&ServiceDefaults{}, &ServiceDefaults{},
+				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			)
@@ -2377,12 +2377,12 @@ func TestService_GiveSecrets(t *testing.T) {
 			t.Parallel()
 
 			tc.svc.Init(
-				&ServiceDefaults{}, &ServiceDefaults{},
+				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			)
 			tc.expected.Init(
-				&ServiceDefaults{}, &ServiceDefaults{},
+				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			)
@@ -2398,7 +2398,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			}
 			if tc.oldService != nil {
 				tc.oldService.Init(
-					&ServiceDefaults{}, &ServiceDefaults{},
+					&Defaults{}, &Defaults{},
 					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 				)
@@ -2465,8 +2465,8 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 	_, err := FromPayload(
 		&Service{},
 		&payload,
-		&ServiceDefaults{},
-		&ServiceDefaults{},
+		&Defaults{},
+		&Defaults{},
 		&shoutrrr.SliceDefaults{},
 		&shoutrrr.SliceDefaults{},
 		&shoutrrr.SliceDefaults{},
@@ -2488,8 +2488,8 @@ func TestFromPayload(t *testing.T) {
 		oldService *Service
 		payload    string
 
-		serviceDefaults     *ServiceDefaults
-		serviceHardDefaults *ServiceDefaults
+		serviceDefaults     *Defaults
+		serviceHardDefaults *Defaults
 
 		notifyGlobals      *shoutrrr.SliceDefaults
 		notifyDefaults     *shoutrrr.SliceDefaults
@@ -2575,7 +2575,15 @@ func TestFromPayload(t *testing.T) {
 					"access_token": "<secret>",
 					"require": {
 						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
 							"token": "<secret>"}}}}`,
+			serviceHardDefaults: &Defaults{
+				LatestVersion: latestver.LookupDefaults{
+					Require: filter.RequireDefaults{
+						Docker: filter.DockerCheckDefaults{
+							Type: "ghcr"}}}},
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2584,7 +2592,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil)},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
@@ -2592,7 +2600,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil)},
 		},
 		"Give DeployedVersion secrets": {
@@ -2601,6 +2609,9 @@ func TestFromPayload(t *testing.T) {
 					"access_token": "<secret>",
 					"require": {
 						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
 							"token": "<secret>"}}},
 				"deployed_version": {
 					"basic_auth": {
@@ -2616,7 +2627,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2630,7 +2641,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2645,6 +2656,9 @@ func TestFromPayload(t *testing.T) {
 					"access_token": "<secret>",
 					"require": {
 						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
 							"token": "<secret>"}}},
 				"deployed_version": {
 					"basic_auth": {
@@ -2695,7 +2709,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2750,7 +2764,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2820,6 +2834,9 @@ func TestFromPayload(t *testing.T) {
 					"access_token": "<secret>",
 					"require": {
 						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/args",
+							"tag": "{{ version }}",
 							"token": "<secret>"}}},
 				"deployed_version": {
 					"basic_auth": {
@@ -2882,7 +2899,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2957,7 +2974,7 @@ func TestFromPayload(t *testing.T) {
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
-							"", "", "", "", "anotherToken", "", time.Now(), nil)},
+							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
 					nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -3051,10 +3068,10 @@ func TestFromPayload(t *testing.T) {
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := ioutil.NopCloser(reader)
 			if tc.serviceHardDefaults == nil {
-				tc.serviceHardDefaults = &ServiceDefaults{}
+				tc.serviceHardDefaults = &Defaults{}
 			}
 			if tc.serviceDefaults == nil {
-				tc.serviceDefaults = &ServiceDefaults{}
+				tc.serviceDefaults = &Defaults{}
 			}
 			if tc.notifyDefaults == nil {
 				tc.notifyDefaults = &shoutrrr.SliceDefaults{}
@@ -3064,7 +3081,7 @@ func TestFromPayload(t *testing.T) {
 			}
 			if tc.oldService != nil {
 				tc.oldService.Init(
-					&ServiceDefaults{}, &ServiceDefaults{},
+					&Defaults{}, &Defaults{},
 					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 			}
@@ -3100,8 +3117,8 @@ func TestFromPayload(t *testing.T) {
 			}
 			// AND we should get a new Service otherwise
 			if got.String("") != tc.want.String("") {
-				t.Errorf("Want:\n%v\n\nGot:\n%v",
-					tc.want, got)
+				t.Errorf("Want:\n%s\n\nGot:\n%s",
+					tc.want.String(""), got.String(""))
 			}
 		})
 	}
@@ -3127,7 +3144,7 @@ func TestService_CheckFetches(t *testing.T) {
 				LatestVersion:         *testLatestVersionLookupURL(false),
 				DeployedVersionLookup: nil},
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.Status.GetLatestVersion(),
+			wantLatestVersion:    testLV.Status.LatestVersion(),
 			startDeployedVersion: "bar",
 			wantDeployedVersion:  "bar",
 			errRegex:             "^$",
@@ -3137,8 +3154,8 @@ func TestService_CheckFetches(t *testing.T) {
 				LatestVersion:         *testLatestVersionLookupURL(false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.Status.GetLatestVersion(),
-			wantDeployedVersion:  testDVL.Status.GetDeployedVersion(),
+			wantLatestVersion:    testLV.Status.LatestVersion(),
+			wantDeployedVersion:  testDVL.Status.DeployedVersion(),
 			startDeployedVersion: "bar",
 			errRegex:             "^$",
 		},
@@ -3181,10 +3198,10 @@ func TestService_CheckFetches(t *testing.T) {
 			t.Parallel()
 
 			tc.svc.Init(
-				&ServiceDefaults{
+				&Defaults{
 					Options: *opt.NewDefaults(
 						"", nil)},
-				&ServiceDefaults{
+				&Defaults{
 					Options: *opt.NewDefaults(
 						"0h", boolPtr(true))},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
@@ -3207,14 +3224,14 @@ func TestService_CheckFetches(t *testing.T) {
 					tc.errRegex, e)
 			}
 			// AND we get the expected LatestVersion
-			if tc.svc.Status.GetLatestVersion() != tc.wantLatestVersion {
+			if tc.svc.Status.LatestVersion() != tc.wantLatestVersion {
 				t.Errorf("LatestVersion\nWant: %q, got: %q",
-					tc.wantLatestVersion, tc.svc.Status.GetLatestVersion())
+					tc.wantLatestVersion, tc.svc.Status.LatestVersion())
 			}
 			// AND we get the expected DeployedVersion
-			if tc.svc.Status.GetDeployedVersion() != tc.wantDeployedVersion {
+			if tc.svc.Status.DeployedVersion() != tc.wantDeployedVersion {
 				t.Errorf("DeployedVersion\nWant: %q, got: %q",
-					tc.wantDeployedVersion, tc.svc.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, tc.svc.Status.DeployedVersion())
 			}
 			if len(*tc.svc.Status.AnnounceChannel) != 0 {
 				t.Errorf("AnnounceChannel should be empty, got %d",

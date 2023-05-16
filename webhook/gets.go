@@ -26,7 +26,7 @@ import (
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (w *WebHook) GetAllowInvalidCerts() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		w.AllowInvalidCerts,
 		w.Main.AllowInvalidCerts,
 		w.Defaults.AllowInvalidCerts,
@@ -35,7 +35,7 @@ func (w *WebHook) GetAllowInvalidCerts() bool {
 
 // GetDelay of the WebHook to use before auto-approving.
 func (w *WebHook) GetDelay() string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		w.Delay,
 		w.Main.Delay,
 		w.Defaults.Delay,
@@ -50,7 +50,7 @@ func (w *WebHook) GetDelayDuration() (duration time.Duration) {
 
 // GetDesiredStatusCode of the WebHook.
 func (w *WebHook) GetDesiredStatusCode() int {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		w.DesiredStatusCode,
 		w.Main.DesiredStatusCode,
 		w.Defaults.DesiredStatusCode,
@@ -96,7 +96,7 @@ func (w *WebHook) SetExecuting(addDelay bool, sending bool) {
 
 // GetMaxTries allowed for the WebHook.
 func (w *WebHook) GetMaxTries() uint {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		w.MaxTries,
 		w.Main.MaxTries,
 		w.Defaults.MaxTries,
@@ -119,8 +119,8 @@ func (w *WebHook) IsRunnable() bool {
 	return time.Now().UTC().After(w.nextRunnable)
 }
 
-// GetRequest will return the WebHook http.request ready to be sent.
-func (w *WebHook) GetRequest() (req *http.Request) {
+// BuildRequest will return the WebHook http.request ready to be sent.
+func (w *WebHook) BuildRequest() (req *http.Request) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
 
@@ -158,7 +158,7 @@ func (w *WebHook) GetRequest() (req *http.Request) {
 
 // GetSecret for the WebHook.
 func (w *WebHook) GetSecret() string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		w.Secret,
 		w.Main.Secret,
 		w.Defaults.Secret,
@@ -167,7 +167,7 @@ func (w *WebHook) GetSecret() string {
 
 // GetSilentFails returns the flag for whether WebHooks should fail silently or notify.
 func (w *WebHook) GetSilentFails() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		w.SilentFails,
 		w.Main.SilentFails,
 		w.Defaults.SilentFails,
@@ -176,7 +176,7 @@ func (w *WebHook) GetSilentFails() bool {
 
 // GetType of the WebHook.
 func (w *WebHook) GetType() string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		w.Type,
 		w.Main.Type,
 		w.Defaults.Type,
@@ -186,7 +186,7 @@ func (w *WebHook) GetType() string {
 // GetURL of the WebHook.
 func (w *WebHook) GetURL() (url string) {
 	url = strings.Clone(
-		util.GetFirstNonDefault(
+		util.FirstNonDefault(
 			w.URL,
 			w.Main.URL,
 			w.Defaults.URL,
@@ -194,6 +194,6 @@ func (w *WebHook) GetURL() (url string) {
 
 	url = util.TemplateString(
 		url,
-		util.ServiceInfo{LatestVersion: w.ServiceStatus.GetLatestVersion()})
+		util.ServiceInfo{LatestVersion: w.ServiceStatus.LatestVersion()})
 	return
 }

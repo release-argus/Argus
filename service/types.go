@@ -33,8 +33,8 @@ var (
 // Slice is a slice mapping of Service.
 type Slice map[string]*Service
 
-// ServiceDefaults are the default values for a Service.
-type ServiceDefaults struct {
+// Defaults are the default values for a Service.
+type Defaults struct {
 	Options               opt.OptionsDefaults        `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service
 	LatestVersion         latestver.LookupDefaults   `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to getting the latest version of the Service
 	DeployedVersionLookup deployedver.LookupDefaults `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
@@ -59,8 +59,8 @@ type Service struct {
 
 	Status svcstatus.Status `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses)
 
-	Defaults     *ServiceDefaults `yaml:"-" json:"-"` // Default values
-	HardDefaults *ServiceDefaults `yaml:"-" json:"-"` // Hardcoded default values
+	Defaults     *Defaults `yaml:"-" json:"-"` // Default values
+	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values
 }
 
 // String returns a string representation of the Service.
@@ -73,7 +73,7 @@ func (s *Service) String(prefix string) (str string) {
 
 // Summary returns a ServiceSummary for the Service.
 func (s *Service) Summary() *apitype.ServiceSummary {
-	icon := s.GetIconURL()
+	icon := s.IconURL()
 	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
 	commands := len(s.Command)
 	webhooks := len(s.WebHook)
@@ -88,10 +88,10 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		Command:                  &commands,
 		WebHook:                  &webhooks,
 		Status: &apitype.Status{
-			ApprovedVersion:          s.Status.GetApprovedVersion(),
-			DeployedVersion:          s.Status.GetDeployedVersion(),
-			DeployedVersionTimestamp: s.Status.GetDeployedVersionTimestamp(),
-			LatestVersion:            s.Status.GetLatestVersion(),
-			LatestVersionTimestamp:   s.Status.GetLatestVersionTimestamp(),
-			LastQueried:              s.Status.GetLastQueried()}}
+			ApprovedVersion:          s.Status.ApprovedVersion(),
+			DeployedVersion:          s.Status.DeployedVersion(),
+			DeployedVersionTimestamp: s.Status.DeployedVersionTimestamp(),
+			LatestVersion:            s.Status.LatestVersion(),
+			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
+			LastQueried:              s.Status.LastQueried()}}
 }

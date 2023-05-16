@@ -461,8 +461,8 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// Set DeployedVersion to the LatestVersion if there's no DeployedVersionLookup
 	if newService.DeployedVersionLookup == nil {
-		newService.Status.SetDeployedVersion(newService.Status.GetLatestVersion(), false)
-		newService.Status.SetDeployedVersionTimestamp(newService.Status.GetLatestVersionTimestamp())
+		newService.Status.SetDeployedVersion(newService.Status.LatestVersion(), false)
+		newService.Status.SetDeployedVersionTimestamp(newService.Status.LatestVersionTimestamp())
 	}
 
 	// Add the new service to the config

@@ -15,7 +15,7 @@
 package service
 
 // SetDefaults for Services.
-func (s *ServiceDefaults) SetDefaults() {
+func (s *Defaults) SetDefaults() {
 	// Service.Options
 	serviceSemanticVersioning := true
 	s.Options.Interval = "10m"

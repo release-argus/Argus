@@ -61,8 +61,8 @@ func FromPayload(
 	oldService *Service,
 	payload *io.ReadCloser,
 
-	serviceDefaults *ServiceDefaults,
-	serviceHardDefaults *ServiceDefaults,
+	serviceDefaults *Defaults,
+	serviceHardDefaults *Defaults,
 
 	notifyGlobals *shoutrrr.SliceDefaults,
 	notifyDefaults *shoutrrr.SliceDefaults,
@@ -114,15 +114,22 @@ func FromPayload(
 	}
 
 	// If the Docker type/image/tag is empty, remove the Docker requirement
-	if newService.LatestVersion.Require != nil && newService.LatestVersion.Require.Docker != nil &&
-		newService.LatestVersion.Require.Docker.Type != "" &&
-		newService.LatestVersion.Require.Docker.Image == "" &&
-		newService.LatestVersion.Require.Docker.Tag == "" {
+	if newService.LatestVersion.Require != nil && newService.LatestVersion.Require.Docker != nil {
+		dockerType := newService.LatestVersion.Require.Docker.Type
+		// Remove the Docker requirement if only the type if there's no image or tag
+		if newService.LatestVersion.Require.Docker.Image == "" &&
+			newService.LatestVersion.Require.Docker.Tag == "" {
 
-		newService.LatestVersion.Require.Docker = nil
-		// If that was the only requirement, remove the requirement
-		if newService.LatestVersion.Require.String() == "{}\n" {
-			newService.LatestVersion.Require = nil
+			newService.LatestVersion.Require.Docker = nil
+			// If that was the only requirement, remove the requirement
+			if newService.LatestVersion.Require.String() == "{}\n" {
+				newService.LatestVersion.Require = nil
+			}
+			// If the Docker type is the same as the default, remove the type
+		} else if dockerType == util.FirstNonDefault(
+			serviceDefaults.LatestVersion.Require.Docker.Type,
+			serviceHardDefaults.LatestVersion.Require.Docker.Type) {
+			newService.LatestVersion.Require.Docker.Type = ""
 		}
 	}
 
@@ -270,10 +277,10 @@ func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map
 		if s.WebHook[i].CustomHeaders != nil && oldWebHook.CustomHeaders != nil ||
 			len((*secretRefs)[i].CustomHeaders) != 0 {
 			for hI := range *s.WebHook[i].CustomHeaders {
-				// Skip if we're not referencing a secret of an existing header
-				// or it's an index out of range
-				if (*s.WebHook[i].CustomHeaders)[hI].Value != "<secret>" ||
-					hI >= len((*secretRefs)[i].CustomHeaders) {
+				// Skip if we're out of range or
+				// not referencing a secret of an existing header
+				if hI >= len((*secretRefs)[i].CustomHeaders) ||
+					(*s.WebHook[i].CustomHeaders)[hI].Value != "<secret>" {
 					continue
 				}
 
@@ -320,16 +327,16 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 
 	// Keep LatestVersion if the LatestVersion lookup is unchanged
 	if s.LatestVersion.IsEqual(&oldService.LatestVersion) {
-		s.Status.SetApprovedVersion(oldService.Status.GetApprovedVersion(), false)
-		s.Status.SetLatestVersion(oldService.Status.GetLatestVersion(), false)
-		s.Status.SetLatestVersionTimestamp(oldService.Status.GetLatestVersionTimestamp())
-		s.Status.SetLastQueried(oldService.Status.GetLastQueried())
+		s.Status.SetApprovedVersion(oldService.Status.ApprovedVersion(), false)
+		s.Status.SetLatestVersion(oldService.Status.LatestVersion(), false)
+		s.Status.SetLatestVersionTimestamp(oldService.Status.LatestVersionTimestamp())
+		s.Status.SetLastQueried(oldService.Status.LastQueried())
 	}
 	// Keep DeployedVersion if the DeployedVersionLookup is unchanged
 	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
 		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-		s.Status.SetDeployedVersion(oldService.Status.GetDeployedVersion(), false)
-		s.Status.SetDeployedVersionTimestamp(oldService.Status.GetDeployedVersionTimestamp())
+		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), false)
+		s.Status.SetDeployedVersionTimestamp(oldService.Status.DeployedVersionTimestamp())
 	}
 }
 
@@ -356,7 +363,7 @@ func (s *Service) CheckFetches() (err error) {
 	// Fetch latest version
 	{
 		// Erase DeployedVersion so that 'require' is checked
-		deployedVersion := s.Status.GetDeployedVersion()
+		deployedVersion := s.Status.DeployedVersion()
 		s.Status.SetDeployedVersion("", false)
 
 		_, err = s.LatestVersion.Query(

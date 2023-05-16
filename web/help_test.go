@@ -100,7 +100,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		&map[string]bool{},
 		jLog)
 	if t != nil {
-		t.Cleanup(func() { os.Remove(*cfg.Settings.GetDataDatabaseFile()) })
+		t.Cleanup(func() { os.Remove(*cfg.Settings.DataDatabaseFile()) })
 	}
 
 	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
@@ -216,8 +216,8 @@ func testService(id string) (svc *service.Service) {
 		Dashboard: *service.NewDashboardOptions(
 			boolPtr(false), "test", "", "https://release-argus.io",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
-		Defaults:          &service.ServiceDefaults{},
-		HardDefaults:      &service.ServiceDefaults{},
+		Defaults:          &service.Defaults{},
+		HardDefaults:      &service.Defaults{},
 		Command:           command.Slice{command.Command{"ls", "-lah"}},
 		CommandController: &command.Controller{},
 		WebHook: webhook.Slice{

@@ -58,11 +58,11 @@ notify:
   single:
     type: gotify
     options:
-      max_tries: "` + testValid.GetSelfOption("max_tries") + `"
+      max_tries: "` + testValid.GetOption("max_tries") + `"
     url_fields:
-      host: ` + testValid.GetSelfURLField("host") + `
-      path: ` + testValid.GetSelfURLField("path") + `
-      token: ` + testValid.GetSelfURLField("token"),
+      host: ` + testValid.GetURLField("host") + `
+      path: ` + testValid.GetURLField("path") + `
+      token: ` + testValid.GetURLField("token"),
 		},
 		"multiple element slice": {
 			slice: &SliceDefaults{
@@ -73,19 +73,19 @@ notify:
   first:
     type: gotify
     options:
-      max_tries: "` + testValid.GetSelfOption("max_tries") + `"
+      max_tries: "` + testValid.GetOption("max_tries") + `"
     url_fields:
-      host: ` + testValid.GetSelfURLField("host") + `
-      path: ` + testValid.GetSelfURLField("path") + `
-      token: ` + testValid.GetSelfURLField("token") + `
+      host: ` + testValid.GetURLField("host") + `
+      path: ` + testValid.GetURLField("path") + `
+      token: ` + testValid.GetURLField("token") + `
   second:
     type: gotify
     options:
-      max_tries: "` + testInvalid.GetSelfOption("max_tries") + `"
+      max_tries: "` + testInvalid.GetOption("max_tries") + `"
     url_fields:
-      host: ` + testInvalid.GetSelfURLField("host") + `
-      path: ` + testInvalid.GetSelfURLField("path") + `
-      token: ` + testInvalid.GetSelfURLField("token"),
+      host: ` + testInvalid.GetURLField("host") + `
+      path: ` + testInvalid.GetURLField("path") + `
+      token: ` + testInvalid.GetURLField("token"),
 		},
 	}
 
@@ -116,7 +116,7 @@ notify:
 	}
 }
 
-func TestShoutrrr_checkValuesMaster(t *testing.T) {
+func TestShoutrrr_checkValuesForType(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		sType              *string
@@ -773,14 +773,14 @@ func TestShoutrrr_checkValuesMaster(t *testing.T) {
 				tc.main,
 				&ShoutrrrDefaults{}, &ShoutrrrDefaults{})
 
-			// WHEN checkValuesMaster is called
+			// WHEN checkValuesForType is called
 			var (
 				errs          error
 				errsOptions   error
 				errsURLFields error
 				errsParams    error
 			)
-			shoutrrr.checkValuesMaster("", &errs, &errsOptions, &errsURLFields, &errsParams)
+			shoutrrr.checkValuesForType("", &errs, &errsOptions, &errsURLFields, &errsParams)
 
 			// THEN it err's when expected
 			// errs
@@ -943,6 +943,8 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			want:      map[string]string{"botmail": "foo%40bar.com"},
 		},
 	}
+	sub_tests := []string{
+		"root", "main", "defaults", "hard_defaults"}
 
 	for name, tc := range tests {
 		name, tc := name, tc
@@ -952,30 +954,77 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 			shoutrrr := New(
 				nil, "", nil, nil,
 				tc.sType,
-				nil, nil, nil, nil)
-			shoutrrr.InitMaps()
-			if tc.mapTarget == "url_fields" {
-				for k, v := range tc.startAs {
-					shoutrrr.SetURLField(k, v)
-				}
-			} else {
-				for k, v := range tc.startAs {
-					shoutrrr.SetParam(k, v)
-				}
+				nil,
+				&ShoutrrrDefaults{}, &ShoutrrrDefaults{}, &ShoutrrrDefaults{})
+			serviceStatus := svcstatus.Status{}
+			serviceStatus.Init(1, 0, 0, &name, nil)
+			shoutrrr.Init(
+				&serviceStatus,
+				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults)
+			var subTestMap = map[string]struct {
+				URLFields map[string]string
+				Params    map[string]string
+			}{
+				"root": {
+					URLFields: shoutrrr.URLFields,
+					Params:    shoutrrr.Params},
+				"main": {
+					URLFields: shoutrrr.Main.URLFields,
+					Params:    shoutrrr.Main.Params},
+				"defaults": {
+					URLFields: shoutrrr.Defaults.URLFields,
+					Params:    shoutrrr.Defaults.Params},
+				"hard_defaults": {
+					URLFields: shoutrrr.HardDefaults.URLFields,
+					Params:    shoutrrr.HardDefaults.Params},
 			}
-
-			// WHEN correctSelf is called
-			shoutrrr.correctSelf()
-
-			// THEN the fields are corrected as necessary
-			for k, v := range tc.want {
-				got := shoutrrr.GetSelfURLField(k)
-				if tc.mapTarget != "url_fields" {
-					got = shoutrrr.GetSelfParam(k)
+			// sub tests - set in different locations and check it's corrected there
+			for sub_test := range subTestMap {
+				t.Logf("sub_test: %s", sub_test)
+				if tc.mapTarget == "url_fields" {
+					for k, v := range tc.startAs {
+						subTestMap[sub_test].URLFields[k] = v
+					}
+				} else {
+					for k, v := range tc.startAs {
+						subTestMap[sub_test].Params[k] = v
+					}
 				}
-				if got != v {
-					t.Errorf("want %s:%q, not %q",
-						k, v, got)
+
+				// WHEN correctSelf is called
+				shoutrrr.correctSelf()
+
+				// THEN the fields are corrected as necessary
+				for k, v := range tc.want {
+					want := v
+					// root is the only one that gets corrected
+					if sub_test != "root" {
+						want = tc.startAs[k]
+					}
+					got := shoutrrr.GetURLField(k)
+					if tc.mapTarget != "url_fields" {
+						got = shoutrrr.GetParam(k)
+					}
+					if got != want {
+						t.Errorf("want %s:%q, not %q",
+							k, want, got)
+					} else {
+						for _, sub_test_check := range sub_tests {
+							if sub_test_check != sub_test {
+								testData := subTestMap[sub_test_check]
+								if len(testData.URLFields) > 0 || len(testData.Params) > 0 {
+									t.Errorf("want empty %s, not %v/%v",
+										sub_test_check, testData.URLFields, testData.Params)
+								}
+							}
+						}
+					}
+					// reset
+					if tc.mapTarget == "url_fields" {
+						delete(subTestMap[sub_test].URLFields, k)
+					} else {
+						delete(subTestMap[sub_test].Params, k)
+					}
 				}
 			}
 		})
@@ -1143,9 +1192,9 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			if tc.nilShoutrrr {
 				return
 			}
-			if tc.wantDelay != "" && shoutrrr.GetSelfOption("delay") != tc.wantDelay {
+			if tc.wantDelay != "" && shoutrrr.GetOption("delay") != tc.wantDelay {
 				t.Errorf("delay not set/corrected. want match for %q\nnot: %q",
-					tc.wantDelay, shoutrrr.GetSelfOption("delay"))
+					tc.wantDelay, shoutrrr.GetOption("delay"))
 			}
 			for key := range tc.wantURLFields {
 				if shoutrrr.URLFields[key] != tc.wantURLFields[key] {

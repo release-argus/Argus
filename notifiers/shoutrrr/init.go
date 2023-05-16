@@ -51,7 +51,7 @@ func (s *Slice) Init(
 		}
 
 		// Get Type from this, the associated Main, or the ID
-		notifyType := util.GetFirstNonDefault(
+		notifyType := util.FirstNonDefault(
 			(*s)[key].Type,
 			(*mains)[key].Type,
 			id)

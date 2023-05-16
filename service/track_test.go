@@ -79,16 +79,16 @@ func TestSlice_Track(t *testing.T) {
 			time.Sleep(time.Second)
 			for i := range *slice {
 				if !util.Contains(tc.ordering, i) {
-					if (*slice)[i].Status.GetLatestVersion() != "" {
+					if (*slice)[i].Status.LatestVersion() != "" {
 						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
 							i, tc.ordering, (*slice)[i].Status.String())
 					}
 				} else if (*slice)[i].Options.GetActive() {
-					if (*slice)[i].Status.GetLatestVersion() == "" {
+					if (*slice)[i].Status.LatestVersion() == "" {
 						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
 							(*slice)[i].Status.String())
 					}
-				} else if (*slice)[i].Status.GetLatestVersion() != "" {
+				} else if (*slice)[i].Status.LatestVersion() != "" {
 					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
 						i, (*slice)[i].Status.String())
 				}
@@ -286,8 +286,8 @@ func TestService_Track(t *testing.T) {
 				svc.Status.SetLastQueried(
 					time.Now().Add(-interval + wantQueryIn).UTC().Format(time.RFC3339))
 			}
-			latestVersionTimestamp := svc.Status.GetLatestVersionTimestamp()
-			deployedVersionTimestamp := svc.Status.GetDeployedVersionTimestamp()
+			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
+			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
 			*svc.Dashboard.AutoApprove = tc.autoApprove
 			allowInvalidCerts := !tc.signedCerts
 			svc.LatestVersion.AllowInvalidCerts = &allowInvalidCerts
@@ -330,23 +330,23 @@ func TestService_Track(t *testing.T) {
 				dvExpectedAfter := dvPreviousTimestamp.Add(timeUntilInterval)
 
 				// WHen we actually did the query
-				didAt, _ := time.Parse(time.RFC3339, svc.Status.GetLastQueried())
+				didAt, _ := time.Parse(time.RFC3339, svc.Status.LastQueried())
 				if didAt.Before(lvExpectedAfter) {
 					t.Errorf("LatestVersionLookup should have waited until\n%s, but did it at\n%s\n%v",
-						lvExpectedAfter, svc.Status.GetLastQueried(), time.Now().UTC())
+						lvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
 				}
 				if didAt.Before(dvExpectedAfter) {
 					t.Errorf("DeployedVersionLookup should have waited until\n%s, but did it at\n%s\n%v",
-						dvExpectedAfter, svc.Status.GetLastQueried(), time.Now().UTC())
+						dvExpectedAfter, svc.Status.LastQueried(), time.Now().UTC())
 				}
 			}
 
 			// THEN the scrape updates the Status correctly
-			if tc.wantLatestVersion != svc.Status.GetLatestVersion() ||
-				tc.wantDeployedVersion != svc.Status.GetDeployedVersion() {
+			if tc.wantLatestVersion != svc.Status.LatestVersion() ||
+				tc.wantDeployedVersion != svc.Status.DeployedVersion() {
 				t.Fatalf("\nLatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
-					tc.wantLatestVersion, svc.Status.GetLatestVersion(),
-					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
+					tc.wantLatestVersion, svc.Status.LatestVersion(),
+					tc.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 			// LatestVersionQueryMetric
 			gotMetric := testutil.ToFloat64(metric.LatestVersionQueryLiveness.WithLabelValues(svc.ID))

@@ -29,7 +29,8 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-var dockerCheckTypes = []string{"hub", "quay", "ghcr"}
+var dockerCheckTypes = []string{
+	"hub", "quay", "ghcr"}
 
 // DockerCheckRegistryBase is the base for checking a Docker registry for an image:tag.
 type DockerCheckRegistryBase struct {
@@ -108,7 +109,7 @@ func NewDockerCheckDefaults(
 
 func (d *DockerCheckDefaults) String(prefix string) (str string) {
 	if d == nil {
-		return ""
+		return
 	}
 
 	if d.Type != "" {
@@ -146,8 +147,8 @@ func (d *DockerCheckDefaults) CheckValues(prefix string) (errs error) {
 	}
 
 	if d.Type != "" && !util.Contains(dockerCheckTypes, d.Type) {
-		errs = fmt.Errorf("%s%stype: %q <invalid> (should be hub/quay/ghcr)\\",
-			util.ErrorToString(errs), prefix, d.Type)
+		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%v])\\",
+			util.ErrorToString(errs), prefix, d.Type, strings.Join(dockerCheckTypes, ","))
 	}
 
 	return
@@ -260,12 +261,12 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 
 	if d.Type != "" {
 		if !util.Contains(dockerCheckTypes, d.Type) {
-			errs = fmt.Errorf("%s%stype: %q <invalid> (should be one of %v)\\",
-				util.ErrorToString(errs), prefix, d.Type, dockerCheckTypes)
+			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%v])\\",
+				util.ErrorToString(errs), prefix, d.Type, strings.Join(dockerCheckTypes, ","))
 		}
 	} else if d.getType() == "" {
-		errs = fmt.Errorf("%s%stype: <required> (should be one of %v)\\",
-			util.ErrorToString(errs), prefix, dockerCheckTypes)
+		errs = fmt.Errorf("%s%stype: <required> (supported types = %v)\\",
+			util.ErrorToString(errs), prefix, strings.Join(dockerCheckTypes, ","))
 	}
 
 	if d.Image == "" {
@@ -305,7 +306,7 @@ func (d *DockerCheck) checkToken() (err error) {
 		return
 	}
 
-	switch d.Type {
+	switch d.getType() {
 	case "hub":
 		username := d.getUsername()
 		token := d.getToken()
@@ -408,16 +409,16 @@ func (d *DockerCheck) getValidToken(dType string) (queryToken string) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	// Have a QueryToken and it's valid for atleast 5s
-	if d.queryToken != "" && d.validUntil.After(time.Now().Add(5*time.Second).UTC()) {
+	// Have a QueryToken and it's valid for atleast 2s
+	if d.queryToken != "" && d.validUntil.After(time.Now().Add(2*time.Second).UTC()) {
 		queryToken = d.queryToken
 		return
 	}
 
 	var validUntil time.Time
 	queryToken, validUntil = d.Defaults.getQueryToken(d.getType())
-	// Have a queryToken and it's valid for atleast 5s
-	if queryToken != "" && validUntil.After(time.Now().Add(5*time.Second).UTC()) {
+	// Have a queryToken and it's valid for atleast 2s
+	if queryToken != "" && validUntil.After(time.Now().Add(2*time.Second).UTC()) {
 		return
 	}
 
@@ -473,17 +474,18 @@ func (d *DockerCheck) getQueryToken() (queryToken string, err error) {
 		return
 	}
 
-	// No valid queryToken found, get a new one
+	// No valid queryToken found, get a new one from the Token
 	token := d.getToken()
 	switch dType {
 	case "hub":
+		// Anonymous query
 		if token == "" {
 			d.mutex.Lock()
 			d.validUntil = time.Now().AddDate(1, 0, 0)
 			d.mutex.Unlock()
-		}
-		if err := d.refreshDockerHubToken(); err != nil {
-			return "", err
+			// Refresh token
+		} else if err = d.refreshDockerHubToken(); err != nil {
+			return
 		}
 	case "ghcr":
 		if token != "" {
@@ -495,8 +497,8 @@ func (d *DockerCheck) getQueryToken() (queryToken string, err error) {
 			validUntil := time.Now().AddDate(1, 0, 0)
 			d.SetQueryToken(&token, &queryToken, &validUntil)
 			// Get a NOOP token for public images
-		} else if err := d.refreshGHCRToken(); err != nil {
-			return "", err
+		} else if err = d.refreshGHCRToken(); err != nil {
+			return
 		}
 	case "quay":
 		queryToken = token
@@ -606,9 +608,9 @@ func (d *DockerCheck) SetQueryToken(token, queryToken *string, validUntil *time.
 	}
 	// Give the Token/ValidUntil to the main struct
 	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	d.queryToken = *queryToken
 	d.validUntil = *validUntil
-	d.mutex.Unlock()
 
 	// If the queryToken came direct from the main struct and the token it came from wasn't empty, we're done
 	if d.Token == *token && d.Token != "" {
@@ -620,18 +622,17 @@ func (d *DockerCheck) SetQueryToken(token, queryToken *string, validUntil *time.
 }
 
 // refreshDockerHubToken for the Image
-func (d *DockerCheck) refreshDockerHubToken() (err error) {
+func (d *DockerCheck) refreshDockerHubToken() error {
 	token := d.getToken()
 	// No Token found
 	if token == "" {
 		return nil
 	}
-	username := d.getUsername()
 
 	// Get the http.Request
 	url := "https://registry.hub.docker.com/v2/users/login"
 	reqBody := net_url.Values{}
-	reqBody.Set("username", username)
+	reqBody.Set("username", d.getUsername())
 	reqBody.Set("password", token)
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody.Encode()))
 	if err != nil {
@@ -643,7 +644,6 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		jLog.Error(err, util.LogFrom{Primary: "docker-hub", Secondary: d.Image}, true)
 		return fmt.Errorf("DockerHub login fail: %w", err)
 	}
 
@@ -651,7 +651,7 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("refreshing the DockerHub token failed - %s", body)
 	}
 	type hubJSON struct {
 		Token string `json:"token"`
@@ -665,11 +665,11 @@ func (d *DockerCheck) refreshDockerHubToken() (err error) {
 	// and to the source of the Token
 	d.SetQueryToken(&token, &queryToken, &validUntil)
 	//nolint:wrapcheck
-	return
+	return err
 }
 
 // refreshGHCRToken for the image
-func (d *DockerCheck) refreshGHCRToken() (err error) {
+func (d *DockerCheck) refreshGHCRToken() error {
 	url := fmt.Sprintf("https://ghcr.io/token?scope=repository:%s:pull", d.Image)
 	resp, err := http.Get(url)
 	if err != nil {

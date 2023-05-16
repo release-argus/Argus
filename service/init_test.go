@@ -27,9 +27,9 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestService_GetServiceInfo(t *testing.T) {
+func TestService_ServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	svc := testServiceURL("TestGetServiceInfo")
+	svc := testServiceURL("TestServiceInfo")
 	id := "test_id"
 	svc.ID = id
 	url := "https://test_url.com"
@@ -41,8 +41,8 @@ func TestService_GetServiceInfo(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
-	// When GetServiceInfo is called on it
-	got := svc.GetServiceInfo()
+	// When ServiceInfo is called on it
+	got := svc.ServiceInfo()
 	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
@@ -52,12 +52,12 @@ func TestService_GetServiceInfo(t *testing.T) {
 
 	// THEN we get the correct ServiceInfo
 	if *got != want {
-		t.Errorf("GetServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
+		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
 	}
 }
 
-func TestService_GetIconURL(t *testing.T) {
+func TestService_IconURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		dashboardIcon string
@@ -132,8 +132,8 @@ func TestService_GetIconURL(t *testing.T) {
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
-			// WHEN GetIconURL is called
-			got := svc.GetIconURL()
+			// WHEN IconURL is called
+			got := svc.IconURL()
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -175,8 +175,8 @@ func TestService_Init(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			var defaults ServiceDefaults
-			var hardDefaults ServiceDefaults
+			var defaults Defaults
+			var hardDefaults Defaults
 			tc.svc.ID = name
 
 			// WHEN Init is called on it

@@ -45,7 +45,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 	wantSemanticVersioning := l.Options.GetSemanticVersioning()
 
 	// If this version is different (new?).
-	latestVersion := l.Status.GetLatestVersion()
+	latestVersion := l.Status.LatestVersion()
 	if version != latestVersion {
 		if wantSemanticVersioning {
 			// Check it's a valid semnatic version
@@ -59,7 +59,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 
 			// Check for a progressive change in version.
 			if latestVersion != "" {
-				oldVersion, err := semver.NewVersion(l.Status.GetDeployedVersion())
+				oldVersion, err := semver.NewVersion(l.Status.DeployedVersion())
 				// If the old version is not a semantic version, then we can't compare it.
 				// (if we switched to semantic versioning with non-semantic versions tracked)
 				if err == nil {
@@ -69,7 +69,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 					// return false (don't notify anything and stay on oldVersion)
 					if newVersion.LessThan(*oldVersion) {
 						err := fmt.Errorf("queried version %q is less than the deployed version %q",
-							version, l.Status.GetLatestVersion())
+							version, l.Status.LatestVersion())
 						jLog.Warn(err, *logFrom, true)
 						return false, err
 					}
@@ -81,9 +81,9 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 		l.Status.ResetRegexMisses()
 
 		// First version found.
-		if l.Status.GetLatestVersion() == "" {
+		if l.Status.LatestVersion() == "" {
 			l.Status.SetLatestVersion(version, true)
-			if l.Status.GetDeployedVersion() == "" {
+			if l.Status.DeployedVersion() == "" {
 				l.Status.SetDeployedVersion(version, true)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)

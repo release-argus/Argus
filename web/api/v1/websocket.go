@@ -101,7 +101,7 @@ func (api *API) wsServiceAction(client *Client, payload api_type.WebSocketMessag
 	// Send the WebHook(s).
 	msg := fmt.Sprintf("%s %q Release actioned - %q",
 		id,
-		svc.Status.GetLatestVersion(),
+		svc.Status.LatestVersion(),
 		strings.ReplaceAll(
 			strings.ReplaceAll(
 				strings.ReplaceAll(*payload.Target,
@@ -248,14 +248,14 @@ func (api *API) wsFlags(client *Client) {
 		Type: "INIT",
 		FlagsData: &api_type.Flags{
 			ConfigFile:       &api.Config.File,
-			LogLevel:         api.Config.Settings.GetLogLevel(),
-			LogTimestamps:    api.Config.Settings.GetLogTimestamps(),
-			DataDatabaseFile: api.Config.Settings.GetDataDatabaseFile(),
-			WebListenHost:    api.Config.Settings.GetWebListenHost(),
-			WebListenPort:    api.Config.Settings.GetWebListenPort(),
-			WebCertFile:      api.Config.Settings.GetWebCertFile(),
-			WebPKeyFile:      api.Config.Settings.GetWebKeyFile(),
-			WebRoutePrefix:   api.Config.Settings.GetWebRoutePrefix()}}
+			LogLevel:         api.Config.Settings.LogLevel(),
+			LogTimestamps:    api.Config.Settings.LogTimestamps(),
+			DataDatabaseFile: api.Config.Settings.DataDatabaseFile(),
+			WebListenHost:    api.Config.Settings.WebListenHost(),
+			WebListenPort:    api.Config.Settings.WebListenPort(),
+			WebCertFile:      api.Config.Settings.WebCertFile(),
+			WebPKeyFile:      api.Config.Settings.WebKeyFile(),
+			WebRoutePrefix:   api.Config.Settings.WebRoutePrefix()}}
 	api.wsSendJSON(client, msg, &logFrom)
 }
 

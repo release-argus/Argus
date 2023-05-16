@@ -271,9 +271,9 @@ func TestLookup_Query(t *testing.T) {
 						tc.errRegex, e)
 				}
 				if tc.wantLatestVersion != nil &&
-					*tc.wantLatestVersion != lookup.Status.GetLatestVersion() {
+					*tc.wantLatestVersion != lookup.Status.LatestVersion() {
 					t.Fatalf("wanted LatestVersion to become %q, not %q",
-						*tc.wantLatestVersion, lookup.Status.GetLatestVersion())
+						*tc.wantLatestVersion, lookup.Status.LatestVersion())
 				}
 			}
 		})

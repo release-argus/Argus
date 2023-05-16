@@ -70,13 +70,13 @@ func Run(cfg *config.Config, log *util.JLog) {
 	jLog = log
 	router := newWebUI(cfg)
 
-	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), util.LogFrom{}, true)
+	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), util.LogFrom{}, true)
 
-	if cfg.Settings.GetWebCertFile() != nil && cfg.Settings.GetWebKeyFile() != nil {
+	if cfg.Settings.WebCertFile() != nil && cfg.Settings.WebKeyFile() != nil {
 		jLog.Fatal(
 			http.ListenAndServeTLS(
-				listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router),
+				listenAddress, *cfg.Settings.WebCertFile(), *cfg.Settings.WebKeyFile(), router),
 			util.LogFrom{}, true)
 	} else {
 		jLog.Fatal(

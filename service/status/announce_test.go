@@ -44,8 +44,8 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 				status.AnnounceChannel = nil
 			}
 			wantID := *status.ServiceID
-			wantLatestVersion := status.GetLatestVersion()
-			wantLatestVersionTimestamp := status.GetLatestVersionTimestamp()
+			wantLatestVersion := status.LatestVersion()
+			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
 			// WHEN AnnounceFirstVersion is called on it
 			status.AnnounceFirstVersion()
@@ -94,7 +94,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 				status.AnnounceChannel = nil
 			}
 			wantID := *status.ServiceID
-			wantLastQueried := status.GetLastQueried()
+			wantLastQueried := status.LastQueried()
 
 			// WHEN AnnounceQuery is called on it
 			status.AnnounceQuery()
@@ -139,8 +139,8 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 				status.AnnounceChannel = nil
 			}
 			wantID := *status.ServiceID
-			wantLatestVersion := status.GetLatestVersion()
-			wantLatestVersionTimestamp := status.GetLatestVersionTimestamp()
+			wantLatestVersion := status.LatestVersion()
+			wantLatestVersionTimestamp := status.LatestVersionTimestamp()
 
 			// WHEN AnnounceQueryNewVersion is called on it
 			status.AnnounceQueryNewVersion()
@@ -189,8 +189,8 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 				status.AnnounceChannel = nil
 			}
 			wantID := *status.ServiceID
-			wantDeployedVersion := status.GetDeployedVersion()
-			wantDeployedVersionTimestamp := status.GetDeployedVersionTimestamp()
+			wantDeployedVersion := status.DeployedVersion()
+			wantDeployedVersionTimestamp := status.DeployedVersionTimestamp()
 
 			// WHEN AnnounceUpdate is called on it
 			status.AnnounceUpdate()
@@ -239,7 +239,7 @@ func TestStatus_AnnounceApproved(t *testing.T) {
 				status.AnnounceChannel = nil
 			}
 			wantID := *status.ServiceID
-			wantApprovedVersion := status.GetApprovedVersion()
+			wantApprovedVersion := status.ApprovedVersion()
 
 			// WHEN AnnounceApproved is called on it
 			status.AnnounceApproved()

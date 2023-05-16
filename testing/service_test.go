@@ -181,7 +181,7 @@ func TestServiceTest(t *testing.T) {
 				defaults.SetDefaults()
 				tc.slice[tc.flag].ID = tc.flag
 				tc.slice[tc.flag].Init(
-					&service.ServiceDefaults{}, &defaults.Service,
+					&service.Defaults{}, &defaults.Service,
 					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &defaults.Notify,
 					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &defaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*

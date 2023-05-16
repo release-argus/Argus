@@ -91,7 +91,7 @@ func (f *failsBase) Length() int {
 }
 
 // String representation of failsBase.
-func (f *failsBase) String() (out string) {
+func (f *failsBase) String() (str string) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -103,10 +103,10 @@ func (f *failsBase) String() (out string) {
 			val = fmt.Sprint(*f.fails[key])
 		}
 
-		out += fmt.Sprintf("%v: %s, ", key, val)
+		str += fmt.Sprintf("%v: %s, ", key, val)
 	}
-	if len(out) != 0 {
-		out = "{" + out[:len(out)-2] + "}"
+	if len(str) != 0 {
+		str = "{" + str[:len(str)-2] + "}"
 	}
 
 	return
@@ -173,7 +173,7 @@ func (f *FailsCommand) Length() int {
 }
 
 // String representation of FailsCommand.
-func (f *FailsCommand) String() (out string) {
+func (f *FailsCommand) String() (str string) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -183,10 +183,10 @@ func (f *FailsCommand) String() (out string) {
 			val = fmt.Sprint(*f.fails[i])
 		}
 
-		out += fmt.Sprintf("%v: %s, ", i, val)
+		str += fmt.Sprintf("%v: %s, ", i, val)
 	}
-	if len(out) != 0 {
-		out = "[" + out[:len(out)-2] + "]"
+	if len(str) != 0 {
+		str = "[" + str[:len(str)-2] + "]"
 	}
 
 	return
@@ -201,27 +201,27 @@ type FailsWebHook struct {
 }
 
 // String returns a string representation of the Fails.
-func (f *Fails) String() (out string) {
-	out = ""
+func (f *Fails) String() (str string) {
+	str = ""
 
 	shoutrrrStr := f.Shoutrrr.String()
 	if shoutrrrStr != "" {
-		out += fmt.Sprintf("shoutrrr: %s, ", shoutrrrStr)
+		str += fmt.Sprintf("shoutrrr: %s, ", shoutrrrStr)
 	}
 
 	commandStr := f.Command.String()
 	if commandStr != "" {
-		out += fmt.Sprintf("command: %s, ", commandStr)
+		str += fmt.Sprintf("command: %s, ", commandStr)
 	}
 
 	webhookStr := f.WebHook.String()
 	if webhookStr != "" {
-		out += fmt.Sprintf("webhook: %s, ", webhookStr)
+		str += fmt.Sprintf("webhook: %s, ", webhookStr)
 	}
 
-	if len(out) != 0 {
+	if len(str) != 0 {
 		// Trim the trailing ', '
-		out = out[:len(out)-2]
+		str = str[:len(str)-2]
 	}
 	return
 }

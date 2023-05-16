@@ -60,7 +60,7 @@ func testConfig() Config {
 				Log: LogSettings{
 					Level: &logLevel}}},
 		HardDefaults: Defaults{
-			Service: service.ServiceDefaults{
+			Service: service.Defaults{
 				Status: svcstatus.NewStatusDefaults(
 					nil, &databaseChannel, &saveChannel)}},
 		DatabaseChannel: &databaseChannel,
@@ -106,7 +106,7 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
 	config.Load(file, &flags, log)
-	t.Cleanup(func() { os.Remove(*config.Settings.GetDataDatabaseFile()) })
+	t.Cleanup(func() { os.Remove(*config.Settings.DataDatabaseFile()) })
 
 	return
 }
@@ -186,8 +186,8 @@ func testServiceURL(id string) *service.Service {
 		Options: *opt.New(
 			boolPtr(true), "5s", boolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
-		Defaults:     &service.ServiceDefaults{},
-		HardDefaults: &service.ServiceDefaults{}}
+		Defaults:     &service.Defaults{},
+		HardDefaults: &service.Defaults{}}
 	svc.Status.ServiceID = &svc.ID
 	svc.Status.Init(
 		len(svc.Notify), len(svc.Command), len(svc.WebHook),

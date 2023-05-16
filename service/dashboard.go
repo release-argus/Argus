@@ -71,7 +71,7 @@ func NewDashboardOptions(
 
 // GetAutoApprove will return whether new releases should be auto-approved.
 func (d *DashboardOptions) GetAutoApprove() bool {
-	return *util.GetFirstNonDefault(
+	return *util.FirstNonDefault(
 		d.AutoApprove,
 		d.Defaults.AutoApprove,
 		d.HardDefaults.AutoApprove)

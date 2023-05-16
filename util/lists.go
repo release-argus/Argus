@@ -112,8 +112,8 @@ func ReplaceElement(list []string, old string, new string) []string {
 	return list
 }
 
-// GetIndentation used in line. Test variations on intentationxindentSize
-func GetIndentation(line string, indentSize uint8) (indentation string) {
+// Indentation used in line. Test variations on intentationxindentSize
+func Indentation(line string, indentSize uint8) (indentation string) {
 	for {
 		if !strings.HasPrefix(line, indentation+strings.Repeat(" ", int(indentSize))) {
 			break

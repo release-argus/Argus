@@ -49,8 +49,8 @@ func (c *Config) Init() {
 
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
-	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
-	jLog.SetLevel(c.Settings.GetLogLevel())
+	jLog.SetTimestamps(*c.Settings.LogTimestamps())
+	jLog.SetLevel(c.Settings.LogLevel())
 
 	i := 0
 	for _, name := range c.Order {

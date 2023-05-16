@@ -125,7 +125,7 @@ func testService(id string) *service.Service {
 			nil, "", boolPtr(true),
 			nil, nil)}
 	svc.Init(
-		&service.ServiceDefaults{}, &service.ServiceDefaults{},
+		&service.Defaults{}, &service.Defaults{},
 		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 		&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 	svc.Status.AnnounceChannel = &announceChannel

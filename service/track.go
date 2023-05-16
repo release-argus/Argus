@@ -35,7 +35,7 @@ func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
 
 		jLog.Verbose(
 			fmt.Sprintf("Tracking %s at %s every %s",
-				(*s)[key].ID, (*s)[key].LatestVersion.GetServiceURL(true), (*s)[key].Options.GetInterval()),
+				(*s)[key].ID, (*s)[key].LatestVersion.ServiceURL(true), (*s)[key].Options.GetInterval()),
 			util.LogFrom{Primary: (*s)[key].ID},
 			true)
 
@@ -59,12 +59,12 @@ func (s *Service) Track() {
 	s.ResetMetrics()
 
 	// If this Service was last queried less than interval ago, wait until interval has elapsed.
-	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.GetLastQueried())
+	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.LastQueried())
 	if time.Since(lastQueriedAt) < s.Options.GetIntervalDuration() {
 		time.Sleep(s.Options.GetIntervalDuration() - time.Since(lastQueriedAt))
 	}
 
-	// Track the deployed version in a infinite loop goroutine.
+	// Track the deployed version in an infinite loop goroutine.
 	go func() {
 		time.Sleep(2 * time.Second) // Give LatestVersion some time to query first.
 

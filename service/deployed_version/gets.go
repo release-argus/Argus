@@ -20,7 +20,7 @@ import (
 
 // GetAllowInvalidCerts returns whether invalid HTTPS certs are allowed.
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
 		l.Defaults.AllowInvalidCerts,
 		l.HardDefaults.AllowInvalidCerts)

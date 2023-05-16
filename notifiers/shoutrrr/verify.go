@@ -84,7 +84,7 @@ func (s *ShoutrrrBase) CheckValues(prefix string) (errs error) {
 	}
 
 	// Delay
-	if delay := s.GetSelfOption("delay"); delay != "" {
+	if delay := s.GetOption("delay"); delay != "" {
 		// Default to seconds when an integer is provided
 		if _, err := strconv.Atoi(delay); err == nil {
 			s.Options["delay"] += "s"
@@ -97,14 +97,14 @@ func (s *ShoutrrrBase) CheckValues(prefix string) (errs error) {
 
 	s.correctSelf()
 
-	if !util.CheckTemplate(s.GetSelfOption("message")) {
+	if !util.CheckTemplate(s.GetOption("message")) {
 		errsOptions = fmt.Errorf("%s%s  message: %q <invalid> (didn't pass templating)\\",
-			util.ErrorToString(errsOptions), prefix, s.GetSelfOption("message"))
+			util.ErrorToString(errsOptions), prefix, s.GetOption("message"))
 	}
-	for key := range s.Params {
-		if !util.CheckTemplate(s.GetSelfParam(key)) {
+	for key, value := range s.Params {
+		if !util.CheckTemplate(value) {
 			errsParams = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-				util.ErrorToString(errsParams), prefix, key, s.GetSelfParam("title"))
+				util.ErrorToString(errsParams), prefix, key, value)
 		}
 	}
 	if errsOptions != nil {
@@ -152,13 +152,13 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		}
 	}
 
-	s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
+	s.checkValuesForType(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
 
 	// Exclude matrix since it logs in, so may run into a rate-limit
 	if errsParams == nil && errsURLFields == nil && s.GetType() != "matrix" {
 		//#nosec G104 -- Disregard as we're not giving any rawURLs
 		sender, _ := shoutrrr_lib.CreateSender()
-		if _, err := sender.Locate(s.GetURL()); err != nil {
+		if _, err := sender.Locate(s.BuildURL()); err != nil {
 			errsLocate = fmt.Errorf("%s%s^ %w\\",
 				util.ErrorToString(errsLocate), prefix, err)
 		}
@@ -191,17 +191,17 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 // e.g. slack color wants $23 instead of #
 func (s *ShoutrrrBase) correctSelf() {
 	// Port, strip leading :
-	if port := strings.TrimPrefix(s.GetSelfURLField("port"), ":"); port != "" {
+	if port := strings.TrimPrefix(s.GetURLField("port"), ":"); port != "" {
 		s.SetURLField("port", port)
 	}
 
 	// Path, strip leading /
-	if path := strings.TrimPrefix(s.GetSelfURLField("path"), "/"); path != "" {
+	if path := strings.TrimPrefix(s.GetURLField("path"), "/"); path != "" {
 		s.SetURLField("path", path)
 	}
 
 	// Host
-	host := s.GetSelfURLField("host")
+	host := s.GetURLField("host")
 	if strings.Contains(host, ":") {
 		// Trim leading http(s)://
 		host = strings.TrimPrefix(host, "http://")
@@ -219,12 +219,12 @@ func (s *ShoutrrrBase) correctSelf() {
 	switch s.Type {
 	case "matrix":
 		// Remove #'s in channel aliases
-		if rooms := strings.ReplaceAll(s.GetSelfParam("rooms"), "#", ""); rooms != "" {
+		if rooms := strings.ReplaceAll(s.GetParam("rooms"), "#", ""); rooms != "" {
 			s.SetParam("rooms", rooms)
 		}
 	case "mattermost":
 		// Channel, strip leading /
-		if channel := strings.TrimPrefix(s.GetSelfURLField("channel"), "/"); channel != "" {
+		if channel := strings.TrimPrefix(s.GetURLField("channel"), "/"); channel != "" {
 			s.SetURLField("channel", channel)
 		}
 	case "slack":
@@ -233,29 +233,29 @@ func (s *ShoutrrrBase) correctSelf() {
 		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
 		// So #ff8000 would be %23ff8000 etc.
 		key := "color"
-		if s.GetSelfParam(key) != "" {
-			s.SetParam(key, strings.Replace(s.GetSelfParam(key), "#", "%23", 1))
+		if s.GetParam(key) != "" {
+			s.SetParam(key, strings.Replace(s.GetParam(key), "#", "%23", 1))
 		}
 	case "teams":
 		// AltID, strip leading /
-		if altid := strings.TrimPrefix(s.GetSelfURLField("altid"), "/"); altid != "" {
+		if altid := strings.TrimPrefix(s.GetURLField("altid"), "/"); altid != "" {
 			s.SetURLField("altid", altid)
 		}
 		// GroupOwner, strip leading /
-		if groupowner := strings.TrimPrefix(s.GetSelfURLField("groupowner"), "/"); groupowner != "" {
+		if groupowner := strings.TrimPrefix(s.GetURLField("groupowner"), "/"); groupowner != "" {
 			s.SetURLField("groupowner", groupowner)
 		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
-		if botmail := s.GetSelfURLField("botmail"); botmail != "" {
+		if botmail := s.GetURLField("botmail"); botmail != "" {
 			s.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
 		}
 	}
 }
 
-// checkValuesMaster will check that this leading Shoutrrr can access all vars required
+// checkValuesForType will check that this Shoutrrr can access all vars required
 // for its Type and that this Type is valid.
-func (s *Shoutrrr) checkValuesMaster(
+func (s *Shoutrrr) checkValuesForType(
 	prefix string,
 	errs *error,
 	errsOptions *error,
@@ -265,7 +265,7 @@ func (s *Shoutrrr) checkValuesMaster(
 	// Check that the Type is valid
 	sType := s.GetType()
 	if !util.Contains(supportedTypes, sType) {
-		sTypeWithoutID := util.GetFirstNonDefault(s.Type, s.Main.Type)
+		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
 		if sTypeWithoutID == "" {
 			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
 				util.ErrorToString(*errs), prefix)

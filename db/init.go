@@ -65,7 +65,7 @@ func checkFile(path string) {
 
 func Run(cfg *config.Config, log *util.JLog) {
 	jLog = log
-	databaseFile := cfg.Settings.GetDataDatabaseFile()
+	databaseFile := cfg.Settings.DataDatabaseFile()
 	logFrom = &util.LogFrom{Primary: "db", Secondary: *databaseFile}
 
 	api := api{config: cfg}
@@ -80,7 +80,7 @@ func Run(cfg *config.Config, log *util.JLog) {
 }
 
 func (api *api) initialise() {
-	databaseFile := api.config.Settings.GetDataDatabaseFile()
+	databaseFile := api.config.Settings.DataDatabaseFile()
 	checkFile(*databaseFile)
 	db, err := sql.Open("sqlite", *databaseFile)
 	jLog.Fatal(err, *logFrom, err != nil)

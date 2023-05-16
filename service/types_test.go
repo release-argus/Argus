@@ -70,10 +70,10 @@ func TestService_String(t *testing.T) {
 				Dashboard: *NewDashboardOptions(
 					boolPtr(true), "", "", "",
 					nil, nil),
-				Defaults: &ServiceDefaults{
+				Defaults: &Defaults{
 					Options: *opt.NewDefaults(
 						"", boolPtr(false))},
-				HardDefaults: &ServiceDefaults{
+				HardDefaults: &Defaults{
 					Options: *opt.NewDefaults(
 						"", boolPtr(false))}},
 			want: `

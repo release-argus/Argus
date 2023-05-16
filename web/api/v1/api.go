@@ -36,7 +36,7 @@ type API struct {
 // NewAPI will create a new API with the provided config.
 func NewAPI(cfg *config.Config, log *util.JLog) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
-	routePrefix := "/" + strings.TrimPrefix(cfg.Settings.GetWebRoutePrefix(), "/")
+	routePrefix := "/" + strings.TrimPrefix(cfg.Settings.WebRoutePrefix(), "/")
 
 	api := &API{
 		Config:      cfg,

@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
@@ -104,6 +105,92 @@ func TestSlice_Print(t *testing.T) {
 			if strOut != tc.want {
 				t.Errorf("Print should have given\n%q\nbut gave\n%q",
 					tc.want, strOut)
+			}
+		})
+	}
+}
+
+func TestDefaults_CheckValues(t *testing.T) {
+	// GIVEN a Defaults
+	tests := map[string]struct {
+		options       opt.OptionsDefaults
+		latestVersion latestver.LookupDefaults
+		errRegex      []string
+	}{
+		"valid": {
+			options: *opt.NewDefaults(
+				"10s", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"ghcr", "", "", "", "", nil))),
+		},
+		"options with errs": {
+			options: *opt.NewDefaults(
+				"10x", nil),
+			errRegex: []string{
+				`^options:$`,
+				`^  interval: "[^"]+" <invalid>`},
+		},
+		"latestVersion with errs": {
+			options: *opt.NewDefaults(
+				"10s", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"randomType", "", "", "", "", nil))),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+		},
+		"all errs": {
+			options: *opt.NewDefaults(
+				"10x", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"randomType", "", "", "", "", nil))),
+			errRegex: []string{
+				`^options:$`,
+				`^  interval: "[^"]+" <invalid>`,
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := &Defaults{
+				Options:       tc.options,
+				LatestVersion: tc.latestVersion}
+
+			// WHEN CheckValues is called
+			err := svc.CheckValues("")
+
+			// THEN it err's when expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
 			}
 		})
 	}
@@ -320,7 +407,7 @@ func TestService_CheckValues(t *testing.T) {
 			tc.svc.Notify = tc.notifies
 			tc.svc.Dashboard = tc.dashboardOptions
 			tc.svc.Init(
-				&ServiceDefaults{}, &ServiceDefaults{},
+				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 

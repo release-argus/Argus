@@ -28,20 +28,6 @@ var (
 		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "shoutrrr"}
 )
 
-type Notifier interface {
-	GetType() string
-
-	GetParams() *map[string]string
-	GetSelfParam(key string) string
-	SetParam(key string, value string)
-	GetOptions() *map[string]string
-	GetSelfOption(key string) string
-	SetOption(key string, value string)
-	GetURLFields() *map[string]string
-	GetSelfURLField(key string) string
-	SetURLField(key string, value string)
-}
-
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr
 

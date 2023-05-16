@@ -565,7 +565,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 		},
 		"bare": {
 			input: &config.Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Options:               opt.OptionsDefaults{},
 					LatestVersion:         latestver.LookupDefaults{},
 					DeployedVersionLookup: deployedver.LookupDefaults{},
@@ -582,7 +582,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 		},
 		"censor service.latest_version": {
 			input: &config.Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Options: opt.OptionsDefaults{},
 					LatestVersion: *latestver.NewDefaults(
 						stringPtr("censor"),

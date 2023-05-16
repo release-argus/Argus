@@ -23,7 +23,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestShoutrrr_GetURL(t *testing.T) {
+func TestShoutrrr_BuildURL(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		sType     string
@@ -435,8 +435,8 @@ func TestShoutrrr_GetURL(t *testing.T) {
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
 
-			// WHEN GetURL is called
-			got := shoutrrr.GetURL()
+			// WHEN BuildURL is called
+			got := shoutrrr.BuildURL()
 
 			// THEN the expected URL is returned
 			if got != tc.want {

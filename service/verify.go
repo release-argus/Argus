@@ -38,8 +38,8 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 	return
 }
 
-// CheckValues of the ServiceDefaults.
-func (s *ServiceDefaults) CheckValues(prefix string) (errs error) {
+// CheckValues of the Defaults.
+func (s *Defaults) CheckValues(prefix string) (errs error) {
 	if optionErrs := s.Options.CheckValues(prefix); optionErrs != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), optionErrs)

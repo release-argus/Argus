@@ -333,7 +333,7 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 	}
 }
 
-func TestWebHook_GetRequest(t *testing.T) {
+func TestWebHook_BuildRequest(t *testing.T) {
 	// GIVEN a WebHook and a HTTP Request
 	tests := map[string]struct {
 		webhookType   string
@@ -383,8 +383,8 @@ func TestWebHook_GetRequest(t *testing.T) {
 			webhook.URL = tc.url
 			webhook.CustomHeaders = &tc.customHeaders
 
-			// WHEN GetRequest is called
-			req := webhook.GetRequest()
+			// WHEN BuildRequest is called
+			req := webhook.BuildRequest()
 
 			// THEN the function returns the correct result
 			if tc.wantNil {

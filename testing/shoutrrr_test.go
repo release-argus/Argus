@@ -216,7 +216,7 @@ func TestFindShoutrrr(t *testing.T) {
 								"gotify",
 								&map[string]string{
 									"host":  "example.com",
-									"token": "example"},
+									"token": "fooo"},
 								nil, nil, nil),
 							"baz": {}}}},
 				Notify: shoutrrr.SliceDefaults{
@@ -226,7 +226,7 @@ func TestFindShoutrrr(t *testing.T) {
 						&map[string]string{
 							"host":  "example.com",
 							"token": "example"})}},
-			foundInRoot: boolPtr(true),
+			foundInRoot: boolPtr(false),
 		},
 		"matching search of Service notifier with incomplete config filled by Defaults": {
 			flag: "bar",
@@ -426,14 +426,14 @@ func TestFindShoutrrr(t *testing.T) {
 			// if the notifier should have been found in the root or in a service
 			if tc.foundInRoot != nil {
 				if *tc.foundInRoot {
-					if !identicalNotifiers(tc.cfg.Notify[tc.flag], got["test"]) {
-						t.Fatalf("want: %v\ngot: %v",
-							tc.cfg.Notify[tc.flag], got["test"])
+					if tc.cfg.Notify[tc.flag].String("") != got["test"].String("") {
+						t.Fatalf("want:\n%v\n\ngot:\n%v",
+							tc.cfg.Notify[tc.flag].String(""), got["test"].String(""))
 					}
 				} else {
-					if !identicalNotifiers(tc.cfg.Service["argus"].Notify[tc.flag], got["test"]) {
+					if tc.cfg.Service["argus"].Notify[tc.flag].String("") != got["test"].String("") {
 						t.Fatalf("want: %v\ngot: %v",
-							tc.cfg.Service["argus"].Notify[tc.flag], got["test"])
+							tc.cfg.Service["argus"].Notify[tc.flag].String(""), got["test"].String(""))
 					}
 					// would have been given in the Init
 					got["test"].Defaults = tc.cfg.Defaults.Notify[got["test"].Type]
@@ -441,40 +441,13 @@ func TestFindShoutrrr(t *testing.T) {
 			}
 			// if there were defaults for that type
 			if tc.cfg.Defaults.Notify[got["test"].Type] != nil {
-				if !identicalNotifiers(tc.cfg.Defaults.Notify[got["test"].Type], got["test"].Defaults) {
+				if tc.cfg.Defaults.Notify[got["test"].Type].String("") != got["test"].Defaults.String("") {
 					t.Fatalf("defaults were not applied\nwant: %v\ngot: %v",
-						tc.cfg.Defaults.Notify[got["test"].Type], got["test"].Defaults)
+						tc.cfg.Defaults.Notify[got["test"].Type].String(""), got["test"].Defaults.String(""))
 				}
 			}
 		})
 	}
-}
-
-func identicalNotifiers(a shoutrrr.Notifier, b shoutrrr.Notifier) (identical bool) {
-	if (a == nil && b != nil) || (a != nil && b == nil) {
-		return false
-	}
-
-	identical = a.GetType() == b.GetType() &&
-		len(*a.GetOptions()) == len(*b.GetOptions()) &&
-		len(*a.GetURLFields()) == len(*b.GetURLFields()) &&
-		len(*a.GetParams()) == len(*b.GetParams())
-	for i := range *a.GetOptions() {
-		if a.GetSelfOption(i) != b.GetSelfOption(i) {
-			identical = false
-		}
-	}
-	for i := range *a.GetURLFields() {
-		if a.GetSelfURLField(i) != b.GetSelfURLField(i) {
-			identical = false
-		}
-	}
-	for i := range *a.GetParams() {
-		if a.GetSelfParam(i) != b.GetSelfParam(i) {
-			identical = false
-		}
-	}
-	return
 }
 
 func TestNotifyTest(t *testing.T) {
@@ -574,13 +547,13 @@ func TestNotifyTest(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
-			serviceHardDefaults := service.ServiceDefaults{}
+			serviceHardDefaults := service.Defaults{}
 			serviceHardDefaults.SetDefaults()
 			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
 			shoutrrrHardDefaults.SetDefaults()
 			for i := range tc.slice {
 				(*tc.slice[i]).Init(
-					&service.ServiceDefaults{}, &serviceHardDefaults,
+					&service.Defaults{}, &serviceHardDefaults,
 					&tc.rootSlice, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
 					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 			}

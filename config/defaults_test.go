@@ -49,7 +49,7 @@ func TestDefaults_String(t *testing.T) {
 		},
 		"all fields": {
 			defaults: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Options: *opt.NewDefaults(
 						"1m",            // interval
 						boolPtr(false)), // semantic_versioning
@@ -183,7 +183,7 @@ func TestDefaults_SetDefaults(t *testing.T) {
 			got:  defaults.Service.Options.Interval,
 			want: "10m"},
 		"Notify.discord.username": {
-			got:  defaults.Notify["discord"].GetSelfParam("username"),
+			got:  defaults.Notify["discord"].GetParam("username"),
 			want: "Argus"},
 		"WebHook.Delay": {
 			got:  defaults.WebHook.Delay,
@@ -219,7 +219,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99m",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": ""},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Options: *opt.NewDefaults("99m", nil)}},
 		},
 		"service.options": {
@@ -227,7 +227,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99m",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true"},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Options: *opt.NewDefaults("99m", boolPtr(true))}},
 		},
 		"service.options - invalid time.duration - interval": {
@@ -248,7 +248,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true"},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					LatestVersion: *latestver.NewDefaults(
 						stringPtr("ghp_something"),
 						boolPtr(true),
@@ -263,7 +263,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_HUB_USERNAME": "usernameForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					LatestVersion: *latestver.NewDefaults(
 						nil, nil, nil,
 						filter.NewRequireDefaults(
@@ -301,7 +301,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "true"},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					DeployedVersionLookup: *deployedver.NewDefaults(
 						boolPtr(true))}},
 		},
@@ -314,7 +314,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "true"},
 			want: &Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					Dashboard: service.NewDashboardOptionsDefaults(
 						boolPtr(true))}},
 		},
@@ -898,7 +898,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			dflts := Defaults{
-				Service: service.ServiceDefaults{
+				Service: service.Defaults{
 					DeployedVersionLookup: deployedver.LookupDefaults{}}}
 			if tc.want == nil {
 				tc.want = &Defaults{
@@ -963,7 +963,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		errRegex []string
 	}{
 		"Service.Interval": {
-			input: &Defaults{Service: service.ServiceDefaults{
+			input: &Defaults{Service: service.Defaults{
 				Options: *opt.NewDefaults("10x", nil)}},
 			errRegex: []string{
 				`^service:$`,
@@ -971,7 +971,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^    interval: "10x" <invalid>`},
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
-			input: &Defaults{Service: service.ServiceDefaults{
+			input: &Defaults{Service: service.Defaults{
 				LatestVersion: latestver.LookupDefaults{
 					Require: filter.RequireDefaults{
 						Docker: *filter.NewDockerCheckDefaults(
@@ -985,7 +985,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 				`^        type: "pizza" <invalid>`},
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
-			input: &Defaults{Service: service.ServiceDefaults{
+			input: &Defaults{Service: service.Defaults{
 				Options: *opt.NewDefaults("10x", nil),
 				LatestVersion: latestver.LookupDefaults{
 					Require: filter.RequireDefaults{

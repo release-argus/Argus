@@ -59,7 +59,7 @@ func (c *Config) Print(flag *bool) {
 
 	if len(c.Order) > 0 {
 		c.Service.Print("", c.Order)
-		fmt.Println("")
+		fmt.Println()
 	}
 	if len(c.Notify) > 0 {
 		c.Notify.Print("")

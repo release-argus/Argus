@@ -38,7 +38,7 @@ func (l *Lookup) applyOverrides(
 ) (*Lookup, error) {
 	// Use the provided overrides, or the defaults.
 	// access_token
-	useAccessToken := util.GetFirstNonNilPtr(accessToken, l.AccessToken)
+	useAccessToken := util.FirstNonNilPtr(accessToken, l.AccessToken)
 	// allow_invalid_certs
 	useAllowInvalidCerts := l.AllowInvalidCerts
 	if allowInvalidCerts != nil {
@@ -59,12 +59,12 @@ func (l *Lookup) applyOverrides(
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
 	// type
-	useType := util.GetValue(typeStr, l.Type)
+	useType := util.ValueOrDefault(typeStr, l.Type)
 	if useType == "" {
 		useType = "github"
 	}
 	// url
-	useURL := util.GetValue(url, l.URL)
+	useURL := util.ValueOrDefault(url, l.URL)
 	// url_commands
 	useURLCommands, errURLCommands := filter.URLCommandsFromStr(
 		urlCommands,
@@ -104,7 +104,7 @@ func (l *Lookup) applyOverrides(
 		0, 0, 0,
 		serviceID,
 		nil)
-	lookup.Status.SetLatestVersion(l.Status.GetLatestVersion(), false)
+	lookup.Status.SetLatestVersion(l.Status.LatestVersion(), false)
 
 	if lookup.Type == "github" {
 		// Use the current ETag/releases
@@ -133,7 +133,7 @@ func (l *Lookup) applyOverrides(
 //
 // `version` - found from this query
 //
-// `annoounceUpdate` - Whether that version is new and should be announced (no overrides provided),
+// `annoounceUpdate` - Whether that version is new and should be announced (if no overrides provided),
 //
 // `err` - any errs encountered
 func (l *Lookup) Refresh(
@@ -184,7 +184,7 @@ func (l *Lookup) Refresh(
 	if err != nil {
 		return
 	}
-	version = lookup.Status.GetLatestVersion()
+	version = lookup.Status.LatestVersion()
 	announceUpdate = l.updateFromRefresh(lookup, overrides)
 	return
 }
@@ -224,10 +224,10 @@ func (l *Lookup) updateFromRefresh(newLookup *Lookup, changingOverrides bool) (a
 	}
 
 	// Update the last queried time.
-	l.Status.SetLastQueried(newLookup.Status.GetLastQueried())
+	l.Status.SetLastQueried(newLookup.Status.LastQueried())
 	// Update the latest version if it has changed.
-	newLatestVersion := newLookup.Status.GetLatestVersion()
-	if newLatestVersion != l.Status.GetLatestVersion() {
+	newLatestVersion := newLookup.Status.LatestVersion()
+	if newLatestVersion != l.Status.LatestVersion() {
 		announceUpdate = true
 		l.Status.SetLatestVersion(newLatestVersion, true)
 	}
