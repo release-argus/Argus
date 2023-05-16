@@ -18,11 +18,66 @@ package latestver
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/util"
 )
+
+func TestLookupDefaults_CheckValues(t *testing.T) {
+	// GIVEN a LookupDefault
+	tests := map[string]struct {
+		require  filter.RequireDefaults
+		errRegex []string
+	}{
+		"valid": {
+			require: *filter.NewRequireDefaults(
+				filter.NewDockerCheckDefaults(
+					"ghcr", "", "", "", "", nil)),
+			errRegex: []string{},
+		},
+		"invalid require": {
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+			require: *filter.NewRequireDefaults(
+				filter.NewDockerCheckDefaults(
+					"someType", "", "", "", "", nil)),
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			defaults := LookupDefaults{
+				Require: tc.require}
+
+			// WHEN CheckValues is called
+			err := defaults.CheckValues("")
+
+			// THEN it err's when expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
+			}
+		})
+	}
+}
 
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup
@@ -32,38 +87,58 @@ func TestLookup_CheckValues(t *testing.T) {
 		wantURL     *string
 		require     *filter.Require
 		urlCommands *filter.URLCommandSlice
-		errRegex    string
+		errRegex    []string
 	}{
-		"valid service": {
-			errRegex: `^$`,
+		"valid": {
+			errRegex: []string{},
 		},
 		"no type": {
-			errRegex: `type: <required>`,
-			lType:    stringPtr(""),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  type: <required>`},
+			lType: stringPtr(""),
 		},
 		"invalid type": {
-			errRegex: `type: .* <invalid>`,
-			lType:    stringPtr("foo"),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  type: "[^"]+" <invalid>`},
+			lType: stringPtr("foo"),
 		},
 		"no url": {
-			errRegex: `url: <required>`,
-			url:      stringPtr(""),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url: <required>`},
+			url: stringPtr(""),
 		},
 		"corrects github url": {
-			errRegex: `^$`,
+			errRegex: []string{},
 			url:      stringPtr("https://github.com/release-argus/Argus"),
 			wantURL:  stringPtr("release-argus/Argus"),
 		},
 		"invalid require": {
-			errRegex: `regex_content: .* <invalid>`,
-			require:  &filter.Require{RegexContent: "[0-"},
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    regex_content: "[^"]+" <invalid>`},
+			require: &filter.Require{RegexContent: "[0-"},
 		},
 		"invalid urlCommands": {
-			errRegex:    `type: .* <invalid>`,
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url_commands:$`,
+				`^    item_0:$`,
+				`^      type: "[^"]+" <invalid>`},
 			urlCommands: &filter.URLCommandSlice{{Type: "foo"}},
 		},
 		"all errs": {
-			errRegex:    `url: <required>`,
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url: <required>`,
+				`^  require:$`,
+				`^    regex_content: "[^"]+" <invalid>`,
+				`^  url_commands:$`,
+				`^    item_0:$`,
+				`^      type: "[^"]+" <invalid>`},
 			url:         stringPtr(""),
 			require:     &filter.Require{RegexContent: "[0-"},
 			urlCommands: &filter.URLCommandSlice{{Type: "foo"}},
@@ -94,11 +169,18 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			// THEN it err's when expected
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
 			}
 		})
 	}

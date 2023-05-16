@@ -29,7 +29,7 @@ import (
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.ServiceDefaults `yaml:"service,omitempty" json:"service,omitempty"`
+	Service service.Defaults        `yaml:"service,omitempty" json:"service,omitempty"`
 	Notify  shoutrrr.SliceDefaults  `yaml:"notify,omitempty" json:"notify,omitempty"`
 	WebHook webhook.WebHookDefaults `yaml:"webhook,omitempty" json:"webhook,omitempty"`
 }

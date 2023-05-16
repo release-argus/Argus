@@ -17,10 +17,8 @@
 package deployedver
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -400,20 +398,16 @@ func TestLookup_Refresh(t *testing.T) {
 			previousStatus := svcstatus.Status{}
 			if tc.lookup != nil {
 				tc.lookup.Status = &svcstatus.Status{ServiceID: stringPtr("serviceID")}
-				previousStatus.SetApprovedVersion(tc.lookup.Status.GetApprovedVersion(), false)
-				previousStatus.SetDeployedVersion(tc.lookup.Status.GetDeployedVersion(), false)
-				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.GetDeployedVersionTimestamp())
-				previousStatus.SetLatestVersion(tc.lookup.Status.GetLatestVersion(), false)
-				previousStatus.SetLatestVersionTimestamp(tc.lookup.Status.GetLatestVersionTimestamp())
-				previousStatus.SetLastQueried(tc.lookup.Status.GetLastQueried())
+				previousStatus.SetApprovedVersion(tc.lookup.Status.ApprovedVersion(), false)
+				previousStatus.SetDeployedVersion(tc.lookup.Status.DeployedVersion(), false)
+				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.DeployedVersionTimestamp())
+				previousStatus.SetLatestVersion(tc.lookup.Status.LatestVersion(), false)
+				previousStatus.SetLatestVersionTimestamp(tc.lookup.Status.LatestVersionTimestamp())
+				previousStatus.SetLastQueried(tc.lookup.Status.LastQueried())
 				if tc.deployedVersion != "" {
 					tc.lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
 					tc.lookup.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
 				}
-			}
-
-			if strings.HasPrefix(name, "Change of vars that fail Query") || strings.HasPrefix(name, "Refresh new version") {
-				fmt.Println()
 			}
 
 			// WHEN we call Refresh
@@ -453,23 +447,23 @@ func TestLookup_Refresh(t *testing.T) {
 			// and the possible query-changing overrides are nil
 			if tc.headers == nil && tc.json == nil && tc.regex == nil && tc.semanticVersioning == nil && tc.url == nil {
 				// If the version changed
-				if previousStatus.GetDeployedVersion() != tc.lookup.Status.GetDeployedVersion() {
+				if previousStatus.DeployedVersion() != tc.lookup.Status.DeployedVersion() {
 					// then so should the timestamp
-					if previousStatus.GetDeployedVersionTimestamp() == tc.lookup.Status.GetDeployedVersionTimestamp() {
+					if previousStatus.DeployedVersionTimestamp() == tc.lookup.Status.DeployedVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
+							previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
 					}
 					// otherwise, the timestamp should remain unchanged
-				} else if previousStatus.GetDeployedVersionTimestamp() != tc.lookup.Status.GetDeployedVersionTimestamp() {
+				} else if previousStatus.DeployedVersionTimestamp() != tc.lookup.Status.DeployedVersionTimestamp() {
 					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
+						previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
 				}
 				// If the overrides are not nil
 			} else {
 				// The timestamp shouldn't change
-				if previousStatus.GetDeployedVersionTimestamp() != tc.lookup.Status.GetDeployedVersionTimestamp() {
+				if previousStatus.DeployedVersionTimestamp() != tc.lookup.Status.DeployedVersionTimestamp() {
 					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.GetDeployedVersionTimestamp(), tc.lookup.Status.GetDeployedVersionTimestamp())
+						previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
 				}
 			}
 		})

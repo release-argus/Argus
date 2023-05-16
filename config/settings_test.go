@@ -83,101 +83,101 @@ func TestSettings_GetString(t *testing.T) {
 		getFuncPtr   func() *string
 	}{
 		"log.level hard default": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, want: "INFO",
 			nilConfig: true,
 			configPtr: &settings.Log.Level,
 		},
 		"log.level config": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, want: "DEBUG",
 		},
 		"log.level flag": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, flagVal: stringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"data.database-file hard default": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, want: "data/argus.db",
 			nilConfig: true, configPtr: &settings.Data.DatabaseFile,
 		},
 		"data.database-file config": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, want: "somewhere.db",
 		},
 		"data.database-file flag": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, flagVal: stringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"web.listen-host hard default": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, want: "0.0.0.0",
 			nilConfig: true, configPtr: &settings.Web.ListenHost,
 		},
 		"web.listen-host config": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, want: "test",
 		},
 		"web.listen-host flag": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, flagVal: stringPtr("127.0.0.1"),
 			want: "127.0.0.1",
 		},
 		"web.listen-port hard default": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, want: "8080",
 			nilConfig: true, configPtr: &settings.Web.ListenPort,
 		},
 		"web.listen-port config": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, want: "123",
 		},
 		"web.listen-port flag": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, flagVal: stringPtr("54321"),
 			want: "54321",
 		},
 		"web.cert-file hard default": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, want: "<nil>",
 			nilConfig: true, configPtr: &settings.Web.CertFile,
 		},
 		"web.cert-file config": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, want: "../README.md",
 		},
 		"web.cert-file flag": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, flagVal: stringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.pkey-file hard default": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, want: "<nil>",
 			nilConfig: true, configPtr: &settings.Web.KeyFile,
 		},
 		"web.pkey-file config": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, want: "../LICENSE",
 		},
 		"web.pkey-file flag": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, flagVal: stringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.route-prefix hard default": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, want: "/",
 			nilConfig: true, configPtr: &settings.Web.RoutePrefix,
 		},
 		"web.route-prefix config": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, want: "/something",
 		},
 		"web.route-prefix flag": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, flagVal: stringPtr("/flag"),
 			want: "/flag",
 		},
@@ -356,16 +356,16 @@ func TestSettings_GetBool(t *testing.T) {
 		getFuncPtr func() *bool
 	}{
 		"log.timestamps hard default": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps,
 			want:       "false",
 			nilConfig:  true, configPtr: &settings.Log.Timestamps},
 		"log.timestamps config": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps,
 			want:       "true"},
 		"log.timestamps flag": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps, flagVal: boolPtr(true),
 			want: "true"},
 	}
@@ -403,7 +403,7 @@ func TestSettings_GetBool(t *testing.T) {
 	}
 }
 
-func TestSettings_GetWebFileNotExist(t *testing.T) {
+func TestSettings_GetWebFile_NotExist(t *testing.T) {
 	// GIVEN strings that point to files that don't exist
 	settings := Settings{}
 	tests := map[string]struct {
@@ -413,25 +413,25 @@ func TestSettings_GetWebFileNotExist(t *testing.T) {
 		want      string
 	}{
 		"hard default cert file": {
-			getFunc: settings.GetWebCertFile},
+			getFunc: settings.WebCertFile},
 		"config cert file": {
 			file:      "cert_file_that_shouldnt_exist.hope",
 			changeVar: &settings.Web.CertFile,
-			getFunc:   settings.GetWebCertFile},
+			getFunc:   settings.WebCertFile},
 		"flag cert file": {
 			file:      "cert_file_that_shouldnt_exist.hope",
 			changeVar: &WebCertFile,
-			getFunc:   settings.GetWebCertFile},
+			getFunc:   settings.WebCertFile},
 		"hard default pkey file": {
-			getFunc: settings.GetWebKeyFile},
+			getFunc: settings.WebKeyFile},
 		"config pkey file": {
 			file:      "pkey_file_that_shouldnt_exist.hope",
 			changeVar: &settings.Web.KeyFile,
-			getFunc:   settings.GetWebKeyFile},
+			getFunc:   settings.WebKeyFile},
 		"flag pkey file": {
 			file:      "pkey_file_that_shouldnt_exist.hope",
 			changeVar: &WebPKeyFile,
-			getFunc:   settings.GetWebKeyFile},
+			getFunc:   settings.WebKeyFile},
 	}
 
 	for name, tc := range tests {

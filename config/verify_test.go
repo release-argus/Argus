@@ -71,7 +71,7 @@ func TestConfig_CheckValues(t *testing.T) {
 		"invalid Defaults": {
 			config: &Config{
 				Defaults: Defaults{
-					Service: service.ServiceDefaults{
+					Service: service.Defaults{
 						Options: *opt.NewDefaults("1x", nil)}}},
 			errRegex: []string{
 				`^defaults:$`,

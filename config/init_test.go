@@ -37,7 +37,7 @@ func TestConfig_Load(t *testing.T) {
 			got:  config.Defaults.Service.Options.Interval,
 			want: "123s"},
 		"Notify.discord.username": {
-			got:  config.Defaults.Notify["slack"].GetSelfParam("title"),
+			got:  config.Defaults.Notify["slack"].GetParam("title"),
 			want: "defaultTitle"},
 		"WebHook.Delay": {
 			got:  config.Defaults.WebHook.Delay,

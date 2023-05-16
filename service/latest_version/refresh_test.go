@@ -339,11 +339,11 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 func TestLookup_Refresh(t *testing.T) {
 	testURL := testLookup(true, true)
 	testURL.Query(true, &util.LogFrom{})
-	testVersionURL := testURL.Status.GetLatestVersion()
+	testVersionURL := testURL.Status.LatestVersion()
 	testGitHub := testLookup(false, false)
 	testGitHub.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
 	testGitHub.Query(true, &util.LogFrom{})
-	testVersionGitHub := testGitHub.Status.GetLatestVersion()
+	testVersionGitHub := testGitHub.Status.LatestVersion()
 
 	// GIVEN a Lookup and various json strings to override parts of it
 	tests := map[string]struct {
@@ -472,25 +472,25 @@ func TestLookup_Refresh(t *testing.T) {
 				t.Errorf("expected version %q, not %q", tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
-			if previousStatus.GetLatestVersionTimestamp() != "" {
+			if previousStatus.LatestVersionTimestamp() != "" {
 				// If the possible query-changing overrides are nil
 				if tc.require == nil && tc.semanticVersioning == nil && tc.url == nil && tc.urlCommands == nil {
 					// The timestamp should change only if the version changed
-					if previousStatus.GetLatestVersion() != tc.previous.Status.GetLatestVersion() &&
-						previousStatus.GetLatestVersionTimestamp() == tc.previous.Status.GetLatestVersionTimestamp() {
+					if previousStatus.LatestVersion() != tc.previous.Status.LatestVersion() &&
+						previousStatus.LatestVersionTimestamp() == tc.previous.Status.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
 						// The timestamp shouldn't change as the version didn't change
-					} else if previousStatus.GetLatestVersionTimestamp() != tc.previous.Status.GetLatestVersionTimestamp() {
+					} else if previousStatus.LatestVersionTimestamp() != tc.previous.Status.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
 					}
 					// If the overrides are not nil
 				} else {
 					// The timestamp shouldn't change
-					if previousStatus.GetLatestVersionTimestamp() != tc.previous.Status.GetLatestVersionTimestamp() {
+					if previousStatus.LatestVersionTimestamp() != tc.previous.Status.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.GetLatestVersionTimestamp(), tc.previous.Status.GetLatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
 					}
 				}
 			}
@@ -913,7 +913,7 @@ func TestLookup_updateFromRefresh(t *testing.T) {
 			tc.now.Status.ServiceID = &name
 			tc.previous.Status.ServiceID = &name
 			tc.want.Status.ServiceID = &name
-			expectNewLatestVersion := tc.previous.Status.GetLatestVersion() != tc.want.Status.GetLatestVersion()
+			expectNewLatestVersion := tc.previous.Status.LatestVersion() != tc.want.Status.LatestVersion()
 
 			// WHEN we call updateFromRefresh
 			tc.previous.updateFromRefresh(tc.now, tc.changingOverrides)
@@ -934,9 +934,9 @@ func TestLookup_updateFromRefresh(t *testing.T) {
 					tc.want.GitHubData.ETag(), tc.previous.GitHubData.ETag())
 			}
 			// LastQueried copied over when expected
-			if tc.previous.Status.GetLastQueried() != tc.want.Status.GetLastQueried() {
+			if tc.previous.Status.LastQueried() != tc.want.Status.LastQueried() {
 				t.Errorf("expected LastQueried %q, not %q",
-					tc.want.Status.GetLastQueried(), tc.previous.Status.GetLastQueried())
+					tc.want.Status.LastQueried(), tc.previous.Status.LastQueried())
 			}
 			// Docker queryToken copied over when expected
 			if tc.want.Require == nil && tc.previous.Require != nil ||
@@ -961,9 +961,9 @@ func TestLookup_updateFromRefresh(t *testing.T) {
 				}
 			}
 			// latest_version copied over when expected
-			if tc.want.Status.GetLatestVersion() != tc.previous.Status.GetLatestVersion() {
+			if tc.want.Status.LatestVersion() != tc.previous.Status.LatestVersion() {
 				t.Errorf("expected LatestVersion %q, not %q",
-					tc.want.Status.GetLatestVersion(), tc.previous.Status.GetLatestVersion())
+					tc.want.Status.LatestVersion(), tc.previous.Status.LatestVersion())
 			} else if expectNewLatestVersion {
 				if len(*tc.previous.Status.DatabaseChannel) != 1 {
 					t.Errorf("expected 1 message on database channel, not %d",

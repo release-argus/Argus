@@ -210,7 +210,7 @@ func (c *Config) Save() {
 					removed = true
 					linesRemoved++
 				} else {
-					deepestRemovable := util.GetIndentation(lines[index], c.Settings.Indentation)
+					deepestRemovable := util.Indentation(lines[index], c.Settings.Indentation)
 					if index != 0 &&
 						strings.HasSuffix(lines[index-1], ":") &&
 						strings.HasPrefix(lines[index-1], deepestRemovable) {

@@ -111,7 +111,7 @@ func (c *Command) ApplyTemplate(serviceStatus *svcstatus.Status) (command Comman
 
 	command = Command(make([]string, len(*c)))
 	copy(command, *c)
-	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.GetLatestVersion()}
+	serviceInfo := util.ServiceInfo{LatestVersion: serviceStatus.LatestVersion()}
 	for i := range command {
 		command[i] = util.TemplateString(command[i], serviceInfo)
 	}

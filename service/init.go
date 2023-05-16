@@ -34,8 +34,8 @@ func LogInit(log *util.JLog) {
 
 // Init will initialise the Service metric.
 func (s *Service) Init(
-	defaults *ServiceDefaults,
-	hardDefaults *ServiceDefaults,
+	defaults *Defaults,
+	hardDefaults *Defaults,
 
 	rootNotifyConfig *shoutrrr.SliceDefaults,
 	notifyDefaults *shoutrrr.SliceDefaults,
@@ -98,18 +98,18 @@ func (s *Service) Init(
 
 }
 
-// GetServiceInfo returns info about the service.
-func (s *Service) GetServiceInfo() *util.ServiceInfo {
+// ServiceInfo returns info about the service.
+func (s *Service) ServiceInfo() *util.ServiceInfo {
 	return &util.ServiceInfo{
 		ID:            s.ID,
-		URL:           s.LatestVersion.GetServiceURL(true),
+		URL:           s.LatestVersion.ServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
-		LatestVersion: s.Status.GetLatestVersion(),
+		LatestVersion: s.Status.LatestVersion(),
 	}
 }
 
-// GetIconURL returns the URL Icon for the Service.
-func (s *Service) GetIconURL() (icon string) {
+// IconURL returns the URL Icon for the Service.
+func (s *Service) IconURL() (icon string) {
 	// Service.Icon
 	if strings.HasPrefix(s.Dashboard.Icon, "http") {
 		icon = s.Dashboard.Icon

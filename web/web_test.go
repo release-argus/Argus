@@ -591,7 +591,7 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: svc.Status.GetLatestVersion(),
+					LatestVersion: svc.Status.LatestVersion(),
 				}
 			}
 			sends := 1
@@ -693,10 +693,10 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 			// Check version was skipped
 			if util.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
 				if tc.wantSkipMessage &&
-					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.GetLatestVersion() {
+					messages[0].ServiceData.Status.ApprovedVersion != "SKIP_"+svc.Status.LatestVersion() {
 					t.Errorf("LatestVersion %q wasn't skipped. approved is %q\ngot=%q",
-						svc.Status.GetLatestVersion(),
-						svc.Status.GetApprovedVersion(),
+						svc.Status.LatestVersion(),
+						svc.Status.ApprovedVersion(),
 						messages[0].ServiceData.Status.ApprovedVersion)
 				}
 			} else {
@@ -754,16 +754,16 @@ func TestWebSocketApprovalsVERSION(t *testing.T) {
 					if !receivedForAnAction {
 						//  IF we're expecting a message about approvedVersion
 						if tc.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
-							if message.ServiceData.Status.ApprovedVersion != svc.Status.GetLatestVersion() {
+							if message.ServiceData.Status.ApprovedVersion != svc.Status.LatestVersion() {
 								t.Fatalf("expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-									message, message.ServiceData.Status.ApprovedVersion, svc.Status.GetLatestVersion())
+									message, message.ServiceData.Status.ApprovedVersion, svc.Status.LatestVersion())
 							}
 							continue
 						}
 						if tc.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
-							if message.ServiceData.Status.DeployedVersion != svc.Status.GetLatestVersion() {
+							if message.ServiceData.Status.DeployedVersion != svc.Status.LatestVersion() {
 								t.Fatalf("expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-									message, message.ServiceData.Status.DeployedVersion, svc.Status.GetLatestVersion())
+									message, message.ServiceData.Status.DeployedVersion, svc.Status.LatestVersion())
 							}
 							continue
 						}
@@ -886,7 +886,7 @@ func TestWebSocketApprovalsACTIONS(t *testing.T) {
 				ServiceData: &api_type.ServiceSummary{ID: tc.serviceID}}
 			if svc != nil {
 				msg.ServiceData.Status = &api_type.Status{
-					LatestVersion: svc.Status.GetLatestVersion(),
+					LatestVersion: svc.Status.LatestVersion(),
 				}
 			}
 			data, _ := json.Marshal(msg)
@@ -1021,9 +1021,9 @@ func TestWebSocketFlagsINIT(t *testing.T) {
 		t.Fatalf("Didn't get any FlagsData in the message\n%#v",
 			message)
 	}
-	if message.FlagsData.LogLevel != mainCfg.Settings.GetLogLevel() {
+	if message.FlagsData.LogLevel != mainCfg.Settings.LogLevel() {
 		t.Errorf("Expected FlagsData.LogLevel to be %q, got %q\n%s",
-			mainCfg.Settings.GetLogLevel(), message.FlagsData.LogLevel, raw)
+			mainCfg.Settings.LogLevel(), message.FlagsData.LogLevel, raw)
 	}
 }
 
@@ -1150,9 +1150,9 @@ func TestWebSocketConfigINIT(t *testing.T) {
 							message.ConfigData.Settings.Log.Level == nil {
 							t.Errorf("Didn't receive ConfigData.Settings.Log.Level from\n%s",
 								raw)
-						} else if *message.ConfigData.Settings.Log.Level != mainCfg.Settings.GetLogLevel() {
+						} else if *message.ConfigData.Settings.Log.Level != mainCfg.Settings.LogLevel() {
 							t.Errorf("Expected ConfigData.Settings.Log.Level to be %q, got %q\n%s",
-								mainCfg.Settings.GetLogLevel(), *message.ConfigData.Settings.Log.Level, raw)
+								mainCfg.Settings.LogLevel(), *message.ConfigData.Settings.Log.Level, raw)
 						} else {
 							t.Logf("1. SETTINGS: %s", raw)
 						}

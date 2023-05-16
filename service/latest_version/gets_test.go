@@ -119,7 +119,7 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	}
 }
 
-func TestLookup_GetServiceURL(t *testing.T) {
+func TestLookup_ServiceURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		serviceType   string
@@ -205,7 +205,7 @@ func TestLookup_GetServiceURL(t *testing.T) {
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called
-			got := lookup.GetServiceURL(tc.ignoreWebURL)
+			got := lookup.ServiceURL(tc.ignoreWebURL)
 
 			// THEN the function returns the correct result
 			if got != tc.want {

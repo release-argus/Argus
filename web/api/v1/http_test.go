@@ -279,9 +279,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 		"latest version, no changes": {
 			params: map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.GetLatestVersion()),
+				testSVC.Status.LatestVersion()),
 			wantStatusCode:    http.StatusOK,
-			wantLatestVersion: testSVC.Status.GetLatestVersion(),
+			wantLatestVersion: testSVC.Status.LatestVersion(),
 		},
 		"latest version, different regex doesn't update service version": {
 			params: map[string]string{
@@ -316,7 +316,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 				"json":                "foo.bar.version",
 				"allow_invalid_certs": "true"},
 			wantBody: fmt.Sprintf(`\{"version":%q`,
-				testSVC.Status.GetDeployedVersion()),
+				testSVC.Status.DeployedVersion()),
 			wantStatusCode:      http.StatusOK,
 			wantDeployedVersion: "",
 		},
@@ -324,9 +324,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			deployedVersion: true,
 			params:          map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.GetDeployedVersion()),
+				testSVC.Status.DeployedVersion()),
 			wantStatusCode:      http.StatusOK,
-			wantDeployedVersion: testSVC.Status.GetDeployedVersion(),
+			wantDeployedVersion: testSVC.Status.DeployedVersion(),
 		},
 		"deployed version, different json doesn't update service version": {
 			deployedVersion: true,
@@ -417,14 +417,14 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 					tc.wantBody, got)
 			}
 			// AND the LatestVersion is expected
-			if svc.Status.GetLatestVersion() != tc.wantLatestVersion {
+			if svc.Status.LatestVersion() != tc.wantLatestVersion {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.GetLatestVersion())
+					tc.wantLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected
-			if svc.Status.GetDeployedVersion() != tc.wantDeployedVersion {
+			if svc.Status.DeployedVersion() != tc.wantDeployedVersion {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}
@@ -800,17 +800,17 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 			}
 			// AND the LatestVersion is expected
 			re = regexp.MustCompile(tc.wantLatestVersion)
-			match = re.MatchString(svc.Status.GetLatestVersion())
+			match = re.MatchString(svc.Status.LatestVersion())
 			if !match {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.GetLatestVersion())
+					tc.wantLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected
 			re = regexp.MustCompile(tc.wantDeployedVersion)
-			match = re.MatchString(svc.Status.GetDeployedVersion())
+			match = re.MatchString(svc.Status.DeployedVersion())
 			if !match {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}

@@ -64,7 +64,7 @@ func ServiceTest(
 				fmt.Sprintf(
 					"No version matching the conditions specified could be found for %q at %q\n%s",
 					*flag,
-					service.LatestVersion.GetServiceURL(true),
+					service.LatestVersion.ServiceURL(true),
 					helpMsg,
 				),
 				logFrom,

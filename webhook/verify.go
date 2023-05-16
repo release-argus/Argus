@@ -125,7 +125,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 	}
 
 	// url
-	if util.GetFirstNonDefault(
+	if util.FirstNonDefault(
 		w.URL,
 		w.Main.URL,
 		w.Defaults.URL,
@@ -135,7 +135,7 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 	}
 	// secret
 	if w.GetSecret() == "" {
-		errs = fmt.Errorf("%s%ssecret: <required> (here, or in the root webhook.%s, or in defaults)\\",
+		errs = fmt.Errorf("%s%ssecret: <required> (here, in the root webhook.%s, or in defaults)\\",
 			util.ErrorToString(errs), prefix, w.ID)
 	}
 

@@ -201,19 +201,19 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 
 	// THEN the Status is as expected
 	// ApprovedVersion
-	got := status.GetApprovedVersion()
+	got := status.ApprovedVersion()
 	if got != approvedVersion {
 		t.Errorf("ApprovedVersion not set to %s. Got %s",
 			approvedVersion, got)
 	}
 	// LatestVersion
-	got = status.GetLatestVersion()
+	got = status.LatestVersion()
 	if got != latestVersion {
 		t.Errorf("LatestVersion not set to %s. Got %s",
 			latestVersion, got)
 	}
 	// DeployedVersion
-	got = status.GetDeployedVersion()
+	got = status.DeployedVersion()
 	if got != deployedVersion {
 		t.Errorf("DeployedVersion not set to %s. Got %s",
 			deployedVersion, got)
@@ -274,20 +274,20 @@ func TestStatus_DeployedVersion(t *testing.T) {
 			status.SetDeployedVersion(tc.deploying, false)
 
 			// THEN DeployedVersion is set to this version
-			if status.GetDeployedVersion() != tc.deployedVersion {
+			if status.DeployedVersion() != tc.deployedVersion {
 				t.Errorf("Expected DeployedVersion to be set to %q, not %q",
-					tc.deployedVersion, status.GetDeployedVersion())
+					tc.deployedVersion, status.DeployedVersion())
 			}
-			if status.GetApprovedVersion() != tc.approvedVersion {
+			if status.ApprovedVersion() != tc.approvedVersion {
 				t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
-					tc.approvedVersion, status.GetApprovedVersion())
+					tc.approvedVersion, status.ApprovedVersion())
 			}
-			if status.GetLatestVersion() != tc.latestVersion {
+			if status.LatestVersion() != tc.latestVersion {
 				t.Errorf("Expected LatestVersion to be set to %q, not %q",
-					tc.latestVersion, status.GetLatestVersion())
+					tc.latestVersion, status.LatestVersion())
 			}
 			// and the current time
-			d, _ := time.Parse(time.RFC3339, status.GetDeployedVersionTimestamp())
+			d, _ := time.Parse(time.RFC3339, status.DeployedVersionTimestamp())
 			since := time.Since(d)
 			if since > time.Second {
 				t.Errorf("DeployedVersionTimestamp was %v ago, not recent enough!",
@@ -333,22 +333,22 @@ func TestStatus_LatestVersion(t *testing.T) {
 			status.SetLatestVersion(tc.deploying, false)
 
 			// THEN LatestVersion is set to this version
-			if status.GetLatestVersion() != tc.latestVersion {
+			if status.LatestVersion() != tc.latestVersion {
 				t.Errorf("Expected LatestVersion to be set to %q, not %q",
-					tc.latestVersion, status.GetLatestVersion())
+					tc.latestVersion, status.LatestVersion())
 			}
-			if status.GetDeployedVersion() != tc.deployedVersion {
+			if status.DeployedVersion() != tc.deployedVersion {
 				t.Errorf("Expected DeployedVersion to be set to %q, not %q",
-					tc.deployedVersion, status.GetDeployedVersion())
+					tc.deployedVersion, status.DeployedVersion())
 			}
-			if status.GetApprovedVersion() != tc.approvedVersion {
+			if status.ApprovedVersion() != tc.approvedVersion {
 				t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
-					tc.approvedVersion, status.GetApprovedVersion())
+					tc.approvedVersion, status.ApprovedVersion())
 			}
 			// and the current time
-			if status.GetLatestVersionTimestamp() != status.GetLastQueried() {
+			if status.LatestVersionTimestamp() != status.LastQueried() {
 				t.Errorf("LatestVersionTimestamp should've been set to LastQueried \n%q, not \n%q",
-					status.GetLastQueried(), status.GetLatestVersionTimestamp())
+					status.LastQueried(), status.LatestVersionTimestamp())
 			}
 		})
 	}

@@ -163,33 +163,33 @@ func TestDBQueryService(t *testing.T) {
 		serviceName,
 		[]dbtype.Cell{
 			{Column: "id", Value: serviceName},
-			{Column: "latest_version", Value: (*svc).Status.GetLatestVersion()},
-			{Column: "latest_version_timestamp", Value: (*svc).Status.GetLatestVersionTimestamp()},
-			{Column: "deployed_version", Value: (*svc).Status.GetDeployedVersion()},
-			{Column: "deployed_version_timestamp", Value: (*svc).Status.GetDeployedVersionTimestamp()},
-			{Column: "approved_version", Value: (*svc).Status.GetApprovedVersion()}})
+			{Column: "latest_version", Value: (*svc).Status.LatestVersion()},
+			{Column: "latest_version_timestamp", Value: (*svc).Status.LatestVersionTimestamp()},
+			{Column: "deployed_version", Value: (*svc).Status.DeployedVersion()},
+			{Column: "deployed_version_timestamp", Value: (*svc).Status.DeployedVersionTimestamp()},
+			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}})
 
 	// THEN that data can be queried
 	got := queryRow(t, api.db, serviceName)
-	if (*svc).Status.GetLatestVersion() != got.GetLatestVersion() {
+	if (*svc).Status.LatestVersion() != got.LatestVersion() {
 		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.GetLatestVersion(), got.GetLatestVersion())
+			(*svc).Status.LatestVersion(), got.LatestVersion())
 	}
-	if (*svc).Status.GetLatestVersionTimestamp() != got.GetLatestVersionTimestamp() {
+	if (*svc).Status.LatestVersionTimestamp() != got.LatestVersionTimestamp() {
 		t.Errorf("LatestVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.GetLatestVersionTimestamp(), got.GetLatestVersionTimestamp())
+			(*svc).Status.LatestVersionTimestamp(), got.LatestVersionTimestamp())
 	}
-	if (*svc).Status.GetDeployedVersion() != got.GetDeployedVersion() {
+	if (*svc).Status.DeployedVersion() != got.DeployedVersion() {
 		t.Errorf("DeployedVersion %q was not pushed to the db. Got %q\n%v\n%s",
-			(*svc).Status.GetDeployedVersion(), got.GetDeployedVersion(), got, (*svc).Status.String())
+			(*svc).Status.DeployedVersion(), got.DeployedVersion(), got, (*svc).Status.String())
 	}
-	if (*svc).Status.GetDeployedVersionTimestamp() != got.GetDeployedVersionTimestamp() {
+	if (*svc).Status.DeployedVersionTimestamp() != got.DeployedVersionTimestamp() {
 		t.Errorf("DeployedVersionTimestamp %q was not pushed to the db. Got %q",
-			(*svc).Status.GetDeployedVersionTimestamp(), got.GetDeployedVersionTimestamp())
+			(*svc).Status.DeployedVersionTimestamp(), got.DeployedVersionTimestamp())
 	}
-	if (*svc).Status.GetApprovedVersion() != got.GetApprovedVersion() {
+	if (*svc).Status.ApprovedVersion() != got.ApprovedVersion() {
 		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
-			(*svc).Status.GetApprovedVersion(), got.GetApprovedVersion())
+			(*svc).Status.ApprovedVersion(), got.ApprovedVersion())
 	}
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -215,11 +215,11 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 	for id, svc := range api.config.Service {
 		sqlStmt += fmt.Sprintf(" (%q, %q, %q, %q, %q, %q),",
 			id,
-			svc.Status.GetLatestVersion(),
-			svc.Status.GetLatestVersionTimestamp(),
-			svc.Status.GetDeployedVersion(),
-			svc.Status.GetDeployedVersionTimestamp(),
-			svc.Status.GetApprovedVersion(),
+			svc.Status.LatestVersion(),
+			svc.Status.LatestVersionTimestamp(),
+			svc.Status.DeployedVersion(),
+			svc.Status.DeployedVersionTimestamp(),
+			svc.Status.ApprovedVersion(),
 		)
 	}
 	_, err := api.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
@@ -305,7 +305,7 @@ func TestAPI_Run(t *testing.T) {
 	want.SetApprovedVersion("0.0.1", false)
 	want.SetDeployedVersion("0.0.0", false)
 	want.SetDeployedVersionTimestamp("2020-01-01T01:01:01Z")
-	if got.GetLatestVersion() != want.GetLatestVersion() {
+	if got.LatestVersion() != want.LatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
 			cell.Column, cell.Value, got, want.String())
 	}
@@ -340,11 +340,11 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 			ServiceID: id,
 			Cells: []dbtype.Cell{
 				{Column: "id", Value: id},
-				{Column: "latest_version", Value: wantStatus[index].GetLatestVersion()},
-				{Column: "latest_version_timestamp", Value: wantStatus[index].GetLatestVersionTimestamp()},
-				{Column: "deployed_version", Value: wantStatus[index].GetDeployedVersion()},
-				{Column: "deployed_version_timestamp", Value: wantStatus[index].GetDeployedVersionTimestamp()},
-				{Column: "approved_version", Value: wantStatus[index].GetApprovedVersion()}}}
+				{Column: "latest_version", Value: wantStatus[index].LatestVersion()},
+				{Column: "latest_version_timestamp", Value: wantStatus[index].LatestVersionTimestamp()},
+				{Column: "deployed_version", Value: wantStatus[index].DeployedVersion()},
+				{Column: "deployed_version_timestamp", Value: wantStatus[index].DeployedVersionTimestamp()},
+				{Column: "approved_version", Value: wantStatus[index].ApprovedVersion()}}}
 		// Clear the Status in the Config
 		svc.Status = *svcstatus.New(
 			svc.Status.AnnounceChannel, svc.Status.DatabaseChannel, svc.Status.SaveChannel,
@@ -361,25 +361,25 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	// THEN the Status in the Config is updated
 	for i := range wantStatus {
 		row := queryRow(t, api.db, *wantStatus[i].ServiceID)
-		if row.GetLatestVersion() != wantStatus[i].GetLatestVersion() {
+		if row.LatestVersion() != wantStatus[i].LatestVersion() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
-				"latest_version", row.GetLatestVersion(), row, wantStatus[i].String())
+				"latest_version", row.LatestVersion(), row, wantStatus[i].String())
 		}
-		if row.GetLatestVersionTimestamp() != wantStatus[i].GetLatestVersionTimestamp() {
+		if row.LatestVersionTimestamp() != wantStatus[i].LatestVersionTimestamp() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
-				"latest_version_timestamp", row.GetLatestVersionTimestamp(), row, wantStatus[i].String())
+				"latest_version_timestamp", row.LatestVersionTimestamp(), row, wantStatus[i].String())
 		}
-		if row.GetDeployedVersion() != wantStatus[i].GetDeployedVersion() {
+		if row.DeployedVersion() != wantStatus[i].DeployedVersion() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
-				"deployed_version", row.GetDeployedVersion(), row, wantStatus[i].String())
+				"deployed_version", row.DeployedVersion(), row, wantStatus[i].String())
 		}
-		if row.GetDeployedVersionTimestamp() != wantStatus[i].GetDeployedVersionTimestamp() {
+		if row.DeployedVersionTimestamp() != wantStatus[i].DeployedVersionTimestamp() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
-				"deployed_version_timestamp", row.GetDeployedVersionTimestamp(), row, wantStatus[i].String())
+				"deployed_version_timestamp", row.DeployedVersionTimestamp(), row, wantStatus[i].String())
 		}
-		if row.GetApprovedVersion() != wantStatus[i].GetApprovedVersion() {
+		if row.ApprovedVersion() != wantStatus[i].ApprovedVersion() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
-				"approved_version", row.GetApprovedVersion(), row, wantStatus[i].String())
+				"approved_version", row.ApprovedVersion(), row, wantStatus[i].String())
 		}
 	}
 }

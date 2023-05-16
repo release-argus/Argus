@@ -88,8 +88,8 @@ func testServiceGitHub(id string) *Service {
 		Options: *opt.New(
 			boolPtr(true), "5s", boolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
-		Defaults:     &ServiceDefaults{},
-		HardDefaults: &ServiceDefaults{},
+		Defaults:     &Defaults{},
+		HardDefaults: &Defaults{},
 	}
 	// Status
 	svc.Status = *svcstatus.New(
@@ -103,7 +103,7 @@ func testServiceGitHub(id string) *Service {
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 
 	svc.Init(
-		&ServiceDefaults{}, &ServiceDefaults{},
+		&Defaults{}, &Defaults{},
 		nil, nil, nil,
 		nil, nil, nil)
 	svc.Status.ServiceID = &svc.ID
@@ -130,8 +130,8 @@ func testServiceURL(id string) *Service {
 		Options: *opt.New(
 			boolPtr(true), "5s", boolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
-		Defaults: &ServiceDefaults{},
-		HardDefaults: &ServiceDefaults{
+		Defaults: &Defaults{},
+		HardDefaults: &Defaults{
 			DeployedVersionLookup: deployedver.LookupDefaults{},
 			Status:                svcstatus.StatusDefaults{}}}
 	svc.HardDefaults.Status.AnnounceChannel = svc.Status.AnnounceChannel

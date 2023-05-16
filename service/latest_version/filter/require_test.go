@@ -91,6 +91,58 @@ func TestRequire_Init(t *testing.T) {
 	}
 }
 
+func TestRequireDefaults_CheckValues(t *testing.T) {
+	// GIVEN a RequireDefaults
+	tests := map[string]struct {
+		docker   DockerCheckDefaults
+		errRegex []string
+	}{
+		"valid": {
+			docker: *NewDockerCheckDefaults(
+				"ghcr", "", "", "", "", nil),
+			errRegex: []string{},
+		},
+		"invalid docker": {
+			docker: *NewDockerCheckDefaults(
+				"foo", "", "", "", "", nil),
+			errRegex: []string{
+				`^require:$`,
+				`^  docker:$`,
+				`^    type: .* <invalid>`},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			require := RequireDefaults{
+				Docker: tc.docker}
+
+			// WHEN CheckValues is called on it
+			err := require.CheckValues("")
+
+			// THEN err is expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
+			}
+		})
+	}
+}
+
 func TestRequire_CheckValues(t *testing.T) {
 	// GIVEN a Require
 	tests := map[string]struct {

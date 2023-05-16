@@ -33,7 +33,7 @@ func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_type
 
 	// Service Params
 	for key := range s.Params {
-		(*params)[key] = s.GetSelfParam(key)
+		(*params)[key] = s.GetParam(key)
 	}
 
 	// Main Params
@@ -41,25 +41,25 @@ func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_type
 		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[key] = s.Main.GetSelfParam(key)
+			(*params)[key] = s.Main.GetParam(key)
 		}
 	}
 
 	// Default Params
 	for key := range s.Defaults.Params {
 		_, exist := (*params)[key]
-		// Only overwrite if it doesn't exist in the level below
+		// Only overwrite if it doesn't exist in the levels below
 		if !exist {
-			(*params)[key] = s.Defaults.GetSelfParam(key)
+			(*params)[key] = s.Defaults.GetParam(key)
 		}
 	}
 
 	// HardDefault Params
 	for key := range s.HardDefaults.Params {
 		_, exist := (*params)[key]
-		// Only overwrite if it doesn't exist in the level below
+		// Only overwrite if it doesn't exist in the levels below
 		if !exist {
-			(*params)[key] = s.HardDefaults.GetSelfParam(key)
+			(*params)[key] = s.HardDefaults.GetParam(key)
 		}
 	}
 
@@ -71,7 +71,7 @@ func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_type
 	return
 }
 
-func (s *Shoutrrr) GetURL() (url string) {
+func (s *Shoutrrr) BuildURL() (url string) {
 	switch s.GetType() {
 	case "bark":
 		// bark://:devicekey@host:port/[path]
@@ -293,7 +293,7 @@ func (s *Shoutrrr) Send(
 		time.Sleep(s.GetDelayDuration())
 	}
 
-	url := s.GetURL()
+	url := s.BuildURL()
 	sender, err := shoutrrr_lib.CreateSender(url)
 	if err != nil {
 		return fmt.Errorf("failed to create Shoutrrr sender: %w", err)
@@ -304,7 +304,7 @@ func (s *Shoutrrr) Send(
 	}
 	toSend := message
 	if message == "" {
-		toSend = s.GetMessage(serviceInfo)
+		toSend = s.Message(serviceInfo)
 	}
 
 	combinedErrs := make(map[string]int)
@@ -356,7 +356,7 @@ func (s *Shoutrrr) Send(
 		// Give up after MaxTries.
 		if triesLeft == 0 {
 			msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
-				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
+				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
 			s.Failed.Set(s.ID, &failed)

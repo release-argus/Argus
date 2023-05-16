@@ -131,7 +131,7 @@ func (w *WebHook) Send(
 // try to send a WebHook to its URL with the body SHA1 and SHA256 encrypted with its Secret.
 // It also simulates other GitHub headers and returns when an error is encountered.
 func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
-	req := w.GetRequest()
+	req := w.BuildRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
 		jLog.Error(err, *logFrom, true)

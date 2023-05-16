@@ -54,7 +54,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			lock.Lock()
 			config.Load(file, &flags, log)
 			lock.Unlock()
-			defer os.Remove(*config.Settings.GetDataDatabaseFile())
+			defer os.Remove(*config.Settings.DataDatabaseFile())
 
 			// THEN it gets the ordering correctly
 			gotOrder := config.Order
@@ -68,7 +68,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 	}
 }
 
-func TestGetIndentationW(t *testing.T) {
+func TestIndentationW(t *testing.T) {
 	// GIVEN lines of varying indentation
 	tests := map[string]struct {
 		input string

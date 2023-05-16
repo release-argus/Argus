@@ -427,16 +427,16 @@ func TestLookup_Track(t *testing.T) {
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			t.Log(string(out))
-			if tc.wantDeployedVersion != tc.lookup.Status.GetDeployedVersion() {
+			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion() {
 				t.Errorf("expected DeployedVersion to be %q after query, not %q",
-					tc.wantDeployedVersion, tc.lookup.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion())
 			}
 			if tc.wantLatestVersion == "" {
 				tc.wantLatestVersion = tc.wantDeployedVersion
 			}
-			if tc.wantLatestVersion != tc.lookup.Status.GetLatestVersion() {
+			if tc.wantLatestVersion != tc.lookup.Status.LatestVersion() {
 				t.Errorf("expected LatestVersion to be %q after query, not %q",
-					tc.wantLatestVersion, tc.lookup.Status.GetLatestVersion())
+					tc.wantLatestVersion, tc.lookup.Status.LatestVersion())
 			}
 			if tc.wantAnnounces != len(*tc.lookup.Status.AnnounceChannel) {
 				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",

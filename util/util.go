@@ -108,8 +108,8 @@ type customComparable interface {
 	bool | int | map[string]string | string | uint
 }
 
-// GetFirstNonNilPtr will return the first pointer in `pointers` that is not nil.
-func GetFirstNonNilPtr[T customComparable](pointers ...*T) *T {
+// FirstNonNilPtr will return the first pointer in `pointers` that is not nil.
+func FirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	for _, pointer := range pointers {
 		if pointer != nil {
 			return pointer
@@ -118,8 +118,8 @@ func GetFirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	return nil
 }
 
-// GetFirstNonDefault will return the first var in `vars` that is not the default.
-func GetFirstNonDefault[T comparable](vars ...T) T {
+// FirstNonDefault will return the first var in `vars` that is not the default.
+func FirstNonDefault[T comparable](vars ...T) T {
 	var fresh T
 	for _, v := range vars {
 		if v != fresh {
@@ -160,12 +160,12 @@ func DefaultOrValue[T comparable](check *T, value T) T {
 	return value
 }
 
-// GetValue will return the value of `ptr` if it's non-nil, otherwise `fallback`.
-func GetValue[T comparable](ptr *T, fallback T) T {
+// ValueOrDefault will return the value of `ptr` if it's non-nil, otherwise `fallback`.
+func ValueOrDefault[T comparable](ptr *T, defaultValue T) T {
 	if ptr != nil {
 		return *ptr
 	}
-	return fallback
+	return defaultValue
 }
 
 // ErrorToString accounts for nil errors, returning an empty string for those
@@ -218,30 +218,6 @@ func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
 		m2[key] = m[key]
 	}
 	return m2
-}
-
-// GetPortFromURL extracts PORT from https://HOST:PORT
-// and uses http/https defaults if there is no port specified
-//
-// If none of the above returns anything, return defaultPort
-func GetPortFromURL(url string, defaultPort string) (convertedPort string) {
-	if strings.HasPrefix(url, "https") {
-		convertedPort = "443"
-		url = strings.TrimPrefix(url, "https://")
-	} else if strings.HasPrefix(url, "http") {
-		convertedPort = "80"
-		url = strings.TrimPrefix(url, "http://")
-	}
-
-	url = strings.Split(url, "/")[0]
-	if strings.Contains(url, ":") {
-		convertedPort = strings.Split(url, ":")[1]
-	}
-
-	if convertedPort == "" {
-		return defaultPort
-	}
-	return convertedPort
 }
 
 // LowercaseStringStringMap will convert all lowercase all keys in the map

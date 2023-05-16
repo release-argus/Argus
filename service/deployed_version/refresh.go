@@ -52,16 +52,16 @@ func (l *Lookup) applyOverrides(
 		&l.Headers,
 		logFrom)
 	// json
-	useJSON := util.GetValue(json, l.JSON)
+	useJSON := util.ValueOrDefault(json, l.JSON)
 	// regex
-	useRegex := util.GetValue(regex, l.Regex)
+	useRegex := util.ValueOrDefault(regex, l.Regex)
 	// semantic_versioning
 	useSemanticVersioning := l.Options.SemanticVersioning
 	if semanticVersioning != nil {
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
 	// url
-	useURL := util.GetValue(url, l.URL)
+	useURL := util.ValueOrDefault(url, l.URL)
 
 	// options
 	options := opt.New(
@@ -143,7 +143,7 @@ func (l *Lookup) Refresh(
 	}
 
 	// Update the deployed version if it has changed.
-	if version != l.Status.GetDeployedVersion() &&
+	if version != l.Status.DeployedVersion() &&
 		// and no overrides that may change a successful query were provided
 		!overrides {
 		announceUpdate = true

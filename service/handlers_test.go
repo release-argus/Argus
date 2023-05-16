@@ -54,11 +54,11 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 			svc.Status.SetLatestVersion(tc.latestVersion, false)
 
 			// WHEN UpdateLatestApproved is called on it
-			want := svc.Status.GetLatestVersion()
+			want := svc.Status.LatestVersion()
 			svc.UpdateLatestApproved()
 
 			// THEN ApprovedVersion becomes LatestVersion
-			got := svc.Status.GetApprovedVersion()
+			got := svc.Status.ApprovedVersion()
 			if got != want {
 				t.Errorf("LatestVersion should have changed to %q not %q",
 					want, got)
@@ -207,22 +207,22 @@ func TestService_UpdatedVersion(t *testing.T) {
 				svc.Status.Fails.WebHook.Set(i, tc.webhookFails[i])
 			}
 			if tc.latestIsDeployed {
-				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
+				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), false)
 			}
 
 			// WHEN UpdatedVersion is called on it
-			startLV := svc.Status.GetLatestVersion()
+			startLV := svc.Status.LatestVersion()
 			svc.UpdatedVersion(true)
 
 			// THEN ApprovedVersion becomes LatestVersion if there's a dvl and commands/webhooks
-			gotAV := svc.Status.GetApprovedVersion()
+			gotAV := svc.Status.ApprovedVersion()
 			if (tc.approvedBecomesLatest && gotAV != startLV) ||
 				(!tc.approvedBecomesLatest && gotAV == startLV) {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
 					startLV, gotAV)
 			}
 			// THEN DeployedVersion becomes LatestVersion if there's no dvl
-			gotDV := svc.Status.GetDeployedVersion()
+			gotDV := svc.Status.DeployedVersion()
 			if (tc.deployedBecomesLatest && gotDV != startLV) ||
 				(!tc.deployedBecomesLatest && gotDV == startLV) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
@@ -318,7 +318,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			svc.DeployedVersionLookup = nil
 
 			// WHEN HandleUpdateActions is called on it
-			want := svc.Status.GetLatestVersion()
+			want := svc.Status.LatestVersion()
 			svc.HandleUpdateActions(true)
 			// wait until all commands/webhooks have run
 			if tc.deployedBecomesLatest {
@@ -380,7 +380,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := svc.Status.GetDeployedVersion()
+			got := svc.Status.DeployedVersion()
 			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
@@ -564,7 +564,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				&svc.ID,
 				&svc.Dashboard.WebURL)
 			if tc.deployedLatest {
-				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
+				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), false)
 			}
 			svc.Command = tc.commands
 			if len(tc.commands) != 0 {
@@ -600,7 +600,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			}
 
 			// WHEN HandleFailedActions is called on it
-			want := svc.Status.GetLatestVersion()
+			want := svc.Status.LatestVersion()
 			svc.HandleFailedActions()
 			// wait until all commands/webhooks have run
 			var actionsRan bool
@@ -635,7 +635,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := svc.Status.GetDeployedVersion()
+			got := svc.Status.DeployedVersion()
 			if (tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
@@ -744,7 +744,7 @@ func TestService_HandleCommand(t *testing.T) {
 			t.Parallel()
 
 			if tc.deployedLatest {
-				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
+				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), false)
 			}
 			svc.Command = tc.commands
 			if len(tc.commands) != 0 {
@@ -770,7 +770,7 @@ func TestService_HandleCommand(t *testing.T) {
 			}
 
 			// WHEN HandleCommand is called on it
-			want := svc.Status.GetLatestVersion()
+			want := svc.Status.LatestVersion()
 			svc.HandleCommand(tc.command)
 			// wait until all commands have run
 			var actionsRan bool
@@ -797,7 +797,7 @@ func TestService_HandleCommand(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := svc.Status.GetDeployedVersion()
+			got := svc.Status.DeployedVersion()
 			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
@@ -916,7 +916,7 @@ func TestService_HandleWebHook(t *testing.T) {
 			t.Parallel()
 
 			if tc.deployedLatest {
-				svc.Status.SetDeployedVersion(svc.Status.GetLatestVersion(), false)
+				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), false)
 			}
 			for k, v := range tc.fails {
 				svc.Status.Fails.WebHook.Set(k, v)
@@ -927,7 +927,7 @@ func TestService_HandleWebHook(t *testing.T) {
 			}
 
 			// WHEN HandleWebHook is called on it
-			want := svc.Status.GetLatestVersion()
+			want := svc.Status.LatestVersion()
 			svc.HandleWebHook(tc.webhook)
 			// wait until all webhooks have run
 			var actionsRan bool
@@ -954,7 +954,7 @@ func TestService_HandleWebHook(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			got := svc.Status.GetDeployedVersion()
+			got := svc.Status.DeployedVersion()
 			if !tc.deployedLatest && ((tc.deployedBecomesLatest && got != want) || (!tc.deployedBecomesLatest && got == want)) {
 				t.Errorf("DeployedVersion should have changed to %q not %q",
 					want, got)
@@ -1027,9 +1027,9 @@ func TestService_HandleSkip(t *testing.T) {
 			svc.HandleSkip(tc.skipVersion)
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
-			if tc.approvedVersion != svc.Status.GetApprovedVersion() {
+			if tc.approvedVersion != svc.Status.ApprovedVersion() {
 				t.Errorf("ApprovedVersion should have changed to %q not %q",
-					tc.approvedVersion, svc.Status.GetApprovedVersion())
+					tc.approvedVersion, svc.Status.ApprovedVersion())
 			}
 			// AND the correct number of changes are announced to the announce channel
 			if tc.prepDelete {

@@ -21,22 +21,17 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// GetOptions map from this Shoutrrr.
-func (s *ShoutrrrBase) GetOptions() *map[string]string {
-	return &s.Options
-}
-
 // GetOption from this/Main/Defaults/HardDefaults on FiFo.
 func (s *Shoutrrr) GetOption(key string) string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		s.Options[key],
 		s.Main.Options[key],
 		s.Defaults.Options[key],
 		s.HardDefaults.Options[key])
 }
 
-// GetSelfOption gets Options[key] from this Shoutrrr
-func (s *ShoutrrrBase) GetSelfOption(key string) string {
+// GetOption gets Options[key] from this Shoutrrr
+func (s *ShoutrrrBase) GetOption(key string) string {
 	return s.Options[key]
 }
 
@@ -45,22 +40,17 @@ func (s *ShoutrrrBase) SetOption(key string, value string) {
 	s.Options[key] = value
 }
 
-// GetParams map from this Shoutrrr.
-func (s *ShoutrrrBase) GetParams() *map[string]string {
-	return &s.Params
-}
-
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetParam(key string) string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		s.Params[key],
 		s.Main.Params[key],
 		s.Defaults.Params[key],
 		s.HardDefaults.Params[key])
 }
 
-// GetSelfParam gets Params[key] from this Shoutrrr
-func (s *ShoutrrrBase) GetSelfParam(key string) string {
+// GetParam gets Params[key] from this Shoutrrr
+func (s *ShoutrrrBase) GetParam(key string) string {
 	return s.Params[key]
 }
 
@@ -69,22 +59,17 @@ func (s *ShoutrrrBase) SetParam(key string, value string) {
 	s.Params[key] = value
 }
 
-// GetURLFields map from this Shoutrrr.
-func (s *ShoutrrrBase) GetURLFields() *map[string]string {
-	return &s.URLFields
-}
-
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetURLField(key string) string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		s.URLFields[key],
 		s.Main.URLFields[key],
 		s.Defaults.URLFields[key],
 		s.HardDefaults.URLFields[key])
 }
 
-// GetSelfURLField gets URLFields[key] from this Shoutrrr
-func (s *ShoutrrrBase) GetSelfURLField(key string) string {
+// GetURLField gets URLFields[key] from this Shoutrrr
+func (s *ShoutrrrBase) GetURLField(key string) string {
 	return s.URLFields[key]
 }
 
@@ -114,33 +99,20 @@ func (s *Shoutrrr) GetMaxTries() uint {
 	return uint(tries)
 }
 
-// GetMessage of the Gotification after the context is applied and template evaluated.
-func (s *Shoutrrr) GetMessage(context *util.ServiceInfo) (msg string) {
-	msg = s.GetOption("message")
-	msg = util.TemplateString(msg, *context)
-	return
+// Message of the Shoutrrr after the context is applied and template evaluated.
+func (s *Shoutrrr) Message(context *util.ServiceInfo) string {
+	return util.TemplateString(s.GetOption("message"), *context)
 }
 
-// GetTitle of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) GetTitle(serviceInfo *util.ServiceInfo) (title string) {
-	title = util.GetFirstNonDefault(
-		s.GetSelfParam("title"),
-		s.Main.GetSelfParam("title"),
-		s.Defaults.GetSelfParam("title"),
-		s.HardDefaults.GetSelfParam("title"))
-	title = util.TemplateString(title, *serviceInfo)
-	return
-}
-
-// GetType of this Shoutrrr.
-func (s *ShoutrrrBase) GetType() string {
-	return s.Type
+// Title of the Shoutrrr after the context is applied and template evaluated.
+func (s *Shoutrrr) Title(serviceInfo *util.ServiceInfo) string {
+	return util.TemplateString(s.GetParam("title"), *serviceInfo)
 }
 
 // GetType of this Shoutrrr.
 func (s *Shoutrrr) GetType() string {
 	// s.ID if the name is the same as the type
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		s.Type,
 		s.Main.Type,
 		s.ID)

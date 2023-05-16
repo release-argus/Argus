@@ -84,7 +84,7 @@ func (o *Options) GetActive() bool {
 
 // GetInterval between queries for this Service's latest version.
 func (o *Options) GetInterval() string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		o.Interval,
 		o.Defaults.Interval,
 		o.HardDefaults.Interval)
@@ -92,7 +92,7 @@ func (o *Options) GetInterval() string {
 
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
 func (o *Options) GetSemanticVersioning() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		o.SemanticVersioning,
 		o.Defaults.SemanticVersioning,
 		o.HardDefaults.SemanticVersioning)
