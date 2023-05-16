@@ -26,7 +26,7 @@ LABEL maintainer="The Argus Authors <developers@release-argus.io>"
 RUN \
     apt-get update && \
     apt-get install ca-certificates -y && \
-    apt-get clean
+    rm -rf /var/lib/apt/lists/*
 
 COPY entrypoint.sh /entrypoint.sh
 COPY --from=0 /build/argus               /usr/bin/argus
