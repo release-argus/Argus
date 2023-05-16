@@ -32,7 +32,6 @@ import (
 
 func TestWebHook_Try(t *testing.T) {
 	// GIVEN a WebHook
-	testLogging("WARN")
 	tests := map[string]struct {
 		url               *string
 		allowInvalidCerts bool
@@ -78,9 +77,9 @@ func TestWebHook_Try(t *testing.T) {
 			for contextDeadlineExceeded != false {
 				try++
 				contextDeadlineExceeded = false
-				webhook := testWebHook(false, true, tc.selfSignedCert, false)
+				webhook := testWebHook(false, tc.selfSignedCert, false)
 				if tc.wouldFail {
-					webhook = testWebHook(true, true, tc.selfSignedCert, false)
+					webhook = testWebHook(true, tc.selfSignedCert, false)
 				}
 				if tc.url != nil {
 					webhook.URL = *tc.url
@@ -113,7 +112,6 @@ func TestWebHook_Try(t *testing.T) {
 
 func TestWebHook_Send(t *testing.T) {
 	// GIVEN a WebHook
-	testLogging("INFO")
 	tests := map[string]struct {
 		customHeaders bool
 		wouldFail     bool
@@ -186,7 +184,7 @@ func TestWebHook_Send(t *testing.T) {
 				stdout := os.Stdout
 				r, w, _ := os.Pipe()
 				os.Stdout = w
-				webhook := testWebHook(tc.wouldFail, true, false, tc.customHeaders)
+				webhook := testWebHook(tc.wouldFail, false, tc.customHeaders)
 				if tc.deleting {
 					webhook.ServiceStatus.SetDeleting()
 				}
@@ -253,7 +251,6 @@ func TestWebHook_Send(t *testing.T) {
 
 func TestSlice_Send(t *testing.T) {
 	// GIVEN a Slice
-	testLogging("INFO")
 	tests := map[string]struct {
 		slice          *Slice
 		stdoutRegex    string
@@ -268,14 +265,14 @@ func TestSlice_Send(t *testing.T) {
 			stdoutRegex: `^$`},
 		"successful and failing webhook": {
 			slice: &Slice{
-				"pass": testWebHook(false, true, false, false),
-				"fail": testWebHook(true, true, false, false)},
+				"pass": testWebHook(false, false, false),
+				"fail": testWebHook(true, false, false)},
 			stdoutRegex:    `WebHook received.*failed \d times to send the WebHook`,
 			stdoutRegexAlt: `failed \d times to send the WebHook.*WebHook received`},
 		"does apply webhook delay": {
 			slice: &Slice{
-				"pass": testWebHook(false, true, false, false),
-				"fail": testWebHook(true, true, false, false)},
+				"pass": testWebHook(false, false, false),
+				"fail": testWebHook(true, false, false)},
 			stdoutRegex: `WebHook received.*failed \d times to send the WebHook`,
 			useDelay:    true,
 			delays: map[string]string{
@@ -346,7 +343,6 @@ func TestSlice_Send(t *testing.T) {
 
 func TestNotifiers_SendWithNotifier(t *testing.T) {
 	// GIVEN Notifiers
-	testLogging("INFO")
 	tests := map[string]struct {
 		shoutrrrNotifiers *shoutrrr.Slice
 		errRegex          string

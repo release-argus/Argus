@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -227,7 +228,7 @@ func TestDefaultIfNil(t *testing.T) {
 	}
 }
 
-func TestGetFirstNonNilPtr(t *testing.T) {
+func TestFirstNonNilPtr(t *testing.T) {
 	// GIVEN a bunch of pointers
 	tests := map[string]struct {
 		pointers  []*string
@@ -269,8 +270,8 @@ func TestGetFirstNonNilPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetFirstNonNilPtr is run on a slice of pointers
-			got := GetFirstNonNilPtr(tc.pointers...)
+			// WHEN FirstNonNilPtr is run on a slice of pointers
+			got := FirstNonNilPtr(tc.pointers...)
 
 			// THEN the correct pointer (or nil) is returned
 			if tc.allNil {
@@ -321,7 +322,7 @@ func TestValueIfTrue(t *testing.T) {
 	}
 }
 
-func TestGetFirstNonDefault(t *testing.T) {
+func TestFirstNonDefault(t *testing.T) {
 	// GIVEN a bunch of comparables
 	tests := map[string]struct {
 		slice      []string
@@ -363,8 +364,8 @@ func TestGetFirstNonDefault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetFirstNonDefault is run on a slice of slice
-			got := GetFirstNonDefault(tc.slice...)
+			// WHEN FirstNonDefault is run on a slice of slice
+			got := FirstNonDefault(tc.slice...)
 
 			// THEN the correct var (or "") is returned
 			if tc.allDefault {
@@ -545,7 +546,7 @@ func TestDefaultOrValue(t *testing.T) {
 	}
 }
 
-func TestGetValue(t *testing.T) {
+func TestValueOrDefault(t *testing.T) {
 	// GIVEN a bunch of comparables pointers and values
 	tests := map[string]struct {
 		ptr   interface{}
@@ -577,15 +578,15 @@ func TestGetValue(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetValue is called
+			// WHEN ValueOrDefault is called
 			var got interface{}
 			switch v := tc.ptr.(type) {
 			case *string:
-				got = GetValue(v, tc.value.(string))
+				got = ValueOrDefault(v, tc.value.(string))
 			case *bool:
-				got = GetValue(v, tc.value.(bool))
+				got = ValueOrDefault(v, tc.value.(bool))
 			case *int:
-				got = GetValue(v, tc.value.(int))
+				got = ValueOrDefault(v, tc.value.(int))
 			}
 
 			// THEN the pointer is returned if it's nil, otherwise the value
@@ -870,56 +871,6 @@ func TestCopyMap(t *testing.T) {
 					t.Fatalf("want: %v\ngot:  %v",
 						tc.want, got)
 				}
-			}
-		})
-	}
-}
-
-func TestGetPortFromURL(t *testing.T) {
-	// GIVEN different byte strings
-	tests := map[string]struct {
-		url         string
-		defaultPort string
-		want        string
-	}{
-		"http url": {
-			url:         "http://example.com",
-			defaultPort: "1",
-			want:        "80"},
-		"http url with port": {
-			url:         "http://example.com:123",
-			defaultPort: "1",
-			want:        "123"},
-		"https url": {
-			url:         "https://example.com",
-			defaultPort: "1",
-			want:        "443"},
-		"https url with port": {
-			url:         "https://example.com:123",
-			defaultPort: "1",
-			want:        "123"},
-		"no protocol url with port": {
-			url:         "example.com:123",
-			defaultPort: "1",
-			want:        "123"},
-		"no protocol url with no port": {
-			url:         "example.com",
-			defaultPort: "1",
-			want:        "1"},
-	}
-
-	for name, tc := range tests {
-		name, tc := name, tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN GetPortFromURL is called
-			got := GetPortFromURL(tc.url, tc.defaultPort)
-
-			// THEN the port is extracted/defaulted correctly
-			if got != tc.want {
-				t.Errorf("port not extracted from %q correctly\nwant: %q\ngot:  %q",
-					tc.url, tc.want, got)
 			}
 		})
 	}
@@ -1265,6 +1216,78 @@ func TestStringToPointer(t *testing.T) {
 			if *got != *tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					*tc.want, *got)
+			}
+		})
+	}
+}
+
+func TestTo____String(t *testing.T) {
+	// GIVEN a struct to print in YAML format
+	tests := map[string]struct {
+		input    interface{}
+		wantYAML string
+		wantJSON string
+	}{
+		"empty struct": {
+			input:    struct{}{},
+			wantYAML: "{}",
+			wantJSON: "{}",
+		},
+		"simple struct": {
+			input: struct {
+				Test string `yaml:"test" json:"test"`
+			}{
+				Test: "test"},
+			wantYAML: "test: test",
+			wantJSON: `{"test":"test"}`,
+		},
+		"nested struct": {
+			input: struct {
+				Test struct {
+					Foo string `yaml:"foo" json:"foo"`
+				} `yaml:"test" json:"test"`
+			}{
+				Test: struct {
+					Foo string `yaml:"foo" json:"foo"`
+				}{
+					Foo: "bar"}},
+			wantYAML: "test:\n  foo: bar",
+			wantJSON: `{"test":{"foo":"bar"}}`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				wantYAML := strings.TrimPrefix(tc.wantYAML, "\n")
+				if wantYAML != "" {
+					if wantYAML != "{}" {
+						wantYAML = prefix + strings.ReplaceAll(wantYAML, "\n", "\n"+prefix)
+					}
+					wantYAML += "\n"
+				}
+
+				// WHEN ToYAMLString is called
+				gotYAML := ToYAMLString(tc.input, prefix)
+
+				// THEN the struct is printed in YAML format
+				if gotYAML != wantYAML {
+					t.Fatalf("(prefix=%q) want:\n%q\ngot:\n%q",
+						prefix, wantYAML, gotYAML)
+				}
+			}
+
+			// WHEN ToJSONString is called
+			gotJSON := ToJSONString(tc.input)
+
+			// THEN the struct is printed in JSON format
+			if gotJSON != tc.wantJSON {
+				t.Fatalf("want:\n%q\ngot:\n%q",
+					tc.wantJSON, gotJSON)
 			}
 		})
 	}

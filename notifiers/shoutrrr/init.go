@@ -28,15 +28,15 @@ func LogInit(log *util.JLog) {
 // Init the Slice metrics amd hand out the defaults.
 func (s *Slice) Init(
 	serviceStatus *svcstatus.Status,
-	mains *Slice,
-	defaults *Slice,
-	hardDefaults *Slice,
+	mains *SliceDefaults,
+	defaults *SliceDefaults,
+	hardDefaults *SliceDefaults,
 ) {
 	if s == nil {
 		return
 	}
-	if mains == nil {
-		mains = &Slice{}
+	if mains == nil || len(*mains) == 0 {
+		mains = &SliceDefaults{}
 	}
 
 	for key := range *s {
@@ -46,27 +46,25 @@ func (s *Slice) Init(
 		}
 		(*s)[key].ID = id
 
-		if len(*mains) == 0 {
-			mains = &Slice{}
-		}
 		if (*mains)[key] == nil {
-			(*mains)[key] = &Shoutrrr{}
+			(*mains)[key] = &ShoutrrrDefaults{}
 		}
 
-		// Get Type from this or the associated Main
-		notifyType := util.GetFirstNonDefault(
+		// Get Type from this, the associated Main, or the ID
+		notifyType := util.FirstNonDefault(
 			(*s)[key].Type,
-			(*mains)[key].Type)
+			(*mains)[key].Type,
+			id)
 
 		// Ensure defaults aren't nil
 		if len(*defaults) == 0 {
-			defaults = &Slice{}
+			defaults = &SliceDefaults{}
 		}
 		if (*defaults)[notifyType] == nil {
-			(*defaults)[notifyType] = &Shoutrrr{}
+			(*defaults)[notifyType] = &ShoutrrrDefaults{}
 		}
 		if (*hardDefaults)[notifyType] == nil {
-			(*hardDefaults)[notifyType] = &Shoutrrr{}
+			(*hardDefaults)[notifyType] = &ShoutrrrDefaults{}
 		}
 
 		(*s)[key].Init(
@@ -75,12 +73,17 @@ func (s *Slice) Init(
 	}
 }
 
+// Init the Shoutrrr.
+func (s *ShoutrrrBase) Init() {
+	s.InitMaps()
+}
+
 // Init the Shoutrrr metrics and hand out the defaults.
 func (s *Shoutrrr) Init(
 	serviceStatus *svcstatus.Status,
-	main *Shoutrrr,
-	defaults *Shoutrrr,
-	hardDefaults *Shoutrrr,
+	main *ShoutrrrDefaults,
+	defaults *ShoutrrrDefaults,
+	hardDefaults *ShoutrrrDefaults,
 ) {
 	if s == nil {
 		return
@@ -92,30 +95,27 @@ func (s *Shoutrrr) Init(
 	// Give the matching main
 	s.Main = main
 	// Create a new main if it's nil and attached to a service
-	if main == nil && s.ServiceStatus != nil {
-		s.Main = &Shoutrrr{}
+	if main == nil {
+		s.Main = &ShoutrrrDefaults{}
 	}
 
-	// Shoutrrr is attached to a Service
-	if s.Main != nil {
-		s.Failed = &s.ServiceStatus.Fails.Shoutrrr
-		s.Failed.Set(s.ID, nil)
+	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
+	s.Failed.Set(s.ID, nil)
 
-		// Remove the type if it's the same as the main
-		if s.Type == s.Main.Type {
-			s.Type = ""
-		}
-
-		s.Main.InitMaps()
-
-		// Give Defaults
-		s.Defaults = defaults
-		s.Defaults.InitMaps()
-
-		// Give Hard Defaults
-		s.HardDefaults = hardDefaults
-		s.HardDefaults.InitMaps()
+	// Remove the type if it's the same as the main or the type is in the ID
+	if s.Type == s.Main.Type || s.Type == s.ID {
+		s.Type = ""
 	}
+
+	s.Main.Init()
+
+	// Give Defaults
+	s.Defaults = defaults
+	s.Defaults.Init()
+
+	// Give Hard Defaults
+	s.HardDefaults = hardDefaults
+	s.HardDefaults.Init()
 }
 
 // initOptions mapping, converting all keys to lowercase.
@@ -144,6 +144,29 @@ func (s *Shoutrrr) InitMaps() {
 	s.initParams()
 }
 
+// initOptions mapping, converting all keys to lowercase.
+func (s *ShoutrrrBase) initOptions() {
+	s.Options = util.LowercaseStringStringMap(&s.Options)
+}
+
+// initURLFields mapping, converting all keys to lowercase.
+func (s *ShoutrrrBase) initURLFields() {
+	s.URLFields = util.LowercaseStringStringMap(&s.URLFields)
+}
+
+// initParams mapping, converting all keys to lowercase.
+func (s *ShoutrrrBase) initParams() {
+	// have := map[string]string(s.Params)
+	s.Params = util.LowercaseStringStringMap(&s.Params)
+}
+
+// InitMaps will initialise all maps, converting all keys to lowercase.
+func (s *ShoutrrrBase) InitMaps() {
+	s.initOptions()
+	s.initURLFields()
+	s.initParams()
+}
+
 // InitMetrics for this Slice.
 func (s *Slice) InitMetrics() {
 	if s == nil {
@@ -157,26 +180,19 @@ func (s *Slice) InitMetrics() {
 
 // initMetrics for this Shoutrrr.
 func (s *Shoutrrr) initMetrics() {
-	// Only record metrics for Shoutrrrs attached to a Service
-	if s.Main == nil || s.GetType() == "" {
-		return
-	}
-
 	// ############
 	// # Counters #
 	// ############
-	if s.ServiceStatus != nil {
-		metric.InitPrometheusCounter(metric.NotifyMetric,
-			s.ID,
-			*s.ServiceStatus.ServiceID,
-			s.GetType(),
-			"SUCCESS")
-		metric.InitPrometheusCounter(metric.NotifyMetric,
-			s.ID,
-			*s.ServiceStatus.ServiceID,
-			s.GetType(),
-			"FAIL")
-	}
+	metric.InitPrometheusCounter(metric.NotifyMetric,
+		s.ID,
+		*s.ServiceStatus.ServiceID,
+		s.GetType(),
+		"SUCCESS")
+	metric.InitPrometheusCounter(metric.NotifyMetric,
+		s.ID,
+		*s.ServiceStatus.ServiceID,
+		s.GetType(),
+		"FAIL")
 }
 
 // DeleteMetrics for this Slice.
@@ -192,11 +208,6 @@ func (s *Slice) DeleteMetrics() {
 
 // deleteMetrics for this Shoutrrr.
 func (s *Shoutrrr) deleteMetrics() {
-	// Only record metrics for Shoutrrrs attached to a Service
-	if s.Main == nil || s.GetType() == "" {
-		return
-	}
-
 	metric.DeletePrometheusCounter(metric.NotifyMetric,
 		s.ID,
 		*s.ServiceStatus.ServiceID,

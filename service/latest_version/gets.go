@@ -22,33 +22,34 @@ import (
 )
 
 func (l *Lookup) GetAccessToken() *string {
-	return util.GetFirstNonNilPtr(
+	return util.FirstNonNilPtr(
 		l.AccessToken,
 		l.Defaults.AccessToken,
 		l.HardDefaults.AccessToken)
 }
 
 func (l *Lookup) GetAllowInvalidCerts() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		l.AllowInvalidCerts,
 		l.Defaults.AllowInvalidCerts,
 		l.HardDefaults.AllowInvalidCerts)
 }
 
-// GetServiceURL returns the service's URL (handles the github type where the URL
-// may be `owner/repo`, adding the github.com prefix in that case).
-func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
+// ServiceURL (handles the github type where the URL may be `owner/repo`
+// and adds the github.com/ prefix in that case).
+func (l *Lookup) ServiceURL(ignoreWebURL bool) (serviceURL string) {
 	if !ignoreWebURL && *l.Status.WebURL != "" {
 		// Don't use this template if `LatestVersion` hasn't been found and is used in `WebURL`.
-		latestVersion := l.Status.GetLatestVersion()
+		latestVersion := l.Status.LatestVersion()
 		if !(latestVersion == "" && strings.Contains(*l.Status.WebURL, "version")) {
-			return util.TemplateString(
+			serviceURL = util.TemplateString(
 				*l.Status.WebURL,
 				util.ServiceInfo{LatestVersion: latestVersion})
+			return
 		}
 	}
 
-	serviceURL := l.URL
+	serviceURL = l.URL
 	// GitHub service. Get the non-API URL.
 	if l.Type == "github" {
 		// If it's "owner/repo" rather than a full path.
@@ -56,12 +57,12 @@ func (l *Lookup) GetServiceURL(ignoreWebURL bool) string {
 			serviceURL = fmt.Sprintf("https://github.com/%s", serviceURL)
 		}
 	}
-	return serviceURL
+	return
 }
 
 // Get UsePreRelease will return whether GitHub PreReleases are considered valid for new versions.
 func (l *Lookup) GetUsePreRelease() bool {
-	return *util.GetFirstNonDefault(
+	return *util.FirstNonDefault(
 		l.UsePreRelease,
 		l.Defaults.UsePreRelease,
 		l.HardDefaults.UsePreRelease)

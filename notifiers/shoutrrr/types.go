@@ -15,50 +15,157 @@
 package shoutrrr
 
 import (
+	"fmt"
+
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 var (
-	jLog *util.JLog
+	jLog           *util.JLog
+	supportedTypes = []string{
+		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "shoutrrr"}
 )
 
 // Slice mapping of Shoutrrr.
 type Slice map[string]*Shoutrrr
 
 // String returns a string representation of the Slice.
-func (s *Slice) String() string {
-	if s == nil {
-		return "<nil>"
+func (s *Slice) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
 	}
-
-	yamlBytes, _ := yaml.Marshal(s)
-	return string(yamlBytes)
+	return
 }
 
-type Shoutrrr struct {
-	Type          string                   `yaml:"type,omitempty" json:"type,omitempty"` // Notification type, e.g. slack
-	ID            string                   `yaml:"-" json:"-"`                           // ID for this Shoutrrr sender
-	Failed        *svcstatus.FailsShoutrrr `yaml:"-" json:"-"`                           // Whether the last send attempt failed
-	ServiceStatus *svcstatus.Status        `yaml:"-" json:"-"`                           // Status of the Service (used for templating commands)
-	Main          *Shoutrrr                `yaml:"-" json:"-"`                           // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
-	Defaults      *Shoutrrr                `yaml:"-" json:"-"`                           // Default values
-	HardDefaults  *Shoutrrr                `yaml:"-" json:"-"`                           // Harcoded default values
-
-	// Unsure whether to switch this to a base service which specific services inherit and define the Options/URLFields/Params
-	// Thinking this may be preferable as it makes adding new services much quicker/easier
+// ShoutrrrBase is the base Shoutrrr.
+type ShoutrrrBase struct {
+	Type      string            `yaml:"type,omitempty" json:"type,omitempty"`             // Notification type, e.g. slack
 	Options   map[string]string `yaml:"options,omitempty" json:"options,omitempty"`       // Options
 	URLFields map[string]string `yaml:"url_fields,omitempty" json:"url_fields,omitempty"` // URL Fields
 	Params    map[string]string `yaml:"params,omitempty" json:"params,omitempty"`         // Query/Param Props
 }
 
-// String returns a string representation of the Shoutrrr.
-func (s *Shoutrrr) String() string {
+// SliceDefaults mapping of ShoutrrrDefaults.
+type SliceDefaults map[string]*ShoutrrrDefaults
+
+// String returns a string representation of the SliceDefaults.
+func (s *SliceDefaults) String(prefix string) (str string) {
 	if s == nil {
-		return "<nil>"
+		return
 	}
 
-	yamlBytes, _ := yaml.Marshal(s)
-	return string(yamlBytes)
+	keys := util.SortedKeys(*s)
+	if len(keys) == 0 {
+		str += "{}\n"
+	}
+
+	for _, k := range keys {
+		itemStr := (*s)[k].String(prefix + "  ")
+		if itemStr != "" {
+			delim := "\n"
+			if itemStr == "{}\n" {
+				delim = " "
+			}
+			str += fmt.Sprintf("%s%s:%s%s",
+				prefix, k, delim, itemStr)
+		}
+	}
+
+	return
+}
+
+// ShoutrrrDefaults are the default values for Shoutrrr.
+type ShoutrrrDefaults struct {
+	ShoutrrrBase `yaml:",inline" json:",inline"`
+}
+
+// NewDefaults returns a new ShoutrrrDefaults.
+func NewDefaults(
+	sType string,
+	options *map[string]string,
+	params *map[string]string,
+	urlFields *map[string]string,
+) (defaults *ShoutrrrDefaults) {
+	if options == nil {
+		options = &map[string]string{}
+	}
+	if params == nil {
+		params = &map[string]string{}
+	}
+	if urlFields == nil {
+		urlFields = &map[string]string{}
+	}
+	defaults = &ShoutrrrDefaults{
+		ShoutrrrBase{
+			Options:   *options,
+			URLFields: *urlFields,
+			Type:      sType,
+			Params:    *params}}
+	defaults.InitMaps()
+	return
+}
+
+// String returns a string representation of the ShoutrrrDefaults.
+func (s *ShoutrrrDefaults) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
+}
+
+type Shoutrrr struct {
+	ShoutrrrBase `yaml:",inline" json:",inline"`
+
+	ID string `yaml:"-" json:"-"` // ID for this Shoutrrr sender
+
+	Failed        *svcstatus.FailsShoutrrr `yaml:"-" json:"-"` // Whether the last send attempt failed
+	ServiceStatus *svcstatus.Status        `yaml:"-" json:"-"` // Status of the Service (used for templating commands)
+
+	Main         *ShoutrrrDefaults `yaml:"-" json:"-"` // The Shoutrrr that this Shoutrrr is calling (and may override parts of)
+	Defaults     *ShoutrrrDefaults `yaml:"-" json:"-"` // Default values
+	HardDefaults *ShoutrrrDefaults `yaml:"-" json:"-"` // Harcoded default values
+}
+
+// New Shoutrrr.
+func New(
+	failed *svcstatus.FailsShoutrrr,
+	id string,
+	options *map[string]string,
+	params *map[string]string,
+	sType string,
+	urlFields *map[string]string,
+	main *ShoutrrrDefaults,
+	defaults *ShoutrrrDefaults,
+	hardDefaults *ShoutrrrDefaults,
+) (shoutrrr *Shoutrrr) {
+	shoutrrr = &Shoutrrr{
+		ShoutrrrBase: ShoutrrrBase{
+			Type: sType},
+		Failed:        failed,
+		ID:            id,
+		ServiceStatus: nil,
+		Main:          main,
+		Defaults:      defaults,
+		HardDefaults:  hardDefaults}
+	if options != nil {
+		shoutrrr.Options = *options
+	}
+	if params != nil {
+		shoutrrr.Params = *params
+	}
+	if urlFields != nil {
+		shoutrrr.URLFields = *urlFields
+	}
+	shoutrrr.InitMaps()
+	return
+}
+
+// String returns a string representation of the Shoutrrr.
+func (s *Shoutrrr) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
 }

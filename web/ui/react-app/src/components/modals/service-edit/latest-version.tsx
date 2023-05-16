@@ -3,18 +3,18 @@ import { FC, memo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
+import { DefaultLatestVersionLookupType } from "types/config";
 import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
-import { LatestVersionLookupType } from "types/config";
 import VersionWithRefresh from "./version-with-refresh";
 import { useWatch } from "react-hook-form";
 
 interface Props {
   serviceName: string;
   original?: LatestVersionLookupEditType;
-  defaults?: LatestVersionLookupType;
-  hard_defaults?: LatestVersionLookupType;
+  defaults?: DefaultLatestVersionLookupType;
+  hard_defaults?: DefaultLatestVersionLookupType;
 }
 
 const EditServiceLatestVersion: FC<Props> = ({
@@ -57,7 +57,7 @@ const EditServiceLatestVersion: FC<Props> = ({
                 name="latest_version.access_token"
                 col_sm={12}
                 label="Access Token"
-                placeholder={
+                defaultVal={
                   defaults?.access_token || hard_defaults?.access_token
                 }
                 isURL={latestVersionType !== "github"}
@@ -66,7 +66,6 @@ const EditServiceLatestVersion: FC<Props> = ({
                 <BooleanWithDefault
                   name="latest_version.use_prerelease"
                   label="Use pre-releases"
-                  value={original?.use_prerelease}
                   defaultValue={
                     defaults?.use_prerelease || hard_defaults?.use_prerelease
                   }
@@ -77,7 +76,6 @@ const EditServiceLatestVersion: FC<Props> = ({
             <BooleanWithDefault
               name="latest_version.allow_invalid_certs"
               label="Allow Invalid Certs"
-              value={original?.allow_invalid_certs}
               defaultValue={
                 defaults?.allow_invalid_certs ||
                 hard_defaults?.allow_invalid_certs
@@ -85,7 +83,10 @@ const EditServiceLatestVersion: FC<Props> = ({
             />
           )}
           <FormURLCommands />
-          <EditServiceLatestVersionRequire />
+          <EditServiceLatestVersionRequire
+            defaults={defaults?.require}
+            hard_defaults={hard_defaults?.require}
+          />
 
           <VersionWithRefresh
             vType={0}

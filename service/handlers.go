@@ -23,9 +23,9 @@ import (
 )
 
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
-// to `s.Status.LatestVersion`
+// to `s.Status.LatestVersion` if there's no DeployedVersionLookup and announce the change.
 func (s *Service) UpdatedVersion(writeToDB bool) {
-	if s.Status.GetDeployedVersion() == s.Status.GetLatestVersion() {
+	if s.Status.DeployedVersion() == s.Status.LatestVersion() {
 		return
 	}
 
@@ -49,7 +49,7 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 		}
 		return
 	}
-	s.Status.SetDeployedVersion(s.Status.GetLatestVersion(), writeToDB)
+	s.Status.SetDeployedVersion(s.Status.LatestVersion(), writeToDB)
 
 	// Announce version change to WebSocket clients
 	s.Status.AnnounceUpdate()
@@ -59,8 +59,8 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 // set the LatestVersion as approved in the Status, and announce the approval (if not previously).
 func (s *Service) UpdateLatestApproved() {
 	// Only announce once
-	lv := s.Status.GetLatestVersion()
-	if s.Status.GetApprovedVersion() != lv {
+	lv := s.Status.LatestVersion()
+	if s.Status.ApprovedVersion() != lv {
 		s.Status.SetApprovedVersion(lv, true)
 	}
 }
@@ -69,7 +69,7 @@ func (s *Service) UpdateLatestApproved() {
 // automatically and auto-approve is true. If new releases aren't auto-approved, then these will
 // only be run/send if this is triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
-	serviceInfo := s.GetServiceInfo()
+	serviceInfo := s.ServiceInfo()
 
 	// Send the Notify Message(s).
 	//nolint:errcheck
@@ -79,7 +79,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 	if s.WebHook != nil || s.Command != nil {
 		if s.Dashboard.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
-				s.Status.GetLatestVersion())
+				s.Status.LatestVersion())
 			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s)
@@ -133,7 +133,7 @@ func (s *Service) HandleFailedActions() {
 				}
 				// Send
 				go func(key string) {
-					err := s.WebHook[key].Send(s.GetServiceInfo(), false)
+					err := s.WebHook[key].Send(s.ServiceInfo(), false)
 					errChan <- err
 				}(key)
 				// Space out WebHooks.
@@ -219,7 +219,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 	}
 
 	// Send the WebHook.
-	err := s.WebHook[webhookID].Send(s.GetServiceInfo(), false)
+	err := s.WebHook[webhookID].Send(s.ServiceInfo(), false)
 	if err == nil {
 		s.UpdatedVersion(true)
 	}
@@ -227,7 +227,7 @@ func (s *Service) HandleWebHook(webhookID string) {
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
 func (s *Service) HandleSkip(version string) {
-	if version != s.Status.GetLatestVersion() {
+	if version != s.Status.LatestVersion() {
 		return
 	}
 

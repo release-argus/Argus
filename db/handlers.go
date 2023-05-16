@@ -73,8 +73,7 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	if err != nil {
 		jLog.Error(
 			fmt.Sprintf("updateRow UPDATE: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
-			*logFrom,
-			true)
+			*logFrom, true)
 		return
 	}
 

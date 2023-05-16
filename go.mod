@@ -8,19 +8,18 @@ require (
 	github.com/flosch/pongo2/v5 v5.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/prometheus/client_golang v1.15.0
-	github.com/vearutop/statigz v1.2.0
-	gopkg.in/yaml.v2 v2.4.0
+	github.com/prometheus/client_golang v1.15.1
+	github.com/vearutop/statigz v1.3.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	modernc.org/libc v1.22.3 // indirect
+	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect
-	modernc.org/sqlite v1.21.1
+	modernc.org/sqlite v1.22.1
 )
 
 require (
@@ -28,7 +27,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect

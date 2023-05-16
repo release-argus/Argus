@@ -20,7 +20,6 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
@@ -42,16 +41,16 @@ func (c *Config) Init() {
 	defer c.OrderMutex.RUnlock()
 
 	c.HardDefaults.SetDefaults()
+	// Give the HardDefaults to the Defaults
+	c.Defaults.Service.LatestVersion.Require.Docker.SetDefaults(
+		&c.HardDefaults.Service.LatestVersion.Require.Docker)
+
 	c.Settings.SetDefaults()
 
-	if c.Defaults.Service.DeployedVersionLookup == nil {
-		c.Defaults.Service.DeployedVersionLookup = &deployedver.Lookup{}
-	}
-	c.Defaults.Service.Convert()
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
-	jLog.SetTimestamps(*c.Settings.GetLogTimestamps())
-	jLog.SetLevel(c.Settings.GetLogLevel())
+	jLog.SetTimestamps(*c.Settings.LogTimestamps())
+	jLog.SetLevel(c.Settings.LogLevel())
 
 	i := 0
 	for _, name := range c.Order {
@@ -62,22 +61,6 @@ func (c *Config) Init() {
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
 			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
-	}
-
-	// c.Notify
-	if c.Notify != nil {
-		for key := range c.Notify {
-			// DefaultIfNil to handle testing. CheckValues will pick up on this nil
-			c.Notify[key].Defaults = c.Defaults.Notify[c.Notify[key].Type]
-			c.Notify[key].HardDefaults = c.HardDefaults.Notify[c.Notify[key].Type]
-		}
-	}
-	// c.WebHook
-	if c.WebHook != nil {
-		for key := range c.WebHook {
-			c.WebHook[key].Defaults = &c.Defaults.WebHook
-			c.WebHook[key].HardDefaults = &c.HardDefaults.WebHook
-		}
 	}
 }
 
@@ -90,12 +73,12 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 
 	//#nosec G304 -- Loading the file asked for by the user
 	data, err := os.ReadFile(file)
-	msg := fmt.Sprintf("Error reading %q\n%s", file, err)
-	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	jLog.Fatal(fmt.Sprintf("Error reading %q\n%s", file, err),
+		util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, c)
-	msg = fmt.Sprintf("Unmarshal of %q failed\n%s", file, err)
-	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	jLog.Fatal(fmt.Sprintf("Unmarshal of %q failed\n%s", file, err),
+		util.LogFrom{}, err != nil)
 
 	c.GetOrder(data)
 
@@ -107,9 +90,9 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 
 	for key := range c.Service {
 		c.Service[key].ID = key
-		c.Service[key].Status = svcstatus.Status{
-			DatabaseChannel: c.DatabaseChannel,
-			SaveChannel:     c.SaveChannel}
+		c.Service[key].Status = *svcstatus.New(
+			nil, c.DatabaseChannel, c.SaveChannel,
+			"", "", "", "", "", "")
 	}
 	c.HardDefaults.Service.Status.DatabaseChannel = c.DatabaseChannel
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel

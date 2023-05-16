@@ -25,15 +25,15 @@ import (
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
-// GetParams returns the params using everything from master>main>defaults>hardDefaults when
+// BuildParams returns the params using everything from master>main>defaults>hardDefaults when
 // the key is not defined in the lower level
-func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
+func (s *Shoutrrr) BuildParams(context *util.ServiceInfo) (params *shoutrrr_types.Params) {
 	p := make(shoutrrr_types.Params, len(s.Params)+len(s.Main.Params))
 	params = &p
 
 	// Service Params
 	for key := range s.Params {
-		(*params)[key] = s.GetSelfParam(key)
+		(*params)[key] = s.GetParam(key)
 	}
 
 	// Main Params
@@ -41,25 +41,25 @@ func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.
 		_, exist := s.Params[key]
 		// Only overwrite if it doesn't exist in the level below
 		if !exist {
-			(*params)[key] = s.Main.GetSelfParam(key)
+			(*params)[key] = s.Main.GetParam(key)
 		}
 	}
 
 	// Default Params
 	for key := range s.Defaults.Params {
 		_, exist := (*params)[key]
-		// Only overwrite if it doesn't exist in the level below
+		// Only overwrite if it doesn't exist in the levels below
 		if !exist {
-			(*params)[key] = s.Defaults.GetSelfParam(key)
+			(*params)[key] = s.Defaults.GetParam(key)
 		}
 	}
 
 	// HardDefault Params
 	for key := range s.HardDefaults.Params {
 		_, exist := (*params)[key]
-		// Only overwrite if it doesn't exist in the level below
+		// Only overwrite if it doesn't exist in the levels below
 		if !exist {
-			(*params)[key] = s.HardDefaults.GetSelfParam(key)
+			(*params)[key] = s.HardDefaults.GetParam(key)
 		}
 	}
 
@@ -71,8 +71,15 @@ func (s *Shoutrrr) GetParams(context *util.ServiceInfo) (params *shoutrrr_types.
 	return
 }
 
-func (s *Shoutrrr) GetURL() (url string) {
+func (s *Shoutrrr) BuildURL() (url string) {
 	switch s.GetType() {
+	case "bark":
+		// bark://:devicekey@host:port/[path]
+		url = fmt.Sprintf("bark://:%s@%s:%s%s",
+			s.GetURLField("devicekey"),
+			s.GetURLField("host"),
+			s.GetURLField("port"),
+			util.ValueIfNotDefault(s.GetURLField("path"), "/"+s.GetURLField("path")))
 	case "discord":
 		// discord://token@webhookid
 		url = fmt.Sprintf("discord://%s@%s",
@@ -150,6 +157,14 @@ func (s *Shoutrrr) GetURL() (url string) {
 			rooms,
 			disableTLS,
 		)
+	case "ntfy":
+		// ntfy://[username]:[password]@[host][:port]/topic
+		url = fmt.Sprintf("ntfy://%s:%s@%s%s/%s",
+			s.GetURLField("username"),
+			s.GetURLField("password"),
+			s.GetURLField("host"),
+			util.ValueIfNotDefault(s.GetURLField("port"), ":"+s.GetURLField("port")),
+			s.GetURLField("topic"))
 	case "opsgenie":
 		// opsgenie://host[:port][/path]/apikey
 		port := s.GetURLField("port")
@@ -278,18 +293,18 @@ func (s *Shoutrrr) Send(
 		time.Sleep(s.GetDelayDuration())
 	}
 
-	url := s.GetURL()
+	url := s.BuildURL()
 	sender, err := shoutrrr_lib.CreateSender(url)
 	if err != nil {
 		return fmt.Errorf("failed to create Shoutrrr sender: %w", err)
 	}
-	params := s.GetParams(serviceInfo)
+	params := s.BuildParams(serviceInfo)
 	if title != "" {
 		(*params)["title"] = title
 	}
 	toSend := message
 	if message == "" {
-		toSend = s.GetMessage(serviceInfo)
+		toSend = s.Message(serviceInfo)
 	}
 
 	combinedErrs := make(map[string]int)
@@ -341,7 +356,7 @@ func (s *Shoutrrr) Send(
 		// Give up after MaxTries.
 		if triesLeft == 0 {
 			msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
-				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.GetURL())
+				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
 			jLog.Error(msg, logFrom, true)
 			failed := true
 			s.Failed.Set(s.ID, &failed)

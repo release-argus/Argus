@@ -62,10 +62,10 @@ func TestLookup_GetAccessToken(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got == nil {
-				t.Errorf("want: %q\ngot:  %v",
+				t.Errorf("want: %q, got:  %v",
 					tc.wantString, got)
 			} else if *got != tc.wantString {
-				t.Errorf("want: %q\ngot:  %q",
+				t.Errorf("want: %q, got:  %q",
 					tc.wantString, *got)
 			}
 		})
@@ -112,14 +112,14 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.wantBool {
-				t.Errorf("want: %t\ngot:  %t",
+				t.Errorf("want: %t, got:  %t",
 					tc.wantBool, got)
 			}
 		})
 	}
 }
 
-func TestLookup_GetServiceURL(t *testing.T) {
+func TestLookup_ServiceURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		serviceType   string
@@ -205,7 +205,7 @@ func TestLookup_GetServiceURL(t *testing.T) {
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
 
 			// WHEN GetAllowInvalidCerts is called
-			got := lookup.GetServiceURL(tc.ignoreWebURL)
+			got := lookup.ServiceURL(tc.ignoreWebURL)
 
 			// THEN the function returns the correct result
 			if got != tc.want {

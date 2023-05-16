@@ -23,7 +23,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestShoutrrr_GetURL(t *testing.T) {
+func TestShoutrrr_BuildURL(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
 		sType     string
@@ -32,6 +32,23 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		params    map[string]string
 		want      string
 	}{
+		"bark - base": {
+			sType: "bark",
+			want:  "bark://:KEY@HOST:8080",
+			urlFields: map[string]string{
+				"devicekey": "KEY",
+				"host":      "HOST",
+				"port":      "8080"},
+		},
+		"bark - base + path": {
+			sType: "bark",
+			want:  "bark://:KEY@HOST:8080/shazam",
+			urlFields: map[string]string{
+				"devicekey": "KEY",
+				"host":      "HOST",
+				"port":      "8080",
+				"path":      "shazam"},
+		},
 		"discord - base": {
 			sType: "discord",
 			want:  "discord://TOKEN@WEBHOOKID",
@@ -221,6 +238,46 @@ func TestShoutrrr_GetURL(t *testing.T) {
 				"rooms":      "ROOMS",
 				"disabletls": "yes"},
 		},
+		"ntfy - base": {
+			sType: "ntfy",
+			want:  "ntfy://:@/TOPIC",
+			urlFields: map[string]string{
+				"topic": "TOPIC"},
+		},
+		"ntfy - base + username": {
+			sType: "ntfy",
+			want:  "ntfy://USER:@/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER"},
+		},
+		"ntfy - base + username + password": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS"},
+		},
+		"ntfy - base + username + password + host": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@HOST/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS",
+				"host":     "HOST"},
+		},
+		"ntfy - base + username + password + host + port": {
+			sType: "ntfy",
+			want:  "ntfy://USER:PASS@HOST:8443/TOPIC",
+			urlFields: map[string]string{
+				"topic":    "TOPIC",
+				"username": "USER",
+				"password": "PASS",
+				"host":     "HOST",
+				"port":     "8443"},
+		},
 		"opsgenie - base": {
 			sType: "opsgenie",
 			want:  "opsgenie://DEFAULT_HOST/APIKEY",
@@ -364,7 +421,8 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		"shoutrrr - base": {
 			sType:     "shoutrrr",
 			want:      "RAW",
-			urlFields: map[string]string{"raw": "RAW"}},
+			urlFields: map[string]string{"raw": "RAW"},
+		},
 	}
 
 	for name, tc := range tests {
@@ -372,13 +430,13 @@ func TestShoutrrr_GetURL(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.Type = tc.sType
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
 
-			// WHEN GetURL is called
-			got := shoutrrr.GetURL()
+			// WHEN BuildURL is called
+			got := shoutrrr.BuildURL()
 
 			// THEN the expected URL is returned
 			if got != tc.want {
@@ -389,7 +447,7 @@ func TestShoutrrr_GetURL(t *testing.T) {
 	}
 }
 
-func TestShoutrrr_GetParams(t *testing.T) {
+func TestShoutrrr_BuildParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo
 	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
@@ -447,7 +505,7 @@ func TestShoutrrr_GetParams(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.paramsRoot != nil {
 				shoutrrr.Params[key] = *tc.paramsRoot
 			}
@@ -461,8 +519,8 @@ func TestShoutrrr_GetParams(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.paramsHardDefault
 			}
 
-			// WHEN GetParams is called
-			got := shoutrrr.GetParams(&serviceInfo)
+			// WHEN BuildParams is called
+			got := shoutrrr.BuildParams(&serviceInfo)
 
 			// THEN the function returns the params to use
 			if (*got)[key] != tc.wantString {

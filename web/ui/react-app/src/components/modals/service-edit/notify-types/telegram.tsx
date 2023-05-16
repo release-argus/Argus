@@ -4,14 +4,16 @@ import { useEffect, useMemo } from "react";
 import { BooleanWithDefault } from "components/generic";
 import { NotifyOptions } from "./generic";
 import { NotifyTelegramType } from "types/config";
+import { globalOrDefault } from "./util";
+import { normaliseForSelect } from "../util/normalise-selects";
+import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
-import { useGlobalOrDefault } from "./util";
 
 export const TelegramParseModeOptions = [
-  { value: "none", label: "None" },
-  { value: "markdown", label: "Markdown" },
-  { value: "html", label: "HTML" },
-  { value: "markdown_v2", label: "Markdown v2" },
+  { label: "None", value: "None" },
+  { label: "HTML", value: "HTML" },
+  { label: "Markdown", value: "Markdown" },
+  { label: "Markdown v2", value: "MarkdownV2" },
 ];
 
 const TELEGRAM = ({
@@ -27,25 +29,37 @@ const TELEGRAM = ({
   defaults?: NotifyTelegramType;
   hard_defaults?: NotifyTelegramType;
 }) => {
-  const { setValue } = useFormContext();
-  const defaultParamsParseMode = useGlobalOrDefault(
+  const { getValues, setValue } = useFormContext();
+
+  const defaultParamsParseMode = globalOrDefault(
     global?.params?.parsemode,
     defaults?.params?.parsemode,
     hard_defaults?.params?.parsemode
-  );
-  const telegramParseModeOptions = useMemo(
-    () =>
+  ).toLowerCase();
+  const telegramParseModeOptions = useMemo(() => {
+    const defaultParseMode = normaliseForSelect(
+      TelegramParseModeOptions,
       defaultParamsParseMode
-        ? [
-            { value: "", label: `${defaultParamsParseMode} (default)` },
-            ...TelegramParseModeOptions,
-          ]
-        : TelegramParseModeOptions,
-    [defaultParamsParseMode]
-  );
+    );
+
+    if (defaultParseMode)
+      return [
+        { value: "", label: `${defaultParseMode.label} (default)` },
+        ...TelegramParseModeOptions,
+      ];
+
+    return TelegramParseModeOptions;
+  }, [defaultParamsParseMode]);
+
   useEffect(() => {
-    global?.params?.parsemode && setValue(`${name}.params.parsemode`, "");
-  }, [global]);
+    // Normalise selected parsemode, or default it
+    if (defaultParamsParseMode === "")
+      setValue(
+        `${name}.params.parsemode`,
+        normaliseForSelect(getValues(`${name}.params.parsemode`))?.value ||
+          "None"
+      );
+  }, []);
 
   return (
     <>
@@ -62,7 +76,7 @@ const TELEGRAM = ({
           required
           col_sm={12}
           label="Token"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.url_fields?.token,
             defaults?.url_fields?.token,
             hard_defaults?.url_fields?.token
@@ -77,7 +91,7 @@ const TELEGRAM = ({
           col_sm={8}
           label="Chats"
           tooltip="Chat IDs or Channel names, e.g. -123,@bar"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.params?.chats,
             defaults?.params?.chats,
             hard_defaults?.params?.chats
@@ -90,14 +104,26 @@ const TELEGRAM = ({
           options={telegramParseModeOptions}
           onRight
         />
+        <FormItem
+          name={`${name}.params.title`}
+          col_sm={12}
+          label="Title"
+          defaultVal={globalOrDefault(
+            global?.params?.title,
+            defaults?.params?.title,
+            hard_defaults?.params?.title
+          )}
+        />
         <BooleanWithDefault
           name={`${name}.params.notification`}
           label="Notification"
           tooltip="Disable for silent messages"
           defaultValue={
-            (global?.params?.notification ||
-              defaults?.params?.notification ||
-              hard_defaults?.params?.notification) === "true"
+            strToBool(
+              global?.params?.notification ||
+                defaults?.params?.notification ||
+                hard_defaults?.params?.notification
+            ) ?? true
           }
         />
         <BooleanWithDefault
@@ -105,9 +131,11 @@ const TELEGRAM = ({
           label="Preview"
           tooltip="Enable web page previews on messages"
           defaultValue={
-            (global?.params?.preview ||
-              defaults?.params?.preview ||
-              hard_defaults?.params?.preview) === "true"
+            strToBool(
+              global?.params?.preview ||
+                defaults?.params?.preview ||
+                hard_defaults?.params?.preview
+            ) || true
           }
         />
       </>

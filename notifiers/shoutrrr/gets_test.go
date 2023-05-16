@@ -66,7 +66,7 @@ func TestShoutrrr_GetOption(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.optionRoot != nil {
 				shoutrrr.Options[key] = *tc.optionRoot
 			}
@@ -89,21 +89,12 @@ func TestShoutrrr_GetOption(t *testing.T) {
 					tc.wantString, got)
 			}
 
-			// WHEN GetSelfOption is called
-			got = shoutrrr.GetSelfOption(key)
-
-			// THEN the function returns the Option in itself
-			if got != util.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("GetSelfOption:\nwant: %q\ngot:  %q",
-					util.DefaultIfNil(tc.optionRoot), got)
-			}
-
 			// WHEN SetOption is called
 			want := got + "-set-test"
 			shoutrrr.SetOption(key, want)
 
 			// THEN the Option is set and can be retrieved with a Get
-			got = shoutrrr.GetSelfOption(key)
+			got = shoutrrr.GetOption(key)
 			if got != want {
 				t.Fatalf("SetOption:\nwant: %q\ngot:  %q",
 					want, got)
@@ -154,7 +145,7 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.optionRoot != nil {
 				shoutrrr.URLFields[key] = *tc.optionRoot
 			}
@@ -177,21 +168,12 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 					tc.wantString, got)
 			}
 
-			// WHEN GetSelfURLField is called
-			got = shoutrrr.GetSelfURLField(key)
-
-			// THEN the function returns the URLField in itself
-			if got != util.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("GetSelfURLField:\nwant: %q\ngot:  %q",
-					util.DefaultIfNil(tc.optionRoot), got)
-			}
-
 			// WHEN SetURLField is called
 			want := got + "-set-test"
 			shoutrrr.SetURLField(key, want)
 
 			// THEN the URLField is set and can be retrieved with a Get
-			got = shoutrrr.GetSelfURLField(key)
+			got = shoutrrr.GetURLField(key)
 			if got != want {
 				t.Fatalf("SetURLField:\nwant: %q\ngot:  %q",
 					want, got)
@@ -242,7 +224,7 @@ func TestShoutrrr_GetParam(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.optionRoot != nil {
 				shoutrrr.Params[key] = *tc.optionRoot
 			}
@@ -265,21 +247,12 @@ func TestShoutrrr_GetParam(t *testing.T) {
 					tc.wantString, got)
 			}
 
-			// WHEN GetSelfParam is called
-			got = shoutrrr.GetSelfParam(key)
-
-			// THEN the function returns the Param in itself
-			if got != util.DefaultIfNil(tc.optionRoot) {
-				t.Fatalf("GetSelfParam:\nwant: %q\ngot:  %q",
-					util.DefaultIfNil(tc.optionRoot), got)
-			}
-
 			// WHEN SetParam is called
 			want := got + "-set-test"
 			shoutrrr.SetParam(key, want)
 
 			// THEN the Param is set and can be retrieved with a Get
-			got = shoutrrr.GetSelfParam(key)
+			got = shoutrrr.GetParam(key)
 			if got != want {
 				t.Fatalf("SetParam:\nwant: %q\ngot:  %q",
 					want, got)
@@ -334,7 +307,7 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 			t.Parallel()
 
 			key := "delay"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.delayRoot != nil {
 				shoutrrr.Options[key] = *tc.delayRoot
 			}
@@ -402,7 +375,7 @@ func TestShoutrrr_GetDelayDuration(t *testing.T) {
 			t.Parallel()
 
 			key := "delay"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.delayRoot != nil {
 				shoutrrr.Options[key] = *tc.delayRoot
 			}
@@ -470,7 +443,7 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 			t.Parallel()
 
 			key := "max_tries"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.maxTriesRoot != nil {
 				shoutrrr.Options[key] = *tc.maxTriesRoot
 			}
@@ -496,7 +469,7 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 	}
 }
 
-func TestShoutrrr_GetMessage(t *testing.T) {
+func TestShoutrrr_Message(t *testing.T) {
 	// GIVEN a Shoutrrr
 	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
@@ -557,7 +530,7 @@ func TestShoutrrr_GetMessage(t *testing.T) {
 			t.Parallel()
 
 			key := "message"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.messageRoot != nil {
 				shoutrrr.Options[key] = *tc.messageRoot
 			}
@@ -571,8 +544,8 @@ func TestShoutrrr_GetMessage(t *testing.T) {
 				shoutrrr.HardDefaults.Options[key] = *tc.messageHardDefault
 			}
 
-			// WHEN GetMessage is called
-			got := shoutrrr.GetMessage(serviceInfo)
+			// WHEN Message is called
+			got := shoutrrr.Message(serviceInfo)
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -583,7 +556,7 @@ func TestShoutrrr_GetMessage(t *testing.T) {
 	}
 }
 
-func TestShoutrrr_GetTitle(t *testing.T) {
+func TestShoutrrr_Title(t *testing.T) {
 	// GIVEN a Shoutrrr
 	serviceInfo := &util.ServiceInfo{
 		ID:            "release-argus/Argus",
@@ -644,7 +617,7 @@ func TestShoutrrr_GetTitle(t *testing.T) {
 			t.Parallel()
 
 			key := "title"
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			if tc.titleRoot != nil {
 				shoutrrr.Params[key] = *tc.titleRoot
 			}
@@ -658,8 +631,8 @@ func TestShoutrrr_GetTitle(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.titleHardDefault
 			}
 
-			// WHEN GetTitle is called
-			got := shoutrrr.GetTitle(serviceInfo)
+			// WHEN Title is called
+			got := shoutrrr.Title(serviceInfo)
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -692,14 +665,14 @@ func TestShoutrrr_GetType(t *testing.T) {
 			typeDefault:     "other",
 			typeHardDefault: "other",
 		},
-		"default is ignored": {
-			want:            "",
+		"default is ignored": { // uses ID
+			want:            "test",
 			typeRoot:        "",
 			typeDefault:     "smtp",
 			typeHardDefault: "",
 		},
-		"hardDefault is ignored": {
-			want:            "",
+		"hardDefault is ignored": { // uses ID
+			want:            "test",
 			typeRoot:        "",
 			typeDefault:     "",
 			typeHardDefault: "smtp",
@@ -711,11 +684,9 @@ func TestShoutrrr_GetType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			shoutrrr := testShoutrrr(false, true, false)
+			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.Type = tc.typeRoot
 			shoutrrr.Main.Type = tc.typeMain
-			shoutrrr.Defaults.Type = tc.typeDefault
-			shoutrrr.HardDefaults.Type = tc.typeHardDefault
 
 			// WHEN GetType is called
 			got := shoutrrr.GetType()

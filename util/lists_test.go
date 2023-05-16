@@ -214,7 +214,7 @@ func TestRemoveElement(t *testing.T) {
 	}
 }
 
-func TestGetIndentation(t *testing.T) {
+func TestIndentation(t *testing.T) {
 	// GIVEN a set of strings with varying indentation
 	tests := map[string]struct {
 		text       string
@@ -248,8 +248,8 @@ func TestGetIndentation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN GetIndentation is called on a string
-			got := GetIndentation(tc.text, uint8(tc.indentSize))
+			// WHEN Indentation is called on a string
+			got := Indentation(tc.text, uint8(tc.indentSize))
 
 			// THEN the expected indentation is returned
 			if got != tc.want {

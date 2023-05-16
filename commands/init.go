@@ -118,8 +118,8 @@ func (c *Command) FormattedString() string {
 	return fmt.Sprintf("[ \"%s\" ]", strings.Join(*c, "\", \""))
 }
 
-// GetNextRunnable returns the nextRunnable of the Command at `index`.
-func (c *Controller) GetNextRunnable(index int) (at time.Time) {
+// NextRunnable returns the nextRunnable of the Command at `index`.
+func (c *Controller) NextRunnable(index int) (at time.Time) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 

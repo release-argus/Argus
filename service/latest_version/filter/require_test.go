@@ -17,12 +17,10 @@
 package filter
 
 import (
-	"io"
-	"os"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	command "github.com/release-argus/Argus/commands"
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -32,13 +30,15 @@ import (
 func TestRequire_Init(t *testing.T) {
 	// GIVEN a Require, JLog and a Status
 	tests := map[string]struct {
-		req   *Require
-		lines int
+		req *Require
 	}{
 		"nil require": {
 			req: nil},
 		"non-nil require": {
 			req: &Require{}},
+		"non-nil require with DockerCheck": {
+			req: &Require{
+				Docker: &DockerCheck{}}},
 	}
 
 	for name, tc := range tests {
@@ -50,9 +50,17 @@ func TestRequire_Init(t *testing.T) {
 				stringPtr("test"),
 				stringPtr("http://example.com"))
 			status.SetDeployedVersion("1.2.3", false)
+			defaults := RequireDefaults{
+				Docker: *NewDockerCheckDefaults(
+					"ghcr",
+					"",
+					"foo", "",
+					"",
+					nil)}
+			nilDockerCheck := tc.req == nil || tc.req.Docker == nil
 
 			// WHEN Init is called with it
-			tc.req.Init(&status)
+			tc.req.Init(&status, &defaults)
 
 			// THEN the global JLog is set to its address
 			if tc.req == nil {
@@ -66,69 +74,70 @@ func TestRequire_Init(t *testing.T) {
 					t.Fatalf("Status should be the address of the var given to it %v, not %v",
 						&status, tc.req.Status)
 				}
+				// AND the DockerCheck remains nil if it was initially
+				if nilDockerCheck {
+					if tc.req.Docker != nil {
+						t.Fatal("Init with a nil DockerCheck shouldn't inititalise it")
+					}
+					return
+				}
+				// AND the defaults are handed too it ootherwise
+				if tc.req.Docker.Defaults != &defaults.Docker {
+					t.Fatalf("Docker defaults should be the address of the var given to it %v, not %v",
+						&defaults.Docker, tc.req.Docker.Defaults)
+				}
 			}
 		})
 	}
 }
 
-func TestRequire_Print(t *testing.T) {
-	// GIVEN a Require
+func TestRequireDefaults_CheckValues(t *testing.T) {
+	// GIVEN a RequireDefaults
 	tests := map[string]struct {
-		require *Require
-		lines   int
+		docker   DockerCheckDefaults
+		errRegex []string
 	}{
-		"nil require": {
-			require: nil,
-			lines:   0,
+		"valid": {
+			docker: *NewDockerCheckDefaults(
+				"ghcr", "", "", "", "", nil),
+			errRegex: []string{},
 		},
-		"only regex_content": {
-			require: &Require{
-				RegexContent: "content"},
-			lines: 2,
-		},
-		"only regex_version": {
-			require: &Require{
-				RegexVersion: "version"},
-			lines: 2,
-		},
-		"only command": {
-			require: &Require{
-				Command: []string{"bash", "update.sh"}},
-			lines: 2,
-		},
-		"only docker": {
-			require: &Require{
-				Docker: &DockerCheck{Type: "ghcr"}},
-			lines: 3,
-		},
-		"full require": {
-			require: &Require{
-				RegexContent: "content",
-				RegexVersion: "version",
-				Command:      []string{"bash", "update.sh"},
-				Docker:       &DockerCheck{Type: "ghcr"}},
-			lines: 6,
+		"invalid docker": {
+			docker: *NewDockerCheckDefaults(
+				"foo", "", "", "", "", nil),
+			errRegex: []string{
+				`^require:$`,
+				`^  docker:$`,
+				`^    type: .* <invalid>`},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			require := RequireDefaults{
+				Docker: tc.docker}
 
-			// WHEN Print is called on it
-			tc.require.Print("")
+			// WHEN CheckValues is called on it
+			err := require.CheckValues("")
 
-			// THEN the expected number of lines are printed
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
+			// THEN err is expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				found := false
+				for j := range lines {
+					match := re.MatchString(lines[j])
+					if match {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("want match for: %q\ngot:  %q",
+						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
 			}
 		})
 	}
@@ -194,16 +203,18 @@ func TestRequire_CheckValues(t *testing.T) {
 		},
 		"valid docker": {
 			require: &Require{
-				Docker: &DockerCheck{
-					Type:  "ghcr",
-					Image: "release-argus/argus",
-					Tag:   "{{ version }}"}},
+				Docker: NewDockerCheck(
+					"ghcr",
+					"release-argus/argus",
+					"{{ version }}",
+					"", "", "", time.Now(), nil)},
 			errRegex: []string{`^$`},
 		},
 		"invalid docker": {
 			require: &Require{
-				Docker: &DockerCheck{
-					Type: "foo"}},
+				Docker: NewDockerCheck(
+					"foo",
+					"", "", "", "", "", time.Now(), nil)},
 			errRegex: []string{
 				`^require:$`,
 				`^  docker:$`,
@@ -213,8 +224,9 @@ func TestRequire_CheckValues(t *testing.T) {
 			require: &Require{
 				RegexContent: "[0-",
 				RegexVersion: "[0-",
-				Docker: &DockerCheck{
-					Type: "foo"}},
+				Docker: NewDockerCheck(
+					"foo",
+					"", "", "", "", "", time.Now(), nil)},
 			errRegex: []string{
 				`^require:$`,
 				`^  regex_content: .* <invalid>`,
@@ -253,7 +265,6 @@ func TestRequire_CheckValues(t *testing.T) {
 }
 
 func TestRequire_FromStr(t *testing.T) {
-	testLogging("WARN")
 	// GIVEN a JSON string and a Require to use as defaults
 	dflt := testRequire()
 	tests := map[string]struct {
@@ -293,31 +304,31 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"invalid data type": {
 			jsonStr: stringPtr(`{
-"regex_content": 1}`),
+				"regex_content": 1}`),
 			errRegex: `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"invalid data type with default": {
 			jsonStr: stringPtr(`{
-"regex_content": 1}`),
+				"regex_content": 1}`),
 			dflt:             &dflt,
 			pointerToDefault: true,
 			errRegex:         `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"RegexContent defined": {
 			jsonStr: stringPtr(`{
-"regex_content": "foo"}`),
+				"regex_content": "foo"}`),
 			want: &Require{
 				RegexContent: "foo"},
 		},
 		"RegexVersion defined": {
 			jsonStr: stringPtr(`{
-"regex_version": "foo"}`),
+				"regex_version": "foo"}`),
 			want: &Require{
 				RegexVersion: "foo"},
 		},
 		"RegexContent from str, RegexVersion from default": {
 			jsonStr: stringPtr(`{
-"regex_content": "foo"}`),
+				"regex_content": "foo"}`),
 			dflt: &Require{
 				RegexVersion: "bar"},
 			want: &Require{
@@ -326,7 +337,7 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"RegexContent from default, RegexVersion from str": {
 			jsonStr: stringPtr(`{
-"regex_version": "bar"}`),
+				"regex_version": "bar"}`),
 			dflt: &Require{
 				RegexContent: "foo"},
 			want: &Require{
@@ -335,14 +346,14 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"Command defined": {
 			jsonStr: stringPtr(`{
-"command":[
-	"foo",
-	"bar"]}`),
+				"command":[
+					"foo",
+					"bar"]}`),
 			want: &Require{Command: []string{"foo", "bar"}},
 		},
 		"No Command JSON uses default": {
 			jsonStr: stringPtr(`{
-"regex_version": "foo"}`),
+				"regex_version": "foo"}`),
 			dflt: &Require{
 				RegexVersion: "bar",
 				Command:      []string{"foo", "bar"}},
@@ -352,8 +363,8 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"Empty command overrides default": {
 			jsonStr: stringPtr(`{
-"regex_version": "foo",
-"command": []}`),
+				"regex_version": "foo",
+				"command": []}`),
 			dflt: &Require{
 				RegexVersion: "bar",
 				Command:      []string{"foo", "bar"}},
@@ -363,175 +374,188 @@ func TestRequire_FromStr(t *testing.T) {
 		},
 		"Only Docker.Type sent": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"type": "ghcr"}}`),
+				"docker": {
+					"type": "ghcr"}}`),
 			want:     &Require{},
 			errRegex: "^$",
 		},
-		"Docker defined": {
+		"Docker defined, none prior": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"type": "ghcr",
-	"image": "release-argus/argus",
-	"tag": "latest",
-	"username": "magic",
-	"token": "admin"}}`),
+				"docker": {
+					"type": "ghcr",
+					"image": "release-argus/argus",
+					"tag": "latest",
+					"username": "magic",
+					"token": "admin"}}`),
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "ghcr",
-					Image:    "release-argus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"ghcr",
+					"release-argus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Time{}, nil)},
 		},
 		"Docker changing Type": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"type": "ghcr"}}`),
+				"docker": {
+					"type": "ghcr"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Now(), nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "ghcr",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"ghcr",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Time{}, nil)},
 		},
 		"Docker changing Image": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"image": "release-argus/argus"}}`),
+				"docker": {
+					"image": "release-argus/argus"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "release-argus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"release-argus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 		},
 		"Docker changing Tag": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"tag": "1.2.3"}}`),
+				"docker": {
+					"tag": "1.2.3"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "1.2.3",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"1.2.3",
+					"magic",
+					"admin",
+					"", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 		},
 		"Docker changing Username": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"username": "sir"}}`),
+				"docker": {
+					"username": "sir"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Now(),
+					nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "sir",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"sir",
+					"admin",
+					"", time.Time{}, nil)},
 		},
 		"Docker changing Token": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"token": "letmein"}}`),
+				"docker": {
+					"token": "letmein"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Now(), nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "letmein"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"letmein",
+					"", time.Time{}, nil)},
 		},
 		"Docker changing multiple (GHCR Argus)": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"type": "ghcr",
-	"image": "release-argus/argus",
-	"username": "",
-	"token": "bar"}}`),
+		"docker": {
+			"type": "ghcr",
+			"image": "release-argus/argus",
+			"username": "",
+			"token": "bar"}}`),
 			dflt: &Require{
-				Docker: &DockerCheck{
-					Type:     "hub",
-					Image:    "releaseargus/argus",
-					Tag:      "latest",
-					Username: "magic",
-					Token:    "admin"}},
+				Docker: NewDockerCheck(
+					"hub",
+					"releaseargus/argus",
+					"latest",
+					"magic",
+					"admin",
+					"", time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 			want: &Require{
-				Docker: &DockerCheck{
-					Type:     "ghcr",
-					Image:    "release-argus/argus",
-					Tag:      "latest",
-					Username: "",
-					Token:    "bar"}},
+				Docker: NewDockerCheck(
+					"ghcr",
+					"release-argus/argus",
+					"latest",
+					"",
+					"bar",
+					"", time.Time{}, nil)},
 		},
 		"only RegexContent changed keeps default Docker": {
 			jsonStr: stringPtr(`{
-"regex_content": "foo"}`),
-			dflt: &Require{Docker: &DockerCheck{
-				Type:  "ghcr",
-				Image: "release-argus/argus",
-				Tag:   "latest"}},
+		"regex_content": "foo"}`),
+			dflt: &Require{Docker: NewDockerCheck(
+				"ghcr",
+				"release-argus/argus",
+				"latest",
+				"", "",
+				"", time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				nil)},
 			want: &Require{
 				RegexContent: "foo",
-				Docker: &DockerCheck{
-					Type:  "ghcr",
-					Image: "release-argus/argus",
-					Tag:   "latest"}},
-		},
-		"no Docker type defaults to 'hub'": {
-			jsonStr: stringPtr(`{
-"docker": {
-	"image": "releaseargus/argus",
-	"tag": "latest"}}`),
-			dflt: &Require{},
-			want: &Require{
-				Docker: &DockerCheck{
-					Type:  "hub",
-					Image: "releaseargus/argus",
-					Tag:   "latest"}},
+				Docker: NewDockerCheck(
+					"ghcr",
+					"release-argus/argus",
+					"latest",
+					"", "",
+					"", time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
 		},
 		"Invalid Docker (no tag)": {
 			jsonStr: stringPtr(`{
-"docker": {
-	"type": "ghcr",
-	"image": "release-argus/argus"}}`),
+		"docker": {
+			"type": "ghcr",
+			"image": "release-argus/argus"}}`),
 			errRegex: `docker.*tag.*required`,
 		},
 	}
@@ -564,14 +588,16 @@ func TestRequire_FromStr(t *testing.T) {
 			}
 			// AND got is expected
 			if !tc.pointerToDefault {
-				if !reflect.DeepEqual(got, tc.want) {
-					if tc.want.Docker == nil || got.Docker == nil {
-						t.Errorf("\nwant: %v\ngot:  %v",
-							tc.want, got)
-					} else {
-						t.Errorf("\nwant: %v\ngot:  %v",
-							*tc.want, *got)
-					}
+				if got != nil && tc.want != nil &&
+					got.Docker != nil && tc.want.Docker != nil &&
+					(got.Docker.Type != tc.want.Docker.Type ||
+						got.Docker.Username != tc.want.Docker.Username ||
+						got.Docker.Image != tc.want.Docker.Image) {
+					got.Docker.validUntil = tc.want.Docker.validUntil
+				}
+				if got.String() != tc.want.String() {
+					t.Errorf("\nwant: %v\ngot:  %v",
+						*tc.want, *got)
 				}
 
 				//(pointer to the default if jsonStr was invalid)
@@ -590,7 +616,7 @@ func TestRequire__String(t *testing.T) {
 	}{
 		"nil": {
 			require: nil,
-			want:    "<nil>"},
+			want:    ""},
 		"empty": {
 			require: &Require{},
 			want:    "{}\n"},
@@ -600,19 +626,17 @@ func TestRequire__String(t *testing.T) {
 				RegexContent: "abc{{ version }}.tar.gz",
 				RegexVersion: "v([0-9.]+)",
 				Command:      command.Command{"ls", "-la"},
-				Docker: &DockerCheck{
-					Type: "hub"},
-			},
+				Docker: NewDockerCheck(
+					"hub",
+					"", "", "", "", "", time.Now(), nil)},
 			want: `
 regex_content: abc{{ version }}.tar.gz
 regex_version: v([0-9.]+)
 command:
-    - ls
-    - -la
+  - ls
+  - -la
 docker:
-    type: hub
-    image: ""
-    tag: ""
+  type: hub
 `},
 	}
 

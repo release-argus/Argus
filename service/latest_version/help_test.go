@@ -18,6 +18,7 @@ package latestver
 
 import (
 	"os"
+	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -32,34 +33,43 @@ func boolPtr(val bool) *bool {
 func stringPtr(val string) *string {
 	return &val
 }
-func testLogging(level string) {
-	jLog = util.NewJLog(level, false)
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
+	jLog.Testing = true
 	LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
 func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
-	lookup := &Lookup{
-		Type:              "github",
-		URL:               "release-argus/Argus",
-		AllowInvalidCerts: boolPtr(allowInvalidCerts),
-		Require:           &filter.Require{},
-		Options: &opt.Options{
-			SemanticVersioning: boolPtr(true),
-			Defaults:           &opt.Options{},
-			HardDefaults:       &opt.Options{},
-		},
-		Status: &svcstatus.Status{
-			ServiceID:       stringPtr("test"),
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel,
-			SaveChannel:     &saveChannel,
-		},
-		Defaults:     &Lookup{},
-		HardDefaults: &Lookup{},
-	}
+	svcStatus := svcstatus.New(
+		&announceChannel, &databaseChannel, &saveChannel,
+		"", "", "", "", "", "")
+	lookup := New(
+		stringPtr(os.Getenv("GITHUB_TOKEN")),
+		boolPtr(allowInvalidCerts),
+		nil,
+		opt.New(
+			nil, "", boolPtr(true),
+			&opt.OptionsDefaults{},
+			opt.NewDefaults(
+				"0s", boolPtr(true))),
+		&filter.Require{}, nil,
+		"github",
+		"release-argus/Argus",
+		nil,
+		nil,
+		&LookupDefaults{},
+		&LookupDefaults{})
+	lookup.Status = svcStatus
 	if urlType {
 		lookup.Type = "url"
 		lookup.URL = "https://invalid.release-argus.io/plain"
@@ -78,5 +88,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		stringPtr("http://example.com"),
 	)
 	lookup.Require.Status = lookup.Status
+	lookup.Defaults = &LookupDefaults{}
+	lookup.HardDefaults = &LookupDefaults{}
 	return lookup
 }

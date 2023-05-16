@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/config"
@@ -248,7 +249,6 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 }
 
 func TestHTTP_VersionRefresh(t *testing.T) {
-	testLogging()
 	testSVC := testService("TestHTTP_VersionRefresh")
 	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
 	testSVC.LatestVersion.Query(true, &util.LogFrom{})
@@ -279,9 +279,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 		"latest version, no changes": {
 			params: map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.GetLatestVersion()),
+				testSVC.Status.LatestVersion()),
 			wantStatusCode:    http.StatusOK,
-			wantLatestVersion: testSVC.Status.GetLatestVersion(),
+			wantLatestVersion: testSVC.Status.LatestVersion(),
 		},
 		"latest version, different regex doesn't update service version": {
 			params: map[string]string{
@@ -316,7 +316,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 				"json":                "foo.bar.version",
 				"allow_invalid_certs": "true"},
 			wantBody: fmt.Sprintf(`\{"version":%q`,
-				testSVC.Status.GetDeployedVersion()),
+				testSVC.Status.DeployedVersion()),
 			wantStatusCode:      http.StatusOK,
 			wantDeployedVersion: "",
 		},
@@ -324,9 +324,9 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			deployedVersion: true,
 			params:          map[string]string{},
 			wantBody: fmt.Sprintf(`\{"version":%q,.*"\}`,
-				testSVC.Status.GetDeployedVersion()),
+				testSVC.Status.DeployedVersion()),
 			wantStatusCode:      http.StatusOK,
-			wantDeployedVersion: testSVC.Status.GetDeployedVersion(),
+			wantDeployedVersion: testSVC.Status.DeployedVersion(),
 		},
 		"deployed version, different json doesn't update service version": {
 			deployedVersion: true,
@@ -417,14 +417,14 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 					tc.wantBody, got)
 			}
 			// AND the LatestVersion is expected
-			if svc.Status.GetLatestVersion() != tc.wantLatestVersion {
+			if svc.Status.LatestVersion() != tc.wantLatestVersion {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.GetLatestVersion())
+					tc.wantLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected
-			if svc.Status.GetDeployedVersion() != tc.wantDeployedVersion {
+			if svc.Status.DeployedVersion() != tc.wantDeployedVersion {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}
@@ -580,7 +580,6 @@ func TestHTTP_EditServiceGetOtherDetails(t *testing.T) {
 }
 
 func TestHTTP_EditServiceEdit(t *testing.T) {
-	testLogging()
 	testSVC := testService("TestHTTP_EditServiceEdit")
 	testSVC.LatestVersion.Status.SetLatestVersion("1.0.0", false)
 	testSVC.LatestVersion.Query(true, &util.LogFrom{})
@@ -783,12 +782,12 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 				json.Unmarshal([]byte(tc.payload), &data)
 				serviceName = data["name"].(string)
 			}
+			apiMutex.RLock()
 			if tc.serviceName != nil &&
 				api.Config.Service[*tc.serviceName] == nil {
 				t.Errorf("service %q not created",
 					*tc.serviceName)
 			}
-			apiMutex.RLock()
 			svc = api.Config.Service[serviceName]
 			apiMutex.RUnlock()
 			if svc == nil {
@@ -801,17 +800,17 @@ func TestHTTP_EditServiceEdit(t *testing.T) {
 			}
 			// AND the LatestVersion is expected
 			re = regexp.MustCompile(tc.wantLatestVersion)
-			match = re.MatchString(svc.Status.GetLatestVersion())
+			match = re.MatchString(svc.Status.LatestVersion())
 			if !match {
 				t.Errorf("LatestVersion, expected %q, not %q",
-					tc.wantLatestVersion, svc.Status.GetLatestVersion())
+					tc.wantLatestVersion, svc.Status.LatestVersion())
 			}
 			// AND the DeployedVersion is expected
 			re = regexp.MustCompile(tc.wantDeployedVersion)
-			match = re.MatchString(svc.Status.GetDeployedVersion())
+			match = re.MatchString(svc.Status.DeployedVersion())
 			if !match {
 				t.Errorf("DeployedVersion, expected %q, not %q",
-					tc.wantDeployedVersion, svc.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 		})
 	}
@@ -828,9 +827,13 @@ func TestHTTP_EditServiceDelete(t *testing.T) {
 		}
 	}()
 	svc := testService("TestHTTP_EditServiceDelete")
-	api.Config.Service[svc.ID] = svc
-	api.Config.Order = append(api.Config.Order, svc.ID)
-
+	svc.Init(
+		&api.Config.Defaults.Service, &api.Config.HardDefaults.Service,
+		&api.Config.Notify, &api.Config.Defaults.Notify, &api.Config.HardDefaults.Notify,
+		&api.Config.WebHook, &api.Config.Defaults.WebHook, &api.Config.HardDefaults.WebHook)
+	api.Config.AddService("", svc)
+	// drain db from the Service addition
+	<-*api.Config.DatabaseChannel
 	tests := []struct {
 		name           string
 		service        string
@@ -861,10 +864,8 @@ func TestHTTP_EditServiceDelete(t *testing.T) {
 		name, tc := tc.name, tc
 		t.Run(name, func(t *testing.T) {
 
-			svc := testService(name)
-			api.Config.Service[svc.ID] = svc
 			target := "/api/v1/service/delete/"
-			target += url.QueryEscape(svc.ID)
+			target += url.QueryEscape(tc.service)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -903,6 +904,20 @@ func TestHTTP_EditServiceDelete(t *testing.T) {
 			if util.Contains(api.Config.Order, tc.service) {
 				t.Errorf("service %q was not removed from the Order",
 					tc.service)
+			}
+			// AND the service is removed from the database (if the req was OK)
+			if tc.wantStatusCode == http.StatusOK {
+				time.Sleep(time.Second)
+				if len(*api.Config.DatabaseChannel) == 0 {
+					t.Errorf("service %q was not removed from the database",
+						tc.service)
+				} else {
+					msg := <-*api.Config.DatabaseChannel
+					if msg.Delete != true {
+						t.Errorf("message to the db should have been a deletion\n%+v",
+							msg)
+					}
+				}
 			}
 		})
 	}

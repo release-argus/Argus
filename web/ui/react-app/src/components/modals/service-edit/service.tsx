@@ -47,7 +47,7 @@ const EditService: FC<Props> = ({ name }) => {
   );
 
   const defaultData: ServiceEditType = useMemo(
-    () => convertAPIServiceDataEditToUI(name, serviceData),
+    () => convertAPIServiceDataEditToUI(name, serviceData, otherOptionsData),
     [serviceData, otherOptionsData]
   );
   const { monitorData } = useWebSocket();
@@ -87,7 +87,6 @@ const EditService: FC<Props> = ({ name }) => {
         <FormItem name="comment" col_sm={12} label="Comment" onRight />
       </Form.Group>
       <EditServiceOptions
-        options={serviceData?.options}
         defaults={otherOptionsData?.defaults?.service?.options}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.options}
       />
@@ -117,7 +116,6 @@ const EditService: FC<Props> = ({ name }) => {
         hard_defaults={otherOptionsData?.hard_defaults?.notify}
       />
       <EditServiceDashboard
-        dashboard={serviceData?.dashboard}
         defaults={otherOptionsData?.defaults?.service?.dashboard}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.dashboard}
       />

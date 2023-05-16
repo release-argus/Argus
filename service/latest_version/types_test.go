@@ -29,38 +29,34 @@ import (
 func TestLookup_String(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		lookup Lookup
+		lookup *Lookup
 		want   string
 	}{
 		"empty": {
-			lookup: Lookup{},
+			lookup: &Lookup{},
 			want:   "{}\n",
 		},
 		"filled": {
-			lookup: Lookup{
-				Type:              "github",
-				URL:               "https://test.com",
-				AccessToken:       stringPtr("token"),
-				AllowInvalidCerts: boolPtr(true),
-				UsePreRelease:     boolPtr(true),
-				URLCommands: []filter.URLCommand{
-					{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-				Require: &filter.Require{
+			lookup: New(
+				stringPtr("token"),
+				boolPtr(true),
+				nil,
+				opt.New(
+					nil, "1h2m3s", nil,
+					nil, nil),
+				&filter.Require{
 					RegexContent: "foo.tar.gz",
 				},
-				Options: &opt.Options{
-					Interval: "1h2m3s",
-				},
-				GitHubData: &GitHubData{
-					ETag: "etag",
-				},
-				Defaults: &Lookup{
-					Type: "gitlab",
-				},
-				HardDefaults: &Lookup{
-					AllowInvalidCerts: boolPtr(true),
-				},
-			},
+				nil,
+				"github",
+				"https://test.com",
+				&filter.URLCommandSlice{
+					{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
+				boolPtr(true),
+				NewDefaults(
+					stringPtr("foo"), nil, nil, nil),
+				NewDefaults(
+					nil, boolPtr(true), nil, nil)),
 			want: `
 type: github
 url: https://test.com
@@ -68,22 +64,24 @@ access_token: token
 allow_invalid_certs: true
 use_prerelease: true
 url_commands:
-    - type: regex
-      regex: v([0-9.]+)
+  - type: regex
+    regex: v([0-9.]+)
 require:
-    regex_content: foo.tar.gz
+  regex_content: foo.tar.gz
 `,
 		},
 		"quotes otherwise invalid yaml strings": {
-			lookup: Lookup{
-				AccessToken: stringPtr(">123"),
-				URLCommands: filter.URLCommandSlice{
-					{Type: "regex", Regex: stringPtr("{2}([0-9.]+)")}}},
+			lookup: New(
+				stringPtr(">123"),
+				nil, nil, nil, nil, nil, "", "",
+				&filter.URLCommandSlice{
+					{Type: "regex", Regex: stringPtr("{2}([0-9.]+)")}},
+				nil, nil, nil),
 			want: `
 access_token: '>123'
 url_commands:
-    - type: regex
-      regex: '{2}([0-9.]+)'
+  - type: regex
+    regex: '{2}([0-9.]+)'
 `,
 		},
 	}
@@ -94,7 +92,7 @@ url_commands:
 			t.Parallel()
 
 			// WHEN the Lookup is stringified with String
-			got := tc.lookup.String()
+			got := tc.lookup.String("")
 
 			// THEN the result is as expected
 			tc.want = strings.TrimPrefix(tc.want, "\n")
@@ -109,16 +107,19 @@ url_commands:
 func TestGitHubData_String(t *testing.T) {
 	// GIVEN a GitHubData
 	tests := map[string]struct {
-		githubData GitHubData
+		githubData *GitHubData
 		want       string
 	}{
+		"nil": {
+			githubData: nil,
+			want:       ""},
 		"empty": {
-			githubData: GitHubData{},
-			want:       `{"etag":""}`},
+			githubData: &GitHubData{},
+			want:       "{}"},
 		"filled": {
-			githubData: GitHubData{
-				ETag: "argus",
-				Releases: []github_types.Release{
+			githubData: &GitHubData{
+				eTag: "argus",
+				releases: []github_types.Release{
 					{URL: "https://test.com/1.2.3"},
 					{URL: "https://test.com/3.2.1"},
 				}},
@@ -155,82 +156,92 @@ func TestLookup_IsEqual(t *testing.T) {
 		},
 		"defaults ignored": {
 			a: &Lookup{
-				Defaults: &Lookup{
-					AllowInvalidCerts: boolPtr(false)}},
+				Defaults: NewDefaults(
+					nil, boolPtr(false), nil, nil)},
 			b:    &Lookup{},
 			want: true,
 		},
 		"hard_defaults ignored": {
 			a: &Lookup{
-				HardDefaults: &Lookup{
-					AllowInvalidCerts: boolPtr(false)}},
+				HardDefaults: NewDefaults(
+					nil, boolPtr(false), nil, nil)},
 			b:    &Lookup{},
 			want: true,
 		},
 		"equal": {
-			a: &Lookup{
-				Type:              "github",
-				URL:               "https://example.com",
-				AccessToken:       stringPtr("token"),
-				AllowInvalidCerts: boolPtr(false),
-				UsePreRelease:     boolPtr(true),
-				Require: &filter.Require{
+			a: New(
+				stringPtr("token"),
+				boolPtr(false),
+				nil,
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				&filter.Require{
 					RegexContent: "foo.tar.gz"},
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				GitHubData: &GitHubData{
-					ETag: "etag"},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
-			b: &Lookup{
-				Type:              "github",
-				URL:               "https://example.com",
-				AccessToken:       stringPtr("token"),
-				AllowInvalidCerts: boolPtr(false),
-				UsePreRelease:     boolPtr(true),
-				Require: &filter.Require{
+				nil,
+				"github",
+				"https://example.com",
+				nil, nil,
+				NewDefaults(
+					stringPtr("foo"), nil, nil, nil),
+				NewDefaults(
+					nil, boolPtr(true), nil, nil)),
+			b: New(
+				stringPtr("token"),
+				boolPtr(false),
+				nil,
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				&filter.Require{
 					RegexContent: "foo.tar.gz"},
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				GitHubData: &GitHubData{
-					ETag: "etag"},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
+				nil,
+				"github",
+				"https://example.com",
+				nil, nil,
+				NewDefaults(
+					stringPtr("foo"), nil, nil, nil),
+				NewDefaults(
+					nil, boolPtr(true), nil, nil)),
 			want: true,
 		},
 		"not equal": {
-			a: &Lookup{
-				Type:              "github",
-				URL:               "https://example.com",
-				AccessToken:       stringPtr("token"),
-				AllowInvalidCerts: boolPtr(false),
-				UsePreRelease:     boolPtr(true),
-				Require: &filter.Require{
+			a: New(
+				stringPtr("token"),
+				boolPtr(false),
+				nil,
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				&filter.Require{
 					RegexContent: "foo.tar.gz"},
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				GitHubData: &GitHubData{
-					ETag: "etag"},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
-			b: &Lookup{
-				Type:              "github",
-				URL:               "https://example.com/other",
-				AccessToken:       stringPtr("token"),
-				AllowInvalidCerts: boolPtr(false),
-				UsePreRelease:     boolPtr(true),
-				Require: &filter.Require{
+				nil,
+				"github",
+				"https://example.com",
+				nil,
+				boolPtr(true),
+				NewDefaults(
+					stringPtr("foo"), nil, nil, nil),
+				NewDefaults(
+					nil, boolPtr(true), nil, nil)),
+			b: New(
+				stringPtr("token"),
+				boolPtr(false),
+				nil,
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				&filter.Require{
 					RegexContent: "foo.tar.gz"},
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				GitHubData: &GitHubData{
-					ETag: "etag"},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
+				nil,
+				"github",
+				"https://example.com/other",
+				nil,
+				boolPtr(true),
+				NewDefaults(
+					stringPtr("foo"), nil, nil, nil),
+				NewDefaults(
+					nil, boolPtr(true), nil, nil)),
 			want: false,
 		},
 		"not equal with nil": {

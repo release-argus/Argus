@@ -27,170 +27,68 @@ import (
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestService_Print(t *testing.T) {
-	// GIVEN a Service
-	tests := map[string]struct {
-		svc              *Service
-		options          opt.Options
-		latestVersion    latestver.Lookup
-		deployedVersion  *deployedver.Lookup
-		commands         command.Slice
-		webhooks         webhook.Slice
-		notifies         shoutrrr.Slice
-		dashboardOptions DashboardOptions
-		lines            int
-	}{
-		"base fields only": {
-			lines: 2,
-			svc: &Service{ID: "test",
-				Comment: "foo_comment"},
-		},
-		"base + latest_version": {
-			lines: 4,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-		},
-		"base + latest_version + deployed_version": {
-			lines: 6,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				URL: "https://release-argus.io/demo/api/v1/version"},
-		},
-		"base + latest_version + deployed_version + notifies": {
-			lines: 9,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				URL: "https://release-argus.io/demo/api/v1/version"},
-			notifies: shoutrrr.Slice{
-				"foo": {Type: "discord"}},
-		},
-		"base + latest_version + deployed_version + notifies + commands": {
-			lines: 11,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				URL: "https://release-argus.io/demo/api/v1/version"},
-			notifies: shoutrrr.Slice{
-				"foo": {Type: "discord"}},
-			commands: command.Slice{
-				{"ls", "-la"}},
-		},
-		"base + latest_version + deployed_version + notifies + commands + webhooks": {
-			lines: 14,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				URL: "https://release-argus.io/demo/api/v1/version"},
-			notifies: shoutrrr.Slice{
-				"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
-			commands: command.Slice{
-				{"ls", "-la"}},
-			webhooks: webhook.Slice{
-				"bar": &webhook.WebHook{URL: "https://example.com"}},
-		},
-		"base + latest_version + deployed_version + notifies + commands + webhooks + dashboard": {
-			lines: 16,
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			latestVersion: latestver.Lookup{
-				Type: "github", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				URL: "https://release-argus.io/demo/api/v1/version"},
-			notifies: shoutrrr.Slice{
-				"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
-			commands: command.Slice{
-				{"ls", "-la"}},
-			webhooks: webhook.Slice{
-				"bar": &webhook.WebHook{URL: "https://example.com"}},
-			dashboardOptions: DashboardOptions{
-				Icon: "https://example.com/icon.png"},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			tc.svc.LatestVersion = tc.latestVersion
-			tc.svc.DeployedVersionLookup = tc.deployedVersion
-			tc.svc.Command = tc.commands
-			tc.svc.WebHook = tc.webhooks
-			tc.svc.Notify = tc.notifies
-			tc.svc.Dashboard = tc.dashboardOptions
-
-			// WHEN Print is called
-			tc.svc.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
-
 func TestSlice_Print(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
-		slice      *Slice
-		ordering   []string
-		lines      int
-		regexMatch string
+		slice    *Slice
+		ordering []string
+		want     string
 	}{
 		"nil slice with no ordering": {
-			lines: 0,
 			slice: nil,
+			want:  "",
 		},
 		"nil slice with ordering": {
-			lines:    0,
 			ordering: []string{"foo", "bar"},
 			slice:    nil,
+			want:     "",
+		},
+		"slice with nil Service and empty Service": {
+			ordering: []string{"foo", "bar"},
+			slice:    &Slice{"foo": nil, "bar": &Service{}},
+			want: `
+	service:
+	  bar: {}`,
 		},
 		"respects ordering": {
-			lines:    7,
 			ordering: []string{"zulu", "alpha"},
 			slice: &Slice{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
-			regexMatch: `zulu(.|\s)+alpha`,
+			want: `
+	service:
+	  zulu:
+	    comment: a
+	  alpha:
+	    comment: b`,
 		},
 		"respects reversedordering": {
-			lines:    7,
 			ordering: []string{"alpha", "zulu"},
 			slice: &Slice{
 				"zulu":  &Service{ID: "zulu", Comment: "a"},
 				"alpha": &Service{ID: "alpha", Comment: "b"}},
-			regexMatch: `alpha(.|\s)+zulu`,
+			want: `
+	service:
+	  alpha:
+	    comment: b
+	  zulu:
+	    comment: a`,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
+			if tc.want != "" {
+				tc.want += "\n"
+			}
+			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
@@ -198,21 +96,101 @@ func TestSlice_Print(t *testing.T) {
 			// WHEN Print is called
 			tc.slice.Print("", tc.ordering)
 
-			// THEN it prints the expected number of lines
+			// THEN it prints the expected output
 			w.Close()
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
+			strOut := string(out)
+			tc.want = strings.TrimPrefix(tc.want, "\n")
+			if strOut != tc.want {
+				t.Errorf("Print should have given\n%q\nbut gave\n%q",
+					tc.want, strOut)
 			}
-			// in the right order
-			re := regexp.MustCompile(tc.regexMatch)
-			match := re.MatchString(string(out))
-			if !match {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.regexMatch, string(out))
+		})
+	}
+}
+
+func TestDefaults_CheckValues(t *testing.T) {
+	// GIVEN a Defaults
+	tests := map[string]struct {
+		options       opt.OptionsDefaults
+		latestVersion latestver.LookupDefaults
+		errRegex      []string
+	}{
+		"valid": {
+			options: *opt.NewDefaults(
+				"10s", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"ghcr", "", "", "", "", nil))),
+		},
+		"options with errs": {
+			options: *opt.NewDefaults(
+				"10x", nil),
+			errRegex: []string{
+				`^options:$`,
+				`^  interval: "[^"]+" <invalid>`},
+		},
+		"latestVersion with errs": {
+			options: *opt.NewDefaults(
+				"10s", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"randomType", "", "", "", "", nil))),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+		},
+		"all errs": {
+			options: *opt.NewDefaults(
+				"10x", nil),
+			latestVersion: *latestver.NewDefaults(
+				nil, nil, nil,
+				filter.NewRequireDefaults(
+					filter.NewDockerCheckDefaults(
+						"randomType", "", "", "", "", nil))),
+			errRegex: []string{
+				`^options:$`,
+				`^  interval: "[^"]+" <invalid>`,
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := &Defaults{
+				Options:       tc.options,
+				LatestVersion: tc.latestVersion}
+
+			// WHEN CheckValues is called
+			err := svc.CheckValues("")
+
+			// THEN it err's when expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
 			}
 		})
 	}
@@ -222,7 +200,6 @@ func TestService_CheckValues(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
 		svc              *Service
-		defaults         *Service
 		options          opt.Options
 		latestVersion    latestver.Lookup
 		deployedVersion  *deployedver.Lookup
@@ -237,57 +214,64 @@ func TestService_CheckValues(t *testing.T) {
 				ID: "test", Comment: "foo_comment"},
 			latestVersion: latestver.Lookup{
 				Type: "github", URL: "release-argus/Argus"},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			errRegex: []string{
+				`^test:$`,
 				`^  options:$`,
-				`^    interval: .* <invalid>`},
+				`^    interval: "[^"]+" <invalid>`},
 		},
 		"options,latest_version, with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
 				Type: "invalid", URL: "release-argus/Argus"},
 			errRegex: []string{
-				`^  options:$`, `^    interval: .* <invalid>`,
+				`^test:$`,
+				`^  options:$`,
+				`^    interval: "[^"]+" <invalid>`,
 				`^  latest_version:$`,
-				`^    type: .* <invalid>`},
+				`^    type: "[^"]+" <invalid>`},
 		},
 		"latest_version, deployed_version with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
 				Type: "invalid", URL: "release-argus/Argus"},
 			deployedVersion: &deployedver.Lookup{
 				Regex: "[0-"},
 			errRegex: []string{
+				`^test:$`,
 				`^  options:$`,
-				`^    interval: .* <invalid>`,
+				`^    interval: "[^"]+" <invalid>`,
 				`^  latest_version:$`,
-				`^    type: .* <invalid>`,
+				`^    type: "[^"]+" <invalid>`,
 				`^  deployed_version:$`,
-				`^    regex: .* <invalid>`},
+				`^    url: <required>`,
+				`^    regex: "[^"]+" <invalid>`},
 		},
 		"latest_version, deployed_version, command with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
 				Type: "invalid", URL: "release-argus/Argus"},
 			deployedVersion: &deployedver.Lookup{
 				Regex: "[0-"},
 			errRegex: []string{
+				`^test:$`,
 				`^  options:$`,
-				`^    interval: .* <invalid>`,
+				`^    interval: "[^"]+" <invalid>`,
 				`^  latest_version:$`,
-				`^    type: .* <invalid>`,
+				`^    type: "[^"]+" <invalid>`,
 				`^  deployed_version:$`,
-				`^    regex: .* <invalid>`,
+				`^    url: <required>`,
+				`^    regex: "[^"]+" <invalid>`,
 				`^  command:$`,
 				`^    item_0: bash .* <invalid>.*templating`},
 			commands: command.Slice{{"bash", "update.sh", "{{ version }"}},
@@ -295,67 +279,82 @@ func TestService_CheckValues(t *testing.T) {
 		"latest_version, deployed_version, notify with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
 				Type: "invalid", URL: "release-argus/Argus"},
 			deployedVersion: &deployedver.Lookup{
 				Regex: "[0-"},
+			notifies: shoutrrr.Slice{
+				"foo": shoutrrr.New(
+					nil, "", nil, nil,
+					"discord",
+					nil, nil, nil, nil)},
 			commands: command.Slice{{
 				"bash", "update.sh", "{{ version }"}},
-			notifies: shoutrrr.Slice{
-				"foo": &shoutrrr.Shoutrrr{Type: "discord"}}, errRegex: []string{
-				`^  options:$`, `^    interval: .* <invalid>`,
-				`^  latest_version:$`,
-				`^    type: .* <invalid>`,
-				`^  deployed_version:$`,
-				`^    regex: .* <invalid>`,
-				`^  command:$`,
-				`^    item_0: bash .* <invalid>.*templating`,
-				`^  notify:`,
-				`^    foo:$`,
-				`^      url_fields:$`,
-				`^        token: <required>`,
-				`^        webhookid: <required>`},
-		},
-		"latest_version, deployed_version, webhook with errs": {
-			svc: &Service{
-				ID: "test", Comment: "foo_comment"},
-			options: opt.Options{
-				Interval: "10x"},
-			latestVersion: latestver.Lookup{
-				Type: "invalid", URL: "release-argus/Argus"},
-			deployedVersion: &deployedver.Lookup{
-				Regex: "[0-"},
-			commands: command.Slice{{
-				"bash", "update.sh", "{{ version }"}},
-			notifies: shoutrrr.Slice{
-				"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
-			webhooks: webhook.Slice{
-				"wh": &webhook.WebHook{Delay: "0x"}}, errRegex: []string{
+			errRegex: []string{
+				`^test:$`,
 				`^  options:$`,
-				`^    interval: .* <invalid>`,
+				`^    interval: "[^"]+" <invalid>`,
 				`^  latest_version:$`,
-				`^    type: .* <invalid>`,
+				`^    type: "[^"]+" <invalid>`,
 				`^  deployed_version:$`,
-				`^    regex: .* <invalid>`,
-				`^  command:$`,
-				`^    item_0: bash .* <invalid>.*templating`,
+				`^    url: <required>`,
+				`^    regex: "[^"]+" <invalid>`,
 				`^  notify:`,
 				`^    foo:$`,
 				`^      url_fields:$`,
 				`^        token: <required>`,
 				`^        webhookid: <required>`,
-				`^  webhook:$`,
-				`^    wh:$`,
-				`^      delay: .* <invalid>`},
+				`^  command:$`,
+				`^    item_0: bash .* <invalid>.*templating`},
 		},
-		"has defaults. latest_version, deployed_version, webhook with errs": {
+		"latest_version, deployed_version, webhook with errs": {
 			svc: &Service{
 				ID: "test", Comment: "foo_comment"},
-			defaults: &Service{},
-			options: opt.Options{
-				Interval: "10x"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
+			latestVersion: latestver.Lookup{
+				Type: "invalid", URL: "release-argus/Argus"},
+			deployedVersion: &deployedver.Lookup{
+				Regex: "[0-"},
+			commands: command.Slice{{
+				"bash", "update.sh", "{{ version }"}},
+			notifies: shoutrrr.Slice{
+				"foo": shoutrrr.New(
+					nil, "", nil, nil,
+					"discord",
+					nil, nil, nil, nil)},
+			webhooks: webhook.Slice{
+				"wh": webhook.New(
+					nil, nil,
+					"0x",
+					nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			errRegex: []string{
+				`^test:$`,
+				`^  options:$`,
+				`^    interval: "[^"]+" <invalid>`,
+				`^  latest_version:$`,
+				`^    type: "[^"]+" <invalid>`,
+				`^  deployed_version:$`,
+				`^    url: <required>`,
+				`^    regex: "[^"]+" <invalid>`,
+				`^  notify:`,
+				`^    foo:$`,
+				`^      url_fields:$`,
+				`^        token: <required>`,
+				`^        webhookid: <required>`,
+				`^  command:$`,
+				`^    item_0: bash .* <invalid>.*templating`,
+				`^  webhook:$`,
+				`^    wh:$`,
+				`^      delay: "[^"]+" <invalid>`},
+		},
+		"has latest_version+deployed_version, webhook with errs": {
+			svc: &Service{
+				ID: "test", Comment: "foo_comment"},
+			options: *opt.New(
+				nil, "10x", nil, nil, nil),
 			latestVersion: latestver.Lookup{
 				Type: "invalid", URL: "release-argus/Argus"},
 			deployedVersion: &deployedver.Lookup{
@@ -363,45 +362,54 @@ func TestService_CheckValues(t *testing.T) {
 			commands: command.Slice{
 				{"bash", "update.sh", "{{ version }"}},
 			notifies: shoutrrr.Slice{
-				"foo": &shoutrrr.Shoutrrr{Type: "discord"}},
+				"foo": shoutrrr.New(
+					nil, "", nil, nil,
+					"discord",
+					nil, nil, nil, nil)},
 			webhooks: webhook.Slice{
-				"wh": &webhook.WebHook{Delay: "0x"}},
+				"wh": webhook.New(
+					nil, nil,
+					"0x",
+					nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 			errRegex: []string{
-				`^  test:$`,
+				`^test:$`,
 				`^  options:$`,
-				`^    interval: .* <invalid>`,
+				`^    interval: "[^"]+" <invalid>`,
 				`^  latest_version:$`,
-				`^    type: .* <invalid>`,
+				`^    type: "[^"]+" <invalid>`,
 				`^  deployed_version:$`,
-				`^    regex: .* <invalid>`,
-				`^  command:$`,
-				`^    item_0: bash .* <invalid>.*templating`,
+				`^    url: <required>`,
+				`^    regex: "[^"]+" <invalid>`,
 				`^  notify:`,
 				`^    foo:$`,
-				`^      url_fields:$`, `^        token: <required>`,
+				`^      url_fields:$`,
+				`^        token: <required>`,
 				`^        webhookid: <required>`,
+				`^  command:$`,
+				`^    item_0: bash .* <invalid>.*templating`,
 				`^  webhook:$`,
-				`^    wh:$`, `^      delay: .* <invalid>`},
+				`^    wh:$`,
+				`^      delay: "[^"]+" <invalid>`},
 		},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			tc.svc.ID = "test"
-			tc.svc.Defaults = tc.defaults
 			tc.svc.Options = tc.options
 			tc.svc.LatestVersion = tc.latestVersion
 			tc.svc.DeployedVersionLookup = tc.deployedVersion
 			tc.svc.Command = tc.commands
 			tc.svc.WebHook = tc.webhooks
 			tc.svc.Notify = tc.notifies
-			for i := range tc.notifies {
-				tc.notifies[i].Main = &shoutrrr.Shoutrrr{}
-				tc.notifies[i].Defaults = &shoutrrr.Shoutrrr{}
-				tc.notifies[i].HardDefaults = &shoutrrr.Shoutrrr{}
-			}
 			tc.svc.Dashboard = tc.dashboardOptions
+			tc.svc.Init(
+				&Defaults{}, &Defaults{},
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 
 			// WHEN CheckValues is called
 			err := tc.svc.CheckValues("")
@@ -409,19 +417,16 @@ func TestService_CheckValues(t *testing.T) {
 			// THEN it err's when expected
 			e := util.ErrorToString(err)
 			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
 			for i := range tc.errRegex {
 				re := regexp.MustCompile(tc.errRegex[i])
-				found := false
-				for j := range lines {
-					match := re.MatchString(lines[j])
-					if match {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
 				}
 			}
 		})
@@ -440,7 +445,8 @@ func TestSlice_CheckValues(t *testing.T) {
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
-					Options: opt.Options{Interval: "10s"},
+					Options: *opt.New(
+						nil, "10s", nil, nil, nil),
 					LatestVersion: latestver.Lookup{
 						Type: "github", URL: "release-argus/Argus"}}},
 			errRegex: `^$`,
@@ -450,23 +456,26 @@ func TestSlice_CheckValues(t *testing.T) {
 				"first": {
 					ID:      "test",
 					Comment: "foo_comment",
-					Options: opt.Options{Interval: "10x"},
+					Options: *opt.New(
+						nil, "10x", nil, nil, nil),
 					LatestVersion: latestver.Lookup{
 						Type: "github", URL: "release-argus/Argus"}}},
-			errRegex: `interval: .* <invalid>`,
+			errRegex: `interval: "[^"]+" <invalid>`,
 		},
 		"multiple invalid services": {
 			slice: Slice{
 				"foo": {
 					ID:      "test",
 					Comment: "foo_comment",
-					Options: opt.Options{Interval: "10x"},
+					Options: *opt.New(
+						nil, "10x", nil, nil, nil),
 					LatestVersion: latestver.Lookup{
 						Type: "github", URL: "release-argus/Argus"}},
 				"bar": {
 					ID:      "test",
 					Comment: "foo_comment",
-					Options: opt.Options{Interval: "10y"},
+					Options: *opt.New(
+						nil, "10y", nil, nil, nil),
 					LatestVersion: latestver.Lookup{
 						Type: "github", URL: "release-argus/Argus"}}},
 			errRegex:      `interval: .*10x.* <invalid>.*interval: .*10y.* <invalid>`,

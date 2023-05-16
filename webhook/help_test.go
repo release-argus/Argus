@@ -18,7 +18,9 @@ package webhook
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -45,38 +47,45 @@ func stringifyPointer[T comparable](ptr *T) string {
 	}
 	return str
 }
-func testLogging(level string) {
-	jLog = util.NewJLog(level, false)
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	shoutrrr.LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
-func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeaders bool) *WebHook {
+func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook {
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	webhook := &WebHook{
-		Type:              "github",
-		URL:               "https://valid.release-argus.io/hooks/github-style",
-		Secret:            "argus",
-		AllowInvalidCerts: boolPtr(false),
-		DesiredStatusCode: &desiredStatusCode,
-		Delay:             "0s",
-		SilentFails:       boolPtr(false),
-		MaxTries:          &whMaxTries,
-	}
-	if forService {
-		webhook.ID = "test"
-		webhook.ParentInterval = stringPtr("12m")
-		webhook.ServiceStatus = &svcstatus.Status{}
-		webhook.ServiceStatus.Init(
-			0, 0, 1,
-			stringPtr("testServiceID"),
-			nil)
-		webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
-		webhook.Main = &WebHook{}
-		webhook.Defaults = &WebHook{}
-		webhook.HardDefaults = &WebHook{}
-	}
+	webhook := New(
+		boolPtr(false),
+		nil,
+		"0s",
+		&desiredStatusCode,
+		nil,
+		&whMaxTries,
+		nil,
+		stringPtr("12m"),
+		"argus",
+		boolPtr(false),
+		"github",
+		"https://valid.release-argus.io/hooks/github-style",
+		&WebHookDefaults{},
+		&WebHookDefaults{},
+		&WebHookDefaults{})
+	webhook.ID = "test"
+	webhook.ServiceStatus = &svcstatus.Status{}
+	webhook.ServiceStatus.Init(
+		0, 0, 1,
+		stringPtr("testServiceID"),
+		nil)
+	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 	serviceName := "testServiceID"
 	webURL := "https://example.com"
 	webhook.ServiceStatus.Init(
@@ -103,24 +112,56 @@ func testWebHook(failing bool, forService bool, selfSignedCert bool, customHeade
 	return webhook
 }
 
+func testWebHookDefaults(failing bool, selfSignedCert bool, customHeaders bool) *WebHookDefaults {
+	desiredStatusCode := 0
+	whMaxTries := uint(1)
+	webhook := NewDefaults(
+		boolPtr(false),
+		nil,
+		"0s",
+		&desiredStatusCode,
+		&whMaxTries,
+		"argus",
+		boolPtr(false),
+		"github",
+		"https://valid.release-argus.io/hooks/github-style")
+	if failing {
+		webhook.Secret = "invalid"
+	}
+	if customHeaders {
+		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
+		if failing {
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "invalid"}}
+		} else {
+			webhook.CustomHeaders = &Headers{
+				{Key: "X-Test", Value: "secret"}}
+		}
+	}
+	return webhook
+}
+
 func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
 	}
-	notifier := &shoutrrr.Shoutrrr{
-		Type:          "gotify",
-		ID:            "test",
-		Failed:        nil,
-		ServiceStatus: &svcstatus.Status{},
-		Main:          &shoutrrr.Shoutrrr{},
-		Defaults:      &shoutrrr.Shoutrrr{},
-		HardDefaults:  &shoutrrr.Shoutrrr{},
-		Options:       map[string]string{"max_tries": "1"},
-		// trunk-ignore(gitleaks/generic-api-key)
-		URLFields: map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
-		Params:    map[string]string{},
-	}
+	notifier := shoutrrr.New(
+		nil,
+		"test",
+		&map[string]string{
+			"max_tries": "1"},
+		&map[string]string{},
+		"gotify",
+		&map[string]string{
+			"host": url,
+			"path": "/gotify",
+			// trunk-ignore(gitleaks/generic-api-key)
+			"token": "AGE-LlHU89Q56uQ"},
+		&shoutrrr.ShoutrrrDefaults{},
+		&shoutrrr.ShoutrrrDefaults{},
+		&shoutrrr.ShoutrrrDefaults{})
+	notifier.ServiceStatus = &svcstatus.Status{}
 	notifier.ServiceStatus.Init(
 		0, 1, 0,
 		stringPtr("testServiceID"),

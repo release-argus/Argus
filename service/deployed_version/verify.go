@@ -21,36 +21,6 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Print will print the Lookup.
-func (l *Lookup) Print(prefix string) {
-	if l == nil {
-		return
-	}
-	fmt.Printf("%sdeployed_version:\n", prefix)
-	prefix += "  "
-
-	util.PrintlnIfNotDefault(l.URL,
-		fmt.Sprintf("%surl: %s", prefix, l.URL))
-	util.PrintlnIfNotNil(l.AllowInvalidCerts,
-		fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
-	if l.BasicAuth != nil {
-		fmt.Printf("%sbasic_auth:\n", prefix)
-		fmt.Printf("%s  username: %s\n", prefix, l.BasicAuth.Username)
-		fmt.Printf("%s  password: <secret>\n", prefix)
-	}
-	if l.Headers != nil {
-		fmt.Printf("%sheaders:\n", prefix)
-		for _, header := range l.Headers {
-			fmt.Printf("%s  - key: %s\n", prefix, header.Key)
-			fmt.Printf("%s    value: <secret>\n", prefix)
-		}
-	}
-	util.PrintlnIfNotDefault(l.JSON,
-		fmt.Sprintf("%sjson: %q", prefix, l.JSON))
-	util.PrintlnIfNotDefault(l.Regex,
-		fmt.Sprintf("%sregex: %q", prefix, l.Regex))
-}
-
 // CheckValues of the Lookup.
 func (l *Lookup) CheckValues(prefix string) (errs error) {
 	if l == nil {
@@ -59,7 +29,7 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 
 	// URL
 	if l.URL == "" && l.Defaults != nil {
-		errs = fmt.Errorf("%s%s  url: <missing> (URL to get the deployed_version is required)\\",
+		errs = fmt.Errorf("%s%s  url: <required> (URL to get the deployed_version is required)\\",
 			util.ErrorToString(errs), prefix)
 	}
 

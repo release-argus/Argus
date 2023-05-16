@@ -6,7 +6,7 @@ import {
 
 import { NotifyMatterMostType } from "types/config";
 import { NotifyOptions } from "./generic";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const MATTERMOST = ({
   name,
@@ -36,7 +36,7 @@ const MATTERMOST = ({
         col_sm={9}
         label="Host"
         tooltip="e.g. gotify.example.com"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
@@ -48,7 +48,7 @@ const MATTERMOST = ({
         type="number"
         label="Port"
         tooltip="e.g. 443"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
@@ -64,7 +64,7 @@ const MATTERMOST = ({
             <span className="bold-underline">path</span>
           </>
         }
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
@@ -73,7 +73,7 @@ const MATTERMOST = ({
       <FormItem
         name={`${name}.url_fields.username`}
         label="Username"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
@@ -85,7 +85,7 @@ const MATTERMOST = ({
         required
         label="Token"
         tooltip="WebHook token"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -95,7 +95,7 @@ const MATTERMOST = ({
         name={`${name}.url_fields.channel`}
         label="Channel"
         tooltip="e.g. releases"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
@@ -109,7 +109,7 @@ const MATTERMOST = ({
         name={`${name}.params.icon`}
         label="Icon"
         tooltip="URL of icon to use"
-        placeholder={
+        defaultVal={
           global?.params?.icon ||
           defaults?.params?.icon ||
           hard_defaults?.params?.icon

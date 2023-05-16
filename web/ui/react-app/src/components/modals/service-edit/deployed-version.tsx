@@ -1,10 +1,9 @@
 import { Accordion, Form, Row } from "react-bootstrap";
 import { FC, memo } from "react";
-import { FormItem, FormLabel } from "components/generic/form";
+import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
 import { DeployedVersionLookupType } from "types/config";
-import FormKeyValMap from "./key-val-map";
 import VersionWithRefresh from "./version-with-refresh";
 
 interface Props {
@@ -46,7 +45,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             name="deployed_version.basic_auth.username"
             col_xs={6}
             label="Username"
-            placeholder={
+            defaultVal={
               defaults?.basic_auth?.username ||
               hard_defaults?.basic_auth?.username
             }
@@ -56,7 +55,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             name="deployed_version.basic_auth.password"
             col_xs={6}
             label="Password"
-            placeholder={
+            defaultVal={
               defaults?.basic_auth?.password ||
               hard_defaults?.basic_auth?.password
             }
@@ -76,7 +75,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
               <span className="bold-underline">data.version</span>
             </>
           }
-          placeholder={defaults?.json || hard_defaults?.json}
+          defaultVal={defaults?.json || hard_defaults?.json}
         />
         <FormItem
           name="deployed_version.regex"
@@ -88,7 +87,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
               <span className="bold-underline">v([0-9.]+)</span>
             </>
           }
-          placeholder={defaults?.regex || hard_defaults?.regex}
+          defaultVal={defaults?.regex || hard_defaults?.regex}
           isRegex
           onRight
         />

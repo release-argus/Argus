@@ -28,7 +28,7 @@ func (c *Controller) AnnounceCommand(index int) {
 	formatted := (*c.Command)[index].ApplyTemplate(c.ServiceStatus)
 	commandSummary[formatted.String()] = &api_type.CommandSummary{
 		Failed:       c.Failed.Get(index),
-		NextRunnable: c.GetNextRunnable(index),
+		NextRunnable: c.NextRunnable(index),
 	}
 
 	// Command success/fail

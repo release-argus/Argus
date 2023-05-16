@@ -1,17 +1,15 @@
 import { Accordion, Button, Form, Row } from "react-bootstrap";
 import { FC, memo } from "react";
-import { useFieldArray, useFormContext } from "react-hook-form";
 
 import Command from "./command";
+import { useFieldArray } from "react-hook-form";
 
 interface Props {
   name: string;
 }
 
 const EditServiceCommands: FC<Props> = ({ name }) => {
-  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control,
     name: name,
   });
 

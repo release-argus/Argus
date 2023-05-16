@@ -17,6 +17,9 @@
 package deployedver
 
 import (
+	"os"
+	"testing"
+
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -28,23 +31,32 @@ func stringPtr(val string) *string {
 func boolPtr(val bool) *bool {
 	return &val
 }
-func testLogging() {
+func TestMain(m *testing.M) {
+	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
-func testLookup() *Lookup {
-	return &Lookup{
-		URL:               "https://invalid.release-argus.io/json",
-		AllowInvalidCerts: boolPtr(true),
-		JSON:              "version",
-		Options: &opt.Options{
-			SemanticVersioning: boolPtr(true),
-			Defaults:           &opt.Options{},
-			HardDefaults:       &opt.Options{},
-		},
-		Status:       &svcstatus.Status{ServiceID: stringPtr("test")},
-		Defaults:     &Lookup{},
-		HardDefaults: &Lookup{},
-	}
+func testLookup() (lookup *Lookup) {
+	lookup = New(
+		boolPtr(true),
+		nil,
+		nil,
+		"version",
+		opt.New(
+			nil, "", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		"",
+		&svcstatus.Status{
+			ServiceID: stringPtr("test")},
+		"https://invalid.release-argus.io/json",
+		&LookupDefaults{},
+		&LookupDefaults{})
+	return
 }

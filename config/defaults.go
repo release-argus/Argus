@@ -16,163 +16,239 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
 
-	"github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	latestver "github.com/release-argus/Argus/service/latest_version"
-	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.Service `yaml:"service,omitempty"`
-	Notify  shoutrrr.Slice  `yaml:"notify,omitempty"`
-	WebHook webhook.WebHook `yaml:"webhook,omitempty"`
+	Service service.Defaults        `yaml:"service,omitempty" json:"service,omitempty"`
+	Notify  shoutrrr.SliceDefaults  `yaml:"notify,omitempty" json:"notify,omitempty"`
+	WebHook webhook.WebHookDefaults `yaml:"webhook,omitempty" json:"webhook,omitempty"`
+}
+
+// String returns a string representation of the Defaults.
+func (d *Defaults) String(prefix string) (str string) {
+	if d != nil {
+		str = util.ToYAMLString(d, prefix)
+	}
+	return
 }
 
 // SetDefaults (last resort vars).
 func (d *Defaults) SetDefaults() {
-	// Service defaults.
-	serviceSemanticVersioning := true
-	d.Service.Options = opt.Options{
-		Interval:           "10m",
-		SemanticVersioning: &serviceSemanticVersioning}
-	serviceLatestVersionAllowInvalidCerts := false
-	usePreRelease := false
-	d.Service.LatestVersion = latestver.Lookup{
-		AllowInvalidCerts: &serviceLatestVersionAllowInvalidCerts,
-		UsePreRelease:     &usePreRelease}
-	serviceDeployedVersionLookupAllowInvalidCerts := false
-	d.Service.DeployedVersionLookup = &deployedver.Lookup{
-		AllowInvalidCerts: &serviceDeployedVersionLookupAllowInvalidCerts}
-	serviceAutoApprove := false
-	d.Service.Dashboard = service.DashboardOptions{
-		AutoApprove: &serviceAutoApprove}
+	d.Service.SetDefaults()
 
-	notifyDefaultOptions := map[string]string{
-		"message":   "{{ service_id }} - {{ version }} released",
-		"max_tries": "3",
-		"delay":     "0s"}
-
-	// Notify defaults.
-	d.Notify = make(shoutrrr.Slice)
-	d.Notify["discord"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params: types.Params{
-			"username": "Argus"}}
-	d.Notify["smtp"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		URLFields: map[string]string{
-			"port": "25"},
-		Params: types.Params{}}
-	d.Notify["googlechat"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	d.Notify["gotify"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		URLFields: map[string]string{
-			"port": "443"},
-		Params: types.Params{
-			"title":    "Argus",
-			"priority": "0"}}
-	d.Notify["ifttt"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params: types.Params{
-			"title":             "Argus",
-			"usemessageasvalue": "2",
-			"usetitleasvalue":   "0"}}
-	d.Notify["join"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	d.Notify["mattermost"] = &shoutrrr.Shoutrrr{
-		Options: map[string]string{
-			"message":   "<{{ service_url }}|{{ service_id }}> - {{ version }} released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
-			"max_tries": "3",
-			"delay":     "0s"},
-		URLFields: map[string]string{
-			"username": "Argus",
-			"port":     "443"}}
-	d.Notify["matrix"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		URLFields: map[string]string{
-			"port": "443"},
-		Params: types.Params{}}
-	d.Notify["opsgenie"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	d.Notify["pushbullet"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		URLFields: map[string]string{
-			"port": "443"},
-		Params: types.Params{
-			"title": "Argus"}}
-	d.Notify["pushover"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	d.Notify["rocketchat"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		URLFields: map[string]string{
-			"port": "443"},
-		Params: types.Params{}}
-	d.Notify["slack"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params: types.Params{
-			"botname": "Argus"}}
-	d.Notify["team"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	d.Notify["telegram"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params: types.Params{
-			"notification": "yes",
-			"preview":      "yes"}}
-	d.Notify["zulip"] = &shoutrrr.Shoutrrr{
-		Options: notifyDefaultOptions,
-		Params:  types.Params{}}
-	// InitMaps
-	for _, notify := range d.Notify {
-		notify.InitMaps()
-	}
+	// Notify defaults
+	d.Notify.SetDefaults()
 
 	// WebHook defaults.
-	d.WebHook.Type = "github"
-	d.WebHook.Delay = "0s"
-	webhookMaxTries := uint(3)
-	d.WebHook.MaxTries = &webhookMaxTries
-	webhookAllowInvalidCerts := false
-	d.WebHook.AllowInvalidCerts = &webhookAllowInvalidCerts
-	webhookDesiredStatusCode := 0
-	d.WebHook.DesiredStatusCode = &webhookDesiredStatusCode
-	webhookSilentFails := false
-	d.WebHook.SilentFails = &webhookSilentFails
+	d.WebHook.SetDefaults()
+
+	// Overwrite defaults with environment variables.
+	d.MapEnvToStruct()
+
+	// Notify Types
+	for notifyType, notify := range d.Notify {
+		notify.Type = notifyType
+	}
+}
+
+// MapEnvToStruct maps environment variables to this struct.
+func (d *Defaults) MapEnvToStruct() {
+	err := mapEnvToStruct(d, "", nil)
+	if err == nil {
+		err = d.CheckValues("")
+	}
+	if err != nil {
+		jLog.Fatal(
+			"One or more 'ARGUS_' environment variables are incorrect:\n"+
+				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
+			util.LogFrom{}, true)
+	}
+}
+
+// mapEnvToStruct maps environment variables to a struct.
+func mapEnvToStruct(src interface{}, prefix string, envVars *[]string) (err error) {
+	srcV := reflect.ValueOf(src).Elem()
+	// First call, get all matching env vars
+	if prefix == "" {
+		prefix = "ARGUS_"
+		// All env vars
+		allEnvVars := os.Environ()
+		envVarsTrimmed := make([]string, 0, len(allEnvVars))
+		// TRIM non-ARGUS env vars
+		for _, envVar := range allEnvVars {
+			parts := strings.SplitN(envVar, "=", 2)
+			// Skip empty env vars
+			if strings.HasPrefix(envVar, prefix) && parts[1] != "" {
+				envVarsTrimmed = append(envVarsTrimmed, envVar)
+			}
+		}
+		// Have no pointers to map
+		if len(envVarsTrimmed) == 0 {
+			return
+		}
+		envVars = &envVarsTrimmed
+	}
+
+	for i := 0; i < srcV.NumField(); i++ {
+		fieldType := srcV.Field(i).Type()
+		kind := fieldType.Kind()
+		// Get kind of this pointer
+		if kind == reflect.Ptr {
+			// Skip nil pointers to non-comparable types
+			if !fieldType.Elem().Comparable() && srcV.Field(i).IsNil() {
+				continue
+			}
+			kind = fieldType.Elem().Kind()
+		}
+
+		// YAML tag of this field
+		srcT := reflect.TypeOf(src).Elem()
+		fieldTag := srcT.Field(i).Tag.Get("yaml")
+		fieldName := strings.Split(fieldTag, ",")[0]
+		if fieldName == "" || fieldName == "-" {
+			if fieldTag == ",inline" {
+				err = mapEnvToStruct(srcV.Field(i).Addr().Interface(), prefix, envVars)
+				if err != nil {
+					return
+				}
+			}
+			continue
+		}
+		fieldName = strings.ToUpper(prefix + fieldName)
+		hasEnvVar := false
+		for _, envVar := range *envVars {
+			if strings.HasPrefix(envVar, fieldName) {
+				hasEnvVar = true
+				break
+			}
+		}
+		if !hasEnvVar {
+			continue
+		}
+
+		switch kind {
+		case reflect.Bool, reflect.Int, reflect.String, reflect.Uint:
+			// Check if env var exists for this field
+			if envValueStr, exists := os.LookupEnv(fieldName); exists {
+				isPointer := fieldType.Kind() == reflect.Ptr
+				// Get ENV var in correct type
+				switch kind {
+				// Boolean
+				case reflect.Bool:
+					envValue, err := strconv.ParseBool(envValueStr)
+					if err != nil {
+						return fmt.Errorf("invalid bool for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						srcV.Field(i).Set(reflect.ValueOf(&envValue))
+					}
+
+					// Integer
+				case reflect.Int:
+					envValue, err := strconv.Atoi(envValueStr)
+					if err != nil {
+						return fmt.Errorf("invalid integer for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						srcV.Field(i).Set(reflect.ValueOf(&envValue))
+					}
+
+					// String
+				case reflect.String:
+					envValue := envValueStr
+					if !isPointer {
+						srcV.Field(i).SetString(envValue)
+					} else {
+						srcV.Field(i).Set(reflect.ValueOf(&envValue))
+					}
+
+					// UInt
+				case reflect.Uint:
+					envValue, err := strconv.ParseUint(envValueStr, 10, 32)
+					if err != nil {
+						return fmt.Errorf("invalid uint for %s: %q", fieldName, envValueStr)
+					}
+					// All are pointers to distinguish between undefined
+					if isPointer {
+						uInt := uint(envValue)
+						srcV.Field(i).Set(reflect.ValueOf(&uInt))
+					}
+				}
+			}
+		case reflect.Map:
+			// Notify maps
+			if strings.HasPrefix(fieldName, "ARGUS_NOTIFY_") {
+				for _, envVar := range *envVars {
+					if strings.HasPrefix(envVar, fieldName) {
+						// Get key and value
+						keyValue := strings.SplitN(envVar, "=", 2)
+
+						// Remove fieldName from key (get key of map)
+						// e.g."ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES=7"
+						// -> "max_tries=7"
+						keyValue[0] = strings.ToLower(
+							strings.Replace(keyValue[0], fieldName+"_", "", 1))
+
+						// Set value in map
+						srcV.Field(i).SetMapIndex(reflect.ValueOf(keyValue[0]), reflect.ValueOf(keyValue[1]))
+					}
+				}
+				continue
+			}
+			// Recurse into map
+			for _, key := range srcV.Field(i).MapKeys() {
+				err = mapEnvToStruct(
+					srcV.Field(i).MapIndex(key).Interface(),
+					fmt.Sprintf("%s_%s_", fieldName, strings.ToUpper(key.String())),
+					envVars)
+			}
+		case reflect.Struct:
+			fieldName += "_"
+			if fieldType.Kind() == reflect.Ptr {
+				// If it's nil, create a new instance of this struct
+				if srcV.Field(i).IsNil() {
+					srcV.Field(i).Set(reflect.New(fieldType.Elem()))
+				}
+
+				err = mapEnvToStruct(srcV.Field(i).Interface(), fieldName, envVars)
+			} else {
+				err = mapEnvToStruct(srcV.Field(i).Addr().Interface(), fieldName, envVars)
+			}
+		}
+	}
+	return
 }
 
 // CheckValues are valid.
-func (d *Defaults) CheckValues() (errs error) {
-	prefix := "  "
+func (d *Defaults) CheckValues(prefix string) (errs error) {
+	itemPrefix := prefix + "  "
 
 	// Service
-	if err := d.Service.CheckValues(prefix); err != nil {
+	if err := d.Service.CheckValues(itemPrefix); err != nil {
 		errs = fmt.Errorf("%s%sservice:\\%w",
 			util.ErrorToString(errs), prefix, err)
 	}
 
 	// Notify
-	for i := range d.Notify {
-		// Remove the types since the key is the type
-		d.Notify[i].Type = ""
-	}
 	if err := d.Notify.CheckValues(prefix); err != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), err)
 	}
 
 	// WebHook
-	if err := d.WebHook.CheckValues(prefix); err != nil {
+	if err := d.WebHook.CheckValues(itemPrefix); err != nil {
 		errs = fmt.Errorf("%s%swebhook:\\%w",
 			util.ErrorToString(errs), prefix, err)
 	}
@@ -181,17 +257,12 @@ func (d *Defaults) CheckValues() (errs error) {
 }
 
 // Print the defaults Strcut.
-func (d *Defaults) Print() {
-	fmt.Println("defaults:")
-
-	// Service defaults.
-	fmt.Println("  service:")
-	d.Service.Print("    ")
-
-	// Notify defaults.
-	d.Notify.Print("  ")
-
-	// WebHook defaults.
-	fmt.Println("  webhook:")
-	d.WebHook.Print("    ")
+func (d *Defaults) Print(prefix string) {
+	itemPrefix := prefix + "  "
+	str := d.String(itemPrefix)
+	delim := "\n"
+	if str == "{}\n" {
+		delim = " "
+	}
+	fmt.Printf("%sdefaults:%s%s", prefix, delim, str)
 }

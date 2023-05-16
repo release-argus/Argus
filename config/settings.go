@@ -38,21 +38,39 @@ var (
 
 // Settings for the binary.
 type Settings struct {
-	Log          LogSettings  `yaml:"log,omitempty"`  // Log settings
-	Data         DataSettings `yaml:"data,omitempty"` // Data settings
-	Web          WebSettings  `yaml:"web,omitempty"`  // Web settings
-	FromFlags    SettingsBase `yaml:"-"`              // Values from flags
-	HardDefaults SettingsBase `yaml:"-"`              // Hard defaults
-	Indentation  uint8        `yaml:"-"`              // Number of spaces used in the config.yml for indentation
+	SettingsBase `yaml:",inline"` // SettingsBase for the binary
+
+	FromFlags    SettingsBase `yaml:"-"` // Values from flags
+	HardDefaults SettingsBase `yaml:"-"` // Hard defaults
+	Indentation  uint8        `yaml:"-"` // Number of spaces used in the config.yml for indentation
+}
+
+// String returns a string representation of the Settings.
+func (s *Settings) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
 }
 
 // SettingsBase for the binary.
 //
 // (Used in Defaults)
 type SettingsBase struct {
-	Log  LogSettings  `yaml:"-"`
-	Data DataSettings `yaml:"-"`
-	Web  WebSettings  `yaml:"-"`
+	Log  LogSettings  `yaml:"log,omitempty"`  // Log settings
+	Data DataSettings `yaml:"data,omitempty"` // Data settings
+	Web  WebSettings  `yaml:"web,omitempty"`  // Web settings
+}
+
+// MapEnvToStruct maps environment variables to this struct.
+func (s *SettingsBase) MapEnvToStruct() {
+	err := mapEnvToStruct(s, "", nil)
+	if err != nil {
+		jLog.Fatal(
+			"One or more 'ARGUS_' environment variables are incorrect:\n"+
+				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
+			util.LogFrom{}, true)
+	}
 }
 
 // LogSettings for the binary.
@@ -109,7 +127,7 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 	}
 }
 
-// SetDefaults initialises to the defaults.
+// SetDefaults initialises the Settings to the defaults.
 func (s *Settings) SetDefaults() {
 	// #######
 	// # LOG #
@@ -163,58 +181,58 @@ func (s *Settings) SetDefaults() {
 	s.FromFlags.Web.KeyFile = WebPKeyFile
 }
 
-// GetLogTimestamps.
-func (s *Settings) GetLogTimestamps() *bool {
-	return util.GetFirstNonNilPtr(
+// LogTimestamps.
+func (s *Settings) LogTimestamps() *bool {
+	return util.FirstNonNilPtr(
 		s.FromFlags.Log.Timestamps,
 		s.Log.Timestamps,
 		s.HardDefaults.Log.Timestamps)
 }
 
-// GetLogLevel.
-func (s *Settings) GetLogLevel() string {
-	return strings.ToUpper(*util.GetFirstNonNilPtr(
+// LogLevel.
+func (s *Settings) LogLevel() string {
+	return strings.ToUpper(*util.FirstNonNilPtr(
 		s.FromFlags.Log.Level,
 		s.FromFlags.Log.Level,
 		s.Log.Level,
 		s.HardDefaults.Log.Level))
 }
 
-// GetDataDatabaseFile.
-func (s *Settings) GetDataDatabaseFile() *string {
-	return util.GetFirstNonNilPtr(
+// DataDatabaseFile.
+func (s *Settings) DataDatabaseFile() *string {
+	return util.FirstNonNilPtr(
 		s.FromFlags.Data.DatabaseFile,
 		s.Data.DatabaseFile,
 		s.HardDefaults.Data.DatabaseFile)
 }
 
-// GetWebListenHost.
-func (s *Settings) GetWebListenHost() string {
-	return *util.GetFirstNonNilPtr(
+// WebListenHost.
+func (s *Settings) WebListenHost() string {
+	return *util.FirstNonNilPtr(
 		s.FromFlags.Web.ListenHost,
 		s.Web.ListenHost,
 		s.HardDefaults.Web.ListenHost)
 }
 
-// GetWebListenPort.
-func (s *Settings) GetWebListenPort() string {
-	return *util.GetFirstNonNilPtr(
+// WebListenPort.
+func (s *Settings) WebListenPort() string {
+	return *util.FirstNonNilPtr(
 		s.FromFlags.Web.ListenPort,
 		s.Web.ListenPort,
 		s.HardDefaults.Web.ListenPort)
 }
 
-// GetWebRoutePrefix.
-func (s *Settings) GetWebRoutePrefix() string {
-	return *util.GetFirstNonNilPtr(
+// WebRoutePrefix.
+func (s *Settings) WebRoutePrefix() string {
+	return *util.FirstNonNilPtr(
 		s.FromFlags.Web.RoutePrefix,
 		s.Web.RoutePrefix,
 		s.HardDefaults.Web.RoutePrefix)
 }
 
-// GetWebCertFile.
-func (s *Settings) GetWebCertFile() *string {
-	certFile := util.GetFirstNonNilPtr(
+// WebCertFile.
+func (s *Settings) WebCertFile() *string {
+	certFile := util.FirstNonNilPtr(
 		s.FromFlags.Web.CertFile,
 		s.Web.CertFile,
 		s.HardDefaults.Web.CertFile)
@@ -237,9 +255,9 @@ func (s *Settings) GetWebCertFile() *string {
 	return certFile
 }
 
-// GetWebKeyFile.
-func (s *Settings) GetWebKeyFile() *string {
-	keyFile := util.GetFirstNonNilPtr(
+// WebKeyFile.
+func (s *Settings) WebKeyFile() *string {
+	keyFile := util.FirstNonNilPtr(
 		s.FromFlags.Web.KeyFile,
 		s.Web.KeyFile,
 		s.HardDefaults.Web.KeyFile)

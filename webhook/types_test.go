@@ -22,9 +22,8 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestHeaders_UnmarshalYAML(t *testing.T) {
@@ -121,6 +120,88 @@ bosh: boom`,
 	}
 }
 
+func TestWebHookDefaults_String(t *testing.T) {
+	tests := map[string]struct {
+		webhook *WebHookDefaults
+		want    string
+	}{
+		"nil": {
+			webhook: nil,
+			want:    "",
+		},
+		"empty": {
+			webhook: &WebHookDefaults{},
+			want:    "{}",
+		},
+		"filled": {
+			webhook: NewDefaults(
+				boolPtr(false),
+				&Headers{
+					{Key: "X-Header", Value: "val"},
+					{Key: "X-Another", Value: "val2"}},
+				"1h1m1s",
+				intPtr(200),
+				uintPtr(4),
+				"foobar",
+				boolPtr(true),
+				"github",
+				"https://example.com"),
+			want: `
+type: github
+url: https://example.com
+allow_invalid_certs: false
+custom_headers:
+  - key: X-Header
+    value: val
+  - key: X-Another
+    value: val2
+secret: foobar
+desired_status_code: 200
+delay: 1h1m1s
+max_tries: 4
+silent_fails: true`,
+		},
+		"quotes otherwise invalid yaml strings": {
+			webhook: NewDefaults(
+				nil,
+				&Headers{
+					{Key: ">123", Value: "{pass}"}},
+				"", nil, nil, "", nil, "", ""),
+			want: `
+custom_headers:
+  - key: '>123'
+    value: '{pass}'`},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
+
+				// WHEN the WebHookDefaults are stringified with String
+				got := tc.webhook.String(prefix)
+
+				// THEN the result is as expected
+				want = strings.TrimPrefix(want, "\n")
+				if got != want {
+					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestWebHook_String(t *testing.T) {
 	tests := map[string]struct {
 		webhook *WebHook
@@ -128,59 +209,68 @@ func TestWebHook_String(t *testing.T) {
 	}{
 		"nil": {
 			webhook: nil,
-			want:    "<nil>",
+			want:    "",
 		},
 		"empty": {
 			webhook: &WebHook{},
 			want:    "{}\n",
 		},
 		"filled": {
-			webhook: &WebHook{
-				ID:                "something",
-				Type:              "github",
-				URL:               "https://example.com",
-				AllowInvalidCerts: boolPtr(false),
-				CustomHeaders: &Headers{
+			webhook: New(
+				boolPtr(false), // allow_invalid_certs
+				&Headers{ // custom_headers
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				Secret:            "foobar",
-				DesiredStatusCode: intPtr(200),
-				Delay:             "1h1mm1s",
-				MaxTries:          uintPtr(4),
-				SilentFails:       boolPtr(true),
-				Main:              &WebHook{},
-				Defaults:          &WebHook{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults:      &WebHook{AllowInvalidCerts: boolPtr(false)},
-				Notifiers: &Notifiers{
+				"1h1m1s",    // delay
+				intPtr(200), // desired_status_code
+				nil,         // failed
+				uintPtr(4),  // max_tries
+				&Notifiers{ // notifiers
 					Shoutrrr: &shoutrrr.Slice{
-						"foo": &shoutrrr.Shoutrrr{Type: "discord"}}},
-				ServiceStatus:  &svcstatus.Status{},
-				ParentInterval: stringPtr("3h2m1s"),
-			},
+						"foo": shoutrrr.New(
+							nil, "", nil, nil,
+							"discord",
+							nil, nil, nil, nil)}},
+				stringPtr("3h2m1s"),   // parent_interval
+				"foobar",              // secret
+				boolPtr(true),         // silent_fails
+				"github",              // type
+				"https://example.com", // url
+				NewDefaults( // main
+					boolPtr(false),
+					nil, "", nil, nil, "", nil, "", ""),
+				NewDefaults( // defaults
+					boolPtr(true),
+					nil, "", nil, nil, "", nil, "", ""),
+				NewDefaults( // hard_defaults
+					boolPtr(true),
+					nil, "", nil, nil, "", nil, "", "")),
 			want: `
 type: github
 url: https://example.com
 allow_invalid_certs: false
 custom_headers:
-- key: X-Header
-  value: val
-- key: X-Another
-  value: val2
+  - key: X-Header
+    value: val
+  - key: X-Another
+    value: val2
 secret: foobar
 desired_status_code: 200
-delay: 1h1mm1s
+delay: 1h1m1s
 max_tries: 4
 silent_fails: true
 `,
 		},
 		"quotes otherwise invalid yaml strings": {
-			webhook: &WebHook{
-				CustomHeaders: &Headers{
-					{Key: ">123", Value: "{pass}"}}},
+			webhook: New(
+				nil,
+				&Headers{
+					{Key: ">123", Value: "{pass}"}},
+				"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 			want: `
 custom_headers:
-- key: '>123'
-  value: '{pass}'
+  - key: '>123'
+    value: '{pass}'
 `},
 	}
 
@@ -202,6 +292,99 @@ custom_headers:
 	}
 }
 
+func TestSliceDefaults_String(t *testing.T) {
+	tests := map[string]struct {
+		slice *SliceDefaults
+		want  string
+	}{
+		"nil": {
+			slice: nil,
+			want:  "",
+		},
+		"empty": {
+			slice: &SliceDefaults{},
+			want:  "{}",
+		},
+		"one empty and one nil": {
+			slice: &SliceDefaults{
+				"one": &WebHookDefaults{},
+				"two": nil},
+			want: `
+one: {}`,
+		},
+		"one with data": {
+			slice: &SliceDefaults{
+				"one": NewDefaults(
+					nil, nil, "", nil, nil, "", nil,
+					"github",
+					"https://example.com")},
+			want: `
+one:
+  type: github
+  url: https://example.com`,
+		},
+		"multiple": {
+			slice: &SliceDefaults{
+				"one": NewDefaults(
+					nil, nil, "", nil, nil, "", nil,
+					"github",
+					"https://example.com"),
+				"two": NewDefaults(
+					nil, nil, "", nil, nil, "", nil,
+					"gitlab",
+					"https://other.com")},
+			want: `
+one:
+  type: github
+  url: https://example.com
+two:
+  type: gitlab
+  url: https://other.com`,
+		},
+		"quotes otherwise invalid yaml strings": {
+			slice: &SliceDefaults{
+				"invalid": NewDefaults(
+					nil,
+					&Headers{
+						{Key: ">123", Value: "{pass}"}},
+					"", nil, nil, "", nil, "", "")},
+			want: `
+invalid:
+  custom_headers:
+    - key: '>123'
+      value: '{pass}'`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
+
+				// WHEN the Slice is stringified with String
+				got := tc.slice.String(prefix)
+
+				// THEN the result is as expected
+				want = strings.TrimPrefix(want, "\n")
+				if got != want {
+					t.Fatalf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestSlice_String(t *testing.T) {
 	tests := map[string]struct {
 		slice *Slice
@@ -209,7 +392,7 @@ func TestSlice_String(t *testing.T) {
 	}{
 		"nil": {
 			slice: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			slice: &Slice{},
@@ -217,9 +400,11 @@ func TestSlice_String(t *testing.T) {
 		},
 		"one": {
 			slice: &Slice{
-				"one": {
-					Type: "github",
-					URL:  "https://example.com"}},
+				"one": New(
+					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+					"github",
+					"https://example.com",
+					nil, nil, nil)},
 			want: `
 one:
   type: github
@@ -228,12 +413,16 @@ one:
 		},
 		"multiple": {
 			slice: &Slice{
-				"one": {
-					Type: "github",
-					URL:  "https://example.com"},
-				"two": {
-					Type: "gitlab",
-					URL:  "https://other.com"}},
+				"one": New(
+					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+					"github",
+					"https://example.com",
+					nil, nil, nil),
+				"two": New(
+					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+					"gitlab",
+					"https://other.com",
+					nil, nil, nil)},
 			want: `
 one:
   type: github
@@ -245,13 +434,16 @@ two:
 		},
 		"quotes otherwise invalid yaml strings": {
 			slice: &Slice{
-				"invalid": {CustomHeaders: &Headers{
-					{Key: ">123", Value: "{pass}"}}}},
+				"invalid": New(
+					nil,
+					&Headers{
+						{Key: ">123", Value: "{pass}"}},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 			want: `
 invalid:
   custom_headers:
-  - key: '>123'
-    value: '{pass}'
+    - key: '>123'
+      value: '{pass}'
 `},
 	}
 

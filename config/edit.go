@@ -38,12 +38,12 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	logFrom.Secondary = newService.ID
 	// Whether we need to save the config
 	changedService := oldServiceID != newService.ID ||
-		c.Service[oldServiceID].String() != newService.String()
+		c.Service[oldServiceID].String("") != newService.String("")
 	// Whether we need to update the database
 	changedDB := oldServiceID == "" ||
-		c.Service[oldServiceID].Status.GetApprovedVersion() != newService.Status.GetApprovedVersion() ||
-		c.Service[oldServiceID].Status.GetLatestVersion() != newService.Status.GetLatestVersion() ||
-		c.Service[oldServiceID].Status.GetDeployedVersion() != newService.Status.GetDeployedVersion()
+		c.Service[oldServiceID].Status.ApprovedVersion() != newService.Status.ApprovedVersion() ||
+		c.Service[oldServiceID].Status.LatestVersion() != newService.Status.LatestVersion() ||
+		c.Service[oldServiceID].Status.DeployedVersion() != newService.Status.DeployedVersion()
 	// New service
 	if oldServiceID == "" {
 		jLog.Info("Adding service", logFrom, true)
@@ -81,11 +81,11 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 		*c.HardDefaults.Service.Status.DatabaseChannel <- dbtype.Message{
 			ServiceID: newService.ID,
 			Cells: []dbtype.Cell{
-				{Column: "latest_version", Value: newService.Status.GetLatestVersion()},
-				{Column: "latest_version_timestamp", Value: newService.Status.GetLatestVersionTimestamp()},
-				{Column: "deployed_version", Value: newService.Status.GetDeployedVersion()},
-				{Column: "deployed_version_timestamp", Value: newService.Status.GetDeployedVersionTimestamp()},
-				{Column: "approved_version", Value: newService.Status.GetApprovedVersion()}}}
+				{Column: "latest_version", Value: newService.Status.LatestVersion()},
+				{Column: "latest_version_timestamp", Value: newService.Status.LatestVersionTimestamp()},
+				{Column: "deployed_version", Value: newService.Status.DeployedVersion()},
+				{Column: "deployed_version_timestamp", Value: newService.Status.DeployedVersionTimestamp()},
+				{Column: "approved_version", Value: newService.Status.ApprovedVersion()}}}
 	}
 
 	// Start tracking the service

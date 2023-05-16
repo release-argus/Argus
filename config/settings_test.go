@@ -19,6 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -71,111 +72,122 @@ func TestSettings_GetString(t *testing.T) {
 	// GIVEN vars set in different at different priority levels in Settings
 	settings := testSettings()
 	tests := map[string]struct {
-		flag       **string
-		flagVal    *string
-		want       string
-		nilConfig  bool
-		configPtr  **string
-		getFunc    func() string
-		getFuncPtr func() *string
+		flag         **string
+		flagVal      *string
+		env          map[string]string
+		want         string
+		wantSettings *Settings
+		nilConfig    bool
+		configPtr    **string
+		getFunc      func() string
+		getFuncPtr   func() *string
 	}{
 		"log.level hard default": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, want: "INFO",
-			nilConfig: true, configPtr: &settings.Log.Level,
+			nilConfig: true,
+			configPtr: &settings.Log.Level,
 		},
 		"log.level config": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, want: "DEBUG",
 		},
 		"log.level flag": {
-			getFunc: settings.GetLogLevel,
+			getFunc: settings.LogLevel,
 			flag:    &LogLevel, flagVal: stringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"data.database-file hard default": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, want: "data/argus.db",
 			nilConfig: true, configPtr: &settings.Data.DatabaseFile,
 		},
 		"data.database-file config": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, want: "somewhere.db",
 		},
 		"data.database-file flag": {
-			getFuncPtr: settings.GetDataDatabaseFile,
+			getFuncPtr: settings.DataDatabaseFile,
 			flag:       &DataDatabaseFile, flagVal: stringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"web.listen-host hard default": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, want: "0.0.0.0",
 			nilConfig: true, configPtr: &settings.Web.ListenHost,
 		},
 		"web.listen-host config": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, want: "test",
 		},
 		"web.listen-host flag": {
-			getFunc: settings.GetWebListenHost,
+			getFunc: settings.WebListenHost,
 			flag:    &WebListenHost, flagVal: stringPtr("127.0.0.1"),
 			want: "127.0.0.1",
 		},
 		"web.listen-port hard default": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, want: "8080",
 			nilConfig: true, configPtr: &settings.Web.ListenPort,
 		},
 		"web.listen-port config": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, want: "123",
 		},
 		"web.listen-port flag": {
-			getFunc: settings.GetWebListenPort,
+			getFunc: settings.WebListenPort,
 			flag:    &WebListenPort, flagVal: stringPtr("54321"),
 			want: "54321",
 		},
 		"web.cert-file hard default": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, want: "<nil>",
 			nilConfig: true, configPtr: &settings.Web.CertFile,
 		},
 		"web.cert-file config": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, want: "../README.md",
 		},
 		"web.cert-file flag": {
-			getFuncPtr: settings.GetWebCertFile,
+			getFuncPtr: settings.WebCertFile,
 			flag:       &WebCertFile, flagVal: stringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.pkey-file hard default": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, want: "<nil>",
 			nilConfig: true, configPtr: &settings.Web.KeyFile,
 		},
 		"web.pkey-file config": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, want: "../LICENSE",
 		},
 		"web.pkey-file flag": {
-			getFuncPtr: settings.GetWebKeyFile,
+			getFuncPtr: settings.WebKeyFile,
 			flag:       &WebPKeyFile, flagVal: stringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.route-prefix hard default": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, want: "/",
 			nilConfig: true, configPtr: &settings.Web.RoutePrefix,
 		},
 		"web.route-prefix config": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, want: "/something",
 		},
 		"web.route-prefix flag": {
-			getFunc: settings.GetWebRoutePrefix,
+			getFunc: settings.WebRoutePrefix,
 			flag:    &WebRoutePrefix, flagVal: stringPtr("/flag"),
 			want: "/flag",
+		},
+		"set from env": {
+			env: map[string]string{
+				"ARGUS_LOG_LEVEL": "ERROR"},
+			wantSettings: &Settings{
+				HardDefaults: SettingsBase{
+					Log: LogSettings{
+						Level: stringPtr("ERROR")}}},
 		},
 	}
 
@@ -183,8 +195,10 @@ func TestSettings_GetString(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 
-			*tc.flag = tc.flagVal
-			jLog = util.NewJLog("ERROR", false)
+			settings = testSettings()
+			if tc.flag != nil {
+				*tc.flag = tc.flagVal
+			}
 
 			// WHEN SetDefaults is called on it
 			settings.SetDefaults()
@@ -210,6 +224,125 @@ func TestSettings_GetString(t *testing.T) {
 	}
 }
 
+func TestSettings_MapEnvToStruct(t *testing.T) {
+	// GIVEN vars set for Settings vars
+	tests := map[string]struct {
+		env      map[string]string
+		want     *Settings
+		errRegex string
+	}{
+		"empty vars ignored": {
+			env: map[string]string{
+				"ARGUS_LOG_LEVEL": ""},
+			want: &Settings{},
+		},
+		"log.level": {
+			env: map[string]string{
+				"ARGUS_LOG_LEVEL": "ERROR"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Log: LogSettings{
+						Level: stringPtr("ERROR")}}},
+		},
+		"log.timestamps": {
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "true"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Log: LogSettings{
+						Timestamps: boolPtr(true)}}},
+		},
+		"log.timestamps - invalid, not a bool": {
+			env: map[string]string{
+				"ARGUS_LOG_TIMESTAMPS": "abc"},
+			errRegex: `invalid bool for ARGUS_LOG_TIMESTAMPS: "abc"`,
+		},
+		"web.listen-host": {
+			env: map[string]string{
+				"ARGUS_WEB_LISTEN_HOST": "test"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						ListenHost: stringPtr("test")}}},
+		},
+		"web.listen-port": {
+			env: map[string]string{
+				"ARGUS_WEB_LISTEN_PORT": "123"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						ListenPort: stringPtr("123")}}},
+		},
+		"web.cert-file": {
+			env: map[string]string{
+				"ARGUS_WEB_CERT_FILE": "cert.test"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						CertFile: stringPtr("cert.test")}}},
+		},
+		"web.pkey-file": {
+			env: map[string]string{
+				"ARGUS_WEB_PKEY_FILE": "pkey.test"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						KeyFile: stringPtr("pkey.test")}}},
+		},
+		"web.route-prefix": {
+			env: map[string]string{
+				"ARGUS_WEB_ROUTE_PREFIX": "prefix"},
+			want: &Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("prefix")}}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+			settings := Settings{}
+			// Catch fatal panics.
+			defer func() {
+				r := recover()
+				if r != nil {
+					if tc.errRegex == "" {
+						t.Fatalf("unexpected panic: %v", r)
+					}
+					switch r.(type) {
+					case string:
+						if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
+							t.Errorf("want error matching:\n%v\ngot:\n%v",
+								tc.errRegex, t)
+						}
+					default:
+						t.Fatalf("unexpected panic: %v", r)
+					}
+				}
+			}()
+
+			// WHEN MapEnvToStruct is called on it
+			settings.MapEnvToStruct()
+
+			// THEN any error is as expected
+			if tc.errRegex != "" { // Expected a FATAL panic to be caught above
+				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
+			}
+			// AND the settings are set to the appropriate env vars
+			if settings.String("") != tc.want.String("") {
+				t.Errorf("want:\n%v\ngot:\n%v",
+					tc.want.String(""), settings.String(""))
+			}
+		})
+	}
+}
+
 func TestSettings_GetBool(t *testing.T) {
 	// GIVEN vars set in different at different priority levels in Settings
 	settings := testSettings()
@@ -223,16 +356,16 @@ func TestSettings_GetBool(t *testing.T) {
 		getFuncPtr func() *bool
 	}{
 		"log.timestamps hard default": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps,
 			want:       "false",
 			nilConfig:  true, configPtr: &settings.Log.Timestamps},
 		"log.timestamps config": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps,
 			want:       "true"},
 		"log.timestamps flag": {
-			getFuncPtr: settings.GetLogTimestamps,
+			getFuncPtr: settings.LogTimestamps,
 			flag:       &LogTimestamps, flagVal: boolPtr(true),
 			want: "true"},
 	}
@@ -270,9 +403,8 @@ func TestSettings_GetBool(t *testing.T) {
 	}
 }
 
-func TestSettings_GetWebFileNotExist(t *testing.T) {
+func TestSettings_GetWebFile_NotExist(t *testing.T) {
 	// GIVEN strings that point to files that don't exist
-	jLog = util.NewJLog("WARN", false)
 	settings := Settings{}
 	tests := map[string]struct {
 		file      string
@@ -281,32 +413,31 @@ func TestSettings_GetWebFileNotExist(t *testing.T) {
 		want      string
 	}{
 		"hard default cert file": {
-			getFunc: settings.GetWebCertFile},
+			getFunc: settings.WebCertFile},
 		"config cert file": {
 			file:      "cert_file_that_shouldnt_exist.hope",
 			changeVar: &settings.Web.CertFile,
-			getFunc:   settings.GetWebCertFile},
+			getFunc:   settings.WebCertFile},
 		"flag cert file": {
 			file:      "cert_file_that_shouldnt_exist.hope",
 			changeVar: &WebCertFile,
-			getFunc:   settings.GetWebCertFile},
+			getFunc:   settings.WebCertFile},
 		"hard default pkey file": {
-			getFunc: settings.GetWebKeyFile},
+			getFunc: settings.WebKeyFile},
 		"config pkey file": {
 			file:      "pkey_file_that_shouldnt_exist.hope",
 			changeVar: &settings.Web.KeyFile,
-			getFunc:   settings.GetWebKeyFile},
+			getFunc:   settings.WebKeyFile},
 		"flag pkey file": {
 			file:      "pkey_file_that_shouldnt_exist.hope",
 			changeVar: &WebPKeyFile,
-			getFunc:   settings.GetWebKeyFile},
+			getFunc:   settings.WebKeyFile},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// Switch Fatal to panic and disable this panic.
-			jLog.Testing = true
+			// Catch fatal panics.
 			defer func() {
 				r := recover()
 				if r != nil &&

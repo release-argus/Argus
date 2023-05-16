@@ -3,7 +3,8 @@ import { FormItem, FormLabel } from "components/generic/form";
 import { BooleanWithDefault } from "components/generic";
 import { NotifyGotifyType } from "types/config";
 import { NotifyOptions } from "./generic";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
+import { strToBool } from "utils";
 
 const GOTIFY = ({
   name,
@@ -33,7 +34,7 @@ const GOTIFY = ({
         col_sm={9}
         label="Host"
         tooltip="e.g. gotify.example.com"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
@@ -45,7 +46,7 @@ const GOTIFY = ({
         type="number"
         label="Port"
         tooltip="e.g. 443"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
@@ -61,7 +62,7 @@ const GOTIFY = ({
             <span className="bold-underline">path</span>
           </>
         }
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
@@ -71,7 +72,7 @@ const GOTIFY = ({
         name={`${name}.url_fields.token`}
         required
         label="Token"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -81,21 +82,12 @@ const GOTIFY = ({
     </>
     <>
       <FormLabel text="Params" heading />
-      <BooleanWithDefault
-        name={`${name}.params.disabletls`}
-        label="Disable TLS"
-        defaultValue={
-          (global?.params?.disabletls ||
-            defaults?.params?.disabletls ||
-            hard_defaults?.params?.disabletls) === "true"
-        }
-      />
       <FormItem
         name={`${name}.params.priority`}
         col_sm={2}
         type="number"
         label="Priority"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
@@ -105,12 +97,23 @@ const GOTIFY = ({
         name={`${name}.params.title`}
         col_sm={10}
         label="Title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
         onRight
+      />
+      <BooleanWithDefault
+        name={`${name}.params.disabletls`}
+        label="Disable TLS"
+        defaultValue={
+          strToBool(
+            global?.params?.disabletls ||
+              defaults?.params?.disabletls ||
+              hard_defaults?.params?.disabletls
+          ) ?? false
+        }
       />
     </>
   </>

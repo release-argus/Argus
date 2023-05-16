@@ -1,41 +1,29 @@
 /* eslint-disable react/prop-types */
 import { Button, ButtonGroup, Col, Row } from "react-bootstrap";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { useFieldArray, useFormContext } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import FormURLCommand from "./latest-version-urlcommand";
 import { memo } from "react";
+import { useFieldArray } from "react-hook-form";
 
 const FormURLCommands = () => {
-  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({
-    control,
     name: "latest_version.url_commands",
   });
 
   return (
     <>
-      <span className={"pt-1"}>
-        <FormLabel text="URL Commands" />
-      </span>
-      {fields.map(({ id }, index) => {
-        return (
-          <Row key={id} className="d-flex align-items-center">
-            <FormURLCommand
-              name={`latest_version.url_commands.${index}`}
-              removeMe={() => remove(index)}
-            />
-          </Row>
-        );
-      })}
       <Row>
+        <Col>
+          <FormLabel text="URL Commands" />
+        </Col>
         <Col>
           <ButtonGroup style={{ float: "right" }}>
             <Button
               aria-label="Add new URL Command"
-              className="btn-unchecked mb-3"
+              className="btn-unchecked"
               variant="success"
               style={{ float: "right" }}
               onClick={() =>
@@ -56,7 +44,7 @@ const FormURLCommands = () => {
             </Button>
             <Button
               aria-label="Remove last URL Command"
-              className="btn-unchecked mb-3"
+              className="btn-unchecked"
               variant="danger"
               style={{ float: "left" }}
               onClick={() => remove(fields.length - 1)}
@@ -66,6 +54,22 @@ const FormURLCommands = () => {
           </ButtonGroup>
         </Col>
       </Row>
+      {fields.map(({ id }, i, { length }) => {
+        return (
+          <Row
+            key={id}
+            className={`d-flex align-items-center ${
+              length - 1 === i ? "mb-2" : ""
+            }`}
+          >
+            <FormURLCommand
+              name={`latest_version.url_commands.${i}`}
+              removeMe={() => remove(i)}
+            />
+          </Row>
+        );
+      })}
+      {fields.length !== 0 && <br />}
     </>
   );
 };

@@ -15,6 +15,7 @@
 package shoutrrr
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,6 +25,28 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// CheckValues of this SliceDefaults.
+func (s *SliceDefaults) CheckValues(prefix string) (errs error) {
+	if s == nil {
+		return
+	}
+
+	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "    "
+	for _, key := range keys {
+		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
+			errs = fmt.Errorf("%s%s  %s:\\%w",
+				util.ErrorToString(errs), prefix, key, err)
+		}
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%snotify:\\%w",
+			prefix, errs)
+	}
+	return
+}
+
 // CheckValues of this Slice.
 func (s *Slice) CheckValues(prefix string) (errs error) {
 	if s == nil {
@@ -31,8 +54,9 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 	}
 
 	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "    "
 	for _, key := range keys {
-		if err := (*s)[key].CheckValues(prefix + "    "); err != nil {
+		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				util.ErrorToString(errs), prefix, key, err)
 		}
@@ -46,21 +70,21 @@ func (s *Slice) CheckValues(prefix string) (errs error) {
 }
 
 // CheckValues of this Notification.
-func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
-	if s == nil {
-		return
-	}
-
+func (s *ShoutrrrBase) CheckValues(prefix string) (errs error) {
 	var (
-		errsOptions   error
-		errsURLFields error
-		errsParams    error
-		errsLocate    error
+		errsOptions error
+		errsParams  error
 	)
 	s.InitMaps()
 
+	// Type
+	if s.Type != "" && !util.Contains(supportedTypes, s.Type) {
+		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
+			util.ErrorToString(errs), prefix, s.Type, strings.Join(supportedTypes, ","))
+	}
+
 	// Delay
-	if delay := s.GetSelfOption("delay"); delay != "" {
+	if delay := s.GetOption("delay"); delay != "" {
 		// Default to seconds when an integer is provided
 		if _, err := strconv.Atoi(delay); err == nil {
 			s.Options["delay"] += "s"
@@ -73,42 +97,89 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 
 	s.correctSelf()
 
-	if s.Main != nil {
-		s.checkValuesMaster(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
-
-		// Exclude matrix since it logs in, so may run into a rate-limit
-		if s.GetType() != "matrix" {
-			//#nosec G104 -- Disregard as we're not giving any rawURLs
-			sender, _ := shoutrrr_lib.CreateSender()
-			if _, err := sender.Locate(s.GetURL()); err != nil {
-				errsLocate = fmt.Errorf("%s%s^ %w\\",
-					util.ErrorToString(errsLocate), prefix, err)
-			}
-		}
-	}
-
-	if !util.CheckTemplate(s.GetSelfOption("message")) {
+	if !util.CheckTemplate(s.GetOption("message")) {
 		errsOptions = fmt.Errorf("%s%s  message: %q <invalid> (didn't pass templating)\\",
-			util.ErrorToString(errsOptions), prefix, s.GetSelfOption("message"))
+			util.ErrorToString(errsOptions), prefix, s.GetOption("message"))
 	}
-	for key := range s.Params {
-		if !util.CheckTemplate(s.GetSelfParam(key)) {
+	for key, value := range s.Params {
+		if !util.CheckTemplate(value) {
 			errsParams = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-				util.ErrorToString(errsParams), prefix, key, s.GetSelfParam("title"))
+				util.ErrorToString(errsParams), prefix, key, value)
 		}
 	}
 	if errsOptions != nil {
 		errs = fmt.Errorf("%s%soptions:\\%w",
 			util.ErrorToString(errs), prefix, errsOptions)
 	}
-	if errsURLFields != nil {
-		errs = fmt.Errorf("%s%surl_fields:\\%w",
-			util.ErrorToString(errs), prefix, errsURLFields)
-	}
 	if errsParams != nil {
 		errs = fmt.Errorf("%s%sparams:\\%w",
 			util.ErrorToString(errs), prefix, errsParams)
 	}
+	return
+}
+
+// CheckValues of this Notification.
+func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
+	if s == nil {
+		return
+	}
+	var (
+		errsOptions   error
+		errsURLFields error
+		errsParams    error
+		errsLocate    error
+	)
+
+	baseErrs := s.ShoutrrrBase.CheckValues(prefix)
+	// split option and param errs
+	if baseErrs != nil {
+		strErr := baseErrs.Error()
+		paramsStr := fmt.Sprintf("%sparams:\\", prefix)
+		optionsStr := fmt.Sprintf("%soptions:\\", prefix)
+		// Has errParams
+		if strings.Contains(strErr, paramsStr) {
+			splitStrErr := strings.Split(strErr, paramsStr)
+			errsParams = errors.New(splitStrErr[1])
+			// Has errOptions too
+			if strings.Contains(splitStrErr[0], optionsStr) {
+				errsOptions = errors.New(
+					strings.TrimPrefix(splitStrErr[0], optionsStr))
+			}
+			// only errOptions
+		} else {
+			errsOptions = errors.New(
+				strings.TrimPrefix(strErr, optionsStr))
+		}
+	}
+
+	s.checkValuesForType(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
+
+	// Exclude matrix since it logs in, so may run into a rate-limit
+	if errsParams == nil && errsURLFields == nil && s.GetType() != "matrix" {
+		//#nosec G104 -- Disregard as we're not giving any rawURLs
+		sender, _ := shoutrrr_lib.CreateSender()
+		if _, err := sender.Locate(s.BuildURL()); err != nil {
+			errsLocate = fmt.Errorf("%s%s^ %w\\",
+				util.ErrorToString(errsLocate), prefix, err)
+		}
+	}
+
+	// options
+	if errsOptions != nil {
+		errs = fmt.Errorf("%s%soptions:\\%w",
+			util.ErrorToString(errs), prefix, errsOptions)
+	}
+	// params
+	if errsParams != nil {
+		errs = fmt.Errorf("%s%sparams:\\%w",
+			util.ErrorToString(errs), prefix, errsParams)
+	}
+	// url_fields
+	if errsURLFields != nil {
+		errs = fmt.Errorf("%s%surl_fields:\\%w",
+			util.ErrorToString(errs), prefix, errsURLFields)
+	}
+	// locate
 	if errsLocate != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), errsLocate)
@@ -118,26 +189,42 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 
 // correctSelf will do a few corrections to user provided vars
 // e.g. slack color wants $23 instead of #
-func (s *Shoutrrr) correctSelf() {
+func (s *ShoutrrrBase) correctSelf() {
 	// Port, strip leading :
-	if port := strings.TrimPrefix(s.GetSelfURLField("port"), ":"); port != "" {
+	if port := strings.TrimPrefix(s.GetURLField("port"), ":"); port != "" {
 		s.SetURLField("port", port)
 	}
 
 	// Path, strip leading /
-	if path := strings.TrimPrefix(s.GetSelfURLField("path"), "/"); path != "" {
+	if path := strings.TrimPrefix(s.GetURLField("path"), "/"); path != "" {
 		s.SetURLField("path", path)
+	}
+
+	// Host
+	host := s.GetURLField("host")
+	if strings.Contains(host, ":") {
+		// Trim leading http(s)://
+		host = strings.TrimPrefix(host, "http://")
+		host = strings.TrimPrefix(host, "https://")
+		s.SetURLField("host", host)
+
+		// Move port from "host" to "port"
+		split := strings.Split(host, ":")
+		if len(split) > 1 {
+			s.SetURLField("host", split[0])
+			s.SetURLField("port", split[1])
+		}
 	}
 
 	switch s.Type {
 	case "matrix":
 		// Remove #'s in channel aliases
-		if rooms := strings.ReplaceAll(s.GetSelfParam("rooms"), "#", ""); rooms != "" {
+		if rooms := strings.ReplaceAll(s.GetParam("rooms"), "#", ""); rooms != "" {
 			s.SetParam("rooms", rooms)
 		}
 	case "mattermost":
 		// Channel, strip leading /
-		if channel := strings.TrimPrefix(s.GetSelfURLField("channel"), "/"); channel != "" {
+		if channel := strings.TrimPrefix(s.GetURLField("channel"), "/"); channel != "" {
 			s.SetURLField("channel", channel)
 		}
 	case "slack":
@@ -146,40 +233,64 @@ func (s *Shoutrrr) correctSelf() {
 		// The format for the Color prop follows the slack docs but # needs to be escaped as %23 when passed in a URL.
 		// So #ff8000 would be %23ff8000 etc.
 		key := "color"
-		if s.GetSelfParam(key) != "" {
-			s.SetParam(key, strings.Replace(s.GetSelfParam(key), "#", "%23", 1))
+		if s.GetParam(key) != "" {
+			s.SetParam(key, strings.Replace(s.GetParam(key), "#", "%23", 1))
 		}
 	case "teams":
 		// AltID, strip leading /
-		if altid := strings.TrimPrefix(s.GetSelfURLField("altid"), "/"); altid != "" {
+		if altid := strings.TrimPrefix(s.GetURLField("altid"), "/"); altid != "" {
 			s.SetURLField("altid", altid)
 		}
 		// GroupOwner, strip leading /
-		if groupowner := strings.TrimPrefix(s.GetSelfURLField("groupowner"), "/"); groupowner != "" {
+		if groupowner := strings.TrimPrefix(s.GetURLField("groupowner"), "/"); groupowner != "" {
 			s.SetURLField("groupowner", groupowner)
 		}
 	case "zulip":
 		// BotMail, replace the @ with a %40 - https://containrrr.dev/shoutrrr/v0.5/services/zulip/
-		if botmail := s.GetSelfURLField("botmail"); botmail != "" {
+		if botmail := s.GetURLField("botmail"); botmail != "" {
 			s.SetURLField("botmail", strings.ReplaceAll(botmail, "@", "%40"))
 		}
 	}
 }
 
-// checkValuesMaster will check that the leading Shoutrrr can access all vars required
-// for its Type
-func (s *Shoutrrr) checkValuesMaster(
+// checkValuesForType will check that this Shoutrrr can access all vars required
+// for its Type and that this Type is valid.
+func (s *Shoutrrr) checkValuesForType(
 	prefix string,
 	errs *error,
 	errsOptions *error,
 	errsURLFields *error,
-	errsParams *error) {
-	if util.GetFirstNonDefault(s.Type, s.Main.Type) == "" {
-		*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
-			util.ErrorToString(*errs), prefix)
+	errsParams *error,
+) {
+	// Check that the Type is valid
+	sType := s.GetType()
+	if !util.Contains(supportedTypes, sType) {
+		sTypeWithoutID := util.FirstNonDefault(s.Type, s.Main.Type)
+		if sTypeWithoutID == "" {
+			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
+				util.ErrorToString(*errs), prefix)
+		} else {
+			*errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
+				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
+		}
+	}
+	// Check that the Type doesn't differ in the Main
+	if s.Main.Type != "" && sType != s.Main.Type {
+		*errs = fmt.Errorf("%s%stype: %q != %q <invalid> (omit the type, or make it the same as the root notify.%s.type)\\",
+			util.ErrorToString(*errs), prefix, sType, s.Main.Type, s.ID)
 	}
 
-	switch s.GetType() {
+	switch sType {
+	case "bark":
+		// bark://:devicekey@host:port/[path]
+		if s.GetURLField("devicekey") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  devicekey: <required>\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
+		if s.GetURLField("host") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  host: <required>\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
 	case "discord":
 		// discord://token@webhookid
 		if s.GetURLField("token") == "" {
@@ -258,6 +369,12 @@ func (s *Shoutrrr) checkValuesMaster(
 		}
 		if s.GetURLField("password") == "" {
 			*errsURLFields = fmt.Errorf("%s%s  password: <required> e.g. 'pass123' (with user) OR 'access_token' (no user)\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
+	case "ntfy":
+		// ntfy://[username]:[password]@[host][:port][/path]/topic
+		if s.GetURLField("topic") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  topic: <required>\\",
 				util.ErrorToString(*errsURLFields), prefix)
 		}
 	case "opsgenie":
@@ -375,51 +492,12 @@ func (s *Shoutrrr) checkValuesMaster(
 	}
 }
 
-// Print the Slice.
-func (s *Slice) Print(prefix string) bool {
+// Print the SliceDefaults.
+func (s *SliceDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {
-		return false
+		return
 	}
 
-	keys := util.SortedKeys(*s)
-
-	fmt.Printf("%snotify:\n", prefix)
-	for _, key := range keys {
-		fmt.Printf("%s  %s:\n", prefix, key)
-		(*s)[key].Print(prefix + "    ")
-	}
-	return true
-}
-
-// Print the Shourrr Struct.
-func (s *Shoutrrr) Print(prefix string) {
-	util.PrintlnIfNotDefault(s.Type,
-		fmt.Sprintf("%stype: %s", prefix, s.Type))
-
-	if len(s.Options) != 0 {
-		fmt.Printf("%soptions:\n", prefix)
-		keys := util.SortedKeys(s.Options)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfOption(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfOption(key)))
-		}
-	}
-
-	if len(s.URLFields) != 0 {
-		fmt.Printf("%surl_fields:\n", prefix)
-		keys := util.SortedKeys(s.URLFields)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfURLField(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfURLField(key)))
-		}
-	}
-
-	if len(s.Params) != 0 {
-		fmt.Printf("%sparams:\n", prefix)
-		keys := util.SortedKeys(s.Params)
-		for _, key := range keys {
-			util.PrintlnIfNotDefault(s.GetSelfParam(key),
-				fmt.Sprintf("%s  %s: %s", prefix, key, s.GetSelfParam(key)))
-		}
-	}
+	str := s.String(prefix + "  ")
+	fmt.Printf("%snotify:\n%s", prefix, str)
 }

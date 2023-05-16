@@ -18,8 +18,11 @@ package command
 
 import (
 	"fmt"
+	"os"
+	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func boolPtr(val bool) *bool {
@@ -41,12 +44,28 @@ func stringifyPointer[T comparable](ptr *T) string {
 
 func testController(announce *chan []byte) (control *Controller) {
 	control = &Controller{}
+	svcStatus := svcstatus.New(
+		announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = stringPtr("service_id")
 	control.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: announce},
+		svcStatus,
 		&Slice{{}, {}},
 		nil,
 		stringPtr("14m"),
 	)
 
 	return
+}
+
+func TestMain(m *testing.M) {
+	// initialize jLog
+	jLog = util.NewJLog("DEBUG", false)
+	jLog.Testing = true
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }

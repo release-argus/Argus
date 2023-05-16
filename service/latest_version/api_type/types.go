@@ -15,9 +15,8 @@
 package types
 
 import (
-	"encoding/json"
-
 	"github.com/coreos/go-semver/semver"
+	"github.com/release-argus/Argus/util"
 )
 
 // Release is the format of a Release on api.github.com/repos/OWNER/REPO/releases.
@@ -31,9 +30,11 @@ type Release struct {
 }
 
 // String returns a string representation of the Release.
-func (r *Release) String() string {
-	jsonBytes, _ := json.Marshal(r)
-	return string(jsonBytes)
+func (r *Release) String() (str string) {
+	if r != nil {
+		str = util.ToJSONString(r)
+	}
+	return
 }
 
 // Asset is the format of an Asset on api.github.com/repos/OWNER/REPO/releases.
@@ -45,7 +46,9 @@ type Asset struct {
 }
 
 // String returns a string representation of the Asset.
-func (a *Asset) String() string {
-	jsonBytes, _ := json.Marshal(a)
-	return string(jsonBytes)
+func (a *Asset) String() (str string) {
+	if a != nil {
+		str = util.ToJSONString(a)
+	}
+	return
 }

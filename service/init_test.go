@@ -27,9 +27,9 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestService_GetServiceInfo(t *testing.T) {
+func TestService_ServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	svc := testServiceURL("TestGetServiceInfo")
+	svc := testServiceURL("TestServiceInfo")
 	id := "test_id"
 	svc.ID = id
 	url := "https://test_url.com"
@@ -41,8 +41,8 @@ func TestService_GetServiceInfo(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
-	// When GetServiceInfo is called on it
-	got := svc.GetServiceInfo()
+	// When ServiceInfo is called on it
+	got := svc.ServiceInfo()
 	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
@@ -52,12 +52,12 @@ func TestService_GetServiceInfo(t *testing.T) {
 
 	// THEN we get the correct ServiceInfo
 	if *got != want {
-		t.Errorf("GetServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
+		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
 	}
 }
 
-func TestService_GetIconURL(t *testing.T) {
+func TestService_IconURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		dashboardIcon string
@@ -71,10 +71,10 @@ func TestService_GetIconURL(t *testing.T) {
 		"no icon anywhere": {
 			want:          "",
 			dashboardIcon: "",
-			notify: shoutrrr.Slice{"test": &shoutrrr.Shoutrrr{
-				Main:         &shoutrrr.Shoutrrr{},
-				Defaults:     &shoutrrr.Shoutrrr{},
-				HardDefaults: &shoutrrr.Shoutrrr{},
+			notify: shoutrrr.Slice{"test": {
+				Main:         &shoutrrr.ShoutrrrDefaults{},
+				Defaults:     &shoutrrr.ShoutrrrDefaults{},
+				HardDefaults: &shoutrrr.ShoutrrrDefaults{},
 			}},
 		},
 		"emoji icon": {
@@ -87,38 +87,38 @@ func TestService_GetIconURL(t *testing.T) {
 		},
 		"notify icon only": {
 			want: "https://example.com/icon.png",
-			notify: shoutrrr.Slice{"test": {
-				Params: map[string]string{
-					"icon": "https://example.com/icon.png",
-				},
-				Main:         &shoutrrr.Shoutrrr{},
-				Defaults:     &shoutrrr.Shoutrrr{},
-				HardDefaults: &shoutrrr.Shoutrrr{},
-			}},
+			notify: shoutrrr.Slice{"test": shoutrrr.New(
+				nil, "", nil,
+				&map[string]string{
+					"icon": "https://example.com/icon.png"},
+				"", nil,
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{})},
 		},
 		"notify icon takes precedence over emoji": {
 			want:          "https://example.com/icon.png",
 			dashboardIcon: ":smile:",
-			notify: shoutrrr.Slice{"test": {
-				Params: map[string]string{
-					"icon": "https://example.com/icon.png",
-				},
-				Main:         &shoutrrr.Shoutrrr{},
-				Defaults:     &shoutrrr.Shoutrrr{},
-				HardDefaults: &shoutrrr.Shoutrrr{},
-			}},
+			notify: shoutrrr.Slice{"test": shoutrrr.New(
+				nil, "", nil,
+				&map[string]string{
+					"icon": "https://example.com/icon.png"},
+				"", nil,
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{})},
 		},
 		"dashboard icon takes precedence over notify icon": {
 			want:          "https://root.com/icon.png",
 			dashboardIcon: "https://root.com/icon.png",
-			notify: shoutrrr.Slice{"test": {
-				Params: map[string]string{
-					"icon": "https://example.com/icon.png",
-				},
-				Main:         &shoutrrr.Shoutrrr{},
-				Defaults:     &shoutrrr.Shoutrrr{},
-				HardDefaults: &shoutrrr.Shoutrrr{},
-			}},
+			notify: shoutrrr.Slice{"test": shoutrrr.New(
+				nil, "", nil,
+				&map[string]string{
+					"icon": "https://example.com/icon.png"},
+				"", nil,
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{},
+				&shoutrrr.ShoutrrrDefaults{})},
 		},
 	}
 
@@ -132,8 +132,8 @@ func TestService_GetIconURL(t *testing.T) {
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
-			// WHEN GetIconURL is called
-			got := svc.GetIconURL()
+			// WHEN IconURL is called
+			got := svc.IconURL()
 
 			// THEN the function returns the correct result
 			if got != tc.want {
@@ -146,7 +146,6 @@ func TestService_GetIconURL(t *testing.T) {
 
 func TestService_Init(t *testing.T) {
 	// GIVEN a Service
-	testLogging()
 	tests := map[string]struct {
 		svc *Service
 	}{
@@ -162,7 +161,10 @@ func TestService_Init(t *testing.T) {
 				LatestVersion: latestver.Lookup{
 					Type: "github", URL: "release-argus/Argus"},
 				Notify: shoutrrr.Slice{
-					"test": &shoutrrr.Shoutrrr{Type: "discord"}},
+					"test": shoutrrr.New(
+						nil, "", nil, nil,
+						"discord",
+						nil, nil, nil, nil)},
 				Command: command.Slice{
 					{"ls"}},
 				WebHook: webhook.Slice{
@@ -173,15 +175,15 @@ func TestService_Init(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			var defaults Service
-			var hardDefaults Service
+			var defaults Defaults
+			var hardDefaults Defaults
 			tc.svc.ID = name
 
 			// WHEN Init is called on it
 			tc.svc.Init(
 				&defaults, &hardDefaults,
-				&shoutrrr.Slice{}, &shoutrrr.Slice{}, &shoutrrr.Slice{},
-				&webhook.Slice{}, &webhook.WebHook{}, &webhook.WebHook{})
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
 
 			// THEN pointers to those vars are handed out to the Lookup
 			// defaults

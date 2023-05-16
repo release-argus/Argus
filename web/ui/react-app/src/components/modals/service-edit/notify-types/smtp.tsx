@@ -1,18 +1,26 @@
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyOptions } from "./generic";
 import { NotifySMTPType } from "types/config";
-import { useEffect } from "react";
+import { globalOrDefault } from "./util";
+import { normaliseForSelect } from "../util/normalise-selects";
+import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
-import { useGlobalOrDefault } from "./util";
 
 export const SMTPAuthOptions = [
-  { value: "none", label: "None" },
-  { value: "plain", label: "Plain" },
-  { value: "crammd5", label: "CRAM-MD5" },
-  { value: "unknown", label: "Unknown" },
-  { value: "oauth2", label: "OAuth2" },
+  { label: "None", value: "None" },
+  { label: "Plain", value: "Plain" },
+  { label: "CRAM-MD5", value: "CRAMMD5" },
+  { label: "Unknown", value: "Unknown" },
+  { label: "OAuth2", value: "OAuth2" },
+];
+export const SMTPEncryptionOptions = [
+  { label: "Auto", value: "Auto" },
+  { label: "ExplicitTLS", value: "ExplicitTLS" },
+  { label: "ImplicitTLS", value: "ImplicitTLS" },
+  { label: "None", value: "None" },
 ];
 
 const SMTP = ({
@@ -28,15 +36,67 @@ const SMTP = ({
   defaults?: NotifySMTPType;
   hard_defaults?: NotifySMTPType;
 }) => {
-  const { setValue } = useFormContext();
-  const defaultParamsAuth = useGlobalOrDefault(
+  const { getValues, setValue } = useFormContext();
+
+  const defaultParamsAuth = globalOrDefault(
     global?.params?.auth,
     defaults?.params?.auth,
     hard_defaults?.params?.auth
-  );
+  ).toLowerCase();
+  const smtpAuthOptions = useMemo(() => {
+    const defaultParamsAuthLabel = normaliseForSelect(
+      SMTPAuthOptions,
+      defaultParamsAuth
+    );
+
+    if (defaultParamsAuthLabel)
+      return [
+        { value: "", label: `${defaultParamsAuthLabel.label} (default)` },
+        ...SMTPAuthOptions,
+      ];
+
+    return SMTPAuthOptions;
+  }, [defaultParamsAuth]);
+
+  const defaultParamsEncryption = globalOrDefault(
+    global?.params?.encryption,
+    defaults?.params?.encryption,
+    hard_defaults?.params?.encryption
+  ).toLowerCase();
+  const smtpEncryptionOptions = useMemo(() => {
+    const defaultParamsEncryptionLabel = normaliseForSelect(
+      SMTPEncryptionOptions,
+      defaultParamsEncryption
+    );
+
+    if (defaultParamsEncryptionLabel)
+      return [
+        { value: "", label: `${defaultParamsEncryptionLabel.label} (default)` },
+        ...SMTPEncryptionOptions,
+      ];
+
+    return SMTPEncryptionOptions;
+  }, [defaultParamsAuth]);
+
   useEffect(() => {
-    global?.params?.auth && setValue(`${name}.params.auth`, "");
-  }, [global]);
+    const currentAuth = getValues(`${name}.params.auth`);
+    // Normalise selected auth, or default it
+    if (defaultParamsAuth === "")
+      setValue(
+        `${name}.params.auth`,
+        normaliseForSelect(SMTPAuthOptions, currentAuth)?.value || "Unknown"
+      );
+
+    // Normalise selected encryption, or default it
+    if (defaultParamsEncryption === "")
+      setValue(
+        `${name}.params.encryption`,
+        normaliseForSelect(
+          SMTPEncryptionOptions,
+          getValues(`${name}.params.encryption`)
+        )?.value || "Auto"
+      );
+  }, []);
 
   return (
     <>
@@ -52,7 +112,7 @@ const SMTP = ({
           name={`${name}.url_fields.username`}
           label="Username"
           tooltip="e.g. something@example.com"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.url_fields?.username,
             defaults?.url_fields?.username,
             hard_defaults?.url_fields?.username
@@ -61,7 +121,7 @@ const SMTP = ({
         <FormItem
           name={`${name}.url_fields.password`}
           label="Password"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.url_fields?.password,
             defaults?.url_fields?.password,
             hard_defaults?.url_fields?.password
@@ -74,7 +134,7 @@ const SMTP = ({
           col_sm={9}
           label="Host"
           tooltip="e.g. smtp.example.com"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.url_fields?.host,
             defaults?.url_fields?.host,
             hard_defaults?.url_fields?.host
@@ -86,7 +146,7 @@ const SMTP = ({
           type="number"
           label="Port"
           tooltip="e.g. 25/465/587/2525"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.url_fields?.port,
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
@@ -102,7 +162,7 @@ const SMTP = ({
           col_sm={12}
           label="To Address(es)"
           tooltip="Email(s) to send to (Comma separated)"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.params?.toaddresses,
             defaults?.params?.toaddresses,
             hard_defaults?.params?.toaddresses
@@ -113,7 +173,7 @@ const SMTP = ({
           required
           label="From Address"
           tooltip="Email to send from"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.params?.fromaddress,
             defaults?.params?.fromaddress,
             hard_defaults?.params?.fromaddress
@@ -123,7 +183,7 @@ const SMTP = ({
           name={`${name}.params.fromname`}
           label="From Name"
           tooltip="Name to send as"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.params?.fromname,
             defaults?.params?.fromname,
             hard_defaults?.params?.fromname
@@ -134,21 +194,36 @@ const SMTP = ({
           name={`${name}.params.auth`}
           col_sm={4}
           label="Auth"
-          options={
-            defaultParamsAuth
-              ? [{ value: "", label: defaultParamsAuth }, ...SMTPAuthOptions]
-              : SMTPAuthOptions
-          }
+          options={smtpAuthOptions}
         />
         <FormItem
           name={`${name}.params.subject`}
           col_sm={8}
           label="Subject"
           tooltip="Email subject"
-          placeholder={useGlobalOrDefault(
+          defaultVal={globalOrDefault(
             global?.params?.subject,
             defaults?.params?.subject,
             hard_defaults?.params?.subject
+          )}
+          onRight
+        />
+        <FormSelect
+          name={`${name}.params.encryption`}
+          col_sm={4}
+          label="Encryption"
+          tooltip="Encryption method"
+          options={smtpEncryptionOptions}
+        />
+        <FormItem
+          name={`${name}.params.clienthost`}
+          col_sm={8}
+          label="Client Host"
+          tooltip={`The client host name sent to the SMTP server during HELLO phase. If set to "auto", it will use the OS hostname`}
+          defaultVal={globalOrDefault(
+            global?.params?.clienthost,
+            defaults?.params?.clienthost,
+            hard_defaults?.params?.clienthost
           )}
           onRight
         />
@@ -157,9 +232,11 @@ const SMTP = ({
           label="Use HTML"
           tooltip="Whether 'message' is in HTML"
           defaultValue={
-            (global?.params?.usehtml ||
-              defaults?.params?.usehtml ||
-              hard_defaults?.params?.usehtml) === "true"
+            strToBool(
+              global?.params?.usehtml ||
+                defaults?.params?.usehtml ||
+                hard_defaults?.params?.usehtml
+            ) ?? false
           }
         />
         <BooleanWithDefault
@@ -167,9 +244,11 @@ const SMTP = ({
           label="Use StartTLS"
           tooltip="Use StartTLS encryption"
           defaultValue={
-            (global?.params?.usestarttls ||
-              defaults?.params?.usestarttls ||
-              hard_defaults?.params?.usestarttls) === "true"
+            strToBool(
+              global?.params?.usestarttls ||
+                defaults?.params?.usestarttls ||
+                hard_defaults?.params?.usestarttls
+            ) ?? true
           }
         />
       </>

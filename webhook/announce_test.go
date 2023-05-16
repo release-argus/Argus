@@ -49,7 +49,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 
 	for name, tc := range tests {
 		name, tc := name, tc
-		webhook := testWebHook(true, true, false, false)
+		webhook := testWebHook(true, false, false)
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

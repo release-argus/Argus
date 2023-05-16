@@ -127,10 +127,12 @@ const ServiceEditModal = () => {
             style={{ display: "flex", justifyContent: "space-between" }}
           >
             <ButtonGroup>
-              <DeleteModal
-                onDelete={() => onDelete()}
-                disabled={err === null}
-              />
+              {modal.service.id !== "" && (
+                <DeleteModal
+                  onDelete={() => onDelete()}
+                  disabled={err === null}
+                />
+              )}
             </ButtonGroup>
             {err === null && (
               <FontAwesomeIcon
@@ -156,7 +158,7 @@ const ServiceEditModal = () => {
                 type="submit"
                 onClick={form.handleSubmit(onSubmit)}
                 className="ms-2"
-                disabled={err === null}
+                disabled={err === null || !form.formState.isDirty}
               >
                 Confirm
               </Button>

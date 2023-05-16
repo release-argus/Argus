@@ -32,8 +32,7 @@ import (
 )
 
 func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		url      string
 		errRegex string
@@ -73,8 +72,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		url                  string
 		allowInvalidCerts    bool
@@ -180,8 +178,7 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_Track(t *testing.T) {
-	// GIVEN a Lookup
-	testLogging()
+	// GIVEN a Lookup()
 	tests := map[string]struct {
 		lookup               *Lookup
 		allowInvalidCerts    bool
@@ -367,26 +364,21 @@ func TestLookup_Track(t *testing.T) {
 				os.Stdout = stdout
 			}()
 			if tc.lookup != nil {
-				defaults := &Lookup{}
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.Defaults = defaults
-				tc.lookup.HardDefaults = defaults
-				tc.lookup.Options = &opt.Options{
-					Interval:           "2s",
-					SemanticVersioning: boolPtr(tc.semanticVersioning),
-					Defaults:           &opt.Options{},
-					HardDefaults:       &opt.Options{},
-				}
+				tc.lookup.Defaults = &LookupDefaults{}
+				tc.lookup.HardDefaults = &LookupDefaults{}
+				tc.lookup.Options = opt.New(
+					nil, "2s", &tc.semanticVersioning,
+					&opt.OptionsDefaults{}, &opt.OptionsDefaults{})
 				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
-				webURL := &tc.lookup.URL
-				tc.lookup.Status = &svcstatus.Status{
-					ServiceID:       stringPtr(name),
-					AnnounceChannel: &announceChannel,
-					DatabaseChannel: &dbChannel,
-					WebURL:          webURL,
-				}
+				svcStatus := svcstatus.New(
+					&announceChannel, &dbChannel, nil,
+					"", "", "", "", "", "")
+				tc.lookup.Status = svcStatus
+				tc.lookup.Status.ServiceID = stringPtr(name)
+				tc.lookup.Status.WebURL = &tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()
 				}
@@ -435,16 +427,16 @@ func TestLookup_Track(t *testing.T) {
 			out, _ := io.ReadAll(r)
 			os.Stdout = stdout
 			t.Log(string(out))
-			if tc.wantDeployedVersion != tc.lookup.Status.GetDeployedVersion() {
+			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion() {
 				t.Errorf("expected DeployedVersion to be %q after query, not %q",
-					tc.wantDeployedVersion, tc.lookup.Status.GetDeployedVersion())
+					tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion())
 			}
 			if tc.wantLatestVersion == "" {
 				tc.wantLatestVersion = tc.wantDeployedVersion
 			}
-			if tc.wantLatestVersion != tc.lookup.Status.GetLatestVersion() {
+			if tc.wantLatestVersion != tc.lookup.Status.LatestVersion() {
 				t.Errorf("expected LatestVersion to be %q after query, not %q",
-					tc.wantLatestVersion, tc.lookup.Status.GetLatestVersion())
+					tc.wantLatestVersion, tc.lookup.Status.LatestVersion())
 			}
 			if tc.wantAnnounces != len(*tc.lookup.Status.AnnounceChannel) {
 				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",

@@ -1,13 +1,8 @@
-import {
-  FormItem,
-  FormItemColour,
-  FormLabel,
-  FormTextArea,
-} from "components/generic/form";
+import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
 import { NotifyOptions } from "./generic";
 import { NotifyTeamsType } from "types/config";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const TEAMS = ({
   name,
@@ -34,7 +29,7 @@ const TEAMS = ({
       <FormItem
         name={`${name}.url_fields.altid`}
         label="Alt ID"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.altid,
           defaults?.url_fields?.altid,
           hard_defaults?.url_fields?.altid
@@ -43,7 +38,7 @@ const TEAMS = ({
       <FormItem
         name={`${name}.url_fields.tenant`}
         label="Tenant"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.tenant,
           defaults?.url_fields?.tenant,
           hard_defaults?.url_fields?.tenant
@@ -53,7 +48,7 @@ const TEAMS = ({
       <FormItem
         name={`${name}.url_fields.group`}
         label="Group"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.group,
           defaults?.url_fields?.group,
           hard_defaults?.url_fields?.group
@@ -62,7 +57,7 @@ const TEAMS = ({
       <FormItem
         name={`${name}.url_fields.groupowner`}
         label="Group Owner"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.groupowner,
           defaults?.url_fields?.groupowner,
           hard_defaults?.url_fields?.groupowner
@@ -76,7 +71,7 @@ const TEAMS = ({
         name={`${name}.params.color`}
         col_sm={5}
         label="Color"
-        placeholder={
+        defaultVal={
           global?.params?.color ||
           defaults?.params?.color ||
           hard_defaults?.params?.color
@@ -86,19 +81,18 @@ const TEAMS = ({
         name={`${name}.params.host`}
         col_sm={7}
         label="Host"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.host,
           defaults?.params?.host,
           hard_defaults?.params?.host
         )}
         onRight
       />
-      <FormTextArea
+      <FormItem
         name={`${name}.params.title`}
         col_sm={12}
-        rows={2}
         label="Title"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

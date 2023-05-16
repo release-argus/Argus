@@ -89,11 +89,10 @@ func (r *Require) RegexCheckContent(
 		if !regexMatch {
 			// if we're on the last asset
 			if i == len(searchArea)-1 {
+				regexStr := util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version})
 				err := fmt.Errorf(
 					"regex %q not matched on content for version %q",
-					util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version}),
-					version,
-				)
+					regexStr, version)
 				r.Status.RegexMissContent()
 				jLog.Info(err, *logFrom, r.Status.RegexMissesContent() == 1)
 				return err

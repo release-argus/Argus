@@ -17,102 +17,63 @@
 package latestver
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestLookup_Print(t *testing.T) {
-	// GIVEN a Lookup
+func TestLookupDefaults_CheckValues(t *testing.T) {
+	// GIVEN a LookupDefault
 	tests := map[string]struct {
-		lookup      *Lookup
-		urlCommands filter.URLCommandSlice
-		require     *filter.Require
-		options     opt.Options
-		lines       int
+		require  filter.RequireDefaults
+		errRegex []string
 	}{
-		"minimal github type with no urlCommands/require": {
-			lookup: &Lookup{
-				Type: "github",
-				URL:  "release-argus/Argus"},
-			lines: 3,
+		"valid": {
+			require: *filter.NewRequireDefaults(
+				filter.NewDockerCheckDefaults(
+					"ghcr", "", "", "", "", nil)),
+			errRegex: []string{},
 		},
-		"fully defined github type with no urlCommands/require": {
-			lookup: testLookup(false, false),
-			lines:  6,
-		},
-		"url type with no urlCommands/require": {
-			lookup: testLookup(true, false),
-			lines:  4,
-		},
-		"url type with urlCommands and no require": {
-			lookup: testLookup(true, false),
-			lines:  7,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-		},
-		"github type with urlCommands and no require": {
-			lookup: testLookup(false, false),
-			lines:  9,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-		},
-		"url type with require and no urlCommands": {
-			lookup:  testLookup(true, false),
-			lines:   6,
-			require: &filter.Require{RegexContent: "foo"},
-		},
-		"github type with require and no urlCommands": {
-			lookup:  testLookup(false, false),
-			lines:   8,
-			require: &filter.Require{RegexContent: "foo"},
-		},
-		"url type with urlCommands and require": {
-			lookup: testLookup(true, false),
-			lines:  9,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-			require: &filter.Require{
-				RegexContent: "foo"},
-			options: opt.Options{Active: boolPtr(false)},
-		},
-		"github type with urlCommands and require": {
-			lookup: testLookup(false, false),
-			lines:  11,
-			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("foo")}},
-			require: &filter.Require{RegexContent: "foo"},
-			options: opt.Options{Active: boolPtr(false)},
+		"invalid require": {
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    docker:$`,
+				`^      type: "[^"]+" <invalid>`},
+			require: *filter.NewRequireDefaults(
+				filter.NewDockerCheckDefaults(
+					"someType", "", "", "", "", nil)),
 		},
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			tc.lookup.Require = tc.require
-			tc.lookup.URLCommands = tc.urlCommands
-			tc.lookup.Options = &tc.options
+			defaults := LookupDefaults{
+				Require: tc.require}
 
-			// WHEN Print is called
-			tc.lookup.Print("")
+			// WHEN CheckValues is called
+			err := defaults.CheckValues("")
 
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
+			// THEN it err's when expected
+			e := util.ErrorToString(err)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
 			}
 		})
 	}
@@ -126,38 +87,58 @@ func TestLookup_CheckValues(t *testing.T) {
 		wantURL     *string
 		require     *filter.Require
 		urlCommands *filter.URLCommandSlice
-		errRegex    string
+		errRegex    []string
 	}{
-		"valid service": {
-			errRegex: `^$`,
+		"valid": {
+			errRegex: []string{},
 		},
 		"no type": {
-			errRegex: `type: <required>`,
-			lType:    stringPtr(""),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  type: <required>`},
+			lType: stringPtr(""),
 		},
 		"invalid type": {
-			errRegex: `type: .* <invalid>`,
-			lType:    stringPtr("foo"),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  type: "[^"]+" <invalid>`},
+			lType: stringPtr("foo"),
 		},
 		"no url": {
-			errRegex: `url: <required>`,
-			url:      stringPtr(""),
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url: <required>`},
+			url: stringPtr(""),
 		},
 		"corrects github url": {
-			errRegex: `^$`,
+			errRegex: []string{},
 			url:      stringPtr("https://github.com/release-argus/Argus"),
 			wantURL:  stringPtr("release-argus/Argus"),
 		},
 		"invalid require": {
-			errRegex: `regex_content: .* <invalid>`,
-			require:  &filter.Require{RegexContent: "[0-"},
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  require:$`,
+				`^    regex_content: "[^"]+" <invalid>`},
+			require: &filter.Require{RegexContent: "[0-"},
 		},
 		"invalid urlCommands": {
-			errRegex:    `type: .* <invalid>`,
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url_commands:$`,
+				`^    item_0:$`,
+				`^      type: "[^"]+" <invalid>`},
 			urlCommands: &filter.URLCommandSlice{{Type: "foo"}},
 		},
 		"all errs": {
-			errRegex:    `url: <required>`,
+			errRegex: []string{
+				`^latest_version:$`,
+				`^  url: <required>`,
+				`^  require:$`,
+				`^    regex_content: "[^"]+" <invalid>`,
+				`^  url_commands:$`,
+				`^    item_0:$`,
+				`^      type: "[^"]+" <invalid>`},
 			url:         stringPtr(""),
 			require:     &filter.Require{RegexContent: "[0-"},
 			urlCommands: &filter.URLCommandSlice{{Type: "foo"}},
@@ -188,11 +169,18 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			// THEN it err's when expected
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
-				t.Fatalf("want match for %q\nnot: %q",
-					tc.errRegex, e)
+			lines := strings.Split(e, `\`)
+			if len(tc.errRegex) > len(lines) {
+				t.Fatalf("want %d errors:\n%v\ngot %d errors:\n%v",
+					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			}
+			for i := range tc.errRegex {
+				re := regexp.MustCompile(tc.errRegex[i])
+				match := re.MatchString(lines[i])
+				if !match {
+					t.Fatalf("%q didn't match %q\ngot:  %q",
+						lines[i], tc.errRegex[i], e)
+				}
 			}
 		})
 	}

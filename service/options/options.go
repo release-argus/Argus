@@ -20,24 +20,61 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
+// OptionsBase is the base struct for Options.
+type OptionsBase struct {
+	Interval           string `yaml:"interval,omitempty" json:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
+	SemanticVersioning *bool  `yaml:"semantic_versioning,omitempty" json:"semantic_versioning,omitempty"` // default - true = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
+}
+
+// OptionsDefaults are the default values for Options.
+type OptionsDefaults struct {
+	OptionsBase `yaml:",inline" json:",inline"`
+}
+
+// NewDefaults returns a new OptionsDefaults.
+func NewDefaults(
+	interval string,
+	semanticVersioning *bool,
+) *OptionsDefaults {
+	return &OptionsDefaults{
+		OptionsBase: OptionsBase{
+			Interval:           interval,
+			SemanticVersioning: semanticVersioning}}
+}
+
 type Options struct {
-	Active             *bool    `yaml:"active,omitempty" json:"active,omitempty"`                           // Disable the service.
-	Interval           string   `yaml:"interval,omitempty" json:"interval,omitempty"`                       // AhBmCs = Sleep A hours, B minutes and C seconds between queries.
-	SemanticVersioning *bool    `yaml:"semantic_versioning,omitempty" json:"semantic_versioning,omitempty"` // default - true = Version has to follow semantic versioning (https://semver.org/) and be greater than the previous to trigger anything.
-	Defaults           *Options `yaml:"-" json:"-"`                                                         // Defaults
-	HardDefaults       *Options `yaml:"-" json:"-"`                                                         // Hard Defaults
+	OptionsBase `yaml:",inline" json:",inline"`
+
+	Active *bool `yaml:"active,omitempty" json:"active,omitempty"` // Disable the service.
+
+	Defaults     *OptionsDefaults `yaml:"-" json:"-"` // Defaults
+	HardDefaults *OptionsDefaults `yaml:"-" json:"-"` // Hard Defaults
+}
+
+// New Options.
+func New(
+	active *bool,
+	interval string,
+	semanticVersioning *bool,
+	defaults, hardDefaults *OptionsDefaults,
+) *Options {
+	return &Options{
+		OptionsBase: OptionsBase{
+			Interval:           interval,
+			SemanticVersioning: semanticVersioning},
+		Active:       active,
+		Defaults:     defaults,
+		HardDefaults: hardDefaults}
 }
 
 // String returns a string representation of the Options.
-func (o *Options) String() string {
-	if o == nil {
-		return "<nil>"
+func (o *Options) String() (str string) {
+	if o != nil {
+		str = util.ToYAMLString(o, "")
 	}
-	yamlBytes, _ := yaml.Marshal(o)
-	return string(yamlBytes)
+	return
 }
 
 // GetActive status of the Service.
@@ -47,7 +84,7 @@ func (o *Options) GetActive() bool {
 
 // GetInterval between queries for this Service's latest version.
 func (o *Options) GetInterval() string {
-	return util.GetFirstNonDefault(
+	return util.FirstNonDefault(
 		o.Interval,
 		o.Defaults.Interval,
 		o.HardDefaults.Interval)
@@ -55,7 +92,7 @@ func (o *Options) GetInterval() string {
 
 // GetSemanticVersioning will return whether Semantic Versioning should be used for this Service.
 func (o *Options) GetSemanticVersioning() bool {
-	return *util.GetFirstNonNilPtr(
+	return *util.FirstNonNilPtr(
 		o.SemanticVersioning,
 		o.Defaults.SemanticVersioning,
 		o.HardDefaults.SemanticVersioning)
@@ -79,7 +116,7 @@ func (o *Options) GetIntervalDuration() time.Duration {
 }
 
 // CheckValues of the option.
-func (o *Options) CheckValues(prefix string) (errs error) {
+func (o *OptionsBase) CheckValues(prefix string) (errs error) {
 	// Interval
 	if o.Interval != "" {
 		// Default to seconds when an integer is provided
@@ -98,19 +135,4 @@ func (o *Options) CheckValues(prefix string) (errs error) {
 	}
 
 	return
-}
-
-// Print the struct.
-func (o *Options) Print(prefix string) {
-	if o.Active == nil && o.Interval == "" && o.SemanticVersioning == nil {
-		return
-	}
-
-	fmt.Printf("%soptions:\n", prefix)
-	util.PrintlnIfNotNil(o.Active,
-		fmt.Sprintf("%s  active: %t", prefix, util.DefaultIfNil(o.Active)))
-	util.PrintlnIfNotDefault(o.Interval,
-		fmt.Sprintf("%s  interval: %s", prefix, o.Interval))
-	util.PrintlnIfNotNil(o.SemanticVersioning,
-		fmt.Sprintf("%s  semantic_versioning: %t", prefix, util.DefaultIfNil(o.SemanticVersioning)))
 }

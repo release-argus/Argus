@@ -19,6 +19,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -46,10 +47,18 @@ func stringifyPointer[T comparable](ptr *T) string {
 	}
 	return str
 }
-func testLogging() {
+
+func TestMain(m *testing.M) {
+	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	LogInit(jLog)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
 }
 
 func testServiceGitHub(id string) *Service {
@@ -60,40 +69,33 @@ func testServiceGitHub(id string) *Service {
 	)
 	svc := &Service{
 		ID: id,
-		LatestVersion: latestver.Lookup{
-			Type:        "github",
-			AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
-			URL:         "release-argus/Argus",
-			Require: &filter.Require{
+		LatestVersion: *latestver.New(
+			stringPtr(os.Getenv("GITHUB_TOKEN")),
+			nil, nil, nil,
+			&filter.Require{
 				RegexContent: "content",
-				RegexVersion: "version",
-			},
-			AllowInvalidCerts: boolPtr(true),
-			UsePreRelease:     boolPtr(false),
-		},
-		Dashboard: DashboardOptions{
-			AutoApprove: boolPtr(false),
-			Icon:        "test",
-			IconLinkTo:  "https://example.com",
-			WebURL:      "https://release-argus.io",
-		},
-		Status: svcstatus.Status{
-			ServiceID:       stringPtr("test"),
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel,
-			SaveChannel:     &saveChannel,
-		},
-		Options: opt.Options{
-			Interval:           "5s",
-			SemanticVersioning: boolPtr(true),
-		},
-		Defaults: &Service{},
-		HardDefaults: &Service{
-			Options: opt.Options{
-				Active: boolPtr(true)},
-		},
+				RegexVersion: "version"},
+			nil,
+			"github",
+			"release-argus/Argus",
+			nil,
+			boolPtr(false),
+			&latestver.LookupDefaults{},
+			&latestver.LookupDefaults{}),
+		Dashboard: *NewDashboardOptions(
+			boolPtr(false), "test", "https://example.com", "https://release-argus.io",
+			nil, nil),
+		Options: *opt.New(
+			boolPtr(true), "5s", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		Defaults:     &Defaults{},
+		HardDefaults: &Defaults{},
 	}
 	// Status
+	svc.Status = *svcstatus.New(
+		&announceChannel, &databaseChannel, &saveChannel,
+		"", "", "", "", "", "")
+	svc.Status.ServiceID = &svc.ID
 	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", false)
 	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
@@ -101,7 +103,7 @@ func testServiceGitHub(id string) *Service {
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 
 	svc.Init(
-		&Service{}, &Service{},
+		&Defaults{}, &Defaults{},
 		nil, nil, nil,
 		nil, nil, nil)
 	svc.Status.ServiceID = &svc.ID
@@ -117,39 +119,24 @@ func testServiceURL(id string) *Service {
 	)
 	svc := &Service{
 		ID:                    id,
-		LatestVersion:         testLatestVersionLookupURL(false),
+		LatestVersion:         *testLatestVersionLookupURL(false),
 		DeployedVersionLookup: testDeployedVersionLookup(false),
-		Dashboard: DashboardOptions{
-			AutoApprove:  boolPtr(false),
-			Icon:         "test",
-			IconLinkTo:   "https://release-argus.io",
-			WebURL:       "https://release-argus.io",
-			Defaults:     &DashboardOptions{},
-			HardDefaults: &DashboardOptions{},
-		},
-		Status: svcstatus.Status{
-			ServiceID:       stringPtr("test"),
-			AnnounceChannel: &announceChannel,
-			DatabaseChannel: &databaseChannel,
-			SaveChannel:     &saveChannel,
-		},
-		Options: opt.Options{
-			Interval:           "5s",
-			SemanticVersioning: boolPtr(true),
-			Defaults:           &opt.Options{},
-			HardDefaults:       &opt.Options{},
-		},
-		Defaults: &Service{},
-		HardDefaults: &Service{
-			Options: opt.Options{
-				Active: boolPtr(true)},
-			DeployedVersionLookup: &deployedver.Lookup{},
-			Status: svcstatus.Status{
-				AnnounceChannel: &announceChannel,
-				DatabaseChannel: &databaseChannel,
-				SaveChannel:     &saveChannel},
-		},
-	}
+		Dashboard: *NewDashboardOptions(
+			boolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
+			&DashboardOptionsDefaults{}, &DashboardOptionsDefaults{}),
+		Status: *svcstatus.New(
+			&announceChannel, &databaseChannel, &saveChannel,
+			"", "", "", "", "", ""),
+		Options: *opt.New(
+			boolPtr(true), "5s", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		Defaults: &Defaults{},
+		HardDefaults: &Defaults{
+			DeployedVersionLookup: deployedver.LookupDefaults{},
+			Status:                svcstatus.StatusDefaults{}}}
+	svc.HardDefaults.Status.AnnounceChannel = svc.Status.AnnounceChannel
+	svc.HardDefaults.Status.DatabaseChannel = svc.Status.DatabaseChannel
+	svc.HardDefaults.Status.SaveChannel = svc.Status.SaveChannel
 
 	// Status
 	svc.Status.Init(
@@ -163,78 +150,81 @@ func testServiceURL(id string) *Service {
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 
 	svc.LatestVersion.Init(
-		&latestver.Lookup{}, &latestver.Lookup{},
+		&latestver.LookupDefaults{}, &latestver.LookupDefaults{},
 		&svc.Status,
 		&svc.Options)
 	svc.DeployedVersionLookup.Init(
-		&deployedver.Lookup{}, &deployedver.Lookup{},
+		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
 		&svc.Status,
 		&svc.Options)
 	return svc
 }
 
-func testLatestVersionLookupURL(fail bool) latestver.Lookup {
-	return latestver.Lookup{
-		Type:        "url",
-		URL:         "https://invalid.release-argus.io/plain",
-		AccessToken: stringPtr(os.Getenv("GITHUB_TOKEN")),
-		URLCommands: filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("v([0-9.]+)")},
-		},
-		AllowInvalidCerts: boolPtr(!fail),
-		UsePreRelease:     boolPtr(false),
-		Require: &filter.Require{
+func testLatestVersionLookupURL(fail bool) *latestver.Lookup {
+	lv := latestver.New(
+		stringPtr(os.Getenv("GITHUB_TOKEN")),
+		boolPtr(!fail),
+		nil,
+		opt.New(
+			nil, "", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		&filter.Require{
 			RegexContent: "{{ version }}-beta",
 			RegexVersion: "[0-9]+",
 		},
-		Options: &opt.Options{
-			SemanticVersioning: boolPtr(true),
-			Defaults: &opt.Options{
-				SemanticVersioning: boolPtr(true)},
-			HardDefaults: &opt.Options{
-				SemanticVersioning: boolPtr(true)}},
-		Status: &svcstatus.Status{
-			ServiceID: stringPtr("foo")},
-		Defaults:     &latestver.Lookup{},
-		HardDefaults: &latestver.Lookup{},
-	}
+		nil,
+		"url",
+		"https://invalid.release-argus.io/plain",
+		&filter.URLCommandSlice{
+			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
+		boolPtr(false),
+		&latestver.LookupDefaults{},
+		&latestver.LookupDefaults{})
+	lv.Status.ServiceID = stringPtr("foo")
+	return lv
 }
 
-func testDeployedVersionLookup(fail bool) *deployedver.Lookup {
-	return &deployedver.Lookup{
-		URL:               "https://invalid.release-argus.io/json",
-		JSON:              "version",
-		AllowInvalidCerts: boolPtr(!fail),
-		Options: &opt.Options{
-			SemanticVersioning: boolPtr(true),
-			Defaults: &opt.Options{
-				SemanticVersioning: boolPtr(true)},
-			HardDefaults: &opt.Options{
-				SemanticVersioning: boolPtr(true)}},
-		Status:       &svcstatus.Status{},
-		Defaults:     &deployedver.Lookup{},
-		HardDefaults: &deployedver.Lookup{},
-	}
+func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
+	dvl = deployedver.New(
+		boolPtr(!fail),
+		nil, nil,
+		"version",
+		opt.New(
+			nil, "", boolPtr(true),
+			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+		"",
+		&svcstatus.Status{},
+		"https://invalid.release-argus.io/json",
+		&deployedver.LookupDefaults{},
+		&deployedver.LookupDefaults{})
+
+	announceChannel := make(chan []byte, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
+	saveChannel := make(chan bool, 5)
+	dvl.Status = svcstatus.New(
+		&announceChannel, &databaseChannel, &saveChannel,
+		"", "", "", "", "", "")
+
+	return
 }
 
 func testWebHook(failing bool) *webhook.WebHook {
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
-	wh := &webhook.WebHook{
-		ID:                "test",
-		Type:              "github",
-		URL:               "https://valid.release-argus.io/hooks/github-style",
-		Secret:            "argus",
-		AllowInvalidCerts: boolPtr(false),
-		DesiredStatusCode: &desiredStatusCode,
-		Delay:             "0s",
-		SilentFails:       boolPtr(false),
-		MaxTries:          &whMaxTries,
-		ParentInterval:    stringPtr("12m"),
-		Main:              &webhook.WebHook{},
-		Defaults:          &webhook.WebHook{},
-		HardDefaults:      &webhook.WebHook{},
-	}
+	wh := webhook.New(
+		boolPtr(false),
+		nil,
+		"0s",
+		&desiredStatusCode,
+		nil,
+		&whMaxTries,
+		nil,
+		stringPtr("12m"),
+		"argus",
+		boolPtr(false),
+		"github",
+		"https://valid.release-argus.io/hooks/github-style",
+		nil, nil, nil)
 	if failing {
 		wh.Secret = "notArgus"
 	}

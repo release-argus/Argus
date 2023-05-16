@@ -26,53 +26,61 @@ import (
 
 func TestLookup_String(t *testing.T) {
 	tests := map[string]struct {
-		lookup Lookup
+		lookup *Lookup
 		want   string
 	}{
+		"nil": {
+			lookup: nil,
+			want:   "",
+		},
 		"empty": {
-			lookup: Lookup{},
-			want:   "{}\n",
+			lookup: &Lookup{},
+			want:   "{}",
 		},
 		"filled": {
-			lookup: Lookup{
-				URL:               "https://example.com",
-				AllowInvalidCerts: boolPtr(false),
-				BasicAuth: &BasicAuth{
+			lookup: New(
+				boolPtr(false),
+				&BasicAuth{
 					Username: "user", Password: "pass"},
-				Headers: []Header{
+				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				JSON:  "value.version",
-				Regex: "v([0-9.]+)",
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				Status:       &svcstatus.Status{},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)}},
+				"value.version",
+				opt.New(
+					boolPtr(true), "9m", boolPtr(false),
+					nil, nil),
+				"v([0-9.]+)",
+				&svcstatus.Status{},
+				"https://example.com",
+				NewDefaults(
+					boolPtr(false)),
+				NewDefaults(
+					boolPtr(false))),
 			want: `
 url: https://example.com
 allow_invalid_certs: false
 basic_auth:
-    username: user
-    password: pass
+  username: user
+  password: pass
 headers:
-    - key: X-Header
-      value: val
-    - key: X-Another
-      value: val2
+  - key: X-Header
+    value: val
+  - key: X-Another
+    value: val2
 json: value.version
-regex: v([0-9.]+)
-`,
+regex: v([0-9.]+)`,
 		},
 		"quotes otherwise invalid yaml strings": {
-			lookup: Lookup{
-				BasicAuth: &BasicAuth{
-					Username: ">123", Password: "{pass}"}},
+			lookup: New(
+				nil,
+				&BasicAuth{
+					Username: ">123", Password: "{pass}"},
+				nil, "", nil, "", &svcstatus.Status{}, "", nil, nil),
 			want: `
 basic_auth:
-    username: '>123'
-    password: '{pass}'
-`},
+  username: '>123'
+  password: '{pass}'`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -80,14 +88,24 @@ basic_auth:
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN the Lookup is stringified with String
-			got := tc.lookup.String()
+			prefixes := []string{"", " ", "  ", "    ", "- "}
+			for _, prefix := range prefixes {
+				want := strings.TrimPrefix(tc.want, "\n")
+				if want != "" {
+					if want != "{}" {
+						want = prefix + strings.ReplaceAll(want, "\n", "\n"+prefix)
+					}
+					want += "\n"
+				}
 
-			// THEN the result is as expected
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				// WHEN the Lookup is stringified with String
+				got := tc.lookup.String(prefix)
+
+				// THEN the result is as expected
+				if got != want {
+					t.Errorf("(prefix=%q) got:\n%q\nwant:\n%q",
+						prefix, got, want)
+				}
 			}
 		})
 	}
@@ -106,82 +124,94 @@ func TestLookup_IsEqual(t *testing.T) {
 		},
 		"defaults ignored": {
 			a: &Lookup{
-				Defaults: &Lookup{
-					AllowInvalidCerts: boolPtr(false)}},
+				Defaults: NewDefaults(
+					boolPtr(false))},
 			b:    &Lookup{},
 			want: true,
 		},
 		"hard_defaults ignored": {
 			a: &Lookup{
-				HardDefaults: &Lookup{
-					AllowInvalidCerts: boolPtr(false)}},
+				HardDefaults: NewDefaults(
+					boolPtr(false))},
 			b:    &Lookup{},
 			want: true,
 		},
 		"equal": {
-			a: &Lookup{
-				URL:               "https://example.com",
-				AllowInvalidCerts: boolPtr(false),
-				BasicAuth: &BasicAuth{
+			a: New(
+				boolPtr(false),
+				&BasicAuth{
 					Username: "user", Password: "pass"},
-				Headers: []Header{
+				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				JSON:  "value.version",
-				Regex: "v([0-9.]+)",
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
-			b: &Lookup{
-				URL:               "https://example.com",
-				AllowInvalidCerts: boolPtr(false),
-				BasicAuth: &BasicAuth{
+				"value.version",
+				opt.New(
+					nil, "", nil,
+					nil, nil),
+				"v([0-9.]+)",
+				&svcstatus.Status{},
+				"https://example.com",
+				NewDefaults(
+					boolPtr(false)),
+				NewDefaults(
+					boolPtr(false))),
+			b: New(
+				boolPtr(false),
+				&BasicAuth{
 					Username: "user", Password: "pass"},
-				Headers: []Header{
+				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				JSON:  "value.version",
-				Regex: "v([0-9.]+)",
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
+				"value.version",
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				"v([0-9.]+)",
+				&svcstatus.Status{},
+				"https://example.com",
+				NewDefaults(
+					boolPtr(false)),
+				NewDefaults(
+					boolPtr(false))),
 			want: true,
 		},
 		"not equal": {
-			a: &Lookup{
-				URL:               "https://example.com",
-				AllowInvalidCerts: boolPtr(false),
-				BasicAuth: &BasicAuth{
+			a: New(
+				boolPtr(false),
+				&BasicAuth{
 					Username: "user", Password: "pass"},
-				Headers: []Header{
+				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				JSON:  "value.version",
-				Regex: "v([0-9.]+)",
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
-			b: &Lookup{
-				URL:               "https://example.com/other",
-				AllowInvalidCerts: boolPtr(false),
-				BasicAuth: &BasicAuth{
+				"value.version",
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				"v([0-9.]+)",
+				&svcstatus.Status{},
+				"https://example.com",
+				NewDefaults(
+					boolPtr(false)),
+				NewDefaults(
+					boolPtr(false))),
+			b: New(
+				boolPtr(false),
+				&BasicAuth{
 					Username: "user", Password: "pass"},
-				Headers: []Header{
+				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				JSON:  "value.version",
-				Regex: "v([0-9.]+)",
-				Options: &opt.Options{
-					SemanticVersioning: boolPtr(true)},
-				Defaults:     &Lookup{AllowInvalidCerts: boolPtr(false)},
-				HardDefaults: &Lookup{AllowInvalidCerts: boolPtr(false)},
-			},
+				"value.version",
+				opt.New(
+					nil, "", boolPtr(true),
+					nil, nil),
+				"v([0-9.]+)",
+				&svcstatus.Status{},
+				"https://example.com/other",
+				NewDefaults(
+					boolPtr(false)),
+				NewDefaults(
+					boolPtr(false))),
 			want: false,
 		},
 		"not equal with nil": {

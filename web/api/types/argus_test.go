@@ -350,23 +350,23 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		"custom_headers": {
 			webhook: &WebHook{
-				CustomHeaders: []Header{
+				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
-				CustomHeaders: []Header{
+				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "<secret>"},
 					{Key: "X-Bing", Value: "<secret>"}}},
 		},
 		"all": {
 			webhook: &WebHook{
 				Secret: stringPtr("shazam"),
-				CustomHeaders: []Header{
+				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
 				Secret: stringPtr("<secret>"),
-				CustomHeaders: []Header{
+				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "<secret>"},
 					{Key: "X-Bing", Value: "<secret>"}}},
 		},
@@ -389,10 +389,12 @@ func TestWebHook_Censor(t *testing.T) {
 				t.Errorf("Secret uncensored\ngot %q, want %q",
 					util.DefaultIfNil(tc.webhook.Secret), util.DefaultIfNil(tc.want.Secret))
 			}
-			for i := range tc.want.CustomHeaders {
-				if tc.want.CustomHeaders[i] != tc.webhook.CustomHeaders[i] {
-					t.Errorf("Header %d:\ngot %v, want %v",
-						i, tc.webhook.CustomHeaders[i], tc.want.CustomHeaders[i])
+			if tc.webhook.CustomHeaders != nil {
+				for i := range *tc.want.CustomHeaders {
+					if (*tc.want.CustomHeaders)[i] != (*tc.webhook.CustomHeaders)[i] {
+						t.Errorf("Header %d:\ngot %v, want %v",
+							i, (*tc.webhook.CustomHeaders)[i], (*tc.want.CustomHeaders)[i])
+					}
 				}
 			}
 		})
@@ -470,7 +472,7 @@ func TestServiceSummary_String(t *testing.T) {
 	}{
 		"nil": {
 			summary: nil,
-			want:    "<nil>",
+			want:    "",
 		},
 		"empty": {
 			summary: &ServiceSummary{},
@@ -764,7 +766,7 @@ func TestStatus_String(t *testing.T) {
 	}{
 		"nil": {
 			status: nil,
-			want:   "<nil>",
+			want:   "",
 		},
 		"empty": {
 			status: &Status{},
@@ -809,7 +811,7 @@ func TestWebHook_String(t *testing.T) {
 	}{
 		"nil": {
 			webhook: nil,
-			want:    "<nil>",
+			want:    "",
 		},
 		"empty": {
 			webhook: &WebHook{},
@@ -823,7 +825,7 @@ func TestWebHook_String(t *testing.T) {
 				URL:               stringPtr("https://release-argus.io"),
 				AllowInvalidCerts: boolPtr(true),
 				Secret:            stringPtr("secret"),
-				CustomHeaders: []Header{
+				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "bosh"}},
 				DesiredStatusCode: intPtr(200),
 				Delay:             "1h",
@@ -870,7 +872,7 @@ func TestWebHookSlice_String(t *testing.T) {
 	}{
 		"nil": {
 			slice: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			slice: &WebHookSlice{},
@@ -884,7 +886,7 @@ func TestWebHookSlice_String(t *testing.T) {
 					URL:               stringPtr("https://release-argus.io"),
 					AllowInvalidCerts: boolPtr(true),
 					Secret:            stringPtr("secret"),
-					CustomHeaders: []Header{
+					CustomHeaders: &[]Header{
 						{Key: "X-Header", Value: "bosh"}},
 					DesiredStatusCode: intPtr(200),
 					Delay:             "1h",
@@ -944,7 +946,7 @@ func TestNotifySlice_String(t *testing.T) {
 	}{
 		"nil": {
 			slice: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			slice: &NotifySlice{},
@@ -1032,7 +1034,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 	}{
 		"nil": {
 			dvl:  nil,
-			want: "<nil>",
+			want: "",
 		},
 		"empty": {
 			dvl:  &DeployedVersionLookup{},
@@ -1094,7 +1096,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 	}{
 		"nil": {
 			slice: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			slice: &URLCommandSlice{},
@@ -1140,7 +1142,7 @@ func TestDefaults_String(t *testing.T) {
 	}{
 		"nil": {
 			dflts: nil,
-			want:  "<nil>",
+			want:  "",
 		},
 		"empty": {
 			dflts: &Defaults{},
@@ -1155,6 +1157,51 @@ func TestDefaults_String(t *testing.T) {
 
 			// WHEN the Defaults are stringified with String
 			got := tc.dflts.String()
+
+			// THEN the result is as expected
+			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLatestVersionRequireDefaults_String(t *testing.T) {
+	// GIVEN a LatestVersionRequireDefaults
+	tests := map[string]struct {
+		lvrd *LatestVersionRequireDefaults
+		want string
+	}{
+		"nil": {
+			lvrd: nil,
+			want: ""},
+		"empty": {
+			lvrd: &LatestVersionRequireDefaults{},
+			want: `{"docker":{}}`},
+		"all fields": {
+			lvrd: &LatestVersionRequireDefaults{
+				Docker: RequireDockerCheckDefaults{
+					Type: "ghcr",
+					GHCR: &RequireDockerCheckRegistryDefaults{
+						Token: "tokenForGHCR"},
+					Hub: &RequireDockerCheckRegistryDefaultsWithUsername{
+						RequireDockerCheckRegistryDefaults: RequireDockerCheckRegistryDefaults{
+							Token: "tokenForHub"},
+						Username: "userForHub"},
+					Quay: &RequireDockerCheckRegistryDefaults{
+						Token: "tokenForQuay"}}},
+			want: `{"docker":{"type":"ghcr","ghcr":{"token":"tokenForGHCR"},"hub":{"token":"tokenForHub","username":"userForHub"},"quay":{"token":"tokenForQuay"}}}`},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN the LatestVersionRequireDefaults are stringified with String
+			got := tc.lvrd.String()
 
 			// THEN the result is as expected
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")

@@ -1,7 +1,5 @@
-export const useGlobalOrDefault = (
+export const globalOrDefault = (
   globalValue?: string | number,
-  defaultValue?: string | number,
-  hardDefaultValue?: string | number
-): string => {
-  return `${globalValue ?? defaultValue ?? hardDefaultValue ?? ""}`;
-};
+  defaultValue: string | number = "",
+  hardDefaultValue: string | number = ""
+) => `${globalValue ?? defaultValue ?? hardDefaultValue}`;

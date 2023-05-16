@@ -25,8 +25,39 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// statusBase is the base struct for the Status struct.
+type statusBase struct {
+	// Announces
+	AnnounceChannel *chan []byte         // Announce to the WebSocket
+	DatabaseChannel *chan dbtype.Message // Channel for broadcasts to the Database
+	SaveChannel     *chan bool           // Channel for triggering a save of the config
+}
+
+// StatusDefaults are the default values for the Status struct.
+type StatusDefaults struct {
+	statusBase
+}
+
+// New StatusDefaults struct.
+func NewStatusDefaults(
+	announceChannel *chan []byte,
+	databaseChannel *chan dbtype.Message,
+	saveChannel *chan bool,
+) StatusDefaults {
+	return StatusDefaults{
+		statusBase: statusBase{
+			AnnounceChannel: announceChannel,
+			DatabaseChannel: databaseChannel,
+			SaveChannel:     saveChannel}}
+}
+
 // Status is the current state of the Service element (version and regex misses).
 type Status struct {
+	statusBase `yaml:"-" json:"-"`
+
+	ServiceID *string `yaml:"-" json:"-"` // ID of the Service
+	WebURL    *string `yaml:"-" json:"-"` // Web URL of the Service
+
 	approvedVersion          string       // The version that's been approved
 	deployedVersion          string       // Track the deployed version of the service from the last successful WebHook.
 	deployedVersionTimestamp string       // UTC timestamp of DeployedVersion being changed.
@@ -38,13 +69,32 @@ type Status struct {
 	Fails                    Fails        // Track the Notify/WebHook fails
 	deleting                 bool         // Flag to indicate the service is being deleted
 	mutex                    sync.RWMutex // Lock for the Status
+}
 
-	// Announces
-	AnnounceChannel *chan []byte         `yaml:"-" json:"-"` // Announce to the WebSocket
-	DatabaseChannel *chan dbtype.Message `yaml:"-" json:"-"` // Channel for broadcasts to the Database
-	SaveChannel     *chan bool           `yaml:"-" json:"-"` // Channel for triggering a save of the config
-	ServiceID       *string              `yaml:"-" json:"-"` // ID of the Service
-	WebURL          *string              `yaml:"-" json:"-"` // Web URL of the Service
+// New Status struct.
+func New(
+	announceChannel *chan []byte,
+	databaseChannel *chan dbtype.Message,
+	saveChannel *chan bool,
+
+	av string,
+	dv string,
+	dvT string,
+	lv string,
+	lvT string,
+	lq string,
+) *Status {
+	return &Status{
+		statusBase: statusBase{
+			AnnounceChannel: announceChannel,
+			DatabaseChannel: databaseChannel,
+			SaveChannel:     saveChannel},
+		approvedVersion:          av,
+		deployedVersion:          dv,
+		deployedVersionTimestamp: dvT,
+		latestVersion:            lv,
+		latestVersionTimestamp:   lvT,
+		lastQueried:              lq}
 }
 
 // String returns a string representation of the Status.
@@ -84,6 +134,13 @@ func (s *Status) String() string {
 	return strings.TrimSuffix(buf.String(), ", ")
 }
 
+func (s *Status) SetAnnounceChannel(channel *chan []byte) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.AnnounceChannel = channel
+}
+
 // Init initialises the Status vars when more than the default value is needed.
 func (s *Status) Init(
 	shoutrrrs int,
@@ -100,8 +157,8 @@ func (s *Status) Init(
 	s.WebURL = webURL
 }
 
-// GetLastQueried.
-func (s *Status) GetLastQueried() string {
+// LastQueried time of the LatestVersion.
+func (s *Status) LastQueried() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.lastQueried
@@ -118,8 +175,8 @@ func (s *Status) SetLastQueried(t string) {
 	}
 }
 
-// GetApprovedVersion returns the ApprovedVersion.
-func (s *Status) GetApprovedVersion() string {
+// ApprovedVersion returns the ApprovedVersion.
+func (s *Status) ApprovedVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.approvedVersion
@@ -143,8 +200,8 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetDeployedVersion returns the DeployedVersion.
-func (s *Status) GetDeployedVersion() string {
+// DeployedVersion returns the DeployedVersion.
+func (s *Status) DeployedVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.deployedVersion
@@ -176,8 +233,8 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetDeployedVersionTimestamp returns the DeployedVersionTimestamp.
-func (s *Status) GetDeployedVersionTimestamp() string {
+// DeployedVersionTimestamp returns the DeployedVersionTimestamp.
+func (s *Status) DeployedVersionTimestamp() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.deployedVersionTimestamp
@@ -192,8 +249,8 @@ func (s *Status) SetDeployedVersionTimestamp(timestamp string) {
 	s.mutex.Unlock()
 }
 
-// GetLatestVersion returns the latest version.
-func (s *Status) GetLatestVersion() string {
+// LatestVersion returns the latest version.
+func (s *Status) LatestVersion() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.latestVersion
@@ -205,7 +262,6 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	{
 		s.latestVersion = version
 		s.latestVersionTimestamp = s.lastQueried
-
 	}
 	s.mutex.Unlock()
 
@@ -223,8 +279,8 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	}
 }
 
-// GetLatestVersionTimestamp returns the timestamp of the latest version.
-func (s *Status) GetLatestVersionTimestamp() string {
+// LatestVersionTimestamp returns the timestamp of the latest version.
+func (s *Status) LatestVersionTimestamp() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.latestVersionTimestamp
@@ -330,16 +386,6 @@ func (s *Status) SendSave() {
 	*s.SaveChannel <- true
 }
 
-// TODO: Deprecate
-// OldStatus is for handling config.yml's containing data that now belongs in argus.db
-type OldStatus struct {
-	ApprovedVersion          string `yaml:"approved_version,omitempty"`           // The version that's been approved
-	DeployedVersion          string `yaml:"deployed_version,omitempty"`           // Track the deployed version of the service from the last successful WebHook.
-	DeployedVersionTimestamp string `yaml:"deployed_version_timestamp,omitempty"` // UTC timestamp of DeployedVersion being changed.
-	LatestVersion            string `yaml:"latest_version,omitempty"`             // Latest version found from query().
-	LatestVersionTimestamp   string `yaml:"latest_version_timestamp,omitempty"`   // UTC timestamp of LatestVersion being changed.
-}
-
 // GetWebURL returns the Web URL.
 func (s *Status) GetWebURL() string {
 	if util.DefaultIfNil(s.WebURL) == "" {
@@ -348,21 +394,5 @@ func (s *Status) GetWebURL() string {
 
 	return util.TemplateString(
 		*s.WebURL,
-		util.ServiceInfo{LatestVersion: s.GetLatestVersion()})
-}
-
-// Print will print the Status.
-func (s *Status) Print(prefix string) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	util.PrintlnIfNotDefault(s.approvedVersion,
-		fmt.Sprintf("%sapproved_version: %s", prefix, s.approvedVersion))
-	util.PrintlnIfNotDefault(s.deployedVersion,
-		fmt.Sprintf("%sdeployed_version: %s", prefix, s.deployedVersion))
-	util.PrintlnIfNotDefault(s.deployedVersionTimestamp,
-		fmt.Sprintf("%sdeployed_version_timestamp: %q", prefix, s.deployedVersionTimestamp))
-	util.PrintlnIfNotDefault(s.latestVersion,
-		fmt.Sprintf("%slatest_version: %s", prefix, s.latestVersion))
-	util.PrintlnIfNotDefault(s.latestVersionTimestamp,
-		fmt.Sprintf("%slatest_version_timestamp: %q", prefix, s.latestVersionTimestamp))
+		util.ServiceInfo{LatestVersion: s.LatestVersion()})
 }

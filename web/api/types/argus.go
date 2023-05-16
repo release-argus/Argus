@@ -15,8 +15,6 @@
 package apitype
 
 import (
-	"encoding/json"
-	"sort"
 	"time"
 
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
@@ -39,12 +37,11 @@ type ServiceSummary struct {
 }
 
 // String returns a JSON string representation of the ServiceSummary.
-func (s *ServiceSummary) String() string {
-	if s == nil {
-		return "<nil>"
+func (s *ServiceSummary) String() (str string) {
+	if s != nil {
+		str = util.ToJSONString(s)
 	}
-	jsonBytes, _ := json.Marshal(s)
-	return string(jsonBytes)
+	return
 }
 
 // RemoveUnchanged will nil/empty out the fields that haven't changed compared to `other`.
@@ -119,12 +116,11 @@ type Status struct {
 }
 
 // String returns a JSON string representation of the Status.
-func (s *Status) String() string {
-	if s == nil {
-		return "<nil>"
+func (s *Status) String() (str string) {
+	if s != nil {
+		str = util.ToJSONString(s)
 	}
-	jsonBytes, _ := json.Marshal(s)
-	return string(jsonBytes)
+	return
 }
 
 // StatusFails keeps track of whether each of the notifications failed on the last version change.
@@ -181,20 +177,19 @@ type Flags struct {
 	WebRoutePrefix   string  `json:"web.route-prefix,omitempty"`
 }
 
-// Defaults is the global default for vars.
+// Defaults are the global defaults for vars.
 type Defaults struct {
-	Service Service     `json:"service,omitempty"`
-	Notify  NotifySlice `json:"notify,omitempty"`
-	WebHook WebHook     `json:"webhook,omitempty"`
+	Service ServiceDefaults `json:"service,omitempty"`
+	Notify  NotifySlice     `json:"notify,omitempty"`
+	WebHook WebHook         `json:"webhook,omitempty"`
 }
 
 // String returns a JSON string representation of the Defaults.
-func (d *Defaults) String() string {
-	if d == nil {
-		return "<nil>"
+func (d *Defaults) String() (str string) {
+	if d != nil {
+		str = util.ToJSONString(d)
 	}
-	jsonBytes, _ := json.Marshal(d)
-	return string(jsonBytes)
+	return
 }
 
 // Config is the config for Argus.
@@ -234,12 +229,11 @@ type WebSettings struct {
 type NotifySlice map[string]*Notify
 
 // String returns a JSON string representation of the NotifySlice.
-func (slice *NotifySlice) String() string {
-	if slice == nil {
-		return "<nil>"
+func (slice *NotifySlice) String() (str string) {
+	if slice != nil {
+		str = util.ToJSONString(slice)
 	}
-	jsonBytes, _ := json.Marshal(slice)
-	return string(jsonBytes)
+	return
 }
 
 // Flatten this NotifySlice into a list
@@ -248,15 +242,8 @@ func (slice *NotifySlice) Flatten() *[]Notify {
 		return nil
 	}
 
-	list := make([]Notify, len(*slice))
-	index := 0
-	// Sort names so that the list is ordered
-	names := make([]string, len(*slice))
-	for name := range *slice {
-		names[index] = name
-		index += 1
-	}
-	sort.Strings(names)
+	names := util.SortedKeys(*slice)
+	list := make([]Notify, len(names))
 
 	for index, name := range names {
 		// Add to list
@@ -351,6 +338,13 @@ type Service struct {
 	Status                *Status                `json:"status,omitempty"`           // Track the Status of this source (version and regex misses)
 }
 
+// ServiceDefaults are default values for a Service.
+type ServiceDefaults struct {
+	Service `json:",inline"`
+
+	LatestVersion *LatestVersionDefaults `json:"latest_version,omitempty"` // Latest version lookup for the Service
+}
+
 // ServiceOptions.
 type ServiceOptions struct {
 	Active             *bool  `json:"active,omitempty"`              // Active Service?
@@ -377,12 +371,48 @@ type LatestVersion struct {
 	Require           *LatestVersionRequire `json:"require,omitempty"`             // Requirements for the version to be considered valid
 }
 
-// LatestVersionRequire commands, regex etc for the release to be considered valid.
+// LatestVersionRequireDefaults are default values for a LatestVersion.
+type LatestVersionDefaults struct {
+	LatestVersion `json:",inline"`
+
+	Require *LatestVersionRequireDefaults `json:"require,omitempty"`
+}
+
+// String returns a string representation of the LatestVersionRequireDefaults.
+func (slice *LatestVersionRequireDefaults) String() (str string) {
+	if slice != nil {
+		str = util.ToJSONString(slice)
+	}
+	return
+}
+
+// LatestVersionRequire contains commands, regex etc for the release to be considered valid.
 type LatestVersionRequire struct {
 	Command      []string            `json:"command,omitempty"`       // Require Command to pass
 	Docker       *RequireDockerCheck `json:"docker,omitempty"`        // Docker image tag requirements
 	RegexContent string              `json:"regex_content,omitempty"` // "abc-[a-z]+-{{ version }}_amd64.deb" This regex must exist in the body of the URL to trigger new version actions
 	RegexVersion string              `json:"regex_version,omitempty"` // "v*[0-9.]+" The version found must match this release to trigger new version actions
+}
+
+// LatestVersionRequireDefaults for the release to be considered valid.
+type LatestVersionRequireDefaults struct {
+	Docker RequireDockerCheckDefaults `json:"docker,omitempty"` // Docker repo defaults
+}
+
+type RequireDockerCheckRegistryDefaults struct {
+	Token string `json:"token,omitempty"` // Token to get the token for the queries
+}
+
+type RequireDockerCheckRegistryDefaultsWithUsername struct {
+	RequireDockerCheckRegistryDefaults
+	Username string `json:"username,omitempty"` // Username to get a new token
+}
+
+type RequireDockerCheckDefaults struct {
+	Type string                                          `json:"type,omitempty"` // Default DockerCheck Type
+	GHCR *RequireDockerCheckRegistryDefaults             `json:"ghcr,omitempty"` // GHCR
+	Hub  *RequireDockerCheckRegistryDefaultsWithUsername `json:"hub,omitempty"`  // DockerHub
+	Quay *RequireDockerCheckRegistryDefaults             `json:"quay,omitempty"` // Quay
 }
 
 type RequireDockerCheck struct {
@@ -406,12 +436,11 @@ type DeployedVersionLookup struct {
 }
 
 // String returns a JSON string representation of the DeployedVersionLookup.
-func (d *DeployedVersionLookup) String() string {
-	if d == nil {
-		return "<nil>"
+func (d *DeployedVersionLookup) String() (str string) {
+	if d != nil {
+		str = util.ToJSONString(d)
 	}
-	jsonBytes, _ := json.Marshal(d)
-	return string(jsonBytes)
+	return
 }
 
 // BasicAuth to use on the HTTP(s) request.
@@ -430,12 +459,11 @@ type Header struct {
 type URLCommandSlice []URLCommand
 
 // String returns a string representation of the URLCommandSlice.
-func (slice *URLCommandSlice) String() string {
-	if slice == nil {
-		return "<nil>"
+func (slice *URLCommandSlice) String() (str string) {
+	if slice != nil {
+		str = util.ToJSONString(slice)
 	}
-	yamlBytes, _ := json.Marshal(slice)
-	return string(yamlBytes)
+	return
 }
 
 // URLCommand is a command to be ran to filter version from the URL body.
@@ -455,12 +483,11 @@ type CommandSlice []Command
 type WebHookSlice map[string]*WebHook
 
 // String returns a string representation of the WebHookSlice.
-func (slice *WebHookSlice) String() string {
-	if slice == nil {
-		return "<nil>"
+func (slice *WebHookSlice) String() (str string) {
+	if slice != nil {
+		str = util.ToJSONString(slice)
 	}
-	yamlBytes, _ := json.Marshal(slice)
-	return string(yamlBytes)
+	return
 }
 
 // Flatten the WebHookSlice into a list.
@@ -469,15 +496,8 @@ func (slice *WebHookSlice) Flatten() *[]*WebHook {
 		return nil
 	}
 
-	list := make([]*WebHook, len(*slice))
-	index := 0
-	// Sort names so that list is ordered
-	names := make([]string, len(*slice))
-	for name := range *slice {
-		names[index] = name
-		index += 1
-	}
-	sort.Strings(names)
+	names := util.SortedKeys(*slice)
+	list := make([]*WebHook, len(names))
 
 	for index, name := range names {
 		list[index] = (*slice)[name]
@@ -490,27 +510,25 @@ func (slice *WebHookSlice) Flatten() *[]*WebHook {
 
 // WebHook is a WebHook to send.
 type WebHook struct {
-	ServiceID         string   `json:"-"`                             // ID of the service this WebHook is attached to
-	ID                string   `json:"name,omitempty"`                // Name of this WebHook
-	Type              *string  `json:"type,omitempty"`                // "github"/"url"
-	URL               *string  `json:"url,omitempty"`                 // "https://example.com"
-	AllowInvalidCerts *bool    `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	Secret            *string  `json:"secret,omitempty"`              // "SECRET"
-	CustomHeaders     []Header `json:"custom_headers,omitempty"`      // Custom Headers for the WebHook
-	DesiredStatusCode *int     `json:"desired_status_code,omitempty"` // e.g. 202
-	Delay             string   `json:"delay,omitempty"`               // The delay before sending the WebHook
-	MaxTries          *uint    `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received
-	SilentFails       *bool    `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times
+	ServiceID         string    `json:"-"`                             // ID of the service this WebHook is attached to
+	ID                string    `json:"name,omitempty"`                // Name of this WebHook
+	Type              *string   `json:"type,omitempty"`                // "github"/"url"
+	URL               *string   `json:"url,omitempty"`                 // "https://example.com"
+	AllowInvalidCerts *bool     `json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
+	Secret            *string   `json:"secret,omitempty"`              // "SECRET"
+	CustomHeaders     *[]Header `json:"custom_headers,omitempty"`      // Custom Headers for the WebHook
+	DesiredStatusCode *int      `json:"desired_status_code,omitempty"` // e.g. 202
+	Delay             string    `json:"delay,omitempty"`               // The delay before sending the WebHook
+	MaxTries          *uint     `json:"max_tries,omitempty"`           // Number of times to attempt sending the WebHook if the desired status code is not received
+	SilentFails       *bool     `json:"silent_fails,omitempty"`        // Whether to notify if this WebHook fails MaxTries times
 }
 
 // String returns a string representation of the WebHook.
-func (w *WebHook) String() string {
-	if w == nil {
-		return "<nil>"
+func (w *WebHook) String() (str string) {
+	if w != nil {
+		str = util.ToJSONString(w)
 	}
-
-	yamlBytes, _ := json.Marshal(w)
-	return string(yamlBytes)
+	return
 }
 
 // Censor this WebHook for sending to the web client
@@ -526,8 +544,10 @@ func (w *WebHook) Censor() {
 	}
 
 	// Headers
-	for i := range w.CustomHeaders {
-		w.CustomHeaders[i].Value = "<secret>"
+	if w.CustomHeaders != nil {
+		for i := range *w.CustomHeaders {
+			(*w.CustomHeaders)[i].Value = "<secret>"
+		}
 	}
 }
 

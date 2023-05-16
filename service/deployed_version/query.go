@@ -171,7 +171,7 @@ func (l *Lookup) queryMetrics(successfulQuery bool) {
 // checks whether this is later than LatestVersion and announces and updates `Status` accordingly.
 func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 	// If the new version is the same as what we had, do nothing.
-	if version == "" || version == l.Status.GetDeployedVersion() {
+	if version == "" || version == l.Status.DeployedVersion() {
 		return
 	}
 
@@ -180,10 +180,10 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 
 	// If this new version isn't LatestVersion
 	// Check that it's not a later version than LatestVersion
-	latestVersion := l.Status.GetLatestVersion()
+	latestVersion := l.Status.LatestVersion()
 	if latestVersion == "" {
-		l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), writeToDB)
-		l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
+		l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
+		l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
 		l.Status.AnnounceQueryNewVersion()
 	} else if version != latestVersion &&
 		l.Options.GetSemanticVersioning() {
@@ -194,8 +194,8 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 
 		// Update LatestVersion to DeployedVersion if it's newer
 		if latestVersionSV.LessThan(*deployedVersionSV) {
-			l.Status.SetLatestVersion(l.Status.GetDeployedVersion(), writeToDB)
-			l.Status.SetLatestVersionTimestamp(l.Status.GetDeployedVersionTimestamp())
+			l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
+			l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
 			l.Status.AnnounceQueryNewVersion()
 		}
 	}

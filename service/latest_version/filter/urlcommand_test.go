@@ -17,8 +17,6 @@
 package filter
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -98,7 +96,6 @@ func TestURLCommandSlice_String(t *testing.T) {
 }
 
 func TestURLCommandsFromStr(t *testing.T) {
-	testLogging("INFO")
 	// GIVEN a JSON string and a defaults URLCommandSlice
 	defaults := URLCommandSlice{{Type: "regex"}}
 	tests := map[string]struct {
@@ -198,57 +195,8 @@ func TestLogInit(t *testing.T) {
 	}
 }
 
-func TestURLCommandSlice_Print(t *testing.T) {
-	// GIVEN a URLCommandSlice
-	tests := map[string]struct {
-		slice *URLCommandSlice
-		lines int
-	}{
-		"regex": {
-			slice: &URLCommandSlice{testURLCommandRegex()},
-			lines: 3},
-		"replace": {
-			slice: &URLCommandSlice{testURLCommandReplace()},
-			lines: 4},
-		"split": {
-			slice: &URLCommandSlice{testURLCommandSplit()},
-			lines: 4},
-		"all types": {
-			slice: &URLCommandSlice{
-				testURLCommandRegex(),
-				testURLCommandReplace(),
-				testURLCommandSplit()},
-			lines: 9},
-		"nil slice": {
-			slice: nil, lines: 0},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// WHEN Print is called on it
-			tc.slice.Print("")
-
-			// THEN the expected number of lines are printed
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
-
 func TestURLCommandSlice_Run(t *testing.T) {
 	// GIVEN a URLCommandSlice
-	testLogging("WARN")
 	testText := "abc123-def456"
 	tests := map[string]struct {
 		slice    *URLCommandSlice

@@ -1,7 +1,7 @@
 import { Accordion, Button, Col, Form, Row } from "react-bootstrap";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
-import { NotifyType, ServiceDict } from "types/config";
+import { NotifyType, NotifyTypesConst, ServiceDict } from "types/config";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -33,13 +33,19 @@ const Notify: FC<Props> = ({
   const itemName = useWatch({ name: `${name}.name` });
   const itemType = useWatch({ name: `${name}.type` });
   useEffect(() => {
-    if (globals && itemName !== "" && globals[itemName]?.type !== undefined) {
+    // Set Type to that of the global for the new name if it exists
+    if (globals?.[itemName]?.type !== undefined) {
       setValue(`${name}.type`, globals[itemName].type);
-      trigger();
+    } else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName)) {
+      setValue(`${name}.type`, itemName);
     }
+    setTimeout(() => {
+      if (itemName !== "") trigger(`${name}.name`);
+      trigger(`${name}.type`);
+    }, 25);
   }, [itemName]);
   const header = useMemo(
-    () => `${Number(name.split(".").slice(-1)) + 1}: (${itemType}) ${itemName}`,
+    () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
     [name, itemName, itemType]
   );
 
@@ -63,9 +69,7 @@ const Notify: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this Notify as a base" />
               <Form.Select
                 value={
-                  globals &&
-                  itemName !== "" &&
-                  Object.keys(globals).indexOf(itemName) !== -1
+                  globals && Object.keys(globals).indexOf(itemName) !== -1
                     ? itemName
                     : ""
                 }
@@ -77,6 +81,16 @@ const Notify: FC<Props> = ({
           </Col>
           <FormSelect
             name={`${name}.type`}
+            customValidation={(value) => {
+              if (
+                itemType !== undefined &&
+                globals?.[itemName]?.type &&
+                itemType !== globals?.[itemName]?.type
+              ) {
+                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+              }
+              return true;
+            }}
             col_xs={6}
             label="Type"
             options={TYPE_OPTIONS}
@@ -92,9 +106,9 @@ const Notify: FC<Props> = ({
           <RenderNotify
             name={name}
             type={itemType}
-            globalNotify={globals && itemName ? globals[itemName] : undefined}
-            defaults={defaults}
-            hard_defaults={hard_defaults && hard_defaults[itemType]}
+            globalNotify={globals?.[itemName]}
+            defaults={defaults?.[itemType]}
+            hard_defaults={hard_defaults?.[itemType]}
           />
         </Row>
       </Accordion.Body>

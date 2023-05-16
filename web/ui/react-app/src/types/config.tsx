@@ -1,5 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { SMTPAuthOptions } from "components/modals/service-edit/notify-types/smtp";
+import {
+  BarkSchemeOptions,
+  BarkSoundOptions,
+} from "components/modals/service-edit/notify-types/bark";
+import {
+  NtfyPriorityOptions,
+  NtfySchemeOptions,
+} from "components/modals/service-edit/notify-types/ntfy";
+import {
+  SMTPAuthOptions,
+  SMTPEncryptionOptions,
+} from "components/modals/service-edit/notify-types/smtp";
+
 import { TelegramParseModeOptions } from "components/modals/service-edit/notify-types/telegram";
 
 export interface ServiceDict<T> {
@@ -71,13 +83,9 @@ export interface ServiceListType {
 
 export interface DefaultServiceType {
   [key: string]: any;
-  comment?: string;
   options?: ServiceOptionsType;
-  latest_version?: LatestVersionLookupType;
+  latest_version?: DefaultLatestVersionLookupType;
   deployed_version?: DeployedVersionLookupType;
-  command?: string[][];
-  webhook?: WebHookType;
-  notify?: ServiceDict<NotifyType>;
   dashboard?: ServiceDashboardOptionsType;
 }
 
@@ -115,28 +123,53 @@ export interface DockerFilterType {
   token?: string;
 }
 
-export interface LatestVersionFiltersType {
-  [key: string]: string | CommandType | DockerFilterType | undefined;
-  regex_content?: string;
-  regex_version?: string;
-  command?: CommandType;
-  docker?: DockerFilterType;
-}
-
-export interface LatestVersionLookupType {
+export interface BaseLatestVersionLookupType {
   [key: string]:
     | string
     | boolean
     | undefined
     | URLCommandType[]
-    | LatestVersionFiltersType;
+    | LatestVersionFiltersType
+    | DefaultLatestVersionFiltersType;
   type?: "github" | "url";
   url?: string;
   access_token?: string;
   allow_invalid_certs?: boolean;
   use_prerelease?: boolean;
   url_commands?: URLCommandType[];
+}
+export interface DefaultLatestVersionLookupType
+  extends BaseLatestVersionLookupType {
+  require?: DefaultLatestVersionFiltersType;
+}
+
+export interface LatestVersionLookupType extends BaseLatestVersionLookupType {
   require?: LatestVersionFiltersType;
+}
+
+export interface DefaultLatestVersionFiltersType {
+  [key: string]: DefaultDockerFilterType | undefined;
+  docker?: DefaultDockerFilterType;
+}
+export interface DefaultDockerFilterType {
+  [key: string]: string | DefaultDockerFilterRegistryType | undefined;
+  type?: string;
+  ghcr?: DefaultDockerFilterRegistryType;
+  hub?: DefaultDockerFilterRegistryType;
+  quay?: DefaultDockerFilterRegistryType;
+}
+export interface DefaultDockerFilterRegistryType {
+  [key: string]: string | undefined;
+  token?: string;
+  username?: string;
+}
+
+export interface LatestVersionFiltersType {
+  [key: string]: string | CommandType | DockerFilterType | undefined;
+  regex_content?: string;
+  regex_version?: string;
+  command?: CommandType;
+  docker?: DockerFilterType;
 }
 export interface DeployedVersionLookupType {
   [key: string]: string | boolean | undefined | BasicAuthType | HeaderType[];
@@ -171,25 +204,29 @@ export interface URLCommandType {
   old?: string; // replace
   new?: string; // replace
 }
-export type NotifyTypes =
-  | "discord"
-  | "smtp"
-  | "googlechat"
-  | "gotify"
-  | "ifttt"
-  | "join"
-  | "mattermost"
-  | "matrix"
-  | "opsgenie"
-  | "pushbullet"
-  | "pushover"
-  | "rocketchat"
-  | "slack"
-  | "teams"
-  | "telegram"
-  | "zulip";
-
+export const NotifyTypesConst = [
+  "bark",
+  "discord",
+  "smtp",
+  "googlechat",
+  "gotify",
+  "ifttt",
+  "join",
+  "mattermost",
+  "matrix",
+  "ntfy",
+  "opsgenie",
+  "pushbullet",
+  "pushover",
+  "rocketchat",
+  "slack",
+  "teams",
+  "telegram",
+  "zulip",
+];
+export type NotifyTypes = (typeof NotifyTypesConst)[number];
 export interface NotifyDefaults {
+  barl: NotifyBarkType;
   discord: NotifyDiscordType;
   smtp: NotifySMTPType;
   googlechat: NotifyGoogleChatType;
@@ -198,6 +235,7 @@ export interface NotifyDefaults {
   join: NotifyJoinType;
   mattermost: NotifyMatterMostType;
   matrix: NotifyMatrixType;
+  ntfy: NotifyNtfyType;
   opsgenie: NotifyOpsGenieType;
   pushbullet: NotifyPushbulletType;
   pushover: NotifyPushoverType;
@@ -208,21 +246,7 @@ export interface NotifyDefaults {
   zulip: NotifyZulipType;
 }
 export interface NotifyType {
-  [key: string]:
-    | string
-    | number
-    | undefined
-    | NotifyTypes
-    | NotifyOptionsType
-    | {
-        [key: string]:
-          | undefined
-          | string
-          | number
-          | boolean
-          | NotifyOpsGenieTarget[]
-          | { [key: string]: string }[];
-      };
+  [key: string]: any;
   id?: number;
   name?: string;
 
@@ -235,8 +259,29 @@ export interface NotifyType {
       | string
       | number
       | boolean
+      | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
-      | { [key: string]: string }[];
+      | { [key: string]: string };
+  };
+}
+
+export interface NotifyBarkType extends NotifyType {
+  type: "bark";
+  url_fields: {
+    devicekey?: string;
+    host?: string;
+    port?: string;
+    path?: string;
+  };
+  params: {
+    badge?: number;
+    copy?: string;
+    group?: string;
+    icon?: string;
+    scheme?: (typeof BarkSchemeOptions)[number]["value"];
+    sound?: (typeof BarkSoundOptions)[number]["value"];
+    title?: string;
+    url?: string;
   };
 }
 
@@ -250,6 +295,7 @@ export interface NotifyDiscordType extends NotifyType {
     avatar?: string;
     title?: string;
     username?: string;
+    splitlines?: string;
   };
 }
 export interface NotifySMTPType extends NotifyType {
@@ -261,7 +307,9 @@ export interface NotifySMTPType extends NotifyType {
     username?: string;
   };
   params: {
-    auth?: typeof SMTPAuthOptions[number]["value"];
+    auth?: (typeof SMTPAuthOptions)[number]["value"];
+    clienthost?: string;
+    encryption?: (typeof SMTPEncryptionOptions)[number]["value"];
     fromaddress?: string;
     fromname?: string;
     subject?: string;
@@ -346,6 +394,49 @@ export interface NotifyMatrixType extends NotifyType {
     title?: string;
   };
 }
+export interface NotifyNtfyType extends NotifyType {
+  type: "ntfy";
+  url_fields: {
+    host?: string;
+    password?: string;
+    port?: number;
+    topic?: string;
+    username?: string;
+  };
+  params: {
+    actions?: string | NotifyNtfyAction[];
+    attach?: string;
+    cache?: boolean | string;
+    click?: string;
+    delay?: string;
+    email?: string;
+    filename?: string;
+    firebase?: boolean | string;
+    icon?: string;
+    priority?: (typeof NtfyPriorityOptions)[number]["value"];
+    scheme?: (typeof NtfySchemeOptions)[number]["value"];
+    tags?: string;
+    title?: string;
+  };
+}
+export type NotifyNtfyActionTypes = "view" | "http" | "broadcast";
+export interface NotifyNtfyAction {
+  action: string;
+  label: string;
+
+  // view/http
+  url?: string;
+
+  // http
+  method: string;
+  headers?: HeaderType[] | { [key: string]: string };
+  body?: string;
+
+  // broadcast
+  intent?: string;
+  extras?: HeaderType[] | { [key: string]: string };
+}
+
 export interface NotifyOpsGenieType extends NotifyType {
   type: "opsgenie";
   url_fields: {
@@ -357,7 +448,7 @@ export interface NotifyOpsGenieType extends NotifyType {
     actions?: string;
     alias?: string;
     description?: string;
-    details?: string | { [key: string]: string }[];
+    details?: string | { [key: string]: string };
     entity?: string;
     note?: string;
     priority?: string;
@@ -451,7 +542,7 @@ export interface NotifyTelegramType extends NotifyType {
   params: {
     chats?: string;
     notification?: boolean | string;
-    parsemode?: typeof TelegramParseModeOptions[number]["value"];
+    parsemode?: (typeof TelegramParseModeOptions)[number]["value"];
     preview?: boolean | string;
     title?: string;
   };

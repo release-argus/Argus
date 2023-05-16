@@ -17,8 +17,6 @@
 package opt
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -167,30 +165,23 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 func TestOptions_GetIntervalPointer(t *testing.T) {
 	// GIVEN options
 	tests := map[string]struct {
-		options *Options
-		want    string
+		interval   string
+		intervalD  string
+		intervalHD string
+		want       string
 	}{
 		"root overrides all": {
-			options: &Options{
-				Interval: "10s",
-				Defaults: &Options{
-					Interval: "20s"},
-				HardDefaults: &Options{
-					Interval: "30s"}},
-			want: "10s"},
+			interval:   "10s",
+			intervalD:  "20s",
+			intervalHD: "30s",
+			want:       "10s"},
 		"default overrides hardDefault": {
-			options: &Options{
-				Defaults: &Options{
-					Interval: "20s"},
-				HardDefaults: &Options{
-					Interval: "30s"}},
-			want: "20s"},
+			intervalD:  "20s",
+			intervalHD: "30s",
+			want:       "20s"},
 		"hardDefault is last resort": {
-			options: &Options{
-				Defaults: &Options{},
-				HardDefaults: &Options{
-					Interval: "30s"}},
-			want: "30s"},
+			intervalHD: "30s",
+			want:       "30s"},
 	}
 
 	for name, tc := range tests {
@@ -198,8 +189,13 @@ func TestOptions_GetIntervalPointer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			options := testOptions()
+			options.Interval = tc.interval
+			options.Defaults.Interval = tc.intervalD
+			options.HardDefaults.Interval = tc.intervalHD
+
 			// WHEN GetIntervalPointer is called
-			got := tc.options.GetIntervalPointer()
+			got := options.GetIntervalPointer()
 
 			// THEN the function returns the correct result
 			if *got != tc.want {
@@ -226,91 +222,31 @@ func TestOptions_GetIntervalDuration(t *testing.T) {
 	}
 }
 
-func TestOptions_Print(t *testing.T) {
-	// GIVEN Options
-	tests := map[string]struct {
-		options Options
-		lines   int
-	}{
-		"empty/default Options": {
-			options: Options{},
-			lines:   0,
-		},
-		"only active": {
-			options: Options{
-				Active: boolPtr(false)},
-			lines: 2,
-		},
-		"only interval": {
-			options: Options{
-				Interval: "10s"},
-			lines: 2,
-		},
-		"only semantic_versioning": {
-			options: Options{
-				SemanticVersioning: boolPtr(false)},
-			lines: 2,
-		},
-		"all options defined": {
-			options: Options{
-				Active:             boolPtr(false),
-				Interval:           "10s",
-				SemanticVersioning: boolPtr(false)},
-			lines: 4,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// WHEN Print is called
-			tc.options.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
-
 func TestOptions_CheckValues(t *testing.T) {
 	// GIVEN Options
 	tests := map[string]struct {
-		options      Options
+		options      *Options
 		wantInterval string
 		errRegex     string
 	}{
 		"valid options": {
 			errRegex: `^$`,
-			options: Options{
-				Active:             boolPtr(false),
-				Interval:           "10s",
-				SemanticVersioning: boolPtr(false)},
+			options: New(
+				boolPtr(false), "10s", boolPtr(false),
+				nil, nil),
 		},
 		"invalid interval": {
 			errRegex: `interval: .* <invalid>`,
-			options: Options{
-				Active:             boolPtr(false),
-				Interval:           "10x",
-				SemanticVersioning: boolPtr(false)},
+			options: New(
+				boolPtr(false), "10x", boolPtr(false),
+				nil, nil),
 		},
 		"seconds get appended to pure decimal interval": {
 			errRegex:     `^$`,
 			wantInterval: "10s",
-			options: Options{
-				Active:             boolPtr(false),
-				Interval:           "10",
-				SemanticVersioning: boolPtr(false)},
+			options: New(
+				boolPtr(false), "10", boolPtr(false),
+				nil, nil),
 		},
 	}
 
@@ -341,74 +277,76 @@ func TestOptions_String(t *testing.T) {
 	}{
 		"nil": {
 			options: nil,
-			want:    "<nil>",
+			want:    "",
 		},
 		"empty/default Options": {
 			options: &Options{},
 			want:    "{}\n",
 		},
 		"all options defined": {
-			options: &Options{
-				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)},
+			options: New(
+				boolPtr(true), "10s", boolPtr(true),
+				nil, nil),
 			want: `
-active: true
 interval: 10s
 semantic_versioning: true
+active: true
 `,
 		},
 		"empty with defaults": {
 			options: &Options{
-				Defaults: &Options{
-					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)}},
+				Defaults: NewDefaults(
+					"10s", boolPtr(true))},
 			want: "{}\n",
 		},
 		"all with defaults": {
-			options: &Options{
-				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
-				Defaults: &Options{
-					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			options: New(
+				boolPtr(true), "10s", boolPtr(true),
+				nil,
+				NewDefaults(
+					"1h", boolPtr(false))),
 			want: `
-active: true
 interval: 10s
 semantic_versioning: true
+active: true
 `,
 		},
 		"empty with hardDefaults": {
 			options: &Options{
-				HardDefaults: &Options{
-					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)}},
+				HardDefaults: NewDefaults(
+					"10s", boolPtr(true))},
 			want: "{}\n",
 		},
 		"all with hardDefaults": {
-			options: &Options{
-				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
-				HardDefaults: &Options{
-					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			options: New(
+				boolPtr(true), "10s", boolPtr(true),
+				nil,
+				NewDefaults(
+					"1h", boolPtr(false))),
 			want: `
-active: true
 interval: 10s
 semantic_versioning: true
+active: true
 `,
 		},
 		"empty with defaults and hardDefaults": {
-			options: &Options{
-				Defaults: &Options{
-					Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true)},
-				HardDefaults: &Options{
-					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)}},
+			options: New(
+				nil, "", nil,
+				NewDefaults(
+					"10s", boolPtr(true)),
+				NewDefaults("1h", boolPtr(false))),
 			want: "{}\n",
 		},
 		"all with defaults and hardDefaults": {
-			options: &Options{
-				Active: boolPtr(true), Interval: "10s", SemanticVersioning: boolPtr(true),
-				Defaults: &Options{
-					Active: boolPtr(false), Interval: "1h", SemanticVersioning: boolPtr(false)},
-				HardDefaults: &Options{
-					Active: boolPtr(true), Interval: "1m", SemanticVersioning: boolPtr(true)}},
+			options: New(
+				boolPtr(true), "10s", boolPtr(true),
+				NewDefaults(
+					"20s", boolPtr(true)),
+				NewDefaults("30s", boolPtr(false))),
 			want: `
-active: true
 interval: 10s
 semantic_versioning: true
+active: true
 `,
 		},
 	}

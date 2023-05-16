@@ -16,7 +16,6 @@ package svcstatus
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/release-argus/Argus/util"
@@ -29,14 +28,14 @@ type Fails struct {
 	WebHook  FailsWebHook  `yaml:"-" json:"-"` // WebHook unsent/fail/pass.
 }
 
-// FailsBase is a base struct for the Fails structs.
-type FailsBase struct {
+// failsBase is a base struct for the Fails structs.
+type failsBase struct {
 	fails map[string]*bool // map of index to fail status.
 	mutex sync.RWMutex     // Mutex for concurrent access.
 }
 
-// Init the FailsBase.
-func (f *FailsBase) Init(length int) {
+// Init the failsBase.
+func (f *failsBase) Init(length int) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -44,7 +43,7 @@ func (f *FailsBase) Init(length int) {
 }
 
 // Get the fail status of this index.
-func (f *FailsBase) Get(index string) *bool {
+func (f *failsBase) Get(index string) *bool {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -52,7 +51,7 @@ func (f *FailsBase) Get(index string) *bool {
 }
 
 // Set the fail state of this index.
-func (f *FailsBase) Set(index string, state *bool) {
+func (f *failsBase) Set(index string, state *bool) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -60,7 +59,7 @@ func (f *FailsBase) Set(index string, state *bool) {
 }
 
 // AllPassed returns whether all the indexes have passed (fail=false).
-func (f *FailsBase) AllPassed() bool {
+func (f *failsBase) AllPassed() bool {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -74,7 +73,7 @@ func (f *FailsBase) AllPassed() bool {
 }
 
 // Reset of the indexes.
-func (f *FailsBase) Reset() {
+func (f *failsBase) Reset() {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -83,24 +82,20 @@ func (f *FailsBase) Reset() {
 	}
 }
 
-// Length of the FailsBase.
-func (f *FailsBase) Length() int {
+// Length of the failsBase.
+func (f *failsBase) Length() int {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
 	return len(f.fails)
 }
 
-// String representation of FailsBase.
-func (f *FailsBase) String() (out string) {
+// String representation of failsBase.
+func (f *failsBase) String() (str string) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
-	keys := make([]string, 0, len(f.fails))
-	for k := range f.fails {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	keys := util.SortedKeys(f.fails)
 
 	for _, key := range keys {
 		val := "nil"
@@ -108,17 +103,17 @@ func (f *FailsBase) String() (out string) {
 			val = fmt.Sprint(*f.fails[key])
 		}
 
-		out += fmt.Sprintf("%v: %s, ", key, val)
+		str += fmt.Sprintf("%v: %s, ", key, val)
 	}
-	if len(out) != 0 {
-		out = "{" + out[:len(out)-2] + "}"
+	if len(str) != 0 {
+		str = "{" + str[:len(str)-2] + "}"
 	}
 
 	return
 }
 
 type FailsCommand struct {
-	FailsBase
+	failsBase
 	fails []*bool
 }
 
@@ -178,7 +173,7 @@ func (f *FailsCommand) Length() int {
 }
 
 // String representation of FailsCommand.
-func (f *FailsCommand) String() (out string) {
+func (f *FailsCommand) String() (str string) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -188,45 +183,45 @@ func (f *FailsCommand) String() (out string) {
 			val = fmt.Sprint(*f.fails[i])
 		}
 
-		out += fmt.Sprintf("%v: %s, ", i, val)
+		str += fmt.Sprintf("%v: %s, ", i, val)
 	}
-	if len(out) != 0 {
-		out = "[" + out[:len(out)-2] + "]"
+	if len(str) != 0 {
+		str = "[" + str[:len(str)-2] + "]"
 	}
 
 	return
 }
 
 type FailsShoutrrr struct {
-	FailsBase
+	failsBase
 }
 
 type FailsWebHook struct {
-	FailsBase
+	failsBase
 }
 
 // String returns a string representation of the Fails.
-func (f *Fails) String() (out string) {
-	out = ""
+func (f *Fails) String() (str string) {
+	str = ""
 
-	_shoutrrr := f.Shoutrrr.String()
-	if _shoutrrr != "" {
-		out += fmt.Sprintf("shoutrrr: %s, ", _shoutrrr)
+	shoutrrrStr := f.Shoutrrr.String()
+	if shoutrrrStr != "" {
+		str += fmt.Sprintf("shoutrrr: %s, ", shoutrrrStr)
 	}
 
-	_command := f.Command.String()
-	if _command != "" {
-		out += fmt.Sprintf("command: %s, ", _command)
+	commandStr := f.Command.String()
+	if commandStr != "" {
+		str += fmt.Sprintf("command: %s, ", commandStr)
 	}
 
-	_webhook := f.WebHook.String()
-	if _webhook != "" {
-		out += fmt.Sprintf("webhook: %s, ", _webhook)
+	webhookStr := f.WebHook.String()
+	if webhookStr != "" {
+		str += fmt.Sprintf("webhook: %s, ", webhookStr)
 	}
 
-	if len(out) != 0 {
+	if len(str) != 0 {
 		// Trim the trailing ', '
-		out = out[:len(out)-2]
+		str = str[:len(str)-2]
 	}
 	return
 }

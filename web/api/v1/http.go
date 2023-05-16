@@ -153,13 +153,15 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 		err     error
 	)
 	if deployedVersionRefresh {
-		deployedVersionLookup := deployedver.Lookup{
-			Options: &opt.Options{
-				Defaults:     &api.Config.Defaults.Service.Options,
-				HardDefaults: &api.Config.HardDefaults.Service.Options},
-			Status:       &status,
-			Defaults:     api.Config.Defaults.Service.DeployedVersionLookup,
-			HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup}
+		deployedVersionLookup := deployedver.New(
+			nil, nil, nil, "",
+			opt.New(
+				nil, "", nil,
+				&api.Config.Defaults.Service.Options,
+				&api.Config.HardDefaults.Service.Options),
+			"", &status, "",
+			&api.Config.Defaults.Service.DeployedVersionLookup,
+			&api.Config.HardDefaults.Service.DeployedVersionLookup)
 		// Deployed Version
 		version, _, err = deployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
@@ -249,8 +251,8 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 				Options: &api.Config.Service[targetService].Options,
 				Status: &svcstatus.Status{
 					ServiceID: &targetService},
-				Defaults:     api.Config.Defaults.Service.DeployedVersionLookup,
-				HardDefaults: api.Config.HardDefaults.Service.DeployedVersionLookup,
+				Defaults:     &api.Config.Defaults.Service.DeployedVersionLookup,
+				HardDefaults: &api.Config.HardDefaults.Service.DeployedVersionLookup,
 			}
 		}
 		// Deployed Version
@@ -329,7 +331,7 @@ func (api *API) httpEditServiceGetDetail(w http.ResponseWriter, r *http.Request)
 	api.Config.OrderMutex.RUnlock()
 
 	// Convert to API Type, censoring secrets
-	serviceConfig := convertServiceToAPITypeService(service)
+	serviceConfig := convertAndCensorService(service)
 	// Convert to JSON type that swaps slices for lists
 	serviceJSON := api_type.ServiceEdit{
 		Comment:               serviceConfig.Comment,
@@ -363,8 +365,8 @@ func (api *API) httpEditServiceGetOtherDetails(w http.ResponseWriter, r *http.Re
 	err := json.NewEncoder(w).Encode(api_type.Config{
 		HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
 		Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
-		Notify:       convertAndCensorNotifySlice(&api.Config.Notify),
-		WebHook:      convertAndCensorWebHookSlice(&api.Config.WebHook),
+		Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
+		WebHook:      convertAndCensorWebHookSliceDefaults(&api.Config.WebHook),
 	})
 	api.Log.Error(err, logFrom, err != nil)
 }
@@ -411,7 +413,7 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 		reqType = "edit"
 	}
 	targetServicePtr := api.Config.Service[targetService]
-	newService, err := service.New(
+	newService, err := service.FromPayload(
 		targetServicePtr, // nil if creating new
 		&payload,
 		&api.Config.Defaults.Service,
@@ -459,8 +461,8 @@ func (api *API) httpEditServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// Set DeployedVersion to the LatestVersion if there's no DeployedVersionLookup
 	if newService.DeployedVersionLookup == nil {
-		newService.Status.SetDeployedVersion(newService.Status.GetLatestVersion(), false)
-		newService.Status.SetDeployedVersionTimestamp(newService.Status.GetLatestVersionTimestamp())
+		newService.Status.SetDeployedVersion(newService.Status.LatestVersion(), false)
+		newService.Status.SetDeployedVersionTimestamp(newService.Status.LatestVersionTimestamp())
 	}
 
 	// Add the new service to the config

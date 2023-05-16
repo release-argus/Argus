@@ -21,22 +21,18 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Print the struct.
-func (l *Lookup) Print(prefix string) {
-	fmt.Printf("%slatest_version:\n", prefix)
-	prefix += "  "
-	util.PrintlnIfNotDefault(l.Type,
-		fmt.Sprintf("%stype: %s", prefix, l.Type))
-	util.PrintlnIfNotDefault(l.URL,
-		fmt.Sprintf("%surl: %s", prefix, l.URL))
-	util.PrintlnIfNotNil(l.AccessToken,
-		fmt.Sprintf("%saccess_token: %q", prefix, util.DefaultIfNil(l.AccessToken)))
-	util.PrintlnIfNotNil(l.AllowInvalidCerts,
-		fmt.Sprintf("%sallow_invalid_certs: %t", prefix, util.DefaultIfNil(l.AllowInvalidCerts)))
-	util.PrintlnIfNotNil(l.UsePreRelease,
-		fmt.Sprintf("%suse_prerelease: %t", prefix, util.DefaultIfNil(l.UsePreRelease)))
-	l.URLCommands.Print(prefix)
-	l.Require.Print(prefix)
+// CheckValues of the LookupDefaults struct
+func (l *LookupDefaults) CheckValues(prefix string) (errs error) {
+	if requireErrs := l.Require.CheckValues(prefix + "  "); requireErrs != nil {
+		errs = fmt.Errorf("%s%w",
+			util.ErrorToString(errs), requireErrs)
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%slatest_version:\\%w",
+			prefix, errs)
+	}
+	return
 }
 
 // CheckValues of the Lookup struct

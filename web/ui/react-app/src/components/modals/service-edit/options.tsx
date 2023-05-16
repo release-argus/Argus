@@ -7,16 +7,11 @@ import { ServiceOptionsType } from "types/config";
 import { useFormContext } from "react-hook-form";
 
 interface Props {
-  options?: ServiceOptionsType;
   defaults?: ServiceOptionsType;
   hard_defaults?: ServiceOptionsType;
 }
 
-const EditServiceOptions: FC<Props> = ({
-  options,
-  defaults,
-  hard_defaults,
-}) => {
+const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
   const { register } = useFormContext();
   return (
     <Accordion>
@@ -28,14 +23,13 @@ const EditServiceOptions: FC<Props> = ({
           name="options.interval"
           col_sm={12}
           label="Interval"
-          placeholder={defaults?.interval || hard_defaults?.interval}
+          defaultVal={defaults?.interval || hard_defaults?.interval}
         />
         <Row>
           <BooleanWithDefault
             name="options.semantic_versioning"
             label="Semantic versioning"
             tooltip="Releases follow 'MAJOR.MINOR.PATCH' versioning"
-            value={options?.semantic_versioning}
             defaultValue={
               defaults?.semantic_versioning ||
               hard_defaults?.semantic_versioning

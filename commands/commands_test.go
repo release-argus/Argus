@@ -77,7 +77,6 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 
 func TestCommand_Exec(t *testing.T) {
 	// GIVEN different Command's to execute
-	jLog = util.NewJLog("INFO", false)
 	tests := map[string]struct {
 		cmd         Command
 		err         error
@@ -124,11 +123,14 @@ func TestCommand_Exec(t *testing.T) {
 
 func TestController_ExecIndex(t *testing.T) {
 	// GIVEN a Controller with different Command's to execute
-	jLog = util.NewJLog("INFO", false)
 	announce := make(chan []byte, 8)
 	controller := Controller{}
+	svcStatus := svcstatus.New(
+		&announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = stringPtr("service_id")
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id"), AnnounceChannel: &announce},
+		svcStatus,
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
@@ -198,7 +200,6 @@ func TestController_ExecIndex(t *testing.T) {
 
 func TestController_Exec(t *testing.T) {
 	// GIVEN a Controller
-	jLog = util.NewJLog("INFO", false)
 	tests := map[string]struct {
 		nilController bool
 		commands      *Slice

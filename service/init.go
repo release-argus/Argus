@@ -34,14 +34,16 @@ func LogInit(log *util.JLog) {
 
 // Init will initialise the Service metric.
 func (s *Service) Init(
-	defaults *Service,
-	hardDefaults *Service,
-	rootNotifyConfig *shoutrrr.Slice,
-	notifyDefaults *shoutrrr.Slice,
-	notifyHardDefaults *shoutrrr.Slice,
-	rootWebHookConfig *webhook.Slice,
-	webhookDefaults *webhook.WebHook,
-	webhookHardDefaults *webhook.WebHook,
+	defaults *Defaults,
+	hardDefaults *Defaults,
+
+	rootNotifyConfig *shoutrrr.SliceDefaults,
+	notifyDefaults *shoutrrr.SliceDefaults,
+	notifyHardDefaults *shoutrrr.SliceDefaults,
+
+	rootWebHookConfig *webhook.SliceDefaults,
+	webhookDefaults *webhook.WebHookDefaults,
+	webhookHardDefaults *webhook.WebHookDefaults,
 ) {
 	// Status
 	s.Status.Init(
@@ -49,11 +51,14 @@ func (s *Service) Init(
 		&s.ID,
 		&s.Dashboard.WebURL)
 
+	// Service
 	s.Defaults = defaults
-	s.Dashboard.Defaults = &s.Defaults.Dashboard
-	s.Options.Defaults = &s.Defaults.Options
 	s.HardDefaults = hardDefaults
+	// Dashbooard
+	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
+	// Options
+	s.Options.Defaults = &s.Defaults.Options
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
 	// Notify
@@ -86,30 +91,25 @@ func (s *Service) Init(
 		&s.Options)
 
 	// DeployedVersionLookup
-	if s.Defaults.DeployedVersionLookup == nil {
-		s.Defaults.DeployedVersionLookup = &deployedver.Lookup{}
-	}
 	s.DeployedVersionLookup.Init(
-		s.Defaults.DeployedVersionLookup, s.HardDefaults.DeployedVersionLookup,
+		&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup,
 		&s.Status,
 		&s.Options)
 
-	// Convert from old format
-	s.Convert()
 }
 
-// GetServiceInfo returns info about the service.
-func (s *Service) GetServiceInfo() *util.ServiceInfo {
+// ServiceInfo returns info about the service.
+func (s *Service) ServiceInfo() *util.ServiceInfo {
 	return &util.ServiceInfo{
 		ID:            s.ID,
-		URL:           s.LatestVersion.GetServiceURL(true),
+		URL:           s.LatestVersion.ServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
-		LatestVersion: s.Status.GetLatestVersion(),
+		LatestVersion: s.Status.LatestVersion(),
 	}
 }
 
-// GetIconURL returns the URL Icon for the Service.
-func (s *Service) GetIconURL() (icon string) {
+// IconURL returns the URL Icon for the Service.
+func (s *Service) IconURL() (icon string) {
 	// Service.Icon
 	if strings.HasPrefix(s.Dashboard.Icon, "http") {
 		icon = s.Dashboard.Icon

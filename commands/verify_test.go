@@ -17,60 +17,12 @@
 package command
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/util"
 )
-
-func TestSlice_Print(t *testing.T) {
-	// GIVEN a Slice
-	tests := map[string]struct {
-		slice *Slice
-		lines int
-	}{
-		"nil Slice": {
-			lines: 0,
-			slice: nil},
-		"non-nil zero length Slice": {
-			lines: 0,
-			slice: &Slice{}},
-		"single arg Command": {
-			lines: 2,
-			slice: &Slice{{"ls"}}},
-		"single multi-arg Command": {
-			lines: 2,
-			slice: &Slice{{"ls", "-lah", "/root"}}},
-		"multiple Commands": {
-			lines: 4,
-			slice: &Slice{{"ls"}, {"true"}, {"bash", "something.sh"}}},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// WHEN Print is called
-			tc.slice.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
-			if got != tc.lines {
-				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
-			}
-		})
-	}
-}
 
 func TestCommand_CheckValues(t *testing.T) {
 	// GIVEN a Command

@@ -52,32 +52,36 @@ func (l *Lookup) applyOverrides(
 		&l.Headers,
 		logFrom)
 	// json
-	useJSON := util.GetValue(json, l.JSON)
+	useJSON := util.ValueOrDefault(json, l.JSON)
 	// regex
-	useRegex := util.GetValue(regex, l.Regex)
+	useRegex := util.ValueOrDefault(regex, l.Regex)
 	// semantic_versioning
 	useSemanticVersioning := l.Options.SemanticVersioning
 	if semanticVersioning != nil {
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
 	// url
-	useURL := util.GetValue(url, l.URL)
+	useURL := util.ValueOrDefault(url, l.URL)
+
+	// options
+	options := opt.New(
+		nil, "",
+		useSemanticVersioning,
+		l.Options.Defaults,
+		l.Options.HardDefaults)
 
 	// Create a new lookup with the overrides.
-	lookup := Lookup{
-		URL:               useURL,
-		AllowInvalidCerts: useAllowInvalidCerts,
-		BasicAuth:         useBasicAuth,
-		Headers:           *useHeaders,
-		JSON:              useJSON,
-		Regex:             useRegex,
-		Options: &opt.Options{
-			SemanticVersioning: useSemanticVersioning,
-			Defaults:           l.Options.Defaults,
-			HardDefaults:       l.Options.HardDefaults},
-		Status:       &svcstatus.Status{},
-		Defaults:     l.Defaults,
-		HardDefaults: l.HardDefaults}
+	lookup := New(
+		useAllowInvalidCerts,
+		useBasicAuth,
+		useHeaders,
+		useJSON,
+		options,
+		useRegex,
+		&svcstatus.Status{},
+		useURL,
+		l.Defaults,
+		l.HardDefaults)
 	if err := lookup.CheckValues(""); err != nil {
 		jLog.Error(err, *logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
@@ -86,7 +90,7 @@ func (l *Lookup) applyOverrides(
 		0, 0, 0,
 		serviceID,
 		nil)
-	return &lookup, nil
+	return lookup, nil
 }
 
 // Refresh (query) the Lookup with the provided overrides,
@@ -139,7 +143,7 @@ func (l *Lookup) Refresh(
 	}
 
 	// Update the deployed version if it has changed.
-	if version != l.Status.GetDeployedVersion() &&
+	if version != l.Status.DeployedVersion() &&
 		// and no overrides that may change a successful query were provided
 		!overrides {
 		announceUpdate = true

@@ -10,12 +10,12 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
       // {} Object
     } else if (
       typeof obj[key] === "object" &&
-      !["notify", "webhook"].includes(key)
+      !["notify", "webhook"].includes(key) // not notify/webhook as they may be empty to reference globals
     ) {
       // Check object
       removeEmptyValues(obj[key]);
       // Empty object
-      if (Object.keys(obj[key]).length === 0) {
+      if (obj[key] == null || Object.keys(obj[key]).length === 0) {
         delete obj[key];
         continue;
       }

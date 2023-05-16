@@ -60,7 +60,7 @@ func newWebUI(cfg *config.Config) *mux.Router {
 	// Hand out the broadcast channel
 	cfg.HardDefaults.Service.Status.AnnounceChannel = &hub.Broadcast
 	for sKey := range cfg.Service {
-		cfg.Service[sKey].Status.AnnounceChannel = &hub.Broadcast
+		cfg.Service[sKey].Status.SetAnnounceChannel(&hub.Broadcast)
 	}
 
 	return router
@@ -70,20 +70,18 @@ func Run(cfg *config.Config, log *util.JLog) {
 	jLog = log
 	router := newWebUI(cfg)
 
-	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.GetWebListenHost(), cfg.Settings.GetWebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.GetWebRoutePrefix(), util.LogFrom{}, true)
+	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), util.LogFrom{}, true)
 
-	if cfg.Settings.GetWebCertFile() != nil && cfg.Settings.GetWebKeyFile() != nil {
+	if cfg.Settings.WebCertFile() != nil && cfg.Settings.WebKeyFile() != nil {
 		jLog.Fatal(
 			http.ListenAndServeTLS(
-				listenAddress, *cfg.Settings.GetWebCertFile(), *cfg.Settings.GetWebKeyFile(), router),
-			util.LogFrom{},
-			true)
+				listenAddress, *cfg.Settings.WebCertFile(), *cfg.Settings.WebKeyFile(), router),
+			util.LogFrom{}, true)
 	} else {
 		jLog.Fatal(
 			http.ListenAndServe(
 				listenAddress, router),
-			util.LogFrom{},
-			true)
+			util.LogFrom{}, true)
 	}
 }

@@ -2,7 +2,7 @@ import { FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyGoogleChatType } from "types/config";
 import { NotifyOptions } from "./generic";
-import { useGlobalOrDefault } from "./util";
+import { globalOrDefault } from "./util";
 
 const GOOGLE_CHAT = ({
   name,
@@ -33,7 +33,7 @@ const GOOGLE_CHAT = ({
         rows={2}
         label="Raw"
         tooltip="e.g. chat.googleapis.com/v1/spaces/foo/messages?key=bar&token=baz"
-        placeholder={useGlobalOrDefault(
+        defaultVal={globalOrDefault(
           global?.url_fields?.raw,
           defaults?.url_fields?.raw,
           hard_defaults?.url_fields?.raw

@@ -23,7 +23,6 @@ import (
 	command "github.com/release-argus/Argus/commands"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -36,6 +35,35 @@ func LogInit(log *util.JLog) {
 	command.LogInit(log)
 }
 
+// RequireDefaults are the default values for the Require struct.
+type RequireDefaults struct {
+	Docker DockerCheckDefaults `yaml:"docker" json:"docker"` // Docker image tag requirements
+}
+
+func NewRequireDefaults(
+	docker *DockerCheckDefaults,
+) (require *RequireDefaults) {
+	require = &RequireDefaults{}
+	if docker != nil {
+		require.Docker = *docker
+	}
+	return
+}
+
+// CheckValues of the RequireDefaults.
+func (r *RequireDefaults) CheckValues(prefix string) (errs error) {
+	if err := r.Docker.CheckValues(prefix + "    "); err != nil {
+		errs = fmt.Errorf("%s%s  docker:\\%w",
+			util.ErrorToString(errs), prefix, err)
+	}
+
+	if errs != nil {
+		errs = fmt.Errorf("%srequire:\\%s",
+			prefix, util.ErrorToString(errs))
+	}
+	return
+}
+
 // Require for version to be considered valid.
 type Require struct {
 	Status       *svcstatus.Status `yaml:"-" json:"-"`                                             // Service Status
@@ -46,37 +74,24 @@ type Require struct {
 }
 
 // String returns a string representation of the Require.
-func (r *Require) String() string {
-	if r == nil {
-		return "<nil>"
+func (r *Require) String() (str string) {
+	if r != nil {
+		str = util.ToYAMLString(r, "")
 	}
-	yamlBytes, _ := yaml.Marshal(r)
-	return string(yamlBytes)
+	return
 }
 
 // Init will give the filter package the Service's Status.
-func (r *Require) Init(status *svcstatus.Status) {
+func (r *Require) Init(status *svcstatus.Status, defaults *RequireDefaults) {
 	if r == nil {
 		return
 	}
 
 	r.Status = status
-}
 
-// Print the Require.
-func (r *Require) Print(prefix string) {
-	if r == nil {
-		return
+	if r.Docker != nil {
+		r.Docker.Defaults = &defaults.Docker
 	}
-	fmt.Printf("%srequire:\n", prefix)
-	util.PrintlnIfNotDefault(r.RegexContent,
-		fmt.Sprintf("%s  regex_content: %q", prefix, r.RegexContent))
-	util.PrintlnIfNotDefault(r.RegexVersion,
-		fmt.Sprintf("%s  regex_version: %q", prefix, r.RegexVersion))
-	if len(r.Command) != 0 {
-		fmt.Printf("%s  command: %s\n", prefix, r.Command.FormattedString())
-	}
-	r.Docker.Print(prefix + "  ")
 }
 
 // CheckValues of the Require option.
@@ -167,21 +182,33 @@ func RequireFromStr(jsonStr *string, previous *Require, logFrom *util.LogFrom) (
 		if previous.Docker != nil {
 			// Have changed a Docker param
 			if util.Contains(jsonKeys, "docker") {
+				previous.Docker.mutex.RLock()
+				defer previous.Docker.mutex.RUnlock()
+				sameDockerImageAndCredentials := 0
 				// Default params that haven't been changed
 				if !util.Contains(jsonKeys, "docker.type") {
 					require.Docker.Type = previous.Docker.Type
+					sameDockerImageAndCredentials++
 				}
 				if !util.Contains(jsonKeys, "docker.image") {
 					require.Docker.Image = previous.Docker.Image
+					sameDockerImageAndCredentials++
 				}
 				if !util.Contains(jsonKeys, "docker.tag") {
 					require.Docker.Tag = previous.Docker.Tag
 				}
 				if !util.Contains(jsonKeys, "docker.username") {
 					require.Docker.Username = previous.Docker.Username
+					sameDockerImageAndCredentials++
 				}
 				if !util.Contains(jsonKeys, "docker.token") {
 					require.Docker.Token = previous.Docker.Token
+					sameDockerImageAndCredentials++
+				}
+
+				if sameDockerImageAndCredentials == 4 {
+					require.Docker.queryToken = previous.Docker.queryToken
+					require.Docker.validUntil = previous.Docker.validUntil
 				}
 				// Haven't changed any Docker params
 			} else {
@@ -190,13 +217,9 @@ func RequireFromStr(jsonStr *string, previous *Require, logFrom *util.LogFrom) (
 		}
 	}
 	if require.Docker != nil {
-		// nil Docker if only Type
+		// nil Docker if no Image or Tag to use
 		if require.Docker.Image == "" && require.Docker.Tag == "" {
 			require.Docker = nil
-
-			// Default Docker Type
-		} else if require.Docker.Type == "" {
-			require.Docker.Type = "hub"
 		}
 	}
 

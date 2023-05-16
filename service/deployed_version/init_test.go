@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -55,10 +54,8 @@ func TestLookup_Metrics(t *testing.T) {
 func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup()
-	log := util.NewJLog("WARN", false)
-	LogInit(log)
-	var defaults *Lookup = &Lookup{}
-	var hardDefaults *Lookup = &Lookup{}
+	defaults := &LookupDefaults{}
+	hardDefaults := &LookupDefaults{}
 	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
 	var options opt.Options
 

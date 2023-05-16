@@ -11,11 +11,7 @@ const flattenErrors = (errors: any) => {
     for (const key in obj) {
       if (obj[key] !== null) {
         if (typeof obj[key] === "object" && !obj[key].hasOwnProperty("type")) {
-          // Add 1 to indices
-          const humanisedKey = isNaN(parseFloat(key))
-            ? key
-            : parseFloat(key) + 1;
-          traverse(`${prefix}${prefix ? `.${humanisedKey}` : key}`, obj[key]);
+          traverse(`${prefix}${prefix ? `.${key}` : key}`, obj[key]);
         } else if (obj[key]?.hasOwnProperty("type")) {
           flatErrors[`${prefix}${prefix ? `.${key}` : key}`] = obj[key].message;
         }

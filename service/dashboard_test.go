@@ -17,8 +17,6 @@
 package service
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -56,8 +54,10 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 
 			dashboard := DashboardOptions{}
 			dashboard.AutoApprove = tc.autoApproveRoot
-			dashboard.Defaults = &DashboardOptions{AutoApprove: tc.autoApproveDefault}
-			dashboard.HardDefaults = &DashboardOptions{AutoApprove: tc.autoApproveHardDefault}
+			defaults := NewDashboardOptionsDefaults(tc.autoApproveDefault)
+			dashboard.Defaults = &defaults
+			hardDefaults := NewDashboardOptionsDefaults(tc.autoApproveHardDefault)
+			dashboard.HardDefaults = &hardDefaults
 
 			// WHEN GetAutoApprove is called
 			got := dashboard.GetAutoApprove()
@@ -71,94 +71,13 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 	}
 }
 
-func TestDashboardOptions_Print(t *testing.T) {
-	// GIVEN a Service
-	tests := map[string]struct {
-		dashboardOptions DashboardOptions
-		want             string
-	}{
-		"default prints nothing": {
-			dashboardOptions: DashboardOptions{},
-			want:             "",
-		},
-		"print auto_approve": {
-			dashboardOptions: DashboardOptions{
-				AutoApprove: boolPtr(false)},
-			want: `
-dashboard:
-  auto_approve: false
-`,
-		},
-		"print icon": {
-			dashboardOptions: DashboardOptions{
-				Icon: "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"},
-			want: `
-dashboard:
-  icon: "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"
-`,
-		},
-		"print icon_link_to": {
-			dashboardOptions: DashboardOptions{IconLinkTo: "https://release-argus.io/demo"},
-			want: `
-dashboard:
-  icon_link_to: "https://release-argus.io/demo"
-`,
-		},
-		"print web_url": {
-			dashboardOptions: DashboardOptions{WebURL: "https://release-argus.io"},
-			want: `
-dashboard:
-  web_url: "https://release-argus.io"
-`,
-		},
-		"all options defined": {
-			dashboardOptions: DashboardOptions{
-				AutoApprove: boolPtr(false),
-				WebURL:      "https://release-argus.io",
-				Icon:        "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg",
-				IconLinkTo:  "https://release-argus.io/demo"},
-			want: `
-dashboard:
-  auto_approve: false
-  icon: "https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg"
-  icon_link_to: "https://release-argus.io/demo"
-  web_url: "https://release-argus.io"
-`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// WHEN Print is called
-			tc.dashboardOptions.Print("")
-
-			// THEN it prints the expected number of lines
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := string(out)
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
-			}
-		})
-	}
-}
-
 func TestDashboardOptions_CheckValues(t *testing.T) {
 	// GIVEN DashboardOptions
-	jLog = util.NewJLog("WARN", false)
 	tests := map[string]struct {
 		dashboardOptions *DashboardOptions
 		errRegex         []string
 	}{
-		"nil DashboardOptions": {
+		"nil": {
 			errRegex:         []string{"^$"},
 			dashboardOptions: nil},
 		"invalid web_url template": {
