@@ -52,16 +52,16 @@ func (l *Lookup) applyOverrides(
 		&l.Headers,
 		logFrom)
 	// json
-	useJSON := util.ValueOrDefault(json, l.JSON)
+	useJSON := util.PtrValueOrValue(json, l.JSON)
 	// regex
-	useRegex := util.ValueOrDefault(regex, l.Regex)
+	useRegex := util.PtrValueOrValue(regex, l.Regex)
 	// semantic_versioning
 	useSemanticVersioning := l.Options.SemanticVersioning
 	if semanticVersioning != nil {
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
 	// url
-	useURL := util.ValueOrDefault(url, l.URL)
+	useURL := util.PtrValueOrValue(url, l.URL)
 
 	// options
 	options := opt.New(

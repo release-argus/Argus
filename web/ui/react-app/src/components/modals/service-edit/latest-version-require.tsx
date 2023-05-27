@@ -56,9 +56,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
-    if ((selectedDockerRegistry || "") === "") {
+    if ((selectedDockerRegistry || "") === "")
       setValue("latest_version.require.docker.type", "hub");
-    }
   }, []);
 
   return (

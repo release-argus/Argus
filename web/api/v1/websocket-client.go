@@ -22,7 +22,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -73,9 +72,6 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
-
-	// Lock to prevent concurrent write panics
-	mutex sync.Mutex
 }
 
 func getIP(r *http.Request) (ip string) {
@@ -245,77 +241,6 @@ func (c *Client) writePump() {
 				default:
 					c.api.Log.Error(
 						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-						true,
-					)
-					continue
-				}
-			} else {
-				// Message is from client (`msg.Version` specified)
-				switch msg.Page {
-				case "APPROVALS":
-					switch msg.Type {
-					case "VERSION":
-						// Approval/Skip
-						c.api.wsServiceAction(c, msg)
-					case "ACTIONS":
-						// Get Command data for a service
-						c.api.wsCommand(c, msg)
-						// Get WebHook data for a service
-						c.api.wsWebHook(c, msg)
-					case "INIT":
-						// Get all Service data
-						c.api.wsServiceInit(c)
-					default:
-						c.api.Log.Error(
-							fmt.Sprintf("Unknown APPROVALS Type %q\nFull message: %s", msg.Type, string(message)),
-							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-							true,
-						)
-						continue
-					}
-				case "RUNTIME_BUILD":
-					switch msg.Type {
-					case "INIT":
-						c.api.wsStatus(c)
-					default:
-						c.api.Log.Error(
-							fmt.Sprintf("Unknown RUNTIME_BUILD Type %q\nFull message: %s", msg.Type, string(message)),
-							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-							true,
-						)
-					}
-				case "FLAGS":
-					switch msg.Type {
-					case "INIT":
-						c.api.wsFlags(c)
-					default:
-						c.api.Log.Error(
-							fmt.Sprintf("Unknown FLAGS Type %q\nFull message: %s", msg.Type, string(message)),
-							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-							true,
-						)
-						continue
-					}
-				case "CONFIG":
-					switch msg.Type {
-					case "INIT":
-						c.api.wsConfigSettings(c)
-						c.api.wsConfigDefaults(c)
-						c.api.wsConfigNotify(c)
-						c.api.wsConfigWebHook(c)
-						c.api.wsConfigService(c)
-					default:
-						c.api.Log.Error(
-							fmt.Sprintf("Unknown CONFIG Type %q\nFull message: %s", msg.Type, string(message)),
-							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
-							true,
-						)
-						continue
-					}
-				default:
-					c.api.Log.Error(
-						fmt.Sprintf("Unknown PAGE %q\nFull message: %s", msg.Page, string(message)),
 						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)

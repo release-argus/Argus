@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
@@ -78,7 +79,9 @@ func testLoad(file string) *config.Config {
 	var config config.Config
 
 	flags := make(map[string]bool)
-	config.Load(file, &flags, &util.JLog{})
+	jLog := util.NewJLog("DEBUG", false)
+	jLog.Testing = true
+	config.Load(file, &flags, jLog)
 	announceChannel := make(chan []byte, 8)
 	config.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
 
@@ -92,9 +95,11 @@ func testAPI(name string) API {
 	if accessToken != "" {
 		cfg.HardDefaults.Service.LatestVersion.AccessToken = &accessToken
 	}
+	jLog := util.NewJLog("DEBUG", false)
+	jLog.Testing = true
 	return API{
 		Config: cfg,
-		Log:    util.NewJLog("WARN", false),
+		Log:    jLog,
 	}
 }
 
@@ -131,4 +136,36 @@ func testService(id string) *service.Service {
 	svc.Status.AnnounceChannel = &announceChannel
 	svc.Status.DatabaseChannel = &databaseChannel
 	return &svc
+}
+
+func testCommand(failing bool) command.Command {
+	if failing {
+		return command.Command{"ls", "-lah", "/root"}
+	}
+	return command.Command{"ls", "-lah"}
+}
+
+func testWebHook(failing bool, id string) *webhook.WebHook {
+	whDesiredStatusCode := 0
+	whMaxTries := uint(1)
+	wh := webhook.New(
+		boolPtr(false),
+		nil,
+		"0s",
+		&whDesiredStatusCode,
+		nil,
+		&whMaxTries,
+		nil,
+		stringPtr("11m"),
+		"argus",
+		boolPtr(false),
+		"github",
+		"https://valid.release-argus.io/hooks/github-style",
+		&webhook.WebHookDefaults{},
+		&webhook.WebHookDefaults{},
+		&webhook.WebHookDefaults{})
+	if failing {
+		wh.Secret = "notArgus"
+	}
+	return wh
 }

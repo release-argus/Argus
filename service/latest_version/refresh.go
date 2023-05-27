@@ -59,12 +59,12 @@ func (l *Lookup) applyOverrides(
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
 	// type
-	useType := util.ValueOrDefault(typeStr, l.Type)
+	useType := util.PtrValueOrValue(typeStr, l.Type)
 	if useType == "" {
 		useType = "github"
 	}
 	// url
-	useURL := util.ValueOrDefault(url, l.URL)
+	useURL := util.PtrValueOrValue(url, l.URL)
 	// url_commands
 	useURLCommands, errURLCommands := filter.URLCommandsFromStr(
 		urlCommands,

@@ -33,6 +33,7 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         ) {
           return result;
         }
+        // convert to string
         result[key] = convertOpsGenieTargetToString(
           value as NotifyOpsGenieTarget[]
         );
@@ -46,6 +47,7 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         ) {
           return result;
         }
+        // convert to string
         result[key] = convertNtfyActionsToString(value as NotifyNtfyAction[]);
         // opsGenie.details
       } else {
@@ -74,13 +76,13 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
 const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
   JSON.stringify(
     (obj as NotifyNtfyAction[]).map((item) => {
-      if (item.action === "view") {
+      if (item.action === "view")
         return {
           action: item.action,
           label: item.label,
           url: item.url,
         };
-      } else if (item.action === "http") {
+      else if (item.action === "http")
         return {
           action: item.action,
           label: item.label,
@@ -89,16 +91,14 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           headers: item.headers,
           body: item.body,
         };
-      } else if (item.action === "broadcast") {
+      else if (item.action === "broadcast")
         return {
           action: item.action,
           label: item.label,
           intent: item.intent,
           extras: item.extras,
         };
-      } else {
-        return item;
-      }
+      else return item;
     })
   );
 

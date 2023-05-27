@@ -27,9 +27,6 @@ type WebSocketMessage struct {
 	ServiceData *ServiceSummary            `json:"service_data,omitempty"`
 	CommandData map[string]*CommandSummary `json:"command_data,omitempty"`
 	WebHookData map[string]*WebHookSummary `json:"webhook_data,omitempty"`
-	InfoData    *Info                      `json:"info_data,omitempty"`
-	FlagsData   *Flags                     `json:"flags_data,omitempty"`
-	ConfigData  *Config                    `json:"config_data,omitempty"`
 }
 
 // String returns a string representation of the WebSocketMessage.

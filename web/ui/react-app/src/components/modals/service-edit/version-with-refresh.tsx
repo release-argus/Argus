@@ -1,5 +1,5 @@
 import { Alert, Button } from "react-bootstrap";
-import { FC, useMemo } from "react";
+import { FC, useMemo, useState } from "react";
 import {
   LatestVersionLookupEditType,
   ServiceRefreshType,
@@ -21,6 +21,7 @@ interface Props {
 }
 
 const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
+  const [lastFetched, setLastFetched] = useState(0);
   const { monitorData } = useWebSocket();
   const { getFieldState, formState } = useFormContext();
   const dataTarget = useMemo(
@@ -48,10 +49,11 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const {
     data: versionData,
     isFetching,
+    isStale,
     refetch: refetchVersion,
   } = useQuery(
     [
-      "refresh",
+      "version/refresh",
       dataTarget,
       { id: serviceName },
       {
@@ -62,6 +64,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     ],
     () => fetchVersionJSON(),
     {
+      enabled: false,
       initialData: {
         version: monitorData.service[serviceName]
           ? monitorData.service[serviceName]?.status?.[dataTarget]
@@ -69,13 +72,18 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
         error: "",
         timestamp: "",
       },
-      enabled: !invalidURL && !!data?.url,
       notifyOnChangeProps: "all",
+      staleTime: 0,
     }
   );
 
   const refetch = async () => {
-    if (!invalidURL && !!data?.url) {
+    // Prevent refetching too often
+    const currentTime = Date.now();
+    if (currentTime - lastFetched < 1000) return;
+
+    setLastFetched(currentTime);
+    if (isStale && !invalidURL && !!data?.url) {
       refetchSemanticVersioning();
       refetchData();
       // setTimeoout to allow time for refetches ^
@@ -85,12 +93,10 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     }
   };
 
-  const LoadingSpinner = useMemo(
-    () => (
-      <FontAwesomeIcon icon={faSpinner} spin style={{ marginLeft: "0.5rem" }} />
-    ),
-    []
+  const LoadingSpinner = (
+    <FontAwesomeIcon icon={faSpinner} spin style={{ marginLeft: "0.5rem" }} />
   );
+
   return (
     <span style={{ alignItems: "center" }}>
       <span className="pt-1 pb-2" style={{ display: "flex" }}>

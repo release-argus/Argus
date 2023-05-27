@@ -212,7 +212,7 @@ func (r *Require) DockerTagCheck(
 		return fmt.Errorf("%s:%s - %w",
 			r.Docker.Image, tag, err)
 	}
-	switch r.Docker.Type {
+	switch r.Docker.getType() {
 	case "hub":
 		url = fmt.Sprintf("https://registry.hub.docker.com/v2/repositories/%s/tags/%s",
 			r.Docker.Image, tag)
@@ -570,7 +570,8 @@ func (d *DockerCheckDefaults) setQueryToken(dType, token *string, queryToken *st
 		if d.RegistryGHCR != nil {
 			d.RegistryGHCR.mutex.Lock()
 			defer d.RegistryGHCR.mutex.Unlock()
-			if d.RegistryGHCR.Token == *token {
+			// Ignore NOOP tokens as they're repo/image specific
+			if *token != "" && d.RegistryGHCR.Token == *token {
 				d.RegistryGHCR.queryToken = *queryToken
 				d.RegistryGHCR.validUntil = *validUntil
 				return
@@ -580,6 +581,7 @@ func (d *DockerCheckDefaults) setQueryToken(dType, token *string, queryToken *st
 		if d.RegistryHub != nil {
 			d.RegistryHub.mutex.Lock()
 			defer d.RegistryHub.mutex.Unlock()
+			// queryToken is global to all repos/images
 			if d.RegistryHub.Token == *token {
 				d.RegistryHub.queryToken = *queryToken
 				d.RegistryHub.validUntil = *validUntil
@@ -590,6 +592,7 @@ func (d *DockerCheckDefaults) setQueryToken(dType, token *string, queryToken *st
 		if d.RegistryQuay != nil {
 			d.RegistryQuay.mutex.Lock()
 			defer d.RegistryQuay.mutex.Unlock()
+			// queryToken is global to all repos/images
 			if d.RegistryQuay.Token == *token {
 				d.RegistryQuay.queryToken = *queryToken
 				d.RegistryQuay.validUntil = *validUntil

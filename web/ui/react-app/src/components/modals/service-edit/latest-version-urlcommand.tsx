@@ -1,4 +1,4 @@
-import { Button, Col } from "react-bootstrap";
+import { Button, Col, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -23,26 +23,29 @@ const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
 
   return (
     <>
-      <FormSelect
-        col_xs={3}
-        col_sm={3}
-        name={`${name}.type`}
-        label="Type"
-        smallLabel
-        options={urlCommandTypeOptions}
-      />
-      {commandType && (
-        <RenderURLCommand name={name} commandType={commandType} />
-      )}
-      <Col xs={1} className="d-flex align-items-center justify-content-end">
+      <Col xs={2} sm={1} style={{ height: "100%", padding: "0.25rem" }}>
         <Button
-          aria-label="Remove URL Command"
-          className="btn-unchecked"
-          variant="warning"
+          className="btn-secondary-outlined btn-icon-center"
+          variant="secondary"
           onClick={removeMe}
         >
           <FontAwesomeIcon icon={faTrash} />
         </Button>
+      </Col>
+      <Col>
+        <Row>
+          <FormSelect
+            col_xs={4}
+            col_sm={4}
+            name={`${name}.type`}
+            label="Type"
+            smallLabel
+            options={urlCommandTypeOptions}
+          />
+          {commandType && (
+            <RenderURLCommand name={name} commandType={commandType} />
+          )}
+        </Row>
       </Col>
     </>
   );

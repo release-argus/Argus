@@ -15,7 +15,7 @@ export const convertAPIServiceDataEditToUI = (
   serviceData?: ServiceEditAPIType,
   otherOptionsData?: ServiceEditOtherData
 ): ServiceEditType => {
-  if (serviceData && name) {
+  if (serviceData && name)
     // Edit service defaults
     return {
       ...serviceData,
@@ -89,7 +89,6 @@ export const convertAPIServiceDataEditToUI = (
         ...serviceData?.dashboard,
       },
     };
-  }
 
   // New service defaults
   return {

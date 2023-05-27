@@ -1,37 +1,30 @@
-import { ReactElement, useEffect, useReducer } from "react";
-import { addMessageHandler, sendMessage } from "contexts/websocket";
+import { ReactElement, useEffect, useState } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { WebSocketResponse } from "types/websocket";
-import YAML from "yaml";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import reducerConfig from "reducers/config";
+import { fetchJSON } from "utils";
+import { stringify } from "yaml";
 import { useDelayedRender } from "hooks/delayed-render";
+import { useQuery } from "@tanstack/react-query";
 
 export const Config = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
-  const [config, setConfig] = useReducer(reducerConfig, {
-    data: {},
-    waiting_on: ["SETTINGS", "DEFAULTS", "NOTIFY", "WEBHOOK", "SERVICE"],
-  });
+  const [mutated, setMutated] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, isFetching } = useQuery<Record<string, any>>(
+    ["config"],
+    () => fetchJSON(`api/v1/config`),
+    { staleTime: 0 }
+  );
 
   useEffect(() => {
-    sendMessage(
-      JSON.stringify({
-        version: 1,
-        page: "CONFIG",
-        type: "INIT",
-      })
-    );
-
-    // Handler to listen to WebSocket messages
-    const handler = (event: WebSocketResponse) => {
-      if (event.page === "CONFIG") {
-        setConfig(event);
-      }
-    };
-    addMessageHandler("config", handler);
-  }, []);
+    if (!isFetching && data) {
+      trimConfig(data);
+      data.service = orderServices(data.service, data.order);
+      delete data.order;
+    }
+    setMutated(!isFetching);
+  }, [data]);
 
   return (
     <>
@@ -41,7 +34,7 @@ export const Config = (): ReactElement => {
         }}
       >
         Configuration
-        {config.waiting_on.length !== 0 &&
+        {isFetching &&
           delayedRender(() => (
             <div
               style={{
@@ -62,8 +55,41 @@ export const Config = (): ReactElement => {
             </div>
           ))}
       </h2>
-
-      <pre className="config">{YAML.stringify(config.data)}</pre>
+      {mutated && <pre className="config">{stringify(data)}</pre>}
     </>
   );
+};
+
+const trimConfig = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  obj: Record<string, any>,
+  path = ""
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, any> => {
+  for (const key in obj) {
+    if (typeof obj[key] === "object" && obj[key] !== null) {
+      obj[key] = trimConfig(obj[key], `${path}.${key}`);
+      if (
+        Object.keys(obj[key]).length === 0 &&
+        !(
+          path.startsWith(".service") &&
+          (path.endsWith("notify") || path.endsWith("webhook"))
+        )
+      )
+        delete obj[key];
+    }
+  }
+  return obj;
+};
+
+const orderServices = <T extends Record<string, unknown>>(
+  object: T,
+  order?: Array<keyof T>
+): T => {
+  if (!order) return object;
+  const orderedObject = {} as T;
+  order.forEach((key) => {
+    if (object.hasOwnProperty(key)) orderedObject[key] = object[key];
+  });
+  return orderedObject;
 };

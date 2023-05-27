@@ -4,9 +4,7 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
   for (const key in obj) {
     // [] Empty array
     if (Array.isArray(obj[key])) {
-      if (obj[key].length === 0) {
-        delete obj[key];
-      }
+      if (obj[key].length === 0) delete obj[key];
       // {} Object
     } else if (
       typeof obj[key] === "object" &&
@@ -20,9 +18,7 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
         continue;
       }
       // "" Empty/undefined string
-    } else if (obj[key] === "" || obj[key] === undefined) {
-      delete obj[key];
-    }
+    } else if (obj[key] === "" || obj[key] === undefined) delete obj[key];
   }
   return obj;
 };

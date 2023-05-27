@@ -160,12 +160,12 @@ func DefaultOrValue[T comparable](check *T, value T) T {
 	return value
 }
 
-// ValueOrDefault will return the value of `ptr` if it's non-nil, otherwise `fallback`.
-func ValueOrDefault[T comparable](ptr *T, defaultValue T) T {
+// PtrValueOrValue will return the value of `ptr` if it's non-nil, otherwise `fallback`.
+func PtrValueOrValue[T comparable](ptr *T, fallback T) T {
 	if ptr != nil {
 		return *ptr
 	}
-	return defaultValue
+	return fallback
 }
 
 // ErrorToString accounts for nil errors, returning an empty string for those

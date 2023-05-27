@@ -1,41 +1,27 @@
 import { Placeholder, Table } from "react-bootstrap";
 import { ReactElement, useEffect, useState } from "react";
-import {
-  addMessageHandler,
-  removeMessageHandler,
-  sendMessage,
-} from "contexts/websocket";
 
 import { Dictionary } from "types/util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { WebSocketResponse } from "types/websocket";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { fetchJSON } from "utils";
 import { useDelayedRender } from "hooks/delayed-render";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "contexts/theme";
 
 export const Flags = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
-  const [flags, setFlags] = useState<Dictionary<string>>();
+  const [flags, setFlags] =
+    useState<Dictionary<string | boolean | undefined>>();
   const themeCtx = useTheme();
 
-  useEffect(() => {
-    sendMessage(
-      JSON.stringify({
-        version: 1,
-        page: "FLAGS",
-        type: "INIT",
-      })
-    );
+  const { data, isFetching } = useQuery<
+    Dictionary<string | boolean | undefined>
+  >(["flags"], () => fetchJSON(`api/v1/flags`), { staleTime: Infinity });
 
-    // Handler to listen to WebSocket messages
-    const handler = (event: WebSocketResponse) => {
-      if (event.page === "FLAGS" && event.flags_data) {
-        setFlags(event.flags_data);
-        removeMessageHandler("flags");
-      }
-    };
-    addMessageHandler("flags", handler);
-  }, []);
+  useEffect(() => {
+    if (!isFetching && data) setFlags(data);
+  }, [data]);
 
   return (
     <>

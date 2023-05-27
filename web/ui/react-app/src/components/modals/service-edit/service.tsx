@@ -31,18 +31,15 @@ const EditService: FC<Props> = ({ name }) => {
   const [loading, setLoading] = useState(true);
 
   const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
-    useQuery(
-      ["service-edit", "detail"],
-      () => fetchJSON<ServiceEditOtherData>("api/v1/service/edit"),
-      { staleTime: 1000 * 600 }
+    useQuery(["service/edit", "detail"], () =>
+      fetchJSON<ServiceEditOtherData>("api/v1/service/edit")
     );
-  const { data: serviceData, isFetched: isFetchedServiceData } = useQuery(
-    ["service-edit", { name: name }],
+  const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery(
+    ["service/edit", { id: name }],
     () => fetchJSON<ServiceEditAPIType>(`api/v1/service/edit/${name}`),
     {
       enabled: !!name,
       refetchOnMount: "always",
-      cacheTime: 0,
     }
   );
 
@@ -53,11 +50,16 @@ const EditService: FC<Props> = ({ name }) => {
   const { monitorData } = useWebSocket();
 
   useEffect(() => {
-    if ((isFetchedServiceData || !name) && isFetchedOtherOptionsData) {
+    // If we're loading and have finished fetching the service data
+    // (or don't have name = resetting for close)
+    if (
+      (loading && isSuccessServiceData && isFetchedOtherOptionsData) ||
+      !name
+    ) {
       reset(defaultData);
-      setTimeout(() => setLoading(false), 10);
+      setTimeout(() => setLoading(false), 100);
     }
-  }, [isFetchedServiceData, isFetchedOtherOptionsData]);
+  }, [defaultData]);
 
   return loading ? (
     <Loading name={name} />

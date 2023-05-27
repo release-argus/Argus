@@ -9,13 +9,11 @@ const flattenErrors = (errors: any) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traverse = (prefix: string, obj: any) => {
     for (const key in obj) {
-      if (obj[key] !== null) {
-        if (typeof obj[key] === "object" && !obj[key].hasOwnProperty("type")) {
+      if (obj[key] !== null)
+        if (typeof obj[key] === "object" && !obj[key].hasOwnProperty("type"))
           traverse(`${prefix}${prefix ? `.${key}` : key}`, obj[key]);
-        } else if (obj[key]?.hasOwnProperty("type")) {
+        else if (obj[key]?.hasOwnProperty("type"))
           flatErrors[`${prefix}${prefix ? `.${key}` : key}`] = obj[key].message;
-        }
-      }
     }
   };
   traverse("", errors);

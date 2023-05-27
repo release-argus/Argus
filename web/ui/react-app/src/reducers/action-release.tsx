@@ -1,6 +1,6 @@
 import { ActionModalData } from "types/summary";
+
 import { WebSocketResponse } from "types/websocket";
-import { isAfterDate } from "utils";
 
 export default function reducerActionModal(
   state: ActionModalData,
@@ -19,23 +19,12 @@ export default function reducerActionModal(
       if (
         !action.service_data ||
         (!action.webhook_data && !action.command_data)
-      ) {
+      )
         return state;
-      }
 
       switch (action.sub_type) {
-        case "SUMMARY":
-          newState.commands = state.commands;
-
-          if (action.webhook_data !== undefined) {
-            newState.webhooks = action.webhook_data;
-          } else if (action.command_data !== undefined) {
-            newState.commands = action.command_data;
-          }
-          newState.service_id = action.service_data.id;
-          break;
         case "EVENT":
-          if (action.webhook_data) {
+          if (action.webhook_data)
             for (const webhook_id in action.webhook_data) {
               // Remove them from the sending list
               newState.sentWH.splice(
@@ -45,15 +34,18 @@ export default function reducerActionModal(
                 1
               );
 
-              // Record the success/fail
-              if (newState.service_id === action.service_data.id) {
+              // Record the success/fail (if it's the current modal service)
+              if (
+                action.service_data.id === state.service_id &&
+                newState.webhooks[webhook_id] !== undefined
+              )
                 newState.webhooks[webhook_id] = {
                   failed: action.webhook_data[webhook_id].failed,
                   next_runnable: action.webhook_data[webhook_id].next_runnable,
                 };
-              }
             }
-          } else {
+
+          if (action.command_data)
             for (const command in action.command_data) {
               // Remove them from the sending list
               newState.sentC.splice(
@@ -61,41 +53,21 @@ export default function reducerActionModal(
                 1
               );
 
-              // Record the success/fail
-              if (newState.service_id === action.service_data.id) {
+              // Record the success/fail (if it's the current modal service)
+              if (
+                action.service_data.id === state.service_id &&
+                newState.commands[command] !== undefined
+              )
                 newState.commands[command] = {
                   failed: action.command_data[command].failed,
                   next_runnable: action.command_data[command].next_runnable,
                 };
-              }
             }
-          }
-          break;
-        case "SENDING":
-          if (action.webhook_data) {
-            for (const webhook_id in action.webhook_data) {
-              // reset the failed state
-              if (newState.webhooks[webhook_id] !== undefined) {
-                newState.webhooks[webhook_id].failed = undefined;
-              }
-              // set it as sending
-              newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
-            }
-          } else {
-            for (const command in action.command_data) {
-              // reset the failed state
-              if (newState.commands[command] !== undefined) {
-                newState.commands[command].failed = undefined;
-              }
-              // set it as sending
-              newState.sentC.push(`${action.service_data.id} ${command}`);
-            }
-          }
           break;
         case "INIT":
           break;
         default:
-          console.log(action);
+          console.error(action);
           throw new Error();
       }
       break;
@@ -109,51 +81,39 @@ export default function reducerActionModal(
           newState.webhooks = {};
           break;
         case "SENDING":
-          // Send all button
-          // WebHooks
-          for (const webhook_id in state.webhooks) {
-            // skip webhooks that aren't after next_runnable
-            if (
-              state.webhooks[webhook_id].next_runnable !== undefined &&
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              isAfterDate(state.webhooks[webhook_id].next_runnable!)
-            ) {
-              continue;
-            }
-            // reset the failed states
-            if (newState.webhooks[webhook_id] !== undefined) {
-              newState.webhooks[webhook_id].failed = undefined;
-            }
-            // set as sending
-            newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
-          }
-
           // Commands
-          for (const command in state.commands) {
-            // skip commands that aren't after next_runnable
-            if (
-              state.commands[command].next_runnable !== undefined &&
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              isAfterDate(state.commands[command].next_runnable!)
-            ) {
-              continue;
+          if (action.command_data)
+            for (const command in action.command_data) {
+              // reset the failed states
+              if (newState.commands[command])
+                newState.commands[command].failed = undefined;
+              // set as sending
+              newState.sentC.push(`${action.service_data?.id} ${command}`);
             }
-            // reset the failed states
-            if (newState.commands[command] !== undefined) {
-              newState.commands[command].failed = undefined;
+
+          // WebHooks
+          if (action.webhook_data)
+            for (const webhook_id in action.webhook_data) {
+              // reset the failed states
+              if (newState.webhooks[webhook_id])
+                newState.webhooks[webhook_id].failed = undefined;
+              // set as sending
+              newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
             }
-            // set as sending
-            newState.sentC.push(`${action.service_data?.id} ${command}`);
-          }
+          break;
+        case "REFRESH":
+          newState.service_id = action.service_data?.id || newState.service_id;
+          newState.commands = action.command_data ? action.command_data : {};
+          newState.webhooks = action.webhook_data ? action.webhook_data : {};
           break;
         default:
-          console.log(action);
+          console.error(action);
           throw new Error();
       }
       break;
 
     default:
-      console.log(action);
+      console.error(action);
       throw new Error();
   }
 

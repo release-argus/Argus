@@ -1,17 +1,13 @@
+import { BuildInfo, RuntimeInfo } from "types/info";
 import { Placeholder, Table } from "react-bootstrap";
-import { ReactElement, useEffect, useState } from "react";
-import {
-  addMessageHandler,
-  removeMessageHandler,
-  sendMessage,
-} from "contexts/websocket";
 
 import { Dictionary } from "types/util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Info } from "types/info";
-import { WebSocketResponse } from "types/websocket";
+import { ReactElement } from "react";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { fetchJSON } from "utils";
 import { useDelayedRender } from "hooks/delayed-render";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "contexts/theme";
 
 const titleMappings: Dictionary<string> = {
@@ -21,30 +17,18 @@ const ignoreCapitalize = ["GOMAXPROCS", "GOGC", "GODEBUG"];
 
 export const Status = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
-  const [info, setInfo] = useState<Info>();
   const themeCtx = useTheme();
 
-  useEffect(() => {
-    sendMessage(
-      JSON.stringify({
-        version: 1,
-        page: "RUNTIME_BUILD",
-        type: "INIT",
-      })
-    );
-
-    // Handler to listen to WebSocket messages
-    const handler = (event: WebSocketResponse) => {
-      if (event.page === "RUNTIME_BUILD" && event.info_data) {
-        setInfo({
-          build: event.info_data.build,
-          runtime: event.info_data.runtime,
-        });
-        removeMessageHandler("status");
-      }
-    };
-    addMessageHandler("status", handler);
-  }, []);
+  const { data: runtimeData } = useQuery<RuntimeInfo>(
+    ["status/runtime"],
+    () => fetchJSON(`api/v1/status/runtime`),
+    { staleTime: Infinity } // won't change unless Argus is restarted
+  );
+  const { data: buildData } = useQuery<BuildInfo>(
+    ["version"],
+    () => fetchJSON(`api/v1/version`),
+    { staleTime: Infinity } // won't change unless Argus is restarted
+  );
 
   return (
     <>
@@ -54,7 +38,7 @@ export const Status = (): ReactElement => {
         }}
       >
         Runtime Information
-        {info?.runtime === undefined &&
+        {runtimeData === undefined &&
           delayedRender(() => (
             <div
               style={{
@@ -81,7 +65,7 @@ export const Status = (): ReactElement => {
         variant={themeCtx.theme === "theme-dark" ? "dark" : undefined}
       >
         <tbody>
-          {info?.runtime === undefined
+          {runtimeData === undefined
             ? [...Array.from(Array(4).keys())].map((num) => (
                 <tr key={num}>
                   <th style={{ width: "35%" }}>
@@ -97,7 +81,7 @@ export const Status = (): ReactElement => {
                   </td>
                 </tr>
               ))
-            : Object.entries(info.runtime).map(([k, v]) => {
+            : Object.entries(runtimeData).map(([k, v]) => {
                 const title = (
                   k in titleMappings ? titleMappings[k] : k
                 ).replaceAll("_", " ");
@@ -122,7 +106,7 @@ export const Status = (): ReactElement => {
         }}
       >
         Build Information
-        {info?.build === undefined &&
+        {buildData === undefined &&
           delayedRender(() => (
             <div
               style={{
@@ -149,7 +133,7 @@ export const Status = (): ReactElement => {
         variant={themeCtx.theme === "theme-dark" ? "dark" : undefined}
       >
         <tbody>
-          {info?.build === undefined
+          {buildData === undefined
             ? [...Array.from(Array(3).keys())].map((num) => (
                 <tr key={num}>
                   <th style={{ width: "35%" }}>
@@ -165,7 +149,7 @@ export const Status = (): ReactElement => {
                   </td>
                 </tr>
               ))
-            : Object.entries(info.build).map(([k, v]) => {
+            : Object.entries(buildData).map(([k, v]) => {
                 const title = (
                   k in titleMappings ? titleMappings[k] : k
                 ).replaceAll("_", " ");

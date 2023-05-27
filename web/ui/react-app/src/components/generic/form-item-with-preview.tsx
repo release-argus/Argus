@@ -52,7 +52,7 @@ const FormItemWithPreview: FC<Props> = ({
           <Form.Control
             type="text"
             value={formValue}
-            placeholder={placeholder}
+            placeholder={placeholder || defaultVal}
             pattern="^https?://.+"
             style={{ width: preview ? "90%" : "100%" }}
             autoFocus={false}

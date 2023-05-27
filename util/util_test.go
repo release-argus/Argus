@@ -546,7 +546,7 @@ func TestDefaultOrValue(t *testing.T) {
 	}
 }
 
-func TestValueOrDefault(t *testing.T) {
+func TestPtrValueOrValue(t *testing.T) {
 	// GIVEN a bunch of comparables pointers and values
 	tests := map[string]struct {
 		ptr   interface{}
@@ -578,15 +578,15 @@ func TestValueOrDefault(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN ValueOrDefault is called
+			// WHEN PtrValueOrValue is called
 			var got interface{}
 			switch v := tc.ptr.(type) {
 			case *string:
-				got = ValueOrDefault(v, tc.value.(string))
+				got = PtrValueOrValue(v, tc.value.(string))
 			case *bool:
-				got = ValueOrDefault(v, tc.value.(bool))
+				got = PtrValueOrValue(v, tc.value.(bool))
 			case *int:
-				got = ValueOrDefault(v, tc.value.(int))
+				got = PtrValueOrValue(v, tc.value.(int))
 			}
 
 			// THEN the pointer is returned if it's nil, otherwise the value

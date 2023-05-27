@@ -7,7 +7,7 @@ export function handleMessage(
 ) {
   if (
     action.page === "APPROVALS" &&
-    ["SERVICE", "VERSION", "EDIT", "DELETE", "RESET"].includes(action.type)
+    ["SERVICE", "VERSION", "EDIT", "DELETE"].includes(action.type)
   ) {
     reducer(action);
   }

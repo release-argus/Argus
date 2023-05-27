@@ -25,19 +25,16 @@ export const ServiceDictToList = <T,>(
     let newValue = value as T & { name: string; oldIndex: string };
     newValue.name = name;
     newValue.oldIndex = name;
-    if (giveIndexTo) {
-      giveIndexTo.forEach((prop) => {
-        if ((value as any)[prop] && Array.isArray((value as any)[prop])) {
-          newValue = {
-            ...newValue,
-            [prop]: (value as any)[prop].map((v: any, k: string) => ({
-              ...v,
-              oldIndex: k,
-            })),
-          };
-        }
-      });
-    }
+    giveIndexTo?.forEach((prop) => {
+      if ((value as any)[prop] && Array.isArray((value as any)[prop]))
+        newValue = {
+          ...newValue,
+          [prop]: (value as any)[prop].map((v: any, k: string) => ({
+            ...v,
+            oldIndex: k,
+          })),
+        };
+    });
     return newValue;
   });
 };

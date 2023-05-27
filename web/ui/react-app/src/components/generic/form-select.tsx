@@ -84,9 +84,7 @@ const FormSelect: FC<FormSelectProps> = ({
           )}
           rules={{
             validate: (value) => {
-              if (customValidation) {
-                return customValidation(value);
-              }
+              if (customValidation) return customValidation(value);
             },
           }}
         />

@@ -65,7 +65,7 @@ export const handleNotifications = (props: Props) => {
                   props.event.service_data.status.approved_version.startsWith(
                     "SKIP_"
                   )
-                ) {
+                )
                   props.addNotification({
                     type: "info",
                     title: props.event.service_data?.id || "Unknown",
@@ -75,22 +75,17 @@ export const handleNotifications = (props: Props) => {
                     small: new Date().toString(),
                     delay: 30000,
                   });
-                }
               }
               break;
             default:
               break;
           }
           break;
-        case "RESET":
-          break;
 
         case "COMMAND":
           // SUMMARY
           // EVENT
           switch (props.event.sub_type) {
-            case "SUMMARY":
-              break;
             case "EVENT":
               for (const key in props.event.command_data) {
                 props.event.command_data[key].failed === false
@@ -116,8 +111,6 @@ export const handleNotifications = (props: Props) => {
           // SUMMARY
           // EVENT
           switch (props.event.sub_type) {
-            case "SUMMARY":
-              break;
             case "EVENT":
               for (const key in props.event.webhook_data) {
                 props.event.webhook_data[key].failed === false

@@ -138,9 +138,13 @@ func NewGitHubData(
 	eTag string,
 	releases *[]github_types.Release,
 ) (githubData *GitHubData) {
+	var releasesDeref []github_types.Release
+	if releases != nil {
+		releasesDeref = *releases
+	}
 	githubData = &GitHubData{
 		eTag:     eTag,
-		releases: *releases}
+		releases: releasesDeref}
 	return
 }
 

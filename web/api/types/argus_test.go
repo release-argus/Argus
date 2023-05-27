@@ -1146,7 +1146,30 @@ func TestDefaults_String(t *testing.T) {
 		},
 		"empty": {
 			dflts: &Defaults{},
-			want:  `{"service":{},"webhook":{}}`,
+			want:  `{}`,
+		},
+		"all types": {
+			dflts: &Defaults{
+				Service: ServiceDefaults{
+					LatestVersion: &LatestVersionDefaults{
+						AccessToken: "foo"}},
+				Notify: NotifySlice{
+					"gotify": &Notify{
+						URLFields: map[string]string{
+							"url": "https://gotify.example.com"}}},
+				WebHook: WebHook{
+					Secret: stringPtr("bar")}},
+			want: `{
+"service":{
+	"latest_version":{
+		"access_token":"foo"}},
+"notify":{
+	"gotify":{
+		"url_fields":{
+			"url":"https://gotify.example.com"}}},
+"webhook":{
+	"secret":"bar"}
+}`,
 		},
 	}
 
@@ -1160,6 +1183,103 @@ func TestDefaults_String(t *testing.T) {
 
 			// THEN the result is as expected
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = strings.ReplaceAll(tc.want, "\t", "")
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestService_String(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		input *Service
+		want  string
+	}{
+		"nil": {
+			input: nil,
+			want:  "",
+		},
+		"empty": {
+			input: &Service{},
+			want:  `{}`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN the Defaults are stringified with String
+			got := tc.input.String()
+
+			// THEN the result is as expected
+			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLatestVersion_String(t *testing.T) {
+	// GIVEN a LatestVersion
+	tests := map[string]struct {
+		input *LatestVersion
+		want  string
+	}{
+		"nil": {
+			input: nil,
+			want:  ""},
+		"empty": {
+			input: &LatestVersion{},
+			want:  `{}`},
+		"all fields": {
+			input: &LatestVersion{
+				Type:              "github",
+				URL:               "release-argus/argus",
+				AccessToken:       "<secret>",
+				AllowInvalidCerts: boolPtr(true),
+				UsePreRelease:     boolPtr(false),
+				URLCommands: &URLCommandSlice{
+					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
+					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+				Require: &LatestVersionRequire{
+					RegexContent: ".*"}},
+			want: `
+{
+	"type":"github",
+	"url":"release-argus/argus",
+	"access_token":"\u003csecret\u003e",
+	"allow_invalid_certs":true,
+	"use_prerelease":false,
+	"url_commands":[
+		{"type":"replace","new":"withThis","old":"this"},
+		{"type":"split","index":8,"text":"splitThis"},
+		{"type":"regex","regex":"([0-9.]+)"}
+	],
+	"require":{
+		"regex_content":".*"
+	}
+}`},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN the LatestVersion is stringified with String
+			got := tc.input.String()
+
+			// THEN the result is as expected
+			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1179,7 +1299,7 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 			want: ""},
 		"empty": {
 			lvrd: &LatestVersionRequireDefaults{},
-			want: `{"docker":{}}`},
+			want: `{}`},
 		"all fields": {
 			lvrd: &LatestVersionRequireDefaults{
 				Docker: RequireDockerCheckDefaults{
@@ -1205,6 +1325,63 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 
 			// THEN the result is as expected
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			if got != tc.want {
+				t.Errorf("got:\n%q\nwant:\n%q",
+					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLatestVersionRequire_String(t *testing.T) {
+	// GIVEN a LatestVersionRequire
+	tests := map[string]struct {
+		input *LatestVersionRequire
+		want  string
+	}{
+		"nil": {
+			input: nil,
+			want:  ""},
+		"empty": {
+			input: &LatestVersionRequire{},
+			want:  `{}`},
+		"all fields": {
+			input: &LatestVersionRequire{
+				Command: []string{"echo", "hello"},
+				Docker: &RequireDockerCheck{
+					Type:     "hub",
+					Image:    "release-argus/argus",
+					Tag:      "{{ version }}",
+					Username: "user",
+					Token:    "<secret>"},
+				RegexContent: ".*",
+				RegexVersion: `([0-9.]+)`},
+			want: `
+{
+	"command":["echo","hello"],
+	"docker":{
+		"type":"hub",
+		"image":"release-argus/argus",
+		"tag":"{{ version }}",
+		"username":"user",
+		"token":"\u003csecret\u003e"
+	},
+	"regex_content":".*",
+	"regex_version":"([0-9.]+)"
+}`},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN the LatestVersionRequire is stringified with String
+			got := tc.input.String()
+
+			// THEN the result is as expected
+			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)

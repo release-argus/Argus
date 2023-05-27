@@ -1,14 +1,17 @@
 import { ReactElement, useEffect, useMemo, useState } from "react";
-import { sendMessage, useWebSocket } from "contexts/websocket";
 
 import ApprovalsToolbar from "components/approvals/toolbar";
 import { ApprovalsToolbarOptions } from "types/util";
 import { Container } from "react-bootstrap";
+import { OrderAPIResponse } from "types/summary";
 import Service from "components/approvals/service";
+import { fetchJSON } from "utils";
 import useLocalStorage from "hooks/local-storage";
+import { useQuery } from "@tanstack/react-query";
+import { useWebSocket } from "contexts/websocket";
 
 export const Approvals = (): ReactElement => {
-  const { monitorData } = useWebSocket();
+  const { monitorData, setMonitorData } = useWebSocket();
   const toolbarDefaults: ApprovalsToolbarOptions = {
     search: "",
     editMode: false,
@@ -17,6 +20,27 @@ export const Approvals = (): ReactElement => {
   const [toolbarOptionsLS, setLSToolbarOptions] =
     useLocalStorage<ApprovalsToolbarOptions>("toolbarOptions", toolbarDefaults);
   const [toolbarOptions, setToolbarOptions] = useState(toolbarOptionsLS);
+  const {
+    data: orderData,
+    isFetched: isFetchedOrder,
+    isFetching: isFetchingOrder,
+  } = useQuery(
+    ["service/order"],
+    () => fetchJSON<OrderAPIResponse>(`api/v1/service/order`),
+    {
+      cacheTime: 1000 * 60 * 30, // 30 mins
+      initialData: { order: monitorData.order },
+    }
+  );
+  useEffect(() => {
+    if (isFetchedOrder && !isFetchingOrder)
+      setMonitorData({
+        page: "APPROVALS",
+        type: "SERVICE",
+        sub_type: "ORDER",
+        ...orderData,
+      });
+  }, [orderData]);
 
   // Keep local storage and state in sync
   useEffect(() => {
@@ -26,22 +50,6 @@ export const Approvals = (): ReactElement => {
       hide: toolbarOptions.hide,
     });
   }, [toolbarOptions]);
-
-  useEffect(() => {
-    // Starting on /status and switching to /approvals never has data
-    //
-    // INIT for approvals is requested on all pages, but the message fails
-    // to parse correctly
-    monitorData.order.length === 1 &&
-      monitorData.order[0] === "monitorData_loading" &&
-      sendMessage(
-        JSON.stringify({
-          version: 1,
-          page: "APPROVALS",
-          type: "INIT",
-        })
-      );
-  }, [monitorData.order]);
 
   const filteredServices = useMemo(
     () =>
@@ -84,10 +92,7 @@ export const Approvals = (): ReactElement => {
           padding: 0,
         }}
       >
-        {!(
-          monitorData.order.length === 1 &&
-          monitorData.order[0] === "monitorData_loading"
-        ) &&
+        {monitorData.order.length === Object.keys(monitorData.service).length &&
           filteredServices.map((service) => (
             <Service
               key={service.id}
