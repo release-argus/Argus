@@ -9,10 +9,10 @@
     "@fortawesome/free-brands-svg-icons": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@tanstack/react-query": "^4.29.7",
+    "@tanstack/react-query": "^4.29.11",
     "@types/bootstrap": "^5.2.6",
     "@types/jest": "^29.5.1",
-    "@types/react": "^18.2.6",
+    "@types/react": "^18.2.7",
     "@types/react-dom": "^18.2.4",
     "bootstrap": "^5.2.3",
     "date-fns": "^2.30.0",
@@ -20,11 +20,11 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.4",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.43.9",
-    "react-router-dom": "^6.11.1",
+    "react-hook-form": "^7.44.1",
+    "react-router-dom": "^6.11.2",
     "react-scripts": "^5.0.1",
     "reconnecting-websocket": "^4.4.0",
-    "styled-components": "^5.3.10",
+    "styled-components": "^5.3.11",
     "typescript": "^5.0.4"
   },
   "scripts": {
@@ -53,8 +53,8 @@
     ]
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^4.29.7",
-    "@types/node": "^18.15.11",
+    "@tanstack/react-query-devtools": "^4.29.11",
+    "@types/node": "^18.16.16",
     "@types/styled-components": "^5.1.26"
   }
 }
