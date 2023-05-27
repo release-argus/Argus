@@ -1,7 +1,3 @@
-export interface Info {
-  build?: BuildInfo;
-  runtime?: RuntimeInfo;
-}
 export interface BuildInfo {
   version: string;
   build_date: string;

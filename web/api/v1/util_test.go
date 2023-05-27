@@ -18,7 +18,9 @@ package v1
 
 import (
 	"testing"
+	"time"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
@@ -26,6 +28,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
+	svcstatus "github.com/release-argus/Argus/service/status"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -149,7 +152,6 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 					nil, nil, nil)},
 			want: &api_type.NotifySlice{
 				"test": {
-					ID:   "test",
 					Type: "discord",
 					Options: map[string]string{
 						"test": "1"},
@@ -183,7 +185,6 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 					nil, nil, nil)},
 			want: &api_type.NotifySlice{
 				"test": {
-					ID:   "test",
 					Type: "discord",
 					Options: map[string]string{
 						"test": "1"},
@@ -192,7 +193,6 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 					Params: map[string]string{
 						"test": "3"}},
 				"other": {
-					ID:   "other",
 					Type: "discord",
 					Options: map[string]string{
 						"message": "release {{ version }} is available"},
@@ -550,7 +550,289 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
+	// GIVEN a filter.Require
+	tests := map[string]struct {
+		input *filter.Require
+		want  *api_type.LatestVersionRequire
+	}{
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"bare": {
+			input: &filter.Require{},
+			want:  &api_type.LatestVersionRequire{},
+		},
+		"bare with bare Docker": {
+			input: &filter.Require{
+				Docker: &filter.DockerCheck{}},
+			want: &api_type.LatestVersionRequire{
+				Docker: &api_type.RequireDockerCheck{}},
+		},
+		"docker.ghcr": {
+			input: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"ghcr",
+					"release-argus/argus", "{{ version }}",
+					"", "tokenForGHCR",
+					"", time.Now(),
+					nil)},
+			want: &api_type.LatestVersionRequire{
+				Docker: &api_type.RequireDockerCheck{
+					Type:  "ghcr",
+					Image: "release-argus/argus",
+					Tag:   "{{ version }}",
+					Token: "<secret>"}},
+		},
+		"docker.hub": {
+			input: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"hub",
+					"release-argus/argus", "{{ version }}",
+					"user", "tokenForHub",
+					"", time.Now(),
+					nil)},
+			want: &api_type.LatestVersionRequire{
+				Docker: &api_type.RequireDockerCheck{
+					Type:     "hub",
+					Image:    "release-argus/argus",
+					Tag:      "{{ version }}",
+					Username: "user",
+					Token:    "<secret>"}},
+		},
+		"filled": {
+			input: &filter.Require{
+				Status: svcstatus.New(
+					nil, nil, nil,
+					"2.0.0",
+					"1.0.0", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					"3.0.0", time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
+				RegexContent: ".*",
+				RegexVersion: `([0-9.]+)`,
+				Command:      command.Command{"echo", "hello"},
+				Docker: filter.NewDockerCheck(
+					"hub",
+					"release-argus/argus", "{{ version }}",
+					"user", "tokenForHub",
+					"", time.Now(),
+					nil)},
+			want: &api_type.LatestVersionRequire{
+				Command: []string{"echo", "hello"},
+				Docker: &api_type.RequireDockerCheck{
+					Type:     "hub",
+					Image:    "release-argus/argus",
+					Tag:      "{{ version }}",
+					Username: "user",
+					Token:    "<secret>"},
+				RegexContent: ".*",
+				RegexVersion: `([0-9.]+)`},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN convertAndCensorLatestVersionRequire is called
+			got := convertAndCensorLatestVersionRequire(tc.input)
+
+			// THEN the result should be as expected
+			if tc.want.String() != got.String() {
+				t.Errorf("want\n%q\ngot\n%q",
+					tc.want.String(), got.String())
+			}
+		})
+	}
+}
+
+func TestConvertAndCensorLatestVersion(t *testing.T) {
+	// GIVEN a latestver.Lookup
+	tests := map[string]struct {
+		input *latestver.Lookup
+		want  *api_type.LatestVersion
+	}{
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"bare": {
+			input: &latestver.Lookup{},
+			want: &api_type.LatestVersion{
+				URLCommands: &api_type.URLCommandSlice{}},
+		},
+		"urlCommmands": {
+			input: latestver.New(
+				nil, nil, nil, nil, nil, nil, "", "",
+				&filter.URLCommandSlice{
+					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
+					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+				nil, nil, nil),
+			want: &api_type.LatestVersion{
+				URLCommands: &api_type.URLCommandSlice{
+					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
+					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: stringPtr("([0-9.]+)")}}},
+		},
+		"filled": {
+			input: latestver.New(
+				stringPtr("accessToken"),             // access_token
+				boolPtr(true),                        // allow_invalid_certs
+				latestver.NewGitHubData("ETAG", nil), // github_data
+				opt.New( // options
+					boolPtr(true),  // active
+					"1h1m",         // interval
+					boolPtr(false), // semantic_versioning
+					nil, nil),
+				&filter.Require{ // require
+					RegexContent: ".*"},
+				svcstatus.New( // status
+					nil, nil, nil,
+					"2.0.0",
+					"1.0.0", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					"3.0.0", time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
+				"github",              // type
+				"release-argus/argus", // url
+				&filter.URLCommandSlice{ // url_commands
+					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
+					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+				boolPtr(false), // use_prerelease
+				nil, nil),
+			want: &api_type.LatestVersion{
+				Type:              "github",
+				URL:               "release-argus/argus",
+				AccessToken:       "<secret>",
+				AllowInvalidCerts: boolPtr(true),
+				UsePreRelease:     boolPtr(false),
+				URLCommands: &api_type.URLCommandSlice{
+					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
+					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+				Require: &api_type.LatestVersionRequire{
+					RegexContent: ".*"}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN convertAndCensorLatestVersion is called
+			got := convertAndCensorLatestVersion(tc.input)
+
+			// THEN the result should be as expected
+			if tc.want.String() != got.String() {
+				t.Errorf("want\n%q\ngot\n%q",
+					tc.want.String(), got.String())
+			}
+		})
+	}
+}
+
+func TestConvertAndCensorService(t *testing.T) {
+	// GIVEN a service.Service
+	tests := map[string]struct {
+		input *service.Service
+		want  *api_type.Service
+	}{
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"bare": {
+			input: &service.Service{},
+			want: &api_type.Service{
+				Options: &api_type.ServiceOptions{},
+				LatestVersion: &api_type.LatestVersion{
+					URLCommands: &api_type.URLCommandSlice{}},
+				Command:   &api_type.CommandSlice{},
+				Notify:    &api_type.NotifySlice{},
+				WebHook:   &api_type.WebHookSlice{},
+				Dashboard: &api_type.DashboardOptions{}},
+		},
+		"all fields": {
+			input: &service.Service{
+				ID:      "Test",
+				Comment: "Comment on the Service",
+				Options: opt.Options{
+					Active: boolPtr(false)},
+				LatestVersion: *latestver.New(
+					stringPtr("lv_accessToken"),
+					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
+				DeployedVersionLookup: deployedver.New(
+					boolPtr(true),
+					nil, nil, "", nil, "", nil, "", nil, nil),
+				Notify: shoutrrr.Slice{
+					"gotify": shoutrrr.New(
+						nil,
+						"gotify",
+						nil, nil, "",
+						&map[string]string{
+							"url": "http://gotify"},
+						nil, nil, nil)},
+				Command: command.Slice{
+					{"echo", "foo"}},
+				WebHook: webhook.Slice{
+					"test_wh": webhook.New(
+						boolPtr(true),
+						nil, "", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+				Dashboard: *service.NewDashboardOptions(
+					nil,
+					"https://example.com/icon.png",
+					"", "", nil, nil),
+				Status: *svcstatus.New(
+					nil, nil, nil,
+					"2.0.0",
+					"1.0.0", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					"3.0.0", time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
+			},
+			want: &api_type.Service{
+				Comment: "Comment on the Service",
+				Options: &api_type.ServiceOptions{
+					Active: boolPtr(false)},
+				LatestVersion: &api_type.LatestVersion{
+					AccessToken: "<secret>",
+					URLCommands: &api_type.URLCommandSlice{}},
+				Command: &api_type.CommandSlice{
+					{"echo", "foo"}},
+				Notify: &api_type.NotifySlice{
+					"gotify": &api_type.Notify{
+						URLFields: map[string]string{
+							"url": "http://gotify"}}},
+				WebHook: &api_type.WebHookSlice{
+					"test_wh": &api_type.WebHook{
+						AllowInvalidCerts: boolPtr(true)}},
+				DeployedVersionLookup: &api_type.DeployedVersionLookup{
+					AllowInvalidCerts: boolPtr(true)},
+				Dashboard: &api_type.DashboardOptions{
+					Icon: "https://example.com/icon.png"}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN convertAndCensorService is called
+			got := convertAndCensorService(tc.input)
+
+			// THEN the result should be as expected
+			if tc.want.String() != got.String() {
+				t.Errorf("want\n%q\ngot\n%q",
+					tc.want.String(), got.String())
+			}
+		})
+	}
 }
 
 func TestConvertAndCensorDefaults(t *testing.T) {
@@ -573,12 +855,11 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			},
 			want: &api_type.Defaults{
 				Service: api_type.ServiceDefaults{
-					Service: api_type.Service{
-						Options:               &api_type.ServiceOptions{},
-						DeployedVersionLookup: &api_type.DeployedVersionLookup{},
-						Dashboard:             &api_type.DashboardOptions{}},
+					Options: &api_type.ServiceOptions{},
 					LatestVersion: &api_type.LatestVersionDefaults{
-						Require: &api_type.LatestVersionRequireDefaults{}}}},
+						Require: &api_type.LatestVersionRequireDefaults{}},
+					DeployedVersionLookup: &api_type.DeployedVersionLookup{},
+					Dashboard:             &api_type.DashboardOptions{}}},
 		},
 		"censor service.latest_version": {
 			input: &config.Defaults{
@@ -600,13 +881,9 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			},
 			want: &api_type.Defaults{
 				Service: api_type.ServiceDefaults{
-					Service: api_type.Service{
-						Options:               &api_type.ServiceOptions{},
-						DeployedVersionLookup: &api_type.DeployedVersionLookup{},
-						Dashboard:             &api_type.DashboardOptions{}},
+					Options: &api_type.ServiceOptions{},
 					LatestVersion: &api_type.LatestVersionDefaults{
-						LatestVersion: api_type.LatestVersion{
-							AccessToken: "<secret>"},
+						AccessToken: "<secret>",
 						Require: &api_type.LatestVersionRequireDefaults{
 							Docker: api_type.RequireDockerCheckDefaults{
 								Type: "ghcr",
@@ -618,7 +895,9 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 									Username: "usernameHub"},
 								Quay: &api_type.RequireDockerCheckRegistryDefaults{
 									Token: "<secret>"},
-							}}}}},
+							}}},
+					DeployedVersionLookup: &api_type.DeployedVersionLookup{},
+					Dashboard:             &api_type.DashboardOptions{}}},
 		},
 	}
 

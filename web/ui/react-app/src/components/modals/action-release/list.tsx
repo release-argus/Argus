@@ -16,7 +16,6 @@ interface Props {
   data: CommandSummaryListType | WebHookSummaryListType;
   sent: string[];
   onClickAcknowledge: (target: string) => void;
-  setSendingThisService: React.Dispatch<React.SetStateAction<boolean>>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delayedRender: any;
 }
@@ -28,38 +27,39 @@ export const ModalList: FC<Props> = ({
   data,
   sent,
   onClickAcknowledge,
-  setSendingThisService,
   delayedRender,
 }) => {
+  // LOADING
+  if (Object.keys(data ? data : {}).length === 0)
+    return (
+      <Container fluid className="list">
+        {[...Array.from(Array(data).keys())].map((id) => (
+          <Loading
+            key={id}
+            modalType={modalType}
+            delayedRender={delayedRender}
+          />
+        ))}
+      </Container>
+    );
+
   return (
     <Container fluid className="list">
-      {Object.keys(data ? data : {}).length === 0
-        ? [...Array.from(Array(data).keys())].map((id) => (
-            <Loading
-              key={id}
-              modalType={modalType}
-              delayedRender={delayedRender}
-            />
-          ))
-        : Object.entries(data).map(([title, item]) => {
-            let sending = false;
-            if (sent.includes(`${serviceID} ${title}`)) {
-              setSendingThisService(true);
-              sending = true;
-            }
-            return (
-              <Item
-                itemType={itemType}
-                key={title}
-                modalType={modalType}
-                title={title}
-                failed={item.failed}
-                sending={sending}
-                next_runnable={item.next_runnable || ""}
-                ack={onClickAcknowledge}
-              />
-            );
-          })}
+      {Object.entries(data).map(([title, item]) => {
+        const sending = sent.includes(`${serviceID} ${title}`);
+        return (
+          <Item
+            itemType={itemType}
+            key={title}
+            modalType={modalType}
+            title={title}
+            failed={item.failed}
+            sending={sending}
+            next_runnable={item.next_runnable || ""}
+            ack={onClickAcknowledge}
+          />
+        );
+      })}
     </Container>
   );
 };

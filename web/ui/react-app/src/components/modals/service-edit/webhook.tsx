@@ -47,9 +47,8 @@ const EditServiceWebHook: FC<Props> = ({
     global?.type && setValue(`${name}.type`, global.type);
   }, [global]);
   useEffect(() => {
-    if (globals?.[itemName]?.type !== undefined) {
+    if (globals?.[itemName]?.type !== undefined)
       setValue(`${name}.type`, globals[itemName].type);
-    }
     setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);

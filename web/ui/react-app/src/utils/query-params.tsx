@@ -10,18 +10,14 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
 
   // if oldObj is undefined, return newObj
   // e.g. DeployedVersion has no defaults
-  if (oldObj === undefined) {
-    return newObj;
-  }
+  if (oldObj === undefined) return newObj;
 
   // get all keys from both objects
   const keys = Object.keys(oldObj).concat(Object.keys(newObj));
 
   keys.forEach((key) => {
     // skip same values
-    if ((newObj[key] || "") === (oldObj[key] || "")) {
-      return;
-    }
+    if ((newObj[key] || "") === (oldObj[key] || "")) return;
 
     // diff arrays
     if (Array.isArray(oldObj[key]) && Array.isArray(newObj[key])) {
@@ -49,13 +45,9 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
     ) {
       // recurse on nested objects
       const subDiff = deepDiff(oldObj[key], newObj[key]);
-      if (Object.keys(subDiff).length > 0) {
-        diff[key] = subDiff;
-      }
+      if (Object.keys(subDiff).length > 0) diff[key] = subDiff;
       // diff scalars
-    } else if (oldObj[key] !== newObj[key]) {
-      diff[key] = newObj[key];
-    }
+    } else if (oldObj[key] !== newObj[key]) diff[key] = newObj[key];
   });
 
   return diff;
@@ -96,9 +88,9 @@ export const convertToQueryParams = ({
       continue;
     } else if (typeof changedParams[key] === "object") {
       let modifiedObj;
-      if (key === "url_commands") {
+      if (key === "url_commands")
         modifiedObj = toJSON(urlCommandsTrim(params[key]));
-      } else if (key === "require") {
+      else if (key === "require") {
         // Convert array of objects to array of strings
         modifiedObj =
           changedParams[key]?.command &&
@@ -110,14 +102,10 @@ export const convertToQueryParams = ({
                 ).map((value) => value.arg),
               })
             : toJSON(changedParams[key]);
-      } else {
-        modifiedObj = toJSON(changedParams[key]);
-      }
+      } else modifiedObj = toJSON(changedParams[key]);
 
       // Skip empty objects
-      if (modifiedObj === "{}") {
-        continue;
-      }
+      if (modifiedObj === "{}") continue;
       // Push all other objects
       queryParams.push(stringifyQueryParam(paramKey, modifiedObj));
       continue;
@@ -131,9 +119,7 @@ export const convertToQueryParams = ({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeEmpty = (obj: any) => {
-  if (Array.isArray(obj)) {
-    return obj;
-  }
+  if (Array.isArray(obj)) return obj;
 
   const copy = { ...obj };
   Object.keys(copy).forEach((key) => {

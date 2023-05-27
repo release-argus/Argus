@@ -1,4 +1,4 @@
-import { Button, Col } from "react-bootstrap";
+import { Button, Col, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -31,24 +31,29 @@ const FormKeyVal: FC<Props> = ({
         <FontAwesomeIcon icon={faTrash} />
       </Button>
     </Col>
-    <FormItem
-      name={`${name}.key`}
-      unique
-      required
-      col_sm={6}
-      defaultVal={defaults?.key}
-      placeholder={keyPlaceholder}
-      onMiddle
-    />
-    <FormItem
-      name={`${name}.value`}
-      required
-      col_xs={10}
-      col_sm={5}
-      defaultVal={defaults?.value}
-      placeholder={valuePlaceholder}
-      onRight
-    />
+    <Col>
+      <Row>
+        <FormItem
+          name={`${name}.key`}
+          unique
+          required
+          col_xs={12}
+          col_sm={6}
+          defaultVal={defaults?.key}
+          placeholder={keyPlaceholder}
+          onMiddle
+        />
+        <FormItem
+          name={`${name}.value`}
+          required
+          col_xs={12}
+          col_sm={6}
+          defaultVal={defaults?.value}
+          placeholder={valuePlaceholder}
+          onRight
+        />
+      </Row>
+    </Col>
   </>
 );
 

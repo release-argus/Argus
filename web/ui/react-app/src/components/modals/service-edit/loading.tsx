@@ -20,10 +20,11 @@ export const Loading: FC<Props> = ({ name }) => {
     "Notify:",
     "Dashboard:",
   ];
+  const formControlClassName = "pt-1 pb-1 col-form col-sm-12 col-12";
   return (
     <Stack gap={3}>
       <Form.Group className="mb-2">
-        <Form.Group className="mb-2">
+        <Form.Group className={formControlClassName}>
           <FormLabel text="Name" required />
           <Form.Control
             autoFocus={false}
@@ -32,7 +33,7 @@ export const Loading: FC<Props> = ({ name }) => {
             className="bg-transparent"
           />
         </Form.Group>
-        <Form.Group className="mb-2">
+        <Form.Group className={formControlClassName}>
           <FormLabel text="Comment" />
           <Form.Control autoFocus={false} disabled className="bg-transparent" />
         </Form.Group>

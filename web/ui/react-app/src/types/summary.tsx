@@ -1,6 +1,10 @@
-export interface MonitorSummaryType {
-  service: ServiceSummaryListType;
+export interface OrderAPIResponse {
   order: string[];
+}
+
+export interface MonitorSummaryType {
+  order: string[];
+  service: ServiceSummaryListType;
 }
 export interface ServiceSummaryListType {
   [id: string]: ServiceSummaryType;
@@ -9,7 +13,7 @@ export interface ServiceSummaryListType {
 export interface ServiceSummaryType {
   active?: boolean;
   id: string;
-  loading: boolean;
+  loading?: boolean;
   type?: string;
   url?: string;
   icon?: string;
@@ -75,4 +79,9 @@ export interface CommandSummaryType {
 
 export interface CommandSummaryListType {
   [id: string]: CommandSummaryType;
+}
+
+export interface ActionAPIType {
+  command: CommandSummaryListType;
+  webhook: WebHookSummaryListType;
 }

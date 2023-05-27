@@ -104,7 +104,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 		index := 1
 
 		if len(texts) == 0 {
-			err := fmt.Errorf("regex %q didn't return any matches on %q",
+			err := fmt.Errorf("regex %q didn't find a match on %q",
 				l.Regex, version)
 			jLog.Warn(err, *logFrom, true)
 			return "", err

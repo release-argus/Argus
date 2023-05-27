@@ -226,12 +226,11 @@ func (s *Service) HandleWebHook(webhookID string) {
 }
 
 // HandleSkip will set `version` to skipped and announce it to the websocket.
-func (s *Service) HandleSkip(version string) {
-	if version != s.Status.LatestVersion() {
-		return
+func (s *Service) HandleSkip() {
+	// Ignore skips if latest version is deployed
+	if s.Status.DeployedVersion() != s.Status.LatestVersion() {
+		s.Status.SetApprovedVersion("SKIP_"+s.Status.LatestVersion(), true)
 	}
-
-	s.Status.SetApprovedVersion("SKIP_"+version, true)
 }
 
 func (s *Service) shouldRetryAll() (retry bool) {

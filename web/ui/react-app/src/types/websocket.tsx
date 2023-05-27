@@ -4,10 +4,6 @@ import {
   WebHookSummaryListType,
 } from "./summary";
 
-import { ConfigType } from "./config";
-import { Dictionary } from "./util";
-import { Info } from "./info";
-
 export interface GorillaWebSocketMessage {
   bubbles: boolean;
   cancelBubble: boolean;
@@ -40,9 +36,6 @@ export interface WebSocketResponse {
   service_data?: ServiceSummaryType;
   command_data?: CommandSummaryListType;
   webhook_data?: WebHookSummaryListType;
-  info_data?: Info;
-  flags_data?: Dictionary<string>;
-  config_data?: ConfigType;
 }
 
 export interface ExplicitOriginalTarget {

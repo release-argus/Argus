@@ -49,18 +49,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 				CommandData: map[string]*CommandSummary{
 					"alpha": {Failed: boolPtr(true), NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)}},
 				WebHookData: map[string]*WebHookSummary{
-					"omega": {Failed: boolPtr(true), NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}},
-				InfoData: &Info{
-					Build: BuildInfo{
-						Version: "1.2.3"},
-					Runtime: RuntimeInfo{
-						GoRoutineCount: 5}},
-				FlagsData: &Flags{
-					LogLevel: "DEBUG"},
-				ConfigData: &Config{
-					Order: []string{
-						"bish", "bosh", "boop"}},
-			},
+					"omega": {Failed: boolPtr(true), NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}}},
 			want: `{
 "version":1,
 "page":"foo",
@@ -72,22 +61,18 @@ func TestWebSocketMessage_String(t *testing.T) {
 "zap",
 "wallop"
 ],
-"service_data":{"id":"summary id"},
-"command_data":{"alpha":{"failed":true,
-"next_runnable":"2010-01-01T00:00:00Z"}},
-"webhook_data":{"omega":{"failed":true,
-"next_runnable":"2020-02-02T00:00:00Z"}},
-"info_data":{"build":{"version":"1.2.3"},
-"runtime":{"start_time":"0001-01-01T00:00:00Z",
-"goroutines":5}},
-"flags_data":{"log.level":"DEBUG",
-"web.cert-file":null,
-"web.pkey-file":null},
-"config_data":{
-"order":[
-"bish",
-"bosh",
-"boop"]}
+"service_data":{
+	"id":"summary id"},
+"command_data":{
+	"alpha":{"failed":
+	true,
+	"next_runnable":"2010-01-01T00:00:00Z"}},
+	"webhook_data":{
+		"omega":{
+			"failed":true,
+			"next_runnable":"2020-02-02T00:00:00Z"
+		}
+	}
 }`,
 		}}
 
@@ -101,6 +86,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 
 			// THEN the result is as expected
 			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)

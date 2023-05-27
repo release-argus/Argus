@@ -172,6 +172,8 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 
 	req, err := http.NewRequest(http.MethodGet, GetURL(l.URL, l.Type), nil)
 	if err != nil {
+		err = fmt.Errorf("failed creating http request for %q: %w",
+			l.URL, err)
 		jLog.Error(err, *logFrom, true)
 		return
 	}
@@ -180,8 +182,9 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	req.Header.Set("Connection", "close")
 	if l.Type == "github" {
 		// Access Token
-		if util.DefaultIfNil(l.GetAccessToken()) != "" {
-			req.Header.Set("Authorization", fmt.Sprintf("token %s", *l.GetAccessToken()))
+		accessToken := l.GetAccessToken()
+		if util.DefaultIfNil(accessToken) != "" {
+			req.Header.Set("Authorization", fmt.Sprintf("token %s", *accessToken))
 		}
 		// Conditional requests - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
 		eTag := l.GitHubData.ETag()

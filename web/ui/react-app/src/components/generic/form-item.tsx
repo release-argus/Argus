@@ -86,10 +86,8 @@ const FormItem: FC<FormItemProps> = ({
             validate: (value) => {
               let validation = true;
               const testValue = value || defaultVal || "";
-              if (required) {
-                validation = /.+/.test(testValue);
-                if (!validation) return "Required";
-              }
+              if (required) validation = /.+/.test(testValue);
+              if (!validation) return "Required";
 
               if (isURL) {
                 try {

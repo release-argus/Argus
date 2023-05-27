@@ -72,12 +72,16 @@ func (s *Service) String(prefix string) (str string) {
 }
 
 // Summary returns a ServiceSummary for the Service.
-func (s *Service) Summary() *apitype.ServiceSummary {
+func (s *Service) Summary() (summary *apitype.ServiceSummary) {
+	if s == nil {
+		return
+	}
+
 	icon := s.IconURL()
 	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
 	commands := len(s.Command)
 	webhooks := len(s.WebHook)
-	return &apitype.ServiceSummary{
+	summary = &apitype.ServiceSummary{
 		ID:                       s.ID,
 		Active:                   s.Options.Active,
 		Type:                     &s.LatestVersion.Type,
@@ -94,4 +98,5 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 			LatestVersion:            s.Status.LatestVersion(),
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
+	return
 }

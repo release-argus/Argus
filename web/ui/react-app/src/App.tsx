@@ -29,9 +29,9 @@ const App = (): ReactElement => {
   const queryClient = new QueryClient();
   queryClient.setDefaultOptions({
     queries: {
-      staleTime: Infinity,
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
+      cacheTime: 1000 * 60 * 10, // 10 minutes
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
   });
 
@@ -43,15 +43,13 @@ const App = (): ReactElement => {
   const browserWantsDarkTheme = useMedia("(prefers-color-scheme: dark)");
 
   let theme: themeName;
-  if (userTheme !== "auto") {
-    theme = userTheme;
-  } else {
+  if (userTheme !== "auto") theme = userTheme;
+  else
     theme = browserHasThemes
       ? browserWantsDarkTheme
         ? "theme-dark"
         : "theme-light"
       : "theme-light";
-  }
 
   const themeContextValue = useMemo(
     () => ({

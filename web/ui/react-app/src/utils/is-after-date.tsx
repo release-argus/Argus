@@ -1,8 +1,7 @@
-// isAfterDate checks whether thenString is after the current Date
-const isAfterDate = (thenString: string) => {
-  const then = new Date(thenString);
+const dateIsAfterNow = (dateStr: string) => {
+  const then = new Date(dateStr);
   const now = new Date();
   return then > now;
 };
 
-export default isAfterDate;
+export default dateIsAfterNow;

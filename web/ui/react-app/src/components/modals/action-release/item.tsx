@@ -37,15 +37,11 @@ const sendableTimeout = (
   now: Date,
   nextRunnable: Date
 ) => {
-  if (sending) {
-    setSendable(false);
-  } else if (!sendable) {
+  if (sending) setSendable(false);
+  else if (!sendable) {
     let timeout = differenceInMilliseconds(nextRunnable, now);
-    // if we're already after nextRunnable
-    if (now > nextRunnable) {
-      // just wait a second
-      timeout = 1000;
-    }
+    // if we're already after nextRunnable, just wait a second
+    if (now > nextRunnable) timeout = 1000;
     const timer = setTimeout(function () {
       setSendable(true);
     }, timeout);
@@ -75,9 +71,8 @@ export const Item: FC<Props> = ({
 
   // add timeout if it wasn't sent by this user
   useEffect(() => {
-    if (!sending && nextRunnable <= now) {
+    if (!sending && nextRunnable <= now)
       sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
-    }
   }, []);
 
   return (

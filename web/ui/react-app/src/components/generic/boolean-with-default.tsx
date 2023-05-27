@@ -78,7 +78,13 @@ const BooleanWithDefault: FC<Props> = ({
       </>
 
       <div
-        style={{ marginLeft: "auto", paddingLeft: "0.5rem", float: "right" }}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+          marginLeft: "auto",
+          paddingLeft: "0.5rem",
+        }}
       >
         <Controller
           name={name}

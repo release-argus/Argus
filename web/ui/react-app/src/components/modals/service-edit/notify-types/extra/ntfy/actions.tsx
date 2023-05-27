@@ -45,14 +45,13 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
 
   // on load, give the defaults if not overridden
   useEffect(() => {
-    if (useDefaults) {
+    if (useDefaults)
       actionDefaults?.forEach((dflt) => {
         append(
           { action: dflt.action, label: dflt.label, method: dflt.method },
           { shouldFocus: false }
         );
       });
-    }
   }, []);
 
   return (

@@ -109,7 +109,7 @@ func TestLookup_Query(t *testing.T) {
 			regex:                "[0-9]{4}",
 		},
 		"failing regex": {
-			errRegex: "regex .* didn't return any matches on",
+			errRegex: "regex .* didn't find a match on",
 			url:      "https://release-argus.io",
 			regex:    "^bishbashbosh$",
 		},

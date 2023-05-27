@@ -34,11 +34,10 @@ const Notify: FC<Props> = ({
   const itemType = useWatch({ name: `${name}.type` });
   useEffect(() => {
     // Set Type to that of the global for the new name if it exists
-    if (globals?.[itemName]?.type !== undefined) {
+    if (globals?.[itemName]?.type !== undefined)
       setValue(`${name}.type`, globals[itemName].type);
-    } else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName)) {
+    else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName))
       setValue(`${name}.type`, itemName);
-    }
     setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);

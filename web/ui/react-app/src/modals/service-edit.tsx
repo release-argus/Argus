@@ -79,7 +79,7 @@ const ServiceEditModal = () => {
           errorMessage = responseBody.message;
           setErr(errorMessage);
         } catch (e) {
-          console.log(e);
+          console.error(e);
           setErr(err.toString());
         }
       });

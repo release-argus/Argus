@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { MonitorSummaryType } from "types/summary";
+
+import { MonitorSummaryType, ServiceSummaryType } from "types/summary";
+
 import { WebSocketResponse } from "types/websocket";
+import { fetchJSON } from "utils";
 
 export default function reducerMonitor(
   state: MonitorSummaryType,
@@ -8,10 +11,7 @@ export default function reducerMonitor(
 ): MonitorSummaryType {
   switch (action.type) {
     // INIT
-    // VERSION
-    // EDIT
-    // DELETE
-    // RESET
+    // ORDER
     case "SERVICE":
       switch (action.sub_type) {
         case "INIT":
@@ -22,10 +22,8 @@ export default function reducerMonitor(
           }
           break;
 
-        case "ORDERING":
-          if (action.order === undefined) {
-            break;
-          }
+        case "ORDER":
+          if (action.order === undefined) break;
           const newState: MonitorSummaryType = {
             order: action.order,
             service: {},
@@ -39,7 +37,7 @@ export default function reducerMonitor(
           break;
 
         default:
-          console.log(action);
+          console.error(action);
           throw new Error();
       }
       return state;
@@ -50,11 +48,11 @@ export default function reducerMonitor(
     // INIT
     case "VERSION":
       const id = action.service_data?.id as string;
-      if (state.service[id] === undefined) {
-        return state;
-      }
+      if (state.service[id] === undefined) return state;
       switch (action.sub_type) {
         case "QUERY":
+          if (state.service[id]?.status === undefined) return state;
+
           // last_queried
           state.service[id].status!.last_queried =
             action.service_data?.status?.last_queried;
@@ -77,10 +75,6 @@ export default function reducerMonitor(
           break;
 
         case "UPDATED":
-          // url
-          state.service[id].url =
-            action.service_data?.url ?? state.service[id].url;
-
           // deployed_version
           state.service[id].status!.deployed_version =
             action.service_data?.status?.deployed_version;
@@ -131,7 +125,7 @@ export default function reducerMonitor(
     case "EDIT":
       let service = action.service_data;
       if (service === undefined) {
-        console.log("No service data");
+        console.error("No service data");
         return state;
       }
 
@@ -140,7 +134,7 @@ export default function reducerMonitor(
         service = state.service[action.sub_type];
         // Check this service exists
         if (service === undefined) {
-          console.log(`Service ${action.sub_type} does not exist`);
+          console.error(`Service ${action.sub_type} does not exist`);
           return state;
         }
 
@@ -178,7 +172,7 @@ export default function reducerMonitor(
           service.status!.last_queried;
         // create and the service already exists
       } else if (state.service[service.id] !== undefined) {
-        console.log(`Service ${service.id} already exists`);
+        console.error(`Service ${service.id} already exists`);
         return state;
       }
 
@@ -191,9 +185,7 @@ export default function reducerMonitor(
         state.order[state.order.indexOf(action.sub_type)] = service.id;
 
         // If the service is new, we need to add it to the order
-      } else {
-        action.sub_type === undefined && state.order.push(service.id);
-      }
+      } else action.sub_type === undefined && state.order.push(service.id);
 
       // Gotta update the state more for the reload
       state = JSON.parse(JSON.stringify(state));
@@ -202,33 +194,41 @@ export default function reducerMonitor(
 
     case "DELETE":
       if (action.sub_type == undefined) {
-        console.log("No sub_type for DELETE");
+        console.error("No sub_type for DELETE");
+        return state;
+      }
+      if (action.order === undefined) {
+        console.error("No order for DELETE");
         return state;
       }
 
       // Remove the service from the state
-      const orderIndex = state.order.indexOf(action.sub_type);
-      if (orderIndex === -1) {
-        console.log(`Service ${action.sub_type} does not exist`);
-        return state;
+      if (state.service[action.sub_type] !== undefined)
+        delete state.service[action.sub_type];
+      state.order = action.order;
+
+      // Check whether we've missed any other removals
+      for (const id in state.service) {
+        if (!action.order.includes(id)) delete state.service[id];
       }
-      state.order.splice(orderIndex, 1);
-      state.service[action.sub_type] && delete state.service[action.sub_type];
+
+      // Check whether we've missed any additions
+      for (const id of action.order) {
+        if (state.service[id] === undefined)
+          fetchJSON<ServiceSummaryType | undefined>(
+            `api/v1/service/summary/${encodeURIComponent(id)}`
+          ).then((data) => {
+            if (data) state.service[id] = data;
+          });
+      }
 
       // Gotta update the state more for the reload
       state = JSON.parse(JSON.stringify(state));
 
       return state;
 
-    case "RESET":
-      state = {
-        order: [],
-        service: {},
-      };
-      return state;
-
     default:
-      console.log(action);
+      console.error(action);
       throw new Error();
   }
 }

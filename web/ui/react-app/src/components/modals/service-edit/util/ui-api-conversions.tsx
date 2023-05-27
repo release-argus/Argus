@@ -40,7 +40,7 @@ export const convertUIServiceDataEditToAPI = (
     })),
   };
   // Latest version - Require
-  if (data.latest_version?.require) {
+  if (data.latest_version?.require)
     payload.latest_version.require = {
       regex_content: data.latest_version.require?.regex_content,
       regex_version: data.latest_version.require?.regex_version,
@@ -55,7 +55,6 @@ export const convertUIServiceDataEditToAPI = (
         token: data.latest_version.require?.docker?.token,
       },
     };
-  }
 
   // Deployed version - omit if no url is set
   payload.deployed_version = data.deployed_version?.url
@@ -73,12 +72,11 @@ export const convertUIServiceDataEditToAPI = (
     : {};
 
   // Command
-  if (data.command && data.command.length > 0) {
+  if (data.command && data.command.length > 0)
     payload.command = data.command.map((item) => item.args.map((a) => a.arg));
-  }
 
   // WebHook
-  if (data.webhook) {
+  if (data.webhook)
     payload.webhook = data.webhook.reduce((acc, webhook) => {
       webhook = removeEmptyValues(webhook);
       acc[webhook.name as string] = {
@@ -90,15 +88,13 @@ export const convertUIServiceDataEditToAPI = (
       };
       return acc;
     }, {} as ServiceDict<WebHookType>);
-  }
 
   // Notify
-  if (data.notify) {
+  if (data.notify)
     payload.notify = data.notify.reduce((acc, notify) => {
       acc[notify.name as string] = convertNotifyToAPI(notify);
       return acc;
     }, {} as ServiceDict<NotifyType>);
-  }
 
   // Dashboard
   payload.dashboard = {
@@ -135,7 +131,7 @@ export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
   if (notify.url_fields)
     notify.url_fields = convertValuesToString(notify.url_fields);
-  if (notify.params) {
+  if (notify.params)
     if (notify.type === "ntfy") {
       notify.params = convertValuesToString(notify.params);
       // http actions should have headers as {KEY;VAL}, not {key:KEY, val:VAL}
@@ -150,10 +146,7 @@ export const convertNotifyToAPI = (notify: NotifyEditType) => {
               convertHeaderTypeToMap(action.extras as HeaderType[]),
           }))
         : undefined;
-    } else {
-      notify.params = convertValuesToString(notify.params);
-    }
-  }
+    } else notify.params = convertValuesToString(notify.params);
 
   return notify as NotifyType;
 };

@@ -224,10 +224,10 @@ func TestURLCommandSlice_Run(t *testing.T) {
 		"regex doesn't match (gives text that didn't match)": {
 			slice: &URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
-			errRegex: "regex .* didn't return any matches on .*" + testText,
+			errRegex: `regex .* didn't return any matches on "` + testText + `"`,
 			want:     testText,
 		},
-		"regex doesn't match (doesn't give text that didn't match)": {
+		"regex doesn't match (doesn't give text that didn't match as too long)": {
 			slice: &URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
 			errRegex: "regex .* didn't return any matches$",

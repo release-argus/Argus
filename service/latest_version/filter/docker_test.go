@@ -392,9 +392,10 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 	queryToken := "something"
 	validUntil := time.Date(2000, 1, 1, 3, 5, 5, 0, time.UTC)
 	tests := map[string]struct {
-		dockerCheck    *DockerCheck
-		setForToken    string
-		changeDefaults bool
+		dockerCheck      *DockerCheck
+		defaultTokenGHCR *string
+		setForToken      string
+		changeDefaults   bool
 	}{
 		"nil": {
 			dockerCheck: nil,
@@ -413,20 +414,6 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 					nil)),
 			setForToken: "shazam",
 		},
-		"unknown token only sets in main": {
-			dockerCheck: NewDockerCheck(
-				"hub",
-				"", "",
-				"", "foo",
-				"", time.Time{},
-				NewDockerCheckDefaults(
-					"",
-					"tokenGHCR",
-					"tokenHub", "",
-					"tokenQuay",
-					nil)),
-			setForToken: "foo",
-		},
 		"token only set in main even if default has the same": {
 			dockerCheck: NewDockerCheck(
 				"ghcr",
@@ -435,11 +422,12 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 				"", time.Time{},
 				NewDockerCheckDefaults(
 					"",
-					"tokenGHCR",
+					"otherTokenGHCR",
 					"tokenHub", "",
 					"tokenQuay",
 					nil)),
-			setForToken: "tokenGHCR",
+			setForToken:    "tokenGHCR",
+			changeDefaults: false,
 		},
 		"token in defaults - ghcr": {
 			dockerCheck: NewDockerCheck(
@@ -486,6 +474,22 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 			setForToken:    "tokenQuay",
 			changeDefaults: true,
 		},
+		"GHCR, NOOP token not given to defaults as repo/image specific": {
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"initGHCR",
+					"tokenHub", "",
+					"tokenQuay",
+					nil)),
+			defaultTokenGHCR: stringPtr(""),
+			setForToken:      "tokenGHCR",
+			changeDefaults:   false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -496,6 +500,9 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 			hadNil := tc.dockerCheck == nil
 			hadNilDefaults := tc.dockerCheck == nil || tc.dockerCheck.Defaults == nil
 			setForType := tc.dockerCheck.getType()
+			if tc.defaultTokenGHCR != nil {
+				tc.dockerCheck.Defaults.RegistryGHCR.Token = *tc.defaultTokenGHCR
+			}
 
 			// WHEN SetQueryToken is called on it
 			tc.dockerCheck.SetQueryToken(
@@ -593,6 +600,8 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 	validUntil := time.Date(2000, 1, 1, 3, 0, 5, 0, time.UTC)
 	tests := map[string]struct {
 		dockerCheckDefaults *DockerCheckDefaults
+		ghcrToken           *string
+		ghcrDefaultToken    *string
 		setForType          string
 		setForToken         string
 		changeDefaults      bool
@@ -688,6 +697,25 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 			setForToken:    "defaultTokenForGHCR",
 			changeDefaults: true,
 		},
+		"ghcr - NOOP not saved in defaults": {
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"ghcr",
+				"initGHCR",
+				"tokenForHub", "",
+				"tokenForQuay",
+				NewDockerCheckDefaults(
+					"",
+					"initGHCR",
+					"defaultTokenForHub", "",
+					"defaultTokenForQuay",
+					nil)),
+			ghcrToken:        stringPtr(""),
+			ghcrDefaultToken: stringPtr(""),
+			setForType:       "ghcr",
+			setForToken:      "",
+			changeDefaults:   false,
+			changeMain:       false,
+		},
 		"set in defaults - quay": {
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
@@ -709,10 +737,16 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			hadNil := tc.dockerCheckDefaults == nil
 			hadNilDefaults := tc.dockerCheckDefaults == nil || tc.dockerCheckDefaults.defaults == nil
+			if tc.ghcrToken != nil {
+				tc.dockerCheckDefaults.RegistryGHCR.Token = *tc.ghcrToken
+			}
+			if tc.ghcrDefaultToken != nil {
+				tc.dockerCheckDefaults.defaults.RegistryGHCR.Token = *tc.ghcrDefaultToken
+			}
 
 			// WHEN setQueryToken is called on it
 			tc.dockerCheckDefaults.setQueryToken(

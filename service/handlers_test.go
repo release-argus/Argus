@@ -989,21 +989,24 @@ func TestService_HandleSkip(t *testing.T) {
 	// GIVEN a Service
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
-		skipVersion          string
+		startVersion         string
 		approvedVersion      string
 		wantAnnounces        int
 		wantDatabaseMessages int
 		prepDelete           bool
 	}{
-		"skip of not latest version does nothing": {
-			skipVersion: latestVersion + "-beta"},
-		"skip of latest version skips version and announces to announce and database channels": {
-			skipVersion:          latestVersion,
+		"skip of latest version does nothing": {
+			startVersion:         latestVersion,
+			approvedVersion:      "",
+			wantAnnounces:        0,
+			wantDatabaseMessages: 0},
+		"skip of version that's not latest skips version and announces to announce and database channels": {
+			startVersion:         "1.0.0",
 			approvedVersion:      "SKIP_" + latestVersion,
 			wantAnnounces:        1,
 			wantDatabaseMessages: 1},
-		"skip of latest version but PrepDelete has nil'd the database channel": {
-			skipVersion:          latestVersion,
+		"skip of version that's not latest but PrepDelete has nil'd the database channel": {
+			startVersion:         "0.2.3",
 			approvedVersion:      "SKIP_" + latestVersion,
 			prepDelete:           true,
 			wantAnnounces:        0,
@@ -1017,6 +1020,7 @@ func TestService_HandleSkip(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
 
+			svc.Status.SetDeployedVersion(tc.startVersion, false)
 			svc.Status.SetApprovedVersion("", false)
 			svc.Status.SetLatestVersion(latestVersion, false)
 			if tc.prepDelete {
@@ -1024,7 +1028,7 @@ func TestService_HandleSkip(t *testing.T) {
 			}
 
 			// WHEN HandleSkip is called on it
-			svc.HandleSkip(tc.skipVersion)
+			svc.HandleSkip()
 
 			// THEN DeployedVersion becomes LatestVersion as there's no dvl
 			if tc.approvedVersion != svc.Status.ApprovedVersion() {

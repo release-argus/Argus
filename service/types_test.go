@@ -139,11 +139,15 @@ func TestService_Summary(t *testing.T) {
 		latestVersion            string
 		latestVersionTimestamp   string
 		lastQueried              string
-		want                     apitype.ServiceSummary
+		want                     *apitype.ServiceSummary
 	}{
+		"nil": {
+			svc:  nil,
+			want: nil,
+		},
 		"empty": {
 			svc: &Service{},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -155,7 +159,7 @@ func TestService_Summary(t *testing.T) {
 		"only id": {
 			svc: &Service{
 				ID: "foo"},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				ID:                       "foo",
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
@@ -169,7 +173,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Options: opt.Options{
 					Active: boolPtr(false)}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Active:                   boolPtr(false),
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
@@ -183,7 +187,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				LatestVersion: latestver.Lookup{
 					Type: "github"}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr("github"),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -196,7 +200,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr("https://example.com/icon.png"),
 				IconLinkTo:               stringPtr(""),
@@ -209,7 +213,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Dashboard: DashboardOptions{
 					Icon: "smile"}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -232,7 +236,7 @@ func TestService_Summary(t *testing.T) {
 							"", nil, nil, nil),
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr("https://example.com/notify.png"),
 				IconLinkTo:               stringPtr(""),
@@ -257,7 +261,7 @@ func TestService_Summary(t *testing.T) {
 							"", nil, nil, nil),
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr("https://example.com/icon.png"),
 				IconLinkTo:               stringPtr(""),
@@ -270,7 +274,7 @@ func TestService_Summary(t *testing.T) {
 			svc: &Service{
 				Dashboard: DashboardOptions{
 					IconLinkTo: "https://example.com"}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr("https://example.com"),
@@ -282,7 +286,7 @@ func TestService_Summary(t *testing.T) {
 		"only deployed_version": {
 			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -294,7 +298,7 @@ func TestService_Summary(t *testing.T) {
 		"no commands": {
 			svc: &Service{
 				Command: command.Slice{}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -309,7 +313,7 @@ func TestService_Summary(t *testing.T) {
 					{"ls", "-la"},
 					{"true"},
 					{"false"}}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -321,7 +325,7 @@ func TestService_Summary(t *testing.T) {
 		"0 webhooks": {
 			svc: &Service{
 				WebHook: webhook.Slice{}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -345,7 +349,7 @@ func TestService_Summary(t *testing.T) {
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 						"gitlab",
 						"", nil, nil, nil)}},
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -363,7 +367,7 @@ func TestService_Summary(t *testing.T) {
 			latestVersion:            "3",
 			latestVersionTimestamp:   "3-",
 			lastQueried:              "4",
-			want: apitype.ServiceSummary{
+			want: &apitype.ServiceSummary{
 				Type:                     stringPtr(""),
 				Icon:                     stringPtr(""),
 				IconLinkTo:               stringPtr(""),
@@ -386,17 +390,19 @@ func TestService_Summary(t *testing.T) {
 			t.Parallel()
 
 			// status
-			tc.svc.Status.Init(
-				len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
-				&tc.svc.ID,
-				&tc.svc.Dashboard.WebURL)
-			if tc.approvedVersion != "" {
-				tc.svc.Status.SetApprovedVersion(tc.approvedVersion, false)
-				tc.svc.Status.SetDeployedVersion(tc.deployedVersion, false)
-				tc.svc.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
-				tc.svc.Status.SetLatestVersion(tc.latestVersion, false)
-				tc.svc.Status.SetLatestVersionTimestamp(tc.latestVersionTimestamp)
-				tc.svc.Status.SetLastQueried(tc.lastQueried)
+			if tc.svc != nil {
+				tc.svc.Status.Init(
+					len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
+					&tc.svc.ID,
+					&tc.svc.Dashboard.WebURL)
+				if tc.approvedVersion != "" {
+					tc.svc.Status.SetApprovedVersion(tc.approvedVersion, false)
+					tc.svc.Status.SetDeployedVersion(tc.deployedVersion, false)
+					tc.svc.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
+					tc.svc.Status.SetLatestVersion(tc.latestVersion, false)
+					tc.svc.Status.SetLatestVersionTimestamp(tc.latestVersionTimestamp)
+					tc.svc.Status.SetLastQueried(tc.lastQueried)
+				}
 			}
 
 			// WHEN the Service is converted to a ServiceSummary

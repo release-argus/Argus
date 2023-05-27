@@ -33,12 +33,9 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 
   // Set Select's to the defaults
   useEffect(() => {
-    if (defaults !== undefined) {
-      setValue(`${name}.action`, defaults.action);
-    }
-    if (defaults?.method !== undefined) {
+    if (defaults !== undefined) setValue(`${name}.action`, defaults.action);
+    if (defaults?.method !== undefined)
       setValue(`${name}.method`, defaults.method);
-    }
   }, []);
 
   return (
