@@ -371,7 +371,7 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 
 			// WHEN getQueryToken is called on it
 			queryToken, validUntil := tc.dockerCheckDefaults.getQueryToken(
-				tc.dockerCheckDefaults.getType())
+				tc.dockerCheckDefaults.GetType())
 
 			// THEN the query token is what we expect
 			if tc.wantToken != queryToken {
@@ -499,7 +499,7 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 
 			hadNil := tc.dockerCheck == nil
 			hadNilDefaults := tc.dockerCheck == nil || tc.dockerCheck.Defaults == nil
-			setForType := tc.dockerCheck.getType()
+			setForType := tc.dockerCheck.GetType()
 			if tc.defaultTokenGHCR != nil {
 				tc.dockerCheck.Defaults.RegistryGHCR.Token = *tc.defaultTokenGHCR
 			}
@@ -988,7 +988,7 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 			}
 
 			// WHEN getValidToken is called on it
-			got := tc.dockerCheck.getValidToken(tc.dockerCheck.getType())
+			got := tc.dockerCheck.getValidToken(tc.dockerCheck.GetType())
 
 			// THEN the token is what we expect
 			if tc.want != got {
@@ -1713,7 +1713,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 	}
 }
 
-func TestDockerCheckDefaults_getType(t *testing.T) {
+func TestDockerCheckDefaults_GetType(t *testing.T) {
 	// GIVEN a DockerCheckDefaults
 	tests := map[string]struct {
 		defaults *DockerCheckDefaults
@@ -1751,8 +1751,8 @@ func TestDockerCheckDefaults_getType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN getType is called on it
-			got := tc.defaults.getType()
+			// WHEN GetType is called on it
+			got := tc.defaults.GetType()
 
 			// THEN the result is what we expect
 			if got != tc.want {
@@ -1762,7 +1762,7 @@ func TestDockerCheckDefaults_getType(t *testing.T) {
 	}
 }
 
-func TestDockerCheck_getType(t *testing.T) {
+func TestDockerCheck_GetType(t *testing.T) {
 	// GIVEN a DockerCheck
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
@@ -1801,8 +1801,8 @@ func TestDockerCheck_getType(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN getType is called on it
-			got := tc.dockerCheck.getType()
+			// WHEN GetType is called on it
+			got := tc.dockerCheck.GetType()
 
 			// THEN the result is what we expect
 			if got != tc.want {

@@ -319,7 +319,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 		} else if l.Require.Docker != nil {
 			jLog.Info(
 				fmt.Sprintf(`found %s container "%s:%s"`,
-					l.Require.Docker.Type, l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
+					l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
 				*logFrom, true)
 		}
 		break

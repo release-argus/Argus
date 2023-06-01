@@ -665,7 +665,7 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			want: &api_type.LatestVersion{
 				URLCommands: &api_type.URLCommandSlice{}},
 		},
-		"urlCommmands": {
+		"urlCommands": {
 			input: latestver.New(
 				nil, nil, nil, nil, nil, nil, "", "",
 				&filter.URLCommandSlice{

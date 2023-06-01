@@ -179,6 +179,9 @@ func (s *Settings) SetDefaults() {
 
 	// KeyFile
 	s.FromFlags.Web.KeyFile = WebPKeyFile
+
+	// Overwrite defaults with environment variables.
+	s.HardDefaults.MapEnvToStruct()
 }
 
 // LogTimestamps.

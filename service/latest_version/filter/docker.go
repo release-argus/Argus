@@ -212,7 +212,7 @@ func (r *Require) DockerTagCheck(
 		return fmt.Errorf("%s:%s - %w",
 			r.Docker.Image, tag, err)
 	}
-	switch r.Docker.getType() {
+	switch r.Docker.GetType() {
 	case "hub":
 		url = fmt.Sprintf("https://registry.hub.docker.com/v2/repositories/%s/tags/%s",
 			r.Docker.Image, tag)
@@ -245,7 +245,7 @@ func (r *Require) DockerTagCheck(
 			r.Docker.Image, tag, string(body))
 	}
 	// Quay will give a 200 even when the tag doesn't exist
-	if r.Docker.getType() == "quay" && strings.Contains(string(body), `"tags": []`) {
+	if r.Docker.GetType() == "quay" && strings.Contains(string(body), `"tags": []`) {
 		return fmt.Errorf("%s:%s - tag not found",
 			r.Docker.Image, tag)
 	}
@@ -264,7 +264,7 @@ func (d *DockerCheck) CheckValues(prefix string) (errs error) {
 			errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%v])\\",
 				util.ErrorToString(errs), prefix, d.Type, strings.Join(dockerCheckTypes, ","))
 		}
-	} else if d.getType() == "" {
+	} else if d.GetType() == "" {
 		errs = fmt.Errorf("%s%stype: <required> (supported types = %v)\\",
 			util.ErrorToString(errs), prefix, strings.Join(dockerCheckTypes, ","))
 	}
@@ -306,7 +306,7 @@ func (d *DockerCheck) checkToken() (err error) {
 		return
 	}
 
-	switch d.getType() {
+	switch d.GetType() {
 	case "hub":
 		username := d.getUsername()
 		token := d.getToken()
@@ -329,8 +329,8 @@ func (d *DockerCheck) GetTag(version string) string {
 	return util.TemplateString(d.Tag, util.ServiceInfo{LatestVersion: version})
 }
 
-// getType of the DockerCheckDefaults.
-func (d *DockerCheckDefaults) getType() string {
+// GetType of the DockerCheckDefaults.
+func (d *DockerCheckDefaults) GetType() string {
 	if d == nil {
 		return ""
 	}
@@ -338,11 +338,11 @@ func (d *DockerCheckDefaults) getType() string {
 	if d.Type != "" {
 		return d.Type
 	}
-	return d.defaults.getType()
+	return d.defaults.GetType()
 }
 
-// getType of the DockerCheck.
-func (d *DockerCheck) getType() string {
+// GetType of the DockerCheck.
+func (d *DockerCheck) GetType() string {
 	if d == nil {
 		return ""
 	}
@@ -350,7 +350,7 @@ func (d *DockerCheck) getType() string {
 	if d.Type != "" {
 		return d.Type
 	}
-	return d.Defaults.getType()
+	return d.Defaults.GetType()
 }
 
 // getToken returns the token as is from this struct/defaults/hardDefaults.
@@ -365,7 +365,7 @@ func (d *DockerCheck) getToken() (token string) {
 		return
 	}
 
-	token = d.Defaults.getToken(d.getType())
+	token = d.Defaults.getToken(d.GetType())
 	return
 }
 
@@ -416,7 +416,7 @@ func (d *DockerCheck) getValidToken(dType string) (queryToken string) {
 	}
 
 	var validUntil time.Time
-	queryToken, validUntil = d.Defaults.getQueryToken(d.getType())
+	queryToken, validUntil = d.Defaults.getQueryToken(d.GetType())
 	// Have a queryToken and it's valid for atleast 2s
 	if queryToken != "" && validUntil.After(time.Now().Add(2*time.Second).UTC()) {
 		return
@@ -468,7 +468,7 @@ func (d *DockerCheckDefaults) getQueryToken(dType string) (queryToken string, va
 
 // getQueryToken for API queries.
 func (d *DockerCheck) getQueryToken() (queryToken string, err error) {
-	dType := d.getType()
+	dType := d.GetType()
 	queryToken = d.getValidToken(dType)
 	if queryToken != "" {
 		return
@@ -620,7 +620,7 @@ func (d *DockerCheck) SetQueryToken(token, queryToken *string, validUntil *time.
 		return
 	}
 
-	dType := d.getType()
+	dType := d.GetType()
 	d.Defaults.setQueryToken(&dType, token, queryToken, validUntil)
 }
 
