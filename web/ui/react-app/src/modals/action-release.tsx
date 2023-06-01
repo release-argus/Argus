@@ -10,14 +10,14 @@ import {
   OverlayTrigger,
   Tooltip,
 } from "react-bootstrap";
-import { addMessageHandler } from "contexts/websocket";
-import { fetchJSON, dateIsAfterNow } from "utils";
+import { dateIsAfterNow, fetchJSON } from "utils";
 import { useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { ModalContext } from "contexts/modal";
 import { ModalList } from "components/modals/action-release/list";
 import { WebSocketResponse } from "types/websocket";
+import { addMessageHandler } from "contexts/websocket";
 import formatRelative from "date-fns/formatRelative";
 import reducerActionModal from "reducers/action-release";
 import { useDelayedRender } from "hooks/delayed-render";
@@ -112,7 +112,7 @@ const ActionReleaseModal = () => {
       isWebHook: boolean;
       unspecificTarget: boolean;
     }) =>
-      fetch(`/api/v1/service/actions/${encodeURIComponent(data.service)}`, {
+      fetch(`api/v1/service/actions/${encodeURIComponent(data.service)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: data.target }),

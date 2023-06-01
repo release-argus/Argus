@@ -60,9 +60,7 @@ const ServiceEditModal = () => {
     const serviceName = modal.service.id;
 
     await fetch(
-      serviceName
-        ? `/api/v1/service/edit/${serviceName}`
-        : "/api/v1/service/new",
+      serviceName ? `api/v1/service/edit/${serviceName}` : "api/v1/service/new",
       {
         method: serviceName ? "PUT" : "POST",
         body: JSON.stringify(payload),
@@ -87,7 +85,7 @@ const ServiceEditModal = () => {
 
   const onDelete = async () => {
     console.log(`Deleting ${modal.service.id}`);
-    await fetch(`/api/v1/service/delete/${modal.service.id}`, {
+    await fetch(`api/v1/service/delete/${modal.service.id}`, {
       method: "DELETE",
     }).then(() => {
       hideModal();

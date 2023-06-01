@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.0](https://github.com/release-argus/Argus/compare/0.11.1...0.12.0) (2023-06-01)
+
+
+### Features
+
+* **config:** set defaults with env vars ([4eca113](https://github.com/release-argus/Argus/commits/4eca113157b907fc121c55e2800e41678a2aa33f))
+    * anything under defaults, e.g. **ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN** for `defaults.service.latest_version.access_token` in the YAML
+    * anything under settings, e.g. **ARGUS_DATA_DATABASE_FILE** for `settings.data.database_file` in the YAML
+* **shoutrrr:** 0.7 support - bark/ntfy ([0fc85a8](https://github.com/release-argus/Argus/commits/0fc85a86ac8e645c1b6e5acdd52a3b7415a1f392)), closes [#235](https://github.com/release-argus/Argus/issues/235)
+* **web:** editable services ([#226](https://github.com/release-argus/Argus/issues/226)) ([b5a1b8a](https://github.com/release-argus/Argus/commits/b5a1b8afaf970881201802634e7238f362442c58))
+
+
+### Bug Fixes
+
+* **docker:** allow periods in image name ([#248](https://github.com/release-argus/Argus/issues/248)) ([502c6a9](https://github.com/release-argus/Argus/commits/502c6a96281ea4299dcfbd86b324da507472bfc3))
+
 ### [0.11.1](https://github.com/release-argus/Argus/compare/0.11.0...0.11.1) (2023-01-13)
 
 
