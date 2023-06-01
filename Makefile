@@ -10,15 +10,15 @@ include Makefile.common
 DOCKER_IMAGE_NAME ?= argus
 
 .PHONY: go-build
-go-build: common-build
+go-build: commit-prereqs common-build
 
 .PHONY: go-test
 go-test:
-	go test --tags testing,unit,integration ./...
+	go test --tagsunit,integration ./...
 
 .PHONY: go-test-coverage
 go-test-coverage:
-	go test ./...  -coverpkg=./... -coverprofile ./coverage.out --tags testing,unit,integration
+	go test ./...  -coverpkg=./... -coverprofile ./coverage.out --tags unit,integration
 	go tool cover -func ./coverage.out
 
 .PHONY: web-install

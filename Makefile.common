@@ -32,6 +32,16 @@ BUILD_VERSION           ?= $(call GetFromPkg,version)
 
 OUTPUT_BINARY           ?= argus
 
+NCU_EXISTS              := $(shell command -v ncu 2> /dev/null)
+.PHONY: commit-prereqs
+commit-prereqs:
+	@if [ "$(NCU_EXISTS)" ]; then \
+		ncu -u; \
+		npm install; \
+	else \
+		echo "Please install ncu (npm-check-updates) to update package.json"; \
+	fi
+
 # This rule is used to forward a target like "build" to "common-build". This
 # allows a new "build" target to be defined in a Makefile which includes this
 # one and override "common-build" without override warnings.
