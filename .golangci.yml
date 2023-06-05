@@ -2,10 +2,10 @@ linters:
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
   enable:
-    - depguard
     - dupl
     - dupword
     - durationcheck
+    - errcheck
     - errorlint
     - execinquery
     - gci
@@ -13,4 +13,3 @@ linters:
     - misspell
     - typecheck
     - wrapcheck
-    - errcheck
