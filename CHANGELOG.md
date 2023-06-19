@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.1](https://github.com/release-argus/Argus/compare/0.12.0...0.12.1) (2023-06-19)
+
+
+### Bug Fixes
+
+* **web:** use the semantic_versioning bool on query ([#270](https://github.com/release-argus/Argus/issues/270)) ([fd4e2ae](https://github.com/release-argus/Argus/commits/fd4e2ae13ac52fe97bf5afbb1be79ca6344ca819))
+
 ### [0.12.0](https://github.com/release-argus/Argus/compare/0.11.1...0.12.0) (2023-06-01)
 
 
