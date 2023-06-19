@@ -4,7 +4,7 @@ import {
   LatestVersionLookupEditType,
   ServiceRefreshType,
 } from "types/service-edit";
-import { convertToQueryParams, fetchJSON, stringifyQueryParam } from "utils";
+import { convertToQueryParams, fetchJSON } from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 
 import { DeployedVersionLookupType } from "types/config";
@@ -40,10 +40,10 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       }?${
         data &&
         convertToQueryParams({
-          params: data,
+          params: { ...data, semantic_versioning: semanticVersioning },
           defaults: original,
         })
-      }${stringifyQueryParam("semantic_versioning", semanticVersioning, true)}`
+      }`
     );
 
   const {
@@ -82,14 +82,14 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     const currentTime = Date.now();
     if (currentTime - lastFetched < 1000) return;
 
-    setLastFetched(currentTime);
     if (isStale && !invalidURL && !!data?.url) {
       refetchSemanticVersioning();
       refetchData();
-      // setTimeoout to allow time for refetches ^
+      // setTimeout to allow time for refetches ^
       setTimeout(() => {
         refetchVersion();
       });
+      setLastFetched(currentTime);
     }
   };
 
