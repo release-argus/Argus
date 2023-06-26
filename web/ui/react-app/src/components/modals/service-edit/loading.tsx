@@ -1,4 +1,10 @@
-import { Accordion, Container, Form, Stack } from "react-bootstrap";
+import {
+  Accordion,
+  Container,
+  FormControl,
+  FormGroup,
+  Stack,
+} from "react-bootstrap";
 
 import { FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -23,27 +29,27 @@ export const Loading: FC<Props> = ({ name }) => {
   const formControlClassName = "pt-1 pb-1 col-form col-sm-12 col-12";
   return (
     <Stack gap={3}>
-      <Form.Group className="mb-2">
-        <Form.Group className={formControlClassName}>
+      <FormGroup className="mb-2">
+        <FormGroup className={formControlClassName}>
           <FormLabel text="Name" required />
-          <Form.Control
+          <FormControl
             autoFocus={false}
             defaultValue={name}
             disabled
             className="bg-transparent"
           />
-        </Form.Group>
-        <Form.Group className={formControlClassName}>
+        </FormGroup>
+        <FormGroup className={formControlClassName}>
           <FormLabel text="Comment" />
-          <Form.Control autoFocus={false} disabled className="bg-transparent" />
-        </Form.Group>
+          <FormControl autoFocus={false} disabled className="bg-transparent" />
+        </FormGroup>
         {delayedRender(() => (
           <Container className="empty">
             <FontAwesomeIcon icon={faCircleNotch} className={"fa-spin"} />
             <span style={{ paddingLeft: "0.5rem" }}>Loading...</span>
           </Container>
         ))}
-      </Form.Group>
+      </FormGroup>
       {accordionHeaders.map((title) => {
         return (
           <Accordion key={title}>

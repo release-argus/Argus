@@ -1,4 +1,4 @@
-import { Col, Form } from "react-bootstrap";
+import { Col, Form, FormGroup } from "react-bootstrap";
 import { Controller, useFormState } from "react-hook-form";
 import { FC, useMemo } from "react";
 
@@ -63,7 +63,7 @@ const FormSelect: FC<FormSelectProps> = ({
       className={`${padding} pt-1 pb-1 col-form`}
       key={key}
     >
-      <Form.Group>
+      <FormGroup>
         {label && (
           <FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
         )}
@@ -91,7 +91,7 @@ const FormSelect: FC<FormSelectProps> = ({
         {error && (
           <small className="error-msg">{error["message"] || "err"}</small>
         )}
-      </Form.Group>
+      </FormGroup>
     </Col>
   );
 };

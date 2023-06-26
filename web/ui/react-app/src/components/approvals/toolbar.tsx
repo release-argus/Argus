@@ -3,6 +3,7 @@ import {
   Dropdown,
   DropdownButton,
   Form,
+  FormControl,
   InputGroup,
 } from "react-bootstrap";
 import { FC, memo, useContext, useMemo } from "react";
@@ -28,7 +29,7 @@ const ApprovalsToolbar: FC<Props> = ({ values, setValues }) => {
   const setValue = (param: keyof typeof values, value: TypeMappingItem) => {
     setValues((prevState) => ({
       ...prevState,
-      [param]: value as typeof values[typeof param],
+      [param]: value as (typeof values)[typeof param],
     }));
   };
 
@@ -96,7 +97,7 @@ const ApprovalsToolbar: FC<Props> = ({ values, setValues }) => {
   return (
     <Form className="mb-3" style={{ display: "flex" }}>
       <InputGroup className="me-3">
-        <Form.Control
+        <FormControl
           type="string"
           placeholder="Filter services"
           value={values.search}

@@ -1,4 +1,4 @@
-import { Accordion, Button, Col, Form, Row } from "react-bootstrap";
+import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { NotifyType, NotifyTypesConst, ServiceDict } from "types/config";
@@ -64,7 +64,7 @@ const Notify: FC<Props> = ({
       <Accordion.Body>
         <Row xs={12}>
           <Col xs={6} className={`pe-2 pt-1 pb-1`}>
-            <Form.Group className="mb-2">
+            <FormGroup className="mb-2">
               <FormLabel text="Global?" tooltip="Use this Notify as a base" />
               <Form.Select
                 value={
@@ -76,7 +76,7 @@ const Notify: FC<Props> = ({
               >
                 {globalNotifyOptions}
               </Form.Select>
-            </Form.Group>
+            </FormGroup>
           </Col>
           <FormSelect
             name={`${name}.type`}

@@ -1,5 +1,5 @@
 import { FC, useEffect, useMemo, useState } from "react";
-import { Form, Stack } from "react-bootstrap";
+import { FormGroup, Stack } from "react-bootstrap";
 import {
   ServiceEditAPIType,
   ServiceEditOtherData,
@@ -65,7 +65,7 @@ const EditService: FC<Props> = ({ name }) => {
     <Loading name={name} />
   ) : (
     <Stack gap={3}>
-      <Form.Group className="mb-2">
+      <FormGroup className="mb-2">
         <FormItem
           name="name"
           required
@@ -87,7 +87,7 @@ const EditService: FC<Props> = ({ name }) => {
           onRight
         />
         <FormItem name="comment" col_sm={12} label="Comment" onRight />
-      </Form.Group>
+      </FormGroup>
       <EditServiceOptions
         defaults={otherOptionsData?.defaults?.service?.options}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.options}

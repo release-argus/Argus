@@ -1,4 +1,11 @@
-import { Button, ButtonGroup, Col, Form, Row, Stack } from "react-bootstrap";
+import {
+  Button,
+  ButtonGroup,
+  Col,
+  FormGroup,
+  Row,
+  Stack,
+} from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
@@ -55,7 +62,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   }, []);
 
   return (
-    <Form.Group>
+    <FormGroup>
       <Row>
         <Col className="pt-1">
           <FormLabel text={label} tooltip={tooltip} />
@@ -92,7 +99,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
           </Row>
         ))}
       </Stack>
-    </Form.Group>
+    </FormGroup>
   );
 };
 

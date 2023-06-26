@@ -1,4 +1,4 @@
-import { Col, Form } from "react-bootstrap";
+import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, useMemo } from "react";
 
 import FormLabel from "./form-label";
@@ -52,11 +52,11 @@ const FormTextArea: FC<FormItemProps> = ({
   }, [col_xs, col_sm, onRight, onMiddle]);
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
-      <Form.Group>
+      <FormGroup>
         {label && (
           <FormLabel text={label} tooltip={tooltip} required={required} />
         )}
-        <Form.Control
+        <FormControl
           type={"textarea"}
           as="textarea"
           rows={rows}
@@ -76,7 +76,7 @@ const FormTextArea: FC<FormItemProps> = ({
             ...registerParams,
           })}
         />
-      </Form.Group>
+      </FormGroup>
     </Col>
   );
 };
