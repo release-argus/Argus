@@ -1,4 +1,4 @@
-import { Col, Form } from "react-bootstrap";
+import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -46,10 +46,10 @@ const FormItemWithPreview: FC<Props> = ({
 
   return (
     <Col xs={12} sm={12} className={"pt-1 pb-1 col-form"}>
-      <Form.Group>
+      <FormGroup>
         <FormLabel text={label} tooltip={tooltip} />
         <div style={{ display: "flex", alignItems: "center" }}>
-          <Form.Control
+          <FormControl
             type="text"
             value={formValue}
             placeholder={placeholder || defaultVal}
@@ -60,7 +60,7 @@ const FormItemWithPreview: FC<Props> = ({
           />
           {preview}
         </div>
-      </Form.Group>
+      </FormGroup>
     </Col>
   );
 };

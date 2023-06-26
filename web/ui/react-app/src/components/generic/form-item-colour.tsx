@@ -1,4 +1,4 @@
-import { Col, Form } from "react-bootstrap";
+import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, useMemo, useState } from "react";
 
 import FormLabel from "./form-label";
@@ -51,12 +51,12 @@ const FormItemColour: FC<FormItemColourProps> = ({
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
-      <Form.Group style={{ display: "flex", flexDirection: "column" }}>
+      <FormGroup style={{ display: "flex", flexDirection: "column" }}>
         <div>
           <FormLabel text={label} tooltip={tooltip} />
         </div>
         <div style={{ display: "flex", flexWrap: "nowrap" }}>
-          <Form.Control
+          <FormControl
             required={required}
             style={{ width: "50%" }}
             type="text"
@@ -68,7 +68,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
               required: required,
             })}
           />
-          <Form.Control
+          <FormControl
             className="form-control-color"
             style={{ width: "50%" }}
             type="color"
@@ -78,7 +78,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
             autoFocus={false}
           />
         </div>
-      </Form.Group>
+      </FormGroup>
     </Col>
   );
 };

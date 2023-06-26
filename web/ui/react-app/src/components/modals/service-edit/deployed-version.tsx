@@ -1,4 +1,4 @@
-import { Accordion, Form, Row } from "react-bootstrap";
+import { Accordion, FormGroup, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
 
@@ -37,7 +37,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
           defaults?.allow_invalid_certs || hard_defaults?.allow_invalid_certs
         }
       />
-      <Form.Group className="pt-1 mb-2">
+      <FormGroup className="pt-1 mb-2">
         <FormLabel text="Basic auth credentials" />
         <Row>
           <FormItem
@@ -62,7 +62,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             onRight
           />
         </Row>
-      </Form.Group>
+      </FormGroup>
       <FormKeyValMap name="deployed_version.headers" />
       <Row>
         <FormItem

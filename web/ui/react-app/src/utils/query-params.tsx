@@ -89,20 +89,21 @@ export const convertToQueryParams = ({
     } else if (typeof changedParams[key] === "object") {
       let modifiedObj;
       if (key === "url_commands")
-        modifiedObj = toJSON(urlCommandsTrim(params[key]));
+        modifiedObj = JSON.stringify(urlCommandsTrim(params[key]));
       else if (key === "require") {
         // Convert array of objects to array of strings
-        modifiedObj =
+        modifiedObj = JSON.stringify(
           changedParams[key]?.command &&
-          Object.keys(changedParams[key]?.command).length > 0
-            ? toJSON({
+            Object.keys(changedParams[key]?.command).length > 0
+            ? {
                 ...changedParams[key],
                 command: Object.values<ArgType>(
                   changedParams.require.command
                 ).map((value) => value.arg),
-              })
-            : toJSON(changedParams[key]);
-      } else modifiedObj = toJSON(changedParams[key]);
+              }
+            : changedParams[key]
+        );
+      } else modifiedObj = JSON.stringify(changedParams[key]);
 
       // Skip empty objects
       if (modifiedObj === "{}") continue;
@@ -115,30 +116,4 @@ export const convertToQueryParams = ({
   }
 
   return queryParams.join("&");
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const removeEmpty = (obj: any) => {
-  if (Array.isArray(obj)) return obj;
-
-  const copy = { ...obj };
-  Object.keys(copy).forEach((key) => {
-    if (
-      copy[key] == null ||
-      copy[key] === "" ||
-      (Array.isArray(copy[key]) && copy[key].length === 0) ||
-      (typeof copy[key] === "object" &&
-        Object.keys(removeEmpty(copy[key])).length === 0)
-    ) {
-      delete copy[key];
-    }
-  });
-  return copy;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toJSON = (obj: any) => {
-  return JSON.stringify(removeEmpty(obj), (key, value) => {
-    return value;
-  });
 };

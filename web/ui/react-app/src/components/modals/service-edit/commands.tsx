@@ -1,4 +1,4 @@
-import { Accordion, Button, Form, Row } from "react-bootstrap";
+import { Accordion, Button, FormGroup, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 
 import Command from "./command";
@@ -17,7 +17,7 @@ const EditServiceCommands: FC<Props> = ({ name }) => {
     <Accordion>
       <Accordion.Header>Command:</Accordion.Header>
       <Accordion.Body>
-        <Form.Group className="mb-2">
+        <FormGroup className="mb-2">
           <Row>
             {fields.map(({ id }, index) => (
               <Row key={id}>
@@ -39,7 +39,7 @@ const EditServiceCommands: FC<Props> = ({ name }) => {
               Add Command
             </Button>
           </Row>
-        </Form.Group>
+        </FormGroup>
       </Accordion.Body>
     </Accordion>
   );

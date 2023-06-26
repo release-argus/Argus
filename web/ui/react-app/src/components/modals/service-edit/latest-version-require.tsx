@@ -1,4 +1,4 @@
-import { Accordion, Form, Row } from "react-bootstrap";
+import { Accordion, FormGroup, Row } from "react-bootstrap";
 import {
   DefaultDockerFilterRegistryType,
   DefaultLatestVersionFiltersType,
@@ -81,13 +81,13 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             onRight
           />
 
-          <Form.Group className="pt-1">
+          <FormGroup className="pt-1">
             <FormLabel
               text="Command"
               tooltip="Command to run before a release is considered usable and notified/shown in the UI"
             />
             <Command name="latest_version.require.command" />
-          </Form.Group>
+          </FormGroup>
 
           <hr />
           <FormLabel text="Docker" />

@@ -1,4 +1,11 @@
-import { Button, ButtonGroup, Col, Form, Row, Stack } from "react-bootstrap";
+import {
+  Button,
+  ButtonGroup,
+  Col,
+  FormGroup,
+  Row,
+  Stack,
+} from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
@@ -60,7 +67,7 @@ const FormKeyValMap: FC<Props> = ({
   }, []);
 
   return (
-    <Form.Group>
+    <FormGroup>
       <Row>
         <Col>
           <FormLabel text={label} tooltip={tooltip} />
@@ -101,7 +108,7 @@ const FormKeyValMap: FC<Props> = ({
           </Row>
         ))}
       </Stack>
-    </Form.Group>
+    </FormGroup>
   );
 };
 

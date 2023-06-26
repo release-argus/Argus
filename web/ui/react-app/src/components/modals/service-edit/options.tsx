@@ -1,4 +1,4 @@
-import { Accordion, Form, Row } from "react-bootstrap";
+import { Accordion, FormCheck, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
@@ -17,7 +17,7 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
     <Accordion>
       <Accordion.Header>Options:</Accordion.Header>
       <Accordion.Body>
-        <Form.Check label="Active" {...register("options.active")} />
+        <FormCheck label="Active" {...register("options.active")} />
         <FormItem
           key="interval"
           name="options.interval"

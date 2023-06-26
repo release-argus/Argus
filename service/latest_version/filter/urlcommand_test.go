@@ -237,7 +237,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 		"regex index out of bounds": {
 			slice: &URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 2}},
-			errRegex: `regex .* returned \d elements but the index wants element number \d`,
+			errRegex: `regex .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     testText,
 		},
 		"replace": {
@@ -267,7 +267,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 		"split index out of bounds": {
 			slice: &URLCommandSlice{
 				{Type: "split", Text: stringPtr("-"), Index: 2}},
-			errRegex: `split .* returned \d elements but the index wants element number \d`,
+			errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     testText,
 		},
 		"all types": {
