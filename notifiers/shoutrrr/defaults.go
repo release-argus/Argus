@@ -111,6 +111,10 @@ func (s *SliceDefaults) SetDefaults() {
 		nil,
 		&map[string]string{
 			"port": "443"})
+	newSlice["shoutrrr"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil, nil)
 	newSlice["slack"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
