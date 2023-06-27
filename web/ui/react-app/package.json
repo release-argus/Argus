@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^4.29.11",
-    "@types/node": "^18.16.16",
+    "@types/node": "^20.3.2",
     "@types/styled-components": "^5.1.26"
   }
 }
