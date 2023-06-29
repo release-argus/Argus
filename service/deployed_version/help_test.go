@@ -51,7 +51,8 @@ func testLookup() (lookup *Lookup) {
 		"version",
 		opt.New(
 			nil, "", boolPtr(true),
-			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
+			&opt.OptionsDefaults{},
+			opt.NewDefaults("", boolPtr(true))),
 		"",
 		&svcstatus.Status{
 			ServiceID: stringPtr("test")},
