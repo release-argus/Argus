@@ -129,10 +129,16 @@ func testService(id string) *service.Service {
 		Options: *opt.New(
 			nil, "", boolPtr(true),
 			nil, nil)}
+	serviceHardDefaults := service.Defaults{}
+	serviceHardDefaults.SetDefaults()
+	shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
+	shoutrrrHardDefaults.SetDefaults()
+	webhookHardDefaults := webhook.WebHookDefaults{}
+	webhookHardDefaults.SetDefaults()
 	svc.Init(
-		&service.Defaults{}, &service.Defaults{},
-		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-		&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
+		&service.Defaults{}, &serviceHardDefaults,
+		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
+		&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhookHardDefaults)
 	svc.Status.AnnounceChannel = &announceChannel
 	svc.Status.DatabaseChannel = &databaseChannel
 	return &svc

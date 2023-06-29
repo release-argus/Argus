@@ -104,6 +104,7 @@ func FromPayload(
 	newService.Status.DatabaseChannel = serviceHardDefaults.Status.DatabaseChannel
 	newService.Status.SaveChannel = serviceHardDefaults.Status.SaveChannel
 
+	removeDefaults(oldService, newService, serviceDefaults)
 	newService.Init(
 		serviceDefaults, serviceHardDefaults,
 		notifyGlobals, notifyDefaults, notifyHardDefaults,
@@ -390,4 +391,74 @@ func (s *Service) CheckFetches() (err error) {
 	}
 
 	return
+}
+
+func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
+	notifyDefaults, commandDefaults, webhookDefaults := oldService.UsingDefaults()
+	if !notifyDefaults && !commandDefaults && !webhookDefaults {
+		return
+	}
+
+	// Notify
+	if notifyDefaults {
+		defaultNotifys := util.SortedKeys(d.Notify)
+		usingNotifys := util.SortedKeys(newService.Notify)
+		// If the length is different, then we're not using defaults
+		if len(defaultNotifys) != len(usingNotifys) {
+			notifyDefaults = false
+		} else {
+			// Check that the keys are the same
+			for i, notify := range usingNotifys {
+				if defaultNotifys[i] != notify || newService.Notify[notify].String("") != oldService.Notify[notify].String("") {
+					notifyDefaults = false
+					break
+				}
+			}
+		}
+		// If we're using defaults, then remove them
+		if notifyDefaults {
+			newService.Notify = nil
+		}
+	}
+
+	// Command
+	if commandDefaults {
+		if len(newService.Command) != len(d.Command) {
+			commandDefaults = false
+		} else {
+			// Check that the commands are the defaults
+			for i, command := range d.Command {
+				if newService.Command[i].FormattedString() != command.FormattedString() {
+					commandDefaults = false
+					break
+				}
+			}
+		}
+		// If we're using defaults, then remove them
+		if commandDefaults {
+			newService.Command = nil
+		}
+	}
+
+	// WebHook
+	if webhookDefaults {
+		defaultWebHooks := util.SortedKeys(d.WebHook)
+		usingWebHooks := util.SortedKeys(newService.WebHook)
+		// If the length is different, then we're not using defaults
+		if len(defaultWebHooks) != len(usingWebHooks) {
+			webhookDefaults = false
+		} else {
+			// Check that the keys are the same
+			for i, webhook := range usingWebHooks {
+				if defaultWebHooks[i] != webhook || newService.WebHook[webhook].String() != oldService.WebHook[webhook].String() {
+					webhookDefaults = false
+					break
+				}
+			}
+		}
+		// If we're using defaults, then remove them
+		if webhookDefaults {
+			newService.WebHook = nil
+		}
+	}
 }

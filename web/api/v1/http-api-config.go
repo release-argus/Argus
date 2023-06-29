@@ -42,9 +42,31 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			RoutePrefix: api.Config.Settings.Web.RoutePrefix}}
 
 	// Defaults
-	latestVersionRequireDefaults := convertAndCensorLatestVersionRequireDefaults(&api.Config.Defaults.Service.LatestVersion.Require)
+	serviceLatestVersionRequireDefaults := convertAndCensorLatestVersionRequireDefaults(&api.Config.Defaults.Service.LatestVersion.Require)
+	var serviceNotifyDefaults map[string]struct{}
+	if api.Config.Defaults.Service.Notify != nil {
+		serviceNotifyDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.Notify))
+		for notify := range api.Config.Defaults.Service.Notify {
+			serviceNotifyDefaults[notify] = struct{}{}
+		}
+	}
+	serviceCommandDefaults := make(api_type.CommandSlice, len(api.Config.Defaults.Service.Command))
+	for i, command := range api.Config.Defaults.Service.Command {
+		serviceCommandDefaults[i] = make(api_type.Command, len(command))
+		copy(serviceCommandDefaults[i], command)
+	}
+
+	var serviceWebHookDefaults map[string]struct{}
+	if api.Config.Defaults.Service.WebHook != nil {
+		serviceWebHookDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.WebHook))
+		for webhook := range api.Config.Defaults.Service.WebHook {
+			serviceWebHookDefaults[webhook] = struct{}{}
+		}
+	}
+
 	notifyDefaults := convertAndCensorNotifySliceDefaults(&api.Config.Defaults.Notify)
 	webhookDefaults := convertAndCensorWebHookDefaults(&api.Config.Defaults.WebHook)
+
 	cfg.Defaults = &api_type.Defaults{
 		Service: api_type.ServiceDefaults{
 			Options: &api_type.ServiceOptions{
@@ -58,7 +80,10 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 				AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
 				AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
-				Require:           latestVersionRequireDefaults}},
+				Require:           serviceLatestVersionRequireDefaults},
+			Notify:  serviceNotifyDefaults,
+			Command: serviceCommandDefaults,
+			WebHook: serviceWebHookDefaults},
 		Notify:  *notifyDefaults,
 		WebHook: *webhookDefaults}
 

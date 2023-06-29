@@ -18,14 +18,14 @@ import {
   TELEGRAM,
   ZULIP,
 } from "components/modals/service-edit/notify-types";
+import { Dict, NotifyType, NotifyTypes } from "types/config";
 import { FC, memo } from "react";
-import { NotifyType, NotifyTypes, ServiceDict } from "types/config";
 
 interface RenderTypeProps {
   name: string;
   type: string;
   globalNotify?: NotifyType;
-  defaults?: ServiceDict<NotifyType>;
+  defaults?: Dict<NotifyType>;
   hard_defaults?: NotifyType;
 }
 

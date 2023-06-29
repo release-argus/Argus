@@ -14,13 +14,10 @@ import {
 
 import { TelegramParseModeOptions } from "components/modals/service-edit/notify-types/telegram";
 
-export interface ServiceDict<T> {
+export interface Dict<T> {
   [id: string]: T;
 }
-export const ServiceDictToList = <T,>(
-  dict: ServiceDict<T>,
-  giveIndexTo?: string[]
-): T[] => {
+export const DictToList = <T,>(dict: Dict<T>, giveIndexTo?: string[]): T[] => {
   return Object.entries(dict).map(([name, value]) => {
     let newValue = value as T & { name: string; oldIndex: string };
     newValue.name = name;
@@ -47,9 +44,9 @@ export interface ConfigState {
 export interface ConfigType {
   settings?: SettingsType;
   defaults?: DefaultsType;
-  notify?: ServiceDict<NotifyType>;
-  webhook?: ServiceDict<WebHookType>;
-  service?: ServiceDict<ServiceType>;
+  notify?: Dict<NotifyType>;
+  webhook?: Dict<WebHookType>;
+  service?: Dict<ServiceType>;
   order?: string[];
 }
 
@@ -64,7 +61,7 @@ export interface LogSettingsType {
 
 export interface DefaultsType {
   service?: DefaultServiceType;
-  notify?: ServiceDict<NotifyType>;
+  notify?: Dict<NotifyType>;
   webhook?: WebHookType;
 }
 export interface WebSettingsType {
@@ -83,6 +80,9 @@ export interface DefaultServiceType {
   options?: ServiceOptionsType;
   latest_version?: DefaultLatestVersionLookupType;
   deployed_version?: DeployedVersionLookupType;
+  notify?: Dict<undefined>;
+  command?: string[][];
+  webhook?: Dict<undefined>;
   dashboard?: ServiceDashboardOptionsType;
 }
 
@@ -93,8 +93,8 @@ export interface ServiceType {
   latest_version?: LatestVersionLookupType;
   deployed_version?: DeployedVersionLookupType;
   command?: string[][];
-  webhook?: ServiceDict<WebHookType>;
-  notify?: ServiceDict<NotifyType>;
+  webhook?: Dict<WebHookType>;
+  notify?: Dict<NotifyType>;
   dashboard?: ServiceDashboardOptionsType;
 }
 

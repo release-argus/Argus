@@ -9,7 +9,10 @@ import { useQuery } from "@tanstack/react-query";
 
 export const Config = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
-  const [mutated, setMutated] = useState(false);
+  const [mutatedData, setMutatedData] = useState<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    undefined | Record<string, any>
+  >(undefined);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, isFetching } = useQuery<Record<string, any>>(
     ["config"],
@@ -19,11 +22,8 @@ export const Config = (): ReactElement => {
 
   useEffect(() => {
     if (!isFetching && data) {
-      trimConfig(data);
-      data.service = orderServices(data.service, data.order);
-      delete data.order;
+      setMutatedData(updateConfig(data));
     }
-    setMutated(!isFetching);
   }, [data]);
 
   return (
@@ -55,7 +55,7 @@ export const Config = (): ReactElement => {
             </div>
           ))}
       </h2>
-      {mutated && <pre className="config">{stringify(data)}</pre>}
+      {mutatedData && <pre className="config">{stringify(mutatedData)}</pre>}
     </>
   );
 };
@@ -72,8 +72,10 @@ const trimConfig = (
       if (
         Object.keys(obj[key]).length === 0 &&
         !(
-          path.startsWith(".service") &&
-          (path.endsWith("notify") || path.endsWith("webhook"))
+          (path.startsWith(".service") &&
+            (path.endsWith("notify") || path.endsWith("webhook"))) ||
+          (path.startsWith(".defaults.service") && path.endsWith("notify")) ||
+          path.endsWith("webhook")
         )
       )
         delete obj[key];
@@ -92,4 +94,13 @@ const orderServices = <T extends Record<string, unknown>>(
     if (object.hasOwnProperty(key)) orderedObject[key] = object[key];
   });
   return orderedObject;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const updateConfig = (config: Record<string, any>) => {
+  trimConfig(config);
+  config.service = orderServices(config.service, config.order);
+  delete config.order;
+
+  return config;
 };

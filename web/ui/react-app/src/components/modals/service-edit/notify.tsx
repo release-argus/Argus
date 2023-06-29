@@ -1,7 +1,7 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
+import { Dict, NotifyType, NotifyTypesConst } from "types/config";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
-import { NotifyType, NotifyTypesConst, ServiceDict } from "types/config";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,9 +14,9 @@ interface Props {
   removeMe: () => void;
 
   globalNotifyOptions: JSX.Element;
-  globals?: ServiceDict<NotifyType>;
-  defaults?: ServiceDict<NotifyType>;
-  hard_defaults?: ServiceDict<NotifyType>;
+  globals?: Dict<NotifyType>;
+  defaults?: Dict<NotifyType>;
+  hard_defaults?: Dict<NotifyType>;
 }
 
 const Notify: FC<Props> = ({

@@ -2557,7 +2557,13 @@ func TestFromPayload(t *testing.T) {
 					Defaults: &latestver.LookupDefaults{}}},
 		},
 		"Require.Docker stays if have Type&Image&Tag": {
-			payload: `{"latest_version":{"require":{"docker":{"type":"ghcr","image":"release-argus-argus","tag":"latest"}}}}`,
+			payload: `{
+				"latest_version":{
+					"require":{
+						"docker":{
+							"type":"ghcr",
+							"image":"release-argus-argus",
+							"tag":"latest"}}}}`,
 			want: &Service{
 				Options: opt.Options{Defaults: &opt.OptionsDefaults{}},
 				LatestVersion: latestver.Lookup{
@@ -3236,6 +3242,264 @@ func TestService_CheckFetches(t *testing.T) {
 			if len(*tc.svc.Status.AnnounceChannel) != 0 {
 				t.Errorf("AnnounceChannel should be empty, got %d",
 					len(*tc.svc.Status.AnnounceChannel))
+			}
+		})
+	}
+}
+
+func TestRemoveDefaults(t *testing.T) {
+	// GIVEN a Service, old Service and defaults
+	tests := map[string]struct {
+		svc                     *Service
+		wasUsingNotifyDefaults  bool
+		wasUsingCommandDefaults bool
+		wasUsingWebHookDefaults bool
+		d                       *Defaults
+		want                    *Service
+	}{
+		"No defaults being used": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  false,
+			wasUsingCommandDefaults: false,
+			wasUsingWebHookDefaults: false,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"bish": {}},
+				Command: command.Slice{{"ls", "-la"}},
+				WebHook: map[string]struct{}{
+					"bash": {}}},
+			want: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+		},
+		"All from defaults": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  true,
+			wasUsingCommandDefaults: true,
+			wasUsingWebHookDefaults: true,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"foo": {}},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: map[string]struct{}{
+					"bar": {}}},
+			want: &Service{
+				Comment: "foo"},
+		},
+		"Notify default changed": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo",
+						&map[string]string{
+							"message": "bar"},
+						nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  true,
+			wasUsingCommandDefaults: true,
+			wasUsingWebHookDefaults: true,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"foo": {}},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: map[string]struct{}{
+					"bar": {}}},
+			want: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo",
+						&map[string]string{
+							"message": "bar"},
+						nil,
+						"gotify",
+						nil, nil, nil, nil)}},
+		},
+		"WebHook default changed": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil, "gotify", nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil,
+						"1s",
+						nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  true,
+			wasUsingCommandDefaults: true,
+			wasUsingWebHookDefaults: true,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"foo": {}},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: map[string]struct{}{
+					"bar": {}}},
+			want: &Service{
+				Comment: "foo",
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil,
+						"1s",
+						nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+		},
+		"Command default changed": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"rm", "-rf", "foo.txt"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  true,
+			wasUsingCommandDefaults: true,
+			wasUsingWebHookDefaults: true,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"foo": {}},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: map[string]struct{}{
+					"bar": {}}},
+			want: &Service{
+				Comment: "foo",
+				Command: command.Slice{{"rm", "-rf", "foo.txt"}}},
+		},
+		"defaults overriden by changing size of slice": {
+			svc: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil),
+					"bar": shoutrrr.New(
+						nil, "bar", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil),
+					"foo": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+			wasUsingNotifyDefaults:  true,
+			wasUsingCommandDefaults: true,
+			wasUsingWebHookDefaults: true,
+			d: &Defaults{
+				Notify: map[string]struct{}{
+					"foo": {}},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: map[string]struct{}{
+					"bar": {}}},
+			want: &Service{
+				Comment: "foo",
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil),
+					"bar": shoutrrr.New(
+						nil, "bar", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil),
+					"foo": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			oldService := Service{
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "foo", nil, nil,
+						"gotify",
+						nil, nil, nil, nil)},
+				Command: command.Slice{{"ls", "-lah"}},
+				WebHook: webhook.Slice{
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil,
+						"github",
+						"", nil, nil, nil)}}
+			oldService.notifyFromDefaults = tc.wasUsingNotifyDefaults
+			oldService.commandFromDefaults = tc.wasUsingCommandDefaults
+			oldService.webhookFromDefaults = tc.wasUsingWebHookDefaults
+
+			// WHEN we call RemoveDefaults
+			removeDefaults(&oldService, tc.svc, tc.d)
+
+			// THEN we get the expected Service
+			if tc.want.String("") != tc.svc.String("") {
+				t.Errorf("\nwant: %q\ngot:  %q",
+					tc.want.String(""), tc.svc.String(""))
 			}
 		})
 	}

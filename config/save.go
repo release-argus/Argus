@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
@@ -94,10 +95,8 @@ func (c *Config) Save() {
 	// Fix the ordering of the read data
 	var (
 		changed      = true
-		indentation  = strings.Repeat(" ", int(c.Settings.Indentation))
+		parentKey    = make([]string, 10)
 		serviceCount = len(c.Service)
-
-		configType string // section of the config we're in, e.g. 'service'
 
 		currentServiceNumber   int
 		currentOrder           = make([]string, serviceCount)
@@ -105,49 +104,40 @@ func (c *Config) Save() {
 		currentOrderIndexEnd   = make([]int, serviceCount+1)
 	)
 
-	// Keep track of the number of lines we've removed and adjust index by it
-	linesRemoved := 0
-	for index := range lines {
-		index -= linesRemoved
-		if index < 0 {
-			// Say in the first 5 lines we read, we removed 10, index-linesRemoved would be <0, so can't index
-			// So we reset the linesRemoved number by subtracking -index and set index to 0
-			linesRemoved -= index
-			index = 0
-		} else if index == len(lines) {
-			break
-		}
-		if !strings.HasPrefix(lines[index], " ") {
-			configType = strings.TrimRight(lines[index], ":")
-		}
+	for index := 0; index < len(lines); index++ {
+		line := lines[index]
+		indents := indentCount(line, c.Settings.Indentation)
+		key := strings.Split(strings.TrimSpace(line), ":")[0]
+		parentKey[indents] = key
 
-		if configType == "service" &&
-			strings.HasSuffix(lines[index], ":") &&
-			strings.HasPrefix(lines[index], indentation) &&
-			!strings.HasPrefix(lines[index], indentation+" ") {
+		// Start of a Service item
+		if indents == 1 &&
+			strings.HasSuffix(line, ":") &&
+			parentKey[0] == "service" {
+
 			// First service will be on 1 because we remove items and decrement
 			// currentOrderIndexEnd[currentServiceNumber]. So we want to know when the service
 			// has started so that the decrements are direct to the service
 			currentServiceNumber++
 
 			// Service's ID
-			currentOrder[currentServiceNumber-1] = strings.TrimSpace(strings.TrimRight(lines[index], ":"))
+			currentOrder[currentServiceNumber-1] = key
 			currentOrderIndexStart[currentServiceNumber] = index
 
 			// Get the index that this service ends on
 			currentOrderIndexEnd[currentServiceNumber] = len(lines) - 1
-			for i := index + 1; i <= len(lines); i++ {
-				// If the line has only 1 indentation or no indentation, it's the end of the Service
-				if !strings.HasPrefix(lines[i], indentation+" ") &&
-					strings.HasPrefix(lines[i], indentation) ||
-					!strings.HasPrefix(lines[i], " ") {
+			for i := index + 1; i < len(lines); i++ {
+				lIndent := indentCount(lines[i], c.Settings.Indentation)
+				// If the line has no/1 indent, it's the end of this Service
+				if lIndent <= 1 {
 					currentOrderIndexEnd[currentServiceNumber] = i - 1
 					break
 				}
 			}
+			continue
 		}
 		// Remove empty key:values
-		if strings.HasSuffix(lines[index], ": {}") {
+		if strings.HasSuffix(line, ": {}") {
 			// Ignore empty notify/webhook mappings under a service as they are using defaults
 			// service:
 			// <>example:
@@ -156,75 +146,71 @@ func (c *Config) Save() {
 			// <><><>EMAIL: {}
 			// <><>webhook:
 			// <><><>WH: {}
-			underNotify := false
-			TwoIndents := strings.Repeat(" ", 2*int(c.Settings.Indentation))
-			ThreeIndents := strings.Repeat(" ", 3*int(c.Settings.Indentation))
-			if configType == "service" &&
-				!strings.HasPrefix(lines[index], ThreeIndents+" ") &&
-				strings.HasPrefix(lines[index], ThreeIndents) {
-				// Check that we're under a notify/webhook:
-				prevIndex := index
-				for prevIndex > 0 {
-					prevIndex--
-					// line has only 2*indentation
-					if !strings.HasPrefix(lines[prevIndex], TwoIndents+" ") &&
-						strings.HasPrefix(lines[prevIndex], TwoIndents) {
-						underNotify = lines[prevIndex] == TwoIndents+"notify:" ||
-							lines[prevIndex] == TwoIndents+"webhook:"
-						break
+			if indents == 3 {
+				// service:           || defaults:
+				// <>name:            || <>service:
+				// <><>VAR:           || <><>VAR:
+				// <><><>DISCORD: {}  || <><><>DISCORD: {}
+				if parentKey[0] == "service" || parentKey[0] == "defaults" {
+					// Check that we're under a service.X.(notify|webhook): | defaults.service.X.(notify|webhook):
+					if parentKey[2] == "notify" || parentKey[2] == "webhook" {
+						continue
 					}
-				}
-				if underNotify {
-					continue
 				}
 			}
 
 			util.RemoveIndex(&lines, index)
+			index--
 			currentOrderIndexEnd[currentServiceNumber]--
-			linesRemoved++
 
 			// Remove level by level
 			// Until we don't find an empty map to remove
-			// Possible current state:
-			// bish
-			//   bash:
-			//     bosh: {} <- index
-			// foo: bar
 			removed := true
-			parentsRemoved := 0 // shift index by this number (+1 when remove index-1)
 			for removed {
-				removed = false
-				index -= parentsRemoved
-				if index == len(lines) {
-					continue
-				}
 				if index < 0 {
-					parentsRemoved -= index
-					index = 0
+					break
 				}
+				removed = false
 
-				// If it's an empty map
-				if strings.HasSuffix(lines[index], ": {}") {
-					util.RemoveIndex(&lines, index)
-					currentOrderIndexEnd[currentServiceNumber]--
-					removed = true
-					linesRemoved++
-				} else {
-					deepestRemovable := util.Indentation(lines[index], c.Settings.Indentation)
-					if index != 0 &&
-						strings.HasSuffix(lines[index-1], ":") &&
-						strings.HasPrefix(lines[index-1], deepestRemovable) {
-
-						util.RemoveIndex(&lines, index-1)
+				// This key is a map
+				if len(lines) > 0 && strings.HasSuffix(lines[index], ":") {
+					canRemove := false
+					// If we're at the end of the file, it's an empty map
+					if index+1 == len(lines) {
+						// <>bish: <- EOF index
+						// <><>bosh: {}  --- just removed
+						// ^ EOF, can remove index
+						canRemove = true
+					} else {
+						// Not at the end of the file, so compare the indentations
+						indexIndentation := indentCount(lines[index], c.Settings.Indentation)
+						nextIndentation := indentCount(lines[index+1], c.Settings.Indentation)
+						// <><>bish: <- index
+						// <><><>bosh: {}  --- just removed
+						// <><>bosh:          | <><><>bash:
+						// ^ can remove index | ^ can't remove index as bash is its child
+						// If the current line is as indented or more than the next, it's an empty map
+						canRemove = indexIndentation >= nextIndentation
+					}
+					if canRemove {
+						util.RemoveIndex(&lines, index)
 						currentOrderIndexEnd[currentServiceNumber]--
 						removed = true
-						linesRemoved++
-						parentsRemoved++
+						index--
 					}
 				}
 			}
 		}
 	}
+
+	// Clean defaults
+	removeAllServiceDefaults(
+		&lines,
+		c.Settings.Indentation,
+		&c.Service,
+		&currentOrder,
+		&currentOrderIndexStart,
+		&currentOrderIndexEnd)
 
 	// Service Bubble Sort
 	for changed {
@@ -287,4 +273,98 @@ func (c *Config) Save() {
 	jLog.Info(
 		fmt.Sprintf("Saved service updates to %s", c.File),
 		util.LogFrom{}, true)
+}
+
+// removeAllServiceDefaults removes the written default values from all Services
+func removeAllServiceDefaults(
+	lines *[]string,
+	indentation uint8,
+	services *service.Slice,
+	currentOrder *[]string,
+	currentOrderIndexStart *[]int,
+	currentOrderIndexEnd *[]int) {
+	linesRemoved := 0
+	for i, serviceName := range *currentOrder {
+		svc := (*services)[serviceName]
+		n, c, w := svc.UsingDefaults()
+		// Not using any defaults, skip this Service
+		if !n && !c && !w {
+			// Update the start/end indices of the next Service
+			if i+2 < len(*currentOrderIndexStart) {
+				(*currentOrderIndexStart)[i+2] -= linesRemoved
+				(*currentOrderIndexEnd)[i+2] -= linesRemoved
+			}
+			continue
+		}
+
+		start := (*currentOrderIndexStart)[i+1]
+		end := (*currentOrderIndexEnd)[i+1]
+		section := (*lines)[start : end+1]
+		size := len(section)
+		// Notify
+		if n {
+			removeSection("notify", &section, indentation, 2)
+		}
+		// Command
+		if c {
+			removeSection("command", &section, indentation, 2)
+		}
+		// WebHook
+		if w {
+			removeSection("webhook", &section, indentation, 2)
+		}
+
+		// Put the section back into the lines
+		sectionDecrease := size - len(section)
+		newLines := make([]string, len(*lines)-sectionDecrease)
+		copy(newLines[:start], (*lines)[:start])
+		copy(newLines[start:], section)
+		if end+1 < len(*lines) {
+			copy(newLines[start+len(section):], (*lines)[end+1:])
+		}
+		*lines = newLines
+
+		// Update the end index of the current Service
+		(*currentOrderIndexEnd)[i+1] -= sectionDecrease
+		// Update the start/end indices of the next Service
+		linesRemoved += sectionDecrease
+		if i+2 < len(*currentOrderIndexStart) {
+			(*currentOrderIndexStart)[i+2] -= linesRemoved
+			(*currentOrderIndexEnd)[i+2] -= linesRemoved
+		}
+	}
+}
+
+// removeSection removes the given section from the given lines
+func removeSection(section string, lines *[]string, indentation uint8, indents int) {
+	targetIndentation := (strings.Repeat(" ", int(indentation)*indents))
+	outsideIndentation := targetIndentation + " "
+	sectionStart := targetIndentation + section + ":"
+	var insideSection bool
+	for i := 0; i < len(*lines); i++ {
+		line := (*lines)[i]
+		if !insideSection {
+			if strings.HasPrefix(line, sectionStart) {
+				insideSection = true
+				util.RemoveIndex(lines, i)
+				i-- // subtract as we've removed a line
+			}
+			continue
+		}
+
+		// If we're inside the section, and this line isn't indented more than the target,
+		// move to the next Service
+		if !strings.HasPrefix(line, outsideIndentation) {
+			break
+		}
+		// else, we're still inside, so remove this line
+		util.RemoveIndex(lines, i)
+		i-- // subtract as we've removed a line
+	}
+}
+
+// indentCount returns the number of indents in the given line
+func indentCount(line string, indentationSize uint8) int {
+	// characters of indent / indentationSize = indents
+	return len(util.Indentation(line, indentationSize)) / int(indentationSize)
 }

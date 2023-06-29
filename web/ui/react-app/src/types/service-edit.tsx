@@ -1,6 +1,7 @@
 import {
   BasicAuthType,
   DefaultsType,
+  Dict,
   DockerFilterType,
   HeaderType,
   NotifyNtfyAction,
@@ -9,7 +10,6 @@ import {
   NotifyType,
   NotifyTypes,
   ServiceDashboardOptionsType,
-  ServiceDict,
   ServiceOptionsType,
   URLCommandType,
   WebHookType,
@@ -20,8 +20,8 @@ export interface ServiceEditModalData {
 }
 
 export interface ServiceEditOtherData {
-  webhook?: ServiceDict<WebHookType>;
-  notify?: ServiceDict<NotifyType>;
+  webhook?: Dict<WebHookType>;
+  notify?: Dict<NotifyType>;
   defaults?: DefaultsType;
   hard_defaults?: DefaultsType;
 }
