@@ -24,7 +24,7 @@
     "react-router-dom": "^6.11.2",
     "react-scripts": "^5.0.1",
     "reconnecting-websocket": "^4.4.0",
-    "styled-components": "^5.3.11",
+    "styled-components": "^6.0.1",
     "typescript": "^5.0.4"
   },
   "scripts": {
