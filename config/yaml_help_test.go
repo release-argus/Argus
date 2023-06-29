@@ -60,6 +60,13 @@ defaults:
       semantic_versioning: n
     latest_version:
       access_token: ghp_default
+    notify:
+      default: {}
+    command:
+      - - bash
+        - /opt/default.sh
+    webhook:
+      default: {}
   notify:
     gotify:
       url_fields:
@@ -135,10 +142,6 @@ service:
       require:
         regex_content: Argus-{{ version }}-linux-amd64
         regex_version: ^[0-9.]+[0-9]$
-    notify:
-      default: {}
-    webhook:
-      default: {}
   Gitea:
     latest_version:
       type: github
@@ -172,6 +175,26 @@ service:
     latest_version:
       type: github
       url: release-argus/argus
+`
+
+	writeYAML(path, data, t)
+}
+
+func testYAML_SmallConfigTest(path string, t *testing.T) {
+	// for the `save.go`
+	// if index < 0 {
+	// boundary check
+	data := `
+settings:
+  data: {}
+  web: {}
+service:
+  some-service:
+    options: {}
+    latest_version:
+      type: github
+      url: release-argus/Argus
+    dashboard: {}
 `
 
 	writeYAML(path, data, t)

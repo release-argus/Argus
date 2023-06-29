@@ -1,4 +1,5 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
+import { Dict, WebHookType } from "types/config";
 import { FC, useEffect, useMemo } from "react";
 import {
   FormItem,
@@ -6,7 +7,6 @@ import {
   FormLabel,
   FormSelect,
 } from "components/generic/form";
-import { ServiceDict, WebHookType } from "types/config";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
@@ -19,7 +19,7 @@ interface Props {
   removeMe: () => void;
 
   globalOptions: JSX.Element;
-  globals?: ServiceDict<WebHookType>;
+  globals?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
 }

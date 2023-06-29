@@ -378,9 +378,9 @@ type ServiceDefaults struct {
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service
 	LatestVersion         *LatestVersionDefaults `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service
-	Command               *CommandSlice          `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release
-	Notify                *NotifySlice           `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars
-	WebHook               *WebHookSlice          `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars
+	Notify                map[string]struct{}    `json:"notify,omitempty" yaml:"notify,omitempty"`                     // Service-specific Notify vars
+	Command               CommandSlice           `json:"command,omitempty" yaml:"command,omitempty"`                   // OS Commands to run on new release
+	WebHook               map[string]struct{}    `json:"webhook,omitempty" yaml:"webhook,omitempty"`                   // Service-specific WebHook vars
 	DeployedVersionLookup *DeployedVersionLookup `json:"deployed_version,omitempty" yaml:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
 	Dashboard             *DashboardOptions      `json:"dashboard,omitempty" yaml:"dashboard,omitempty"`               // Dashboard options
 	Status                *Status                `json:"status,omitempty" yaml:"status,omitempty"`

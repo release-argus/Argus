@@ -1,14 +1,14 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
+import { Dict, NotifyType } from "types/config";
 import { FC, memo, useCallback, useMemo } from "react";
-import { NotifyType, ServiceDict } from "types/config";
 
 import Notify from "./notify";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
-  globals?: ServiceDict<NotifyType>;
-  defaults?: ServiceDict<NotifyType>;
-  hard_defaults?: ServiceDict<NotifyType>;
+  globals?: Dict<NotifyType>;
+  defaults?: Dict<NotifyType>;
+  hard_defaults?: Dict<NotifyType>;
 }
 
 const EditServiceNotifys: FC<Props> = ({

@@ -38,6 +38,9 @@ type Defaults struct {
 	Options               opt.OptionsDefaults        `yaml:"options,omitempty" json:"options,omitempty"`                   // Options to give the Service
 	LatestVersion         latestver.LookupDefaults   `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to getting the latest version of the Service
 	DeployedVersionLookup deployedver.LookupDefaults `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
+	Notify                map[string]struct{}        `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Default Notify's to give the Service
+	Command               command.Slice              `yaml:"command,omitempty" json:"command,omitempty"`                   // Default Command's to give the Service
+	WebHook               map[string]struct{}        `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Default WebHook's to give the Servic
 	Dashboard             DashboardOptionsDefaults   `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Dashboard defaults
 
 	Status svcstatus.StatusDefaults `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses)
@@ -52,10 +55,13 @@ type Service struct {
 	LatestVersion         latestver.Lookup    `yaml:"latest_version,omitempty" json:"latest_version,omitempty"`     // Vars to getting the latest version of the Service
 	DeployedVersionLookup *deployedver.Lookup `yaml:"deployed_version,omitempty" json:"deployed_version,omitempty"` // Var to scrape the Service's current deployed version
 	Notify                shoutrrr.Slice      `yaml:"notify,omitempty" json:"notify,omitempty"`                     // Service-specific Shoutrrr vars
-	CommandController     *command.Controller `yaml:"-" json:"-"`                                                   // The controller for the OS Commands that tracks fails and has the announce channel
-	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"`                   // OS Commands to run on new release
-	WebHook               webhook.Slice       `yaml:"webhook,omitempty" json:"webhook,omitempty"`                   // Service-specific WebHook vars
-	Dashboard             DashboardOptions    `yaml:"dashboard,omitempty" json:"dashboard,omitempty"`               // Options for the dashboard
+	notifyFromDefaults    bool
+	CommandController     *command.Controller `yaml:"-" json:"-"`                                 // The controller for the OS Commands that tracks fails and has the announce channel
+	Command               command.Slice       `yaml:"command,omitempty" json:"command,omitempty"` // OS Commands to run on new release
+	commandFromDefaults   bool
+	WebHook               webhook.Slice `yaml:"webhook,omitempty" json:"webhook,omitempty"` // Service-specific WebHook vars
+	webhookFromDefaults   bool
+	Dashboard             DashboardOptions `yaml:"dashboard,omitempty" json:"dashboard,omitempty"` // Options for the dashboard
 
 	Status svcstatus.Status `yaml:"-" json:"-"` // Track the Status of this source (version and regex misses)
 
@@ -99,4 +105,12 @@ func (s *Service) Summary() (summary *apitype.ServiceSummary) {
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
 	return
+}
+
+// UsingDefaults returns whether the Service is using the Notify(s)/Command(s)/WebHook(s) from Defaults
+func (s *Service) UsingDefaults() (bool, bool, bool) {
+	if s == nil {
+		return false, false, false
+	}
+	return s.notifyFromDefaults, s.commandFromDefaults, s.webhookFromDefaults
 }

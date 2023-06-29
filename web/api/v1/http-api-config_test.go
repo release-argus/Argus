@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	command "github.com/release-argus/Argus/commands"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
@@ -145,7 +146,88 @@ func TestHTTP_Config(t *testing.T) {
 	"service":{}
 }`,
 		},
-		"2. settings + defaults + notify": {
+		"2. settings + defaults (with notify+command+webhook service defaults)": {
+			defaults: &config.Defaults{
+				Service: service.Defaults{
+					Options: opt.OptionsDefaults{
+						OptionsBase: opt.OptionsBase{
+							Interval: "1h"}},
+					LatestVersion: *latestver.NewDefaults(
+						stringPtr("foo"),
+						boolPtr(true),
+						boolPtr(false),
+						filter.NewRequireDefaults(
+							filter.NewDockerCheckDefaults(
+								"ghcr",
+								"tokenForGHCR",
+								"tokenForHub", "usernameForHub",
+								"tokenForQuay",
+								nil))),
+					Notify: map[string]struct{}{
+						"n1": {}},
+					Command: command.Slice{
+						{"command", "arg1", "arg2"}},
+					WebHook: map[string]struct{}{
+						"wh1": {},
+						"wh2": {},
+						"wh3": {},
+						"wh4": {}}}},
+			wantBody: `
+{
+	"settings":{
+		"log":{},
+		"web":{
+			"listen_host":"127.0.0.1"
+		}
+	},
+	"defaults":{
+		"service":{
+			"options":{
+				"interval":"1h"
+			},
+			"latest_version":{
+				"access_token":"\u003csecret\u003e",
+				"allow_invalid_certs":true,
+				"use_prerelease":false,
+				"require":{
+					"docker":{
+						"type":"ghcr",
+						"ghcr":{
+							"token":"\u003csecret\u003e"
+						},
+						"hub":{
+							"token":"\u003csecret\u003e",
+							"username":"usernameForHub"
+						},
+						"quay":{
+							"token":"\u003csecret\u003e"
+						}
+					}
+				}
+			},
+			"notify":{
+				"n1":{}
+			},
+			"command":[
+				["command","arg1","arg2"]
+			],
+			"webhook":{
+				"wh1":{},
+				"wh2":{},
+				"wh3":{},
+				"wh4":{}
+			},
+			"deployed_version":{},
+			"dashboard":{}
+		},
+		"webhook":{}
+	},
+	"notify":{},
+	"webhook":{},
+	"service":{}
+}`,
+		},
+		"3. settings + defaults (with notify+command+webhook service defaults) + notify": {
 			notify: &shoutrrr.SliceDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify",
@@ -188,6 +270,18 @@ func TestHTTP_Config(t *testing.T) {
 					}
 				}
 			},
+			"notify":{
+				"n1":{}
+			},
+			"command":[
+				["command","arg1","arg2"]
+			],
+			"webhook":{
+				"wh1":{},
+				"wh2":{},
+				"wh3":{},
+				"wh4":{}
+			},
 			"deployed_version":{},
 			"dashboard":{}
 		},
@@ -211,7 +305,7 @@ func TestHTTP_Config(t *testing.T) {
 	"service":{}
 }`,
 		},
-		"3. settings + defaults + notify + webhook": {
+		"4. settings + defaults (with notify+command+webhook service defaults) + notify + webhook": {
 			webhook: &webhook.SliceDefaults{
 				"foo": webhook.NewDefaults(
 					boolPtr(true), // allow_invalid_certs
@@ -257,6 +351,18 @@ func TestHTTP_Config(t *testing.T) {
 					}
 				}
 			},
+			"notify":{
+				"n1":{}
+			},
+			"command":[
+				["command","arg1","arg2"]
+			],
+			"webhook":{
+				"wh1":{},
+				"wh2":{},
+				"wh3":{},
+				"wh4":{}
+			},
 			"deployed_version":{},
 			"dashboard":{}
 		},
@@ -288,7 +394,7 @@ func TestHTTP_Config(t *testing.T) {
 	"service":{}
 }`,
 		},
-		"4. settings + defaults + notify + webhook + service": {
+		"5. settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service": {
 			service: &service.Slice{
 				"alpha": &service.Service{
 					LatestVersion: *latestver.New(
@@ -337,6 +443,18 @@ func TestHTTP_Config(t *testing.T) {
 						}
 					}
 				}
+			},
+			"notify":{
+				"n1":{}
+			},
+			"command":[
+				["command","arg1","arg2"]
+			],
+			"webhook":{
+				"wh1":{},
+				"wh2":{},
+				"wh3":{},
+				"wh4":{}
 			},
 			"deployed_version":{},
 			"dashboard":{}

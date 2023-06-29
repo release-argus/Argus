@@ -1,9 +1,9 @@
 import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
 import {
+  Dict,
   HeaderType,
   NotifyNtfyAction,
   NotifyType,
-  ServiceDict,
   ServiceType,
   URLCommandType,
   WebHookType,
@@ -87,14 +87,14 @@ export const convertUIServiceDataEditToAPI = (
         max_tries: webhook.max_tries ? Number(webhook.max_tries) : undefined,
       };
       return acc;
-    }, {} as ServiceDict<WebHookType>);
+    }, {} as Dict<WebHookType>);
 
   // Notify
   if (data.notify)
     payload.notify = data.notify.reduce((acc, notify) => {
       acc[notify.name as string] = convertNotifyToAPI(notify);
       return acc;
-    }, {} as ServiceDict<NotifyType>);
+    }, {} as Dict<NotifyType>);
 
   // Dashboard
   payload.dashboard = {

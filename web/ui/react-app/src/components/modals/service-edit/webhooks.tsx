@@ -1,12 +1,12 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
+import { Dict, WebHookType } from "types/config";
 import { FC, useMemo } from "react";
-import { ServiceDict, WebHookType } from "types/config";
-import { useFieldArray } from "react-hook-form";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
+import { useFieldArray } from "react-hook-form";
 
 interface Props {
-  globals?: ServiceDict<WebHookType>;
+  globals?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
 }

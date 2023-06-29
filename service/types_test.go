@@ -416,3 +416,77 @@ func TestService_Summary(t *testing.T) {
 		})
 	}
 }
+
+func TestService_UsingDefaults(t *testing.T) {
+	// GIVEN a Service that may/may not be using defaults
+	tests := map[string]struct {
+		nilService           bool
+		usingNotifyDefaults  bool
+		usingCommandDefaults bool
+		usingWebHookDefaults bool
+	}{
+		"nil Service": {
+			nilService:           true,
+			usingNotifyDefaults:  false,
+			usingCommandDefaults: false,
+			usingWebHookDefaults: false,
+		},
+		"using all defaults": {
+			usingNotifyDefaults:  true,
+			usingCommandDefaults: true,
+			usingWebHookDefaults: true,
+		},
+		"using no defaults": {
+			usingNotifyDefaults:  false,
+			usingCommandDefaults: false,
+			usingWebHookDefaults: false,
+		},
+		"using Notify defaults": {
+			usingNotifyDefaults:  true,
+			usingCommandDefaults: false,
+			usingWebHookDefaults: false,
+		},
+		"using Command defaults": {
+			usingNotifyDefaults:  false,
+			usingCommandDefaults: true,
+			usingWebHookDefaults: false,
+		},
+		"using WebHook defaults": {
+			usingNotifyDefaults:  false,
+			usingCommandDefaults: false,
+			usingWebHookDefaults: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var svc *Service
+			if !tc.nilService {
+				svc = &Service{}
+				svc.notifyFromDefaults = tc.usingNotifyDefaults
+				svc.commandFromDefaults = tc.usingCommandDefaults
+				svc.webhookFromDefaults = tc.usingWebHookDefaults
+			}
+
+			// WHEN UsingDefaults is called
+			usingNotifyDefaults, usingCommandDefaults, usingWebHookDefaults := svc.UsingDefaults()
+
+			// THEN the Service is using defaults as expected
+			if tc.usingNotifyDefaults != usingNotifyDefaults {
+				t.Errorf("got: %v, want: %v",
+					usingNotifyDefaults, tc.usingNotifyDefaults)
+			}
+			if tc.usingCommandDefaults != usingCommandDefaults {
+				t.Errorf("got: %v, want: %v",
+					usingCommandDefaults, tc.usingCommandDefaults)
+			}
+			if tc.usingWebHookDefaults != usingWebHookDefaults {
+				t.Errorf("got: %v, want: %v",
+					usingWebHookDefaults, tc.usingWebHookDefaults)
+			}
+		})
+	}
+}

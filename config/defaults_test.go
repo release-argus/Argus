@@ -1063,7 +1063,7 @@ func TestDefaults_Print(t *testing.T) {
 	}{
 		"unmodified hard defaults": {
 			input: &defaults,
-			lines: 148 + len(defaults.Notify)},
+			lines: 153 + len(defaults.Notify)},
 		"empty defaults": {
 			input: &Defaults{},
 			lines: 1},

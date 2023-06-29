@@ -62,13 +62,27 @@ func (s *Service) Init(
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
 	// Notify
+	// use defaults?
+	if s.Notify == nil && len(defaults.Notify) != 0 {
+		s.Notify = make(shoutrrr.Slice, len(defaults.Notify))
+		for key := range defaults.Notify {
+			s.Notify[key] = &shoutrrr.Shoutrrr{}
+		}
+		s.notifyFromDefaults = true
+	}
 	s.Notify.Init(
 		&s.Status,
 		rootNotifyConfig, notifyDefaults, notifyHardDefaults)
 
 	// Command
+	// use defaults?
+	if len(s.Command) == 0 && len(defaults.Command) != 0 {
+		s.Command = make(command.Slice, len(defaults.Command))
+		copy(s.Command, defaults.Command)
+		s.commandFromDefaults = true
+	}
 	//nolint:typecheck
-	if s.Command != nil {
+	if s.Command != nil && len(s.Command) != 0 {
 		s.CommandController = &command.Controller{}
 		s.CommandController.Init(
 			&s.Status,
@@ -78,6 +92,14 @@ func (s *Service) Init(
 	}
 
 	// WebHook
+	// use defaults?
+	if s.WebHook == nil && len(defaults.WebHook) != 0 {
+		s.WebHook = make(webhook.Slice, len(defaults.WebHook))
+		for key := range defaults.WebHook {
+			s.WebHook[key] = &webhook.WebHook{}
+		}
+		s.webhookFromDefaults = true
+	}
 	s.WebHook.Init(
 		&s.Status,
 		rootWebHookConfig, webhookDefaults, webhookHardDefaults,
