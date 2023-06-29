@@ -1,6 +1,6 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
 import { Dict, WebHookType } from "types/config";
-import { FC, useEffect, useMemo } from "react";
+import { FC, JSX, useEffect, useMemo } from "react";
 import {
   FormItem,
   FormKeyValMap,

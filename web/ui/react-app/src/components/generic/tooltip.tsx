@@ -1,4 +1,4 @@
-import { FC, memo } from "react";
+import { FC, JSX, memo } from "react";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

@@ -111,7 +111,7 @@ export const convertOpsGenieDetailsFromString = (
   str?: string | NotifyOpsGenieDetailType[]
 ): NotifyOpsGenieDetailType[] | undefined => {
   // already converted
-  if (typeof str === "object") return str as NotifyOpsGenieDetailType[];
+  if (typeof str === "object") return str;
   // undefined/empty
   if (str === undefined || str === "") return undefined;
 
@@ -131,7 +131,7 @@ export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[]
 ): NotifyOpsGenieTarget[] | undefined => {
   // already converted
-  if (typeof str === "object") return str as NotifyOpsGenieTarget[];
+  if (typeof str === "object") return str;
   // undefined/empty
   if (str === undefined || str === "") return undefined;
 
@@ -170,7 +170,7 @@ export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[]
 ): NotifyNtfyAction[] | undefined => {
   // already converted
-  if (typeof str === "object") return str as NotifyNtfyAction[];
+  if (typeof str === "object") return str;
   if (str === undefined || str === "") return undefined;
 
   // convert from a JSON string

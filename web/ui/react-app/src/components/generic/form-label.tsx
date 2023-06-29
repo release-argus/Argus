@@ -1,4 +1,5 @@
-import { FC } from "react";
+import { FC, JSX } from "react";
+
 import { Form } from "react-bootstrap";
 import { HelpTooltip } from "components/generic";
 

@@ -1,5 +1,5 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, useMemo } from "react";
+import { FC, JSX, useMemo } from "react";
 import { useFormContext, useFormState } from "react-hook-form";
 
 import FormLabel from "./form-label";

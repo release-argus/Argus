@@ -87,6 +87,9 @@ export default function reducerMonitor(
           break;
 
         case "INIT":
+          // Check we have the service
+          if (state.service[id] === undefined) return state;
+
           // latest_version
           state.service[id].status!.deployed_version =
             action.service_data?.status?.latest_version;

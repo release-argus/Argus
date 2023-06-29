@@ -1,6 +1,6 @@
 import { Col, Form, FormGroup } from "react-bootstrap";
 import { Controller, useFormState } from "react-hook-form";
-import { FC, useMemo } from "react";
+import { FC, JSX, useMemo } from "react";
 
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
