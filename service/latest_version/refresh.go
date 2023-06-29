@@ -54,7 +54,7 @@ func (l *Lookup) applyOverrides(
 		return nil, errRequire
 	}
 	// semantic_versioning
-	useSemanticVersioning := l.Options.SemanticVersioning
+	var useSemanticVersioning *bool
 	if semanticVersioning != nil {
 		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
 	}
@@ -174,7 +174,7 @@ func (l *Lookup) Refresh(
 
 	// Whether overrides were provided or not, we can update the status if not.
 	overrides := require != nil ||
-		semanticVersioning != nil ||
+		l.Options.GetSemanticVersioning() != lookup.Options.GetSemanticVersioning() ||
 		url != nil ||
 		urlCommands != nil ||
 		usePreRelease != nil
