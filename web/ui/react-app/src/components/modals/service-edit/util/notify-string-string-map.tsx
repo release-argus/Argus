@@ -75,7 +75,7 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
 // convertNtfyActionsToString will convert the NotifyNtfyAction[] to a JSON string
 const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
   JSON.stringify(
-    (obj as NotifyNtfyAction[]).map((item) => {
+    obj.map((item) => {
       if (item.action === "view")
         return {
           action: item.action,
@@ -105,7 +105,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
 // convertOpsGenieTargetToString will convert the NotifyOpsGenieTarget[] to a JSON string
 const convertOpsGenieTargetToString = (obj: NotifyOpsGenieTarget[]): string =>
   JSON.stringify(
-    (obj as NotifyOpsGenieTarget[]).map(({ type, sub_type, value }) => ({
+    obj.map(({ type, sub_type, value }) => ({
       type: type,
       [sub_type]: value,
     }))

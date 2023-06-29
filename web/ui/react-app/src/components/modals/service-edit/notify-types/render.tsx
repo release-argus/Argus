@@ -23,7 +23,7 @@ import { FC, memo } from "react";
 
 interface RenderTypeProps {
   name: string;
-  type: string;
+  type: NotifyTypes;
   globalNotify?: NotifyType;
   defaults?: Dict<NotifyType>;
   hard_defaults?: NotifyType;
@@ -67,8 +67,7 @@ const RenderNotify: FC<RenderTypeProps> = ({
   defaults,
   hard_defaults,
 }) => {
-  const RenderTypeComponent =
-    RENDER_TYPE_COMPONENTS[(type as NotifyTypes) || "discord"];
+  const RenderTypeComponent = RENDER_TYPE_COMPONENTS[type || "discord"];
   return (
     <RenderTypeComponent
       name={name}

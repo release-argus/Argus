@@ -1,6 +1,6 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
 import { Dict, NotifyType, NotifyTypesConst } from "types/config";
-import { FC, memo, useEffect, useMemo } from "react";
+import { FC, JSX, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { useFormContext, useWatch } from "react-hook-form";
 

@@ -2,6 +2,7 @@ import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, useMemo, useState } from "react";
 
 import FormLabel from "./form-label";
+import { JSX } from "react";
 import { useFormContext } from "react-hook-form";
 
 interface FormItemColourProps {
