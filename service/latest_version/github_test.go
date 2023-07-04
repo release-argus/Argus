@@ -123,6 +123,13 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		usePreReleases     bool
 		want               []string
 	}{
+		"use Name if no TagName (/tags vs /releases API)": {
+			releases: []github_types.Release{
+				{Name: "0.99.0"},
+				{Name: "0.3.0"},
+				{Name: "0.0.1"},
+			}, want: []string{"0.99.0", "0.3.0", "0.0.1"},
+		},
 		"keep pre-releases": {
 			usePreReleases: true,
 			releases: []github_types.Release{

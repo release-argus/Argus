@@ -33,11 +33,17 @@ func boolPtr(val bool) *bool {
 func stringPtr(val string) *string {
 	return &val
 }
+
+// Unsure why Go tests give a different result than the compiled binary
+var initialEmptyListETag string
+
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	LogInit(jLog)
+	FindEmptyListETag(os.Getenv("GITHUB_TOKEN"))
+	initialEmptyListETag = getEmptyListETag()
 
 	// run other tests
 	exitCode := m.Run()
@@ -76,7 +82,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		lookup.URLCommands = filter.URLCommandSlice{
 			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
 	} else {
-		lookup.GitHubData = &GitHubData{}
+		lookup.GitHubData = NewGitHubData("", nil)
 		lookup.URLCommands = filter.URLCommandSlice{
 			{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
 		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))

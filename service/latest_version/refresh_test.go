@@ -204,7 +204,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			want: &Lookup{
 				Type:       "github",
 				URL:        "release-argus/Argus",
-				GitHubData: &GitHubData{}},
+				GitHubData: NewGitHubData("", nil)},
 		},
 		"type github carries over Releases and ETag": {
 			url: stringPtr("release-argus/other"),

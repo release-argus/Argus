@@ -17,7 +17,9 @@
 package latestver
 
 import (
+	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
@@ -25,6 +27,261 @@ import (
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
 )
+
+var emptyListETagTestMutex = sync.Mutex{}
+
+func TestGetEmptyListETag(t *testing.T) {
+	// GIVEN emptyListETag exists
+	emptyListETagTestMutex.Lock()
+	defer emptyListETagTestMutex.Unlock()
+	emptyListETagMutex.RLock()
+	defer emptyListETagMutex.RUnlock()
+
+	// WHEN getEmptyListETag is called
+	got := getEmptyListETag()
+
+	// THEN the emptyListETag is returned
+	if got != emptyListETag {
+		t.Errorf("getEmptyListETag() = %q, want %q", got, emptyListETag)
+	}
+}
+
+func TestSetEmptyListETag(t *testing.T) {
+	// GIVEN emptyListETag exists
+	emptyListETagTestMutex.Lock()
+	defer emptyListETagTestMutex.Unlock()
+
+	// WHEN setEmptyListETag is called
+	newValue := "foo"
+	setEmptyListETag(newValue)
+
+	// THEN the emptyListETag is set
+	if emptyListETag != newValue {
+		t.Errorf("setEmptyListETag() = %q, want %q",
+			emptyListETag, newValue)
+	}
+}
+
+func TestFindEmptyListETag(t *testing.T) {
+	// GIVEN emptyListETag is set to the incorrect value
+	emptyListETagTestMutex.Lock()
+	defer emptyListETagTestMutex.Unlock()
+	incorrectValue := "foo"
+	setEmptyListETag(incorrectValue)
+
+	// WHEN FindEmptyListETag is called
+	FindEmptyListETag(os.Getenv("GITHUB_TOKEN"))
+
+	// THEN the emptyListETag is set
+	setTo := getEmptyListETag()
+	if setTo == incorrectValue {
+		t.Errorf("emptyListETag wasn't updated. Got %q, want %q",
+			setTo, emptyListETag)
+	}
+	if setTo != initialEmptyListETag {
+		t.Errorf("Empty list ETag has changed from %q to %q",
+			initialEmptyListETag, setTo)
+	}
+}
+
+func TestNewGitHubData(t *testing.T) {
+	emptyListETagTestMutex.Lock()
+	defer emptyListETagTestMutex.Unlock()
+	startingEmptyListETag := getEmptyListETag()
+	// GIVEN a GitHubData is wanted with/without an eTag/releases
+	tests := map[string]struct {
+		eTag     string
+		releases *[]github_types.Release
+		want     *GitHubData
+	}{
+		"no eTag or releases": {
+			eTag:     "",
+			releases: nil,
+			want: &GitHubData{
+				eTag:     startingEmptyListETag,
+				releases: []github_types.Release{},
+			},
+		},
+		"eTag but no releases": {
+			eTag:     "foo",
+			releases: nil,
+			want: &GitHubData{
+				eTag:     "foo",
+				releases: []github_types.Release{},
+			},
+		},
+		"no eTag but releases": {
+			eTag: "",
+			releases: &[]github_types.Release{
+				{TagName: "bar"}},
+			want: &GitHubData{
+				eTag: startingEmptyListETag,
+				releases: []github_types.Release{
+					{TagName: "bar"}},
+			},
+		},
+		"eTag and releases": {
+			eTag: "zing",
+			releases: &[]github_types.Release{
+				{TagName: "zap"}},
+			want: &GitHubData{
+				eTag: "zing",
+				releases: []github_types.Release{
+					{TagName: "zap"}},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN NewGitHubData is called
+			got := NewGitHubData(tc.eTag, tc.releases)
+
+			// THEN the correct GitHubData is returned
+			if got.eTag != tc.want.eTag {
+				t.Errorf("eTag: got %q, want %q",
+					got.eTag, tc.want.eTag)
+			}
+			if len(got.releases) != len(tc.want.releases) {
+				t.Errorf("releases: got %v, want %v",
+					got.releases, tc.want.releases)
+			} else {
+				for i, release := range got.releases {
+					if release.TagName != tc.want.releases[i].TagName {
+						t.Errorf("%d: TagName, got %q (%v), want %q (%v)",
+							i, got.releases[i].TagName, got.releases, tc.want.releases[i].TagName, tc.want.releases)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGitHubData_hasReleases(t *testing.T) {
+	// GIVEN a GitHubData
+	tests := map[string]struct {
+		gd   *GitHubData
+		want bool
+	}{
+		"no releases": {
+			gd:   &GitHubData{},
+			want: false,
+		},
+		"1 release": {
+			gd: &GitHubData{
+				releases: []github_types.Release{
+					{TagName: "foo"}}},
+			want: true,
+		},
+		"multiple releases": {
+			gd: &GitHubData{
+				releases: []github_types.Release{
+					{TagName: "foo"},
+					{TagName: "bar"}}},
+			want: true,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN hasReleases is called
+			got := tc.gd.hasReleases()
+
+			// THEN the correct value is returned
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGitHubData_TagFallback(t *testing.T) {
+	// GIVEN a GitHubData
+	gd := &GitHubData{}
+	tests := []bool{
+		true, false, true, false, true}
+
+	if gd.tagFallback != false {
+		t.Fatalf("tagFallback wasn't set to false initially")
+	}
+
+	for _, tc := range tests {
+		gd.SetTagFallback()
+
+		// WHEN TagFallback is called
+		got := gd.TagFallback()
+
+		// THEN the correct value is returned
+		if got != tc {
+			t.Errorf("got %t, want %t", got, tc)
+		}
+	}
+}
+
+func TestGitHubData_Copy(t *testing.T) {
+	// GIVEN a fresh GitHubData and a GitHubData to copy from
+	tests := map[string]struct {
+		fresh *GitHubData
+		gd    *GitHubData
+	}{
+		"empty": {
+			gd: &GitHubData{},
+		},
+		"filled": {
+			gd: &GitHubData{
+				eTag: "foo",
+				releases: []github_types.Release{
+					{TagName: "bar"}}},
+		},
+		"filled with data to overwrite": {
+			fresh: &GitHubData{
+				eTag: "fizz",
+				releases: []github_types.Release{
+					{TagName: "bang"}}},
+			gd: &GitHubData{
+				eTag: "foo",
+				releases: []github_types.Release{
+					{TagName: "bar"}}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.fresh == nil {
+				tc.fresh = &GitHubData{}
+			}
+
+			// WHEN Copy is called
+			tc.fresh.Copy(tc.gd)
+
+			// THEN the correct GitHubData is returned
+			if tc.fresh.eTag != tc.gd.eTag {
+				t.Errorf("eTag: got %q, want %q",
+					tc.fresh.eTag, tc.gd.eTag)
+			}
+			if len(tc.fresh.releases) != len(tc.gd.releases) {
+				t.Errorf("releases: got %v, want %v",
+					tc.fresh.releases, tc.gd.releases)
+			} else {
+				for i, release := range tc.fresh.releases {
+					if release.TagName != tc.gd.releases[i].TagName {
+						t.Errorf("%d: TagName, got %q (%v), want %q (%v)",
+							i, tc.fresh.releases[i].TagName, tc.fresh.releases, tc.gd.releases[i].TagName, tc.gd.releases)
+					}
+				}
+			}
+		})
+	}
+}
 
 func TestLookup_String(t *testing.T) {
 	// GIVEN a Lookup

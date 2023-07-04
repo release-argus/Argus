@@ -117,7 +117,7 @@ func (l *Lookup) applyOverrides(
 
 			// Type changed to github (or new service)
 		} else {
-			lookup.GitHubData = &GitHubData{}
+			lookup.GitHubData = NewGitHubData("", nil)
 		}
 	}
 
@@ -202,7 +202,7 @@ func (l *Lookup) updateFromRefresh(newLookup *Lookup, changingOverrides bool) (a
 		l.GitHubData != nil &&
 		l.GitHubData.ETag() != newLookup.GitHubData.ETag() {
 		// Update the ETag and releases
-		l.GitHubData.Set(newLookup.GitHubData.ETag(), newLookup.GitHubData.Releases())
+		l.GitHubData.Copy(newLookup.GitHubData)
 	}
 
 	// Copy the Docker queryToken if it's what the current would fetch

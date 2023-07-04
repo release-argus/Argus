@@ -25,8 +25,48 @@ import (
 )
 
 var (
-	jLog *util.JLog
+	jLog               *util.JLog
+	emptyListETagMutex sync.RWMutex
+	emptyListETag      = `"d1507206fce72fdb4c3c5bc3f7ac5886c75cf86ab707cf43d5a7530516bc9cee"`
 )
+
+// get_empty_list_etag returns the ETag for an empty list query on the GitHub API.
+func getEmptyListETag() string {
+	emptyListETagMutex.RLock()
+	defer emptyListETagMutex.RUnlock()
+
+	return emptyListETag
+}
+
+// FindEmptyListETag finds the ETag for an empty list query on the GitHub API.
+func FindEmptyListETag(access_token string) {
+	githubData := NewGitHubData("", nil)
+
+	allowInvalidCerts := false
+	lookup := New(
+		&access_token,
+		&allowInvalidCerts,
+		githubData,
+		nil, nil, nil,
+		"github",
+		"release-argus/.github",
+		nil, nil,
+		&LookupDefaults{}, &LookupDefaults{})
+	// Fallback to /tags to stop the /tags fallback query if on /releases
+	lookup.GitHubData.SetTagFallback()
+	//nolint:errcheck
+	lookup.httpRequest(&util.LogFrom{Primary: "FindEmptyListETag"})
+
+	setEmptyListETag(lookup.GitHubData.ETag())
+}
+
+// setEmptyListETag sets the ETag for an empty list query on the GitHub API.
+func setEmptyListETag(etag string) {
+	emptyListETagMutex.Lock()
+	defer emptyListETagMutex.Unlock()
+
+	emptyListETag = etag
+}
 
 // LookupBase is the base struct for a Lookup.
 type LookupBase struct {
@@ -127,8 +167,9 @@ func (l *Lookup) String(prefix string) (str string) {
 
 // GitHubData is data needed in GitHub requests
 type GitHubData struct {
-	eTag     string                 // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl
-	releases []github_types.Release // Track the ETag releases until they're usable
+	eTag        string                 // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requestsl
+	releases    []github_types.Release // Track the ETag releases until they're usable
+	tagFallback bool                   // Whether we've fallen back to using /tags instead of /releases
 
 	mutex sync.RWMutex `json:"-"` // Mutex to protect the GitHubData
 }
@@ -138,10 +179,16 @@ func NewGitHubData(
 	eTag string,
 	releases *[]github_types.Release,
 ) (githubData *GitHubData) {
+	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
+	if eTag == "" {
+		eTag = getEmptyListETag()
+	}
+	// Releases
 	var releasesDeref []github_types.Release
 	if releases != nil {
 		releasesDeref = *releases
 	}
+
 	githubData = &GitHubData{
 		eTag:     eTag,
 		releases: releasesDeref}
@@ -174,6 +221,14 @@ func (g *GitHubData) Releases() []github_types.Release {
 	return g.releases
 }
 
+// hasReleases returns whether the GitHubData currently has releases.
+func (g *GitHubData) hasReleases() bool {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+
+	return len(g.releases) > 0
+}
+
 // SetReleases of the GitHubData.
 func (g *GitHubData) SetReleases(releases []github_types.Release) {
 	g.mutex.Lock()
@@ -198,13 +253,33 @@ func (g *GitHubData) SetETag(etag string) {
 	g.eTag = etag
 }
 
-// Set the ETag and releases for the GitHubData.
-func (g *GitHubData) Set(etag string, releases []github_types.Release) {
+// TagFallback of the GitHubData.
+func (g *GitHubData) TagFallback() bool {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+
+	return g.tagFallback
+}
+
+// SetTagFallback will flip the TagFallback bool.
+func (g *GitHubData) SetTagFallback() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 
-	g.eTag = etag
-	g.releases = releases
+	g.tagFallback = !g.tagFallback
+}
+
+// Copy the ETag and Releases for the GitHubData.
+func (g *GitHubData) Copy(from *GitHubData) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	from.mutex.RLock()
+	defer from.mutex.RUnlock()
+
+	g.eTag = from.eTag
+	g.releases = from.releases
+	g.tagFallback = from.tagFallback
+
 }
 
 // isEqual will return a bool of whether this lookup is the same as `other` (excluding status).

@@ -15,6 +15,7 @@
 package latestver
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -170,7 +171,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, GetURL(l.URL, l.Type), nil)
+	req, err := http.NewRequest(http.MethodGet, l.GetURL(), nil)
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
 			l.URL, err)
@@ -211,10 +212,36 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	rawBody, err = io.ReadAll(resp.Body)
 	jLog.Error(err, *logFrom, err != nil)
 	if l.Type == "github" && err == nil {
-		newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
-		if l.GitHubData.ETag() != newETag {
-			jLog.Verbose("Potentially found new releases (ETag changed)", *logFrom, true)
+		// 200 - Resource has changed
+		if resp.StatusCode == http.StatusOK {
+			newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
 			l.GitHubData.SetETag(newETag)
+			// []byte{91, 93} == []byte("[]") == empty JSON array
+			if len(rawBody) == 2 && bytes.Equal(rawBody, []byte{91, 93}) {
+				// Update the default empty list ETag
+				setEmptyListETag(newETag)
+				// Flip the fallback flag
+				l.GitHubData.SetTagFallback()
+				if l.GitHubData.TagFallback() {
+					jLog.Verbose(fmt.Sprintf("/releases gave %v, trying /tags", string(rawBody)), *logFrom, true)
+					rawBody, err = l.httpRequest(logFrom)
+				}
+				// Has tags/releases
+			} else {
+				jLog.Verbose("Potentially found new releases (new ETag)", *logFrom, true)
+			}
+
+			// 304 - Resource has not changed
+		} else if resp.StatusCode == http.StatusNotModified {
+			// Didn't find any releases before and nothing's changed
+			if !l.GitHubData.hasReleases() {
+				// Flip the fallback flag
+				l.GitHubData.SetTagFallback()
+				if l.GitHubData.TagFallback() {
+					jLog.Verbose("no tags found on /releases, trying /tags", *logFrom, true)
+					rawBody, err = l.httpRequest(logFrom)
+				}
+			}
 		}
 	}
 	return

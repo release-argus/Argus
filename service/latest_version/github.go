@@ -48,7 +48,11 @@ func (l *Lookup) filterGitHubReleases(
 		var err error
 
 		// Check that TagName matches URLCommands
-		if tagName, err = l.URLCommands.Run(releases[i].TagName, *logFrom); err != nil {
+		tag := releases[i].TagName
+		if tag == "" {
+			tag = releases[i].Name
+		}
+		if tagName, err = l.URLCommands.Run(tag, *logFrom); err != nil {
 			continue
 		}
 
