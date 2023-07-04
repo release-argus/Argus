@@ -17,10 +17,13 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -381,5 +384,103 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
 				"approved_version", row.ApprovedVersion(), row, wantStatus[i].String())
 		}
+	}
+}
+
+func Test_UpdateColumnTypes(t *testing.T) {
+	// GIVEN a DB with the *_version columns as STRING/TEXT
+	tests := map[string]struct {
+		columnType string
+	}{
+		"No conversion necessary": {
+			columnType: "TEXT"},
+		"Conversion wanted": {
+			columnType: "STRING"},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			db, err := sql.Open("sqlite", "Test_UpdateColumnTypes.db")
+			defer os.Remove("Test_UpdateColumnTypes.db")
+			if err != nil {
+				t.Fatal(err)
+			}
+			sqlStmt := `
+				CREATE TABLE IF NOT EXISTS status (
+					id                         TYPE     NOT NULL PRIMARY KEY,
+					latest_version             TYPE     DEFAULT  '',
+					latest_version_timestamp   DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+					deployed_version           TYPE     DEFAULT  '',
+					deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+					approved_version           TYPE     DEFAULT  ''
+				);`
+			sqlStmt = strings.ReplaceAll(sqlStmt, "TYPE", tc.columnType)
+			_, err = db.Exec(sqlStmt)
+			// Add a row to the table
+			id := "keepMe"
+			latest_version, latest_version_timestamp := "0.0.3", "2020-01-02T01:01:01Z"
+			deployed_version, deployed_version_timestamp := "0.0.2", "2020-01-01T01:01:01Z"
+			approved_version := "0.0.1"
+			sqlStmt = `
+				INSERT OR REPLACE INTO status (
+					id,
+					latest_version,
+					latest_version_timestamp,
+					deployed_version,
+					deployed_version_timestamp,
+					approved_version
+				)
+				VALUES (
+					'` + id + `',
+					'` + latest_version + `',
+					'` + latest_version_timestamp + `',
+					'` + deployed_version + `',
+					'` + deployed_version_timestamp + `',
+					'` + approved_version + `'
+				);`
+			_, err = db.Exec(sqlStmt)
+
+			// WHEN updateTable is called
+			updateTable(db)
+
+			// THEN the id column and all *_version columns are now TEXT
+			wantTextColumns := []string{"id", "latest_version", "deployed_version", "approved_version"}
+			for _, row := range wantTextColumns {
+				var columnType string
+				db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType)
+				if columnType != "TEXT" {
+					t.Errorf("Expected %q to be %q, not %q",
+						row, "TEXT", columnType)
+				}
+			}
+			// AND all rows were carried over
+			got := queryRow(t, db, id)
+			if got.LatestVersion() != latest_version || got.LatestVersionTimestamp() != latest_version_timestamp ||
+				got.DeployedVersion() != deployed_version || got.DeployedVersionTimestamp() != deployed_version_timestamp ||
+				got.ApprovedVersion() != approved_version {
+				t.Errorf("Row wasn't carried over correctly.\nHad: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q\nGot: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q",
+					latest_version, latest_version_timestamp, deployed_version, deployed_version_timestamp, approved_version,
+					got.LatestVersion(), got.LatestVersionTimestamp(), got.DeployedVersion(), got.DeployedVersionTimestamp(), got.ApprovedVersion())
+			}
+			// AND the conversion was output to stdout
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = stdout
+			output := string(out)
+			want := "Finished updating column types"
+			contains := strings.Contains(output, want)
+			if tc.columnType == "TEXT" && contains {
+				t.Errorf("Table started as %q, so should not have been updated. Got %q",
+					tc.columnType, output)
+			} else if tc.columnType == "STRING" && !contains {
+				t.Errorf("Table started as %q, so should have been updated. Got %q",
+					tc.columnType, output)
+			}
+		})
 	}
 }
