@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/util"
 )
@@ -130,6 +130,14 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 				{Name: "0.0.1"},
 			}, want: []string{"0.99.0", "0.3.0", "0.0.1"},
 		},
+		"handle leading v's": {
+			usePreReleases: true,
+			releases: []github_types.Release{
+				{TagName: "0.99.0"},
+				{TagName: "v0.3.0"},
+				{TagName: "0.0.1"},
+			}, want: []string{"0.99.0", "v0.3.0", "0.0.1"},
+		},
 		"keep pre-releases": {
 			usePreReleases: true,
 			releases: []github_types.Release{
@@ -152,7 +160,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			releases: []github_types.Release{
 				{TagName: "0.99.0"},
 				{TagName: "0.3.0", PreRelease: true},
-				{TagName: "v0.2.0", PreRelease: true},
+				{TagName: "version 0.2.0", PreRelease: true},
 				{TagName: "0.0.1"},
 			}, want: []string{"0.99.0", "0.3.0", "0.0.1"},
 		},

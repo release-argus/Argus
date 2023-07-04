@@ -113,11 +113,16 @@ func TestLookup_Query(t *testing.T) {
 			url:      "https://release-argus.io",
 			regex:    "^bishbashbosh$",
 		},
+		"handle non-semantic (only major) version": {
+			noSemanticVersioning: false,
+			url:                  "https://release-argus.io",
+			regex:                "([0-9]+) The Argus Developers",
+		},
 		"want semantic versioning but get non-semantic version": {
 			noSemanticVersioning: false,
 			errRegex:             "failed converting .* to a semantic version",
 			url:                  "https://release-argus.io",
-			regex:                "([0-9]+) The Argus Developers",
+			regex:                "([0-9]+ )The Argus Developers",
 		},
 		"allow non-semantic versioning and get non-semantic version": {
 			noSemanticVersioning: true,
@@ -233,12 +238,22 @@ func TestLookup_Track(t *testing.T) {
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
-				Regex: `non-semantic: "([^"]+)`},
+				Regex: `non-semantic: ("[^"]+)`},
 			semanticVersioning:  true,
 			wantDatabaseMesages: 0,
 			wantAnnounces:       0,
 		},
 		"allow non-semantic version": {
+			startLatestVersion:  "v1.2.2",
+			wantDeployedVersion: "v1.2.2",
+			lookup: &Lookup{
+				URL:   "https://valid.release-argus.io/plain",
+				Regex: `non-semantic: "([^"]+)`},
+			semanticVersioning:  false,
+			wantDatabaseMesages: 1,
+			wantAnnounces:       1,
+		},
+		"allow non-semantic version (leading v's)": {
 			startLatestVersion:  "v1.2.2",
 			wantDeployedVersion: "v1.2.2",
 			lookup: &Lookup{
