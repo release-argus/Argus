@@ -43,12 +43,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			url:      "https://release-argus.invalid-tld",
 			errRegex: "no such host"},
 		"valid url": {
-			url:      "https://release-argus.io",
-			errRegex: "^$"},
+			url: "https://release-argus.io"},
 		"github token": {
 			url:         "release-argus/Argus",
-			accessToken: "foo", githubType: true,
-			errRegex: "^$"},
+			accessToken: "foo", githubType: true},
 	}
 
 	for name, tc := range tests {
@@ -67,6 +65,9 @@ func TestLookup_HTTPRequest(t *testing.T) {
 
 			// THEN any err is expected
 			e := util.ErrorToString(err)
+			if tc.errRegex == "" {
+				tc.errRegex = "^$"
+			}
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(e)
 			if !match {
@@ -93,6 +94,7 @@ func TestLookup_Query(t *testing.T) {
 		requireRegexVersion   string
 		requireCommand        []string
 		requireDockerCheck    *filter.DockerCheck
+		outputRegex           string
 		errRegex              string
 	}{
 		"invalid url": {
@@ -126,11 +128,6 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"regex content match": {
 			requireRegexContent: "v{{ version }}",
-			errRegex:            "^$",
-		},
-		"regex version mismatch": {
-			requireRegexVersion: "^v[0-9]+$",
-			errRegex:            "regex not matched on version",
 		},
 		"command fail": {
 			requireCommand: []string{"false"},
@@ -138,7 +135,6 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"command pass": {
 			requireCommand: []string{"true"},
-			errRegex:       "^$",
 		},
 		"docker tag mismatch": {
 			requireDockerCheck: filter.NewDockerCheck(
@@ -158,9 +154,8 @@ func TestLookup_Query(t *testing.T) {
 				"",
 				os.Getenv("GH_TOKEN"),
 				"", time.Now(), nil),
-			errRegex: "^$",
 		},
-		"regex version match": {
+		"regex version mismatch": {
 			requireRegexVersion: "v([0-9.]+)",
 			errRegex:            "regex not matched on version",
 		},
@@ -169,8 +164,7 @@ func TestLookup_Query(t *testing.T) {
 			errRegex: "regex .* didn't return any matches",
 		},
 		"valid semantic version query": {
-			regex:    stringPtr("v([0-9.]+)"),
-			errRegex: "^$",
+			regex: stringPtr("v([0-9.]+)"),
 		},
 		"older version found": {
 			regex:           stringPtr("([0-9.]+)"),
@@ -181,32 +175,32 @@ func TestLookup_Query(t *testing.T) {
 		"newer version found": {
 			regex:           stringPtr("([0-9.]+)"),
 			deployedVersion: "0.0.0",
-			errRegex:        "^$",
 		},
 		"same version found": {
 			regex:           stringPtr("([0-9.]+)"),
 			deployedVersion: "1.2.1",
-			errRegex:        "^$",
 		},
 		"no deployed version lookup": {
 			regex:             stringPtr("([0-9.]+)-beta"),
-			errRegex:          "^$",
 			wantLatestVersion: stringPtr("1.2.2"),
 		},
 		"non-semantic version lookup": {
 			regex:                 stringPtr("v[0-9.]+"),
-			errRegex:              "^$",
 			wantLatestVersion:     stringPtr("v1.2.2"),
 			nonSemanticVersioning: true,
 		},
 		"github lookup": {
 			githubService: true,
-			errRegex:      "^$",
+		},
+		"github lookup on repo that uses tags, not releases": {
+			githubService: true,
+			url:           "go-vikunja/api",
+			regex:         stringPtr("v([0-9.]+)"),
+			outputRegex:   `no tags found on /releases, trying /tags`,
 		},
 		"github lookup with no access token": {
 			githubService: true,
 			noAccessToken: true,
-			errRegex:      "^$",
 		},
 		"github lookup with failing urlCommand match": {
 			githubService: true,
@@ -226,6 +220,9 @@ func TestLookup_Query(t *testing.T) {
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
+				stdout := os.Stdout
+				r, w, _ := os.Pipe()
+				os.Stdout = w
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(!tc.githubService, tc.allowInvalidCerts)
@@ -256,7 +253,13 @@ func TestLookup_Query(t *testing.T) {
 				_, err := lookup.Query(true, &util.LogFrom{})
 
 				// THEN any err is expected
+				w.Close()
+				out, _ := io.ReadAll(r)
+				os.Stdout = stdout
 				e := util.ErrorToString(err)
+				if tc.errRegex == "" {
+					tc.errRegex = "^$"
+				}
 				re := regexp.MustCompile(tc.errRegex)
 				match := re.MatchString(e)
 				if !match {
@@ -270,6 +273,15 @@ func TestLookup_Query(t *testing.T) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
+				// AND the output contains the expected strings
+				output := string(out)
+				re = regexp.MustCompile(tc.outputRegex)
+				match = re.MatchString(output)
+				if !match {
+					t.Fatalf("match for %q not found in:\n%q",
+						tc.outputRegex, output)
+				}
+				// AND the LatestVersion is as expected
 				if tc.wantLatestVersion != nil &&
 					*tc.wantLatestVersion != lookup.Status.LatestVersion() {
 					t.Fatalf("wanted LatestVersion to become %q, not %q",
@@ -277,6 +289,60 @@ func TestLookup_Query(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
+	// Lock so that default empty list ETag isn't changed by other tests
+	emptyListETagTestMutex.Lock()
+	defer emptyListETagTestMutex.Unlock()
+	invalidETag := "123"
+
+	// GIVEN a Lookup
+	try := 0
+	temporaryFailureInNameResolution := true
+	for temporaryFailureInNameResolution != false {
+		stdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+		try++
+		setEmptyListETag(invalidETag)
+		temporaryFailureInNameResolution = false
+		lookup := testLookup(false, false)
+		lookup.URL = "go-vikunja/api"
+		lookup.URLCommands[0].Regex = stringPtr("v([0-9.]+)")
+
+		// WHEN Query is called on it
+		_, err := lookup.Query(true, &util.LogFrom{})
+
+		// THEN any err is expected
+		w.Close()
+		out, _ := io.ReadAll(r)
+		os.Stdout = stdout
+		e := util.ErrorToString(err)
+		errRegex := "^$"
+		re := regexp.MustCompile(errRegex)
+		match := re.MatchString(e)
+		if !match {
+			if strings.Contains(e, "context deadline exceeded") {
+				temporaryFailureInNameResolution = true
+				if try != 3 {
+					time.Sleep(time.Second)
+					continue
+				}
+			}
+			t.Fatalf("want match for %q\nnot: %q",
+				errRegex, e)
+		}
+		// AND the output contains the expected strings
+		output := string(out)
+		wantOutputRegex := `/releases gave \[\], trying /tags`
+		re = regexp.MustCompile(wantOutputRegex)
+		match = re.MatchString(output)
+		if !match {
+			t.Fatalf("match for %q not found in:\n%q",
+				wantOutputRegex, output)
+		}
 	}
 }
 
@@ -343,7 +409,8 @@ no releases were found matching the url_commands and/or require`},
 
 			// THEN any err is expected
 			w.Close()
-			out, _ := io.ReadAll(r)
+			o, _ := io.ReadAll(r)
+			out := string(o)
 			os.Stdout = stdout
 			tc.errRegex = strings.ReplaceAll(tc.errRegex, "\n", "--")
 			re := regexp.MustCompile(tc.errRegex)
@@ -352,12 +419,12 @@ no releases were found matching the url_commands and/or require`},
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, errors)
 			}
-			gotETagChanged := strings.Count(string(out), "ETag changed")
+			gotETagChanged := strings.Count(out, "new ETag")
 			if gotETagChanged != tc.eTagChanged {
-				t.Errorf("ETag changed - got=%d, want=%d\n%s",
+				t.Errorf("new ETag - got=%d, want=%d\n%s",
 					gotETagChanged, tc.eTagChanged, out)
 			}
-			gotETagUnchangedUseCache := strings.Count(string(out), "Using cached releases")
+			gotETagUnchangedUseCache := strings.Count(out, "Using cached releases")
 			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
 				t.Errorf("ETag unchanged use cache - got=%d, want=%d\n%s",
 					gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, out)

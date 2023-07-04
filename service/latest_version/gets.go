@@ -69,11 +69,17 @@ func (l *Lookup) GetUsePreRelease() bool {
 }
 
 // GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
-func GetURL(url string, urlType string) string {
-	if urlType == "github" {
+func (l *Lookup) GetURL() string {
+	url := l.URL
+	if l.Type == "github" {
 		// Convert "owner/repo" to the API path.
 		if strings.Count(url, "/") == 1 {
-			url = fmt.Sprintf("https://api.github.com/repos/%s/releases", url)
+			apiTarget := "releases"
+			if l.GitHubData.TagFallback() {
+				apiTarget = "tags"
+			}
+			url = fmt.Sprintf("https://api.github.com/repos/%s/%s",
+				url, apiTarget)
 		}
 	}
 	return url

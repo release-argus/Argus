@@ -43,7 +43,7 @@ func (l *Lookup) Init(
 	options *opt.Options,
 ) {
 	if l.Type == "github" {
-		l.GitHubData = &GitHubData{}
+		l.GitHubData = NewGitHubData("", nil)
 	}
 
 	l.Defaults = defaults

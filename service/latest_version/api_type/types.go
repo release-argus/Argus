@@ -24,6 +24,7 @@ type Release struct {
 	URL             string          `json:"url,omitempty"`
 	AssetsURL       string          `json:"assets_url,omitempty"`
 	SemanticVersion *semver.Version `json:"-"`
+	Name            string          `json:"name,omitempty"` // This is the tag name on /tags queries
 	TagName         string          `json:"tag_name,omitempty"`
 	PreRelease      bool            `json:"prerelease,omitempty"`
 	Assets          []Asset         `json:"assets,omitempty"`

@@ -262,3 +262,50 @@ func TestLookup_GetUsePreRelease(t *testing.T) {
 		})
 	}
 }
+
+func TestLookup_GetURL(t *testing.T) {
+	// GIVEN a Lookup
+	tests := map[string]struct {
+		urlType     bool
+		url         string
+		tagFallback bool
+		want        string
+	}{
+		"type=url": {
+			urlType: true,
+			url:     "https://release-argus.io",
+			want:    "https://release-argus.io",
+		},
+		"type=github": {
+			url:  "release-argus/Argus",
+			want: "https://api.github.com/repos/release-argus/Argus/releases",
+		},
+		"type=github, tagFallback": {
+			url:         "release-argus/Argus",
+			tagFallback: true,
+			want:        "https://api.github.com/repos/release-argus/Argus/tags",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(tc.urlType, false)
+			lookup.URL = tc.url
+			if !tc.urlType {
+				lookup.GitHubData.tagFallback = tc.tagFallback
+			}
+
+			// WHEN GetURL is called
+			got := lookup.GetURL()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("\nwant: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
