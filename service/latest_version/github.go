@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/util"
 )
@@ -90,7 +90,7 @@ func insertionSort(release github_types.Release, filteredReleases *[]github_type
 	n := len(*filteredReleases)
 	// find the insertion point
 	i := sort.Search(n, func(index int) bool {
-		return (*filteredReleases)[index].SemanticVersion.LessThan(*release.SemanticVersion)
+		return (*filteredReleases)[index].SemanticVersion.LessThan(release.SemanticVersion)
 	})
 
 	// append an empty release to the end of the slice

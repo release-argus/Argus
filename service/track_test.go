@@ -188,8 +188,15 @@ func TestService_Track(t *testing.T) {
 			wantLatestVersion: "", wantDeployedVersion: "",
 			wantAnnounces: 0, wantDatabaseMesages: 0,
 		},
+		"handle leading v's": {
+			urlRegex: "v[0-9.]+", livenessMetric: 1, nilRequire: true,
+			startLatestVersion: "", startDeployedVersion: "",
+			wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
+			wantAnnounces:       1, // announce: 1 for latest query
+			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+		},
 		"non-semantic version fail": {
-			urlRegex: "v[0-9.]+", livenessMetric: 3, nilRequire: true,
+			urlRegex: `"v[0-9.]+`, livenessMetric: 3, nilRequire: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
 			wantAnnounces: 0, wantDatabaseMesages: 0,

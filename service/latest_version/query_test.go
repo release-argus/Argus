@@ -103,14 +103,13 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"query that gets a non-semantic version": {
 			url:      "https://valid.release-argus.io/plain",
-			regex:    stringPtr("v[0-9.]+"),
+			regex:    stringPtr(`"v[0-9.]+`),
 			errRegex: "failed converting .* to a semantic version",
 		},
 		"query on self-signed https works when allowed": {
 			url:               "https://invalid.release-argus.io/plain",
 			regex:             stringPtr("v[0-9.]+"),
 			allowInvalidCerts: true,
-			errRegex:          "failed converting .* to a semantic version",
 		},
 		"query on self-signed https fails when not allowed": {
 			url:               "https://invalid.release-argus.io/plain",

@@ -15,7 +15,7 @@
 package types
 
 import (
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/release-argus/Argus/util"
 )
 

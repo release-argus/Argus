@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
@@ -193,7 +193,7 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 		latestVersionSV, _ := semver.NewVersion(latestVersion)
 
 		// Update LatestVersion to DeployedVersion if it's newer
-		if latestVersionSV.LessThan(*deployedVersionSV) {
+		if latestVersionSV.LessThan(deployedVersionSV) {
 			l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
 			l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
 			l.Status.AnnounceQueryNewVersion()

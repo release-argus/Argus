@@ -19,13 +19,14 @@ package types
 import (
 	"testing"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 )
 
 func TestRelease_String(t *testing.T) {
 	tests := map[string]struct {
-		release *Release
-		want    string
+		release                  *Release
+		release_semantic_version string
+		want                     string
 	}{
 		"nil": {
 			release: nil,
@@ -40,20 +41,24 @@ func TestRelease_String(t *testing.T) {
 			want: `{"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"},{"id":2,"name":"test2"}]}`},
 		"all fields defined": {
 			release: &Release{
-				URL:             "https://test.com",
-				AssetsURL:       "https://test.com/assets",
-				SemanticVersion: &semver.Version{Major: 1, Minor: 2, Patch: 3},
-				TagName:         "v1.2.3",
-				PreRelease:      true,
+				URL:        "https://test.com",
+				AssetsURL:  "https://test.com/assets",
+				TagName:    "v1.2.3",
+				PreRelease: true,
 				Assets: []Asset{
 					{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"}}},
-			want: `{"url":"https://test.com","assets_url":"https://test.com/assets","tag_name":"v1.2.3","prerelease":true,"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}]}`},
+			release_semantic_version: "1.2.3",
+			want:                     `{"url":"https://test.com","assets_url":"https://test.com/assets","tag_name":"v1.2.3","prerelease":true,"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}]}`},
 	}
 
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			if tc.release_semantic_version != "" {
+				tc.release.SemanticVersion, _ = semver.NewVersion(tc.release_semantic_version)
+			}
 
 			// WHEN the Release is stringified with String
 			got := tc.release.String()

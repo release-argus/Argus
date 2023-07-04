@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/Masterminds/semver/v3"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
@@ -68,7 +68,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 					// newVersion = 1.2.9
 					// oldVersion = 1.2.10
 					// return false (don't notify anything and stay on oldVersion)
-					if newVersion.LessThan(*oldVersion) {
+					if newVersion.LessThan(oldVersion) {
 						err := fmt.Errorf("queried version %q is less than the deployed version %q",
 							version, l.Status.LatestVersion())
 						jLog.Warn(err, *logFrom, true)
