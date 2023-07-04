@@ -87,17 +87,18 @@ func (api *api) initialise() {
 
 	// Create the table
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS status
-		(
-			id STRING NOT NULL PRIMARY KEY,
-			latest_version STRING DEFAULT '',
-			latest_version_timestamp DATETIME DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-			deployed_version STRING DEFAULT '',
-			deployed_version_timestamp DATETIME DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-			approved_version STRING DEFAULT ''
+		CREATE TABLE IF NOT EXISTS status (
+			id                         TEXT     NOT NULL PRIMARY KEY,
+			latest_version             TEXT     DEFAULT  '',
+			latest_version_timestamp   DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+			deployed_version           TEXT     DEFAULT  '',
+			deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+			approved_version           TEXT     DEFAULT  ''
 		);`
 	_, err = db.Exec(sqlStmt)
 	jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+
+	updateTable(db)
 
 	api.db = db
 }
@@ -168,4 +169,46 @@ func (api *api) extractServiceStatus() {
 		fmt.Sprintf("extractServiceStatus: %s", util.ErrorToString(err)),
 		*logFrom,
 		err != nil)
+}
+
+// updateTable will update the table for the latest version
+func updateTable(db *sql.DB) {
+	// Get the type of the *_version columns
+	var columnType string
+	err := db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType)
+	jLog.Fatal(fmt.Sprintf("updateTable: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	// Update if the column type is not TEXT
+	if columnType != "TEXT" {
+		jLog.Verbose("Updating column types", *logFrom, true)
+		updateColumnTypes(db)
+		jLog.Verbose("Finished updating column types", *logFrom, true)
+	}
+}
+
+// updateColumnTypes will recreate the table with the correct column types
+func updateColumnTypes(db *sql.DB) {
+	// Create the new table
+	sqlStmt := `
+		CREATE TABLE IF NOT EXISTS status_backup (
+			id                         TEXT     NOT NULL PRIMARY KEY,
+			latest_version             TEXT     DEFAULT  '',
+			latest_version_timestamp   DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+			deployed_version           TEXT     DEFAULT  '',
+			deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+			approved_version           TEXT     DEFAULT  ''
+		);`
+	_, err := db.Exec(sqlStmt)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - create: %s", util.ErrorToString(err)), *logFrom, err != nil)
+
+	// Copy the data from the old table to the new table
+	_, err = db.Exec(`INSERT INTO status_backup SELECT * FROM status;`)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - copy: %s", util.ErrorToString(err)), *logFrom, err != nil)
+
+	// Drop the table
+	_, err = db.Exec("DROP TABLE status;")
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - drop: %s", util.ErrorToString(err)), *logFrom, err != nil)
+
+	// Rename the new table to the old table
+	_, err = db.Exec("ALTER TABLE status_backup RENAME TO status;")
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - rename: %s", util.ErrorToString(err)), *logFrom, err != nil)
 }

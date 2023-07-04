@@ -39,11 +39,11 @@ func TestAPI_UpdateRow(t *testing.T) {
 				{Column: "latest_version",
 					Value: "9.9.9"}},
 		},
-		// "trailing 0 is kept": {
-		// 	target: "keep0",
-		// 	cells: []dbtype.Cell{
-		// 		{Column: "latest_version",
-		// 			Value: "1.20"}}},
+		"trailing 0 is kept": {
+			target: "keep0",
+			cells: []dbtype.Cell{
+				{Column: "latest_version",
+					Value: "1.20"}}},
 		"update multiple columns of a row": {
 			target: "keep0",
 			cells: []dbtype.Cell{
