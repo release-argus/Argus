@@ -88,20 +88,29 @@ export default function reducerMonitor(
 
         case "INIT":
           // Check we have the service
-          if (state.service[id] === undefined) return state;
+          if (
+            state.service[id] === undefined ||
+            action.service_data?.status === undefined
+          )
+            return state;
+
+          state.service[id].status = state.service[id].status || {};
 
           // latest_version
-          state.service[id].status!.deployed_version =
-            action.service_data?.status?.latest_version;
           state.service[id].status!.latest_version =
             action.service_data?.status?.latest_version;
-
-          // latest_version_timestamp
-          state.service[id].status!.deployed_version_timestamp =
-            action.service_data?.status?.latest_version_timestamp;
           state.service[id].status!.latest_version_timestamp =
             action.service_data?.status?.latest_version_timestamp;
+          // last_queried
           state.service[id].status!.last_queried =
+            action.service_data?.status?.latest_version_timestamp;
+
+          // deployed_version
+          state.service[id].status!.deployed_version =
+            state.service[id].status!.deployed_version ||
+            action.service_data?.status?.latest_version;
+          state.service[id].status!.deployed_version_timestamp =
+            state.service[id].status!.deployed_version_timestamp ||
             action.service_data?.status?.latest_version_timestamp;
 
           // url
