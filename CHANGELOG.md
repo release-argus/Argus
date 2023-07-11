@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0](https://github.com/release-argus/Argus/compare/0.12.1...0.13.0) (2023-07-11)
+
+
+### Features
+
+* **service:** add /tags fallback to github services ([207e610](https://github.com/release-argus/Argus/commits/207e610793b4660811b51760418a24ed36720052)), closes [#275](https://github.com/release-argus/Argus/issues/275)
+* **service:** default service notify/command/webhook ([08eb05f](https://github.com/release-argus/Argus/commits/08eb05ff7ecc6ceb235704eb9943a3ea2294b929))
+* **service:** support leading v in versions (e.g. v1.2.3) ([bdab68d](https://github.com/release-argus/Argus/commits/bdab68daa9f085ae3b3fd617bd6b10ae52aa7d0f))
+* **web:** lv url-commands, add regex index field ([#274](https://github.com/release-argus/Argus/issues/274)) ([7def08c](https://github.com/release-argus/Argus/commits/7def08c65be748fab603506e8d7e83cf1be1dab8))
+
+
+### Bug Fixes
+
+* **db:** switch to text for versions to keep trailing 0's ([7289ce9](https://github.com/release-argus/Argus/commits/7289ce9f5cb1aae0d658d2ec5c69b77f52daa4fe))
+* **notify:** missing defaults for shoutrrr type ([4bdbf17](https://github.com/release-argus/Argus/commits/4bdbf172f220fb3706a9aaed66d89d2b46b94501))
+* **web:** allow skip when command/webhook blocked by delay ([4436d38](https://github.com/release-argus/Argus/commits/4436d3828f1f4e89456ccea97a41b485bd9f1efb))
+* **web:** compare previous `semantic_version` state in version refreshes ([3414a24](https://github.com/release-argus/Argus/commits/3414a2432487834c7bc1629448d182b665138eb3)), closes [#279](https://github.com/release-argus/Argus/issues/279)
+
 ### [0.12.1](https://github.com/release-argus/Argus/compare/0.12.0...0.12.1) (2023-06-19)
 
 
