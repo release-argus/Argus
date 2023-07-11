@@ -193,8 +193,10 @@ const ActionReleaseModal = () => {
         "ARGUS_SKIP",
       ].includes(target);
 
-      // don't allow unspecific targets if currently sending this service
-      if (!(!canSendUnspecific && unspecificTarget)) {
+      // don't allow unspecific non-skip targets if currently sending this service
+      if (
+        !(!canSendUnspecific && unspecificTarget && target !== "ARGUS_SKIP")
+      ) {
         console.log(`Approving ${modal.service.id} - ${target}`);
         let approveTarget = target;
         if (!unspecificTarget)
@@ -396,7 +398,10 @@ const ActionReleaseModal = () => {
           id="modal-action"
           variant="primary"
           onClick={() => {
-            if (!canSendUnspecific) {
+            if (
+              !["SKIP", "SKIP_NO_WH"].includes(modal.actionType) &&
+              !canSendUnspecific
+            ) {
               hideModal();
               return;
             }
@@ -414,12 +419,12 @@ const ActionReleaseModal = () => {
                 break;
             }
           }}
-          disabled={modal.actionType === "SKIP" && isSendingThisService}
+          disabled={modal.actionType !== "SKIP" && isSendingThisService}
         >
-          {!canSendUnspecific
-            ? "Done"
-            : modal.actionType === "SKIP" || modal.actionType === "SKIP_NO_WH"
+          {modal.actionType === "SKIP" || modal.actionType === "SKIP_NO_WH"
             ? "Skip release"
+            : !canSendUnspecific
+            ? "Done"
             : modal.actionType === "RESEND"
             ? "Resend all"
             : modal.actionType === "SEND"
