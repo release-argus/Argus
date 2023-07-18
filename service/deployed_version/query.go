@@ -16,7 +16,6 @@ package deployedver
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -62,35 +61,11 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	var version string
 	// If JSON is provided, use it to extract the version.
 	if l.JSON != "" {
-		jsonKeys := strings.Split(l.JSON, ".")
-		var queriedJSON map[string]interface{}
-		err := json.Unmarshal(rawBody, &queriedJSON)
-		// If the JSON is invalid, return an error.
+		version, err = util.GetValueByKey(rawBody, l.JSON, l.URL)
 		if err != nil {
-			err := fmt.Errorf("failed to unmarshal the following from %q into json:%s",
-				l.URL, string(rawBody))
 			jLog.Error(err, *logFrom, true)
+			//nolint:wrapcheck
 			return "", err
-		}
-
-		// Iterate through the keys.
-		for k := range jsonKeys {
-			// If the key doesn't exist, return an error.
-			if queriedJSON[jsonKeys[k]] == nil {
-				err := fmt.Errorf("%q could not be found in the following JSON. Failed at %q:\n%s",
-					l.JSON, jsonKeys[k], string(rawBody))
-				jLog.Warn(err, *logFrom, true)
-				return "", err
-			}
-
-			switch v := queriedJSON[jsonKeys[k]].(type) {
-			// If the key is a string, int, float32, or float64, return it.
-			case string, int, float32, float64:
-				version = fmt.Sprint(queriedJSON[jsonKeys[k]])
-				// If the key is a map, set it as the queriedJSON.
-			case map[string]interface{}:
-				queriedJSON = v
-			}
 		}
 	} else {
 		// Use the whole body if not parsing as JSON.

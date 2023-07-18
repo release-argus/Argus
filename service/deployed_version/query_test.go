@@ -85,7 +85,7 @@ func TestLookup_Query(t *testing.T) {
 		wantVersion          string
 	}{
 		"JSON lookup that doesn't resolve": {
-			errRegex: "could not be found in the following JSON",
+			errRegex: `failed to find value for \"[^"]+\" in `,
 			url:      "https://api.github.com/repos/release-argus/argus/releases/latest",
 			json:     "something",
 		},

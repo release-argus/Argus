@@ -33,10 +33,17 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 			util.ErrorToString(errs), prefix)
 	}
 
-	// RegEx
-	_, err := regexp.Compile(l.Regex)
+	// JSON
+	_, err := util.ParseKeys(l.JSON)
 	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: %q <invalid> (Invalid RegEx)\\",
+		errs = fmt.Errorf("%s%s  json: %q <invalid> - %s\\",
+			util.ErrorToString(errs), prefix, l.JSON, err.Error())
+	}
+
+	// RegEx
+	_, err = regexp.Compile(l.Regex)
+	if err != nil {
+		errs = fmt.Errorf("%s%s  regex: %q <invalid>\\",
 			util.ErrorToString(errs), prefix, l.Regex)
 	}
 

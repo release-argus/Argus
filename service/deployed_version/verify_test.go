@@ -27,6 +27,7 @@ func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
 		url        string
+		json       string
 		regex      string
 		defaults   *LookupDefaults
 		errRegex   string
@@ -45,6 +46,11 @@ func TestLookup_CheckValues(t *testing.T) {
 		"no url": {
 			errRegex: `url: <required>`,
 			url:      "",
+			defaults: &LookupDefaults{},
+		},
+		"invalid json - string in square brackets": {
+			errRegex: `json: .* <invalid>`,
+			json:     "foo[bar]",
 			defaults: &LookupDefaults{},
 		},
 		"invalid regex": {
@@ -73,6 +79,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			lookup := &Lookup{}
 			lookup = testLookup()
 			lookup.URL = tc.url
+			lookup.JSON = tc.json
 			lookup.Regex = tc.regex
 			lookup.Defaults = nil
 			if tc.defaults != nil {
