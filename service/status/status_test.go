@@ -22,7 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	dbtype "github.com/release-argus/Argus/db/types"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 func TestStatus_Init(t *testing.T) {
@@ -245,12 +247,20 @@ func TestStatus_DeployedVersion(t *testing.T) {
 			deploying:       approvedVersion,
 			approvedVersion: "",
 			deployedVersion: approvedVersion,
-			latestVersion:   latestVersion},
+			latestVersion:   latestVersion,
+		},
 		"Deploying unknown Version - DeployedVersion becomes this version": {
 			deploying:       "0.0.4",
 			approvedVersion: approvedVersion,
 			deployedVersion: "0.0.4",
-			latestVersion:   latestVersion},
+			latestVersion:   latestVersion,
+		},
+		"Deploying LatestVersion - DeployedVersion becomes this version": {
+			deploying:       latestVersion,
+			approvedVersion: approvedVersion,
+			deployedVersion: latestVersion,
+			latestVersion:   latestVersion,
+		},
 	}
 
 	for name, tc := range tests {
@@ -264,7 +274,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				"", "", "", "", "", "")
 			status.Init(
 				0, 0, 0,
-				stringPtr("test-service"),
+				&name,
 				stringPtr("http://example.com"))
 			status.SetApprovedVersion(approvedVersion, false)
 			status.SetDeployedVersion(deployedVersion, false)
@@ -286,12 +296,22 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				t.Errorf("Expected LatestVersion to be set to %q, not %q",
 					tc.latestVersion, status.LatestVersion())
 			}
-			// and the current time
+			// AND the DeployedVersionTimestamp is set to current time
 			d, _ := time.Parse(time.RFC3339, status.DeployedVersionTimestamp())
 			since := time.Since(d)
 			if since > time.Second {
 				t.Errorf("DeployedVersionTimestamp was %v ago, not recent enough!",
 					since)
+			}
+			// AND the LatestVersionIsDeployedVersion metric is updated
+			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
+			want := float64(0)
+			if status.LatestVersion() == status.DeployedVersion() {
+				want = 1
+			}
+			if got != want {
+				t.Errorf("LatestVersionIsDeployedVersion metric should be %f, not %f",
+					want, got)
 			}
 		})
 	}
@@ -312,7 +332,14 @@ func TestStatus_LatestVersion(t *testing.T) {
 			deploying:       "0.0.4",
 			approvedVersion: approvedVersion,
 			deployedVersion: deployedVersion,
-			latestVersion:   "0.0.4"},
+			latestVersion:   "0.0.4",
+		},
+		"Set LatestVersion to DeployedVersion": {
+			deploying:       deployedVersion,
+			approvedVersion: approvedVersion,
+			deployedVersion: deployedVersion,
+			latestVersion:   deployedVersion,
+		},
 	}
 
 	for name, tc := range tests {
@@ -324,7 +351,10 @@ func TestStatus_LatestVersion(t *testing.T) {
 			status := New(
 				nil, &dbChannel, nil,
 				"", "", "", "", "", "")
-			status.ServiceID = stringPtr("test-service")
+			status.Init(
+				0, 0, 0,
+				&name,
+				stringPtr("http://example.com"))
 			status.SetApprovedVersion(approvedVersion, false)
 			status.SetDeployedVersion(deployedVersion, false)
 			status.SetLatestVersion(latestVersion, false)
@@ -345,10 +375,20 @@ func TestStatus_LatestVersion(t *testing.T) {
 				t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
 					tc.approvedVersion, status.ApprovedVersion())
 			}
-			// and the current time
+			// AND the LatestVersionTimestamp is set to the current time
 			if status.LatestVersionTimestamp() != status.LastQueried() {
 				t.Errorf("LatestVersionTimestamp should've been set to LastQueried \n%q, not \n%q",
 					status.LastQueried(), status.LatestVersionTimestamp())
+			}
+			// AND the LatestVersionIsDeployedVersion metric is updated
+			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
+			want := float64(0)
+			if status.LatestVersion() == status.DeployedVersion() {
+				want = 1
+			}
+			if got != want {
+				t.Errorf("LatestVersionIsDeployedVersion metric should be %f, not %f",
+					want, got)
 			}
 		})
 	}
@@ -803,6 +843,51 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
+	// GIVEN a Status
+	tests := map[string]struct {
+		latestVersion   string
+		deployedVersion string
+		want            float64
+	}{
+		"latest version is deployed": {
+			latestVersion:   "1.2.3",
+			deployedVersion: "1.2.3",
+			want:            1,
+		},
+		"latest version is not deployed": {
+			latestVersion:   "1.2.3",
+			deployedVersion: "1.2.4",
+			want:            0,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			status := Status{}
+			status.Init(
+				0, 0, 0,
+				&name,
+				stringPtr("http://example.com"))
+			status.SetLatestVersion(tc.latestVersion, false)
+			status.SetDeployedVersion(tc.deployedVersion, false)
+
+			// WHEN setLatestVersion is called on it
+			status.setLatestVersionIsDeployedMetric()
+			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
+
+			// THEN the metric is as expected
+			if got != tc.want {
+				t.Errorf("Expected SetLatestVersionIsDeployedMetric to be %f, not %f",
+					tc.want, got)
 			}
 		})
 	}
