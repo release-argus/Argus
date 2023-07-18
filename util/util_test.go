@@ -17,9 +17,11 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -1216,6 +1218,270 @@ func TestStringToPointer(t *testing.T) {
 			if *got != *tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					*tc.want, *got)
+			}
+		})
+	}
+}
+
+func TestParseKeys(t *testing.T) {
+	// GIVEN a JSON key string
+	tests := map[string]struct {
+		input    string
+		want     []interface{}
+		errRegex string
+	}{
+		"empty string": {
+			input: "",
+			want:  []interface{}{},
+		},
+		"single key": {
+			input: "foo",
+			want:  []interface{}{"foo"},
+		},
+		"multiple keys": {
+			input: "foo.bar",
+			want:  []interface{}{"foo", "bar"},
+		},
+		"multiple keys with array": {
+			input: "foo.bar[1]",
+			want:  []interface{}{"foo", "bar", 1},
+		},
+		"multiple keys with array of objects": {
+			input: "foo.bar[1].baz",
+			want:  []interface{}{"foo", "bar", 1, "baz"},
+		},
+		"multiple keys with array of arrays": {
+			input: "foo.bar[1][2]",
+			want:  []interface{}{"foo", "bar", 1, 2},
+		},
+		"multiple keys with array of arrays of objects": {
+			input: "foo.bar[1][2].baz",
+			want:  []interface{}{"foo", "bar", 1, 2, "baz"},
+		},
+		"multiple keys with array of arrays of objects with array": {
+			input: "foo.bar[1][2].baz[3]",
+			want:  []interface{}{"foo", "bar", 1, 2, "baz", 3},
+		},
+		"non-int index": {
+			input:    "foo.bar[1.1][2].baz[3]",
+			want:     []interface{}{"foo", "bar"},
+			errRegex: `failed to parse index "1.1" in `,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN ParseKeys is called
+			got, err := ParseKeys(tc.input)
+
+			// THEN the keys are returned correctly
+			if len(got) != len(tc.want) {
+				t.Fatalf("different amount of keys returned\nwant: %v\ngot:  %v",
+					tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("wrong key - %d\nwant: %v\ngot:  %v",
+						i, tc.want, got)
+				}
+			}
+			// AND the error is returned correctly
+			if tc.errRegex == "" {
+				tc.errRegex = `^$`
+			}
+			e := ErrorToString(err)
+			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+				t.Errorf("want error matching %q, got %q",
+					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestNavigateJSON(t *testing.T) {
+	// GIVEN a JSON string
+	tests := map[string]struct {
+		input    string
+		key      string
+		want     string
+		errRegex string
+	}{
+		"empty key": {
+			input:    `{ "foo": "bar" }`,
+			key:      "",
+			errRegex: "no key was given",
+		},
+		"object not found": {
+			input:    "{}",
+			key:      "foo",
+			errRegex: `failed to find value for "[^"]+" in `,
+		},
+		"simple JSON": {
+			input: `{"foo": "bar"}`,
+			key:   "foo",
+			want:  "bar",
+		},
+		"multi-level JSON": {
+			input: `{"foo": {"bar": "baz"}}`,
+			key:   "foo.bar",
+			want:  "baz",
+		},
+		"multi-level JSON with array": {
+			input: `{"foo": {"bar": ["baz", "bish"]}}`,
+			key:   "foo.bar[1]",
+			want:  "bish",
+		},
+		"multi-level JSON with array of objects": {
+			input: `{"foo": {"bar": [{"baz": "bish"}, {"bash": "quuz"}]}}`,
+			key:   "foo.bar[1].bash",
+			want:  "quuz",
+		},
+		"multi-level JSON with array of arrays": {
+			input: `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:   "foo.bar[1][1]",
+			want:  "quuz",
+		},
+		"negative index": {
+			input: `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:   "foo.bar[-1][1]",
+			want:  "quuz",
+		},
+		"fail: index of map": {
+			input:    `{"foo": {"bar": {"baz": "bish"}}}`,
+			key:      "foo.bar[1]",
+			errRegex: "got a map, but the key is not a string",
+		},
+		"fail: non-int index": {
+			input:    `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:      "foo.bar.bar",
+			errRegex: "got an array, but the key is not an integer index",
+		},
+		"fail: index out of range": {
+			input:    `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:      "foo.bar[1][2]",
+			errRegex: `index \d \([^)]+\) out of range`,
+		},
+		"fail: index out of range (negative)": {
+			input:    `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:      "foo.bar[-4][3]",
+			errRegex: `index -\d \([^)]+\) out of range`,
+		},
+		"fail: got value instead of object": {
+			input:    `{"foo": {"bar": "baz"}}`,
+			key:      "foo.bar.baz",
+			errRegex: `got a value of "[^"]+" at "[^"]+", but there are more keys to navigate`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var jsonData interface{}
+			err := json.Unmarshal([]byte(tc.input), &jsonData)
+
+			// WHEN navigateJSON is called
+			got, err := navigateJSON(&jsonData, tc.key)
+
+			// THEN the value is returned correctly
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+			// AND the error is returned correctly
+			if tc.errRegex == "" {
+				tc.errRegex = `^$`
+			}
+			e := ErrorToString(err)
+			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+				t.Errorf("want error matching %q, got %q",
+					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestGetValueByKey(t *testing.T) {
+	// GIVEN a JSON string
+	tests := map[string]struct {
+		input    string
+		key      string
+		want     string
+		errRegex string
+	}{
+		"fail unmarshal": {
+			input:    "{",
+			key:      "foo",
+			errRegex: "failed to unmarshal the following from",
+		},
+		"empty key": {
+			input: `{ "foo": "bar" }`,
+			key:   "",
+			want:  "__root",
+		},
+		"object not found": {
+			input:    "{}",
+			key:      "foo",
+			errRegex: `failed to find value for "[^"]+" in `,
+		},
+		"simple JSON": {
+			input: `{"foo": "bar"}`,
+			key:   "foo",
+			want:  "bar",
+		},
+		"multi-level JSON": {
+			input: `{"foo": {"bar": "baz"}}`,
+			key:   "foo.bar",
+			want:  "baz",
+		},
+		"negative index": {
+			input: `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:   "foo.bar[-1][1]",
+			want:  "quuz",
+		},
+		"fail: index out of range": {
+			input:    `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:      "foo.bar[1][2]",
+			errRegex: `index \d \([^)]+\) out of range`,
+		},
+		"fail: index out of range (negative)": {
+			input:    `{"foo": {"bar": [["baz", "bish"], ["bash", "quuz"]]}}`,
+			key:      "foo.bar[-4][3]",
+			errRegex: `index -\d \([^)]+\) out of range`,
+		},
+		"fail: got value instead of object": {
+			input:    `{"foo": {"bar": "baz"}}`,
+			key:      "foo.bar.baz",
+			errRegex: `got a value of "[^"]+" at "[^"]+", but there are more keys to navigate`,
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN GetValueByKey is called
+			got, err := GetValueByKey([]byte(tc.input), tc.key, "https://release-argus.com")
+
+			// THEN the value is returned correctly
+			tc.want = strings.ReplaceAll(tc.want, "__root", tc.input)
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+			// AND the error is returned correctly
+			if tc.errRegex == "" {
+				tc.errRegex = `^$`
+			}
+			e := ErrorToString(err)
+			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
+				t.Errorf("want error matching %q, got %q",
+					tc.errRegex, e)
 			}
 		})
 	}

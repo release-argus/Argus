@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -283,6 +284,138 @@ func getKeysFromJSONBytes(data []byte, prefix string) (keys []string) {
 	// sort keys
 	sort.Strings(keys)
 	return
+}
+
+// ParseKeys will return the JSON keys in the string.
+func ParseKeys(key string) (keys []interface{}, err error) {
+	// Split the key into individual components
+	// Example: "foo.bar[1].bash" => ["foo", "bar", "1", "bash"]
+	keyCount := strings.Count(key, ".") + strings.Count(key, "[")
+	keys = make([]interface{}, 0, keyCount+1)
+	keyStrLength := len(key)
+	i := 0
+
+	for i < keyStrLength {
+		switch key[i] {
+		case '.':
+			// Handle dot notation
+			i++
+		case '[':
+			// Handle array notation
+			i++
+			start := i
+			for i < keyStrLength && key[i] != ']' {
+				i++
+			}
+			index := key[start:i]
+			var intIndex int
+			intIndex, err = strconv.Atoi(index)
+			if err != nil {
+				err = fmt.Errorf("failed to parse index %q in %q",
+					index, key)
+				return
+			}
+
+			keys = append(keys, intIndex)
+			i++
+		default:
+			// Handle regular key
+			start := i
+			for i < keyStrLength && key[i] != '.' && key[i] != '[' {
+				i++
+			}
+
+			keys = append(keys, key[start:i])
+		}
+	}
+
+	return
+}
+
+func navigateJSON(jsonData *interface{}, fullKey string) (jsonValue string, err error) {
+	if fullKey == "" {
+		return "", fmt.Errorf("no key was given to navigate the JSON")
+	}
+	//nolint:errcheck // Verify in deployed_version.verify.CheckValues
+	keys, _ := ParseKeys(fullKey)
+	keyCount := len(keys)
+	keyIndex := 0
+	parsedJSON := *jsonData
+	for keyIndex < keyCount {
+		key := keys[keyIndex]
+		switch value := parsedJSON.(type) {
+		// Regular key
+		case map[string]interface{}:
+			// Ensure key is a string
+			keyStr, ok := key.(string)
+			if !ok {
+				err = fmt.Errorf("got a map, but the key is not a string: %q at %v",
+					key, parsedJSON)
+				return
+			}
+			parsedJSON = value[keyStr]
+		// Array
+		case []interface{}:
+			// Parse the index from the key.
+			index, ok := key.(int)
+			fmt.Printf("index: %v, ok: %t, key: %v\n", index, ok, key)
+			if !ok {
+				err = fmt.Errorf("got an array, but the key is not an integer index: %q at %v",
+					key, parsedJSON)
+				return
+			}
+			// Negative index
+			if index < 0 {
+				index = len(value) + index
+			}
+
+			// Check if the index is out of range.
+			if index >= len(value) || index < 0 {
+				err = fmt.Errorf("index %d (%s) out of range at %v",
+					index, fullKey, parsedJSON)
+				return
+			}
+
+			parsedJSON = value[index]
+		// If the value is a string, int, float32, or float64, we can't navigate further.
+		case string, int, float32, float64:
+			err = fmt.Errorf("got a value of %q at %q, but there are more keys to navigate: %s at %v",
+				value, key, fullKey, parsedJSON)
+			return
+		}
+		keyIndex++
+	}
+
+	// If type is string, int, float32, or float64, we've found the value.
+	switch v := parsedJSON.(type) {
+	case string, int, float32, float64:
+		jsonValue = fmt.Sprint(v)
+		return
+	}
+
+	// If we got here, we didn't get a value.
+	err = fmt.Errorf("failed to find value for %q in %v",
+		fullKey, *jsonData)
+	return
+}
+
+// GetValueByKey will return the value of the key in the JSON.
+func GetValueByKey(rawBody []byte, key string, jsonFrom string) (string, error) {
+	// If the key is empty, return the stringified body.
+	if key == "" {
+		return string(rawBody), nil
+	}
+
+	var jsonData interface{}
+	err := json.Unmarshal(rawBody, &jsonData)
+	// If the JSON is invalid, return an error.
+	if err != nil {
+		err := fmt.Errorf("failed to unmarshal the following from %q into json: %q",
+			jsonFrom, string(rawBody))
+		return "", err
+	}
+
+	return navigateJSON(&jsonData, key)
 }
 
 // ToYAMLString will return a YAML string representation of the interface.
