@@ -23,6 +23,7 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // statusBase is the base struct for the Status struct.
@@ -217,6 +218,7 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 		if version == s.approvedVersion {
 			s.approvedVersion = ""
 		}
+		s.setLatestVersionIsDeployedMetric()
 	}
 	s.mutex.Unlock()
 
@@ -262,6 +264,7 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	{
 		s.latestVersion = version
 		s.latestVersionTimestamp = s.lastQueried
+		s.setLatestVersionIsDeployedMetric()
 	}
 	s.mutex.Unlock()
 
@@ -395,4 +398,13 @@ func (s *Status) GetWebURL() string {
 	return util.TemplateString(
 		*s.WebURL,
 		util.ServiceInfo{LatestVersion: s.LatestVersion()})
+}
+
+// setLatestVersionIsDeployedMetric will set the metric for whether the latest version is currently deployed.
+func (s *Status) setLatestVersionIsDeployedMetric() {
+	value := float64(0) // Not deployed
+	if s.latestVersion == s.deployedVersion {
+		value = 1 // Is deployed
+	}
+	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed, *s.ServiceID, value)
 }
