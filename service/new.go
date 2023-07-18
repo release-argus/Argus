@@ -360,7 +360,7 @@ func (s *Service) CheckFetches() (err error) {
 	}()
 
 	logFrom := util.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
-
+	var latestVersion string
 	// Fetch latest version
 	{
 		// Erase DeployedVersion so that 'require' is checked
@@ -375,6 +375,7 @@ func (s *Service) CheckFetches() (err error) {
 			return
 		}
 		s.Status.SetDeployedVersion(deployedVersion, false)
+		latestVersion = s.Status.LatestVersion()
 	}
 
 	// Fetch deployed version
@@ -388,6 +389,7 @@ func (s *Service) CheckFetches() (err error) {
 			return
 		}
 		s.Status.SetDeployedVersion(version, false)
+		s.DeployedVersionLookup.DifferentVersion(version != latestVersion)
 	}
 
 	return

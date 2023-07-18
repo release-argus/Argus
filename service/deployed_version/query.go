@@ -170,6 +170,9 @@ func (l *Lookup) queryMetrics(successfulQuery bool) {
 // HandleNewVersion performs a check for whether this `version` is new, and if so,
 // checks whether this is later than LatestVersion and announces and updates `Status` accordingly.
 func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
+	latestVersion := l.Status.LatestVersion()
+	l.DifferentVersion(version != latestVersion)
+
 	// If the new version is the same as what we had, do nothing.
 	if version == "" || version == l.Status.DeployedVersion() {
 		return
@@ -180,7 +183,6 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 
 	// If this new version isn't LatestVersion
 	// Check that it's not a later version than LatestVersion
-	latestVersion := l.Status.LatestVersion()
 	if latestVersion == "" {
 		l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
 		l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
@@ -206,6 +208,19 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 		util.LogFrom{Primary: *l.Status.ServiceID},
 		true)
 	l.Status.AnnounceUpdate()
+}
+
+// DifferentVersion sets the Prometheus metrics for the Different version.
+func (l *Lookup) DifferentVersion(differentVersion bool) {
+	if differentVersion {
+		metric.SetPrometheusGauge(metric.DifferentVersion,
+			*l.Status.ServiceID,
+			1)
+	} else {
+		metric.SetPrometheusGauge(metric.DifferentVersion,
+			*l.Status.ServiceID,
+			0)
+	}
 }
 
 func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {

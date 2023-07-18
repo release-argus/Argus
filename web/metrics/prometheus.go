@@ -72,6 +72,12 @@ var (
 		[]string{
 			"id",
 		})
+	DifferentVersion = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "deployed_version_different_than_latest_version",
+		Help: "Whether this service's last deployed version different than latest version (0=no, 1=yes)."},
+		[]string{
+			"id",
+		})
 	AckWaiting = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "ack_waiting",
 		Help: "Whether a new release is waiting to be acknowledged (skipped/approved; 0=no, 1=yes)."},
