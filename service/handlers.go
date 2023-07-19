@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 )
 
 // UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
@@ -100,9 +99,6 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 		} else {
 			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
 
-			metric.SetPrometheusGauge(metric.AckWaiting,
-				s.ID,
-				1)
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {

@@ -182,53 +182,83 @@ func TestStatus_SetLastQueried(t *testing.T) {
 }
 
 func TestStatus_ApprovedVersion(t *testing.T) {
-	// GIVEN a Status
-	approvedVersion := "0.0.2"
 	deployedVersion := "0.0.1"
 	latestVersion := "0.0.3"
-	announceChannel := make(chan []byte, 4)
-	databaseChannel := make(chan dbtype.Message, 4)
-	status := New(
-		&announceChannel, &databaseChannel, nil,
-		"", "", "", "", "", "")
-	status.Init(
-		0, 0, 0,
-		stringPtr("TestStatus_SetApprovedVersion"),
-		stringPtr("https://example.com"))
-	status.SetLatestVersion(latestVersion, false)
-	status.SetDeployedVersion(deployedVersion, false)
+	// GIVEN a Status
+	tests := map[string]struct {
+		approving                     string
+		latestVersionIsDeployedMetric float64
+	}{
+		"Approving LatestVersion": {
+			approving:                     latestVersion,
+			latestVersionIsDeployedMetric: 2,
+		},
+		"Skipping LatestVersion": {
+			approving:                     "SKIP_" + latestVersion,
+			latestVersionIsDeployedMetric: 3,
+		},
+		"Approving non-latest version": {
+			approving:                     "0.0.2a",
+			latestVersionIsDeployedMetric: 0,
+		},
+	}
 
-	// WHEN SetApprovedVersion is called
-	status.SetApprovedVersion(approvedVersion, true)
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	// THEN the Status is as expected
-	// ApprovedVersion
-	got := status.ApprovedVersion()
-	if got != approvedVersion {
-		t.Errorf("ApprovedVersion not set to %s. Got %s",
-			approvedVersion, got)
-	}
-	// LatestVersion
-	got = status.LatestVersion()
-	if got != latestVersion {
-		t.Errorf("LatestVersion not set to %s. Got %s",
-			latestVersion, got)
-	}
-	// DeployedVersion
-	got = status.DeployedVersion()
-	if got != deployedVersion {
-		t.Errorf("DeployedVersion not set to %s. Got %s",
-			deployedVersion, got)
-	}
-	// AnnounceChannel
-	if len(*status.AnnounceChannel) != 1 {
-		t.Errorf("AnnounceChannel should have 1 message, but has %d",
-			len(*status.AnnounceChannel))
-	}
-	// DatabaseChannel
-	if len(*status.DatabaseChannel) != 1 {
-		t.Errorf("DatabaseChannel should have 1 message, but has %d",
-			len(*status.DatabaseChannel))
+			announceChannel := make(chan []byte, 4)
+			databaseChannel := make(chan dbtype.Message, 4)
+			status := New(
+				&announceChannel, &databaseChannel, nil,
+				"", "", "", "", "", "")
+			status.Init(
+				0, 0, 0,
+				stringPtr("TestStatus_SetApprovedVersion_"+name),
+				stringPtr("https://example.com"))
+			status.SetLatestVersion(latestVersion, false)
+			status.SetDeployedVersion(deployedVersion, false)
+
+			// WHEN SetApprovedVersion is called
+			status.SetApprovedVersion(tc.approving, true)
+
+			// THEN the Status is as expected
+			// ApprovedVersion
+			got := status.ApprovedVersion()
+			if got != tc.approving {
+				t.Errorf("ApprovedVersion not set to %s. Got %s",
+					tc.approving, got)
+			}
+			// LatestVersion
+			got = status.LatestVersion()
+			if got != latestVersion {
+				t.Errorf("LatestVersion not set to %s. Got %s",
+					latestVersion, got)
+			}
+			// DeployedVersion
+			got = status.DeployedVersion()
+			if got != deployedVersion {
+				t.Errorf("DeployedVersion not set to %s. Got %s",
+					deployedVersion, got)
+			}
+			// AnnounceChannel
+			if len(*status.AnnounceChannel) != 1 {
+				t.Errorf("AnnounceChannel should have 1 message, but has %d",
+					len(*status.AnnounceChannel))
+			}
+			// DatabaseChannel
+			if len(*status.DatabaseChannel) != 1 {
+				t.Errorf("DatabaseChannel should have 1 message, but has %d",
+					len(*status.DatabaseChannel))
+			}
+			// AND LatestVersionIsDeployedVersion metric is updated
+			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			if gotMetric != tc.latestVersionIsDeployedMetric {
+				t.Errorf("LatestVersionIsDeployedVersion metric should be %f, not %f",
+					tc.latestVersionIsDeployedMetric, gotMetric)
+			}
+		})
 	}
 }
 
@@ -799,7 +829,7 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 	for name, tc := range tests {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			tc.status.SetApprovedVersion(tc.approvedVersion, false)
 			tc.status.SetDeployedVersion(tc.deployedVersion, false)
@@ -848,7 +878,7 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 	}
 }
 
-func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
+func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 	// GIVEN a Status
 	tests := map[string]struct {
 		latestVersion   string
@@ -888,6 +918,46 @@ func TestSetLatestVersionIsDeployedMetric(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("Expected SetLatestVersionIsDeployedMetric to be %f, not %f",
 					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestStatus_DeleteMetrics(t *testing.T) {
+	// GIVEN a Status
+	tests := map[string]struct {
+		serviceID *string
+	}{
+		"nil serviceID": {
+			serviceID: nil,
+		},
+		"non-nil serviceID": {
+			serviceID: stringPtr("TestStatus_DeleteMetrics"),
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			status := Status{}
+			status.Init(
+				0, 0, 0,
+				tc.serviceID,
+				stringPtr("http://example.com"))
+
+			// WHEN DeleteMetrics is called on it
+			status.DeleteMetrics()
+
+			// THEN the metrics are deleted
+			got := float64(0)
+			if tc.serviceID != nil {
+				got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			}
+			if got != 0 {
+				t.Errorf("Expected LatestVersionIsDeployed to be 0, not %f",
+					got)
 			}
 		})
 	}

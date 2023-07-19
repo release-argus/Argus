@@ -94,7 +94,7 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 				"url":   "https://valid.release-argus.io/plain",
 				"regex": `stable version: "v?([0-9.+)"`,
 			},
-			wantBody:       `"error":"values failed validity check:.*Invalid RegEx`,
+			wantBody:       `"error":"values failed validity check:.*regex: .*invalid`,
 			wantStatusCode: http.StatusBadRequest,
 		},
 	}
@@ -191,7 +191,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"url_commands":        `[{"type":"regex","regex":"beta: \"v?([0-9.+-beta)\""}]`,
 				"semantic_versioning": "false"},
-			wantBody:          `{.*"error":".*Invalid RegEx`,
+			wantBody:          `{.*"error":".*regex: .*invalid`,
 			wantStatusCode:    http.StatusOK,
 			wantLatestVersion: "",
 		},
@@ -237,7 +237,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			deployedVersion: true,
 			params: map[string]string{
 				"regex": "v?([0-9.+)"},
-			wantBody:          `\{.*"error":".*Invalid RegEx`,
+			wantBody:          `\{.*"error":".*regex: .*invalid`,
 			wantStatusCode:    http.StatusOK,
 			wantLatestVersion: "",
 		},
