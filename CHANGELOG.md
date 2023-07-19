@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.2](https://github.com/release-argus/Argus/compare/0.13.1...0.13.2) (2023-07-19)
+
+
+### Bug Fixes
+
+* **metrics:** `latest_version_is_deployed` was cleared on first query ([b8e6093](https://github.com/release-argus/Argus/commits/b8e6093a4b35e6d4d8617149e1412d1a0718da94))
+    * metrics are reset, but this one wasn't re-created in that reset
+
+    * could also sometimes have metrics for inactive services
+
+    * `*_version_query_result_last` metric wasn't deleted with the service
+
 ### [0.13.1](https://github.com/release-argus/Argus/compare/0.13.0...0.13.1) (2023-07-19)
 
 
