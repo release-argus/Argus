@@ -51,7 +51,7 @@ jobs:
           password: ${{ secrets.GH_TOKEN }}
 
       - name: Login to Quay.io
-        if:   github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v2
         with:
           registry: quay.io
@@ -76,6 +76,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64
+          provenance: false
           build-args: |
             BUILD_VERSION=${{ github.event.release.tag_name }}
             GO_VERSION=${{ env.GO_VERSION }}
@@ -94,6 +95,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64
+          provenance: false
           build-args: |
             BUILD_VERSION=${{ env.sha_short }}
             GO_VERSION=${{ env.GO_VERSION }}
