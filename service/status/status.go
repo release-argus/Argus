@@ -188,7 +188,11 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mutex.Lock()
 	{
 		s.approvedVersion = version
+	}
+	s.mutex.Unlock()
 
+	if writeToDB {
+		s.mutex.RLock()
 		// Update metrics if we're acting on the latest version
 		if strings.HasSuffix(s.approvedVersion, s.latestVersion) {
 			value := float64(3) // Skipping latest version
@@ -201,18 +205,16 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 					value)
 			}
 		}
-	}
-	s.mutex.Unlock()
 
-	if writeToDB {
 		// WebSocket
-		s.AnnounceApproved()
+		s.announceApproved()
 		// Database
 		message := dbtype.Message{
 			ServiceID: *s.ServiceID,
 			Cells: []dbtype.Cell{
-				{Column: "approved_version", Value: s.approvedVersion}}}
-		s.SendDatabase(&message)
+				{Column: "approved_version", Value: version}}}
+		s.sendDatabase(&message)
+		s.mutex.RUnlock()
 	}
 }
 
@@ -233,11 +235,14 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 		if version == s.approvedVersion {
 			s.approvedVersion = ""
 		}
-		s.setLatestVersionIsDeployedMetric()
 	}
 	s.mutex.Unlock()
 
+	// Write to the database if we're not deleting and have a channel
 	if writeToDB {
+		s.mutex.RLock()
+		s.setLatestVersionIsDeployedMetric()
+
 		// Clear the fail status of WebHooks/Commands
 		s.Fails.resetFails()
 
@@ -246,7 +251,8 @@ func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
 			Cells: []dbtype.Cell{
 				{Column: "deployed_version", Value: s.deployedVersion},
 				{Column: "deployed_version_timestamp", Value: s.deployedVersionTimestamp}}}
-		s.SendDatabase(&message)
+		s.sendDatabase(&message)
+		s.mutex.RUnlock()
 	}
 }
 
@@ -279,12 +285,14 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 	{
 		s.latestVersion = version
 		s.latestVersionTimestamp = s.lastQueried
-		s.setLatestVersionIsDeployedMetric()
 	}
 	s.mutex.Unlock()
 
 	// Write to the database if we're not deleting and have a channel
 	if writeToDB {
+		s.mutex.RLock()
+		s.setLatestVersionIsDeployedMetric()
+
 		// Clear the fail status of WebHooks/Commands
 		s.Fails.resetFails()
 
@@ -293,7 +301,8 @@ func (s *Status) SetLatestVersion(version string, writeToDB bool) {
 			Cells: []dbtype.Cell{
 				{Column: "latest_version", Value: s.latestVersion},
 				{Column: "latest_version_timestamp", Value: s.latestVersionTimestamp}}}
-		s.SendDatabase(&message)
+		s.sendDatabase(&message)
+		s.mutex.RUnlock()
 	}
 }
 
@@ -382,10 +391,8 @@ func (s *Status) SendAnnounce(payload *[]byte) {
 	*s.AnnounceChannel <- *payload
 }
 
-// SendDatabase payload to the DatabaseChannel.
-func (s *Status) SendDatabase(payload *dbtype.Message) {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+// sendDatabase payload to the DatabaseChannel.
+func (s *Status) sendDatabase(payload *dbtype.Message) {
 	if s.deleting || s.DatabaseChannel == nil {
 		return
 	}
@@ -435,6 +442,15 @@ func (s *Status) setLatestVersionIsDeployedMetric() {
 	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
 		*s.ServiceID,
 		value)
+}
+
+// InitMetrics for the Status.
+func (s *Status) InitMetrics() {
+	if s == nil || s.ServiceID == nil {
+		return
+	}
+
+	s.setLatestVersionIsDeployedMetric()
 }
 
 // DeleteMetrics of the Status.

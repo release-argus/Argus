@@ -21,6 +21,13 @@ import (
 
 // Prometheus metric.
 var (
+	// Latest version query successful - 0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail
+	LatestVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "latest_version_query_result_last",
+		Help: "Whether this service's last latest version query was successful (0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail)."},
+		[]string{
+			"id",
+		})
 	// Count of the number of times each latest version query has passed/failed
 	LatestVersionQueryMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "latest_version_query_result_total",
@@ -29,6 +36,13 @@ var (
 			"id",
 			"result",
 		})
+	// Lateest deployed version query successful - 0=no, 1=yes
+	DeployedVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "deployed_version_query_result_last",
+		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes)."},
+		[]string{
+			"id",
+		})
 	// Count of the number of times each deployed version query has passed/failed
 	DeployedVersionQueryMetric = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "deployed_version_query_result_total",
@@ -36,6 +50,13 @@ var (
 		[]string{
 			"id",
 			"result",
+		})
+	// Latest version is deployed - 0=no, 1=yes, 2=approved, 3=skipped
+	LatestVersionIsDeployed = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "latest_version_is_deployed",
+		Help: "Whether this service's latest version is the same as its deployed version (0=no, 1=yes, 2=approved, 3=skipped)."},
+		[]string{
+			"id",
 		})
 	// Count of the number of times each Command has passed/failed
 	CommandMetric = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -64,27 +85,6 @@ var (
 			"id",
 			"result",
 			"service_id",
-		})
-	// Latest version query successful - 0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail
-	LatestVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "latest_version_query_result_last",
-		Help: "Whether this service's last latest version query was successful (0=no, 1=yes, 2=no_regex_match, 3=semantic_version_fail, 4=progressive_version_fail)."},
-		[]string{
-			"id",
-		})
-	// Lateest deployed version query successful - 0=no, 1=yes
-	DeployedVersionQueryLiveness = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "deployed_version_query_result_last",
-		Help: "Whether this service's last deployed version query was successful (0=no, 1=yes)."},
-		[]string{
-			"id",
-		})
-	// Latest version is deployed - 0=no, 1=yes, 2=approved, 3=skipped
-	LatestVersionIsDeployed = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "latest_version_is_deployed",
-		Help: "Whether this service's latest version is the same as its deployed version (0=no, 1=yes, 2=approved, 3=skipped)."},
-		[]string{
-			"id",
 		})
 )
 

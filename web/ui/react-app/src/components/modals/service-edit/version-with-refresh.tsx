@@ -120,10 +120,14 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
           <Alert variant="danger">
             Failed to refresh:
             <br />
-            {versionData.error
-              .replaceAll(/\\\\([^a-z])/g, "\n$1")
-              .replaceAll(`\\n`, "\n")
-              .replaceAll(`\\"`, `"`)}
+            {
+              versionData.error
+                .replaceAll(/\\([ \t])/g, "\n$1") // \ + space/tab -> newline
+                .replaceAll(`\\n`, "\n") // \n -> newline
+                .replaceAll(`\\"`, `"`) // \" -> "
+                .replaceAll(`\\\\`, `\\`) // \\ -> \
+                .replaceAll(/\\$/g, "\n") // \ + end of string -> newline
+            }
           </Alert>
         </span>
       )}

@@ -159,6 +159,7 @@ func (s *Service) InitMetrics() {
 	s.Notify.InitMetrics()
 	s.CommandController.InitMetrics()
 	s.WebHook.InitMetrics()
+	s.Status.InitMetrics()
 }
 
 // DeleteMetrics of the Service.

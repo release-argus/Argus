@@ -73,6 +73,10 @@ func (l *Lookup) InitMetrics() {
 
 // DeleteMetrics for this Lookup.
 func (l *Lookup) DeleteMetrics() {
+	// Liveness
+	metric.DeletePrometheusGauge(metric.LatestVersionQueryLiveness,
+		*l.Status.ServiceID)
+	// Counters
 	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
 		*l.Status.ServiceID,
 		"",

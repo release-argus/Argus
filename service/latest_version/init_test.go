@@ -28,10 +28,11 @@ import (
 func TestLookup_Metrics(t *testing.T) {
 	// GIVEN a Lookup
 	lookup := testLookup(false, false)
-	*lookup.Status.ServiceID += "TestInitMetrics"
+	*lookup.Status.ServiceID += "TestLookup_Metrics"
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryMetric)
+	hadG := testutil.CollectAndCount(metric.LatestVersionQueryLiveness)
 	lookup.InitMetrics()
 
 	// THEN it can be collected
@@ -42,13 +43,35 @@ func TestLookup_Metrics(t *testing.T) {
 		t.Errorf("%d Counter metrics's were initialised, expecting %d",
 			(gotC - hadC), wantC)
 	}
+	// gauges
+	gotG := testutil.CollectAndCount(metric.LatestVersionQueryLiveness)
+	wantG := 0
+	if (gotG - hadG) != wantG {
+		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
+			(gotG - hadG), wantG)
+	}
+	// But can be added
+	lookup.queryMetrics(nil)
+	gotG = testutil.CollectAndCount(metric.LatestVersionQueryLiveness)
+	wantG = 1
+	if (gotG - hadG) != wantG {
+		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
+			(gotG - hadG), wantG)
+	}
 
 	// AND it can be deleted
 	lookup.DeleteMetrics()
+	// counters
 	gotC = testutil.CollectAndCount(metric.LatestVersionQueryMetric)
 	if gotC != hadC {
 		t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
 			gotC, hadC)
+	}
+	// gauges
+	gotG = testutil.CollectAndCount(metric.LatestVersionQueryLiveness)
+	if gotG != hadG {
+		t.Errorf("Gauge metrics were not deleted, got %d. expecting %d",
+			gotG, hadG)
 	}
 }
 

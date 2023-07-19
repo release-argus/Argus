@@ -97,7 +97,7 @@ func (s *Status) AnnounceUpdate() {
 
 // AnnounceAction on an update (skip/approve) to the `s.AnnounceChannel`
 // (Broadcast to all WebSocket clients).
-func (s *Status) AnnounceApproved() {
+func (s *Status) announceApproved() {
 	var payloadData []byte
 
 	// Last query time update OR approvel/approved
@@ -108,7 +108,7 @@ func (s *Status) AnnounceApproved() {
 		ServiceData: &api_type.ServiceSummary{
 			ID: *s.ServiceID,
 			Status: &api_type.Status{
-				ApprovedVersion: s.ApprovedVersion()}}})
+				ApprovedVersion: s.approvedVersion}}})
 
 	s.SendAnnounce(&payloadData)
 }

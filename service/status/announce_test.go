@@ -218,7 +218,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 	}
 }
 
-func TestStatus_AnnounceApproved(t *testing.T) {
+func TestStatus_announceApproved(t *testing.T) {
 	// GIVEN a Status and an AnnounceChannel
 	tests := map[string]struct {
 		nilChannel bool
@@ -241,8 +241,8 @@ func TestStatus_AnnounceApproved(t *testing.T) {
 			wantID := *status.ServiceID
 			wantApprovedVersion := status.ApprovedVersion()
 
-			// WHEN AnnounceApproved is called on it
-			status.AnnounceApproved()
+			// WHEN announceApproved is called on it
+			status.announceApproved()
 
 			// THEN the message is received
 			if tc.nilChannel {
