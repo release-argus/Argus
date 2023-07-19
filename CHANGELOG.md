@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.1](https://github.com/release-argus/Argus/compare/0.13.0...0.13.1) (2023-07-19)
+
+
+### Features
+
+* **deployed_version:** support arrays in json filter ([1f1e1d0](https://github.com/release-argus/Argus/commits/1f1e1d0624cf3d822d08bbb7420fae016eeef644)), closes [#292](https://github.com/release-argus/Argus/issues/292)
+    * e.g. `foo[0].version`
+* **metrics:** add, `latest_version_is_deployed` ([8ba1074](https://github.com/release-argus/Argus/commits/8ba107496f6a4e3732de5a681147d0138c29255f)), closes [#293](https://github.com/release-argus/Argus/issues/293)
+    * merged `ack_waiting` into this
+    * 0=no, 1=yes, 2=approved, 3=skipped
+
 ## [0.13.0](https://github.com/release-argus/Argus/compare/0.12.1...0.13.0) (2023-07-11)
 
 
