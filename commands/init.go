@@ -80,13 +80,6 @@ func (c *Controller) InitMetrics() {
 			"",
 			"FAIL")
 	}
-
-	// ##########
-	// # Gauges #
-	// ##########
-	metric.SetPrometheusGauge(metric.AckWaiting,
-		*c.ServiceStatus.ServiceID,
-		float64(0))
 }
 
 // DeleteMetrics for this Controller.
@@ -108,9 +101,6 @@ func (c *Controller) DeleteMetrics() {
 			"",
 			"FAIL")
 	}
-
-	metric.DeletePrometheusGauge(metric.AckWaiting,
-		*c.ServiceStatus.ServiceID)
 }
 
 // FormattedString will convert Command to a string in the format of '[ "arg0", "arg1" ]'

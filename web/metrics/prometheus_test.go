@@ -183,8 +183,8 @@ func TestPrometheusGaugeVec(t *testing.T) {
 		"DeployedVersionQueryLiveness": {
 			metric: DeployedVersionQueryLiveness,
 			args:   []string{"SERVICE_ID"}},
-		"AckWaiting": {
-			metric: AckWaiting,
+		"LatestVersionIsDeployed": {
+			metric: LatestVersionIsDeployed,
 			args:   []string{"SERVICE_ID"}},
 	}
 

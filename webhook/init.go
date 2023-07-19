@@ -123,13 +123,6 @@ func (w *WebHook) initMetrics() {
 		*w.ServiceStatus.ServiceID,
 		"",
 		"FAIL")
-
-	// ##########
-	// # Gauges #
-	// ##########
-	metric.SetPrometheusGauge(metric.AckWaiting,
-		*w.ServiceStatus.ServiceID,
-		float64(0))
 }
 
 // DeleteMetrics of the Slice.
@@ -159,7 +152,4 @@ func (w *WebHook) deleteMetrics() {
 		*w.ServiceStatus.ServiceID,
 		"",
 		"FAIL")
-
-	metric.DeletePrometheusGauge(metric.AckWaiting,
-		*w.ServiceStatus.ServiceID)
 }

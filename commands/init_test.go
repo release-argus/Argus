@@ -318,7 +318,7 @@ func TestController_Metrics(t *testing.T) {
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
 	hadC := testutil.CollectAndCount(metric.CommandMetric)
-	hadG := testutil.CollectAndCount(metric.AckWaiting)
+	hadG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	controller.InitMetrics()
 
 	// THEN it can be collected
@@ -330,8 +330,8 @@ func TestController_Metrics(t *testing.T) {
 			(gotC - hadC), wantC)
 	}
 	// gauges
-	gotG := testutil.CollectAndCount(metric.AckWaiting)
-	wantG := 1
+	gotG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
+	wantG := 0
 	if (gotG - hadG) != wantG {
 		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
 			(gotG - hadG), wantG)
@@ -346,7 +346,7 @@ func TestController_Metrics(t *testing.T) {
 			gotC, hadC)
 	}
 	// gauges
-	gotG = testutil.CollectAndCount(metric.AckWaiting)
+	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	if gotG != hadG {
 		t.Errorf("Gauge metrics's were deleted, got %d. expecting %d",
 			gotG, hadG)

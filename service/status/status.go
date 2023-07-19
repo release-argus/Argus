@@ -186,7 +186,22 @@ func (s *Status) ApprovedVersion() string {
 // SetApprovedVersion.
 func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mutex.Lock()
-	s.approvedVersion = version
+	{
+		s.approvedVersion = version
+
+		// Update metrics if we're acting on the latest version
+		if strings.HasSuffix(s.approvedVersion, s.latestVersion) {
+			value := float64(3) // Skipping latest version
+			if s.approvedVersion == s.latestVersion {
+				value = 2 // Approving latest version
+			}
+			if s.ServiceID != nil {
+				metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
+					*s.ServiceID,
+					value)
+			}
+		}
+	}
 	s.mutex.Unlock()
 
 	if writeToDB {
@@ -402,9 +417,32 @@ func (s *Status) GetWebURL() string {
 
 // setLatestVersionIsDeployedMetric will set the metric for whether the latest version is currently deployed.
 func (s *Status) setLatestVersionIsDeployedMetric() {
+	if s.ServiceID == nil {
+		return
+	}
+
 	value := float64(0) // Not deployed
 	if s.latestVersion == s.deployedVersion {
 		value = 1 // Is deployed
+
+		// Latest version isn't deployed, but has been approved/skipped, so carry that over
+	} else if strings.HasSuffix(s.approvedVersion, s.latestVersion) {
+		value = 3 // Latest version was skipped
+		if s.approvedVersion == s.latestVersion {
+			value = 2 // Latest version was approved
+		}
 	}
-	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed, *s.ServiceID, value)
+	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
+		*s.ServiceID,
+		value)
+}
+
+// DeleteMetrics of the Status.
+func (s *Status) DeleteMetrics() {
+	if s == nil || s.ServiceID == nil {
+		return
+	}
+
+	metric.DeletePrometheusGauge(metric.LatestVersionIsDeployed,
+		*s.ServiceID)
 }

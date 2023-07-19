@@ -168,6 +168,7 @@ func (s *Service) DeleteMetrics() {
 	s.Notify.DeleteMetrics()
 	s.CommandController.DeleteMetrics()
 	s.WebHook.DeleteMetrics()
+	s.Status.DeleteMetrics()
 }
 
 // ResetMetrics of the Service.
