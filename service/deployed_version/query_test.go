@@ -46,6 +46,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		"valid url": {
 			url:      "https://release-argus.io",
 			errRegex: "^$"},
+		"404": {
+			errRegex: "non-2XX response code: 404",
+			url:      "https://release-argus.io/foo/bar",
+		},
 	}
 
 	for name, tc := range tests {
@@ -137,11 +141,15 @@ func TestLookup_Query(t *testing.T) {
 			url:         "https://release-argus.io/docs/getting-started/",
 		},
 		"headers fail": {
-			errRegex: "Bad credentials",
+			errRegex: "non-2XX response code: 401",
 			headers: []Header{
 				{Key: "Authorization", Value: "token ghp_FAIL"}},
 			url:  "https://api.github.com/repos/release-argus/argus/releases/latest",
 			json: "something",
+		},
+		"404": {
+			errRegex: "non-2XX response code: 404",
+			url:      "https://release-argus.io/foo/bar",
 		},
 	}
 
