@@ -222,6 +222,13 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		return
 	}
 
+	// Ignore non-2XX responses.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err = fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
+		jLog.Warn(err, *logFrom, true)
+		return
+	}
+
 	// Read the response body.
 	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
