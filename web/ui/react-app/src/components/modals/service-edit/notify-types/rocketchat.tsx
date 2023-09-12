@@ -1,6 +1,6 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { NotifyRocketChatType } from "types/config";
 import { globalOrDefault } from "./util";
 

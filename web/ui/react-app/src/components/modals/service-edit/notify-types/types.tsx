@@ -17,4 +17,5 @@ export const TYPE_OPTIONS = [
   { value: "teams", label: "Teams" },
   { value: "telegram", label: "Telegram" },
   { value: "zulip", label: "Zulip Chat" },
+  { value: "generic", label: "Generic WebHook" },
 ];

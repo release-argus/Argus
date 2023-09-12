@@ -1,6 +1,6 @@
 import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { NotifyTeamsType } from "types/config";
 import { globalOrDefault } from "./util";
 

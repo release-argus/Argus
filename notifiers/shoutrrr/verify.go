@@ -77,12 +77,6 @@ func (s *ShoutrrrBase) CheckValues(prefix string) (errs error) {
 	)
 	s.InitMaps()
 
-	// Type
-	if s.Type != "" && !util.Contains(supportedTypes, s.Type) {
-		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
-			util.ErrorToString(errs), prefix, s.Type, strings.Join(supportedTypes, ","))
-	}
-
 	// Delay
 	if delay := s.GetOption("delay"); delay != "" {
 		// Default to seconds when an integer is provided
@@ -269,9 +263,6 @@ func (s *Shoutrrr) checkValuesForType(
 		if sTypeWithoutID == "" {
 			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
 				util.ErrorToString(*errs), prefix)
-		} else {
-			*errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
-				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
 		}
 	}
 	// Check that the Type doesn't differ in the Main
@@ -483,11 +474,28 @@ func (s *Shoutrrr) checkValuesForType(
 			*errsURLFields = fmt.Errorf("%s%s  raw: <required> e.g. 'service://foo:bar@something'\\",
 				util.ErrorToString(*errsURLFields), prefix)
 		}
+	case "generic":
+		// generic://host[:port][/path]
+		if s.GetURLField("host") == "" {
+			*errsURLFields = fmt.Errorf("%s%s  host: <required> e.g. 'example.com'\\",
+				util.ErrorToString(*errsURLFields), prefix)
+		}
+		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
+		for _, jsonMap := range jsonMaps {
+			value := s.GetURLField(jsonMap)
+			if value != "" {
+				converted := jsonMapToString(s.GetURLField(jsonMap), "-")
+				if converted == "" {
+					*errsURLFields = fmt.Errorf("%s%s  %s: %q <invalid> (must be a JSON map)\\",
+						util.ErrorToString(*errsParams), prefix, jsonMap, value)
+				}
+			}
+		}
 	default:
 		// Invalid/Unknown type
 		if s.Type != "" {
-			*errs = fmt.Errorf("%s%stype: %q <invalid> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
-				util.ErrorToString(*errs), prefix, s.GetType())
+			*errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
+				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
 		}
 	}
 }

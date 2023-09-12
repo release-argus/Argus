@@ -4,7 +4,7 @@ import {
   NotifyOpsGenieTarget,
 } from "types/config";
 import {
-  NotifyOpsGenieDetailType,
+  NotifyHeaderType,
   ServiceEditAPIType,
   ServiceEditOtherData,
   ServiceEditType,
@@ -107,9 +107,9 @@ export const convertAPIServiceDataEditToUI = (
   };
 };
 
-export const convertOpsGenieDetailsFromString = (
-  str?: string | NotifyOpsGenieDetailType[]
-): NotifyOpsGenieDetailType[] | undefined => {
+export const convertHeadersFromString = (
+  str?: string | NotifyHeaderType[]
+): NotifyHeaderType[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
   // undefined/empty
@@ -121,7 +121,7 @@ export const convertOpsGenieDetailsFromString = (
       id: i,
       key: key,
       value: value,
-    })) as NotifyOpsGenieDetailType[];
+    })) as NotifyHeaderType[];
   } catch (error) {
     return [];
   }
@@ -206,8 +206,15 @@ export const convertNotifyParams = (
     case "opsgenie":
       return {
         ...params,
-        details: convertOpsGenieDetailsFromString(params?.details),
+        details: convertHeadersFromString(params?.details),
         targets: convertOpsGenieTargetFromString(params?.targets),
+      };
+    case "generic":
+      return {
+        ...params,
+        custom_headers: convertHeadersFromString(params?.custom_headers),
+        json_payload_vars: convertHeadersFromString(params?.json_payload_vars),
+        query_vars: convertHeadersFromString(params?.query_vars),
       };
     default:
       return params;

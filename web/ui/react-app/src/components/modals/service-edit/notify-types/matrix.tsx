@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyMatrixType } from "types/config";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { globalOrDefault } from "./util";
 import { strToBool } from "utils";
 
@@ -86,17 +86,6 @@ const MATRIX = ({
           global?.params?.rooms,
           defaults?.params?.rooms,
           hard_defaults?.params?.rooms
-        )}
-      />
-      <FormItem
-        name={`${name}.params.title`}
-        col_sm={12}
-        label="Title"
-        tooltip="e.g. 'Release - {{ service_id }}'"
-        defaultVal={globalOrDefault(
-          global?.params?.title,
-          defaults?.params?.title,
-          hard_defaults?.params?.title
         )}
       />
       <BooleanWithDefault

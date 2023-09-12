@@ -106,7 +106,7 @@ export interface NotifyEditType {
           | boolean
           | NotifyNtfyAction[]
           | NotifyOpsGenieTarget[]
-          | NotifyOpsGenieDetailType[]
+          | NotifyHeaderType[]
           | { [key: string]: string };
       };
   name?: string;
@@ -123,11 +123,12 @@ export interface NotifyEditType {
       | boolean
       | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
-      | NotifyOpsGenieDetailType[];
+      | NotifyHeaderType[];
   };
 }
 
-export interface NotifyOpsGenieDetailType {
+// OpsGenieDetail | GenericCustomHeaders | GenericJSONPayloadVars | GenericQueryVars
+export interface NotifyHeaderType {
   key: string;
   value: string;
 }
