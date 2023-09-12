@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.3](https://github.com/release-argus/Argus/compare/0.13.2...0.13.3) (2023-09-12)
+
+
+### Features
+
+* **notify:** shoutrrr 'generic' webhook ([b01ada0](https://github.com/release-argus/Argus/commits/b01ada0a9cb77591ee7ec8f2f0f20cc3c1983eb3)), closes [#271](https://github.com/release-argus/Argus/issues/271)
+
+
+### Bug Fixes
+
+* **deployed_version:** req 2xx for version queries ([#310](https://github.com/release-argus/Argus/issues/310)) ([c2c70fc](https://github.com/release-argus/Argus/commits/c2c70fc830394a58948a467160559fa2aa91aa53))
+
 ### [0.13.2](https://github.com/release-argus/Argus/compare/0.13.1...0.13.2) (2023-07-19)
 
 
