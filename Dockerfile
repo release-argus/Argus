@@ -2,7 +2,7 @@
 # BASE #
 ########
 ARG DEBIAN_VERSION="bullseye"
-ARG GO_VERSION="1.20"
+ARG GO_VERSION="1.21"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION}
 
 COPY . /build/
