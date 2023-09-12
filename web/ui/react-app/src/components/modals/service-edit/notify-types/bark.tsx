@@ -7,7 +7,7 @@ import {
 import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
-import NotifyOptions from "./generic";
+import NotifyOptions from "./shared";
 import { globalOrDefault } from "./util";
 import { normaliseForSelect } from "../util/normalise-selects";
 import { useFormContext } from "react-hook-form";

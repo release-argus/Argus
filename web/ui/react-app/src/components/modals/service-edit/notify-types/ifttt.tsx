@@ -1,7 +1,7 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyIFTTTType } from "types/config";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { globalOrDefault } from "./util";
 
 const IFTTT = ({

@@ -4,8 +4,6 @@ import {
   NotifyOpsGenieTarget,
 } from "types/config";
 
-import { NotifyOpsGenieDetailType } from "types/service-edit";
-
 interface StringAnyMap {
   [key: string]:
     | string
@@ -14,7 +12,7 @@ interface StringAnyMap {
     | undefined
     | NotifyNtfyAction[]
     | NotifyOpsGenieTarget[]
-    | NotifyOpsGenieDetailType[];
+    | HeaderType[];
 }
 interface StringStringMap {
   [key: string]: string;

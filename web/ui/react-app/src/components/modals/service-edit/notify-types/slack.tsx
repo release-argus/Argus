@@ -5,7 +5,7 @@ import {
   FormLabel,
 } from "components/generic/form";
 
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { NotifySlackType } from "types/config";
 import { globalOrDefault } from "./util";
 

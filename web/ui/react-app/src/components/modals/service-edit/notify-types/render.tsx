@@ -21,6 +21,8 @@ import {
 import { Dict, NotifyType, NotifyTypes } from "types/config";
 import { FC, memo } from "react";
 
+import GENERIC from "./generic";
+
 interface RenderTypeProps {
   name: string;
   type: NotifyTypes;
@@ -58,6 +60,7 @@ const RENDER_TYPE_COMPONENTS: {
   teams: TEAMS,
   telegram: TELEGRAM,
   zulip: ZULIP,
+  generic: GENERIC,
 };
 
 const RenderNotify: FC<RenderTypeProps> = ({

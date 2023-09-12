@@ -15,6 +15,7 @@
 package shoutrrr
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -236,9 +237,59 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("host"),
 			stream,
 			topic)
+	case "generic":
+		// generic://example.com:123/api/v1/postStuff
+		port := s.GetURLField("port")
+		path := s.GetURLField("path")
+		// Add the json payload vars, custom headers, and query vars to the url
+		urlParams := "?"
+		// Separate vars to preserve order
+		jsonMaps := []string{"custom_headers", "json_payload_vars", "query_vars"}
+		prefixes := []string{"@", "$", ""}
+		for index := range jsonMaps {
+			urlParams += jsonMapToString(s.GetURLField(jsonMaps[index]), prefixes[index])
+		}
+		if len(urlParams) > 1 {
+			urlParams = strings.TrimSuffix(urlParams, "&")
+		} else {
+			urlParams = ""
+		}
+		url = fmt.Sprintf("generic://%s%s%s%s",
+			s.GetURLField("host"),
+			util.ValueIfNotDefault(port, ":"+port),
+			util.ValueIfNotDefault(path, "/"+path),
+			urlParams)
 	case "shoutrrr":
 		// Raw
 		url = s.GetURLField("raw")
+	}
+	return
+}
+
+// jsonMapToString returns the JSON param map as an '&' joined list of strings with the prefix added to each key
+//
+// e.g.
+//
+// {"key1": "val1", "key2": "val2"} with prefix '@' returns:
+//
+// @key1=val1&@key2=val2&
+func jsonMapToString(param string, prefix string) (converted string) {
+	if param == "" {
+		return
+	}
+
+	// Convert the json string to a map
+	jsonMap := make(map[string]interface{}, 0)
+	err := json.Unmarshal([]byte(param), &jsonMap)
+	if err != nil {
+		return
+	}
+	// Extract and sort keys from the map
+	keys := util.SortedKeys(jsonMap)
+	// Build the string
+	for _, key := range keys {
+		// Formatted as '{prefix}{key}={value}&'
+		converted += fmt.Sprintf("%s%s=%v&", prefix, key, jsonMap[key])
 	}
 	return
 }

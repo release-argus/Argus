@@ -1,4 +1,9 @@
-import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
+import {
+  ArgType,
+  NotifyEditType,
+  NotifyHeaderType,
+  ServiceEditType,
+} from "types/service-edit";
 import {
   Dict,
   HeaderType,
@@ -131,22 +136,23 @@ export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
   if (notify.url_fields)
     notify.url_fields = convertValuesToString(notify.url_fields);
-  if (notify.params)
+  if (notify.params) {
+    notify.params = convertValuesToString(notify.params);
     if (notify.type === "ntfy") {
-      notify.params = convertValuesToString(notify.params);
-      // http actions should have headers as {KEY;VAL}, not {key:KEY, val:VAL}
+      // http actions should have headers as {KEY:VAL}, not {key:KEY, val:VAL}
       notify.params.actions = Array.isArray(notify.params?.actions)
         ? (notify.params?.actions as NotifyNtfyAction[]).map((action) => ({
             ...action,
             headers:
               action.headers &&
-              convertHeaderTypeToMap(action.headers as HeaderType[]),
+              convertHeaderTypeToMap(action.headers as NotifyHeaderType[]),
             extras:
               action.extras &&
-              convertHeaderTypeToMap(action.extras as HeaderType[]),
+              convertHeaderTypeToMap(action.extras as NotifyHeaderType[]),
           }))
         : undefined;
-    } else notify.params = convertValuesToString(notify.params);
+    }
+  }
 
   return notify as NotifyType;
 };

@@ -732,6 +732,51 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"botmail": "bash",
 					"botkey":  "bosh"}),
 		},
+		"generic - invalid": {
+			sType:              stringPtr("generic"),
+			errsURLFieldsRegex: "host: <required>",
+		},
+		"generic - valid": {
+			sType: stringPtr("generic"),
+			urlFields: map[string]string{
+				"host": "example.com"},
+		},
+		"generic - valid with main": {
+			sType: stringPtr("generic"),
+			main: NewDefaults(
+				"", nil, nil,
+				&map[string]string{
+					"host": "example.com"}),
+		},
+		"generic - valid with custom_headers/json_payload_vars/query_vars": {
+			sType: stringPtr("generic"),
+			urlFields: map[string]string{
+				"host":              "example.com",
+				"custom_headers":    `{"foo":"bar"}`,
+				"json_payload_vars": `{"bish":"bash","bosh":"bing"}`,
+				"query_vars":        `{"me":"work"}`},
+		},
+		"generic - invalid custom_headers": {
+			sType:              stringPtr("generic"),
+			errsURLFieldsRegex: `custom_headers: "[^ ]+ <invalid>`,
+			urlFields: map[string]string{
+				"host":           "example.com",
+				"custom_headers": `"foo":"bar"}`},
+		},
+		"generic - invalid json_payload_vars": {
+			sType:              stringPtr("generic"),
+			errsURLFieldsRegex: `json_payload_vars: "[^ ]+ <invalid>`,
+			urlFields: map[string]string{
+				"host":              "example.com",
+				"json_payload_vars": `{foo":"bar`},
+		},
+		"generic - invalid query_vars": {
+			sType:              stringPtr("generic"),
+			errsURLFieldsRegex: `query_vars: "[^ ]+ <invalid>`,
+			urlFields: map[string]string{
+				"host":       "example.com",
+				"query_vars": `{foo:bar}`},
+		},
 		"shoutrrr - invalid": {
 			sType:              stringPtr("shoutrrr"),
 			errsURLFieldsRegex: "raw: <required>",
@@ -1277,7 +1322,7 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 				"valid": testShoutrrrDefaults(false, false),
 				"other": testShoutrrrDefaults(false, false)}},
 		"invalid type": {
-			errRegex: `type: "[^"]+" <invalid>`,
+			errRegex: "", // Caught by Shoutrrr.CheckValues
 			slice: &SliceDefaults{
 				"valid": testShoutrrrDefaults(false, false),
 				"other": NewDefaults(

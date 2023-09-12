@@ -111,10 +111,6 @@ func (s *SliceDefaults) SetDefaults() {
 		nil,
 		&map[string]string{
 			"port": "443"})
-	newSlice["shoutrrr"] = NewDefaults(
-		"",
-		notifyDefaultOptions(),
-		nil, nil)
 	newSlice["slack"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -133,6 +129,20 @@ func (s *SliceDefaults) SetDefaults() {
 			"preview":      "yes"},
 		nil)
 	newSlice["zulip"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil, nil)
+	newSlice["generic"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		&map[string]string{
+			"contenttype":   "application/json",
+			"disabletls":    "no",
+			"messagekey":    "message",
+			"requestmethod": "POST",
+			"titlekey":      "title"},
+		nil)
+	newSlice["shoutrrr"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil, nil)

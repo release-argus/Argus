@@ -2,7 +2,7 @@ import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { NotifyTelegramType } from "types/config";
 import { globalOrDefault } from "./util";
 import { normaliseForSelect } from "../util/normalise-selects";

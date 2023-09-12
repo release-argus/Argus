@@ -418,6 +418,42 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"topic":  "TOPIC",
 				"stream": "STREAM"},
 		},
+		"generic - base": {
+			sType: "generic",
+			want:  "generic://HOST",
+			urlFields: map[string]string{
+				"host": "HOST"},
+		},
+		"generic - base + custom_headers": {
+			sType: "generic",
+			want:  "generic://HOST?@contentType=val2&@fooBar=val1",
+			urlFields: map[string]string{
+				"host":           "HOST",
+				"custom_headers": `{"fooBar":"val1","contentType":"val2"}`},
+		},
+		"generic - base + json_payload_vars": {
+			sType: "generic",
+			want:  "generic://HOST?$key1=val1",
+			urlFields: map[string]string{
+				"host":              "HOST",
+				"json_payload_vars": `{"key1":"val1"}`},
+		},
+		"generic - base + query_vars": {
+			sType: "generic",
+			want:  "generic://HOST?foo=bar",
+			urlFields: map[string]string{
+				"host":       "HOST",
+				"query_vars": `{"foo":"bar"}`},
+		},
+		"generic - base + custom_headers + json_payload_vars + query_vars": {
+			sType: "generic",
+			want:  "generic://HOST?@contentType=val2&@fooBar=val1&$key1=val1&foo=bar",
+			urlFields: map[string]string{
+				"host":              "HOST",
+				"custom_headers":    `{"fooBar":"val1","contentType":"val2"}`,
+				"json_payload_vars": `{"key1":"val1"}`,
+				"query_vars":        `{"foo":"bar"}`},
+		},
 		"shoutrrr - base": {
 			sType:     "shoutrrr",
 			want:      "RAW",
@@ -437,6 +473,51 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 
 			// WHEN BuildURL is called
 			got := shoutrrr.BuildURL()
+
+			// THEN the expected URL is returned
+			if got != tc.want {
+				t.Errorf("\nwant: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
+
+func Test_jsonMapToString(t *testing.T) {
+	// GIVEN a JSON string
+	tests := map[string]struct {
+		jsonStr string
+		want    string
+	}{
+		"empty": {
+			jsonStr: ``,
+			want:    "",
+		},
+		"empty map": {
+			jsonStr: `{}`,
+			want:    "",
+		},
+		"single": {
+			jsonStr: `{"foo":"bar"}`,
+			want:    "@foo=bar&",
+		},
+		"multiple": {
+			jsonStr: `{"foo":"bar","bar":"foo"}`,
+			want:    "@bar=foo&@foo=bar&",
+		},
+		"invalid": {
+			jsonStr: `{"foo":"bar","bar":"foo`,
+			want:    "",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN jsonMapToString is called
+			got := jsonMapToString(tc.jsonStr, "@")
 
 			// THEN the expected URL is returned
 			if got != tc.want {

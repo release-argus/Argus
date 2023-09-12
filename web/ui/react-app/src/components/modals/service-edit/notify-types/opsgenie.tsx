@@ -1,12 +1,12 @@
 import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
 import {
-  convertOpsGenieDetailsFromString,
+  convertHeadersFromString,
   convertOpsGenieTargetFromString,
 } from "../util/api-ui-conversions";
 import { useEffect, useMemo } from "react";
 
 import { NotifyOpsGenieType } from "types/config";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { OpsGenieTargets } from "./extra";
 import { globalOrDefault } from "./util";
 import { useFormContext } from "react-hook-form";
@@ -28,7 +28,7 @@ const OPSGENIE = ({
 
   const convertedDefaults = useMemo(
     () => ({
-      details: convertOpsGenieDetailsFromString(
+      details: convertHeadersFromString(
         globalOrDefault(
           global?.params?.details as string,
           defaults?.params?.details as string,
@@ -57,10 +57,7 @@ const OPSGENIE = ({
     const details = getValues(`${name}.params.details`);
 
     if (typeof details === "string")
-      setValue(
-        `${name}.params.details`,
-        convertOpsGenieDetailsFromString(details)
-      );
+      setValue(`${name}.params.details`, convertHeadersFromString(details));
 
     const responders = getValues(`${name}.paramms.responders`);
     if (typeof responders === "string")

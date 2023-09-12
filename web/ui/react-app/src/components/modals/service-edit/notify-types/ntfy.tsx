@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
-import NotifyOptions from "./generic";
+import NotifyOptions from "./shared";
 import { NtfyActions } from "./extra";
 import { globalOrDefault } from "./util";
 import { normaliseForSelect } from "../util/normalise-selects";

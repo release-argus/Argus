@@ -5,7 +5,7 @@ import {
 } from "components/generic/form";
 
 import { NotifyMatterMostType } from "types/config";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { globalOrDefault } from "./util";
 
 const MATTERMOST = ({

@@ -51,10 +51,10 @@ code {
   --accordion-button-background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e5e5e5'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
 }
 .theme-light {
-  --dark-text: #363636;
-  --text: #191d21;
-  --dark-background: #e5e5e5;
-  --background: #cecece;
+  --dark-text: #191d21;
+  --text: #363636;
+  --dark-background: #cecece;
+  --background: #e5e5e5;
   --background-success: #00b74a;
   --background-warning: #ffa900;
   --background-info: #39c0ed;
@@ -526,6 +526,9 @@ code {
   background-color: var(--dark-background);
   color: var(--text);
   box-shadow: var(--dark-text);
+}
+.form-control::placeholder {
+  color: var(--accent);
 }
 .form-select {
   border-color: var(--btn-secondary-background-color);

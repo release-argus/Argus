@@ -6,7 +6,7 @@ import {
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
-import NotifyOptions from "./generic";
+import NotifyOptions from "./shared";
 import { globalOrDefault } from "./util";
 import { strToBool } from "utils";
 

@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyGotifyType } from "types/config";
-import { NotifyOptions } from "./generic";
+import { NotifyOptions } from "./shared";
 import { globalOrDefault } from "./util";
 import { strToBool } from "utils";
 

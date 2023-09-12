@@ -557,6 +557,33 @@ export interface NotifyZulipType extends NotifyType {
   };
 }
 
+export type NotifyGenericRequestMethods =
+  | "OPTIONS"
+  | "GET"
+  | "HEAD"
+  | "POST"
+  | "PUT"
+  | "DELETE"
+  | "TRACE"
+  | "CONNECT";
+export interface NotifyGenericType extends NotifyType {
+  type: "generic";
+  url_fields: {
+    host?: string;
+    port?: number;
+    path?: string;
+  };
+  params: {
+    contenttype?: string;
+    disabletls?: boolean;
+    messagekey?: string;
+    requestmethod?: string;
+    template?: string;
+    title?: string;
+    titlekey?: string;
+  };
+}
+
 export interface NotifyOptionsType {
   [key: string]: string | number | undefined;
   message?: string;

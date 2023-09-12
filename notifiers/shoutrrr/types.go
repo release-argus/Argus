@@ -25,7 +25,7 @@ var (
 	jLog           *util.JLog
 	supportedTypes = []string{
 		"bark", "discord", "smtp", "gotify", "googlechat", "ifttt", "join", "mattermost", "matrix", "ntfy",
-		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "shoutrrr"}
+		"opsgenie", "pushbullet", "pushover", "rocketchat", "slack", "teams", "telegram", "zulip", "generic", "shoutrrr"}
 )
 
 // Slice mapping of Shoutrrr.
