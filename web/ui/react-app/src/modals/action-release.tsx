@@ -105,8 +105,8 @@ const ActionReleaseModal = () => {
     );
   }, [isSendingThisService, modalData]);
 
-  const { mutate } = useMutation(
-    (data: {
+  const { mutate } = useMutation({
+    mutationFn: (data: {
       target: string;
       service: string;
       isWebHook: boolean;
@@ -117,73 +117,69 @@ const ActionReleaseModal = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target: data.target }),
       }),
-    {
-      onMutate: (data) => {
-        if (data.target === "ARGUS_SKIP") return;
+    onMutate: (data) => {
+      if (data.target === "ARGUS_SKIP") return;
 
-        let command_data: CommandSummaryListType | undefined = {};
-        let webhook_data: WebHookSummaryListType | undefined = {};
-        if (!data.unspecificTarget) {
-          // Targeting specific command/webhook
-          if (data.isWebHook)
-            webhook_data = { [data.target.slice("webhook_".length)]: {} };
-          else command_data = { [data.target.slice("command_".length)]: {} };
-        } else {
-          // All Commands/WebHooks have been sent successfully
-          const allSuccessful =
-            Object.keys(modalData.commands).every(
-              (command_id) => modalData.commands[command_id].failed === false
-            ) &&
-            Object.keys(modalData.webhooks).every(
-              (webhook_id) => modalData.webhooks[webhook_id].failed === false
-            );
+      let command_data: CommandSummaryListType | undefined = {};
+      let webhook_data: WebHookSummaryListType | undefined = {};
+      if (!data.unspecificTarget) {
+        // Targeting specific command/webhook
+        if (data.isWebHook)
+          webhook_data = { [data.target.slice("webhook_".length)]: {} };
+        else command_data = { [data.target.slice("command_".length)]: {} };
+      } else {
+        // All Commands/WebHooks have been sent successfully
+        const allSuccessful =
+          Object.keys(modalData.commands).every(
+            (command_id) => modalData.commands[command_id].failed === false
+          ) &&
+          Object.keys(modalData.webhooks).every(
+            (webhook_id) => modalData.webhooks[webhook_id].failed === false
+          );
 
-          // sending these commands
-          for (const command_id in modalData.commands) {
-            // skip commands that aren't after next_runnable
-            // and commands that have already succeeded if some commands haven't
-            if (
-              (modalData.commands[command_id].next_runnable !== undefined &&
-                dateIsAfterNow(
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  modalData.commands[command_id].next_runnable!
-                )) ||
-              (!allSuccessful &&
-                modalData.commands[command_id].failed === false)
-            )
-              continue;
-            command_data[command_id] = {};
-          }
-
-          // sending these webhooks
-          for (const webhook_id in modalData.webhooks) {
-            // skip webhooks that aren't after next_runnable
-            // and webhooks that have already succeeded if some webhooks haven't
-            if (
-              (modalData.webhooks[webhook_id].next_runnable !== undefined &&
-                dateIsAfterNow(
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                  modalData.webhooks[webhook_id].next_runnable!
-                )) ||
-              (!allSuccessful &&
-                modalData.webhooks[webhook_id].failed === false)
-            )
-              continue;
-            webhook_data[webhook_id] = {};
-          }
+        // sending these commands
+        for (const command_id in modalData.commands) {
+          // skip commands that aren't after next_runnable
+          // and commands that have already succeeded if some commands haven't
+          if (
+            (modalData.commands[command_id].next_runnable !== undefined &&
+              dateIsAfterNow(
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                modalData.commands[command_id].next_runnable!
+              )) ||
+            (!allSuccessful && modalData.commands[command_id].failed === false)
+          )
+            continue;
+          command_data[command_id] = {};
         }
 
-        setModalData({
-          page: "APPROVALS",
-          type: "ACTION",
-          sub_type: "SENDING",
-          service_data: { id: modal.service.id, loading: false },
-          command_data: command_data,
-          webhook_data: webhook_data,
-        });
-      },
-    }
-  );
+        // sending these webhooks
+        for (const webhook_id in modalData.webhooks) {
+          // skip webhooks that aren't after next_runnable
+          // and webhooks that have already succeeded if some webhooks haven't
+          if (
+            (modalData.webhooks[webhook_id].next_runnable !== undefined &&
+              dateIsAfterNow(
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                modalData.webhooks[webhook_id].next_runnable!
+              )) ||
+            (!allSuccessful && modalData.webhooks[webhook_id].failed === false)
+          )
+            continue;
+          webhook_data[webhook_id] = {};
+        }
+      }
+
+      setModalData({
+        page: "APPROVALS",
+        type: "ACTION",
+        sub_type: "SENDING",
+        service_data: { id: modal.service.id, loading: false },
+        command_data: command_data,
+        webhook_data: webhook_data,
+      });
+    },
+  });
 
   const onClickAcknowledge = useCallback(
     (target: string, isWebHook?: boolean) => {
@@ -215,17 +211,15 @@ const ActionReleaseModal = () => {
     [modal.service, canSendUnspecific]
   );
 
-  const { data } = useQuery<ActionAPIType>(
-    ["actions", { service: modal.service.id }],
-    () =>
+  const { data } = useQuery<ActionAPIType>({
+    queryKey: ["actions", { service: modal.service.id }],
+    queryFn: () =>
       fetchJSON(
         `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`
       ),
-    {
-      enabled: modal.actionType !== "EDIT" && modal.service.id !== "",
-      refetchOnMount: "always",
-    }
-  );
+    enabled: modal.actionType !== "EDIT" && modal.service.id !== "",
+    refetchOnMount: "always",
+  });
 
   useEffect(
     () =>

@@ -14,11 +14,11 @@ export const Config = (): ReactElement => {
     undefined | Record<string, any>
   >(undefined);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, isFetching } = useQuery<Record<string, any>>(
-    ["config"],
-    () => fetchJSON(`api/v1/config`),
-    { staleTime: 0 }
-  );
+  const { data, isFetching } = useQuery<Record<string, any>>({
+    queryKey: ["config"],
+    queryFn: () => fetchJSON(`api/v1/config`),
+    staleTime: 0,
+  });
 
   useEffect(() => {
     if (!isFetching && data) {

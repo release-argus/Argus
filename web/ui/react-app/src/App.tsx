@@ -29,7 +29,7 @@ const App = (): ReactElement => {
   const queryClient = new QueryClient();
   queryClient.setDefaultOptions({
     queries: {
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
       refetchOnWindowFocus: true,
       staleTime: 1000 * 60 * 5, // 5 minutes
     },
