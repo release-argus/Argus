@@ -19,16 +19,16 @@ export const Status = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
   const themeCtx = useTheme();
 
-  const { data: runtimeData } = useQuery<RuntimeInfo>(
-    ["status/runtime"],
-    () => fetchJSON(`api/v1/status/runtime`),
-    { staleTime: Infinity } // won't change unless Argus is restarted
-  );
-  const { data: buildData } = useQuery<BuildInfo>(
-    ["version"],
-    () => fetchJSON(`api/v1/version`),
-    { staleTime: Infinity } // won't change unless Argus is restarted
-  );
+  const { data: runtimeData } = useQuery<RuntimeInfo>({
+    queryKey: ["status/runtime"],
+    queryFn: () => fetchJSON(`api/v1/status/runtime`),
+    staleTime: Infinity, // won't change unless Argus is restarted
+  });
+  const { data: buildData } = useQuery<BuildInfo>({
+    queryKey: ["version"],
+    queryFn: () => fetchJSON(`api/v1/version`),
+    staleTime: Infinity, // won't change unless Argus is restarted
+  });
 
   return (
     <>

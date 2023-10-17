@@ -65,11 +65,11 @@ export const WebSocketProvider = (props: Props) => {
     [connected, monitorData]
   );
 
-  const { data: orderData } = useQuery(
-    ["service/order"],
-    () => fetchJSON<OrderAPIResponse>(`api/v1/service/order`),
-    { cacheTime: 1000 * 60 * 30 } // 30 mins
-  );
+  const { data: orderData } = useQuery({
+    queryKey: ["service/order"],
+    queryFn: () => fetchJSON<OrderAPIResponse>(`api/v1/service/order`),
+    gcTime: 1000 * 60 * 30, // 30 mins
+  });
   useEffect(() => {
     if (orderData?.order !== undefined) {
       setMonitorData({
@@ -109,11 +109,12 @@ export const WebSocketProvider = (props: Props) => {
       // update/invalidate caches
       if (msg.page === "APPROVALS") {
         if (msg.type === "EDIT") {
-          queryClient.invalidateQueries(["actions", { service: msg.sub_type }]);
-          queryClient.invalidateQueries([
-            "service/edit",
-            { service: msg.sub_type },
-          ]);
+          queryClient.invalidateQueries({
+            queryKey: ["actions", { service: msg.sub_type }],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["service/edit", { service: msg.sub_type }],
+          });
         }
 
         if (

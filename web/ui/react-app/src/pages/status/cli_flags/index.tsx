@@ -17,7 +17,11 @@ export const Flags = (): ReactElement => {
 
   const { data, isFetching } = useQuery<
     Dictionary<string | boolean | undefined>
-  >(["flags"], () => fetchJSON(`api/v1/flags`), { staleTime: Infinity });
+  >({
+    queryKey: ["flags"],
+    queryFn: () => fetchJSON(`api/v1/flags`),
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
     if (!isFetching && data) setFlags(data);

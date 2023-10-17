@@ -31,17 +31,16 @@ const EditService: FC<Props> = ({ name }) => {
   const [loading, setLoading] = useState(true);
 
   const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
-    useQuery(["service/edit", "detail"], () =>
-      fetchJSON<ServiceEditOtherData>("api/v1/service/edit")
-    );
-  const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery(
-    ["service/edit", { id: name }],
-    () => fetchJSON<ServiceEditAPIType>(`api/v1/service/edit/${name}`),
-    {
-      enabled: !!name,
-      refetchOnMount: "always",
-    }
-  );
+    useQuery({
+      queryKey: ["service/edit", "detail"],
+      queryFn: () => fetchJSON<ServiceEditOtherData>("api/v1/service/edit"),
+    });
+  const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
+    queryKey: ["service/edit", { id: name }],
+    queryFn: () => fetchJSON<ServiceEditAPIType>(`api/v1/service/edit/${name}`),
+    enabled: !!name,
+    refetchOnMount: "always",
+  });
 
   const defaultData: ServiceEditType = useMemo(
     () => convertAPIServiceDataEditToUI(name, serviceData, otherOptionsData),

@@ -51,8 +51,8 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     isFetching,
     isStale,
     refetch: refetchVersion,
-  } = useQuery(
-    [
+  } = useQuery({
+    queryKey: [
       "version/refresh",
       dataTarget,
       { id: serviceName },
@@ -62,20 +62,18 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
         original_data: original,
       },
     ],
-    () => fetchVersionJSON(),
-    {
-      enabled: false,
-      initialData: {
-        version: monitorData.service[serviceName]
-          ? monitorData.service[serviceName]?.status?.[dataTarget]
-          : "",
-        error: "",
-        timestamp: "",
-      },
-      notifyOnChangeProps: "all",
-      staleTime: 0,
-    }
-  );
+    queryFn: () => fetchVersionJSON(),
+    enabled: false,
+    initialData: {
+      version: monitorData.service[serviceName]
+        ? monitorData.service[serviceName]?.status?.[dataTarget]
+        : "",
+      error: "",
+      timestamp: "",
+    },
+    notifyOnChangeProps: "all",
+    staleTime: 0,
+  });
 
   const refetch = async () => {
     // Prevent refetching too often
