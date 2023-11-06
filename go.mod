@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/containrrr/shoutrrr v0.8.0
 	github.com/flosch/pongo2/v5 v5.0.0
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/vearutop/statigz v1.4.0
