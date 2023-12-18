@@ -18,7 +18,7 @@ import { ModalContext } from "contexts/modal";
 import { ModalList } from "components/modals/action-release/list";
 import { WebSocketResponse } from "types/websocket";
 import { addMessageHandler } from "contexts/websocket";
-import formatRelative from "date-fns/formatRelative";
+import { formatRelative } from "date-fns";
 import reducerActionModal from "reducers/action-release";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useTheme } from "contexts/theme";

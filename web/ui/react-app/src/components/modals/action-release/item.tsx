@@ -6,6 +6,7 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { FC, useEffect, useState } from "react";
+import { differenceInMilliseconds, formatRelative } from "date-fns";
 import {
   faCheck,
   faCircleNotch,
@@ -17,8 +18,6 @@ import {
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalType } from "types/summary";
-import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
-import formatRelative from "date-fns/formatRelative";
 
 interface Props {
   itemType: "COMMAND" | "WEBHOOK";
