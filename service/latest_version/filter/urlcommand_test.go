@@ -39,6 +39,15 @@ func TestURLCommandSlice_String(t *testing.T) {
   regex: -([0-9.]+)-
 `,
 		},
+		"regex (templated)": {
+			slice: &URLCommandSlice{
+				testURLCommandRegexTemplate()},
+			want: `
+- type: regex
+  regex: -([0-9.]+)-
+  template: _$1_
+`,
+		},
 		"replace": {
 			slice: &URLCommandSlice{
 				testURLCommandReplace()},
@@ -240,6 +249,12 @@ func TestURLCommandSlice_Run(t *testing.T) {
 			errRegex: `regex .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     testText,
 		},
+		"regex with template": {
+			slice: &URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("([a-z]+)([0-9]+)"), Index: 1, Template: stringPtr("$1_$2")}},
+			errRegex: "^$",
+			want:     "def_456",
+		},
 		"replace": {
 			slice: &URLCommandSlice{
 				{Type: "replace", Old: stringPtr("-"), New: stringPtr(" ")}},
@@ -281,7 +296,9 @@ func TestURLCommandSlice_Run(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN run is called on it
 			text := testText
@@ -301,6 +318,78 @@ func TestURLCommandSlice_Run(t *testing.T) {
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestURLCommand_regexTemplate(t *testing.T) {
+	// GIVEN a URLCommand and text to run it on
+	tests := map[string]struct {
+		text     string
+		regex    string
+		index    int
+		template *string
+		want     string
+	}{
+		"datetime template": {
+			text:     "2024-01-01T16-36-33Z",
+			regex:    `([\d-]+)T(\d+)-(\d+)-(\d+)Z`,
+			template: stringPtr("$1T$2:$3:$4Z"),
+			want:     "2024-01-01T16:36:33Z",
+		},
+		"template with 10+ matches": {
+			text:     "abcdefghijklmnopqrstuvwxyz",
+			regex:    `([a-z])([a-z])([a-z])([a-z])([a-z]{2})([a-z])([a-z])([a-z])([a-z])([a-z])([a-z])`,
+			template: stringPtr("$1_$2_$3_$4_$5_$6_$7_$8_$9_$10_$11"),
+			want:     "a_b_c_d_ef_g_h_i_j_k_l",
+		},
+		"template using non-zero index": {
+			text:     "abc123-def456-ghi789",
+			regex:    `([a-z]+)(\d+)`,
+			index:    1,
+			template: stringPtr("$2$1"),
+			want:     "456def",
+		},
+		"template with placeholder out of range": {
+			text:     "abc123-def456-ghi789",
+			regex:    `([a-z]+)(\d+)`,
+			template: stringPtr("$1$4-$10"),
+			want:     "abc$4-abc0",
+		},
+		"template with all placeholders out of range": {
+			text:     "abc123-def456-ghi789",
+			regex:    `([a-z]+)(\d+)`,
+			template: stringPtr("$4$5"),
+			want:     "$4$5",
+		},
+		"no template": {
+			text:  "abc123-def456-ghi789",
+			regex: `([a-z]+)(\d+)`,
+			index: 1,
+			want:  "456",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			re := regexp.MustCompile(tc.regex)
+			texts := re.FindAllStringSubmatch(tc.text, -1)
+			urlCommand := URLCommand{
+				Regex:    stringPtr(tc.regex),
+				Index:    tc.index,
+				Template: tc.template}
+
+			// WHEN regexTemplate is called on the regex matches
+			got := urlCommand.regexTemplate(texts, tc.index, &util.LogFrom{})
+
+			// THEN the expected string is returned
+			if got != tc.want {
+				t.Fatalf("want: %q\n got: %q",
+					tc.want, got)
 			}
 		})
 	}
@@ -345,7 +434,9 @@ text: this
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN String is called on it
 			got := tc.cmd.String()
@@ -363,8 +454,9 @@ text: this
 func TestURLCommandSlice_CheckValues(t *testing.T) {
 	// GIVEN a URLCommandSlice
 	tests := map[string]struct {
-		slice    *URLCommandSlice
-		errRegex []string
+		slice     *URLCommandSlice
+		wantSlice *URLCommandSlice
+		errRegex  []string
 	}{
 		"nil slice": {
 			slice:    nil,
@@ -383,6 +475,17 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 			slice: &URLCommandSlice{
 				{Type: "regex", Regex: stringPtr("[0-")}},
 			errRegex: []string{`^    regex: .* <invalid>`},
+		},
+		"valid regex with template": {
+			slice:    &URLCommandSlice{testURLCommandRegexTemplate()},
+			errRegex: []string{`^$`},
+		},
+		"valid regex with empty template": {
+			slice: &URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("[0-"), Template: stringPtr("")}},
+			wantSlice: &URLCommandSlice{
+				{Type: "regex", Regex: stringPtr("[0-")}},
+			errRegex: []string{`^$`},
 		},
 		"valid replace": {
 			slice: &URLCommandSlice{
@@ -433,7 +536,9 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			// WHEN CheckValues is called on it
 			err := tc.slice.CheckValues("")
@@ -454,6 +559,16 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 				if !found {
 					t.Errorf("want match for: %q\ngot:  %q",
 						tc.errRegex[i], strings.ReplaceAll(e, `\`, "\n"))
+				}
+			}
+
+			// AND the slice is as expected
+			if tc.wantSlice != nil {
+				strHave := tc.slice.String()
+				strWant := tc.wantSlice.String()
+				if strHave != strWant {
+					t.Errorf("want slice:\n%q\ngot:  %q",
+						strWant, strHave)
 				}
 			}
 		})

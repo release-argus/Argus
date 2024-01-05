@@ -192,12 +192,14 @@ export type CommandType = string[];
 
 export type URLCommandTypes = "regex" | "replace" | "split" | string;
 export interface URLCommandType {
-  [key: string]: string | URLCommandTypes | number | undefined;
+  [key: string]: string | URLCommandTypes | number | boolean | undefined;
 
   type: URLCommandTypes;
   regex?: string; // regex
   text?: string; // split
-  index?: number; // split
+  index?: number; // regex,split
+  template?: string; // regex
+  template_toggle?: boolean; // regex
   old?: string; // replace
   new?: string; // replace
 }
