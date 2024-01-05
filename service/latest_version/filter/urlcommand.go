@@ -36,12 +36,13 @@ func (s *URLCommandSlice) String() (str string) {
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type  string  `yaml:"type" json:"type"`                       // regex/replace/split
-	Regex *string `yaml:"regex,omitempty" json:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
-	Index int     `yaml:"index,omitempty" json:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text  *string `yaml:"text,omitempty" json:"text,omitempty"`   // split: strings.Split(tgtString, "Text")
-	New   *string `yaml:"new,omitempty" json:"new,omitempty"`     // replace: strings.ReplaceAll(tgtString, "Old", "New")
-	Old   *string `yaml:"old,omitempty" json:"old,omitempty"`     // replace: strings.ReplaceAll(tgtString, "Old", "New")
+	Type     string  `yaml:"type" json:"type"`                             // regex/replace/split
+	Regex    *string `yaml:"regex,omitempty" json:"regex,omitempty"`       // regex: regexp.MustCompile(Regex)
+	Index    int     `yaml:"index,omitempty" json:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Template *string `yaml:"template,omitempty" json:"template,omitempty"` // regex: template
+	Text     *string `yaml:"text,omitempty" json:"text,omitempty"`         // split: strings.Split(tgtString, "Text")
+	New      *string `yaml:"new,omitempty" json:"new,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New")
+	Old      *string `yaml:"old,omitempty" json:"old,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 // String returns a string representation of the URLCommand.
@@ -113,6 +114,9 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 		text = strings.ReplaceAll(text, *c.Old, *c.New)
 	case "regex":
 		msg = fmt.Sprintf("Regexing %q", *c.Regex)
+		if c.Template != nil {
+			msg = fmt.Sprintf("%s with template %q", msg, *c.Template)
+		}
 		text, err = c.regex(text, logFrom)
 	}
 	if err != nil {
@@ -137,6 +141,7 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 		index = len(texts) + c.Index
 	}
 
+	// No matches.
 	if len(texts) == 0 {
 		err := fmt.Errorf("%s %q didn't return any matches",
 			c.Type, *c.Regex)
@@ -148,7 +153,7 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 
 		return text, err
 	}
-
+	// Index out of range.
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
 			c.Type, *c.Regex, len(texts), text, (index + 1))
@@ -157,7 +162,27 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 		return text, err
 	}
 
-	return texts[index][len(texts[index])-1], nil
+	return c.regexTemplate(texts, index, logFrom), nil
+}
+
+// regexTemplate `text` with the URLCommand's regex template.
+func (c *URLCommand) regexTemplate(texts [][]string, index int, logFrom *util.LogFrom) (result string) {
+	// No template, return the text at the index.
+	if c.Template == nil {
+		return texts[index][len(texts[index])-1]
+	}
+
+	text := texts[index]
+
+	// Replace placeholders in the template with matched groups in reverse order
+	// (so that '$10' isn't replace by '$1')
+	result = *c.Template
+	for i := len(text) - 1; i > 0; i-- {
+		placeholder := fmt.Sprintf("$%d", i)
+		result = strings.ReplaceAll(result, placeholder, text[i])
+	}
+
+	return result
 }
 
 // split `text` with the URLCommand's text amd return the index specified.
@@ -224,6 +249,10 @@ func (c *URLCommand) CheckValues(prefix string) (errs error) {
 				errs = fmt.Errorf("%s%sregex: %q <invalid> (Invalid RegEx)\\",
 					util.ErrorToString(errs), prefix, *c.Regex)
 			}
+		}
+		// Remove the template if it's empty
+		if util.DefaultIfNil(c.Template) == "" {
+			c.Template = nil
 		}
 	case "replace":
 		if c.New == nil {

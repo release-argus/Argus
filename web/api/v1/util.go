@@ -169,12 +169,13 @@ func convertURLCommandSlice(commands *filter.URLCommandSlice) *api_type.URLComma
 	slice := make(api_type.URLCommandSlice, len(*commands))
 	for index := range *commands {
 		slice[index] = api_type.URLCommand{
-			Type:  (*commands)[index].Type,
-			Regex: (*commands)[index].Regex,
-			Index: (*commands)[index].Index,
-			Text:  (*commands)[index].Text,
-			Old:   (*commands)[index].Old,
-			New:   (*commands)[index].New}
+			Type:     (*commands)[index].Type,
+			Regex:    (*commands)[index].Regex,
+			Index:    (*commands)[index].Index,
+			Template: (*commands)[index].Template,
+			Text:     (*commands)[index].Text,
+			Old:      (*commands)[index].Old,
+			New:      (*commands)[index].New}
 	}
 	return &slice
 }

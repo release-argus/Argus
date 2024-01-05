@@ -10,6 +10,8 @@ import {
   ServiceEditType,
 } from "types/service-edit";
 
+import { urlCommandsTrimArray } from "./url-command-trim";
+
 export const convertAPIServiceDataEditToUI = (
   name: string,
   serviceData?: ServiceEditAPIType,
@@ -25,6 +27,9 @@ export const convertAPIServiceDataEditToUI = (
       },
       latest_version: {
         ...serviceData?.latest_version,
+        url_commands:
+          serviceData?.latest_version?.url_commands &&
+          urlCommandsTrimArray(serviceData.latest_version.url_commands),
         require: {
           ...serviceData?.latest_version?.require,
           command: serviceData?.latest_version?.require?.command?.map(

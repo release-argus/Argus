@@ -50,6 +50,16 @@ func testURLCommandRegex() URLCommand {
 		Regex: &regex,
 		Index: index}
 }
+func testURLCommandRegexTemplate() URLCommand {
+	regex := "-([0-9.]+)-"
+	index := 0
+	template := "_$1_"
+	return URLCommand{
+		Type:  "regex",
+		Regex: &regex,
+		Index: index,
+		Template: &template}
+}
 
 func testURLCommandReplace() URLCommand {
 	old := "foo"

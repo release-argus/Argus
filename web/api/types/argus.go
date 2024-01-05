@@ -532,12 +532,13 @@ func (slice *URLCommandSlice) String() (str string) {
 
 // URLCommand is a command to be ran to filter version from the URL body.
 type URLCommand struct {
-	Type  string  `json:"type,omitempty" yaml:"type,omitempty"`   // regex/replace/split
-	Regex *string `json:"regex,omitempty" yaml:"regex,omitempty"` // regex: regexp.MustCompile(Regex)
-	Index int     `json:"index,omitempty" yaml:"index,omitempty"` // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Text  *string `json:"text,omitempty" yaml:"text,omitempty"`   // split:       strings.Split(tgtString, "Text")
-	New   *string `json:"new,omitempty" yaml:"new,omitempty"`     // replace:     strings.ReplaceAll(tgtString, "Old", "New")
-	Old   *string `json:"old,omitempty" yaml:"old,omitempty"`     // replace:     strings.ReplaceAll(tgtString, "Old", "New")
+	Type     string  `json:"type,omitempty" yaml:"type,omitempty"`         // regex/replace/split
+	Regex    *string `json:"regex,omitempty" yaml:"regex,omitempty"`       // regex: regexp.MustCompile(Regex)
+	Index    int     `json:"index,omitempty" yaml:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
+	Template *string `yaml:"template,omitempty" json:"template,omitempty"` // regex: template
+	Text     *string `json:"text,omitempty" yaml:"text,omitempty"`         // split:       strings.Split(tgtString, "Text")
+	New      *string `json:"new,omitempty" yaml:"new,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New")
+	Old      *string `json:"old,omitempty" yaml:"old,omitempty"`           // replace:     strings.ReplaceAll(tgtString, "Old", "New")
 }
 
 type Command []string

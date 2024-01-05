@@ -1,3 +1,4 @@
+import FormCheck from "./form-check";
 import FormItem from "./form-item";
 import FormItemColour from "./form-item-colour";
 import FormItemWithPreview from "./form-item-with-preview";
@@ -8,6 +9,7 @@ import FormSelect from "./form-select";
 import FormTextArea from "./form-textarea";
 
 export {
+  FormCheck,
   FormItem,
   FormItemColour,
   FormItemWithPreview,

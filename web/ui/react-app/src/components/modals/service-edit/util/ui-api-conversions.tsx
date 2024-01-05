@@ -114,7 +114,8 @@ export const convertUIServiceDataEditToAPI = (
 
 // urlCommandTrim will remove any keys not used for the type
 const urlCommandTrim = (command: URLCommandType) => {
-  if (command.type === "regex") return { type: "regex", regex: command.regex };
+  if (command.type === "regex")
+    return { type: "regex", regex: command.regex, template: command.template };
   if (command.type === "replace")
     return { type: "replace", old: command.old, new: command.new };
   // else, it's a split

@@ -551,6 +551,22 @@ code {
 .form-error:focus {
   border-color: var(--alert-danger-color);
 }
+.form-check {
+  height: 100%;
+}
+.form-check-input {
+  background-color: var(--dark-background);
+  color: var(--text);
+  border-color: var(--btn-secondary-background-color);
+}
+.form-check-large .form-check-input {
+  height: 2rem;
+  width: -webkit-fill-available;
+}
+.form-check-input:checked {
+  background-color: var(--btn-secondary-background-color);
+  border-color: var(--btn-secondary-background-color);
+}
 
 .nav-pills .nav-link {
   border: var(--btn-secondary-background-color) 0.1em solid;
