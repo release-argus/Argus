@@ -24,9 +24,16 @@ ARG DEBIAN_VERSION="bullseye"
 FROM debian:${DEBIAN_VERSION}-slim
 LABEL maintainer="The Argus Authors <developers@release-argus.io>"
 RUN \
-    apt-get update && \
-    apt-get install ca-certificates -y && \
-    rm -rf /var/lib/apt/lists/*
+    apt update && \
+    apt install ca-certificates -y && \
+    apt autoremove -y && \
+    apt clean && \
+    rm -rf \
+      /tmp/* \
+      /usr/share/doc/* \
+      /var/cache/* \
+      /var/lib/apt/lists/* \
+      /var/tmp/*
 
 COPY entrypoint.sh /entrypoint.sh
 COPY --from=0 /build/argus               /usr/bin/argus
