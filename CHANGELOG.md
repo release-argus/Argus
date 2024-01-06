@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0](https://github.com/release-argus/Argus/compare/0.13.3...0.14.0) (2024-01-06)
+
+
+### Features
+
+* **latest_version:** regex templating ([1d374a0](https://github.com/release-argus/Argus/commits/1d374a01f920224d9cc22c2c5a8465d1a552d824))
+
 ### [0.13.3](https://github.com/release-argus/Argus/compare/0.13.2...0.13.3) (2023-09-12)
 
 
