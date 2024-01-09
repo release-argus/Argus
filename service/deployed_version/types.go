@@ -45,12 +45,13 @@ func NewDefaults(
 
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL        string `yaml:"url,omitempty" json:"url,omitempty"` // URL to query.
-	LookupBase `yaml:",inline" json:",inline"`
-	BasicAuth  *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"` // Basic Auth for the HTTP(S) request.
-	Headers    []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`       // Headers for the HTTP(S) request.
-	JSON       string     `yaml:"json,omitempty" json:"json,omitempty"`             // JSON key to use e.g. version_current.
-	Regex      string     `yaml:"regex,omitempty" json:"regex,omitempty"`           // Regex to get the DeployedVersion
+	URL           string `yaml:"url,omitempty" json:"url,omitempty"` // URL to query.
+	LookupBase    `yaml:",inline" json:",inline"`
+	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // Basic Auth for the HTTP(S) request.
+	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // Headers for the HTTP(S) request.
+	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // JSON key to use e.g. version_current.
+	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // RegEx to get the DeployedVersion
+	RegexTemplate *string    `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // RegEx template to apply to the RegEx match.
 
 	Options *opt.Options      `yaml:"-" json:"-"` // Options for the lookups
 	Status  *svcstatus.Status `yaml:"-" json:"-"` // Service Status
@@ -67,6 +68,7 @@ func New(
 	json string,
 	options *opt.Options,
 	regex string,
+	regexTemplate *string,
 	status *svcstatus.Status,
 	url string,
 	defaults *LookupDefaults,
@@ -75,14 +77,15 @@ func New(
 	lookup = &Lookup{
 		LookupBase: LookupBase{
 			AllowInvalidCerts: allowInvalidCerts},
-		BasicAuth:    basicAuth,
-		JSON:         json,
-		Options:      options,
-		Regex:        regex,
-		Status:       status,
-		URL:          url,
-		Defaults:     defaults,
-		HardDefaults: hardDefaults}
+		BasicAuth:     basicAuth,
+		JSON:          json,
+		Options:       options,
+		Regex:         regex,
+		RegexTemplate: regexTemplate,
+		Status:        status,
+		URL:           url,
+		Defaults:      defaults,
+		HardDefaults:  hardDefaults}
 	if headers != nil {
 		lookup.Headers = *headers
 	}

@@ -69,7 +69,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 				nil, "", nil,
 				&api.Config.Defaults.Service.Options,
 				&api.Config.HardDefaults.Service.Options),
-			"", &status, "",
+			"", nil, &status, "",
 			&api.Config.Defaults.Service.DeployedVersionLookup,
 			&api.Config.HardDefaults.Service.DeployedVersionLookup)
 		// Deployed Version
@@ -79,6 +79,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 			getParam(&queryParams, "headers"),
 			getParam(&queryParams, "json"),
 			getParam(&queryParams, "regex"),
+			getParam(&queryParams, "regex_template"),
 			getParam(&queryParams, "semantic_versioning"),
 			getParam(&queryParams, "url"))
 	} else {
@@ -172,6 +173,7 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 			getParam(&queryParams, "headers"),
 			getParam(&queryParams, "json"),
 			getParam(&queryParams, "regex"),
+			getParam(&queryParams, "regex_template"),
 			getParam(&queryParams, "semantic_versioning"),
 			getParam(&queryParams, "url"),
 		)

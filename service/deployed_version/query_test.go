@@ -85,6 +85,7 @@ func TestLookup_Query(t *testing.T) {
 		headers              []Header
 		json                 string
 		regex                string
+		regexTemplate        *string
 		errRegex             string
 		wantVersion          string
 	}{
@@ -111,6 +112,14 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:             "^$",
 			url:                  "https://release-argus.io",
 			regex:                "[0-9]{4}",
+		},
+		"regex with template": {
+			noSemanticVersioning: true,
+			errRegex:             "^$",
+			url:                  "https://release-argus.io",
+			regex:                "([0-9]+) (The) (Argus) (Developers)",
+			regexTemplate:        stringPtr("$2 $1 $4, $3"),
+			wantVersion:          "The [0-9]+ Developers, Argus",
 		},
 		"failing regex": {
 			errRegex: "regex .* didn't find a match on",
@@ -165,6 +174,7 @@ func TestLookup_Query(t *testing.T) {
 			dvl.Headers = tc.headers
 			dvl.JSON = tc.json
 			dvl.Regex = tc.regex
+			dvl.RegexTemplate = tc.regexTemplate
 			*dvl.Options.SemanticVersioning = !tc.noSemanticVersioning
 
 			// WHEN Query is called on it

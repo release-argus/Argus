@@ -53,7 +53,7 @@ func testLookup() (lookup *Lookup) {
 			nil, "", boolPtr(true),
 			&opt.OptionsDefaults{},
 			opt.NewDefaults("", boolPtr(true))),
-		"",
+		"", nil,
 		&svcstatus.Status{
 			ServiceID: stringPtr("test")},
 		"https://invalid.release-argus.io/json",

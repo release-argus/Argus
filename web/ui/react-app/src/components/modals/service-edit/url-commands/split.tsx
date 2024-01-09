@@ -8,7 +8,7 @@ const REGEX = ({ name }: { name: string }) => (
       label="Text"
       smallLabel
       required
-      col_xs={6}
+      col_xs={5}
       col_sm={6}
       onRight
     />

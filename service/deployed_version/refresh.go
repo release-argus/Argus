@@ -30,6 +30,7 @@ func (l *Lookup) applyOverrides(
 	headers *string,
 	json *string,
 	regex *string,
+	regexTemplate *string,
 	semanticVersioning *string,
 	url *string,
 	serviceID *string,
@@ -55,6 +56,7 @@ func (l *Lookup) applyOverrides(
 	useJSON := util.PtrValueOrValue(json, l.JSON)
 	// regex
 	useRegex := util.PtrValueOrValue(regex, l.Regex)
+	useRegexTemplate := util.PtrValueOrValue(regexTemplate, util.DefaultIfNil(l.RegexTemplate))
 	// semantic_versioning
 	var useSemanticVersioning *bool
 	if semanticVersioning != nil {
@@ -78,6 +80,7 @@ func (l *Lookup) applyOverrides(
 		useJSON,
 		options,
 		useRegex,
+		&useRegexTemplate,
 		&svcstatus.Status{},
 		useURL,
 		l.Defaults,
@@ -101,6 +104,7 @@ func (l *Lookup) Refresh(
 	headers *string,
 	json *string,
 	regex *string,
+	regexTemplate *string,
 	semanticVersioning *string,
 	url *string,
 ) (version string, announceUpdate bool, err error) {
@@ -114,6 +118,7 @@ func (l *Lookup) Refresh(
 		headers,
 		json,
 		regex,
+		regexTemplate,
 		semanticVersioning,
 		url,
 		&serviceID,
@@ -134,7 +139,8 @@ func (l *Lookup) Refresh(
 		l.Options.GetSemanticVersioning() != lookup.Options.GetSemanticVersioning() ||
 		url != nil ||
 		json != nil ||
-		regex != nil
+		regex != nil ||
+		regexTemplate != nil
 
 	// Query the lookup.
 	version, err = lookup.Query(!overrides, &logFrom)

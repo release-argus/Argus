@@ -15,7 +15,9 @@
 package util
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 )
 
 // regexCheck returns whether there is a regex match of `re` on `text`.
@@ -30,4 +32,22 @@ func RegexCheck(re string, text string) bool {
 func RegexCheckWithParams(re string, text string, version string) bool {
 	re = TemplateString(re, ServiceInfo{LatestVersion: version})
 	return RegexCheck(re, text)
+}
+
+// RegexTemplate on `texts[index]` with the regex `template“.
+func RegexTemplate(regexMatches []string, template *string) (result string) {
+	// No template, return the text at the index.
+	if template == nil {
+		return regexMatches[len(regexMatches)-1]
+	}
+
+	// Replace placeholders in the template with matched groups in reverse order
+	// (so that '$10' isn't replace by '$1')
+	result = *template
+	for i := len(regexMatches) - 1; i > 0; i-- {
+		placeholder := fmt.Sprintf("$%d", i)
+		result = strings.ReplaceAll(result, placeholder, regexMatches[i])
+	}
+
+	return result
 }

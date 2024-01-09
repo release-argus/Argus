@@ -5,6 +5,8 @@ import { useEffect } from "react";
 
 const REGEX = ({ name }: { name: string }) => {
   const { setValue } = useFormContext();
+
+  // Template toggle
   const templateToggle = useWatch({ name: `${name}.template_toggle` });
   useEffect(() => {
     // Clear the template if the toggle is false
@@ -13,14 +15,16 @@ const REGEX = ({ name }: { name: string }) => {
       setValue(`${name}.template_toggle`, false);
     }
   }, [templateToggle]);
+
   return (
     <>
       <FormItem
         name={`${name}.regex`}
+        required={templateToggle ? "Required for template" : false}
         label="RegEx"
         smallLabel
         col_sm={5}
-        col_xs={5}
+        col_xs={7}
         isRegex
         onRight
       />
@@ -48,7 +52,6 @@ const REGEX = ({ name }: { name: string }) => {
       {templateToggle && (
         <FormItem
           name={`${name}.template`}
-          required={templateToggle}
           label="Template"
           smallLabel
           col_sm={12}

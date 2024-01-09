@@ -75,20 +75,17 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	// If a regex is provided, use it to extract the version.
 	if l.Regex != "" {
 		re := regexp.MustCompile(l.Regex)
-		texts := re.FindStringSubmatch(version)
-		index := 1
+		texts := re.FindAllStringSubmatch(version, 1)
 
 		if len(texts) == 0 {
 			err := fmt.Errorf("regex %q didn't find a match on %q",
 				l.Regex, version)
 			jLog.Warn(err, *logFrom, true)
 			return "", err
-		} else if len(texts) == 1 {
-			// no capture group in regex
-			index = 0
 		}
 
-		version = texts[index]
+		regexMatches := texts[0]
+		version = util.RegexTemplate(regexMatches, l.RegexTemplate)
 	}
 
 	// If semantic versioning is enabled, check that the version is in the correct format.

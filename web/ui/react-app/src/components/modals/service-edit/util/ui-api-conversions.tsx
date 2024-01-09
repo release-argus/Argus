@@ -69,6 +69,7 @@ export const convertUIServiceDataEditToAPI = (
         headers: data.deployed_version?.headers,
         json: data.deployed_version?.json,
         regex: data.deployed_version?.regex,
+        regex_template: data.deployed_version?.regex_template,
         basic_auth: {
           username: data.deployed_version?.basic_auth?.username || "",
           password: data.deployed_version?.basic_auth?.password || "",

@@ -8,7 +8,7 @@ import { getNestedError } from "utils";
 interface FormItemProps {
   name: string;
   registerParams?: Record<string, unknown>;
-  required?: boolean;
+  required?: boolean | string;
   unique?: boolean;
 
   col_xs?: number;
@@ -30,7 +30,7 @@ interface FormItemProps {
 const FormItem: FC<FormItemProps> = ({
   name,
   registerParams = {},
-  required,
+  required = false,
   unique,
 
   col_xs = 12,
@@ -73,7 +73,7 @@ const FormItem: FC<FormItemProps> = ({
           <FormLabel
             text={label}
             tooltip={tooltip}
-            required={required}
+            required={required !== false}
             small={!!smallLabel}
           />
         )}
@@ -87,7 +87,7 @@ const FormItem: FC<FormItemProps> = ({
               let validation = true;
               const testValue = value || defaultVal || "";
               if (required) validation = /.+/.test(testValue);
-              if (!validation) return "Required";
+              if (!validation) return required === true ? "Required" : required;
 
               if (isURL) {
                 try {

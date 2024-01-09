@@ -26,12 +26,13 @@ import (
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		url        string
-		json       string
-		regex      string
-		defaults   *LookupDefaults
-		errRegex   string
-		nilService bool
+		url           string
+		json          string
+		regex         string
+		regexTemplate *string
+		defaults      *LookupDefaults
+		errRegex      string
+		nilService    bool
 	}{
 		"nil service": {
 			errRegex:   `^$`,
@@ -58,6 +59,12 @@ func TestLookup_CheckValues(t *testing.T) {
 			regex:    "[0-",
 			defaults: &LookupDefaults{},
 		},
+		"regexTemplate with no regex": {
+			url:           "https://example.com",
+			errRegex:      `^$`,
+			regexTemplate: stringPtr("$1.$2.$3"),
+			defaults:      &LookupDefaults{},
+		},
 		"all errs": {
 			errRegex: `url: <required>`,
 			url:      "",
@@ -81,6 +88,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			lookup.URL = tc.url
 			lookup.JSON = tc.json
 			lookup.Regex = tc.regex
+			lookup.RegexTemplate = tc.regexTemplate
 			lookup.Defaults = nil
 			if tc.defaults != nil {
 				lookup.Defaults = tc.defaults
@@ -99,6 +107,11 @@ func TestLookup_CheckValues(t *testing.T) {
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+
+			// AND RegexTemplate is nil when Regex is empty
+			if lookup != nil && lookup.RegexTemplate != nil && lookup.Regex == "" {
+				t.Fatalf("RegexTemplate should be nil when Regex is empty")
 			}
 		})
 	}

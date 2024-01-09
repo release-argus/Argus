@@ -122,7 +122,7 @@ func testService(id string) *service.Service {
 			boolPtr(false),
 			nil, nil,
 			"foo.bar.version",
-			nil, "",
+			nil, "", nil,
 			&svcstatus.Status{},
 			"https://valid.release-argus.io/json",
 			nil, nil),
