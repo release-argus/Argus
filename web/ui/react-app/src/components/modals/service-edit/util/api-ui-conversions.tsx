@@ -38,18 +38,14 @@ export const convertAPIServiceDataEditToUI = (
             })
           ),
           docker: {
+            ...serviceData?.latest_version?.require?.docker,
             type: serviceData?.latest_version?.require?.docker?.type || "",
-            image: serviceData?.latest_version?.require?.docker?.image,
-            tag: serviceData?.latest_version?.require?.docker?.tag,
-            username: serviceData?.latest_version?.require?.docker?.username,
-            token: serviceData?.latest_version?.require?.docker?.token,
           },
         },
       },
       name: name,
       deployed_version: {
-        url: serviceData?.deployed_version?.url,
-        allow_invalid_certs: serviceData?.deployed_version?.allow_invalid_certs,
+        ...serviceData?.deployed_version,
         basic_auth: {
           username: serviceData?.deployed_version?.basic_auth?.username || "",
           password: serviceData?.deployed_version?.basic_auth?.password || "",
@@ -59,8 +55,8 @@ export const convertAPIServiceDataEditToUI = (
             ...header,
             oldIndex: key,
           })) || [],
-        json: serviceData?.deployed_version?.json,
-        regex: serviceData?.deployed_version?.regex,
+        template_toggle:
+          (serviceData?.deployed_version?.regex_template || "") !== "",
       },
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),

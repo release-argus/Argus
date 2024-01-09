@@ -101,7 +101,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					boolPtr(true), "10m", boolPtr(true),
 					&opt.OptionsDefaults{},
 					&opt.OptionsDefaults{}),
-				`([0-9]+\.[0-9]+\.[0-9]+)`,
+				`([0-9]+\.[0-9]+\.[0-9]+)`, stringPtr("$1.$2.$3"),
 				&svcstatus.Status{},
 				"https://release-argus.io",
 				&deployedver.LookupDefaults{},
@@ -119,8 +119,9 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Headers: []api_type.Header{
 					{Key: "X-Test-0", Value: "<secret>"},
 					{Key: "X-Test-1", Value: "<secret>"}},
-				JSON:  "version",
-				Regex: `([0-9]+\.[0-9]+\.[0-9]+)`},
+				JSON:          "version",
+				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
+				RegexTemplate: stringPtr("$1.$2.$3")},
 		},
 	}
 

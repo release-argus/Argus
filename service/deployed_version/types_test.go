@@ -49,7 +49,7 @@ func TestLookup_String(t *testing.T) {
 				opt.New(
 					boolPtr(true), "9m", boolPtr(false),
 					nil, nil),
-				"v([0-9.]+)",
+				"v([0-9.]+)", stringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
@@ -68,14 +68,15 @@ headers:
   - key: X-Another
     value: val2
 json: value.version
-regex: v([0-9.]+)`,
+regex: v([0-9.]+)
+regex_template: $1`,
 		},
 		"quotes otherwise invalid yaml strings": {
 			lookup: New(
 				nil,
 				&BasicAuth{
 					Username: ">123", Password: "{pass}"},
-				nil, "", nil, "", &svcstatus.Status{}, "", nil, nil),
+				nil, "", nil, "", nil, &svcstatus.Status{}, "", nil, nil),
 			want: `
 basic_auth:
   username: '>123'
@@ -148,7 +149,7 @@ func TestLookup_IsEqual(t *testing.T) {
 				opt.New(
 					nil, "", nil,
 					nil, nil),
-				"v([0-9.]+)",
+				"v([0-9.]+)", stringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
@@ -166,7 +167,7 @@ func TestLookup_IsEqual(t *testing.T) {
 				opt.New(
 					nil, "", boolPtr(true),
 					nil, nil),
-				"v([0-9.]+)",
+				"v([0-9.]+)", stringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
@@ -187,7 +188,7 @@ func TestLookup_IsEqual(t *testing.T) {
 				opt.New(
 					nil, "", boolPtr(true),
 					nil, nil),
-				"v([0-9.]+)",
+				"v([0-9.]+)", stringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
@@ -205,7 +206,7 @@ func TestLookup_IsEqual(t *testing.T) {
 				opt.New(
 					nil, "", boolPtr(true),
 					nil, nil),
-				"v([0-9.]+)",
+				"v([0-9.]+)", stringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com/other",
 				NewDefaults(

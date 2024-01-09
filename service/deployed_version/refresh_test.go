@@ -156,9 +156,11 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		headers            *string
 		json               *string
 		regex              *string
+		regexTemplate      *string
 		semanticVersioning *string
 		url                *string
 		previous           *Lookup
+		previousRegex      string
 		errRegex           string
 		want               *Lookup
 	}{
@@ -174,7 +176,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				nil, nil,
 				test.JSON,
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -190,7 +192,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				nil,
 				test.JSON,
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -207,7 +209,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 					{Key: "bosh", Value: "bosh"}},
 				"version",
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -221,7 +223,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				nil, nil,
 				"bish", // JSON
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -235,7 +237,23 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				nil, nil,
 				"version",
 				test.Options,
-				"bish", // RegEx
+				"bish", nil, // RegEx
+				&svcstatus.Status{},
+				test.URL,
+				nil, nil),
+		},
+		"regex template": {
+			regexTemplate: stringPtr("$1.$4"),
+
+			previous:      testLookup(),
+			previousRegex: "([0-9]+)",
+			want: New(
+				test.AllowInvalidCerts,
+				nil, nil,
+				"version",
+				test.Options,
+				"([0-9]+)",
+				stringPtr("$1.$4"), // RegEx Template
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -251,7 +269,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				opt.New(
 					boolPtr(false), "", nil,
 					nil, nil),
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				nil, nil),
@@ -265,7 +283,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				nil, nil,
 				test.JSON,
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				"https://valid.release-argus.io/json", // URL
 				nil, nil),
@@ -290,6 +308,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			if tc.previousRegex != "" {
+				tc.previous.Regex = tc.previousRegex
+			}
 
 			// WHEN we call applyOverrides
 			got, err := tc.previous.applyOverrides(
@@ -298,6 +319,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				tc.headers,
 				tc.json,
 				tc.regex,
+				tc.regexTemplate,
 				tc.semanticVersioning,
 				tc.url,
 				&name,
@@ -340,6 +362,7 @@ func TestLookup_Refresh(t *testing.T) {
 		headers                  *string
 		json                     *string
 		regex                    *string
+		regexTemplate            *string
 		semanticVersioning       *string
 		url                      *string
 		lookup                   *Lookup
@@ -377,7 +400,7 @@ func TestLookup_Refresh(t *testing.T) {
 				nil, nil,
 				test.JSON,
 				test.Options,
-				"",
+				"", nil,
 				&svcstatus.Status{},
 				test.URL,
 				test.Defaults,
@@ -417,6 +440,7 @@ func TestLookup_Refresh(t *testing.T) {
 				tc.headers,
 				tc.json,
 				tc.regex,
+				tc.regexTemplate,
 				tc.semanticVersioning,
 				tc.url)
 

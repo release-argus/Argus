@@ -147,7 +147,7 @@ func TestServiceTest(t *testing.T) {
 						boolPtr(true),
 						nil, nil,
 						"version",
-						nil, "",
+						nil, "", nil,
 						&svcstatus.Status{},
 						"https://release-argus.io/demo/api/v1/version",
 						nil, nil),

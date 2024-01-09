@@ -8,7 +8,7 @@ const REGEX = ({ name }: { name: string }) => (
       label="Replace"
       smallLabel
       required
-      col_xs={4}
+      col_xs={7}
       col_sm={4}
       onRight
     />
@@ -17,7 +17,7 @@ const REGEX = ({ name }: { name: string }) => (
       name={`${name}.new`}
       label="With"
       smallLabel
-      col_xs={4}
+      col_xs={12}
       col_sm={4}
       onRight
     />

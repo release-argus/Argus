@@ -162,27 +162,8 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 		return text, err
 	}
 
-	return c.regexTemplate(texts, index, logFrom), nil
-}
-
-// regexTemplate `text` with the URLCommand's regex template.
-func (c *URLCommand) regexTemplate(texts [][]string, index int, logFrom *util.LogFrom) (result string) {
-	// No template, return the text at the index.
-	if c.Template == nil {
-		return texts[index][len(texts[index])-1]
-	}
-
-	text := texts[index]
-
-	// Replace placeholders in the template with matched groups in reverse order
-	// (so that '$10' isn't replace by '$1')
-	result = *c.Template
-	for i := len(text) - 1; i > 0; i-- {
-		placeholder := fmt.Sprintf("$%d", i)
-		result = strings.ReplaceAll(result, placeholder, text[i])
-	}
-
-	return result
+	regexMatches := texts[index]
+	return util.RegexTemplate(regexMatches, c.Template), nil
 }
 
 // split `text` with the URLCommand's text amd return the index specified.

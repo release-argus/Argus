@@ -46,6 +46,10 @@ func (l *Lookup) CheckValues(prefix string) (errs error) {
 		errs = fmt.Errorf("%s%s  regex: %q <invalid>\\",
 			util.ErrorToString(errs), prefix, l.Regex)
 	}
+	// Remove the RegExTemplate if empty or no RegEx.
+	if l.Regex == "" || util.DefaultIfNil(l.RegexTemplate) == "" {
+		l.RegexTemplate = nil
+	}
 
 	if errs != nil {
 		errs = fmt.Errorf("%sdeployed_version:\\%w",

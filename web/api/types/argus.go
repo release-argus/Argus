@@ -495,6 +495,7 @@ type DeployedVersionLookup struct {
 	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Headers for the HTTP(S) request
 	JSON              string                 `json:"json,omitempty" yaml:"json,omitempty"`                               // JSON key to use e.g. version_current
 	Regex             string                 `json:"regex,omitempty" yaml:"regex,omitempty"`                             // Regex to get the DeployedVersion
+	RegexTemplate     *string                `json:"regex_template,omitempty" yaml:"regex_template,omitempty"`           // Template to use for the Regex
 	HardDefaults      *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Hardcoded default values
 	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Default values
 }

@@ -192,7 +192,7 @@ func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 		opt.New(
 			nil, "", boolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
-		"",
+		"", nil,
 		&svcstatus.Status{},
 		"https://invalid.release-argus.io/json",
 		&deployedver.LookupDefaults{},

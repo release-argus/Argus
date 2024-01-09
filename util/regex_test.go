@@ -17,6 +17,7 @@
 package util
 
 import (
+	"regexp"
 	"testing"
 )
 
@@ -78,6 +79,66 @@ func TestRegexCheckWithParams(t *testing.T) {
 			if got != tc.match {
 				t.Errorf("wanted match=%t, not %t\n%q on %q",
 					tc.match, got, tc.regex, str)
+			}
+		})
+	}
+}
+
+func TestRegexTemplate(t *testing.T) {
+	// GIVEN a RegEx, Index (and possibly a template) and text to run it on
+	tests := map[string]struct {
+		text     string
+		regex    string
+		template *string
+		want     string
+	}{
+		"datetime template": {
+			text:     "2024-01-01T16-36-33Z",
+			regex:    `([\d-]+)T(\d+)-(\d+)-(\d+)Z`,
+			template: stringPtr("$1T$2:$3:$4Z"),
+			want:     "2024-01-01T16:36:33Z",
+		},
+		"template with 10+ matches": {
+			text:     "abcdefghijklmnopqrstuvwxyz",
+			regex:    `([a-z])([a-z])([a-z])([a-z])([a-z]{2})([a-z])([a-z])([a-z])([a-z])([a-z])([a-z])`,
+			template: stringPtr("$1_$2_$3_$4_$5_$6_$7_$8_$9_$10_$11"),
+			want:     "a_b_c_d_ef_g_h_i_j_k_l",
+		},
+		"template with placeholder out of range": {
+			text:     "abc123-def456-ghi789",
+			regex:    `([a-z]+)(\d+)`,
+			template: stringPtr("$1$4-$10"),
+			want:     "abc$4-abc0",
+		},
+		"template with all placeholders out of range": {
+			text:     "abc123-def456-ghi789",
+			regex:    `([a-z]+)(\d+)`,
+			template: stringPtr("$4$5"),
+			want:     "$4$5",
+		},
+		"no template": {
+			text:  "abc123-def456-ghi789",
+			regex: `([a-z]+)(\d+)`,
+			want:  "123",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			re := regexp.MustCompile(tc.regex)
+			texts := re.FindAllStringSubmatch(tc.text, 1)
+			regexMatches := texts[0]
+
+			// WHEN RegexTemplate is called on the regex matches
+			got := RegexTemplate(regexMatches, tc.template)
+
+			// THEN the expected string is returned
+			if got != tc.want {
+				t.Fatalf("want: %q\n got: %q",
+					tc.want, got)
 			}
 		})
 	}

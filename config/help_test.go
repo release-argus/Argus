@@ -174,7 +174,7 @@ func testServiceURL(id string) *service.Service {
 			boolPtr(false),
 			nil, nil,
 			"version",
-			nil, "", nil,
+			nil, "", nil, nil,
 			"https://valid.release-argus.io/json",
 			&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{}),
 		Dashboard: *service.NewDashboardOptions(

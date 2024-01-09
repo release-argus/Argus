@@ -213,7 +213,8 @@ func convertAndCensorDeployedVersionLookup(dvl *deployedver.Lookup) (apiDVL *api
 		AllowInvalidCerts: dvl.AllowInvalidCerts,
 		Headers:           headers,
 		JSON:              dvl.JSON,
-		Regex:             dvl.Regex}
+		Regex:             dvl.Regex,
+		RegexTemplate:     dvl.RegexTemplate}
 	// Basic auth
 	if dvl.BasicAuth != nil {
 		apiDVL.BasicAuth = &api_type.BasicAuth{
