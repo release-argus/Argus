@@ -561,7 +561,9 @@ code {
 }
 .form-check-large .form-check-input {
   height: 2rem;
+  width: 100%;
   width: -webkit-fill-available;
+  width: -moz-available;
 }
 .form-check-input:checked {
   background-color: var(--btn-secondary-background-color);
