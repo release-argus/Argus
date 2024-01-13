@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.1](https://github.com/release-argus/Argus/compare/0.15.0...0.15.1) (2024-01-13)
+
+
+### Bug Fixes
+
+* **web:** formcheck width on non-webkit browsers ([cf1d681](https://github.com/release-argus/Argus/commits/cf1d68153640dceafa8ece42b8f55a3a223ce2d2))
+
 ## [0.15.0](https://github.com/release-argus/Argus/compare/0.14.0...0.15.0) (2024-01-09)
 
 
