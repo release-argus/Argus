@@ -76,7 +76,7 @@ func TestSlice_Track(t *testing.T) {
 			slice.Track(&tc.ordering, &sync.RWMutex{})
 
 			// THEN the function exits straight away
-			time.Sleep(time.Second)
+			time.Sleep(2 * time.Second)
 			for i := range *slice {
 				if !util.Contains(tc.ordering, i) {
 					if (*slice)[i].Status.LatestVersion() != "" {
