@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
@@ -31,7 +32,9 @@ import (
 // Query queries the Service source, updating Service.LatestVersion
 // and returning true if it has changed (is a new release),
 // otherwise returns false.
-func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
+//
+// checkNumber - 0 for first check, 1 for second check (if the first check found a new version)
+func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 	rawBody, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -48,8 +51,16 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 	// If this version is different (new?).
 	latestVersion := l.Status.LatestVersion()
 	if version != latestVersion {
+		// Verify that the version has changed. (GitHub may have just omitted the tag for some reason)
+		if checkNumber == 0 {
+			msg := fmt.Sprintf("Possibly found a new version (From %q to %q). Checking again", latestVersion, version)
+			jLog.Verbose(msg, *logFrom, latestVersion != "")
+			time.Sleep(time.Second)
+			return l.query(logFrom, 1)
+		}
+
 		if wantSemanticVersioning {
-			// Check it's a valid semnatic version
+			// Check it's a valid semantic version
 			newVersion, err := semver.NewVersion(version)
 			if err != nil {
 				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
@@ -103,6 +114,8 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 		return true, nil
 	}
 
+	msg := fmt.Sprintf("Staying on %q as that's the latest version in the second check", version)
+	jLog.Verbose(msg, *logFrom, checkNumber == 1)
 	// Announce `LastQueried`
 	l.Status.AnnounceQuery()
 	// No version change.
@@ -114,7 +127,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (bool, error) {
 //
 // metrics - if true, set Prometheus metrics based on the query
 func (l *Lookup) Query(metrics bool, logFrom *util.LogFrom) (newVersion bool, err error) {
-	newVersion, err = l.query(logFrom)
+	newVersion, err = l.query(logFrom, 0)
 
 	if metrics {
 		l.queryMetrics(err)
@@ -228,7 +241,8 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 				}
 				// Has tags/releases
 			} else {
-				jLog.Verbose("Potentially found new releases (new ETag)", *logFrom, true)
+				msg := fmt.Sprintf("Potentially found new releases (new ETag %s)", newETag)
+				jLog.Verbose(msg, *logFrom, true)
 			}
 
 			// 304 - Resource has not changed

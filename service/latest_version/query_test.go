@@ -359,12 +359,12 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 		"three requests only uses 1 api limit": {
 			attempts:              3,
 			eTagChanged:           1,
-			eTagUnchangedUseCache: 2,
+			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck
 			errRegex:              `^$`},
 		"if initial request fails filter, cached results will be used": {
 			attempts:                   3,
 			eTagChanged:                1,
-			eTagUnchangedUseCache:      2,
+			eTagUnchangedUseCache:      3, // 2 attempts + 1 recheck
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex:                   `regex not matched on version`},
 		"invalid url_commands will catch no versions": {
