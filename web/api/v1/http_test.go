@@ -129,3 +129,88 @@ func TestHTTP_BasicAuth(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTP_SetupFaviconRoute(t *testing.T) {
+	// GIVEN an API with/without favicon overrides
+	tests := map[string]struct {
+		favicon *config.FaviconSettings
+		urlPNG  string
+		urlSVG  string
+	}{
+		"no override": {
+			urlPNG: "",
+			urlSVG: "",
+		},
+		"override png": {
+			urlPNG: "https://release-argus.io/demo/apple-touch-icon.png",
+		},
+		"override svg": {
+			urlSVG: "https://release-argus.io/demo/favicon.svg",
+		},
+		"override png and svg": {
+			urlPNG: "https://release-argus.io/demo/apple-touch-icon.png",
+			urlSVG: "https://release-argus.io/demo/favicon.svg",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			cfg := testBareConfig()
+			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
+			api := NewAPI(cfg, util.NewJLog("WARN", false))
+			api.SetupFaviconRoute()
+			ts := httptest.NewServer(api.Router)
+			defer ts.Close()
+			client := http.Client{}
+
+			// WHEN a HTTP request is made to this router (apple-touch-icon.png)
+			req, err := http.NewRequest("GET", ts.URL+"/apple-touch-icon.png", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// THEN the status code is as expected
+			wantStatus := http.StatusNotFound
+			if tc.urlPNG != "" {
+				wantStatus = http.StatusOK
+			}
+			if resp.StatusCode != wantStatus {
+				t.Errorf("/apple-touch-icon.png - Expected a %d, not a %d",
+					wantStatus, resp.StatusCode)
+			}
+			if tc.urlPNG != "" && tc.urlPNG != resp.Request.URL.String() {
+				t.Errorf("/apple-touch-icon.png - Expected a redirect to %s, not %s",
+					tc.urlPNG, resp.Request.URL.String())
+			}
+
+			// WHEN a HTTP request is made to this router (favicon.svg)
+			req, err = http.NewRequest("GET", ts.URL+"/favicon.svg", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err = client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// THEN the status code is as expected
+			wantStatus = http.StatusNotFound
+			if tc.urlSVG != "" {
+				wantStatus = http.StatusOK
+			}
+			if resp.StatusCode != wantStatus {
+				t.Errorf("/favicon.svg - Expected a %d, not a %d",
+					wantStatus, resp.StatusCode)
+			}
+			if tc.urlSVG != "" && tc.urlSVG != resp.Request.URL.String() {
+				t.Errorf("/favicon.svg - Expected a redirect to %s, not %s",
+					tc.urlSVG, resp.Request.URL.String())
+			}
+		})
+	}
+}
