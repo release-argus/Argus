@@ -175,3 +175,22 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 	}
 	return wh
 }
+
+func testFaviconSettings(png string, svg string) *config.FaviconSettings {
+	if svg == "" && png == "" {
+		return nil
+	}
+
+	return &config.FaviconSettings{
+		SVG: svg,
+		PNG: png}
+}
+
+func testBareConfig() *config.Config {
+	return &config.Config{
+		Settings: config.Settings{
+			SettingsBase: config.SettingsBase{
+				Web: config.WebSettings{
+					RoutePrefix: stringPtr(""),
+				}}}}
+}

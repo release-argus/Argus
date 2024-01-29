@@ -92,12 +92,19 @@ type WebSettings struct {
 	CertFile    *string               `yaml:"cert_file,omitempty"`    // HTTPS certificate path
 	KeyFile     *string               `yaml:"pkey_file,omitempty"`    // HTTPS privkey path
 	BasicAuth   *WebSettingsBasicAuth `yaml:"basic_auth,omitempty"`   // Basic auth creds
+	Favicon     *FaviconSettings      `yaml:"favicon,omitempty"`      // Favicon settings
 }
 
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any)
 type WebSettingsBasicAuth struct {
 	Username string `yaml:"username,omitempty"`
 	Password string `yaml:"password,omitempty"`
+}
+
+// FaviconSettings contains the favicon override settings.
+type FaviconSettings struct {
+	SVG string `yaml:"svg,omitempty"`
+	PNG string `yaml:"png,omitempty"`
 }
 
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {

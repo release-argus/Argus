@@ -112,8 +112,29 @@ func (api *API) SetupRoutesNodeJS() {
 		api.Router.Handle(route, http.StripPrefix(prefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 	}
 
+	// Favicon override
+	api.SetupFaviconRoute()
+
 	// Catch-all for JS, CSS, etc...
 	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
+}
+
+// SetupFaviconRoute will setup the HTTP route for the favicon override.
+func (api *API) SetupFaviconRoute() {
+	if api.Config.Settings.Web.Favicon == nil {
+		return
+	}
+
+	if api.Config.Settings.Web.Favicon.SVG != "" {
+		api.Router.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, api.Config.Settings.Web.Favicon.SVG, http.StatusPermanentRedirect)
+		})
+	}
+	if api.Config.Settings.Web.Favicon.PNG != "" {
+		api.Router.HandleFunc("/apple-touch-icon.png", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, api.Config.Settings.Web.Favicon.PNG, http.StatusPermanentRedirect)
+		})
+	}
 }
 
 // httpVersion serves Argus version JSON over HTTP.
