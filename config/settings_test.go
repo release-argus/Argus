@@ -17,6 +17,7 @@
 package config
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"regexp"
@@ -462,6 +463,239 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			if got != nil && *got != tc.file {
 				t.Errorf("%q shouldn't exist, so this call should have been Fatal",
 					tc.file)
+			}
+		})
+	}
+}
+
+func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
+	// GIVEN a WebSettingsBasicAuth struct with some values set
+	tests := map[string]struct {
+		had  WebSettingsBasicAuth
+		want WebSettingsBasicAuth
+	}{
+		"str Username": {
+			had: WebSettingsBasicAuth{
+				Username: "test"},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("test"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("")))},
+		},
+		"str Web.BasicAuth.Password": {
+			had: WebSettingsBasicAuth{
+				Password: "just a password here"},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte(""))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("just a password here")))},
+		},
+		"str Web.BasicAuth.Username and str Web.BasicAuth.Password": {
+			had: WebSettingsBasicAuth{
+				Username: "user",
+				Password: "pass"},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+		},
+		"str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed": {
+			had: WebSettingsBasicAuth{
+				Username: "user",
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+		},
+		"hashed Web.BasicAuth.Username and str Web.BasicAuth.Password": {
+			had: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: "pass"},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+		},
+		"hashed Web.BasicAuth.Username and hashed Web.BasicAuth.Password": {
+			had: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+			want: WebSettingsBasicAuth{
+				Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+				Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CheckValues is called on it
+			tc.had.CheckValues()
+
+			// THEN the Settings are converted/removed where necessary
+			hadStr := tc.had.String("")
+			wantStr := tc.want.String("")
+			if hadStr != wantStr {
+				t.Errorf("want:\n%v\ngot:\n%v",
+					wantStr, hadStr)
+			}
+		})
+	}
+}
+
+func TestWebSettings_CheckValues(t *testing.T) {
+	// GIVEN a WebSettings struct with some values set
+	tests := map[string]struct {
+		had  WebSettings
+		want WebSettings
+	}{
+		"BasicAuth - empty": {
+			had: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{}},
+			want: WebSettings{
+				BasicAuth: nil},
+		},
+		"BasicAuth - str Username and Password already hashed": {
+			had: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: "user",
+					Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))}},
+			want: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+					Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))}},
+		},
+		"BasicAuth - hashed Username and str Password": {
+			had: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+					Password: "pass"}},
+			want: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+					Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))}},
+		},
+		"Favicon - empty": {
+			had: WebSettings{
+				Favicon: &FaviconSettings{}},
+			want: WebSettings{
+				Favicon: nil},
+		},
+		"Favicon - SVG": {
+			had: WebSettings{
+				Favicon: &FaviconSettings{
+					SVG: "https://example.com/favicon.svg"}},
+			want: WebSettings{
+				Favicon: &FaviconSettings{
+					SVG: "https://example.com/favicon.svg"}},
+		},
+		"Favicon - PNG": {
+			had: WebSettings{
+				Favicon: &FaviconSettings{
+					PNG: "https://example.com/favicon.png"}},
+			want: WebSettings{
+				Favicon: &FaviconSettings{
+					PNG: "https://example.com/favicon.png"}},
+		},
+		"Favicon - Full": {
+			had: WebSettings{
+				Favicon: &FaviconSettings{
+					SVG: "https://example.com/favicon.svg",
+					PNG: "https://example.com/favicon.png"}},
+			want: WebSettings{
+				Favicon: &FaviconSettings{
+					SVG: "https://example.com/favicon.svg",
+					PNG: "https://example.com/favicon.png"}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CheckValues is called on it
+			tc.had.CheckValues()
+
+			// THEN the Settings are converted/removed where necessary
+			hadStr := tc.had.String("")
+			wantStr := tc.want.String("")
+			if hadStr != wantStr {
+				t.Errorf("want:\n%v\ngot:\n%v",
+					wantStr, hadStr)
+			}
+		})
+	}
+}
+
+func TestSettings_CheckValues(t *testing.T) {
+	// GIVEN a Settings struct with some values set
+	tests := map[string]struct {
+		had  Settings
+		want Settings
+	}{
+		"BasicAuth - empty": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{}}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: nil}}},
+		},
+		"BasicAuth - hashed Username and str Password": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+							Password: "pass"}}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						BasicAuth: &WebSettingsBasicAuth{
+							Username: fmt.Sprintf("h__%x", sha256.Sum256([]byte("user"))),
+							Password: fmt.Sprintf("h__%x", sha256.Sum256([]byte("pass")))}}}},
+		},
+		"Favicon - empty": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						Favicon: &FaviconSettings{}}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						Favicon: nil}}},
+		},
+		"Favicon - full": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						Favicon: &FaviconSettings{
+							SVG: "https://example.com/favicon.svg",
+							PNG: "https://example.com/favicon.png"}}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						Favicon: &FaviconSettings{
+							SVG: "https://example.com/favicon.svg",
+							PNG: "https://example.com/favicon.png"}}}},
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CheckValues is called on it
+			tc.had.CheckValues()
+
+			// THEN the Settings are converted/removed where necessary
+			hadStr := tc.had.String("")
+			wantStr := tc.want.String("")
+			if hadStr != wantStr {
+				t.Errorf("want:\n%v\ngot:\n%v",
+					wantStr, hadStr)
 			}
 		})
 	}

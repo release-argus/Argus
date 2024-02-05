@@ -25,9 +25,11 @@ import (
 // CheckValues are valid.
 func (c *Config) CheckValues() {
 	var errs error
-	if err := c.Defaults.CheckValues("  "); err != nil {
-		errs = fmt.Errorf("defaults:\\%w",
-			err)
+	c.Settings.CheckValues()
+
+	if err := c.Defaults.CheckValues(""); err != nil {
+		errs = fmt.Errorf("%s%w",
+			util.ErrorToString(errs), err)
 	}
 
 	if err := c.Notify.CheckValues(""); err != nil {
