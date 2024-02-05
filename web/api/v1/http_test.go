@@ -91,6 +91,10 @@ func TestHTTP_BasicAuth(t *testing.T) {
 
 			cfg := config.Config{}
 			cfg.Settings.Web.BasicAuth = tc.basicAuth
+			// Hash the username/password
+			if cfg.Settings.Web.BasicAuth != nil {
+				cfg.Settings.Web.BasicAuth.CheckValues()
+			}
 			cfg.Settings.Web.RoutePrefix = stringPtr("")
 			api := NewAPI(&cfg, util.NewJLog("WARN", false))
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
@@ -130,7 +134,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 	}
 }
 
-func TestHTTP_SetupFaviconRoute(t *testing.T) {
+func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 	// GIVEN an API with/without favicon overrides
 	tests := map[string]struct {
 		favicon *config.FaviconSettings
@@ -159,7 +163,7 @@ func TestHTTP_SetupFaviconRoute(t *testing.T) {
 			cfg := testBareConfig()
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
 			api := NewAPI(cfg, util.NewJLog("WARN", false))
-			api.SetupFaviconRoute()
+			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
 			defer ts.Close()
 			client := http.Client{}

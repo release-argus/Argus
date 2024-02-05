@@ -17,6 +17,7 @@
 package v1
 
 import (
+	"crypto/sha256"
 	"testing"
 	"time"
 
@@ -32,6 +33,50 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
+
+func TestConstantTimeCompare(t *testing.T) {
+	// GIVEN two hashes
+	tests := map[string]struct {
+		hash1 string
+		hash2 string
+	}{
+		"equal - 1": {
+			hash1: "a",
+			hash2: "a",
+		},
+		"equal - 2": {
+			hash1: "abc",
+			hash2: "abc",
+		},
+		"not equal - 1": {
+			hash1: "a",
+			hash2: "b",
+		},
+		"not equal - 2": {
+			hash1: "abc",
+			hash2: "abb",
+		},
+	}
+
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			hash1 := sha256.Sum256([]byte(tc.hash1))
+			hash2 := sha256.Sum256([]byte(tc.hash2))
+
+			// WHEN ConstantTimeCompare is called
+			got := ConstantTimeCompare(hash1, hash2)
+
+			// THEN the result should be as expected
+			want := tc.hash1 == tc.hash2
+			if got != (want) {
+				t.Errorf("want %v, got %v",
+					want, got)
+			}
+		})
+	}
+}
 
 func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 	// GIVEN a shoutrrr.SliceDefaults
