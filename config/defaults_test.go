@@ -142,7 +142,6 @@ webhook:
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -192,7 +191,6 @@ func TestDefaults_SetDefaults(t *testing.T) {
 
 	// THEN the defaults are set correctly
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -894,7 +892,6 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 	}
 
 	for name, tc := range test {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 
 			dflts := Defaults{
@@ -1028,7 +1025,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

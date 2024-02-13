@@ -212,7 +212,6 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -538,7 +537,6 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1181,7 +1179,6 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		newService := &Service{Notify: tc.notify}
 		newService.Status.Init(
 			len(newService.Notify), len(newService.Command), len(newService.WebHook),
@@ -1729,7 +1726,6 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 	}
 
 	for name, tc := range test {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -2372,7 +2368,6 @@ func TestService_GiveSecrets(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -3066,7 +3061,6 @@ func TestFromPayload(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -3199,7 +3193,6 @@ func TestService_CheckFetches(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -3473,7 +3466,6 @@ func TestRemoveDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

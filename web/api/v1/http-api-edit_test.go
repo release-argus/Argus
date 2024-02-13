@@ -100,7 +100,6 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -253,7 +252,6 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -360,7 +358,6 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -428,7 +425,6 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		file := name + ".test.yml"
 		api := testAPI(file)
 		t.Run(name, func(t *testing.T) {
@@ -612,7 +608,6 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

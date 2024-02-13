@@ -46,7 +46,6 @@ func TestConfig_Load(t *testing.T) {
 
 	// THEN they match the config file
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

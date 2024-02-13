@@ -70,7 +70,6 @@ func TestWaitChannelTimeout(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -128,7 +127,6 @@ func TestConfig_Save(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 
 		// Load here as it could DATA RACE with setting the JLog
 		file := name
@@ -232,7 +230,6 @@ func TestRemoveSection(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -783,7 +780,6 @@ service:
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
