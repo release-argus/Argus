@@ -47,7 +47,6 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 	var flagLock sync.Mutex
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -193,7 +192,6 @@ func TestSettings_GetString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 
 			settings = testSettings()
@@ -301,7 +299,6 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 
 			for k, v := range tc.env {
@@ -523,7 +520,6 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -608,7 +604,6 @@ func TestWebSettings_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -683,7 +678,6 @@ func TestSettings_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

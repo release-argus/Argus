@@ -60,7 +60,6 @@ func TestConfig_RenameService(t *testing.T) {
 	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -136,7 +135,6 @@ func TestConfig_DeleteService(t *testing.T) {
 	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -230,7 +228,6 @@ func TestConfig_AddService(t *testing.T) {
 	logMutex := sync.Mutex{}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

@@ -80,7 +80,6 @@ func TestWebAccessible(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -139,7 +138,6 @@ func TestAccessibleHTTPS(t *testing.T) {
 	address := fmt.Sprintf("https://localhost:%s", *cfg.Settings.Web.ListenPort)
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

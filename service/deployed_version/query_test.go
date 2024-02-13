@@ -53,7 +53,6 @@ func TestLookup_HTTPRequest(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -163,7 +162,6 @@ func TestLookup_Query(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -386,7 +384,6 @@ func TestLookup_Track(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - can't run in parallel because of stdout
 
