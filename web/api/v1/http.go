@@ -16,7 +16,6 @@ package v1
 
 import (
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -39,12 +38,10 @@ func (api *API) basicAuth() mux.MiddlewareFunc {
 				// Hash purely to prevent ConstantTimeCompare leaking lengths
 				usernameHash := sha256.Sum256([]byte(username))
 				passwordHash := sha256.Sum256([]byte(password))
-				expectedUsernameHash := sha256.Sum256([]byte(api.Config.Settings.Web.BasicAuth.Username))
-				expectedPasswordHash := sha256.Sum256([]byte(api.Config.Settings.Web.BasicAuth.Password))
 
 				// Protect from possible timing attacks
-				usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
-				passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+				usernameMatch := ConstantTimeCompare(usernameHash, api.Config.Settings.Web.BasicAuth.UsernameHash)
+				passwordMatch := ConstantTimeCompare(passwordHash, api.Config.Settings.Web.BasicAuth.PasswordHash)
 
 				if usernameMatch && passwordMatch {
 					h.ServeHTTP(w, r)
@@ -113,14 +110,14 @@ func (api *API) SetupRoutesNodeJS() {
 	}
 
 	// Favicon override
-	api.SetupFaviconRoute()
+	api.SetupRoutesFavicon()
 
 	// Catch-all for JS, CSS, etc...
 	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 }
 
-// SetupFaviconRoute will setup the HTTP route for the favicon override.
-func (api *API) SetupFaviconRoute() {
+// SetupRoutesFavicon will setup the HTTP routes for any favicon overrides.
+func (api *API) SetupRoutesFavicon() {
 	if api.Config.Settings.Web.Favicon == nil {
 		return
 	}

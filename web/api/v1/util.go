@@ -69,6 +69,19 @@ func (api *API) announceEdit(oldData *api_type.ServiceSummary, newData *api_type
 	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 
+// ConstantTimeCompare returns true if the two slices, x and y, have equal contents
+// and false otherwise. The time taken is a function of the length of the slices and
+// is independent of the contents.
+func ConstantTimeCompare(x, y [32]byte) bool {
+	var result byte
+
+	for i := 0; i < len(x); i++ {
+		result |= x[i] ^ y[i]
+	}
+
+	return result == 0
+}
+
 //
 // Defaults
 //

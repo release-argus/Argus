@@ -15,6 +15,8 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -95,10 +97,70 @@ type WebSettings struct {
 	Favicon     *FaviconSettings      `yaml:"favicon,omitempty"`      // Favicon settings
 }
 
+// String returns a string representation of the WebSettings.
+func (s *WebSettings) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
+}
+
+func (s *WebSettings) CheckValues() {
+	// BasicAuth
+	if s.BasicAuth != nil {
+		// Remove the BasicAuth if both the Username and Password are empty.
+		if s.BasicAuth.Username == "" && s.BasicAuth.Password == "" {
+			s.BasicAuth = nil
+		} else {
+			s.BasicAuth.CheckValues()
+		}
+	}
+
+	// Favicon
+	if s.Favicon != nil {
+		// Remove the Favicon override if both the SVG and PNG are empty.
+		if s.Favicon.SVG == "" && s.Favicon.PNG == "" {
+			s.Favicon = nil
+		}
+	}
+}
+
 // WebSettingsBasicAuth contains the basic auth credentials to use (if any)
 type WebSettingsBasicAuth struct {
-	Username string `yaml:"username,omitempty"`
-	Password string `yaml:"password,omitempty"`
+	Username     string   `yaml:"username,omitempty"`
+	UsernameHash [32]byte `yaml:"-"` // SHA256 hash
+	Password     string   `yaml:"password,omitempty"`
+	PasswordHash [32]byte `yaml:"-"` // SHA256 hash
+}
+
+// String returns a string representation of the WebSettingsBasicAuth.
+func (s *WebSettingsBasicAuth) String(prefix string) (str string) {
+	if s != nil {
+		str = util.ToYAMLString(s, prefix)
+	}
+	return
+}
+
+// CheckValues will ensure that the values are SHA256 hashed.
+func (ba *WebSettingsBasicAuth) CheckValues() {
+	// Ensure it's hashed.
+	sha256Regex := "^h__[a-f0-9]{64}$"
+	// Username - Hash if not already hashed.
+	if !util.RegexCheck(sha256Regex, ba.Username) {
+		ba.UsernameHash = sha256.Sum256([]byte(ba.Username))
+		ba.Username = fmt.Sprintf("h__%x", ba.UsernameHash)
+	} else {
+		hash, _ := hex.DecodeString(ba.Username[3:])
+		copy(ba.UsernameHash[:], hash)
+	}
+	// Password - Hash if not already hashed.
+	if !util.RegexCheck(sha256Regex, ba.Password) {
+		ba.PasswordHash = sha256.Sum256([]byte(ba.Password))
+		ba.Password = fmt.Sprintf("h__%x", ba.PasswordHash)
+	} else {
+		hash, _ := hex.DecodeString(ba.Password[3:])
+		copy(ba.PasswordHash[:], hash)
+	}
 }
 
 // FaviconSettings contains the favicon override settings.
@@ -288,4 +350,10 @@ func (s *Settings) WebKeyFile() *string {
 		jLog.Fatal("settings.web.key_file "+err.Error(), util.LogFrom{}, true)
 	}
 	return keyFile
+}
+
+// CheckValues of the Settings.
+func (s *Settings) CheckValues() {
+	// Web
+	s.Web.CheckValues()
 }
