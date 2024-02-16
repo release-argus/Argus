@@ -61,7 +61,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	var version string
 	// If JSON is provided, use it to extract the version.
 	if l.JSON != "" {
-		version, err = util.GetValueByKey(rawBody, l.JSON, l.URL)
+		version, err = util.GetValueByKey(rawBody, l.JSON, l.GetURL())
 		if err != nil {
 			jLog.Error(err, *logFrom, true)
 			//nolint:wrapcheck
@@ -189,7 +189,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, l.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, l.GetURL(), nil)
 	if err != nil {
 		jLog.Error(err, *logFrom, true)
 		return
@@ -198,12 +198,12 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	// Set headers
 	req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
-		req.Header.Set(header.Key, header.Value)
+		req.Header.Set(util.EvalEnvVars(header.Key), util.EvalEnvVars(header.Value))
 	}
 
 	// Basic auth
 	if l.BasicAuth != nil {
-		req.SetBasicAuth(l.BasicAuth.Username, l.BasicAuth.Password)
+		req.SetBasicAuth(util.EvalEnvVars(l.BasicAuth.Username), util.EvalEnvVars(l.BasicAuth.Password))
 	}
 
 	client := &http.Client{Transport: customTransport}

@@ -17,32 +17,30 @@
 package deployedver
 
 import (
+	"os"
 	"testing"
 )
 
 func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		allowInvalidCertsRoot        *bool
-		allowInvalidCertsDefault     *bool
-		allowInvalidCertsHardDefault *bool
-		wantBool                     bool
+		root        *bool
+		dfault      *bool
+		hardDefault *bool
+		wantBool    bool
 	}{
 		"root overrides all": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        boolPtr(true),
-			allowInvalidCertsDefault:     boolPtr(false),
-			allowInvalidCertsHardDefault: boolPtr(false)},
+			wantBool:    true,
+			root:        boolPtr(true),
+			dfault:      boolPtr(false),
+			hardDefault: boolPtr(false)},
 		"default overrides hardDefault": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        nil,
-			allowInvalidCertsDefault:     boolPtr(true),
-			allowInvalidCertsHardDefault: boolPtr(false)},
+			wantBool:    true,
+			dfault:      boolPtr(true),
+			hardDefault: boolPtr(false)},
 		"hardDefault is last resort": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        nil,
-			allowInvalidCertsDefault:     nil,
-			allowInvalidCertsHardDefault: boolPtr(true)},
+			wantBool:    true,
+			hardDefault: boolPtr(true)},
 	}
 
 	for name, tc := range tests {
@@ -50,9 +48,9 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup()
-			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
-			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
-			lookup.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
+			lookup.AllowInvalidCerts = tc.root
+			lookup.Defaults.AllowInvalidCerts = tc.dfault
+			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefault
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetAllowInvalidCerts()
@@ -61,6 +59,53 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 			if got != tc.wantBool {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.wantBool, got)
+			}
+		})
+	}
+}
+
+func TestLookup_GetURL(t *testing.T) {
+	// GIVEN a Lookup
+	tests := map[string]struct {
+		env  map[string]string
+		url  string
+		want string
+	}{
+		"returns URL": {
+			url:  "https://example.com",
+			want: "https://example.com",
+		},
+		"returns URL from env": {
+			env:  map[string]string{"TESTLOOKUP_DV_GETURL_ONE": "https://example.com"},
+			url:  "${TESTLOOKUP_DV_GETURL_ONE}",
+			want: "https://example.com",
+		},
+		"returns URL partially from env": {
+			env:  map[string]string{"TESTLOOKUP_DV_GETURL_TWO": "example.com"},
+			url:  "https://${TESTLOOKUP_DV_GETURL_TWO}",
+			want: "https://example.com",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
+			lookup := testLookup()
+			lookup.URL = tc.url
+
+			// WHEN GetURL is called
+			got := lookup.GetURL()
+
+			// THEN the function returns the correct result
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
 			}
 		})
 	}

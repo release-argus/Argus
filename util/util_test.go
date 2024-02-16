@@ -17,6 +17,7 @@
 package util
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -284,6 +285,129 @@ func TestFirstNonNilPtr(t *testing.T) {
 	}
 }
 
+func TestFirstNonNilPtrWithEnv(t *testing.T) {
+	// GIVEN a bunch of pointers
+	tests := map[string]struct {
+		env         map[string]string
+		pointers    []*string
+		allNil      bool
+		wantIndex   int
+		wantText    string
+		diffAddress bool
+	}{
+		"no pointers": {
+			pointers: []*string{},
+			allNil:   true,
+		},
+		"all nil pointers": {
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				nil},
+			allNil: true,
+		},
+		"1 non-nil pointer": {
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				stringPtr("bar")},
+			wantIndex: 3,
+		},
+		"1 non-nil pointer (env var)": {
+			env: map[string]string{"TESTFIRSTNONNILPTRWITHENV_ONE": "bar"},
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				stringPtr("${TESTFIRSTNONNILPTRWITHENV_ONE}")},
+			wantIndex:   3,
+			diffAddress: true,
+			wantText:    "bar",
+		},
+		"1 non-nil pointer (env var partial)": {
+			env: map[string]string{"TESTFIRSTNONNILPTRWITHENV_TWO": "bar"},
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				stringPtr("foo${TESTFIRSTNONNILPTRWITHENV_TWO}")},
+			wantIndex:   3,
+			diffAddress: true,
+			wantText:    "foobar",
+		},
+		"1 non-nil pointer (empty env var)": {
+			env: map[string]string{"TESTFIRSTNONNILPTRWITHENV_THREE": ""},
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				stringPtr("${TESTFIRSTNONNILPTRWITHENV_THREE}")},
+			wantIndex:   3,
+			diffAddress: true,
+			wantText:    "",
+		},
+		"1 non-nil pointer (unset env var)": {
+			pointers: []*string{
+				nil,
+				nil,
+				nil,
+				stringPtr("${TESTFIRSTNONNILPTRWITHENV_UNSET}")},
+			wantIndex:   3,
+			diffAddress: false,
+			wantText:    "${TESTFIRSTNONNILPTRWITHENV_UNSET}",
+		},
+		"2 non-nil pointers": {
+			pointers: []*string{
+				stringPtr("foo"),
+				nil,
+				nil,
+				stringPtr("bar")},
+			wantIndex: 0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
+			// WHEN FirstNonNilPtrWithEnv is run on a slice of pointers
+			got := FirstNonNilPtrWithEnv(tc.pointers...)
+
+			// THEN the correct pointer (or nil) is returned
+			if tc.allNil {
+				if got != nil {
+					t.Fatalf("got:  %v\nfrom: %v",
+						got, tc.pointers)
+				}
+				return
+			}
+			// Addresses should be the same (unless we're using an env var)
+			if got != tc.pointers[tc.wantIndex] && !tc.diffAddress {
+				t.Errorf("want: %v\ngot:  %v",
+					tc.pointers[tc.wantIndex], got)
+				// Addresses should only be the same
+			} else if got == tc.pointers[tc.wantIndex] {
+				// IF we're using an env var
+				if tc.diffAddress {
+					t.Errorf("addresses of pointers should differ (%v, %v)",
+						tc.pointers[tc.wantIndex], got)
+				}
+				// Should have what the env var is set to
+			} else if *got != tc.wantText {
+				t.Errorf("want: %v\ngot:  %v",
+					tc.wantText, *got)
+			}
+		})
+	}
+}
+
 func TestValueIfTrue(t *testing.T) {
 	// GIVEN lists of strings
 	tests := map[string]struct {
@@ -371,6 +495,121 @@ func TestFirstNonDefault(t *testing.T) {
 			if got != tc.slice[tc.wantIndex] {
 				t.Errorf("want: %v\ngot:  %v",
 					tc.slice[tc.wantIndex], got)
+			}
+		})
+	}
+}
+
+func TestFirstNonDefaultWithEnv(t *testing.T) {
+	// GIVEN a bunch of comparables
+	tests := map[string]struct {
+		env         map[string]string
+		slice       []string
+		allDefault  bool
+		wantIndex   int
+		wantText    string
+		diffAddress bool
+	}{
+		"no vars": {
+			slice:      []string{},
+			allDefault: true,
+		},
+		"all default vars": {
+			slice: []string{
+				"",
+				"",
+				"",
+				""},
+			allDefault: true,
+		},
+		"1 non-default var": {
+			slice: []string{
+				"",
+				"",
+				"",
+				"bar"},
+			wantIndex: 3,
+		},
+		"1 non-default var (env var)": {
+			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_ONE": "bar"},
+			slice: []string{
+				"",
+				"",
+				"",
+				"${TESTFIRSTNONDEFAULTWITHENV_ONE}"},
+			wantIndex:   3,
+			wantText:    "bar",
+			diffAddress: true,
+		},
+		"1 non-default var (env var partial)": {
+			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_ONE": "bar"},
+			slice: []string{
+				"",
+				"",
+				"",
+				"foo${TESTFIRSTNONDEFAULTWITHENV_ONE}"},
+			wantIndex:   3,
+			wantText:    "foobar",
+			diffAddress: true,
+		},
+		"2 non-default vars": {
+			slice: []string{
+				"foo",
+				"",
+				"",
+				"bar"},
+			wantIndex: 0,
+		},
+		"2 non-default vars (empty env vars ignored)": {
+			env: map[string]string{
+				"TESTFIRSTNONDEFAULTWITHENV_TWO":   "",
+				"TESTFIRSTNONDEFAULTWITHENV_THREE": "bar"},
+			slice: []string{
+				"${TESTFIRSTNONDEFAULTWITHENV_TWO}",
+				"${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
+				"",
+				"${TESTFIRSTNONDEFAULTWITHENV_THREE}"},
+			wantIndex:   3,
+			wantText:    "${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
+			diffAddress: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
+			// WHEN FirstNonDefaultWithEnv is run on a slice of slice
+			got := FirstNonDefaultWithEnv(tc.slice...)
+
+			// THEN the correct var (or "") is returned
+			if tc.allDefault {
+				if got != "" {
+					t.Fatalf("got:  %v\nfrom: %v",
+						got, tc.slice)
+				}
+				return
+			}
+			// Addresses should be the same (unless we're using an env var)
+			if got != tc.slice[tc.wantIndex] && !tc.diffAddress {
+				t.Errorf("want: %v\ngot:  %v",
+					tc.slice[tc.wantIndex], got)
+				// Addresses should only be the same
+			} else if got == tc.slice[tc.wantIndex] {
+				// IF we're using an env var
+				if tc.diffAddress {
+					t.Errorf("addresses of pointers should differ (%v, %v)",
+						tc.slice[tc.wantIndex], got)
+				}
+				// Should have what the env var is set to
+			} else if got != tc.wantText {
+				t.Errorf("want: %v\ngot:  %v",
+					tc.wantText, got)
 			}
 		})
 	}
@@ -1039,6 +1278,114 @@ func TestStringToBoolPtr(t *testing.T) {
 	}
 }
 
+func TestEnvReplaceFunc(t *testing.T) {
+	// GIVEN an env var that may or may not exist
+	envVarNameBase := "TESTENVREPLACEFUNC"
+	strBase := "${" + envVarNameBase + "}"
+	tests := map[string]struct {
+		envVar *string
+		want   string
+	}{
+		"undefined env var": {
+			want: strBase,
+		},
+		"empty env var": {
+			envVar: stringPtr(""),
+			want:   "",
+		},
+		"non-empty env var": {
+			envVar: stringPtr("bar"),
+			want:   "bar",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			str := strBase
+			if tc.envVar != nil {
+				envVarName := envVarNameBase + strings.ReplaceAll(name, " ", "_")
+				str = "${" + envVarName + "}"
+				os.Setenv(envVarName, *tc.envVar)
+				defer os.Unsetenv(envVarName)
+			}
+
+			// WHEN EnvReplaceFunc is called
+			got := envReplaceFunc(str)
+
+			// THEN the string is evaluated correctly
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestEvalEnvVars(t *testing.T) {
+	// GIVEN a string
+	tests := map[string]struct {
+		input string
+		env   map[string]string
+		want  string
+	}{
+		"no env vars": {
+			input: "hello there ${foo}",
+			want:  "hello there ${foo}",
+		},
+		"1 env var": {
+			input: "hello there ${foo}",
+			env:   map[string]string{"foo": "bar"},
+			want:  "hello there bar",
+		},
+		"2 env vars": {
+			input: "hello there ${foo} ${bar}",
+			env: map[string]string{
+				"foo": "bar",
+				"bar": "baz"},
+			want: "hello there bar baz",
+		},
+		"unset env var": {
+			input: "hello there ${foo}",
+			want:  "hello there ${foo}",
+		},
+		"empty env var": {
+			input: "hello there ${foo}",
+			env:   map[string]string{"foo": ""},
+			want:  "hello there ",
+		},
+		"nested env vars not evaluated": {
+			input: "hello there ${foo} ${bar}",
+			env: map[string]string{
+				"foo": "bar",
+				"bar": "${baz}",
+				"baz": "qux"},
+			want: "hello there bar ${baz}",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
+			// WHEN EvalEnvVars is called
+			got := EvalEnvVars(tc.input)
+
+			// THEN the string is evaluated correctly
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
+
 func TestGetKeysFromJSON(t *testing.T) {
 	// GIVEN a JSON string
 	tests := map[string]struct {
@@ -1161,6 +1508,157 @@ func TestBasicAuth(t *testing.T) {
 	want := "dGVzdDoxMjM="
 	if want != got {
 		t.Errorf("Failed encoding\nwant: %q\ngot:  %q",
+			want, got)
+	}
+}
+
+func TestIsHashed(t *testing.T) {
+	// GIVEN a string
+	tests := map[string]struct {
+		input string
+		want  bool
+	}{
+		"empty string": {
+			input: "",
+			want:  false,
+		},
+		"non-hashed string": {
+			input: "h__foo",
+			want:  false,
+		},
+		"hashed string": {
+			input: fmt.Sprintf("h__%x", sha256.Sum256([]byte("foo"))),
+			want:  true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN isHashed is called on it
+			got := isHashed(tc.input)
+
+			// THEN the hash is detected correctly
+			if got != tc.want {
+				t.Errorf("want: %v\ngot:  %v",
+					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestHash(t *testing.T) {
+	// GIVEN a string
+	tests := map[string]struct {
+		input string
+		want  [32]byte
+	}{
+		"empty string": {
+			input: "",
+			want:  sha256.Sum256([]byte("")),
+		},
+		"non-empty string": {
+			input: "foo",
+			want:  sha256.Sum256([]byte("foo")),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN hash is called on it
+			got := hash(tc.input)
+
+			// THEN the string is hashed correctly
+			if got != tc.want {
+				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestHashFromString(t *testing.T) {
+	// GIVEN a string that contains a hash
+	tests := map[string]string{
+		"empty string":     "",
+		"non-empty string": "foobar",
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			want := sha256.Sum256([]byte(tc))
+			input := fmt.Sprintf("h__%x", want)
+
+			// WHEN hashFromString is called on it
+			got := hashFromString(input[3:])
+
+			// THEN the string is hashed correctly
+			var got32 [32]byte
+			copy(got32[:], got[:])
+			if got32 != want {
+				t.Errorf("want: %q\ngot:  %q",
+					want, got32)
+			}
+		})
+	}
+}
+
+func TestGetHash(t *testing.T) {
+	// GIVEN a string that may or may not be hashed
+	tests := map[string]struct {
+		input         string
+		alreadyHashed bool
+	}{
+		"empty string": {
+			input: "",
+		},
+		"non-empty string": {
+			input: "foo",
+		},
+		"hashed string": {
+			input:         fmt.Sprintf("h__%x", sha256.Sum256([]byte("foo"))),
+			alreadyHashed: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			want := tc.input
+			if !tc.alreadyHashed {
+				want = FmtHash(sha256.Sum256([]byte(tc.input)))
+			}
+
+			// WHEN GetHash is called on it
+			got := GetHash(tc.input)
+
+			// THEN the string is hashed correctly
+			gotHash := FmtHash(got)
+			if gotHash != want {
+				t.Errorf("want: %q\ngot:  %q",
+					want, gotHash)
+			}
+		})
+	}
+}
+
+func TestFmtHash(t *testing.T) {
+	// GIVEN a hash
+	hash := sha256.Sum256([]byte("foo"))
+
+	// WHEN FmtHash is called on it
+	got := FmtHash(hash)
+
+	// THEN the hash is formatted correctly
+	want := fmt.Sprintf("h__%x", hash)
+	if got != want {
+		t.Errorf("want: %q\ngot:  %q",
 			want, got)
 	}
 }

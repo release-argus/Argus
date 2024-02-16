@@ -23,7 +23,7 @@ import (
 
 // GetOption from this/Main/Defaults/HardDefaults on FiFo.
 func (s *Shoutrrr) GetOption(key string) string {
-	return util.FirstNonDefault(
+	return util.FirstNonDefaultWithEnv(
 		s.Options[key],
 		s.Main.Options[key],
 		s.Defaults.Options[key],
@@ -42,7 +42,7 @@ func (s *ShoutrrrBase) SetOption(key string, value string) {
 
 // GetParam from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetParam(key string) string {
-	return util.FirstNonDefault(
+	return util.FirstNonDefaultWithEnv(
 		s.Params[key],
 		s.Main.Params[key],
 		s.Defaults.Params[key],
@@ -61,7 +61,7 @@ func (s *ShoutrrrBase) SetParam(key string, value string) {
 
 // GetURLField from this/Main/Defaults/HardDefaults on FiFo
 func (s *Shoutrrr) GetURLField(key string) string {
-	return util.FirstNonDefault(
+	return util.FirstNonDefaultWithEnv(
 		s.URLFields[key],
 		s.Main.URLFields[key],
 		s.Defaults.URLFields[key],

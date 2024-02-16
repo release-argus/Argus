@@ -228,7 +228,6 @@ func TestCommand_String(t *testing.T) {
 			cmd:  &Command{},
 			want: ""},
 		"nil command": {
-			cmd:  nil,
 			want: ""},
 		"command with no args": {
 			cmd:  &Command{"ls"},
@@ -370,17 +369,16 @@ func TestCommand_Init(t *testing.T) {
 				{"false"}},
 		},
 		"nil Notifiers": {
-			shoutrrrNotifiers: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil Notifiers": {
-			shoutrrrNotifiers: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
+			shoutrrrNotifiers: &shoutrrr.Slice{
+				"test": testShoutrrr(false, false)},
 		},
 		"nil parentInterval": {
-			parentInterval: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
 		},

@@ -53,6 +53,10 @@ Usage of /usr/local/bin/argus:
         Put the name of the Notify service to send a test message.
   -test.service string
         Put the name of the Service to test the version query.
+  -web.basic-auth.password string
+        Password for basic auth
+  -web.basic-auth.username string
+        Username for basic auth
   -web.cert-file string
         HTTPS certificate file path.
   -web.listen-host string

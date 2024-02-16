@@ -17,10 +17,14 @@ package util
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -119,6 +123,19 @@ func FirstNonNilPtr[T customComparable](pointers ...*T) *T {
 	return nil
 }
 
+// FirstNonNilPtrWithEnv will return the first pointer in `pointers` that is not nil after evaluating any environment variables.
+func FirstNonNilPtrWithEnv(pointers ...*string) *string {
+	for _, pointer := range pointers {
+		if pointer != nil {
+			if val := EvalEnvVars(*pointer); val != *pointer {
+				return &val
+			}
+			return pointer
+		}
+	}
+	return nil
+}
+
 // FirstNonDefault will return the first var in `vars` that is not the default.
 func FirstNonDefault[T comparable](vars ...T) T {
 	var fresh T
@@ -128,6 +145,16 @@ func FirstNonDefault[T comparable](vars ...T) T {
 		}
 	}
 	return fresh
+}
+
+// FirstNonDefaultWithEnv will return the first var in `vars` that is not an empty string after evaluating any environment variables. "" is returned if all are empty.
+func FirstNonDefaultWithEnv(vars ...string) string {
+	for _, v := range vars {
+		if v = EvalEnvVars(v); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // PrintlnIfNotDefault will print `msg` is `x` is not the default for that type.
@@ -253,6 +280,59 @@ func StringToPointer(str string) *string {
 func BasicAuth(username string, password string) string {
 	encode := fmt.Sprintf("%s:%s", username, password)
 	return base64.StdEncoding.EncodeToString([]byte(encode))
+}
+
+// isHashed will return whether the string is a hashed value.
+func isHashed(s string) bool {
+	return RegexCheck("^h__[a-f0-9]{64}$", s)
+}
+
+// Hash will return the SHA256 hash of the string.
+func hash(s string) [32]byte {
+	return sha256.Sum256([]byte(s))
+}
+
+// HashFromString will return the byte slice of the hash string.
+func hashFromString(s string) []byte {
+	hash, _ := hex.DecodeString(s)
+	return hash
+}
+
+// GetHash will return the SHA256 hash of the string. If it's already hashed, the string hash is converted to a byte slice.
+func GetHash(s string) [32]byte {
+	if isHashed(s) {
+		hash := hashFromString(s[3:])
+		var hash32 [32]byte
+		copy(hash32[:], hash)
+		return hash32
+	}
+	return hash(s)
+}
+
+func FmtHash(h [32]byte) string {
+	return fmt.Sprintf("h__%x", h)
+}
+
+// envVarRegex is a regular expression to match environment variables.
+var envVarRegex = regexp.MustCompile(`\$\{([a-zA-Z]\w*)\}`)
+
+// envReplaceFunc is a function to replace environment variables in a string.
+func envReplaceFunc(match string) string {
+	envVarName := match[2 : len(match)-1] // Remove the '${' and '}'.
+	if value, ok := os.LookupEnv(envVarName); ok {
+		return value
+	}
+	return match
+}
+
+// EvalEnvVars will evaluate the environment variables in the string.
+func EvalEnvVars(input string) string {
+	// May contain an environment variable.
+	if strings.Contains(input, "${") {
+		return envVarRegex.ReplaceAllStringFunc(input, envReplaceFunc)
+	}
+	// No environment variables.
+	return input
 }
 
 func GetKeysFromJSON(data string) []string {

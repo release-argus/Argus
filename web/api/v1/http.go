@@ -40,8 +40,8 @@ func (api *API) basicAuth() mux.MiddlewareFunc {
 				passwordHash := sha256.Sum256([]byte(password))
 
 				// Protect from possible timing attacks
-				usernameMatch := ConstantTimeCompare(usernameHash, api.Config.Settings.Web.BasicAuth.UsernameHash)
-				passwordMatch := ConstantTimeCompare(passwordHash, api.Config.Settings.Web.BasicAuth.PasswordHash)
+				usernameMatch := ConstantTimeCompare(usernameHash, api.Config.Settings.WebBasicAuthUsernameHash())
+				passwordMatch := ConstantTimeCompare(passwordHash, api.Config.Settings.WebBasicAuthPasswordHash())
 
 				if usernameMatch && passwordMatch {
 					h.ServeHTTP(w, r)
