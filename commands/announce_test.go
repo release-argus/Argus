@@ -39,7 +39,6 @@ func TestController_AnnounceCommand(t *testing.T) {
 		"not tried does delay by 15s": {
 			index:          2,
 			timeDifference: 15 * time.Second,
-			failed:         nil,
 		},
 		"failed does delay by 15s": {
 			index:          0,
@@ -137,7 +136,6 @@ func TestController_Find(t *testing.T) {
 			want:    nil},
 		"nil controller": {
 			command:       "ls -lah /root",
-			want:          nil,
 			nilController: true},
 	}
 

@@ -34,6 +34,7 @@ import (
 func TestLookup_HTTPRequest(t *testing.T) {
 	// GIVEN a Lookup()
 	tests := map[string]struct {
+		env      map[string]string
 		url      string
 		errRegex string
 	}{
@@ -46,6 +47,14 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		"valid url": {
 			url:      "https://release-argus.io",
 			errRegex: "^$"},
+		"url from env": {
+			env:      map[string]string{"TESTLOOKUP_DV_HTTPREQUEST_ONE": "https://release-argus.io"},
+			url:      "${TESTLOOKUP_DV_HTTPREQUEST_ONE}",
+			errRegex: "^$"},
+		"url from env partial": {
+			env:      map[string]string{"TESTLOOKUP_DV_HTTPREQUEST_TWO": "release-argus"},
+			url:      "https://${TESTLOOKUP_DV_HTTPREQUEST_TWO}.io",
+			errRegex: "^$"},
 		"404": {
 			errRegex: "non-2XX response code: 404",
 			url:      "https://release-argus.io/foo/bar",
@@ -56,6 +65,9 @@ func TestLookup_HTTPRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+			}
 			lookup := testLookup()
 			lookup.URL = tc.url
 
@@ -77,6 +89,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup()
 	tests := map[string]struct {
+		env                  map[string]string
 		url                  string
 		allowInvalidCerts    bool
 		noSemanticVersioning bool
@@ -103,6 +116,22 @@ func TestLookup_Query(t *testing.T) {
 			wantVersion:          "[0-9]{4}",
 			errRegex:             "^$",
 			url:                  "https://release-argus.io",
+			regex:                "([0-9]+) The Argus Developers",
+		},
+		"url from env": {
+			noSemanticVersioning: true,
+			wantVersion:          "[0-9]{4}",
+			errRegex:             "^$",
+			env:                  map[string]string{"TESTLOOKUP_DV_QUERY_ONE": "https://release-argus.io"},
+			url:                  "${TESTLOOKUP_DV_QUERY_ONE}",
+			regex:                "([0-9]+) The Argus Developers",
+		},
+		"url from env partial": {
+			noSemanticVersioning: true,
+			wantVersion:          "[0-9]{4}",
+			errRegex:             "^$",
+			env:                  map[string]string{"TESTLOOKUP_DV_QUERY_TWO": "release-argus"},
+			url:                  "https://${TESTLOOKUP_DV_QUERY_TWO}.io",
 			regex:                "([0-9]+) The Argus Developers",
 		},
 		"passing regex with no capture group": {
@@ -165,6 +194,9 @@ func TestLookup_Query(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+			}
 			dvl := testLookup()
 			dvl.URL = tc.url
 			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
@@ -201,6 +233,7 @@ func TestLookup_Query(t *testing.T) {
 func TestLookup_Track(t *testing.T) {
 	// GIVEN a Lookup()
 	tests := map[string]struct {
+		env                  map[string]string
 		lookup               *Lookup
 		allowInvalidCerts    bool
 		semanticVersioning   bool
@@ -285,6 +318,22 @@ func TestLookup_Track(t *testing.T) {
 			basicAuth: &BasicAuth{
 				Username: "test",
 				Password: "123"},
+			lookup: &Lookup{
+				URL:   "https://valid.release-argus.io/basic-auth",
+				Regex: `non-semantic: "v([^"]+)`},
+			semanticVersioning:  true,
+			wantDatabaseMesages: 1,
+			wantAnnounces:       1,
+		},
+		"env vars in basic auth": {
+			env: map[string]string{
+				"TESTLOOKUP_DV_TRACK_ONE": "tes",
+				"TESTLOOKUP_DV_TRACK_TWO": "23"},
+			startLatestVersion:  "1.2.2",
+			wantDeployedVersion: "1.2.2",
+			basicAuth: &BasicAuth{
+				Username: "${TESTLOOKUP_DV_TRACK_ONE}t",
+				Password: "1${TESTLOOKUP_DV_TRACK_TWO}"},
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/basic-auth",
 				Regex: `non-semantic: "v([^"]+)`},
@@ -387,6 +436,10 @@ func TestLookup_Track(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - can't run in parallel because of stdout
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

@@ -360,12 +360,11 @@ func (d *DockerCheck) getToken() (token string) {
 	}
 
 	// Have a Token, return it
-	if d.Token != "" {
-		token = d.Token
+	if token = util.EvalEnvVars(d.Token); token != "" {
 		return
 	}
 
-	token = d.Defaults.getToken(d.GetType())
+	token = util.EvalEnvVars(d.Defaults.getToken(d.GetType()))
 	return
 }
 
@@ -379,22 +378,22 @@ func (d *DockerCheckDefaults) getToken(dType string) (token string) {
 	switch dType {
 	case "ghcr":
 		if d.RegistryGHCR != nil {
-			token = d.RegistryGHCR.Token
+			token = util.EvalEnvVars(d.RegistryGHCR.Token)
 		}
 	case "hub":
 		if d.RegistryHub != nil {
-			token = d.RegistryHub.Token
+			token = util.EvalEnvVars(d.RegistryHub.Token)
 		}
 	case "quay":
 		if d.RegistryQuay != nil {
-			token = d.RegistryQuay.Token
+			token = util.EvalEnvVars(d.RegistryQuay.Token)
 		}
 	}
 	if token != "" {
 		return
 	}
 
-	token = d.defaults.getToken(dType)
+	token = util.EvalEnvVars(d.defaults.getToken(dType))
 	return
 }
 
@@ -517,11 +516,13 @@ func (d *DockerCheckDefaults) getUsername() string {
 		return ""
 	}
 
-	if d.RegistryHub != nil && d.RegistryHub.Username != "" {
-		return d.RegistryHub.Username
+	if d.RegistryHub != nil {
+		if username := util.EvalEnvVars(d.RegistryHub.Username); username != "" {
+			return username
+		}
 	}
 
-	return d.defaults.getUsername()
+	return util.EvalEnvVars(d.defaults.getUsername())
 }
 
 // getUsername for the given type
@@ -530,8 +531,8 @@ func (d *DockerCheck) getUsername() string {
 		return ""
 	}
 
-	if d.Username != "" {
-		return d.Username
+	if username := util.EvalEnvVars(d.Username); username != "" {
+		return username
 	}
 	return d.Defaults.getUsername()
 }

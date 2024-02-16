@@ -158,7 +158,7 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 
 // GetSecret for the WebHook.
 func (w *WebHook) GetSecret() string {
-	return util.FirstNonDefault(
+	return util.FirstNonDefaultWithEnv(
 		w.Secret,
 		w.Main.Secret,
 		w.Defaults.Secret,
@@ -186,7 +186,7 @@ func (w *WebHook) GetType() string {
 // GetURL of the WebHook.
 func (w *WebHook) GetURL() (url string) {
 	url = strings.Clone(
-		util.FirstNonDefault(
+		util.FirstNonDefaultWithEnv(
 			w.URL,
 			w.Main.URL,
 			w.Defaults.URL,

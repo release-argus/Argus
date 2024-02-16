@@ -25,3 +25,8 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 		l.Defaults.AllowInvalidCerts,
 		l.HardDefaults.AllowInvalidCerts)
 }
+
+// GetURL will return the URL of the Lookup.
+func (l *Lookup) GetURL() string {
+	return util.EvalEnvVars(l.URL)
+}

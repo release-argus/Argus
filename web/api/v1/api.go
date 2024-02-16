@@ -54,7 +54,9 @@ func NewAPI(cfg *config.Config, log *util.JLog) *API {
 	api.Router = baseRouter.PathPrefix(routePrefix).Subrouter().StrictSlash(true)
 
 	baseRouter.Handle(routePrefix, http.RedirectHandler(routePrefix+"/", http.StatusPermanentRedirect))
-	if api.Config.Settings.Web.BasicAuth != nil {
+	if api.Config.Settings.Web.BasicAuth != nil ||
+		api.Config.Settings.FromFlags.Web.BasicAuth != nil ||
+		api.Config.Settings.HardDefaults.Web.BasicAuth != nil {
 		api.Router.Use(api.basicAuth())
 	}
 	return api

@@ -17,6 +17,7 @@
 package latestver
 
 import (
+	"os"
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -25,36 +26,58 @@ import (
 func TestLookup_GetAccessToken(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		accessTokenRoot        *string
-		accessTokenDefault     *string
-		accessTokenHardDefault *string
-		wantString             string
+		env         map[string]string
+		root        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:             "this",
-			accessTokenRoot:        stringPtr("this"),
-			accessTokenDefault:     stringPtr("not_this"),
-			accessTokenHardDefault: stringPtr("not_this")},
+			wantString:  "this",
+			root:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this")},
 		"default overrides hardDefault": {
-			wantString:             "this",
-			accessTokenRoot:        nil,
-			accessTokenDefault:     stringPtr("this"),
-			accessTokenHardDefault: stringPtr("not_this")},
+			wantString:  "this",
+			dfault:      stringPtr("this"),
+			hardDefault: stringPtr("not_this")},
 		"hardDefault is last resort": {
-			wantString:             "this",
-			accessTokenRoot:        nil,
-			accessTokenDefault:     nil,
-			accessTokenHardDefault: stringPtr("this")},
+			wantString:  "this",
+			hardDefault: stringPtr("this")},
+		"env var is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_ONE": "this"},
+			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_ONE}"),
+		},
+		"env var partial is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_TWO": "th"},
+			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_TWO}is"),
+		},
+		"empty env var is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_THREE": ""},
+			root:       stringPtr("th${TESTLOOKUP_LV_GETACCESSTOKEN_THREE}is"),
+		},
+		"undefined env var is used": {
+			wantString: "${TESTLOOKUP_LV_GETACCESSTOKEN_UNSET}",
+			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_UNSET}"),
+			dfault:     stringPtr("this"),
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 			lookup := testLookup(false, false)
-			lookup.AccessToken = tc.accessTokenRoot
-			lookup.Defaults.AccessToken = tc.accessTokenDefault
-			lookup.HardDefaults.AccessToken = tc.accessTokenHardDefault
+			lookup.AccessToken = tc.root
+			lookup.Defaults.AccessToken = tc.dfault
+			lookup.HardDefaults.AccessToken = tc.hardDefault
 
 			// WHEN GetAccessToken is called
 			got := lookup.GetAccessToken()
@@ -74,26 +97,23 @@ func TestLookup_GetAccessToken(t *testing.T) {
 func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		allowInvalidCertsRoot        *bool
-		allowInvalidCertsDefault     *bool
-		allowInvalidCertsHardDefault *bool
-		wantBool                     bool
+		root        *bool
+		dfault      *bool
+		hardDefault *bool
+		wantBool    bool
 	}{
 		"root overrides all": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        boolPtr(true),
-			allowInvalidCertsDefault:     boolPtr(false),
-			allowInvalidCertsHardDefault: boolPtr(false)},
+			wantBool:    true,
+			root:        boolPtr(true),
+			dfault:      boolPtr(false),
+			hardDefault: boolPtr(false)},
 		"default overrides hardDefault": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        nil,
-			allowInvalidCertsDefault:     boolPtr(true),
-			allowInvalidCertsHardDefault: boolPtr(false)},
+			wantBool:    true,
+			dfault:      boolPtr(true),
+			hardDefault: boolPtr(false)},
 		"hardDefault is last resort": {
-			wantBool:                     true,
-			allowInvalidCertsRoot:        nil,
-			allowInvalidCertsDefault:     nil,
-			allowInvalidCertsHardDefault: boolPtr(true)},
+			wantBool:    true,
+			hardDefault: boolPtr(true)},
 	}
 
 	for name, tc := range tests {
@@ -101,9 +121,9 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(false, false)
-			lookup.AllowInvalidCerts = tc.allowInvalidCertsRoot
-			lookup.Defaults.AllowInvalidCerts = tc.allowInvalidCertsDefault
-			lookup.HardDefaults.AllowInvalidCerts = tc.allowInvalidCertsHardDefault
+			lookup.AllowInvalidCerts = tc.root
+			lookup.Defaults.AllowInvalidCerts = tc.dfault
+			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefault
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetAllowInvalidCerts()
@@ -216,26 +236,23 @@ func TestLookup_ServiceURL(t *testing.T) {
 func TestLookup_GetUsePreRelease(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		usePreReleaseRoot        *bool
-		usePreReleaseDefault     *bool
-		usePreReleaseHardDefault *bool
-		wantBool                 bool
+		root        *bool
+		dfault      *bool
+		hardDefault *bool
+		wantBool    bool
 	}{
 		"root overrides all": {
-			wantBool:                 true,
-			usePreReleaseRoot:        boolPtr(true),
-			usePreReleaseDefault:     boolPtr(false),
-			usePreReleaseHardDefault: boolPtr(false)},
+			wantBool:    true,
+			root:        boolPtr(true),
+			dfault:      boolPtr(false),
+			hardDefault: boolPtr(false)},
 		"default overrides hardDefault": {
-			wantBool:                 true,
-			usePreReleaseRoot:        nil,
-			usePreReleaseDefault:     boolPtr(true),
-			usePreReleaseHardDefault: boolPtr(false)},
+			wantBool:    true,
+			dfault:      boolPtr(true),
+			hardDefault: boolPtr(false)},
 		"hardDefault is last resort": {
-			wantBool:                 true,
-			usePreReleaseRoot:        nil,
-			usePreReleaseDefault:     nil,
-			usePreReleaseHardDefault: boolPtr(true)},
+			wantBool:    true,
+			hardDefault: boolPtr(true)},
 	}
 
 	for name, tc := range tests {
@@ -243,9 +260,9 @@ func TestLookup_GetUsePreRelease(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(false, false)
-			lookup.UsePreRelease = tc.usePreReleaseRoot
-			lookup.Defaults.UsePreRelease = tc.usePreReleaseDefault
-			lookup.HardDefaults.UsePreRelease = tc.usePreReleaseHardDefault
+			lookup.UsePreRelease = tc.root
+			lookup.Defaults.UsePreRelease = tc.dfault
+			lookup.HardDefaults.UsePreRelease = tc.hardDefault
 
 			// WHEN GetUsePreRelease is called
 			got := lookup.GetUsePreRelease()
@@ -262,6 +279,7 @@ func TestLookup_GetUsePreRelease(t *testing.T) {
 func TestLookup_GetURL(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
+		env         map[string]string
 		urlType     bool
 		url         string
 		tagFallback bool
@@ -281,12 +299,39 @@ func TestLookup_GetURL(t *testing.T) {
 			tagFallback: true,
 			want:        "https://api.github.com/repos/release-argus/Argus/tags",
 		},
+		"env var is used": {
+			env:     map[string]string{"TESTLOOKUP_LV_GETURL_ONE": "https://release-argus.io"},
+			urlType: true,
+			url:     "${TESTLOOKUP_LV_GETURL_ONE}",
+			want:    "https://release-argus.io",
+		},
+		"env var partial is used": {
+			env:     map[string]string{"TESTLOOKUP_LV_GETURL_TWO": "release-argus"},
+			urlType: true,
+			url:     "https://${TESTLOOKUP_LV_GETURL_TWO}.io",
+			want:    "https://release-argus.io",
+		},
+		"empty env var is used": {
+			env:     map[string]string{"TESTLOOKUP_LV_GETURL_THREE": ""},
+			urlType: true,
+			url:     "https://${TESTLOOKUP_LV_GETURL_THREE}.io",
+			want:    "https://.io",
+		},
+		"undefined env var is used": {
+			urlType: true,
+			url:     "${TESTLOOKUP_LV_GETURL_UNSET}",
+			want:    "${TESTLOOKUP_LV_GETURL_UNSET}",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 			lookup := testLookup(tc.urlType, false)
 			lookup.URL = tc.url
 			if !tc.urlType {
