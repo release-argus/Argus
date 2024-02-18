@@ -6,9 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactElement, useMemo } from "react";
-import { Theme, themeLocalStorageKey } from "theme";
-import { ThemeContext, themeName, themeSetting } from "contexts/theme";
+import { ReactElement } from "react";
 
 import { Container } from "react-bootstrap";
 import Header from "components/header";
@@ -17,8 +15,6 @@ import { NotificationProvider } from "contexts/notification";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WebSocketProvider } from "contexts/websocket";
 import { getBasename } from "utils";
-import useLocalStorage from "hooks/local-storage";
-import { useMedia } from "hooks/media";
 
 const App = (): ReactElement => {
   // This dynamically/generically determines the pathPrefix by stripping the first known
@@ -35,52 +31,24 @@ const App = (): ReactElement => {
     },
   });
 
-  const [userTheme, setUserTheme] = useLocalStorage<themeSetting>(
-    themeLocalStorageKey,
-    "auto"
-  );
-  const browserHasThemes = useMedia("(prefers-color-scheme)");
-  const browserWantsDarkTheme = useMedia("(prefers-color-scheme: dark)");
-
-  let theme: themeName;
-  if (userTheme !== "auto") theme = userTheme;
-  else
-    theme = browserHasThemes
-      ? browserWantsDarkTheme
-        ? "theme-dark"
-        : "theme-light"
-      : "theme-light";
-
-  const themeContextValue = useMemo(
-    () => ({
-      theme: theme,
-      themePreference: userTheme,
-      setTheme: (t: themeSetting) => setUserTheme(t),
-    }),
-    [theme, userTheme, setUserTheme]
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       <Router basename={basename}>
-        <ThemeContext.Provider value={themeContextValue}>
-          <Theme />
-          <Header />
-          <WebSocketProvider>
-            <NotificationProvider />
-            <ModalProvider>
-              <Container fluid style={{ padding: "1.25rem" }}>
-                <Routes>
-                  <Route path="/approvals" element={<ApprovalsPage />} />
-                  <Route path="/status" element={<StatusPage />} />
-                  <Route path="/flags" element={<FlagsPage />} />
-                  <Route path="/config" element={<ConfigPage />} />
-                  <Route path="/" element={<Navigate to="/approvals" />} />
-                </Routes>
-              </Container>
-            </ModalProvider>
-          </WebSocketProvider>
-        </ThemeContext.Provider>
+        <Header />
+        <WebSocketProvider>
+          <NotificationProvider />
+          <ModalProvider>
+            <Container fluid style={{ padding: "1.25rem" }}>
+              <Routes>
+                <Route path="/approvals" element={<ApprovalsPage />} />
+                <Route path="/status" element={<StatusPage />} />
+                <Route path="/flags" element={<FlagsPage />} />
+                <Route path="/config" element={<ConfigPage />} />
+                <Route path="/" element={<Navigate to="/approvals" />} />
+              </Routes>
+            </Container>
+          </ModalProvider>
+        </WebSocketProvider>
       </Router>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

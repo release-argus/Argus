@@ -108,7 +108,7 @@ const BooleanWithDefault: FC<Props> = ({
                       style={{
                         height: "1rem",
                       }}
-                      className={`icon-${option.class}`}
+                      className={`text-${option.class}`}
                     />
                   </Button>
                 ))}
@@ -129,7 +129,7 @@ const BooleanWithDefault: FC<Props> = ({
                   style={{
                     height: "1rem",
                   }}
-                  className={`icon-${optionsDefault.class}`}
+                  className={`text-${optionsDefault.class}`}
                 />
               </Button>
             </>

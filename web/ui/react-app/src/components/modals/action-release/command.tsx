@@ -64,7 +64,7 @@ export const Command: FC<Props> = ({
                   height: "2rem",
                 }}
                 className={
-                  command.failed === true ? "icon-danger" : "icon-success"
+                  command.failed === true ? "text-danger" : "text-success"
                 }
               />
             </Container>

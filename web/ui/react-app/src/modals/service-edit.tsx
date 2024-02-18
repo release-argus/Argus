@@ -19,7 +19,6 @@ import { ModalContext } from "contexts/modal";
 import { ServiceEditType } from "types/service-edit";
 import { convertUIServiceDataEditToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import { useTheme } from "contexts/theme";
 
 export interface EditForm {
   optionsSemanticVersioning?: boolean;
@@ -42,7 +41,6 @@ const ServiceEditModal = () => {
   // modal.actionType:
   // EDIT
   const { handleModal, modal } = useContext(ModalContext);
-  const themeCtx = useTheme();
   const form = useForm<ServiceEditType>({ mode: "onBlur" });
   // null if submitting
   const [err, setErr] = useState<string | null>("");
@@ -100,10 +98,7 @@ const ServiceEditModal = () => {
           show={modal.actionType === "EDIT"}
           onHide={() => hideModal()}
         >
-          <Modal.Header
-            closeButton
-            closeVariant={themeCtx.theme === "theme-dark" ? "white" : undefined}
-          >
+          <Modal.Header closeButton>
             <Modal.Title>
               <strong>Edit Service</strong>
               <HelpTooltip

@@ -21,7 +21,6 @@ import { addMessageHandler } from "contexts/websocket";
 import { formatRelative } from "date-fns";
 import reducerActionModal from "reducers/action-release";
 import { useDelayedRender } from "hooks/delayed-render";
-import { useTheme } from "contexts/theme";
 
 const isSendingService = (
   serviceName: string,
@@ -53,7 +52,6 @@ const ActionReleaseModal = () => {
     webhooks: {},
     commands: {},
   });
-  const themeCtx = useTheme();
 
   const hideModal = useCallback(() => {
     setModalData({ page: "APPROVALS", type: "ACTION", sub_type: "RESET" });
@@ -251,10 +249,7 @@ const ActionReleaseModal = () => {
       show={!["", "EDIT"].includes(modal.actionType)}
       onHide={() => hideModal()}
     >
-      <Modal.Header
-        closeButton
-        closeVariant={themeCtx.theme === "theme-dark" ? "white" : undefined}
-      >
+      <Modal.Header closeButton>
         <Modal.Title>
           <strong>
             {modal.actionType === "RESEND"

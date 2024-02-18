@@ -32,7 +32,7 @@ const FormLabel: FC<FormLabelProps> = ({
     }
   >
     {text}
-    {required && <span className="icon-danger">*</span>}
+    {required && <span className="text-danger">*</span>}
     {tooltip && <HelpTooltip text={tooltip} />}
   </Form.Label>
 );
