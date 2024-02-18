@@ -64,7 +64,7 @@ export const WebHook: FC<Props> = ({
                   height: "2rem",
                 }}
                 className={
-                  webhook.failed === true ? "icon-danger" : "icon-success"
+                  webhook.failed === true ? "text-danger" : "text-success"
                 }
               />
             </Container>

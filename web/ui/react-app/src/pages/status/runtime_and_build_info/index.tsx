@@ -8,7 +8,6 @@ import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { fetchJSON } from "utils";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "contexts/theme";
 
 const titleMappings: Dictionary<string> = {
   cwd: "Working directory",
@@ -17,7 +16,6 @@ const ignoreCapitalize = ["GOMAXPROCS", "GOGC", "GODEBUG"];
 
 export const Status = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
-  const themeCtx = useTheme();
 
   const { data: runtimeData } = useQuery<RuntimeInfo>({
     queryKey: ["status/runtime"],
@@ -59,11 +57,7 @@ export const Status = (): ReactElement => {
             </div>
           ))}
       </h2>
-      <Table
-        striped
-        bordered
-        variant={themeCtx.theme === "theme-dark" ? "dark" : undefined}
-      >
+      <Table striped bordered>
         <tbody>
           {runtimeData === undefined
             ? [...Array.from(Array(4).keys())].map((num) => (
@@ -127,11 +121,7 @@ export const Status = (): ReactElement => {
             </div>
           ))}
       </h2>
-      <Table
-        striped
-        bordered
-        variant={themeCtx.theme === "theme-dark" ? "dark" : undefined}
-      >
+      <Table striped bordered>
         <tbody>
           {buildData === undefined
             ? [...Array.from(Array(3).keys())].map((num) => (

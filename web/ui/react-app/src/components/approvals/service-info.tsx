@@ -130,14 +130,14 @@ export const ServiceInfo: FC<Props> = ({
       style={{
         padding: "0px",
       }}
-      className={serviceWarning ? "alert-warning rounded-bottom" : "default"}
+      className={serviceWarning ? "service-warning rounded-bottom" : "default"}
     >
       <ListGroup className="list-group-flush">
         {updateAvailable && !updateSkipped ? (
           <>
             <ListGroup.Item
               key="update-available"
-              className={"service-item update-options alert-warning"}
+              className={"service-item update-options service-warning"}
               variant="secondary"
             >
               {updateApproved && (service.webhook || service.command)
@@ -146,7 +146,7 @@ export const ServiceInfo: FC<Props> = ({
             </ListGroup.Item>
             <ListGroup.Item
               key="update-buttons"
-              className={"service-item update-options alert-warning"}
+              className={"service-item update-options service-warning"}
               variant="secondary"
               style={{ paddingTop: "0.25rem" }}
             >
@@ -237,14 +237,14 @@ export const ServiceInfo: FC<Props> = ({
       <Card.Footer
         className={
           serviceWarning || !service?.status?.last_queried
-            ? "alert-warning rounded-bottom"
+            ? "service-warning rounded-bottom"
             : ""
         }
       >
         <small
           className={
             "text-muted same-color" +
-            (serviceWarning ? " alert-warning rounded-bottom" : "")
+            (serviceWarning ? " service-warning rounded-bottom" : "")
           }
         >
           {service?.status?.last_queried ? (

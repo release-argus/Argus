@@ -3,7 +3,6 @@ import { FC, useState } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { useTheme } from "contexts/theme";
 
 interface Props {
   onDelete: () => void;
@@ -12,7 +11,6 @@ interface Props {
 
 export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
   const [modalShow, setModalShow] = useState(false);
-  const themeCtx = useTheme();
   const [deleting, setDeleting] = useState(false);
 
   const handleConfirm = async () => {
@@ -38,10 +36,7 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
         style={{ backdropFilter: "blur(3px)" }}
         centered
       >
-        <Modal.Header
-          closeButton
-          closeVariant={themeCtx.theme === "theme-dark" ? "white" : undefined}
-        >
+        <Modal.Header closeButton>
           <Modal.Title>Confirm Delete</Modal.Title>
         </Modal.Header>
         <Modal.Body>

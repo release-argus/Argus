@@ -7,13 +7,11 @@ import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { fetchJSON } from "utils";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "contexts/theme";
 
 export const Flags = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
   const [flags, setFlags] =
     useState<Dictionary<string | boolean | undefined>>();
-  const themeCtx = useTheme();
 
   const { data, isFetching } = useQuery<
     Dictionary<string | boolean | undefined>
@@ -56,11 +54,7 @@ export const Flags = (): ReactElement => {
             </div>
           ))}
       </h2>
-      <Table
-        striped
-        bordered
-        variant={themeCtx.theme === "theme-dark" ? "dark" : undefined}
-      >
+      <Table striped bordered>
         <thead>
           <tr>
             <th>Flag</th>

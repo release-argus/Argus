@@ -138,7 +138,7 @@ export const Item: FC<Props> = ({
                 style={{
                   height: "2rem",
                 }}
-                className={failed === true ? "icon-danger" : "icon-success"}
+                className={failed === true ? "text-danger" : "text-success"}
               />
             </Container>
           </OverlayTrigger>

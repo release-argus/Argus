@@ -42,15 +42,14 @@ const Notification: FC<NotificationType> = ({
   return (
     <Toast
       id={`${id}`}
-      className={`m-1 text-white alert-${type} `}
+      className={`m-1 alert-${type}`}
       bg={type}
       key={`notification-${id}`}
       onClose={() => removeNotification(id)}
     >
       <Toast.Header
-        className={`alert-${type} text-white`}
+        className={`alert-${type}`}
         style={{ padding: "0.5em" }}
-        closeVariant="white"
         closeButton={false}
       >
         <FontAwesomeIcon
