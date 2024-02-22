@@ -315,7 +315,7 @@ func testDeployedVersion() *deployedver.Lookup {
 	var (
 		allowInvalidCerts = false
 		json              = "something"
-		regex             = "([0-9]+) The Argus Developers"
+		regex             = `([0-9]+)\s<[^>]+>The Argus Developers`
 		regexTemplate     = "v$1"
 		url               = "https://release-argus.io"
 	)

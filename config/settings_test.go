@@ -29,6 +29,7 @@ import (
 func TestSettingsBase_CheckValues(t *testing.T) {
 	// GIVEN a Settings struct with some values set
 	tests := map[string]struct {
+		env              map[string]string
 		had              Settings
 		want             Settings
 		wantUsernameHash string
@@ -44,19 +45,23 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 					Web: WebSettings{
 						BasicAuth: nil}}},
 		},
-		"BasicAuth - hashed Username and str Password": {
+		"BasicAuth - hashed Username and str env Password": {
+			env: map[string]string{
+				"TESTSETTINGSBASE_CHECKVALUES_ONE": "ass"},
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						BasicAuth: &WebSettingsBasicAuth{
 							Username: util.FmtHash(util.GetHash("user")),
-							Password: "pass"}}}},
+							Password: "p${TESTSETTINGSBASE_CHECKVALUES_ONE}"}}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
 						BasicAuth: &WebSettingsBasicAuth{
 							Username: util.FmtHash(util.GetHash("user")),
-							Password: util.FmtHash(util.GetHash("pass"))}}}},
+							Password: "p${TESTSETTINGSBASE_CHECKVALUES_ONE}"}}}},
+			wantUsernameHash: util.FmtHash(util.GetHash("user")),
+			wantPasswordHash: util.FmtHash(util.GetHash("pass")),
 		},
 		"Favicon - empty": {
 			had: Settings{
@@ -88,6 +93,11 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
 			// WHEN CheckValues is called on it
 			tc.had.CheckValues()
 
@@ -100,14 +110,20 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 			}
 			// AND the BasicAuth username and password are hashed (if they exist)
 			if tc.want.Web.BasicAuth != nil {
-				wantUsernameHash := util.GetHash(tc.want.Web.BasicAuth.Username)
-				if tc.had.Web.BasicAuth.UsernameHash != wantUsernameHash {
-					t.Errorf("want: %x\ngot:  %x",
+				wantUsernameHash := util.FmtHash(util.GetHash(tc.want.Web.BasicAuth.Username))
+				if tc.wantUsernameHash != "" {
+					wantUsernameHash = tc.wantUsernameHash
+				}
+				if util.FmtHash(tc.had.Web.BasicAuth.UsernameHash) != wantUsernameHash {
+					t.Errorf("want: %q\ngot:  %q",
 						wantUsernameHash, tc.had.Web.BasicAuth.UsernameHash)
 				}
-				wantPasswordHash := util.GetHash(tc.want.Web.BasicAuth.Password)
-				if tc.had.Web.BasicAuth.PasswordHash != wantPasswordHash {
-					t.Errorf("want: %x\ngot:  %x",
+				wantPasswordHash := util.FmtHash(util.GetHash(tc.want.Web.BasicAuth.Password))
+				if tc.wantPasswordHash != "" {
+					wantPasswordHash = tc.wantPasswordHash
+				}
+				if util.FmtHash(tc.had.Web.BasicAuth.PasswordHash) != wantPasswordHash {
+					t.Errorf("want: %q\ngot:  %q",
 						wantPasswordHash, tc.had.Web.BasicAuth.PasswordHash)
 				}
 			}
@@ -680,8 +696,10 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 func TestWebSettings_CheckValues(t *testing.T) {
 	// GIVEN a WebSettings struct with some values set
 	tests := map[string]struct {
-		had  WebSettings
-		want WebSettings
+		env              map[string]string
+		had              WebSettings
+		want             WebSettings
+		wantUsernameHash string
 	}{
 		"BasicAuth - empty": {
 			had: WebSettings{
@@ -708,6 +726,34 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				BasicAuth: &WebSettingsBasicAuth{
 					Username: "user",
 					Password: util.FmtHash(util.GetHash("pass"))}},
+		},
+		"BasicAuth - Username and password from env vars": {
+			env: map[string]string{
+				"TESTWEBSETTINGS_CHECKVALUES_ONE": "user",
+				"TESTWEBSETTINGS_CHECKVALUES_TWO": "pass"},
+			had: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: "${TESTWEBSETTINGS_CHECKVALUES_ONE}",
+					Password: "${TESTWEBSETTINGS_CHECKVALUES_TWO}"}},
+			want: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: "${TESTWEBSETTINGS_CHECKVALUES_ONE}",
+					Password: "${TESTWEBSETTINGS_CHECKVALUES_TWO}"}},
+			wantUsernameHash: util.FmtHash(util.GetHash("user")),
+		},
+		"BasicAuth - Username and password from env vars partial": {
+			env: map[string]string{
+				"TESTWEBSETTINGS_CHECKVALUES_THREE": "er",
+				"TESTWEBSETTINGS_CHECKVALUES_FOUR":  "ss"},
+			had: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: "us${TESTWEBSETTINGS_CHECKVALUES_THREE}",
+					Password: "pa${TESTWEBSETTINGS_CHECKVALUES_FOUR}"}},
+			want: WebSettings{
+				BasicAuth: &WebSettingsBasicAuth{
+					Username: "us${TESTWEBSETTINGS_CHECKVALUES_THREE}",
+					Password: "pa${TESTWEBSETTINGS_CHECKVALUES_FOUR}"}},
+			wantUsernameHash: util.FmtHash(util.GetHash("user")),
 		},
 		"Favicon - empty": {
 			had: WebSettings{
@@ -747,6 +793,11 @@ func TestWebSettings_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
 			// WHEN CheckValues is called on it
 			tc.had.CheckValues()
 
@@ -757,6 +808,13 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					wantStr, hadStr)
 			}
+			if tc.wantUsernameHash != "" {
+				got := util.FmtHash(tc.had.BasicAuth.UsernameHash)
+				if got != tc.wantUsernameHash {
+					t.Errorf("Username hash\nwant: %q\ngot:  %q",
+						tc.wantUsernameHash, got)
+				}
+			}
 		})
 	}
 }
@@ -764,8 +822,11 @@ func TestWebSettings_CheckValues(t *testing.T) {
 func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 	// GIVEN a WebSettingsBasicAuth struct with some values set
 	tests := map[string]struct {
-		had  WebSettingsBasicAuth
-		want WebSettingsBasicAuth
+		env              map[string]string
+		had              WebSettingsBasicAuth
+		want             WebSettingsBasicAuth
+		wantUsernameHash string
+		wantPasswordHash string
 	}{
 		"str Username": {
 			had: WebSettingsBasicAuth{
@@ -788,6 +849,38 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			want: WebSettingsBasicAuth{
 				Username: "user",
 				Password: util.FmtHash(util.GetHash("pass"))},
+		},
+		"str env Web.BasicAuth.Username and str env Web.BasicAuth.Password": {
+			env: map[string]string{
+				"TESTWEBSETTINGSBASICAUTH_CHECKVALUES_ONE": "user",
+				"TESTWEBSETTINGSBASICAUTH_CHECKVALUES_TWO": "pass"},
+			had: WebSettingsBasicAuth{
+				Username: "${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_ONE}",
+				Password: "${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_TWO}"},
+			want: WebSettingsBasicAuth{
+				Username: "${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_ONE}",
+				Password: "${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_TWO}"},
+		},
+		"str env partial Web.BasicAuth.Username and str env partial Web.BasicAuth.Password": {
+			env: map[string]string{
+				"TESTWEBSETTINGSBASICAUTH_CHECKVALUES_THREE": "user",
+				"TESTWEBSETTINGSBASICAUTH_CHECKVALUES_FOUR":  "pass"},
+			had: WebSettingsBasicAuth{
+				Username: "a${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_THREE}",
+				Password: "b${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_FOUR}"},
+			want: WebSettingsBasicAuth{
+				Username: "a${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_THREE}",
+				Password: "b${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_FOUR}"},
+		},
+		"str env undefined Web.BasicAuth.Username and str env undefined Web.BasicAuth.Password": {
+			had: WebSettingsBasicAuth{
+				Username: "a${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}",
+				Password: "b${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}"},
+			want: WebSettingsBasicAuth{
+				Username: "a${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}",
+				Password: util.FmtHash(util.GetHash("b${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}"))},
+			wantUsernameHash: util.FmtHash(util.GetHash("a${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}")),
+			wantPasswordHash: util.FmtHash(util.GetHash("b${TESTWEBSETTINGSBASICAUTH_CHECKVALUES_UNDEFINED}")),
 		},
 		"str Web.BasicAuth.Username and Web.BasicAuth.Password already hashed": {
 			had: WebSettingsBasicAuth{
@@ -819,6 +912,11 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
+
 			// WHEN CheckValues is called on it
 			tc.had.CheckValues()
 
@@ -828,6 +926,28 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 			if hadStr != wantStr {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					wantStr, hadStr)
+			}
+			// AND the UsernameHash is calculated correctly
+			want := util.FmtHash(util.GetHash(
+				util.EvalEnvVars(tc.want.Username)))
+			if tc.wantUsernameHash != "" {
+				want = tc.wantUsernameHash
+			}
+			got := util.FmtHash(tc.had.UsernameHash)
+			if got != want {
+				t.Errorf("Username Hash\nwant: %s\ngot:  %s",
+					want, got)
+			}
+			// AND the PasswordHash is calculated correctly
+			want = util.FmtHash(util.GetHash(
+				util.EvalEnvVars(tc.want.Password)))
+			if tc.wantPasswordHash != "" {
+				want = tc.wantPasswordHash
+			}
+			got = util.FmtHash(tc.had.PasswordHash)
+			if got != want {
+				t.Errorf("Password Hash\nwant: %s\ngot:  %s",
+					want, got)
 			}
 		})
 	}

@@ -19,6 +19,7 @@ package webhook
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
@@ -29,6 +30,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := map[string]struct {
+		env    map[string]string
 		root   *Headers
 		main   *Headers
 		dfault *Headers
@@ -115,12 +117,27 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 				"X-Service": serviceID,
 				"X-Version": latestVersion},
 		},
+		"header with env var": {
+			env: map[string]string{"FOO": "bar"},
+			root: &Headers{
+				{Key: "X-Service", Value: "{{ service_id }}"},
+				{Key: "X-Version", Value: "{{ version }}"},
+				{Key: "X-Foo", Value: "b${FOO}r"}},
+			want: map[string]string{
+				"X-Service": serviceID,
+				"X-Version": latestVersion,
+				"X-Foo":     "bbarr"},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			webhook := WebHook{
 				ServiceStatus: &svcstatus.Status{
