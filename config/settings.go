@@ -151,10 +151,14 @@ func (s *WebSettingsBasicAuth) String(prefix string) (str string) {
 // CheckValues will ensure that the values are SHA256 hashed.
 func (ba *WebSettingsBasicAuth) CheckValues() {
 	// Username
-	ba.UsernameHash = util.GetHash(ba.Username)
+	ba.UsernameHash = util.GetHash(util.EvalEnvVars(ba.Username))
 	// Password
-	ba.PasswordHash = util.GetHash(ba.Password)
-	ba.Password = util.FmtHash(ba.PasswordHash)
+	password := util.EvalEnvVars(ba.Password)
+	ba.PasswordHash = util.GetHash(password)
+	if password == ba.Password {
+		// Password doesn't include an env var, so hash the config val.
+		ba.Password = util.FmtHash(ba.PasswordHash)
+	}
 }
 
 // FaviconSettings contains the favicon override settings.
