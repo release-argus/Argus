@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0](https://github.com/release-argus/Argus/compare/0.15.2...0.16.0) (2024-02-24)
+
+New mascot! Thanks [@rexapex](https://github.com/rexapex)
+
+### Features
+
+* **config:** hash `web.basic_auth.(username|password)` locally ([#358](https://github.com/release-argus/Argus/issues/358)) ([1ed247b](https://github.com/release-argus/Argus/commits/1ed247be35ffc173a280abcb6526905da32eadc9))
+* **config:** more env var support ([#367](https://github.com/release-argus/Argus/issues/367)) ([87d63d6](https://github.com/release-argus/Argus/commits/87d63d680bc4c5815452d479a0fe3dcd6ae2ab04))
+* **config:** support env vars in some config vars ([#365](https://github.com/release-argus/Argus/pull/365)) ([c5d5532](https://github.com/release-argus/Argus/commits/c5d5532e2ed17ea59ab49b6e5195c1caa096c34e))
+* **web:** custom favicon support ([#355](https://github.com/release-argus/Argus/pull/355)) ([007db66](https://github.com/release-argus/Argus/commits/007db662f31723aa6c31bf2db8f661f2258ef85e))
+
 ### [0.15.2](https://github.com/release-argus/Argus/compare/0.15.1...0.15.2) (2024-01-17)
 
 
