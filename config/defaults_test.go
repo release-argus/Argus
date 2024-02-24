@@ -281,7 +281,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_HUB_TOKEN":    "tokenForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_HUB_USERNAME": "usernameForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
-			errRegex: `service:[^ ]+  latest_version:[^ ]+    require:[^ ]+      docker:[^ ]+        type: "foo" <invalid> `,
+			errRegex: `defaults[^ ]+  service:[^ ]+    latest_version:[^ ]+      require:[^ ]+        docker:[^ ]+          type: "foo" <invalid> `,
 		},
 		"service.latest_version - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
@@ -374,7 +374,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						&map[string]string{
 							"delay": "foo"},
 						nil, nil)}},
-			errRegex: `notify:[^ ]+  discord:[^ ]+    options:[^ ]+      delay: "foo" <invalid>`,
+			errRegex: `defaults:[^ ]+  notify:[^ ]+    discord:[^ ]+      options:[^ ]+        delay: "foo" <invalid>`,
 		},
 		"notify.smtp": {
 			env: map[string]string{
@@ -930,7 +930,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					case string:
 						if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
 							t.Errorf("want error matching:\n%v\ngot:\n%v",
-								tc.errRegex, t)
+								tc.errRegex, r.(string))
 						}
 					default:
 						t.Fatalf("unexpected panic: %v", r)
@@ -966,9 +966,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 			input: &Defaults{Service: service.Defaults{
 				Options: *opt.NewDefaults("10x", nil)}},
 			errRegex: []string{
-				`^service:$`,
-				`^  options:$`,
-				`^    interval: "10x" <invalid>`},
+				`^defaults:$`,
+				`^  service:$`,
+				`^    options:$`,
+				`^      interval: "10x" <invalid>`},
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
 			input: &Defaults{Service: service.Defaults{
@@ -978,11 +979,12 @@ func TestDefaults_CheckValues(t *testing.T) {
 							"pizza",
 							"", "", "", "", nil)}}}},
 			errRegex: []string{
-				`^service:$`,
-				`^  latest_version:$`,
-				`^    require:$`,
-				`^      docker:$`,
-				`^        type: "pizza" <invalid>`},
+				`^defaults:$`,
+				`^  service:$`,
+				`^    latest_version:$`,
+				`^      require:$`,
+				`^        docker:$`,
+				`^          type: "pizza" <invalid>`},
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: &Defaults{Service: service.Defaults{
@@ -993,13 +995,14 @@ func TestDefaults_CheckValues(t *testing.T) {
 							"pizza",
 							"", "", "", "", nil)}}}},
 			errRegex: []string{
-				`^service:$`,
-				`^  options:$`,
-				`^    interval: "10x" <invalid>`,
-				`^  latest_version:$`,
-				`^    require:$`,
-				`^      docker:$`,
-				`^        type: "pizza" <invalid>`},
+				`^defaults:$`,
+				`^  service:$`,
+				`^    options:$`,
+				`^      interval: "10x" <invalid>`,
+				`^    latest_version:$`,
+				`^      require:$`,
+				`^        docker:$`,
+				`^          type: "pizza" <invalid>`},
 		},
 		"Notify.x.Delay": {
 			input: &Defaults{Notify: shoutrrr.SliceDefaults{
@@ -1008,17 +1011,19 @@ func TestDefaults_CheckValues(t *testing.T) {
 					&map[string]string{"delay": "10x"},
 					nil, nil)}},
 			errRegex: []string{
-				`^notify:$`,
-				`^  slack:$`,
-				`^    options:`,
-				`^      delay: "10x" <invalid>`},
+				`^defaults:$`,
+				`^  notify:$`,
+				`^    slack:$`,
+				`^      options:`,
+				`^        delay: "10x" <invalid>`},
 		},
 		"WebHook.Delay": {
 			input: &Defaults{WebHook: *webhook.NewDefaults(
 				nil, nil, "10x", nil, nil, "", nil, "", "")},
 			errRegex: []string{
-				`^webhook:$`,
-				`^  delay: "10x" <invalid>`},
+				`^defaults:$`,
+				`^  webhook:$`,
+				`^    delay: "10x" <invalid>`},
 		},
 	}
 

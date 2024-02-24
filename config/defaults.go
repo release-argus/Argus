@@ -233,26 +233,30 @@ func mapEnvToStruct(src interface{}, prefix string, envVars *[]string) (err erro
 
 // CheckValues are valid.
 func (d *Defaults) CheckValues(prefix string) (errs error) {
-	itemPrefix := prefix + "  "
+	itemPrefix := prefix + "    "
 
 	// Service
 	if err := d.Service.CheckValues(itemPrefix); err != nil {
-		errs = fmt.Errorf("%s%sservice:\\%w",
+		errs = fmt.Errorf("%s%s  service:\\%w",
 			util.ErrorToString(errs), prefix, err)
 	}
 
 	// Notify
-	if err := d.Notify.CheckValues(prefix); err != nil {
+	if err := d.Notify.CheckValues(prefix + "  "); err != nil {
 		errs = fmt.Errorf("%s%w",
 			util.ErrorToString(errs), err)
 	}
 
 	// WebHook
 	if err := d.WebHook.CheckValues(itemPrefix); err != nil {
-		errs = fmt.Errorf("%s%swebhook:\\%w",
+		errs = fmt.Errorf("%s%s  webhook:\\%w",
 			util.ErrorToString(errs), prefix, err)
 	}
 
+	if errs != nil {
+		errs = fmt.Errorf("%sdefaults:\\%w",
+			prefix, errs)
+	}
 	return
 }
 
