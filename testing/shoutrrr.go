@@ -88,8 +88,8 @@ func findShoutrrr(
 		if cfg.Notify != nil && cfg.Notify[name] != nil {
 			hardDefaults := config.Defaults{}
 			hardDefaults.SetDefaults()
-			emptyShoutrrs := shoutrrr.ShoutrrrDefaults{}
-			emptyShoutrrs.InitMaps()
+			emptyShoutrrrs := shoutrrr.ShoutrrrDefaults{}
+			emptyShoutrrrs.InitMaps()
 			main := cfg.Notify[name]
 			slice["test"] = shoutrrr.New(
 				nil, // failed
@@ -98,9 +98,9 @@ func findShoutrrr(
 				&main.Params,
 				main.Type,
 				&main.URLFields,
-				&emptyShoutrrs,
-				&emptyShoutrrs,
-				&emptyShoutrrs)
+				&emptyShoutrrrs,
+				&emptyShoutrrrs,
+				&emptyShoutrrrs)
 			slice["test"].InitMaps()
 			slice["test"].Main.InitMaps()
 

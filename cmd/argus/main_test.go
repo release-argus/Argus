@@ -78,6 +78,7 @@ func TestTheMain(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			file := fmt.Sprintf("%s.yml", name)
+			os.Remove(tc.db)
 			tc.file(file, t)
 			defer os.Remove(tc.db)
 			resetFlags()

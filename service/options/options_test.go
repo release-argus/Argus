@@ -43,7 +43,6 @@ func TestOptions_GetActive(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -65,48 +64,47 @@ func TestOptions_GetActive(t *testing.T) {
 func TestOptions_GetInterval(t *testing.T) {
 	// GIVEN Options
 	tests := map[string]struct {
-		intervalRoot        string
-		intervalDefault     string
-		intervalHardDefault string
-		wantString          string
+		root        string
+		dfault      string
+		hardDefault string
+		want        string
 	}{
 		"root overrides all": {
-			wantString:          "10s",
-			intervalRoot:        "10s",
-			intervalDefault:     "1m10s",
-			intervalHardDefault: "1m10s",
+			want:        "10s",
+			root:        "10s",
+			dfault:      "1m10s",
+			hardDefault: "1m10s",
 		},
 		"default overrides hardDefault": {
-			wantString:          "10s",
-			intervalRoot:        "",
-			intervalDefault:     "10s",
-			intervalHardDefault: "1m10s",
+			want:        "10s",
+			root:        "",
+			dfault:      "10s",
+			hardDefault: "1m10s",
 		},
 		"hardDefault is last resort": {
-			wantString:          "10s",
-			intervalRoot:        "",
-			intervalDefault:     "",
-			intervalHardDefault: "10s",
+			want:        "10s",
+			root:        "",
+			dfault:      "",
+			hardDefault: "10s",
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			options := testOptions()
-			options.Interval = tc.intervalRoot
-			options.Defaults.Interval = tc.intervalDefault
-			options.HardDefaults.Interval = tc.intervalHardDefault
+			options.Interval = tc.root
+			options.Defaults.Interval = tc.dfault
+			options.HardDefaults.Interval = tc.hardDefault
 
 			// WHEN GetInterval is called
 			got := options.GetInterval()
 
 			// THEN the function returns the correct result
-			if got != tc.wantString {
+			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
-					tc.wantString, got)
+					tc.want, got)
 			}
 		})
 	}
@@ -115,40 +113,36 @@ func TestOptions_GetInterval(t *testing.T) {
 func TestOptions_GetSemanticVersioning(t *testing.T) {
 	// GIVEN Options
 	tests := map[string]struct {
-		semanticVersioningRoot        *bool
-		semanticVersioningDefault     *bool
-		semanticVersioningHardDefault *bool
-		wantBool                      bool
+		root        *bool
+		dfault      *bool
+		hardDefault *bool
+		wantBool    bool
 	}{
 		"root overrides all": {
-			wantBool:                      true,
-			semanticVersioningRoot:        boolPtr(true),
-			semanticVersioningDefault:     boolPtr(false),
-			semanticVersioningHardDefault: boolPtr(false),
+			wantBool:    true,
+			root:        boolPtr(true),
+			dfault:      boolPtr(false),
+			hardDefault: boolPtr(false),
 		},
 		"default overrides hardDefault": {
-			wantBool:                      true,
-			semanticVersioningRoot:        nil,
-			semanticVersioningDefault:     boolPtr(true),
-			semanticVersioningHardDefault: boolPtr(false),
+			wantBool:    true,
+			dfault:      boolPtr(true),
+			hardDefault: boolPtr(false),
 		},
 		"hardDefault is last resort": {
-			wantBool:                      true,
-			semanticVersioningRoot:        nil,
-			semanticVersioningDefault:     nil,
-			semanticVersioningHardDefault: boolPtr(true),
+			wantBool:    true,
+			hardDefault: boolPtr(true),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			options := testOptions()
-			options.SemanticVersioning = tc.semanticVersioningRoot
-			options.Defaults.SemanticVersioning = tc.semanticVersioningDefault
-			options.HardDefaults.SemanticVersioning = tc.semanticVersioningHardDefault
+			options.SemanticVersioning = tc.root
+			options.Defaults.SemanticVersioning = tc.dfault
+			options.HardDefaults.SemanticVersioning = tc.hardDefault
 
 			// WHEN GetSemanticVersioning is called
 			got := options.GetSemanticVersioning()
@@ -165,34 +159,33 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 func TestOptions_GetIntervalPointer(t *testing.T) {
 	// GIVEN options
 	tests := map[string]struct {
-		interval   string
-		intervalD  string
-		intervalHD string
-		want       string
+		root        string
+		dfault      string
+		hardDefault string
+		want        string
 	}{
 		"root overrides all": {
-			interval:   "10s",
-			intervalD:  "20s",
-			intervalHD: "30s",
-			want:       "10s"},
+			root:        "10s",
+			dfault:      "20s",
+			hardDefault: "30s",
+			want:        "10s"},
 		"default overrides hardDefault": {
-			intervalD:  "20s",
-			intervalHD: "30s",
-			want:       "20s"},
+			dfault:      "20s",
+			hardDefault: "30s",
+			want:        "20s"},
 		"hardDefault is last resort": {
-			intervalHD: "30s",
-			want:       "30s"},
+			hardDefault: "30s",
+			want:        "30s"},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			options := testOptions()
-			options.Interval = tc.interval
-			options.Defaults.Interval = tc.intervalD
-			options.HardDefaults.Interval = tc.intervalHD
+			options.Interval = tc.root
+			options.Defaults.Interval = tc.dfault
+			options.HardDefaults.Interval = tc.hardDefault
 
 			// WHEN GetIntervalPointer is called
 			got := options.GetIntervalPointer()
@@ -251,7 +244,6 @@ func TestOptions_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -352,7 +344,6 @@ active: true
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

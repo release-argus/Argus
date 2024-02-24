@@ -47,7 +47,6 @@ func TestDockerCheck_GetTag(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -175,7 +174,6 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -335,7 +333,6 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -493,7 +490,6 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -735,7 +731,6 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -963,7 +958,6 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1021,7 +1015,6 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1049,6 +1042,7 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 func TestDockerCheck_getUsername(t *testing.T) {
 	// GIVEN a DockerCheck
 	tests := map[string]struct {
+		env         map[string]string
 		dockerCheck *DockerCheck
 		want        string
 	}{
@@ -1081,12 +1075,76 @@ func TestDockerCheck_getUsername(t *testing.T) {
 					nil)),
 			want: "anotherUser",
 		},
+		"env var is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_ONE": "aUser"},
+			dockerCheck: NewDockerCheck(
+				"",
+				"", "",
+				"${TESTDOCKERCHECK_GETUSERNAME_ONE}", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "aUser",
+		},
+		"env var partial is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_TWO": "aUser"},
+			dockerCheck: NewDockerCheck(
+				"",
+				"", "",
+				"a${TESTDOCKERCHECK_GETUSERNAME_TWO}", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "aaUser",
+		},
+		"env var isn't used when empty string": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_THREE": ""},
+			dockerCheck: NewDockerCheck(
+				"",
+				"", "",
+				"${TESTDOCKERCHECK_GETUSERNAME_THREE}", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "anotherUser",
+		},
+		"env var is used from default if main empty": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_FOUR": "cUser"},
+			dockerCheck: NewDockerCheck(
+				"",
+				"", "",
+				"", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "${TESTDOCKERCHECK_GETUSERNAME_FOUR}",
+					"",
+					nil)),
+			want: "cUser",
+		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 
 			// WHEN getUsername is called on it
 			got := tc.dockerCheck.getUsername()
@@ -1103,6 +1161,7 @@ func TestDockerCheck_getUsername(t *testing.T) {
 func TestDockerCheckDefaults_getUsername(t *testing.T) {
 	// GIVEN a DockerCheckDefaults
 	tests := map[string]struct {
+		env                 map[string]string
 		dockerCheckDefaults *DockerCheckDefaults
 		want                string
 	}{
@@ -1149,12 +1208,90 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 					nil)),
 			want: "daUser",
 		},
+		"env var is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_ONE": "aUser"},
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"",
+				"",
+				"", "${TESTDOCKERCHECK_GETUSERNAME_ONE}",
+				"",
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "aUser",
+		},
+		"env var partial is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_TWO": "aUser"},
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"",
+				"",
+				"", "${TESTDOCKERCHECK_GETUSERNAME_TWO}a",
+				"",
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "aUsera",
+		},
+		"undefined env var is used": {
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"",
+				"",
+				"", "${TESTDOCKERCHECK_GETUSERNAME_UNSET}",
+				"",
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "${TESTDOCKERCHECK_GETUSERNAME_UNSET}",
+		},
+		"env var isn't used when empty": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_THREE": ""},
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"",
+				"",
+				"", "${TESTDOCKERCHECK_GETUSERNAME_THREE}",
+				"",
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "anotherUser",
+					"",
+					nil)),
+			want: "anotherUser",
+		},
+		"env var is used from default if main empty": {
+			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_FOUR": "cUser"},
+			dockerCheckDefaults: NewDockerCheckDefaults(
+				"",
+				"",
+				"", "",
+				"",
+				NewDockerCheckDefaults(
+					"",
+					"",
+					"", "${TESTDOCKERCHECK_GETUSERNAME_FOUR}",
+					"",
+					nil)),
+			want: "cUser",
+		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 
 			// WHEN getUsername is called on it
 			got := tc.dockerCheckDefaults.getUsername()
@@ -1190,7 +1327,6 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1293,7 +1429,6 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1431,7 +1566,6 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1496,7 +1630,6 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1559,7 +1692,6 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1690,7 +1822,6 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1747,7 +1878,6 @@ func TestDockerCheckDefaults_GetType(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1797,7 +1927,6 @@ func TestDockerCheck_GetType(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1815,6 +1944,7 @@ func TestDockerCheck_GetType(t *testing.T) {
 func TestDockerCheckDefaults_getToken(t *testing.T) {
 	// GIVEN a DockerCheckDefaults
 	tests := map[string]struct {
+		env      map[string]string
 		defaults *DockerCheckDefaults
 		seekType string
 		want     string
@@ -1894,12 +2024,59 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 			seekType: "quay",
 			want:     "quayToken",
 		},
+		"env var is used": {
+			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_ONE": "fromEnv"},
+			defaults: NewDockerCheckDefaults(
+				"",
+				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_ONE}",
+				"hubToken", "",
+				"quayToken",
+				nil),
+			seekType: "ghcr",
+			want:     "fromEnv",
+		},
+		"env var partial is used": {
+			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_TWO": "fromEnv"},
+			defaults: NewDockerCheckDefaults(
+				"",
+				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_TWO}-",
+				"hubToken", "",
+				"quayToken",
+				nil),
+			seekType: "ghcr",
+			want:     "fromEnv-",
+		},
+		"empty env var not ignored": {
+			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_THREE": ""},
+			defaults: NewDockerCheckDefaults(
+				"",
+				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_THREE}",
+				"hubToken", "",
+				"quayToken",
+				nil),
+			seekType: "ghcr",
+			want:     "",
+		},
+		"undefined env var not ignored": {
+			defaults: NewDockerCheckDefaults(
+				"",
+				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_UNSET}",
+				"hubToken", "",
+				"quayToken",
+				nil),
+			seekType: "ghcr",
+			want:     "${TESTDOCKERCHECKDEFAULTS_GETTOKEN_UNSET}",
+		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 
 			// WHEN getToken is called on it
 			got := tc.defaults.getToken(tc.seekType)
@@ -1915,6 +2092,7 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 func TestDockerCheck_getToken(t *testing.T) {
 	// GIVEN a DockerCheck
 	tests := map[string]struct {
+		env         map[string]string
 		dockerCheck *DockerCheck
 		want        string
 	}{
@@ -1955,12 +2133,75 @@ func TestDockerCheck_getToken(t *testing.T) {
 					nil)),
 			want: "ghcrToken",
 		},
+		"env var is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_ONE": "fromEnv"},
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "${TESTDOCKERCHECK_GETTOKEN_ONE}",
+				"", time.Now(),
+				NewDockerCheckDefaults(
+					"ghcr",
+					"ghcrToken",
+					"hubToken", "",
+					"quayToken",
+					nil)),
+			want: "fromEnv",
+		},
+		"env var partial is used": {
+			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_TWO": "fromEnv"},
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "${TESTDOCKERCHECK_GETTOKEN_TWO}-",
+				"", time.Now(),
+				NewDockerCheckDefaults(
+					"ghcr",
+					"ghcrToken",
+					"hubToken", "",
+					"quayToken",
+					nil)),
+			want: "fromEnv-",
+		},
+		"empty env var ignored": {
+			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_THREE": ""},
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "${TESTDOCKERCHECK_GETTOKEN_THREE}",
+				"", time.Now(),
+				NewDockerCheckDefaults(
+					"ghcr",
+					"ghcrToken",
+					"hubToken", "",
+					"quayToken",
+					nil)),
+			want: "ghcrToken",
+		},
+		"undefined env var not ignored": {
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "${TESTDOCKERCHECK_GETTOKEN_UNSET}",
+				"", time.Now(),
+				NewDockerCheckDefaults(
+					"ghcr",
+					"ghcrToken",
+					"hubToken", "",
+					"quayToken",
+					nil)),
+			want: "${TESTDOCKERCHECK_GETTOKEN_UNSET}",
+		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 
 			// WHEN getToken is called on it
 			got := tc.dockerCheck.getToken()
@@ -2003,7 +2244,6 @@ username: admin`},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -2079,7 +2319,6 @@ quay:
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -2148,7 +2387,6 @@ username: '>123'`,
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

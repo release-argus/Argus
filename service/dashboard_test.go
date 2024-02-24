@@ -27,45 +27,42 @@ import (
 func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 	// GIVEN a DashboardOptions
 	tests := map[string]struct {
-		autoApproveRoot        *bool
-		autoApproveDefault     *bool
-		autoApproveHardDefault *bool
-		wantBool               bool
+		root        *bool
+		dfault      *bool
+		hardDefault *bool
+		want        bool
 	}{
 		"root overrides all": {
-			wantBool:               true,
-			autoApproveRoot:        boolPtr(true),
-			autoApproveDefault:     boolPtr(false),
-			autoApproveHardDefault: boolPtr(false)},
+			want:        true,
+			root:        boolPtr(true),
+			dfault:      boolPtr(false),
+			hardDefault: boolPtr(false)},
 		"default overrides hardDefault": {
-			wantBool:               true,
-			autoApproveRoot:        nil,
-			autoApproveDefault:     boolPtr(true),
-			autoApproveHardDefault: boolPtr(false)},
+			want:        true,
+			dfault:      boolPtr(true),
+			hardDefault: boolPtr(false)},
 		"hardDefault is last resort": {
-			wantBool:               true,
-			autoApproveRoot:        nil,
-			autoApproveDefault:     nil,
-			autoApproveHardDefault: boolPtr(true)},
+			want:        true,
+			hardDefault: boolPtr(true)},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
 			dashboard := DashboardOptions{}
-			dashboard.AutoApprove = tc.autoApproveRoot
-			defaults := NewDashboardOptionsDefaults(tc.autoApproveDefault)
+			dashboard.AutoApprove = tc.root
+			defaults := NewDashboardOptionsDefaults(tc.dfault)
 			dashboard.Defaults = &defaults
-			hardDefaults := NewDashboardOptionsDefaults(tc.autoApproveHardDefault)
+			hardDefaults := NewDashboardOptionsDefaults(tc.hardDefault)
 			dashboard.HardDefaults = &hardDefaults
 
 			// WHEN GetAutoApprove is called
 			got := dashboard.GetAutoApprove()
 
 			// THEN the function returns the correct result
-			if got != tc.wantBool {
+			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
-					tc.wantBool, got)
+					tc.want, got)
 			}
 		})
 	}

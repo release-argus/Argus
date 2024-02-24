@@ -44,7 +44,6 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {
@@ -186,7 +185,6 @@ func TestService_UpdatedVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -289,7 +287,6 @@ func TestService_HandleUpdateActions(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 		svc.Command = tc.commands
 		svc.WebHook = tc.webhooks
@@ -553,7 +550,6 @@ func TestService_HandleFailedActions(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {
@@ -737,7 +733,6 @@ func TestService_HandleCommand(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {
@@ -899,7 +894,6 @@ func TestService_HandleWebHook(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 		svc.Status.Init(
 			len(svc.Notify), len(tc.webhooks), 0,
@@ -1014,7 +1008,6 @@ func TestService_HandleSkip(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {
@@ -1149,7 +1142,6 @@ func TestService_ShouldRetryAll(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {

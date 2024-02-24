@@ -15,8 +15,6 @@
 package config
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -28,14 +26,16 @@ import (
 
 // Export the flags.
 var (
-	LogLevel         = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
-	LogTimestamps    = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
-	DataDatabaseFile = flag.String("data.database-file", "data/argus.db", "Database file path.")
-	WebListenHost    = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
-	WebListenPort    = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
-	WebCertFile      = flag.String("web.cert-file", "", "HTTPS certificate file path.")
-	WebPKeyFile      = flag.String("web.pkey-file", "", "HTTPS private key file path.")
-	WebRoutePrefix   = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
+	LogLevel             = flag.String("log.level", "INFO", "ERROR, WARN, INFO, VERBOSE or DEBUG")
+	LogTimestamps        = flag.Bool("log.timestamps", false, "Enable timestamps in CLI output.")
+	DataDatabaseFile     = flag.String("data.database-file", "data/argus.db", "Database file path.")
+	WebListenHost        = flag.String("web.listen-host", "0.0.0.0", "IP address to listen on for UI, API, and telemetry.")
+	WebListenPort        = flag.String("web.listen-port", "8080", "Port to listen on for UI, API, and telemetry.")
+	WebCertFile          = flag.String("web.cert-file", "", "HTTPS certificate file path.")
+	WebPKeyFile          = flag.String("web.pkey-file", "", "HTTPS private key file path.")
+	WebRoutePrefix       = flag.String("web.route-prefix", "/", "Prefix for web endpoints")
+	WebBasicAuthUsername = flag.String("web.basic-auth.username", "", "Username for basic auth")
+	WebBasicAuthPassword = flag.String("web.basic-auth.password", "", "Password for basic auth")
 )
 
 // Settings for the binary.
@@ -64,6 +64,12 @@ type SettingsBase struct {
 	Web  WebSettings  `yaml:"web,omitempty"`  // Web settings
 }
 
+// CheckValues of the SettingsBase.
+func (s *SettingsBase) CheckValues() {
+	// Web
+	s.Web.CheckValues()
+}
+
 // MapEnvToStruct maps environment variables to this struct.
 func (s *SettingsBase) MapEnvToStruct() {
 	err := mapEnvToStruct(s, "", nil)
@@ -73,6 +79,7 @@ func (s *SettingsBase) MapEnvToStruct() {
 				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
 			util.LogFrom{}, true)
 	}
+	s.CheckValues() // Set hash values and remove empty structs.
 }
 
 // LogSettings for the binary.
@@ -143,23 +150,14 @@ func (s *WebSettingsBasicAuth) String(prefix string) (str string) {
 
 // CheckValues will ensure that the values are SHA256 hashed.
 func (ba *WebSettingsBasicAuth) CheckValues() {
-	// Ensure it's hashed.
-	sha256Regex := "^h__[a-f0-9]{64}$"
-	// Username - Hash if not already hashed.
-	if !util.RegexCheck(sha256Regex, ba.Username) {
-		ba.UsernameHash = sha256.Sum256([]byte(ba.Username))
-		ba.Username = fmt.Sprintf("h__%x", ba.UsernameHash)
-	} else {
-		hash, _ := hex.DecodeString(ba.Username[3:])
-		copy(ba.UsernameHash[:], hash)
-	}
-	// Password - Hash if not already hashed.
-	if !util.RegexCheck(sha256Regex, ba.Password) {
-		ba.PasswordHash = sha256.Sum256([]byte(ba.Password))
-		ba.Password = fmt.Sprintf("h__%x", ba.PasswordHash)
-	} else {
-		hash, _ := hex.DecodeString(ba.Password[3:])
-		copy(ba.PasswordHash[:], hash)
+	// Username
+	ba.UsernameHash = util.GetHash(util.EvalEnvVars(ba.Username))
+	// Password
+	password := util.EvalEnvVars(ba.Password)
+	ba.PasswordHash = util.GetHash(password)
+	if password == ba.Password {
+		// Password doesn't include an env var, so hash the config val.
+		ba.Password = util.FmtHash(ba.PasswordHash)
 	}
 }
 
@@ -170,29 +168,26 @@ type FaviconSettings struct {
 }
 
 func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
-	if !(*flagset)["log.level"] {
-		LogLevel = nil
-	}
-	if !(*flagset)["log.timestamps"] {
-		LogTimestamps = nil
-	}
-	if !(*flagset)["data.database-file"] {
-		DataDatabaseFile = nil
-	}
-	if !(*flagset)["web.listen-host"] {
-		WebListenHost = nil
-	}
-	if !(*flagset)["web.listen-port"] {
-		WebListenPort = nil
-	}
-	if !(*flagset)["web.cert-file"] {
-		WebCertFile = nil
-	}
-	if !(*flagset)["web.pkey-file"] {
-		WebPKeyFile = nil
-	}
-	if !(*flagset)["web.route-prefix"] {
-		WebRoutePrefix = nil
+	for _, f := range []struct {
+		Flag     string
+		Variable interface{}
+	}{
+		{"log.level", &LogLevel},
+		{"log.timestamps", &LogTimestamps},
+		{"data.database-file", &DataDatabaseFile},
+		{"web.listen-host", &WebListenHost},
+		{"web.listen-port", &WebListenPort},
+		{"web.cert-file", &WebCertFile},
+		{"web.pkey-file", &WebPKeyFile},
+		{"web.route-prefix", &WebRoutePrefix},
+		{"web.basic-auth.username", &WebBasicAuthUsername},
+		{"web.basic-auth.password", &WebBasicAuthPassword},
+	} {
+		if !(*flagset)[f.Flag] {
+			if strPtr, ok := f.Variable.(**string); ok {
+				*strPtr = nil
+			}
+		}
 	}
 }
 
@@ -238,16 +233,24 @@ func (s *Settings) SetDefaults() {
 	webListenPort := "8080"
 	s.HardDefaults.Web.ListenPort = &webListenPort
 
-	// RoutePrefix
-	s.FromFlags.Web.RoutePrefix = WebRoutePrefix
-	webRoutePrefix := "/"
-	s.HardDefaults.Web.RoutePrefix = &webRoutePrefix
-
 	// CertFile
 	s.FromFlags.Web.CertFile = WebCertFile
 
 	// KeyFile
 	s.FromFlags.Web.KeyFile = WebPKeyFile
+
+	// RoutePrefix
+	s.FromFlags.Web.RoutePrefix = WebRoutePrefix
+	webRoutePrefix := "/"
+	s.HardDefaults.Web.RoutePrefix = &webRoutePrefix
+
+	// BasicAuth
+	if WebBasicAuthUsername != nil || WebBasicAuthPassword != nil {
+		s.FromFlags.Web.BasicAuth = &WebSettingsBasicAuth{}
+		s.FromFlags.Web.BasicAuth.Username = util.EvalEnvVars(util.DefaultIfNil(WebBasicAuthUsername))
+		s.FromFlags.Web.BasicAuth.Password = util.EvalEnvVars(util.DefaultIfNil(WebBasicAuthPassword))
+		s.FromFlags.Web.BasicAuth.CheckValues()
+	}
 
 	// Overwrite defaults with environment variables.
 	s.HardDefaults.MapEnvToStruct()
@@ -352,8 +355,28 @@ func (s *Settings) WebKeyFile() *string {
 	return keyFile
 }
 
-// CheckValues of the Settings.
-func (s *Settings) CheckValues() {
-	// Web
-	s.Web.CheckValues()
+// WebBasicAuthUsername.
+func (s *Settings) WebBasicAuthUsernameHash() [32]byte {
+	// Username set through flag.
+	if s.FromFlags.Web.BasicAuth != nil && s.FromFlags.Web.BasicAuth.Username != "" {
+		return s.FromFlags.Web.BasicAuth.UsernameHash
+	}
+	// Username set through config.
+	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Username != "" {
+		return s.Web.BasicAuth.UsernameHash
+	}
+	return s.HardDefaults.Web.BasicAuth.UsernameHash
+}
+
+// WebBasicAuthPassword.
+func (s *Settings) WebBasicAuthPasswordHash() [32]byte {
+	// Password set through flag.
+	if s.FromFlags.Web.BasicAuth != nil && s.FromFlags.Web.BasicAuth.Password != "" {
+		return s.FromFlags.Web.BasicAuth.PasswordHash
+	}
+	// Password set through config.
+	if s.Web.BasicAuth != nil && s.Web.BasicAuth.Password != "" {
+		return s.Web.BasicAuth.PasswordHash
+	}
+	return s.HardDefaults.Web.BasicAuth.PasswordHash
 }

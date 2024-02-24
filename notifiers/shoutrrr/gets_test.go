@@ -18,6 +18,7 @@ package shoutrrr
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -27,57 +28,78 @@ import (
 func TestShoutrrr_GetOption(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		optionRoot        *string
-		optionMain        *string
-		optionDefault     *string
-		optionHardDefault *string
-		wantString        string
+		env         map[string]string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:        "this",
-			optionRoot:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			root:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionMain:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			main:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     stringPtr("this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			dfault:      stringPtr("this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     nil,
-			optionHardDefault: stringPtr("this"),
+			wantString:  "this",
+			hardDefault: stringPtr("this"),
+		},
+		"env var is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_ONE": "this"},
+			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_ONE}"),
+		},
+		"env var partial is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_TWO": "is"},
+			root:       stringPtr("th${TESTSHOUTRRR_GETOPTION_TWO}"),
+		},
+		"empty env var is ignored": {
+			wantString: "that",
+			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_THREE": ""},
+			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_THREE}"),
+			dfault:     stringPtr("that"),
+		},
+		"undefined env var is used": {
+			wantString: "${TESTSHOUTRRR_GETOPTION_UNSET}",
+			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_UNSET}"),
+			dfault:     stringPtr("that"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.optionRoot != nil {
-				shoutrrr.Options[key] = *tc.optionRoot
+			if tc.root != nil {
+				shoutrrr.Options[key] = *tc.root
 			}
-			if tc.optionMain != nil {
-				shoutrrr.Main.Options[key] = *tc.optionMain
+			if tc.main != nil {
+				shoutrrr.Main.Options[key] = *tc.main
 			}
-			if tc.optionDefault != nil {
-				shoutrrr.Defaults.Options[key] = *tc.optionDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.dfault
 			}
-			if tc.optionHardDefault != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.optionHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefault
+			}
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
 			}
 
 			// WHEN GetOption is called
@@ -106,57 +128,78 @@ func TestShoutrrr_GetOption(t *testing.T) {
 func TestShoutrrr_GetURLField(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		optionRoot        *string
-		optionMain        *string
-		optionDefault     *string
-		optionHardDefault *string
-		wantString        string
+		env         map[string]string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:        "this",
-			optionRoot:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			root:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionMain:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			main:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     stringPtr("this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			dfault:      stringPtr("this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     nil,
-			optionHardDefault: stringPtr("this"),
+			wantString:  "this",
+			hardDefault: stringPtr("this"),
+		},
+		"env var is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_ONE": "this"},
+			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_ONE}"),
+		},
+		"env var partial is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_TWO": "is"},
+			root:       stringPtr("th${TESTSHOUTRRR_GETURLFIELD_TWO}"),
+		},
+		"empty env var is ignored": {
+			wantString: "that",
+			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_THREE": ""},
+			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_THREE}"),
+			dfault:     stringPtr("that"),
+		},
+		"undefined env var is used": {
+			wantString: "${TESTSHOUTRRR_GETURLFIELD_UNSET}",
+			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_UNSET}"),
+			dfault:     stringPtr("that"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.optionRoot != nil {
-				shoutrrr.URLFields[key] = *tc.optionRoot
+			if tc.root != nil {
+				shoutrrr.URLFields[key] = *tc.root
 			}
-			if tc.optionMain != nil {
-				shoutrrr.Main.URLFields[key] = *tc.optionMain
+			if tc.main != nil {
+				shoutrrr.Main.URLFields[key] = *tc.main
 			}
-			if tc.optionDefault != nil {
-				shoutrrr.Defaults.URLFields[key] = *tc.optionDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.URLFields[key] = *tc.dfault
 			}
-			if tc.optionHardDefault != nil {
-				shoutrrr.HardDefaults.URLFields[key] = *tc.optionHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.URLFields[key] = *tc.hardDefault
+			}
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
 			}
 
 			// WHEN GetURLField is called
@@ -185,57 +228,78 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 func TestShoutrrr_GetParam(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		optionRoot        *string
-		optionMain        *string
-		optionDefault     *string
-		optionHardDefault *string
-		wantString        string
+		env         map[string]string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:        "this",
-			optionRoot:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			root:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionMain:        stringPtr("this"),
-			optionDefault:     stringPtr("not_this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			main:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     stringPtr("this"),
-			optionHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			dfault:      stringPtr("this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
-			wantString:        "this",
-			optionRoot:        nil,
-			optionDefault:     nil,
-			optionHardDefault: stringPtr("this"),
+			wantString:  "this",
+			hardDefault: stringPtr("this"),
+		},
+		"env var is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_ONE": "this"},
+			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_ONE}"),
+		},
+		"env var partial is used": {
+			wantString: "this",
+			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_TWO": "is"},
+			root:       stringPtr("th${TESTSHOUTRRR_GETPARAM_TWO}"),
+		},
+		"empty env var is ignored": {
+			wantString: "that",
+			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_THREE": ""},
+			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_THREE}"),
+			dfault:     stringPtr("that"),
+		},
+		"undefined env var is used": {
+			wantString: "${TESTSHOUTRRR_GETPARAM_UNSET}",
+			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_UNSET}"),
+			dfault:     stringPtr("that"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.optionRoot != nil {
-				shoutrrr.Params[key] = *tc.optionRoot
+			if tc.root != nil {
+				shoutrrr.Params[key] = *tc.root
 			}
-			if tc.optionMain != nil {
-				shoutrrr.Main.Params[key] = *tc.optionMain
+			if tc.main != nil {
+				shoutrrr.Main.Params[key] = *tc.main
 			}
-			if tc.optionDefault != nil {
-				shoutrrr.Defaults.Params[key] = *tc.optionDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.dfault
 			}
-			if tc.optionHardDefault != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.optionHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.hardDefault
+			}
+			for k, v := range tc.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
 			}
 
 			// WHEN GetParam is called
@@ -264,61 +328,57 @@ func TestShoutrrr_GetParam(t *testing.T) {
 func TestShoutrrr_GetDelay(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		delayRoot        *string
-		delayMain        *string
-		delayDefault     *string
-		delayHardDefault *string
-		wantString       string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:       "1s",
-			delayRoot:        stringPtr("1s"),
-			delayDefault:     stringPtr("2s"),
-			delayHardDefault: stringPtr("2s"),
+			wantString:  "1s",
+			root:        stringPtr("1s"),
+			main:        stringPtr("2s"),
+			dfault:      stringPtr("2s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"main overrides default and hardDefault": {
-			wantString:       "1s",
-			delayRoot:        nil,
-			delayMain:        stringPtr("1s"),
-			delayDefault:     stringPtr("2s"),
-			delayHardDefault: stringPtr("2s"),
+			wantString:  "1s",
+			main:        stringPtr("1s"),
+			dfault:      stringPtr("2s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"default overrides hardDefault": {
-			wantString:       "1s",
-			delayRoot:        nil,
-			delayDefault:     stringPtr("1s"),
-			delayHardDefault: stringPtr("2s"),
+			wantString:  "1s",
+			dfault:      stringPtr("1s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"hardDefault is last resort": {
-			wantString:       "1s",
-			delayRoot:        nil,
-			delayDefault:     nil,
-			delayHardDefault: stringPtr("1s"),
+			wantString:  "1s",
+			hardDefault: stringPtr("1s"),
 		},
 		"no delay anywhere defaults to 0s": {wantString: "0s",
-			delayRoot:        nil,
-			delayDefault:     nil,
-			delayHardDefault: nil},
+			root:        nil,
+			dfault:      nil,
+			hardDefault: nil},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "delay"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.delayRoot != nil {
-				shoutrrr.Options[key] = *tc.delayRoot
+			if tc.root != nil {
+				shoutrrr.Options[key] = *tc.root
 			}
-			if tc.delayMain != nil {
-				shoutrrr.Main.Options[key] = *tc.delayMain
+			if tc.main != nil {
+				shoutrrr.Main.Options[key] = *tc.main
 			}
-			if tc.delayDefault != nil {
-				shoutrrr.Defaults.Options[key] = *tc.delayDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.dfault
 			}
-			if tc.delayHardDefault != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.delayHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefault
 			}
 
 			// WHEN GetDelay is called
@@ -336,57 +396,53 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 func TestShoutrrr_GetDelayDuration(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		delayRoot        *string
-		delayMain        *string
-		delayDefault     *string
-		delayHardDefault *string
-		want             time.Duration
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		want        time.Duration
 	}{
 		"root overrides all": {
-			want:             1 * time.Second,
-			delayRoot:        stringPtr("1s"),
-			delayDefault:     stringPtr("2s"),
-			delayHardDefault: stringPtr("2s"),
+			want:        1 * time.Second,
+			root:        stringPtr("1s"),
+			main:        stringPtr("2s"),
+			dfault:      stringPtr("2s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"main overrides default and hardDefault": {
-			want:             1 * time.Second,
-			delayRoot:        nil,
-			delayMain:        stringPtr("1s"),
-			delayDefault:     stringPtr("2s"),
-			delayHardDefault: stringPtr("2s"),
+			want:        1 * time.Second,
+			main:        stringPtr("1s"),
+			dfault:      stringPtr("2s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"default overrides hardDefault": {
-			want:             1 * time.Second,
-			delayRoot:        nil,
-			delayDefault:     stringPtr("1s"),
-			delayHardDefault: stringPtr("2s"),
+			want:        1 * time.Second,
+			dfault:      stringPtr("1s"),
+			hardDefault: stringPtr("2s"),
 		},
 		"hardDefault is last resort": {
-			want:             1 * time.Second,
-			delayRoot:        nil,
-			delayDefault:     nil,
-			delayHardDefault: stringPtr("1s"),
+			want:        1 * time.Second,
+			hardDefault: stringPtr("1s"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "delay"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.delayRoot != nil {
-				shoutrrr.Options[key] = *tc.delayRoot
+			if tc.root != nil {
+				shoutrrr.Options[key] = *tc.root
 			}
-			if tc.delayMain != nil {
-				shoutrrr.Main.Options[key] = *tc.delayMain
+			if tc.main != nil {
+				shoutrrr.Main.Options[key] = *tc.main
 			}
-			if tc.delayDefault != nil {
-				shoutrrr.Defaults.Options[key] = *tc.delayDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.dfault
 			}
-			if tc.delayHardDefault != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.delayHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefault
 			}
 
 			// WHEN GetDelay is called
@@ -413,32 +469,28 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 		"root overrides all": {
 			want:                1,
 			maxTriesRoot:        stringPtr("1"),
+			maxTriesMain:        stringPtr("2"),
 			maxTriesDefault:     stringPtr("2"),
 			maxTriesHardDefault: stringPtr("2"),
 		},
 		"main overrides default and hardDefault": {
 			want:                1,
-			maxTriesRoot:        nil,
 			maxTriesMain:        stringPtr("1"),
 			maxTriesDefault:     stringPtr("2"),
 			maxTriesHardDefault: stringPtr("2"),
 		},
 		"default overrides hardDefault": {
 			want:                1,
-			maxTriesRoot:        nil,
 			maxTriesDefault:     stringPtr("1"),
 			maxTriesHardDefault: stringPtr("2"),
 		},
 		"hardDefault is last resort": {
 			want:                1,
-			maxTriesRoot:        nil,
-			maxTriesDefault:     nil,
 			maxTriesHardDefault: stringPtr("1"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -478,70 +530,66 @@ func TestShoutrrr_Message(t *testing.T) {
 		LatestVersion: "0.9.0",
 	}
 	tests := map[string]struct {
-		messageRoot        *string
-		messageMain        *string
-		messageDefault     *string
-		messageHardDefault *string
-		want               string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		want        string
 	}{
 		"root overrides all": {
-			want:               "New version!",
-			messageRoot:        stringPtr("New version!"),
-			messageDefault:     stringPtr("something"),
-			messageHardDefault: stringPtr("something"),
+			want:        "New version!",
+			root:        stringPtr("New version!"),
+			main:        stringPtr("something"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"main overrides default and hardDefault": {
-			want:               "New version!",
-			messageRoot:        nil,
-			messageMain:        stringPtr("New version!"),
-			messageDefault:     stringPtr("something"),
-			messageHardDefault: stringPtr("something"),
+			want:        "New version!",
+			main:        stringPtr("New version!"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"default overrides hardDefault": {
-			want:               "New version!",
-			messageRoot:        nil,
-			messageDefault:     stringPtr("New version!"),
-			messageHardDefault: stringPtr("something"),
+			want:        "New version!",
+			dfault:      stringPtr("New version!"),
+			hardDefault: stringPtr("something"),
 		},
 		"hardDefault is last resort": {
-			want:               "New version!",
-			messageRoot:        nil,
-			messageDefault:     nil,
-			messageHardDefault: stringPtr("New version!"),
+			want:        "New version!",
+			hardDefault: stringPtr("New version!"),
 		},
 		"jinja templating": {
-			want:               "New version!",
-			messageRoot:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			messageDefault:     stringPtr("something"),
-			messageHardDefault: stringPtr("something"),
+			want:        "New version!",
+			root:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"jinja vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			messageRoot:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			messageDefault:     stringPtr("something"),
-			messageHardDefault: stringPtr("something"),
+			root:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "message"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.messageRoot != nil {
-				shoutrrr.Options[key] = *tc.messageRoot
+			if tc.root != nil {
+				shoutrrr.Options[key] = *tc.root
 			}
-			if tc.messageMain != nil {
-				shoutrrr.Main.Options[key] = *tc.messageMain
+			if tc.main != nil {
+				shoutrrr.Main.Options[key] = *tc.main
 			}
-			if tc.messageDefault != nil {
-				shoutrrr.Defaults.Options[key] = *tc.messageDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Options[key] = *tc.dfault
 			}
-			if tc.messageHardDefault != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.messageHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Options[key] = *tc.hardDefault
 			}
 
 			// WHEN Message is called
@@ -565,70 +613,66 @@ func TestShoutrrr_Title(t *testing.T) {
 		LatestVersion: "0.9.0",
 	}
 	tests := map[string]struct {
-		titleRoot        *string
-		titleMain        *string
-		titleDefault     *string
-		titleHardDefault *string
-		want             string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		want        string
 	}{
 		"root overrides all": {
-			want:             "New version!",
-			titleRoot:        stringPtr("New version!"),
-			titleDefault:     stringPtr("something"),
-			titleHardDefault: stringPtr("something"),
+			want:        "New version!",
+			root:        stringPtr("New version!"),
+			main:        stringPtr("something"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"main overrides default and hardDefault": {
-			want:             "New version!",
-			titleRoot:        nil,
-			titleMain:        stringPtr("New version!"),
-			titleDefault:     stringPtr("something"),
-			titleHardDefault: stringPtr("something"),
+			want:        "New version!",
+			main:        stringPtr("New version!"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"default overrides hardDefault": {
-			want:             "New version!",
-			titleRoot:        nil,
-			titleDefault:     stringPtr("New version!"),
-			titleHardDefault: stringPtr("something"),
+			want:        "New version!",
+			dfault:      stringPtr("New version!"),
+			hardDefault: stringPtr("something"),
 		},
 		"hardDefault is last resort": {
-			want:             "New version!",
-			titleRoot:        nil,
-			titleDefault:     nil,
-			titleHardDefault: stringPtr("New version!"),
+			want:        "New version!",
+			hardDefault: stringPtr("New version!"),
 		},
 		"jinja templating": {
-			want:             "New version!",
-			titleRoot:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			titleDefault:     stringPtr("something"),
-			titleHardDefault: stringPtr("something"),
+			want:        "New version!",
+			root:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 		"jinja vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			titleRoot:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			titleDefault:     stringPtr("something"),
-			titleHardDefault: stringPtr("something"),
+			root:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			dfault:      stringPtr("something"),
+			hardDefault: stringPtr("something"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "title"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.titleRoot != nil {
-				shoutrrr.Params[key] = *tc.titleRoot
+			if tc.root != nil {
+				shoutrrr.Params[key] = *tc.root
 			}
-			if tc.titleMain != nil {
-				shoutrrr.Main.Params[key] = *tc.titleMain
+			if tc.main != nil {
+				shoutrrr.Main.Params[key] = *tc.main
 			}
-			if tc.titleDefault != nil {
-				shoutrrr.Defaults.Params[key] = *tc.titleDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.dfault
 			}
-			if tc.titleHardDefault != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.titleHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.hardDefault
 			}
 
 			// WHEN Title is called
@@ -646,47 +690,42 @@ func TestShoutrrr_Title(t *testing.T) {
 func TestShoutrrr_GetType(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		typeRoot        string
-		typeMain        string
-		typeDefault     string
-		typeHardDefault string
-		want            string
+		root        string
+		main        string
+		dfault      string
+		hardDefault string
+		want        string
 	}{
 		"root overrides all": {
-			want:            "smtp",
-			typeRoot:        "smtp",
-			typeDefault:     "other",
-			typeHardDefault: "other",
+			want:        "smtp",
+			root:        "smtp",
+			main:        "other",
+			dfault:      "other",
+			hardDefault: "other",
 		},
 		"main overrides default and hardDefault": {
-			want:            "smtp",
-			typeRoot:        "",
-			typeMain:        "smtp",
-			typeDefault:     "other",
-			typeHardDefault: "other",
+			want:        "smtp",
+			main:        "smtp",
+			dfault:      "other",
+			hardDefault: "other",
 		},
 		"default is ignored": { // uses ID
-			want:            "test",
-			typeRoot:        "",
-			typeDefault:     "smtp",
-			typeHardDefault: "",
+			want:   "test",
+			dfault: "smtp",
 		},
 		"hardDefault is ignored": { // uses ID
-			want:            "test",
-			typeRoot:        "",
-			typeDefault:     "",
-			typeHardDefault: "smtp",
+			want:        "test",
+			hardDefault: "smtp",
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
-			shoutrrr.Type = tc.typeRoot
-			shoutrrr.Main.Type = tc.typeMain
+			shoutrrr.Type = tc.root
+			shoutrrr.Main.Type = tc.main
 
 			// WHEN GetType is called
 			got := shoutrrr.GetType()

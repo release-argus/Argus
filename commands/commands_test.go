@@ -55,7 +55,6 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -84,7 +83,6 @@ func TestCommand_Exec(t *testing.T) {
 	}{
 		"command that will pass": {
 			cmd:         Command{"date", "+%m-%d-%Y"},
-			err:         nil,
 			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 		"command that will fail": {
 			cmd:         Command{"false"},
@@ -145,12 +143,10 @@ func TestController_ExecIndex(t *testing.T) {
 	}{
 		"command index out of range": {
 			index:       2,
-			err:         nil,
 			outputRegex: `^$`,
 			noAnnounce:  true},
 		"command index that will pass": {
 			index:       0,
-			err:         nil,
 			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 		"command index that will fail": {
 			index:       1,
@@ -209,15 +205,12 @@ func TestController_Exec(t *testing.T) {
 	}{
 		"nil Controller": {
 			nilController: true,
-			err:           nil,
 			outputRegex:   `^$`,
 			noAnnounce:    true},
 		"nil Command": {
-			err:         nil,
 			outputRegex: `^$`,
 			noAnnounce:  true},
 		"single Command": {
-			err:         nil,
 			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
 			commands: &Slice{
 				{"date", "+%m-%d-%Y"}}},

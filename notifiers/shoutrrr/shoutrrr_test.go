@@ -462,7 +462,6 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -512,7 +511,6 @@ func Test_jsonMapToString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -535,69 +533,64 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 		LatestVersion: "1.2.3",
 	}
 	tests := map[string]struct {
-		paramsRoot        *string
-		paramsMain        *string
-		paramsDefault     *string
-		paramsHardDefault *string
-		wantString        string
+		root        *string
+		main        *string
+		dfault      *string
+		hardDefault *string
+		wantString  string
 	}{
 		"root overrides all": {
-			wantString:        "this",
-			paramsRoot:        stringPtr("this"),
-			paramsDefault:     stringPtr("not_this"),
-			paramsHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			root:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
-			wantString:        "this",
-			paramsRoot:        nil,
-			paramsMain:        stringPtr("this"),
-			paramsDefault:     stringPtr("not_this"),
-			paramsHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			main:        stringPtr("this"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
-			wantString:        "this",
-			paramsRoot:        nil,
-			paramsDefault:     stringPtr("this"),
-			paramsHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			dfault:      stringPtr("this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
-			wantString:        "this",
-			paramsRoot:        nil,
-			paramsDefault:     nil,
-			paramsHardDefault: stringPtr("this"),
+			wantString:  "this",
+			hardDefault: stringPtr("this"),
 		},
 		"jinja templating": {
-			wantString:        "this",
-			paramsRoot:        stringPtr("{% if 'a' == 'a' %}this{% endif %}"),
-			paramsDefault:     stringPtr("not_this"),
-			paramsHardDefault: stringPtr("not_this"),
+			wantString:  "this",
+			root:        stringPtr("{% if 'a' == 'a' %}this{% endif %}"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 		"jinja vars": {
-			wantString:        fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion),
-			paramsRoot:        stringPtr("foo{{ service_id }}-{{ version }}"),
-			paramsDefault:     stringPtr("not_this"),
-			paramsHardDefault: stringPtr("not_this"),
+			wantString:  fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion),
+			root:        stringPtr("foo{{ service_id }}-{{ version }}"),
+			dfault:      stringPtr("not_this"),
+			hardDefault: stringPtr("not_this"),
 		},
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.paramsRoot != nil {
-				shoutrrr.Params[key] = *tc.paramsRoot
+			if tc.root != nil {
+				shoutrrr.Params[key] = *tc.root
 			}
-			if tc.paramsMain != nil {
-				shoutrrr.Main.Params[key] = *tc.paramsMain
+			if tc.main != nil {
+				shoutrrr.Main.Params[key] = *tc.main
 			}
-			if tc.paramsDefault != nil {
-				shoutrrr.Defaults.Params[key] = *tc.paramsDefault
+			if tc.dfault != nil {
+				shoutrrr.Defaults.Params[key] = *tc.dfault
 			}
-			if tc.paramsHardDefault != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.paramsHardDefault
+			if tc.hardDefault != nil {
+				shoutrrr.HardDefaults.Params[key] = *tc.hardDefault
 			}
 
 			// WHEN BuildParams is called

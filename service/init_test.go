@@ -123,7 +123,6 @@ func TestService_IconURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		svc := testServiceGitHub(name)
 
 		t.Run(name, func(t *testing.T) {

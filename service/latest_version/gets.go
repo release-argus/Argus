@@ -22,7 +22,7 @@ import (
 )
 
 func (l *Lookup) GetAccessToken() *string {
-	return util.FirstNonNilPtr(
+	return util.FirstNonNilPtrWithEnv(
 		l.AccessToken,
 		l.Defaults.AccessToken,
 		l.HardDefaults.AccessToken)
@@ -70,7 +70,7 @@ func (l *Lookup) GetUsePreRelease() bool {
 
 // GetURL will ensure `url` is a valid GitHub API URL if `urlType` is 'github'
 func (l *Lookup) GetURL() string {
-	url := l.URL
+	url := util.EvalEnvVars(l.URL)
 	if l.Type == "github" {
 		// Convert "owner/repo" to the API path.
 		if strings.Count(url, "/") == 1 {

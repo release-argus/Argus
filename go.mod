@@ -1,6 +1,6 @@
 module github.com/release-argus/Argus
 
-go 1.21
+go 1.22
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -19,7 +19,7 @@ require (
 	modernc.org/libc v1.41.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
-	modernc.org/sqlite v1.29.0
+	modernc.org/sqlite v1.29.1
 )
 
 require (

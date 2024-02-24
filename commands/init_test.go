@@ -87,7 +87,6 @@ func TestController_SetNextRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -146,7 +145,6 @@ func TestController_IsRunnable(t *testing.T) {
 
 	time.Sleep(5 * time.Millisecond)
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -199,7 +197,6 @@ func TestController_NextRunnable(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -231,7 +228,6 @@ func TestCommand_String(t *testing.T) {
 			cmd:  &Command{},
 			want: ""},
 		"nil command": {
-			cmd:  nil,
 			want: ""},
 		"command with no args": {
 			cmd:  &Command{"ls"},
@@ -245,7 +241,6 @@ func TestCommand_String(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -279,7 +274,6 @@ func TestCommand_FormattedString(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -375,17 +369,16 @@ func TestCommand_Init(t *testing.T) {
 				{"false"}},
 		},
 		"nil Notifiers": {
-			shoutrrrNotifiers: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil Notifiers": {
-			shoutrrrNotifiers: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
+			shoutrrrNotifiers: &shoutrrr.Slice{
+				"test": testShoutrrr(false, false)},
 		},
 		"nil parentInterval": {
-			parentInterval: nil,
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
 		},
@@ -396,7 +389,6 @@ func TestCommand_Init(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

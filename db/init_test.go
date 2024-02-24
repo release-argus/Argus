@@ -62,7 +62,6 @@ func TestCheckFile(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -399,7 +398,6 @@ func Test_UpdateColumnTypes(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

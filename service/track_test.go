@@ -48,7 +48,6 @@ func TestSlice_Track(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		var slice *Slice
 		if len(tc.slice) != 0 {
 			slice = &Slice{}
@@ -257,7 +256,6 @@ func TestService_Track(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

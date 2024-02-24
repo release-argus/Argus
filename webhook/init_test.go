@@ -52,7 +52,6 @@ func TestSlice_Metrics(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
 
@@ -99,7 +98,6 @@ func TestWebHook_Metrics(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 
 			webhook := testWebHook(true, false, false)
@@ -232,7 +230,6 @@ func TestSlice_Init(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

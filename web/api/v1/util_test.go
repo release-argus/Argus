@@ -59,7 +59,6 @@ func TestConstantTimeCompare(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			hash1 := sha256.Sum256([]byte(tc.hash1))
@@ -153,7 +152,6 @@ func TestConvertAndCensorNotifySliceDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -250,7 +248,6 @@ func TestConvertAndCensorNotifySlice(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -303,7 +300,6 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -389,7 +385,6 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -473,7 +468,6 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -581,7 +575,6 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -679,7 +672,6 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -766,7 +758,6 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -864,7 +855,6 @@ func TestConvertAndCensorService(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -947,7 +937,6 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		name, tc := name, tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
