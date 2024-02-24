@@ -1,1 +1,73 @@
-<svg id="elGauBHTpML1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" style="background-color: transparent; --darkreader-inline-bgcolor: transparent;" viewBox="-0.02 -0.02 120.05 129.47" data-darkreader-inline-bgcolor=""><g transform="translate(159.084396-85.074097)"><rect width="12.6598" height="29.624" rx="7.849101" ry="7.849101" transform="translate(-125.611 184.507)" fill="#00beed" stroke-width="140.231" style="--darkreader-inline-fill: #26d4ff;" data-darkreader-inline-fill=""/><rect width="12.6598" height="29.624" rx="7.849101" ry="7.849101" transform="translate(-85.2117 184.887)" fill="#00beed" stroke-width="140.231" style="--darkreader-inline-fill: #26d4ff;" data-darkreader-inline-fill=""/><ellipse rx="60.0077" ry="57.0959" transform="translate(-99.0767 142.17)" fill="#0ed0ff" stroke-width="140.231" style="--darkreader-inline-fill: #009dc4;" data-darkreader-inline-fill=""/><ellipse rx="35.5706" ry="57.6921" transform="matrix(.106238 0.994341-.999437 0.033525-99.07623 142.169778)" fill="#009ec7" stroke-width="217.054" style="--darkreader-inline-fill: #007e9f;" data-darkreader-inline-fill=""/><ellipse rx="31.3914" ry="53.1393" transform="matrix(.110886 0.993833-.999485 0.032104-99.07623 142.17039)" fill="#fff" stroke-width="195.694" style="--darkreader-inline-fill: #181a1b;" data-darkreader-inline-fill=""/><ellipse rx="10.8875" ry="8.4821" transform="translate(-99.0767 142.17)" fill="#006b86" stroke-width="163.841" style="--darkreader-inline-fill: #6ee2ff;" data-darkreader-inline-fill=""/></g></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 67.733336 67.733335"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient4">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop4" />
+      <stop
+         style="stop-color:#000000;stop-opacity:0;"
+         offset="1"
+         id="stop5" />
+    </linearGradient>
+  </defs>
+  <g
+     id="layer2">
+    <rect
+       style="fill:#0082c7;fill-opacity:1;stroke-width:78.4285"
+       id="rect6"
+       width="7.2357788"
+       height="16.960531"
+       x="37.661629"
+       y="50.772774"
+       rx="2.9794366" />
+    <rect
+       style="fill:#0082c7;fill-opacity:1;stroke-width:78.4285"
+       id="rect6-6"
+       width="7.2357788"
+       height="16.960531"
+       x="22.835808"
+       y="50.772804"
+       rx="2.9794366" />
+    <ellipse
+       style="fill:#0eabff;fill-opacity:1;stroke-width:63.9157"
+       id="path6"
+       cx="33.866619"
+       cy="29.256916"
+       rx="29.36875"
+       ry="29.256916" />
+    <ellipse
+       style="fill:#0081c7;fill-opacity:1;stroke-width:96.3698"
+       id="path7-9"
+       cx="33.866619"
+       cy="29.256916"
+       rx="27.95863"
+       ry="19.221935" />
+    <ellipse
+       style="fill:#ffffff;fill-opacity:1;stroke-width:82.2933"
+       id="path7"
+       cx="33.866619"
+       cy="29.256916"
+       rx="26.034615"
+       ry="15.05247" />
+    <ellipse
+       style="fill:#004970;fill-opacity:1;stroke-width:124.026"
+       id="path8"
+       cx="33.866619"
+       cy="29.256916"
+       rx="4.8238525"
+       ry="4.8054838" />
+  </g>
+</svg>

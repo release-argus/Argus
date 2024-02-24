@@ -1,21 +1,28 @@
-# Argus
+<h1 align="center" style="border-bottom: none">
+    <a href="//release-argus.io" target="_blank"><img alt="Argus" src="/web/ui/static/favicon.svg" height=128></a><br>Argus
+</h1>
 
-[![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
-[![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
-[![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
-[![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
+<div align="center">
 
+  Keeping an eye on releases.
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
-[![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
-[![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
+  [![GitHub](https://img.shields.io/github/license/release-argus/argus)](https://github.com/release-argus/Argus/blob/master/LICENSE)
+  [![Go Report Card](https://goreportcard.com/badge/github.com/release-argus/Argus)](https://goreportcard.com/report/github.com/release-argus/Argus)
+  [![GitHub go.mod Go version (subdirectory of monorepo)](https://img.shields.io/github/go-mod/go-version/release-argus/argus?filename=go.mod)](https://go.dev/dl/)
+  [![GitHub package.json dependency version (subfolder of monorepo)](https://img.shields.io/github/package-json/dependency-version/release-argus/argus/react?filename=web%2Fui%2Freact-app%2Fpackage.json)](https://reactjs.org/)
+  [![Codecov](https://img.shields.io/codecov/c/github/release-argus/argus)](https://app.codecov.io/gh/release-argus/Argus)
+  <br>
+  [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-binary.yml)](https://github.com/release-argus/Argus/actions/workflows/build-binary.yml)
+  [![GitHub release (latest by date)](https://img.shields.io/github/v/release/release-argus/argus)](https://github.com/release-argus/Argus/releases)
+  [![GitHub all releases](https://img.shields.io/github/downloads/release-argus/argus/total)](https://github.com/release-argus/Argus/releases)
+  [![GitHub release (latest by SemVer)](https://img.shields.io/github/downloads/release-argus/argus/latest/total)](https://github.com/release-argus/Argus/releases/latest)
+  <br>
+  [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
+  [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+  [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/release-argus/Argus/build-docker.yml)](https://github.com/release-argus/Argus/actions/workflows/build-docker.yml)
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/releaseargus/argus?sort=semver)](https://hub.docker.com/r/releaseargus/argus/tags)
-[![Docker Pulls](https://img.shields.io/docker/pulls/releaseargus/argus)](https://hub.docker.com/r/releaseargus/argus)
+</div>
 
 Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or WebHook(s) when one has been found.
 For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Argus on your server.
@@ -53,6 +60,10 @@ Usage of /usr/local/bin/argus:
         Put the name of the Notify service to send a test message.
   -test.service string
         Put the name of the Service to test the version query.
+  -web.basic-auth.password string
+        Password for basic auth
+  -web.basic-auth.username string
+        Username for basic auth
   -web.cert-file string
         HTTPS certificate file path.
   -web.listen-host string
@@ -70,7 +81,7 @@ Usage of /usr/local/bin/argus:
 #### Prereqs
 
 The backend of Argus is built with [Go](https://go.dev/) and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
-- [Go 1.21+](https://go.dev/dl/)
+- [Go 1.22+](https://go.dev/dl/)
 - [NodeJS 18](https://nodejs.org/en/download/)
 
 #### Go changes
