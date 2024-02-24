@@ -44,15 +44,14 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ env.repository_owner }}
           password: ${{ secrets.GH_TOKEN }}
 
       - name: Login to Quay.io
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
@@ -69,10 +68,13 @@ jobs:
           tags: |
             releaseargus/argus:${{ github.event.release.tag_name }}
             releaseargus/argus:latest
+            releaseargus/argus:master
             ghcr.io/${{ env.repository }}:${{ github.event.release.tag_name }}
             ghcr.io/${{ env.repository }}:latest
+            ghcr.io/${{ env.repository }}:master
             quay.io/argus-io/argus:${{ github.event.release.tag_name }}
             quay.io/argus-io/argus:latest
+            quay.io/argus-io/argus:master
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           platforms: linux/amd64,linux/arm,linux/arm64
@@ -83,7 +85,8 @@ jobs:
 
       - name: Build and push (master)
         id: docker_build_master
-        uses: docker/build-push-action@v4
+        if: github.event_name != 'release'
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile

@@ -82,7 +82,7 @@ Usage of /usr/local/bin/argus:
 
 The backend of Argus is built with [Go](https://go.dev/) and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
 - [Go 1.22+](https://go.dev/dl/)
-- [NodeJS 18](https://nodejs.org/en/download/)
+- [NodeJS 20](https://nodejs.org/en/download/)
 
 #### Go changes
 
