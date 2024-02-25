@@ -629,7 +629,7 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout
 
 			msg := "var is not default from PrintlnIfNotDefault"
 			stdout := os.Stdout
@@ -1044,6 +1044,71 @@ func TestNormaliseNewlines(t *testing.T) {
 	}
 }
 
+func TestCopyIfSecret(t *testing.T) {
+	// GIVEN maps with secrets to be copied
+	tests := map[string]struct {
+		input    map[string]string
+		copyFrom map[string]string
+		want     map[string]string
+		fields   []string
+	}{
+		"empty map": {
+			input: map[string]string{},
+			copyFrom: map[string]string{
+				"foo": "bar"},
+			want:   map[string]string{},
+			fields: []string{"foo"},
+		},
+		"copy only '<secret>'s in fields": {
+			input: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>"},
+			copyFrom: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "<secret>"},
+			fields: []string{"test"},
+		},
+		"copy only '<secret>'s in fields that also exist in from": {
+			input: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>",
+				"bar":  "<secret>"},
+			copyFrom: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "<secret>",
+				"bar":  "<secret>"},
+			fields: []string{"test", "bar"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CopyIfSecret is called
+			CopyIfSecret(tc.input, tc.copyFrom, tc.fields)
+
+			// THEN the secrets are copied correctly
+			if len(tc.input) != len(tc.want) {
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, tc.input)
+			}
+			for i := range tc.input {
+				if tc.input[i] != tc.want[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, tc.input)
+				}
+			}
+		})
+	}
+}
+
 func TestCopyMap(t *testing.T) {
 	// GIVEN different byte strings
 	tests := map[string]struct {
@@ -1331,43 +1396,43 @@ func TestEvalEnvVars(t *testing.T) {
 		want  string
 	}{
 		"no env vars": {
-			input: "hello there ${foo}",
-			want:  "hello there ${foo}",
+			input: "hello there ${not an env var}",
+			want:  "hello there ${not an env var}",
 		},
 		"1 env var": {
-			input: "hello there ${foo}",
-			env:   map[string]string{"foo": "bar"},
+			env:   map[string]string{"TESTEVALENVVARS_ONE": "bar"},
+			input: "hello there ${TESTEVALENVVARS_ONE}",
 			want:  "hello there bar",
 		},
 		"2 env vars": {
-			input: "hello there ${foo} ${bar}",
 			env: map[string]string{
-				"foo": "bar",
-				"bar": "baz"},
-			want: "hello there bar baz",
+				"TESTEVALENVVARS_TWO":   "bar",
+				"TESTEVALENVVARS_THREE": "baz"},
+			input: "hello there ${TESTEVALENVVARS_TWO} ${TESTEVALENVVARS_THREE}",
+			want:  "hello there bar baz",
 		},
 		"unset env var": {
-			input: "hello there ${foo}",
-			want:  "hello there ${foo}",
+			input: "hello there ${TESTEVALENVVARS_UNSET}",
+			want:  "hello there ${TESTEVALENVVARS_UNSET}",
 		},
 		"empty env var": {
-			input: "hello there ${foo}",
-			env:   map[string]string{"foo": ""},
+			env:   map[string]string{"TESTEVALENVVARS_FOUR": ""},
+			input: "hello there ${TESTEVALENVVARS_FOUR}",
 			want:  "hello there ",
 		},
 		"nested env vars not evaluated": {
-			input: "hello there ${foo} ${bar}",
 			env: map[string]string{
-				"foo": "bar",
-				"bar": "${baz}",
-				"baz": "qux"},
-			want: "hello there bar ${baz}",
+				"TESTEVALENVVARS_FIVE":  "bar",
+				"TESTEVALENVVARS_SIX":   "${TESTEVALENVVARS_SEVEN}",
+				"TESTEVALENVVARS_SEVEN": "qux"},
+			input: "hello there ${TESTEVALENVVARS_FIVE} ${TESTEVALENVVARS_SIX}",
+			want:  "hello there bar ${TESTEVALENVVARS_SEVEN}",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)

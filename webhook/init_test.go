@@ -53,7 +53,7 @@ func TestSlice_Metrics(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			// t.Parallel() - not parallel as we are testing metrics
 
 			if tc.slice != nil {
 				for name, s := range *tc.slice {

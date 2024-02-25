@@ -239,6 +239,15 @@ func NormaliseNewlines(data []byte) []byte {
 	return data
 }
 
+// CopyIfSecret will loop through 'fields' and replace values in 'to' of '<secret>' with values in 'from' if they are non-empty.
+func CopyIfSecret(to, from map[string]string, fields []string) {
+	for _, field := range fields {
+		if to[field] == "<secret>" && from[field] != "" {
+			to[field] = from[field]
+		}
+	}
+}
+
 // CopyMap will return a copy of the map
 func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
 	m2 := make(map[T]Y, len(m))

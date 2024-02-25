@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -403,6 +404,56 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Announce deletion
 	api.announceDelete(targetService)
+
+	// Return 200
+	w.WriteHeader(http.StatusOK)
+	//nolint:errcheck
+	w.Write([]byte{})
+}
+
+// httpNotifyTest handles testing a Notify.
+//
+// # GET
+//
+// notify_name: notify to test
+// service_name: service to test notify for
+// ...payload: config to test notify with
+
+func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
+	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	notify_name := mux.Vars(r)["notify_name"]
+	service_name := mux.Vars(r)["service_name"]
+	tgt := fmt.Sprintf("Test %q of %q",
+		notify_name, service_name)
+	api.Log.Verbose(tgt, logFrom, true)
+
+	// Set headers
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Payload
+	payload := http.MaxBytesReader(w, r.Body, 102400)
+	// Create the new/edited service
+	var original *shoutrrr.Shoutrrr
+	if api.Config.Service[service_name] != nil {
+		original = api.Config.Service[service_name].Notify[notify_name]
+	}
+	notify, err := shoutrrr.FromPayload(&payload,
+		original, &logFrom,
+	)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Test the notify
+	err = notify.TestSend()
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
 
 	// Return 200
 	w.WriteHeader(http.StatusOK)

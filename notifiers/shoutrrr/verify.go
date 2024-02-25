@@ -500,6 +500,30 @@ func (s *Shoutrrr) checkValuesForType(
 	}
 }
 
+// TestSend will test the Shoutrrr by sending a test message.
+func (s *Shoutrrr) TestSend() (err error) {
+	if s == nil {
+		err = fmt.Errorf("Shoutrrr is nil")
+		return
+	}
+
+	testServiceInfo := &util.ServiceInfo{
+		ID:            "NAME_OF_SERVICE",
+		URL:           "QUERY_URL",
+		WebURL:        "WEB_URL",
+		LatestVersion: "MAJOR.MINOR.PATCH"}
+
+	title := s.Title(testServiceInfo)
+	message := "TEST - " + s.Message(testServiceInfo)
+	err = s.Send(
+		title,
+		message,
+		testServiceInfo,
+		false)
+
+	return
+}
+
 // Print the SliceDefaults.
 func (s *SliceDefaults) Print(prefix string) {
 	if s == nil || len(*s) == 0 {

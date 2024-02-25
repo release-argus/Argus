@@ -40,24 +40,9 @@ func NotifyTest(
 	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
-	slice := findShoutrrr(*flag, cfg, log, &logFrom)
+	notify := findShoutrrr(*flag, cfg, log, &logFrom)
 
-	title := slice["test"].Title(&util.ServiceInfo{ID: "Test"})
-	message := "TEST - " + slice["test"].Message(
-		&util.ServiceInfo{
-			ID:            "NAME_OF_SERVICE",
-			URL:           "QUERY_URL",
-			WebURL:        "WEB_URL",
-			LatestVersion: "MAJOR.MINOR.PATCH"})
-	err := slice.Send(
-		title,
-		message,
-		&util.ServiceInfo{
-			ID:            "ID",
-			URL:           "URL",
-			WebURL:        "WebURL",
-			LatestVersion: "MAJOR.MINOR.PATCH"},
-		false)
+	err := notify.TestSend()
 
 	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, util.ErrorToString(err)), logFrom, err != nil)
@@ -73,25 +58,24 @@ func findShoutrrr(
 	cfg *config.Config,
 	log *util.JLog,
 	logFrom *util.LogFrom,
-) shoutrrr.Slice {
-	slice := make(shoutrrr.Slice, 1)
+) (notify *shoutrrr.Shoutrrr) {
 	// Find in Service.X.Notify.name
 	for _, svc := range cfg.Service {
 		if svc.Notify != nil && svc.Notify[name] != nil {
-			slice["test"] = svc.Notify[name]
+			notify = svc.Notify[name]
 			break
 		}
 	}
 
 	// Find in Notify.name
-	if slice["test"] == nil {
+	if notify == nil {
 		if cfg.Notify != nil && cfg.Notify[name] != nil {
 			hardDefaults := config.Defaults{}
 			hardDefaults.SetDefaults()
 			emptyShoutrrrs := shoutrrr.ShoutrrrDefaults{}
 			emptyShoutrrrs.InitMaps()
 			main := cfg.Notify[name]
-			slice["test"] = shoutrrr.New(
+			notify = shoutrrr.New(
 				nil, // failed
 				name,
 				&main.Options,
@@ -101,27 +85,27 @@ func findShoutrrr(
 				&emptyShoutrrrs,
 				&emptyShoutrrrs,
 				&emptyShoutrrrs)
-			slice["test"].InitMaps()
-			slice["test"].Main.InitMaps()
+			notify.InitMaps()
+			notify.Main.InitMaps()
 
-			notifyType := slice["test"].GetType()
+			notifyType := notify.GetType()
 			if cfg.Defaults.Notify[notifyType] != nil {
-				slice["test"].Defaults = cfg.Defaults.Notify[notifyType]
+				notify.Defaults = cfg.Defaults.Notify[notifyType]
 			}
-			slice["test"].Defaults.InitMaps()
-			slice["test"].HardDefaults = hardDefaults.Notify[notifyType]
-			slice["test"].HardDefaults.InitMaps()
+			notify.Defaults.InitMaps()
+			notify.HardDefaults = hardDefaults.Notify[notifyType]
+			notify.HardDefaults.InitMaps()
 
 			serviceID := ""
-			slice["test"].ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
-			slice["test"].ServiceStatus.Init(
+			notify.ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
+			notify.ServiceStatus.Init(
 				1, 0, 0,
-				slice["test"].ServiceStatus.ServiceID,
-				slice["test"].ServiceStatus.WebURL)
-			slice["test"].Failed = &slice["test"].ServiceStatus.Fails.Shoutrrr
+				notify.ServiceStatus.ServiceID,
+				notify.ServiceStatus.WebURL)
+			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 
 			// Check if all values are set
-			if err := slice["test"].CheckValues("    "); err != nil {
+			if err := notify.CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))
 				log.Fatal(msg, *logFrom, true)
 			}
@@ -135,8 +119,8 @@ func findShoutrrr(
 		}
 	}
 	serviceID := "TESTING"
-	slice["test"].ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
-	return slice
+	notify.ServiceStatus = &svcstatus.Status{ServiceID: &serviceID}
+	return
 }
 
 // getAllShoutrrrNames will return a list of all unique shoutrrr names
