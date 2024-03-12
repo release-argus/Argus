@@ -8,10 +8,10 @@ import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
-import NotifyOptions from "./shared";
-import { NtfyActions } from "./extra";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { NtfyActions } from "components/modals/service-edit/notify-types/extra";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { normaliseForSelect } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
@@ -188,7 +188,7 @@ const NTFY = ({
           onMiddle
         />
         <FormItem
-          name={`${name}.url_fields.tags`}
+          name={`${name}.params.tags`}
           label="Tags"
           tooltip="Comma-separated list of tags that may or may not map to emojis"
           defaultVal={globalOrDefault(
@@ -199,7 +199,7 @@ const NTFY = ({
           onRight
         />
         <FormItem
-          name={`${name}.url_fields.attach`}
+          name={`${name}.params.attach`}
           col_sm={8}
           label="Attach"
           tooltip="URL of an attachment"
@@ -210,7 +210,7 @@ const NTFY = ({
           )}
         />
         <FormItem
-          name={`${name}.url_fields.filename`}
+          name={`${name}.params.filename`}
           col_sm={4}
           label="Filename"
           tooltip="File name of the attachment"
@@ -222,7 +222,7 @@ const NTFY = ({
           onRight
         />
         <FormItem
-          name={`${name}.url_fields.email`}
+          name={`${name}.params.email`}
           label="E-mail"
           tooltip="E-mail address to send to"
           defaultVal={globalOrDefault(
@@ -232,7 +232,7 @@ const NTFY = ({
           )}
         />
         <FormItem
-          name={`${name}.url_fields.title`}
+          name={`${name}.params.title`}
           label="Title"
           defaultVal={globalOrDefault(
             global?.params?.title,
@@ -242,7 +242,7 @@ const NTFY = ({
           onRight
         />
         <FormItem
-          name={`${name}.url_fields.click`}
+          name={`${name}.params.click`}
           col_sm={12}
           label="Click"
           tooltip="URL to open when notification is clicked"

@@ -1,6 +1,6 @@
 import { FormItem } from "components/generic/form";
 
-const REGEX = ({ name }: { name: string }) => (
+const SPLIT = ({ name }: { name: string }) => (
   <>
     <FormItem
       key="text"
@@ -26,4 +26,4 @@ const REGEX = ({ name }: { name: string }) => (
   </>
 );
 
-export default REGEX;
+export default SPLIT;

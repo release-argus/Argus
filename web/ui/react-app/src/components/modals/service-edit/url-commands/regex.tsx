@@ -20,7 +20,7 @@ const REGEX = ({ name }: { name: string }) => {
     <>
       <FormItem
         name={`${name}.regex`}
-        required={templateToggle ? "Required for template" : false}
+        required
         label="RegEx"
         smallLabel
         col_sm={5}

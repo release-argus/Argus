@@ -1,6 +1,6 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
 import { Dict, WebHookType } from "types/config";
-import { FC, useMemo } from "react";
+import { FC, useCallback, useMemo } from "react";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
 import { useFieldArray } from "react-hook-form";
@@ -19,6 +19,9 @@ const EditServiceWebHooks: FC<Props> = ({
   const { fields, append, remove } = useFieldArray({
     name: "webhook",
   });
+  const addItem = useCallback(() => {
+    append({ type: "github", name: "" }, { shouldFocus: false });
+  }, []);
 
   const globalWebHookOptions = useMemo(
     () => (
@@ -57,9 +60,7 @@ const EditServiceWebHooks: FC<Props> = ({
             className={fields.length > 0 ? "" : "mt-2"}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
-            onClick={() => {
-              append({ type: "github", name: "" }, { shouldFocus: false });
-            }}
+            onClick={addItem}
           >
             Add WebHook
           </Button>

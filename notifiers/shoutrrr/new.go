@@ -15,51 +15,72 @@
 package shoutrrr
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 
-	shoutrrr_vars "github.com/release-argus/Argus/notifiers/shoutrrr/types"
 	"github.com/release-argus/Argus/util"
 )
 
-func FromPayload(
-	payload *io.ReadCloser,
-	original *Shoutrrr,
+// UseTemplate will create a new Shoutrrr object with the given overrides applied to this template.
+func (s *Shoutrrr) UseTemplate(
+	options *string,
+	urlFields *string,
+	params *string,
+
 	logFrom *util.LogFrom,
 ) (shoutrrr *Shoutrrr, err error) {
-	var buf bytes.Buffer
-	if _, err = buf.ReadFrom(*payload); err != nil {
-		return
-	}
-
 	// Notify
 	shoutrrr = &Shoutrrr{}
-	dec1 := json.NewDecoder(bytes.NewReader(buf.Bytes()))
-	err = dec1.Decode(shoutrrr)
+	shoutrrr.Type = s.Type
+
+	err = stringToMap(options, &shoutrrr.Options, &s.Options)
 	if err != nil {
-		jLog.Error(err, *logFrom, true)
-		jLog.Verbose(fmt.Sprintf("Payload: %s", buf.String()), *logFrom, true)
+		err = fmt.Errorf(`options:\  %s`, err)
 		return
 	}
-	if shoutrrr.Type == "" {
-		err = fmt.Errorf("type is required")
-		jLog.Error(err, *logFrom, true)
+	err = stringToMap(urlFields, &shoutrrr.URLFields, &s.URLFields)
+	if err != nil {
+		err = fmt.Errorf(`url_fields:\  %s`, err)
+		return
+	}
+	err = stringToMap(params, &shoutrrr.Params, &s.Params)
+	if err != nil {
+		err = fmt.Errorf(`params:\  %s`, err)
 		return
 	}
 
-	shoutrrr.inheritSecrets(original)
-	shoutrrr.Main = original.Main
-	shoutrrr.Defaults = original.Defaults
-	shoutrrr.HardDefaults = original.HardDefaults
+	shoutrrr.Main = s.Main
+	shoutrrr.Defaults = s.Defaults
+	shoutrrr.HardDefaults = s.HardDefaults
+
+	shoutrrr.ServiceStatus = s.ServiceStatus
+	shoutrrr.ServiceStatus.Init(1, 0, 0, s.ServiceStatus.ServiceID, s.ServiceStatus.WebURL)
+	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 
 	err = shoutrrr.CheckValues("")
 	return
 }
 
-// inheritSecrets from original will copy all '<secret>'s referenced in `s` from `original`.
-func (s *Shoutrrr) inheritSecrets(original *Shoutrrr) {
-	util.CopyIfSecret(s.Params, original.Params, shoutrrr_vars.CensorableParams[:])
-	util.CopyIfSecret(s.URLFields, original.URLFields, shoutrrr_vars.CensorableURLFields[:])
+// stringToMap will put baseMap into targetMap and convert str into a map[string]string and put it into targetMap.
+//
+// values of "<secret>" in str will be kept at the value in baseMap
+func stringToMap(str *string, targetMap *map[string]string, baseMap *map[string]string) (err error) {
+	if str == nil {
+		*targetMap = *baseMap
+		return
+	}
+	*targetMap = util.CopyMap(*baseMap)
+
+	strMap := make(map[string]string)
+	err = json.Unmarshal([]byte(*str), &strMap)
+	if err != nil {
+		return
+	}
+
+	for k, v := range strMap {
+		if v != "<secret>" || (*targetMap)[k] == "" {
+			(*targetMap)[k] = v
+		}
+	}
+	return
 }

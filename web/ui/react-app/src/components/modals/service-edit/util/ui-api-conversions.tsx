@@ -3,6 +3,7 @@ import {
   NotifyEditType,
   NotifyHeaderType,
   ServiceEditType,
+  StringFieldArray,
 } from "types/service-edit";
 import {
   Dict,
@@ -11,6 +12,7 @@ import {
   NotifyType,
   ServiceType,
   URLCommandType,
+  URLCommandTypes,
   WebHookType,
 } from "types/config";
 
@@ -41,6 +43,7 @@ export const convertUIServiceDataEditToAPI = (
     use_prerelease: data.latest_version?.use_prerelease,
     url_commands: data.latest_version?.url_commands?.map((command) => ({
       ...urlCommandTrim(command),
+      type: command.type as URLCommandTypes,
       index: command.index ? Number(command.index) : undefined,
     })),
   };
@@ -49,7 +52,7 @@ export const convertUIServiceDataEditToAPI = (
     payload.latest_version.require = {
       regex_content: data.latest_version.require?.regex_content,
       regex_version: data.latest_version.require?.regex_version,
-      command: (data.latest_version.require.command || []).map(
+      command: (data.latest_version.require.command ?? []).map(
         (obj) => (obj as ArgType).arg
       ),
       docker: {
@@ -71,8 +74,8 @@ export const convertUIServiceDataEditToAPI = (
         regex: data.deployed_version?.regex,
         regex_template: data.deployed_version?.regex_template,
         basic_auth: {
-          username: data.deployed_version?.basic_auth?.username || "",
-          password: data.deployed_version?.basic_auth?.password || "",
+          username: data.deployed_version?.basic_auth?.username ?? "",
+          password: data.deployed_version?.basic_auth?.password ?? "",
         },
       }
     : {};
@@ -136,23 +139,36 @@ export const urlCommandsTrim = (commands: {
 
 export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
-  if (notify.url_fields)
+  if (notify?.url_fields)
     notify.url_fields = convertValuesToString(notify.url_fields);
-  if (notify.params) {
+  if (notify?.params) {
     notify.params = convertValuesToString(notify.params);
     if (notify.type === "ntfy") {
       // http actions should have headers as {KEY:VAL}, not {key:KEY, val:VAL}
-      notify.params.actions = Array.isArray(notify.params?.actions)
-        ? (notify.params?.actions as NotifyNtfyAction[]).map((action) => ({
-            ...action,
-            headers:
-              action.headers &&
-              convertHeaderTypeToMap(action.headers as NotifyHeaderType[]),
-            extras:
-              action.extras &&
-              convertHeaderTypeToMap(action.extras as NotifyHeaderType[]),
-          }))
-        : undefined;
+      if (Array.isArray(notify.params?.actions))
+        notify.params.actions = (
+          notify.params.actions as NotifyNtfyAction[]
+        ).map((action) => ({
+          ...action,
+          headers: convertHeaderTypeToMap(action.headers as NotifyHeaderType[]),
+          extras: convertHeaderTypeToMap(action.extras as NotifyHeaderType[]),
+        }));
+    } else if (notify.type === "opsgenie") {
+      // Convert the actions to a JSON string
+      if (Array.isArray(notify.params?.actions)) {
+        // Keep the actions as a string if there's only one
+        if (notify.params.actions.length === 1)
+          notify.params.actions = (
+            notify.params.actions as StringFieldArray
+          )[0].arg;
+        // Otherwise, convert to a JSON string
+        else
+          notify.params.actions = JSON.stringify(
+            (notify.params.actions as StringFieldArray).map(
+              (action) => action.arg
+            )
+          );
+      }
     }
   }
 

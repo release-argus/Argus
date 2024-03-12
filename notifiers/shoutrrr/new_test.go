@@ -17,142 +17,120 @@
 package shoutrrr
 
 import (
-	"bytes"
-	"io"
-	"net/http"
+	"encoding/json"
 	"regexp"
-	"strings"
 	"testing"
 
+	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestFromPayload_ReadFromFail(t *testing.T) {
-	// GIVEN an invalid payload
-	payloadStr := "this is a long payload"
-	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
-	payload = http.MaxBytesReader(nil, payload, 5)
-
-	// WHEN we call New
-	_, err := FromPayload(
-		&payload,
-		&Shoutrrr{},
-		&util.LogFrom{Primary: "TestFromPayload_ReadFromFail"},
-	)
-
-	// THEN we should get an error
-	if err == nil {
-		t.Errorf("Want error, got nil")
-	}
-}
-
-func TestShoutrrr_FromPayload(t *testing.T) {
+func TestShoutrrr_UseTemplate(t *testing.T) {
+	testToken := "Aod9Cb0zXCeOrnD"
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		payload  string
-		original *Shoutrrr
-		want     *Shoutrrr
-		err      string
+		template  Shoutrrr
+		options   string
+		urlFields string
+		params    string
+		want      Shoutrrr
+		err       string
 	}{
 		"empty": {
-			payload:  "",
-			original: &Shoutrrr{},
-			want:     &Shoutrrr{},
-			err:      "EOF",
-		},
-		"empty JSON": {
-			payload:  "{}",
-			original: &Shoutrrr{},
-			want:     &Shoutrrr{},
-			err:      "type is required",
-		},
-		"invalid type": {
-			payload:  `{"type": "foo"}`,
-			original: &Shoutrrr{},
-			want: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Type: "foo"}},
-			err: "type.*foo.*invalid",
+			template: Shoutrrr{},
+			want:     Shoutrrr{},
+			err:      "host: <required>.* token: <required>",
 		},
 		"valid": {
-			payload: `{
-"type": "gotify",
-"url_fields": {
-	"host": "example.com",
-	"token": "foo"}
-}`,
-			original: &Shoutrrr{},
-			want: &Shoutrrr{
+			template: Shoutrrr{},
+			urlFields: `
+				{
+					"host": "example.com",
+					"token": "` + testToken + `"
+				}`,
+			want: Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					Type: "gotify",
 					URLFields: map[string]string{
 						"host":  "example.com",
-						"token": "foo"},
-				}},
+						"token": testToken}}},
 		},
 		"inherit secrets": {
-			payload: `{
-"type": "gotify",
-"url_fields": {
-	"host": "example.com",
-	"token": "<secret>"}
-}`,
-			original: &Shoutrrr{
+			template: Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
 					Type: "gotify",
 					URLFields: map[string]string{
 						"host":  "release-argus.com",
-						"token": "bar",
+						"token": testToken,
 					}}},
-			want: &Shoutrrr{
+			urlFields: `
+				{
+					"host": "example.com",
+					"token": "<secret>"
+				}`,
+			want: Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					Type: "gotify",
 					URLFields: map[string]string{
 						"host":  "example.com",
-						"token": "bar",
-					}}},
+						"token": testToken}}},
 		},
 		"invalid CheckValues": {
-			payload: `{
-"type": "gotify",
-"url_fields": {
-	"host": "release-argus.com"}
-}`,
-			original: &Shoutrrr{
+			urlFields: `
+				{"host": "release-argus.com"}`,
+			template: Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
 					Type: "gotify",
 					URLFields: map[string]string{
-						"host":  "example.com",
-						"token": "bar",
+						"host": "example.com",
 					}}},
-			want: &Shoutrrr{
+			want: Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					Type: "gotify",
 					URLFields: map[string]string{
 						"host": "release-argus.com",
 					}}},
-			err: "token: <required",
+			err: "token: <required>",
+		},
+		"invalid JSON - options": {
+			template: Shoutrrr{},
+			options:  "invalid",
+			err:      "options:.* invalid character",
+		},
+		"invalid JSON - urlFields": {
+			template:  Shoutrrr{},
+			urlFields: "invalid",
+			err:       "url_fields:.* invalid character",
+		},
+		"invalid JSON - params": {
+			template: Shoutrrr{},
+			params:   "invalid",
+			err:      "params:.* invalid character",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
-			tc.original.Main = &ShoutrrrDefaults{}
-			tc.original.Defaults = &ShoutrrrDefaults{}
-			tc.original.HardDefaults = &ShoutrrrDefaults{}
-			tc.payload = strings.TrimSpace(tc.payload)
-			tc.payload = strings.ReplaceAll(tc.payload, "\n", "")
-			tc.payload = strings.ReplaceAll(tc.payload, "\t", "")
-			tc.payload = strings.ReplaceAll(tc.payload, ": ", ":")
-			reader := strings.NewReader(tc.payload)
-			payload := io.NopCloser(reader)
+			tc.template.Type = "gotify"
+			tc.want.Type = tc.template.Type
+			tc.template.Main = &ShoutrrrDefaults{}
+			tc.template.Defaults = &ShoutrrrDefaults{}
+			tc.template.HardDefaults = &ShoutrrrDefaults{}
+			tc.template.ServiceStatus = &svcstatus.Status{}
+			vars := []*string{&tc.options, &tc.urlFields, &tc.params}
+			for _, v := range vars {
+				*v = trimJSON(*v)
+				if *v == "" {
+					*v = "{}"
+				}
+			}
 
-			// WHEN creating a Shoutrrr from a payload
-			got, err := FromPayload(&payload, tc.original, &util.LogFrom{
-				Primary: "TestShoutrrr_FromPayload", Secondary: name,
-			})
+			// WHEN using the template
+			got, err := tc.template.UseTemplate(
+				&tc.options,
+				&tc.urlFields,
+				&tc.params,
+				&util.LogFrom{
+					Primary: "TestCopyAndModify", Secondary: name})
 
 			// THEN the Shoutrrr is created as expected
 			if tc.err == "" {
@@ -163,8 +141,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				t.Errorf("Expecting error to match %q, got %q",
 					tc.err, gotErr)
 			}
-			if got.String("") != tc.want.String("") {
-				t.Errorf("FromPayload() mismatch:\ngot:  %q\nwant: %q",
+			if tc.err != "^$" && got.String("") != tc.want.String("") {
+				t.Errorf("Result mismatch:\ngot:  %q\nwant: %q",
 					got.String(""), tc.want.String(""))
 			}
 		})
@@ -172,97 +150,91 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 
 }
 
-func TestShoutrrr_InheritSecrets(t *testing.T) {
+func TestShoutrrr_StringToMap(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		from *Shoutrrr
-		to   *Shoutrrr
-		want *Shoutrrr
+		str     *string
+		baseMap map[string]string
+		want    map[string]string
+		err     string
 	}{
+		"nil": {
+			str: nil,
+			baseMap: map[string]string{
+				"test": "foo"},
+			want: map[string]string{
+				"test": "foo"},
+		},
 		"empty": {
-			from: &Shoutrrr{},
-			to:   &Shoutrrr{},
-			want: &Shoutrrr{},
+			str: stringPtr(""),
+			baseMap: map[string]string{
+				"test": "foo"},
+			want: map[string]string{
+				"test": "foo"},
+			err: "unexpected end of JSON input",
 		},
-		"params": {
-			from: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":      "foo",
-						"not_a_secret": "bar",
-					}}},
-			to: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":      "<secret>",
-						"not_a_secret": "<secret>",
-					}}},
-			want: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":      "foo",
-						"not_a_secret": "<secret>",
-					}}},
+		"empty JSON": {
+			str: stringPtr("{}"),
+			baseMap: map[string]string{
+				"test": "foo"},
+			want: map[string]string{
+				"test": "foo"},
 		},
-		"url_fields": {
-			from: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"altid":        "bish",
-						"not_a_secret": "what",
-					}}},
-			to: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"altid":        "<secret>",
-						"apikey":       "<secret>",
-						"botKey":       "bosh",
-						"not_a_secret": "<secret>",
-					}}},
-			want: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"altid":        "bish",
-						"apikey":       "<secret>",
-						"botKey":       "bosh",
-						"not_a_secret": "<secret>",
-					}}},
+		"invalid JSON": {
+			str: stringPtr(`
+				{
+					"devices": "foo",
+					"other": "<secret>",
+				}`),
+			baseMap: map[string]string{
+				"test": "foo"},
+			want: map[string]string{
+				"test": "foo"},
+			err: `invalid character.*\}`,
 		},
-		"both": {
-			from: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":        "foo",
-						"something_else": "bar",
-					},
-					URLFields: map[string]string{
-						"altid":        "bish",
-						"not_a_secret": "what",
-					}}},
-			to: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":        "foo",
-						"something_else": "<secret>",
-					},
-					URLFields: map[string]string{
-						"altid":        "<secret>",
-						"apikey":       "<secret>",
-						"botKey":       "bosh",
-						"not_a_secret": "<secret>",
-					}}},
-			want: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Params: map[string]string{
-						"devices":        "foo",
-						"something_else": "<secret>",
-					},
-					URLFields: map[string]string{
-						"altid":        "bish",
-						"apikey":       "<secret>",
-						"botKey":       "bosh",
-						"not_a_secret": "<secret>",
-					}}},
+		"<secret> ref": {
+			str: stringPtr(`
+				{
+					"devices": "foo",
+					"other": "<secret>"
+				}`),
+			baseMap: map[string]string{
+				"devices": "<secret>",
+				"other":   "bar",
+			},
+			want: map[string]string{
+				"devices": "foo",
+				"other":   "bar",
+			},
+		},
+		"<secret> ref <secret> stays <secret>": {
+			str: stringPtr(`
+				{
+					"devices": "foo",
+					"other": "<secret>"
+				}`),
+			baseMap: map[string]string{
+				"devices": "<secret>",
+				"other":   "<secret>",
+			},
+			want: map[string]string{
+				"devices": "foo",
+				"other":   "<secret>",
+			},
+		},
+		"<secret> ref empty is kept as <secret>": {
+			str: stringPtr(`
+				{
+					"devices": "foo",
+					"other": "<secret>"
+				}`),
+			baseMap: map[string]string{
+				"devices": "<secret>",
+			},
+			want: map[string]string{
+				"devices": "foo",
+				"other":   "<secret>",
+			},
 		},
 	}
 
@@ -270,15 +242,30 @@ func TestShoutrrr_InheritSecrets(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			targetMap := make(map[string]string)
+			if tc.str != nil {
+				*tc.str = trimJSON(*tc.str)
+			}
+
 			// WHEN inheriting secrets
-			tc.to.inheritSecrets(tc.from)
+			err := stringToMap(tc.str, &targetMap, &tc.baseMap)
 
 			// THEN the secrets are inherited
-			got := tc.to.String("")
-			want := tc.want.String("")
-			if got != want {
-				t.Errorf("InheritSecrets() mismatch: got %q, want %q",
+			got, _ := json.Marshal(targetMap)
+			want, _ := json.Marshal(tc.want)
+			if string(got) != string(want) {
+				t.Errorf("InheritSecrets() mismatch:\ngot:  %q\nwant: %q",
 					got, want)
+			}
+			// AND any errs are expected
+			errStr := util.ErrorToString(err)
+			wantErr := "^$"
+			if tc.err != "" {
+				wantErr = tc.err
+			}
+			if !regexp.MustCompile(wantErr).MatchString(errStr) {
+				t.Errorf("Expecting error to match %q, got %q",
+					wantErr, errStr)
 			}
 		})
 	}

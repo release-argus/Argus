@@ -164,14 +164,12 @@ const ServiceEditModal = () => {
                     <br />
                     {/* Render either the server error or form validation error */}
                     {err ? (
-                      <>
                         <>
                           {err.split("\\").map((line) => (
                             <pre key={line} className="no-margin">
                               {line}
                             </pre>
                           ))}
-                        </>
                       </>
                     ) : (
                       <ul>

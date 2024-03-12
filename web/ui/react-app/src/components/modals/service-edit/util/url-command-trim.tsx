@@ -1,7 +1,10 @@
 import { URLCommandType } from "types/config";
 
 // urlCommandTrim will remove any keys not used for the type
-export const urlCommandTrim = (command: URLCommandType, sending: boolean) => {
+export const urlCommandTrim = (
+  command: URLCommandType,
+  sending: boolean
+): URLCommandType => {
   if (command.type === "regex")
     if (sending)
       return {
@@ -16,7 +19,7 @@ export const urlCommandTrim = (command: URLCommandType, sending: boolean) => {
         regex: command.regex,
         index: command.index ? Number(command.index) : undefined,
         template: command.template ? command.template : undefined,
-        template_toggle: (command.template || "") !== "",
+        template_toggle: (command.template ?? "") !== "",
       };
   if (command.type === "replace")
     return { type: "replace", old: command.old, new: command.new };

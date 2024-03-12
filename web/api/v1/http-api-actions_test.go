@@ -32,6 +32,7 @@ import (
 
 	"github.com/gorilla/mux"
 	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
@@ -117,7 +118,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
 				&tc.serviceID,
-				stringPtr("https://example.com"))
+				test.StringPtr("https://example.com"))
 			svc.Status.SetAnnounceChannel(cfg.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
 			svc.Status.SetDeployedVersion("2.0.0", false)
@@ -130,12 +131,12 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 				Notifiers: command.Notifiers{
 					Shoutrrr: &svc.Notify},
 				ServiceStatus:  &svc.Status,
-				ParentInterval: stringPtr("10m")}
+				ParentInterval: test.StringPtr("10m")}
 			svc.CommandController.Init(
 				&svc.Status,
 				&svc.Command,
 				&svc.Notify,
-				stringPtr("10m"))
+				test.StringPtr("10m"))
 			if tc.commands == nil {
 				svc.CommandController = nil
 			}
@@ -282,28 +283,28 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 	}{
 		"invalid payload": {
 			serviceID:   "__name__",
-			payload:     stringPtr("target: foo"), // not JSON
+			payload:     test.StringPtr("target: foo"), // not JSON
 			stdoutRegex: `invalid payload`,
 		},
 		"ARGUS_SKIP known service_id": {
 			serviceID:       "__name__",
-			target:          stringPtr("ARGUS_SKIP"),
+			target:          test.StringPtr("ARGUS_SKIP"),
 			wantSkipMessage: true,
 		},
 		"ARGUS_SKIP inactive service_id": {
 			serviceID:       "__name__",
-			active:          boolPtr(false),
-			target:          stringPtr("ARGUS_SKIP"),
+			active:          test.BoolPtr(false),
+			target:          test.StringPtr("ARGUS_SKIP"),
 			wantSkipMessage: false,
 		},
 		"ARGUS_SKIP unknown service_id": {
 			serviceID:   "unknown?",
-			target:      stringPtr("ARGUS_SKIP"),
+			target:      test.StringPtr("ARGUS_SKIP"),
 			stdoutRegex: `service "unknown\?" not found`,
 		},
 		"ARGUS_SKIP empty service_id": {
 			serviceID:   "",
-			target:      stringPtr("ARGUS_SKIP"),
+			target:      test.StringPtr("ARGUS_SKIP"),
 			stdoutRegex: `service "" not found`,
 		},
 		"target=nil, known service_id": {
@@ -313,37 +314,37 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"ARGUS_ALL, known service_id with no commands/webhooks": {
 			serviceID:   "__name__",
-			target:      stringPtr("ARGUS_ALL"),
+			target:      test.StringPtr("ARGUS_ALL"),
 			stdoutRegex: `"[^"]+" does not have any commands\/webhooks to approve`,
 		},
 		"ARGUS_ALL, known service_id with command": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"false", "0"}},
 		},
 		"ARGUS_ALL, known service_id with webhook": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.Slice{
 				"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")},
 		},
 		"ARGUS_ALL, known service_id with multiple webhooks": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.Slice{
 				"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"),
 				"known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")},
 		},
 		"ARGUS_ALL, known service_id with multiple commands": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"ls", "-a"}, {"false", "1"}},
 		},
 		"ARGUS_ALL, known service_id with dvl and command and webhook that pass upgrades approved_version": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"ls", "-b"}},
 			webhooks: webhook.Slice{
@@ -353,7 +354,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"ARGUS_ALL, known service_id with command and webhook that pass upgrades deployed_version": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"ls", "-c"}},
 			webhooks: webhook.Slice{
@@ -365,7 +366,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"ARGUS_ALL, known service_id with passing command and failing webhook doesn't upgrade any versions": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"ls", "-d"}},
 			webhooks: webhook.Slice{
@@ -374,7 +375,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
 			serviceID: "__name__",
-			target:    stringPtr("ARGUS_ALL"),
+			target:    test.StringPtr("ARGUS_ALL"),
 			commands: command.Slice{
 				{"fail"}},
 			webhooks: webhook.Slice{
@@ -383,34 +384,34 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		},
 		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
 			serviceID: "__name__",
-			target:    stringPtr("webhook_will_pass"),
+			target:    test.StringPtr("webhook_will_pass"),
 			commands: command.Slice{
 				{"ls", "-f"}},
 			commandFails: []*bool{
-				boolPtr(false)},
+				test.BoolPtr(false)},
 			webhooks: webhook.Slice{
 				"will_pass":  testWebHook(false, "will_pass"),
 				"would_fail": testWebHook(true, "would_fail")},
 			webhookFails: map[string]*bool{
-				"will_pass":  boolPtr(true),
-				"would_fail": boolPtr(false)},
+				"will_pass":  test.BoolPtr(true),
+				"would_fail": test.BoolPtr(false)},
 			removeDVL:               true,
 			upgradesDeployedVersion: true,
 			latestVersion:           "0.9.0",
 		},
 		"command_NAME, known service_id with 1 command left to pass does upgrade deployed_version": {
 			serviceID: "__name__",
-			target:    stringPtr("command_ls -g"),
+			target:    test.StringPtr("command_ls -g"),
 			commands: command.Slice{
 				{"ls", "/root"},
 				{"ls", "-g"}},
 			commandFails: []*bool{
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 			webhooks: webhook.Slice{
 				"would_fail": testWebHook(true, "would_fail")},
 			webhookFails: map[string]*bool{
-				"would_fail": boolPtr(false)},
+				"would_fail": test.BoolPtr(false)},
 			removeDVL:               true,
 			upgradesDeployedVersion: true,
 			latestVersion:           "0.9.0",
@@ -436,7 +437,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
 				&tc.serviceID,
-				stringPtr("https://example.com"))
+				test.StringPtr("https://example.com"))
 			svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
 			svc.Status.SetDeployedVersion("2.0.0", false)
@@ -455,7 +456,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				&svc.Status,
 				&svc.Command,
 				&svc.Notify,
-				stringPtr("10m"))
+				test.StringPtr("10m"))
 			if tc.commands == nil {
 				svc.CommandController = nil
 			}
@@ -646,7 +647,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 							receivedForAnAction = true
 							received = append(received, command.String())
 							t.Logf("FOUND COMMAND %q - failed=%s",
-								command.String(), stringifyPointer(message.CommandData[command.String()].Failed))
+								command.String(), test.StringifyPtr(message.CommandData[command.String()].Failed))
 							break
 						}
 					}
@@ -656,7 +657,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 								receivedForAnAction = true
 								received = append(received, i)
 								t.Logf("FOUND WEBHOOK %q - failed=%s",
-									i, stringifyPointer(message.WebHookData[i].Failed))
+									i, test.StringifyPtr(message.WebHookData[i].Failed))
 								break
 							}
 						}

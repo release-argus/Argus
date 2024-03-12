@@ -15,12 +15,15 @@ interface Props {
 }
 
 const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
-  const targetTypes = [
-    { label: "Team", value: "team" },
-    { label: "User", value: "user" },
-  ];
+  const targetTypes: { label: string; value: NotifyOpsGenieTarget["type"] }[] =
+    [
+      { label: "Team", value: "team" },
+      { label: "User", value: "user" },
+    ];
 
-  const targetType = useWatch({ name: `${name}.type` });
+  const targetType: NotifyOpsGenieTarget["type"] = useWatch({
+    name: `${name}.type`,
+  });
 
   return (
     <>

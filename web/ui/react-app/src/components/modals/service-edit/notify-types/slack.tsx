@@ -5,9 +5,9 @@ import {
   FormLabel,
 } from "components/generic/form";
 
-import { NotifyOptions } from "./shared";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySlackType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 
 const SLACK = ({
   name,

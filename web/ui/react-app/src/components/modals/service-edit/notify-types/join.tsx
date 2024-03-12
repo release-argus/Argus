@@ -5,8 +5,8 @@ import {
 } from "components/generic/form";
 
 import { NotifyJoinType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 
 const JOIN = ({
   name,

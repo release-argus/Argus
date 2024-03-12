@@ -146,7 +146,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		}
 	}
 
-	s.checkValuesForType(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
+	s.checkValuesForType(prefix, &errs, &errsURLFields, &errsParams)
 
 	// Exclude matrix since it logs in, so may run into a rate-limit
 	if errsParams == nil && errsURLFields == nil && s.GetType() != "matrix" {
@@ -252,7 +252,6 @@ func (s *ShoutrrrBase) correctSelf() {
 func (s *Shoutrrr) checkValuesForType(
 	prefix string,
 	errs *error,
-	errsOptions *error,
 	errsURLFields *error,
 	errsParams *error,
 ) {
@@ -263,6 +262,7 @@ func (s *Shoutrrr) checkValuesForType(
 		if sTypeWithoutID == "" {
 			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
 				util.ErrorToString(*errs), prefix)
+			return
 		}
 	}
 	// Check that the Type doesn't differ in the Main
@@ -501,24 +501,30 @@ func (s *Shoutrrr) checkValuesForType(
 }
 
 // TestSend will test the Shoutrrr by sending a test message.
-func (s *Shoutrrr) TestSend() (err error) {
+func (s *Shoutrrr) TestSend(serviceURL string) (err error) {
 	if s == nil {
 		err = fmt.Errorf("Shoutrrr is nil")
 		return
 	}
 
-	testServiceInfo := &util.ServiceInfo{
-		ID:            "NAME_OF_SERVICE",
-		URL:           "QUERY_URL",
-		WebURL:        "WEB_URL",
-		LatestVersion: "MAJOR.MINOR.PATCH"}
+	s.SetOption("max_tries", "1")
 
-	title := s.Title(testServiceInfo)
+	testServiceInfo := &util.ServiceInfo{
+		ID:            *s.ServiceStatus.ServiceID,
+		URL:           serviceURL,
+		WebURL:        *s.ServiceStatus.WebURL,
+		LatestVersion: s.ServiceStatus.LatestVersion()}
+	if testServiceInfo.LatestVersion == "" {
+		testServiceInfo.LatestVersion = "MAJOR.MINOR.PATCH"
+	}
+
+	title := "TEST - " + s.Title(testServiceInfo)
 	message := "TEST - " + s.Message(testServiceInfo)
 	err = s.Send(
 		title,
 		message,
 		testServiceInfo,
+		false,
 		false)
 
 	return

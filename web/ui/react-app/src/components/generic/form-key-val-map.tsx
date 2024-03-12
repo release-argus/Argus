@@ -44,13 +44,13 @@ const FormKeyValMap: FC<Props> = ({
   }, []);
   const removeLast = useCallback(() => {
     remove(fields.length - 1);
-  }, [fields]);
+  }, [fields.length]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => diffObjects(fieldValues, defaults),
+    () => (defaults && diffObjects(fieldValues, defaults)) ?? false,
     [fieldValues, defaults]
   );
   useEffect(() => {
@@ -69,7 +69,7 @@ const FormKeyValMap: FC<Props> = ({
   return (
     <FormGroup>
       <Row>
-        <Col>
+        <Col className="pt-1">
           <FormLabel text={label} tooltip={tooltip} />
         </Col>
         <Col>

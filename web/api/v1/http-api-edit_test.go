@@ -32,7 +32,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -61,7 +64,7 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"type":         "url",
 				"url":          "https://valid.release-argus.io/plain",
-				"url_commands": `[{"type":"regex","regex":"stable version: \"v?([0-9.]+)\""}]`},
+				"url_commands": `[{"type": "regex", "regex": "stable version: \"v?([0-9.]+)\""}]`},
 			wantBody:       `^{"version":"[0-9.]+","timestamp":"[^"]+"}\s$`,
 			wantStatusCode: http.StatusOK,
 		},
@@ -69,7 +72,7 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 			params: map[string]string{
 				"type":         "url",
 				"url":          "https://valid.release-argus.io/plain",
-				"url_commands": `[{"type":"regex"}]`},
+				"url_commands": `[{"type": "regex"}]`},
 			wantBody:       `"error":"url_commands.*regex:.*required`,
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -107,15 +110,18 @@ func TestHTTP_VersionRefreshUncreated(t *testing.T) {
 			if !tc.deployedVersion {
 				target = "/api/v1/latest_version/refresh"
 			}
-			// add the params to the URL
+			// Query params
+			if tc.params["url_commands"] != "" {
+				tc.params["url_commands"] = test.TrimJSON(tc.params["url_commands"])
+			}
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
-			target += "?" + strings.Replace(params.Encode(), "+", "%20", -1)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
+			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
 			api.httpVersionRefreshUncreated(w, req)
 			res := w.Result()
@@ -195,7 +201,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			wantLatestVersion: "",
 		},
 		"latest version, unknown service": {
-			serviceName: stringPtr("bish-bash-bosh"),
+			serviceName: test.StringPtr("bish-bash-bosh"),
 			params: map[string]string{
 				"url_commands":        `\[\{"type":"regex","regex":"beta: \"v?([0-9.+-beta)\""\}\]`,
 				"semantic_versioning": "false"},
@@ -242,7 +248,7 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 		},
 		"deployed version, unknown service": {
 			deployedVersion: true,
-			serviceName:     stringPtr("bish-bash-bosh"),
+			serviceName:     test.StringPtr("bish-bash-bosh"),
 			params: map[string]string{
 				"semantic_versioning": "false"},
 			wantBody:          `\{"message":"service .+ not found"`,
@@ -272,10 +278,10 @@ func TestHTTP_VersionRefresh(t *testing.T) {
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
-			target += "?" + strings.Replace(params.Encode(), "+", "%20", -1)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
+			req.URL.RawQuery = params.Encode()
 			// set service_name
 			serviceName := svc.ID
 			if tc.serviceName != nil {
@@ -351,7 +357,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		"unknown service": {
-			serviceName:    stringPtr("bish-bash-bosh"),
+			serviceName:    test.StringPtr("bish-bash-bosh"),
 			wantBody:       `\{"message":"service .+ not found"`,
 			wantStatusCode: http.StatusNotFound,
 		},
@@ -416,10 +422,10 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 	}{
 		"get details": {
 			wantBody: `
-"hard_defaults":.*\{
-"interval":"10m",
-.*
-"defaults":\{.*"notify":\{.*"webhook":\{`,
+				"hard_defaults": .*\{
+				"interval": "10m",
+				.*
+				"defaults": \{.*"notify": \{.*"webhook": \{`,
 			wantStatusCode: http.StatusOK,
 		},
 	}
@@ -430,6 +436,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.wantBody = trimJSON(tc.wantBody)
 			svc := testService(name)
 			defer func() {
 				os.RemoveAll(file)
@@ -503,105 +510,101 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	}{
 		"invalid json": {
 			payload: `
-		"name": "__name__-",
-		"latest_version": {
-		    "type":"github",
-		    "url":"release-argus/Argus"
-		`,
+				"name": "__name__-",
+				"latest_version": {
+					"type": "github",
+					"url": "release-argus/Argus"
+				`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* cannot unmarshal.*"\}`,
 		},
 		"create new service": {
-			payload: `{
-"name": "create new service-",
-"latest_version": {
-    "type":"github",
-    "url":"release-argus/Argus"
-}}`,
+			payload: `
+				{
+					"name": "create new service-",
+					"latest_version": {
+						"type": "github",
+						"url": "release-argus/Argus"}
+				}`,
 			wantStatusCode: http.StatusOK,
 			wantBody:       "^$",
 		},
 		"create new service, but name already taken": {
-			payload: `{
-		"name": "` + svcName + `",
-		"latest_version": {
-		  "type":"github",
-		  "url":"release-argus/Argus"
-		}}`,
+			payload: `
+				{
+					"name": "` + svcName + `",
+					"latest_version": {
+						"type": "github",
+						"url": "release-argus/Argus"}
+				}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* failed.*"\}`,
 		},
 		"create new service, but invalid interval": {
-			payload: `{
-		"name": "__name__-",
-		"latest_version": {
-		    "type":"github",
-		    "url":"release-argus/Argus"
-		},
-		"options": {
-			"interval": "foo"
-		}}`,
+			payload: `
+				{
+					"name": "__name__-",
+					"latest_version": {
+						"type": "github",
+						"url": "release-argus/Argus"},
+					"options": {
+						"interval": "foo"}
+				}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `\{"message":"create .* failed.*options:.*interval:.*invalid.*"\}`,
 		},
 		"edit service": {
-			serviceName: stringPtr("__name__"),
-			payload: `{
-		"name": "__name__",
-		"latest_version": {
-		    "type":"url",
-		    "url":"https://valid.release-argus.io/plain",
-		    "url_commands": [
-		        {
-		            "type":"regex",
-		            "regex":"stable version: \"v?([0-9.]+)\""
-		        }
-		    ]
-		},
-		"options": {
-		    "interval": "99m"
-		}}`,
+			serviceName: test.StringPtr("__name__"),
+			payload: `
+				{
+					"name": "__name__",
+					"latest_version": {
+						"type": "url",
+						"url": "https://valid.release-argus.io/plain",
+						"url_commands": [
+							{
+								"type": "regex",
+								"regex": "stable version: \"v?([0-9.]+)\""}]},
+					"options": {
+						"interval": "99m"}
+				}`,
 			wantStatusCode:      http.StatusOK,
 			wantBody:            "^$",
 			wantLatestVersion:   "[0-9.]+",
 			wantDeployedVersion: "",
 		},
 		"edit service that doesn't exist": {
-			serviceName: stringPtr("service that doesn't exist"),
-			payload: `{
-		"latest_version": {
-		    "type":"url",
-		    "url":"https://valid.release-argus.io/plain",
-		    "url_commands": [
-		        {
-		            "type":"regex",
-		            "regex":"stable version: \"v?([0-9.]+)\""
-		        }
-		    ]
-		},
-		"options": {
-			"interval": "99m"
-		}}`,
+			serviceName: test.StringPtr("service that doesn't exist"),
+			payload: `
+				{
+					"latest_version": {
+						"type": "url",
+						"url": "https://valid.release-argus.io/plain",
+						"url_commands": [
+							{
+								"type": "regex",
+								"regex": "stable version: \"v?([0-9.]+)\""}]},
+					"options": {
+						"interval": "99m"}
+				}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `^\{"message":"edit .* failed.*"\}`,
 		},
 		"edit service that doesn't query successfully": {
-			serviceName: stringPtr("__name__"),
-			payload: `{
-		"name": "__name__",
-		"latest_version": {
-		    "type":"url",
-		    "url":"https://valid.release-argus.io/plain",
-		    "url_commands": [
-		        {
-		            "type":"regex",
-		            "regex":"stable version: \"v-([0-9.]+)\""
-		        }
-		    ]
-		},
-		"options": {
-			"interval": "99m"
-		}}`,
+			serviceName: test.StringPtr("__name__"),
+			payload: `
+				{
+					"name": "__name__",
+					"latest_version": {
+						"type": "url",
+						"url": "https://valid.release-argus.io/plain",
+						"url_commands": [
+							{
+								"type": "regex",
+								"regex": "stable version: \"v-([0-9.]+)\""}]},
+					"options": {
+						"interval": "99m"}
+				}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       `^\{"message":"edit .* failed.*didn't return any matches"\}`,
 		},
@@ -809,6 +812,508 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 							msg)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestFillNotifyTemplate(t *testing.T) {
+	testFile := "TestFillNotifyTemplate.yml"
+	masterAPI := testAPI(testFile)
+	tNotify := test.TestShoutrrr(false, false)
+	tNotify.ID = "test"
+	defaultNotifyType := tNotify.Type
+	defer os.RemoveAll(testFile)
+	// GIVEN a template and a request to populate it with the relevant config values
+	tests := map[string]struct {
+		knownService       bool
+		serviceNotifyType  *string
+		knownServiceNotify bool
+		knownNotify        bool
+		notifyID           string
+		notifyType         *string
+		want               *shoutrrr.Shoutrrr
+		err                string
+	}{
+		"new Service, no Main": {
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				defaultNotifyType,
+				&map[string]string{},
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"new Service, no Main - no type": {
+			notifyType: test.StringPtr(""),
+			err:        `type is required`,
+		},
+		"new Service, no Main - invalid type": {
+			notifyType: test.StringPtr("something"),
+			err:        `type "something" is invalid`,
+		},
+		"new Service, no Main - type from ID": {
+			notifyType: test.StringPtr(""),
+			notifyID:   "gotify",
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				"",
+				&map[string]string{},
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"new Service, have Main - type from Main": {
+			notifyType:  test.StringPtr(""),
+			knownNotify: true,
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				"",
+				&map[string]string{},
+				nil,
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"new Service, have Main": {
+			knownNotify: true,
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				defaultNotifyType,
+				&map[string]string{},
+				nil,
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"same Service, no Main, no service_notify": {
+			knownService: true,
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				defaultNotifyType,
+				&map[string]string{},
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"same Service, no Main, have service_notify": {
+			knownService:       true,
+			knownServiceNotify: true,
+			want: shoutrrr.New(
+				nil, "",
+				test.CopyMapPtr(tNotify.Options),
+				test.CopyMapPtr(tNotify.Params),
+				defaultNotifyType,
+				test.CopyMapPtr(tNotify.URLFields),
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"same Service, no Main, have service_notify - type from original": {
+			notifyType:         test.StringPtr(""),
+			knownService:       true,
+			knownServiceNotify: true,
+			want: shoutrrr.New(
+				nil, "",
+				test.CopyMapPtr(tNotify.Options),
+				test.CopyMapPtr(tNotify.Params),
+				defaultNotifyType,
+				test.CopyMapPtr(tNotify.URLFields),
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"same Service, have Main, no service_notify": {
+			knownService: true,
+			knownNotify:  true,
+			want: shoutrrr.New(
+				nil, "",
+				&map[string]string{},
+				&map[string]string{},
+				defaultNotifyType,
+				&map[string]string{},
+				nil,
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+		"same Service, have Main, have service_notify": {
+			knownService:       true,
+			knownServiceNotify: true,
+			knownNotify:        true,
+			want: shoutrrr.New(
+				nil, "",
+				test.CopyMapPtr(tNotify.Options),
+				test.CopyMapPtr(tNotify.Params),
+				defaultNotifyType,
+				test.CopyMapPtr(tNotify.URLFields),
+				nil,
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
+			),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			api := API{}
+			// api.Config = masterAPI.Config
+			api.Config = &config.Config{}
+			api.Config.Defaults = masterAPI.Config.Defaults
+			api.Config.HardDefaults = masterAPI.Config.HardDefaults
+			serviceName := strings.ReplaceAll(name, " ", "_")
+			if tc.notifyID == "" {
+				tc.notifyID = serviceName + "__notify"
+			}
+			// tc.notifyType used for template
+			if tc.notifyType == nil {
+				str := strings.Clone(defaultNotifyType)
+				tc.notifyType = &str
+			}
+			// notifyType used for Service/Main Notify
+			notifyType := *tc.notifyType
+			if notifyType == "" {
+				notifyType = defaultNotifyType
+			}
+			// Create the Service we'll be looking at
+			if tc.knownService {
+				api.Config.Service = make(map[string]*service.Service)
+				api.Config.Service[serviceName] = &service.Service{}
+				api.Config.Service[serviceName].Notify = make(map[string]*shoutrrr.Shoutrrr)
+				// Create the Notify in that service
+				if tc.knownServiceNotify {
+					tNotify := test.TestShoutrrr(false, false)
+					tNotify.Type = notifyType
+					tNotify.ID = tc.notifyID
+					api.Config.Service[serviceName].Notify[tc.notifyID] = tNotify
+				}
+			}
+			// Create the Notify in the .Main
+			if name == "new service, have main - type from main" {
+				fmt.Println()
+			}
+			if tc.knownNotify {
+				api.Config.Notify = shoutrrr.SliceDefaults{}
+				api.Config.Notify[tc.notifyID] = shoutrrr.NewDefaults(
+					notifyType,
+					test.CopyMapPtr(tNotify.Options),
+					test.CopyMapPtr(tNotify.Params),
+					test.CopyMapPtr(tNotify.URLFields))
+			}
+			template := test.TestShoutrrr(false, false)
+			template.Type = *tc.notifyType
+			template.ID = tc.notifyID
+			template.Main = api.Config.Notify[tc.notifyID]
+			if tc.err == "" {
+				tc.err = "^$"
+			}
+
+			// WHEN that request is sent to fillNotifyTemplate
+			err := fillNotifyTemplate(
+				template,
+				api.Config,
+				tc.notifyID,
+				serviceName,
+				"https://example.com")
+
+			// THEN the expected error is returned
+			errStr := util.ErrorToString(err)
+			if !util.RegexCheck(tc.err, errStr) {
+				t.Errorf("want error %q, not %q",
+					tc.err, errStr)
+			}
+			if tc.err != "^$" {
+				return
+			}
+			// AND the template is modified as expected
+			if api.Config.Notify[tc.notifyID] != nil {
+				tc.want.Main = api.Config.Notify[tc.notifyID]
+			}
+			if template.String("") != tc.want.String("") {
+				t.Errorf("struct mismatch!\ngot:  %q\nwant: %q",
+					template.String(""), tc.want.String(""))
+			}
+			// AND the template is given the correct Main
+			if template.Main != tc.want.Main {
+				t.Errorf("Expected .Main not given, want %v, not %v",
+					&tc.want.Main, &template.Main)
+			}
+			// AND the template is given the correct Defaults
+			if template.Defaults != tc.want.Defaults {
+				t.Errorf("Expected .Defaults not given, want %v, not %v",
+					&tc.want.Defaults, &template.Defaults)
+			}
+			// AND the template is given the correct HardDefaults
+			if template.HardDefaults != tc.want.HardDefaults {
+				t.Errorf("Expected .HardDefaults not given, want %v, not %v",
+					&tc.want.HardDefaults, &template.HardDefaults)
+			}
+		})
+	}
+}
+
+func TestHTTP_NotifyTest(t *testing.T) {
+	// GIVEN an API and a request to test a notify
+	file := "TestHTTP_NotifyTest.yml"
+	api := testAPI(file)
+	defer os.RemoveAll(file)
+	validNotify := test.TestShoutrrr(false, false)
+	api.Config.Notify = shoutrrr.SliceDefaults{}
+	api.Config.Notify["test"] = shoutrrr.NewDefaults(
+		"gotify",
+		test.CopyMapPtr(validNotify.Options),
+		test.CopyMapPtr(validNotify.Params),
+		test.CopyMapPtr(validNotify.URLFields))
+	api.Config.Service["test"].Notify = map[string]*shoutrrr.Shoutrrr{
+		"test":    test.TestShoutrrr(false, false),
+		"no_main": test.TestShoutrrr(false, false)}
+	tests := map[string]struct {
+		queryParams map[string]string
+		wantStatus  int
+		wantMsg     string
+	}{
+		"no query params": {
+			queryParams: map[string]string{},
+			wantStatus:  http.StatusBadRequest,
+			wantMsg:     "service_name and notify_name/name are required",
+		},
+		"no service, new notify": {
+			queryParams: map[string]string{
+				"notify_name": "new_notify"},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "service_name and notify_name/name are required",
+		},
+		"new service, no new/old notify": {
+			queryParams: map[string]string{
+				"service_name": "new_service"},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "service_name and notify_name/name are required",
+		},
+		"new service, no main": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "ntfy"},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "url_fields:[^ ]+ +topic: .*required",
+		},
+		"new service, no main - invalid JSON, options": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "ntfy",
+				"options":      `{"fail": "missing closing bracket"`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "options:.* unexpected end of JSON input",
+		},
+		"new service, no main - options, invalid": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "ntfy",
+				"options":      `{"delay": "time"}`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `options:[^ ]+  delay: "[^"]+" <invalid>`,
+		},
+		"new service, have main - options, applied, delay ignored": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "test",
+				"options":      `{"delay": "24h"}`},
+			wantStatus: http.StatusOK,
+		},
+		"new service, no main - invalid JSON, url_fields": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "ntfy",
+				"url_fields":   `{"fail": "missing closing bracket"`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "url_fields:.* unexpected end of JSON input",
+		},
+		"new service, have main - url_fields, invalid": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "test",
+				"url_fields":   `{"port": "number?"}`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `invalid port`,
+		},
+		"new service, no main - invalid JSON, params": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "ntfy",
+				"params":       `{"fail": "missing closing bracket"`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "params:.* unexpected end of JSON input",
+		},
+		"new service, have main - params, invalid": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "test",
+				"params":       `{"priority": false}`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `cannot unmarshal bool into Go value of type string`,
+		},
+		"new service, no main - no type": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         ""},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `type is required`,
+		},
+		"new service, no main - unknown type": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         "new_notify",
+				"type":         "something"},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `type "something" is invalid`,
+		},
+		"new service, no main - type from ID": {
+			queryParams: map[string]string{
+				"notify_name":  "unknown",
+				"service_name": "also_unknown",
+				"name":         validNotify.Type,
+				"type":         "",
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "` + validNotify.URLFields["token"] + `"}`},
+			wantStatus: http.StatusOK,
+		},
+		"new service, have main - type from Main": {
+			queryParams: map[string]string{
+				"notify_name":  "test",
+				"service_name": "unknown",
+				"name":         "test",
+				"type":         "",
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "` + validNotify.URLFields["token"] + `"}`},
+			wantStatus: http.StatusOK,
+		},
+		"same service, have main - type from original": {
+			queryParams: map[string]string{
+				"notify_name":  "test",
+				"service_name": "test",
+				"name":         "new_notify",
+				"type":         "",
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "<secret>"}`},
+			wantStatus: http.StatusOK,
+		},
+		"same service, have main - can remove vars": {
+			queryParams: map[string]string{
+				"notify_name":  "test",
+				"service_name": "test",
+				"name":         "new_notify",
+				"type":         "",
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": ""}`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "url_fields:.* token: .*required",
+		},
+		"same service, no main - unsent vars inherited": {
+			queryParams: map[string]string{
+				"notify_name":  "no_main",
+				"service_name": "test",
+				"name":         "new_notify",
+				"type":         "",
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `"}`},
+			wantStatus: http.StatusOK,
+		},
+		"same service, have main - fail send": {
+			queryParams: map[string]string{
+				"notify_name":  "test",
+				"service_name": "test",
+				"name":         "test",
+				"type":         validNotify.Type,
+				"url_fields": `{
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "invalid"}`},
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "invalid .* token",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.wantMsg == "" {
+				tc.wantMsg = "^$"
+			}
+			if tc.queryParams["url_fields"] != "" {
+				tc.queryParams["url_fields"] = trimJSON(tc.queryParams["url_fields"])
+			}
+
+			// WHEN that request is sent
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", nil)
+			// add the params to the URL
+			params := url.Values{}
+			for k, v := range tc.queryParams {
+				params.Set(k, v)
+			}
+			req.URL.RawQuery = params.Encode()
+			w := httptest.NewRecorder()
+			api.httpNotifyTest(w, req)
+			res := w.Result()
+			defer res.Body.Close()
+
+			// THEN the expected status code is returned
+			if res.StatusCode != tc.wantStatus {
+				t.Errorf("Status code: Want: %d, Got: %d",
+					tc.wantStatus, res.StatusCode)
+			}
+			// AND the expected message is contained in the body
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("unexpected error - %v",
+					err)
+			}
+			// Marshal message out of JSON data {"message": text}
+			var msg map[string]string
+			err = json.Unmarshal(data, &msg)
+			if !util.RegexCheck(tc.wantMsg, msg["message"]) {
+				t.Errorf("want match for %q\nnot: %q",
+					tc.wantMsg, msg["message"])
 			}
 		})
 	}

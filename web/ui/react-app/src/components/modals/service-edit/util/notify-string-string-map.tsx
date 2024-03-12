@@ -4,12 +4,15 @@ import {
   NotifyOpsGenieTarget,
 } from "types/config";
 
+import { StringFieldArray } from "types/service-edit";
+
 interface StringAnyMap {
   [key: string]:
     | string
     | number
     | boolean
     | undefined
+    | StringFieldArray
     | NotifyNtfyAction[]
     | NotifyOpsGenieTarget[]
     | HeaderType[];
@@ -25,8 +28,8 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
       if (["responders", "visibleto"].includes(key)) {
         // `value` empty means defaults were used. Skip.
         if (
-          (value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value || "") === ""
+          !(value as NotifyOpsGenieTarget[]).find(
+            (item) => (item.value || "") !== ""
           )
         ) {
           return result;
@@ -35,12 +38,13 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         result[key] = convertOpsGenieTargetToString(
           value as NotifyOpsGenieTarget[]
         );
-        // ntfy.actions
+        // (ntfy|opsgenie).actions
       } else if (key === "actions") {
-        // `label` empty means defaults were used. Skip.
+        // Ntfy - `label` empty means defaults were used. Skip.
+        // OpsGenie - `arg` empty means defaults were used. Skip.
         if (
-          (value as NotifyNtfyAction[]).find(
-            (item) => (item.label || "") === ""
+          !(value as StringFieldArray).find(
+            (item) => (item.label ?? item.arg ?? "") !== ""
           )
         ) {
           return result;
@@ -51,8 +55,8 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
       } else {
         // `value` empty means defaults were used. Skip.
         if (
-          (value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value || "") === ""
+          !(value as NotifyOpsGenieTarget[]).find(
+            (item) => (item.value ?? "") !== ""
           )
         ) {
           return result;

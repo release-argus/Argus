@@ -6,12 +6,12 @@ import {
   Routes,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactElement } from "react";
 
 import { Container } from "react-bootstrap";
 import Header from "components/header";
 import { ModalProvider } from "contexts/modal";
 import { NotificationProvider } from "contexts/notification";
+import { ReactElement } from "react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { WebSocketProvider } from "contexts/websocket";
 import { getBasename } from "utils";

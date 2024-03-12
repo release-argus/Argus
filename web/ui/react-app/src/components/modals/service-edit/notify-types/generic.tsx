@@ -5,14 +5,16 @@ import {
   FormSelect,
 } from "components/generic/form";
 import { NotifyGenericRequestMethods, NotifyGenericType } from "types/config";
+import {
+  convertHeadersFromString,
+  normaliseForSelect,
+} from "components/modals/service-edit/util";
 import { useEffect, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
-import { NotifyOptions } from "./shared";
-import { convertHeadersFromString } from "../util/api-ui-conversions";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 
 const GenericRequestMethodOptions: {

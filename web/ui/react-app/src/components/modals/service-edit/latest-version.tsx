@@ -62,22 +62,20 @@ const EditServiceLatestVersion: FC<Props> = ({
                 }
                 isURL={latestVersionType !== "github"}
               />
-              <>
-                <BooleanWithDefault
-                  name="latest_version.use_prerelease"
-                  label="Use pre-releases"
-                  defaultValue={
-                    defaults?.use_prerelease || hard_defaults?.use_prerelease
-                  }
-                />
-              </>
+              <BooleanWithDefault
+                name="latest_version.use_prerelease"
+                label="Use pre-releases"
+                defaultValue={
+                  defaults?.use_prerelease ?? hard_defaults?.use_prerelease
+                }
+              />
             </>
           ) : (
             <BooleanWithDefault
               name="latest_version.allow_invalid_certs"
               label="Allow Invalid Certs"
               defaultValue={
-                defaults?.allow_invalid_certs ||
+                defaults?.allow_invalid_certs ??
                 hard_defaults?.allow_invalid_certs
               }
             />

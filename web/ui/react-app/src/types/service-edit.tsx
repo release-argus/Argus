@@ -15,6 +15,8 @@ import {
   WebHookType,
 } from "./config";
 
+export type StringFieldArray = { [key: string]: string }[];
+
 export interface ServiceEditModalData {
   service?: ServiceEditType;
 }
@@ -104,6 +106,7 @@ export interface NotifyEditType {
           | string
           | number
           | boolean
+          | StringFieldArray
           | NotifyNtfyAction[]
           | NotifyOpsGenieTarget[]
           | NotifyHeaderType[]
@@ -121,6 +124,7 @@ export interface NotifyEditType {
       | string
       | number
       | boolean
+      | StringFieldArray
       | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
       | NotifyHeaderType[];

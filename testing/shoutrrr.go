@@ -42,7 +42,12 @@ func NotifyTest(
 	// Find the Shoutrrr to test
 	notify := findShoutrrr(*flag, cfg, log, &logFrom)
 
-	err := notify.TestSend()
+	// Default webURL if not set
+	if notify.ServiceStatus.WebURL == nil {
+		webURL := "https://example.com/web_url"
+		notify.ServiceStatus.WebURL = &webURL
+	}
+	err := notify.TestSend("https://example.com/service_url")
 
 	log.Info(fmt.Sprintf("Message sent successfully with %q config\n", *flag), logFrom, err == nil)
 	log.Fatal(fmt.Sprintf("Message failed to send with %q config\n%s\n", *flag, util.ErrorToString(err)), logFrom, err != nil)

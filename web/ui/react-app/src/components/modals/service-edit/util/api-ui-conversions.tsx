@@ -8,6 +8,7 @@ import {
   ServiceEditAPIType,
   ServiceEditOtherData,
   ServiceEditType,
+  StringFieldArray,
 } from "types/service-edit";
 
 import { urlCommandsTrimArray } from "./url-command-trim";
@@ -39,7 +40,7 @@ export const convertAPIServiceDataEditToUI = (
           ),
           docker: {
             ...serviceData?.latest_version?.require?.docker,
-            type: serviceData?.latest_version?.require?.docker?.type || "",
+            type: serviceData?.latest_version?.require?.docker?.type ?? "",
           },
         },
       },
@@ -47,16 +48,16 @@ export const convertAPIServiceDataEditToUI = (
       deployed_version: {
         ...serviceData?.deployed_version,
         basic_auth: {
-          username: serviceData?.deployed_version?.basic_auth?.username || "",
-          password: serviceData?.deployed_version?.basic_auth?.password || "",
+          username: serviceData?.deployed_version?.basic_auth?.username ?? "",
+          password: serviceData?.deployed_version?.basic_auth?.password ?? "",
         },
         headers:
           serviceData?.deployed_version?.headers?.map((header, key) => ({
             ...header,
             oldIndex: key,
-          })) || [],
+          })) ?? [],
         template_toggle:
-          (serviceData?.deployed_version?.regex_template || "") !== "",
+          (serviceData?.deployed_version?.regex_template ?? "") !== "",
       },
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),
@@ -106,6 +107,25 @@ export const convertAPIServiceDataEditToUI = (
       web_url: "",
     },
   };
+};
+
+// convertStringToFieldArray will convert a JSON string to a {[key]: string}[]
+export const convertStringToFieldArray = (
+  str?: string,
+  key = "arg"
+): StringFieldArray | undefined => {
+  if (str === undefined || str === "") return undefined;
+
+  let list: string[];
+  try {
+    list = JSON.parse(str);
+    list = Array.isArray(list) ? list : [str];
+  } catch (error) {
+    list = [str];
+  }
+
+  // map the []string to {arg: string} for the form
+  return list.map((arg: string) => ({ [key]: arg }));
 };
 
 export const convertHeadersFromString = (
@@ -207,6 +227,7 @@ export const convertNotifyParams = (
     case "opsgenie":
       return {
         ...params,
+        actions: convertStringToFieldArray(params?.actions),
         details: convertHeadersFromString(params?.details),
         targets: convertOpsGenieTargetFromString(params?.targets),
       };

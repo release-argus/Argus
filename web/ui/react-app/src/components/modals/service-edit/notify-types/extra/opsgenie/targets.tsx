@@ -1,4 +1,11 @@
-import { Button, ButtonGroup, Col, FormGroup, Row } from "react-bootstrap";
+import {
+  Button,
+  ButtonGroup,
+  Col,
+  FormGroup,
+  Row,
+  Stack,
+} from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
@@ -23,11 +30,18 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
     name: name,
   });
   const addItem = useCallback(() => {
-    append({ type: "team", sub_type: "id", value: "" }, { shouldFocus: false });
+    append(
+      {
+        type: "team",
+        sub_type: "id",
+        value: "",
+      },
+      { shouldFocus: false }
+    );
   }, []);
   const removeLast = useCallback(() => {
     remove(fields.length - 1);
-  }, [fields]);
+  }, [fields.length]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
@@ -79,15 +93,19 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
           </ButtonGroup>
         </Col>
       </Row>
-      {fields.map(({ id }, index) => (
-        <Row key={id}>
-          <OpsGenieTarget
-            name={`${name}.${index}`}
-            removeMe={() => remove(index)}
-            defaults={useDefaults ? defaults?.[index] : undefined}
-          />
-        </Row>
-      ))}
+      <Stack>
+        {fields.map(({ id }, index) => {
+          return (
+            <Row key={id}>
+              <OpsGenieTarget
+                name={`${name}.${index}`}
+                removeMe={() => remove(index)}
+                defaults={useDefaults ? defaults?.[index] : undefined}
+              />
+            </Row>
+          );
+        })}
+      </Stack>
     </FormGroup>
   );
 };

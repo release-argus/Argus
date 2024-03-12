@@ -7,9 +7,9 @@ import {
 import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
-import NotifyOptions from "./shared";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { normaliseForSelect } from "components/modals/service-edit/util";
 import { useFormContext } from "react-hook-form";
 
 export const BarkSchemeOptions = [
@@ -116,7 +116,7 @@ const BARK = ({
         normaliseForSelect(
           BarkSchemeOptions,
           getValues(`${name}.params.scheme`)
-        )?.value || "https"
+        )?.value ?? "https"
       );
 
     // Normalise selected sound, or default it
@@ -127,7 +127,7 @@ const BARK = ({
       setValue(
         `${name}.params.sound`,
         normaliseForSelect(BarkSoundOptions, getValues(`${name}.params.sound`))
-          ?.value || ""
+          ?.value ?? ""
       );
   }, []);
 

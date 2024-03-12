@@ -12,7 +12,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { globalOrDefault } from "./notify-types/util";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 
 interface Props {
   name: string;
@@ -33,16 +33,19 @@ const EditServiceWebHook: FC<Props> = ({
   defaults,
   hard_defaults,
 }) => {
-  const webHookTypeOptions = [
+  const webHookTypeOptions: {
+    label: string;
+    value: NonNullable<WebHookType["type"]>;
+  }[] = [
     { label: "GitHub", value: "github" },
     { label: "GitLab", value: "gitlab" },
   ];
 
   const { setValue, trigger } = useFormContext();
 
-  const itemName = useWatch({ name: `${name}.name` });
-  const itemType = useWatch({ name: `${name}.type` });
-  const global = globals && globals[itemName];
+  const itemName: string = useWatch({ name: `${name}.name` });
+  const itemType: WebHookType["type"] = useWatch({ name: `${name}.type` });
+  const global = globals?.[itemName];
   useEffect(() => {
     global?.type && setValue(`${name}.type`, global.type);
   }, [global]);
@@ -80,11 +83,10 @@ const EditServiceWebHook: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this WebHook as a base" />
               <Form.Select
                 value={
-                  globals
-                    ? itemName !== "" &&
-                      Object.keys(globals).indexOf(itemName) !== -1
-                      ? itemName
-                      : ""
+                  globals &&
+                  itemName !== "" &&
+                  Object.keys(globals).indexOf(itemName) !== -1
+                    ? itemName
                     : ""
                 }
                 onChange={(e) => setValue(`${name}.name`, e.target.value)}
@@ -137,8 +139,8 @@ const EditServiceWebHook: FC<Props> = ({
             name={`${name}.allow_invalid_certs`}
             label="Allow Invalid Certs"
             defaultValue={
-              global?.allow_invalid_certs ||
-              defaults?.allow_invalid_certs ||
+              global?.allow_invalid_certs ??
+              defaults?.allow_invalid_certs ??
               hard_defaults?.allow_invalid_certs
             }
           />
@@ -168,9 +170,9 @@ const EditServiceWebHook: FC<Props> = ({
             col_xs={6}
             label="Max tries"
             defaultVal={`${
-              global?.max_tries ||
-              defaults?.max_tries ||
-              hard_defaults?.max_tries ||
+              global?.max_tries ??
+              defaults?.max_tries ??
+              hard_defaults?.max_tries ??
               ""
             }`}
             onRight
@@ -190,8 +192,8 @@ const EditServiceWebHook: FC<Props> = ({
             label="Silent fails"
             tooltip="Notify if WebHook fails max tries times"
             defaultValue={
-              global?.silent_fails ||
-              defaults?.silent_fails ||
+              global?.silent_fails ??
+              defaults?.silent_fails ??
               hard_defaults?.silent_fails
             }
           />

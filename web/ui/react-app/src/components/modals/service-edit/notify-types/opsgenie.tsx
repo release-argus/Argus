@@ -1,14 +1,20 @@
-import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
+import {
+  FormItem,
+  FormKeyValMap,
+  FormLabel,
+  FormList,
+} from "components/generic/form";
 import {
   convertHeadersFromString,
   convertOpsGenieTargetFromString,
-} from "../util/api-ui-conversions";
+  convertStringToFieldArray,
+} from "components/modals/service-edit/util";
 import { useEffect, useMemo } from "react";
 
 import { NotifyOpsGenieType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { OpsGenieTargets } from "./extra";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useFormContext } from "react-hook-form";
 
 const OPSGENIE = ({
@@ -28,6 +34,13 @@ const OPSGENIE = ({
 
   const convertedDefaults = useMemo(
     () => ({
+      actions: convertStringToFieldArray(
+        globalOrDefault(
+          global?.params?.actions as string,
+          defaults?.params?.actions as string,
+          hard_defaults?.params?.actions as string
+        )
+      ),
       details: convertHeadersFromString(
         globalOrDefault(
           global?.params?.details as string,
@@ -54,8 +67,16 @@ const OPSGENIE = ({
   );
 
   useEffect(() => {
-    const details = getValues(`${name}.params.details`);
+    const actions = getValues(`${name}.params.actions`);
+    // ensure we don't have another types actions
+    for (const item of actions) {
+      if ((item.arg || "") === "") {
+        setValue(`${name}.params.actions`, []);
+        break;
+      }
+    }
 
+    const details = getValues(`${name}.params.details`);
     if (typeof details === "string")
       setValue(`${name}.params.details`, convertHeadersFromString(details));
 
@@ -121,15 +142,11 @@ const OPSGENIE = ({
       </>
       <>
         <FormLabel text="Params" heading />
-        <FormItem
+        <FormList
           name={`${name}.params.actions`}
           label="Actions"
           tooltip="Custom actions that will be available for the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.actions,
-            defaults?.params?.actions,
-            hard_defaults?.params?.actions
-          )}
+          defaults={convertedDefaults.actions}
         />
         <FormItem
           name={`${name}.params.alias`}
@@ -140,7 +157,6 @@ const OPSGENIE = ({
             defaults?.params?.alias,
             hard_defaults?.params?.alias
           )}
-          onRight
         />
         <FormItem
           name={`${name}.params.description`}
@@ -151,6 +167,7 @@ const OPSGENIE = ({
             defaults?.params?.description,
             hard_defaults?.params?.description
           )}
+          onRight
         />
         <FormItem
           name={`${name}.params.note`}
@@ -161,7 +178,6 @@ const OPSGENIE = ({
             defaults?.params?.note,
             hard_defaults?.params?.note
           )}
-          onRight
         />
         <FormKeyValMap
           name={`${name}.params.details`}

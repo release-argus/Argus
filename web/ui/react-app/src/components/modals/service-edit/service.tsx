@@ -16,7 +16,7 @@ import EditServiceWebHooks from "components/modals/service-edit/webhooks";
 import { FormItem } from "components/generic/form";
 import { Loading } from "./loading";
 import { WebHookType } from "types/config";
-import { convertAPIServiceDataEditToUI } from "./util/api-ui-conversions";
+import { convertAPIServiceDataEditToUI } from "components/modals/service-edit/util";
 import { fetchJSON } from "utils";
 import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -112,6 +112,8 @@ const EditService: FC<Props> = ({ name }) => {
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
       />
       <EditServiceNotifys
+        serviceName={name}
+        originals={defaultData?.notify}
         globals={otherOptionsData?.notify}
         defaults={otherOptionsData?.defaults?.notify}
         hard_defaults={otherOptionsData?.hard_defaults?.notify}

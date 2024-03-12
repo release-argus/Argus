@@ -24,7 +24,7 @@ const RENDER_TYPE_COMPONENTS: {
 
 const RenderAction: FC<RenderTypeProps> = ({ name, targetType, defaults }) => {
   const RenderTypeComponent =
-    RENDER_TYPE_COMPONENTS[targetType as NotifyNtfyActionTypes];
+    RENDER_TYPE_COMPONENTS[(targetType || "view") as NotifyNtfyActionTypes];
 
   return <RenderTypeComponent name={name} defaults={defaults} />;
 };

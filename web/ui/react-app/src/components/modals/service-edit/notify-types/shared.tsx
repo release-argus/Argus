@@ -1,7 +1,7 @@
 import { FormItem, FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyOptionsType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { memo } from "react";
 
 export const NotifyOptions = ({

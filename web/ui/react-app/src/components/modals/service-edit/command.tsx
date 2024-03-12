@@ -18,6 +18,11 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
+  const placeholder = (index: number) => {
+    if (index === 0) return `e.g. "/bin/bash"`;
+    if (index === 1) return `e.g. "/opt/script.sh"`;
+    return `e.g. "-arg${index - 1}"`;
+  };
 
   return (
     <Col xs={12}>
@@ -27,13 +32,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
             key={id}
             name={`${name}.${argIndex}.arg`}
             required
-            placeholder={
-              argIndex === 0
-                ? `e.g. "/bin/bash"`
-                : argIndex === 1
-                ? `e.g. "/opt/script.sh"`
-                : `e.g. "-arg${argIndex - 1}"`
-            }
+            placeholder={placeholder(argIndex)}
             onRight={argIndex % 2 === 1}
           />
         ))}

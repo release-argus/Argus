@@ -1,6 +1,6 @@
 import { FormItem } from "components/generic/form";
 
-const REGEX = ({ name }: { name: string }) => (
+const REPLACE = ({ name }: { name: string }) => (
   <>
     <FormItem
       key="old"
@@ -24,4 +24,4 @@ const REGEX = ({ name }: { name: string }) => (
   </>
 );
 
-export default REGEX;
+export default REPLACE;

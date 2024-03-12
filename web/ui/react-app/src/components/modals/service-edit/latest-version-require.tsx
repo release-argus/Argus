@@ -1,7 +1,10 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
 import {
   DefaultDockerFilterRegistryType,
+  DefaultDockerFilterType,
   DefaultLatestVersionFiltersType,
+  DockerFilterRegistryType,
+  DockerFilterType,
 } from "types/config";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
@@ -26,8 +29,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 }) => {
   const { setValue } = useFormContext();
 
-  const defaultDockerRegistry =
-    defaults?.docker?.type || hard_defaults?.docker?.type;
+  const defaultDockerRegistry: DefaultDockerFilterType["type"] =
+    defaults?.docker?.type ?? hard_defaults?.docker?.type;
   const dockerRegistryOptions = useMemo(() => {
     if (defaultDockerRegistry === undefined) return DockerRegistryOptions;
 
@@ -48,15 +51,16 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
     // Unknown default registry, return without this default.
     return DockerRegistryOptions;
   }, [defaultDockerRegistry]);
-  const dockerRegistry = useWatch({
+  const dockerRegistry: DockerFilterType["type"] = useWatch({
     name: "latest_version.require.docker.type",
   });
-  const selectedDockerRegistry = dockerRegistry || defaultDockerRegistry;
+  const selectedDockerRegistry = (dockerRegistry ||
+    defaultDockerRegistry) as DockerFilterRegistryType;
   const showUsernameField = (dockerRegistry || defaultDockerRegistry) === "hub";
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
-    if ((selectedDockerRegistry || "") === "")
+    if ((selectedDockerRegistry ?? "") === "")
       setValue("latest_version.require.docker.type", "hub");
   }, []);
 
@@ -121,7 +125,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
                   defaults?.docker?.[
                     selectedDockerRegistry
                   ] as DefaultDockerFilterRegistryType
-                )?.username ||
+                )?.username ??
                 (
                   hard_defaults?.docker?.[
                     selectedDockerRegistry
@@ -141,7 +145,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
                 defaults?.docker?.[
                   selectedDockerRegistry
                 ] as DefaultDockerFilterRegistryType
-              )?.token ||
+              )?.token ??
               (
                 hard_defaults?.docker?.[
                   selectedDockerRegistry

@@ -1,10 +1,10 @@
 import { Button, Col, Row } from "react-bootstrap";
 import { FC, memo, useEffect } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
+import { NotifyNtfyAction, NotifyNtfyActionTypes } from "types/config";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NotifyNtfyAction } from "types/config";
 import RenderAction from "./render";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
@@ -16,7 +16,7 @@ interface Props {
 
 const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
   const { setValue } = useFormContext();
-  const typeOptions = [
+  const typeOptions: { label: string; value: NotifyNtfyActionTypes }[] = [
     { label: "View", value: "view" },
     { label: "HTTP", value: "http" },
     { label: "Broadcast", value: "broadcast" },
@@ -33,14 +33,13 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 
   // Set Select's to the defaults
   useEffect(() => {
-    if (defaults !== undefined) setValue(`${name}.action`, defaults.action);
-    if (defaults?.method !== undefined)
-      setValue(`${name}.method`, defaults.method);
+    if (defaults?.action) setValue(`${name}.action`, defaults.action);
+    if (defaults?.method) setValue(`${name}.method`, defaults.method);
   }, []);
 
   return (
     <>
-      <Col xs={1} style={{ paddingBottom: "0.25rem" }}>
+      <Col xs={2} sm={1} style={{ padding: "0.25rem" }}>
         <Button
           className="btn-secondary-outlined btn-icon-center"
           variant="secondary"

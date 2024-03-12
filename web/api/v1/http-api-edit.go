@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -418,28 +419,62 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 // notify_name: notify to test
 // service_name: service to test notify for
 // ...payload: config to test notify with
-
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
-	notify_name := mux.Vars(r)["notify_name"]
-	service_name := mux.Vars(r)["service_name"]
+	queryParams := r.URL.Query()
+	oldNotifyName := util.DefaultIfNil(getParam(&queryParams, "notify_name"))
+	newNotifyName := util.DefaultIfNil(getParam(&queryParams, "name"))
+	notifyType := util.DefaultIfNil(getParam(&queryParams, "type"))
+	serviceName := util.DefaultIfNil(getParam(&queryParams, "service_name"))
+	serviceURL := util.DefaultIfNil(getParam(&queryParams, "service_url"))
+	webURL := util.DefaultIfNil(getParam(&queryParams, "web_url"))
+
 	tgt := fmt.Sprintf("Test %q of %q",
-		notify_name, service_name)
+		oldNotifyName, serviceName)
+	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 	api.Log.Verbose(tgt, logFrom, true)
 
 	// Set headers
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")
 
-	// Payload
-	payload := http.MaxBytesReader(w, r.Body, 102400)
-	// Create the new/edited service
-	var original *shoutrrr.Shoutrrr
-	if api.Config.Service[service_name] != nil {
-		original = api.Config.Service[service_name].Notify[notify_name]
+	// No `service_name` or notify referenced
+	if serviceName == "" || (oldNotifyName == "" || newNotifyName == "") {
+		failRequest(&w, "service_name and notify_name/name are required", http.StatusBadRequest)
+		return
 	}
-	notify, err := shoutrrr.FromPayload(&payload,
-		original, &logFrom,
+
+	// Create a template of the new/edited Notify
+	template := shoutrrr.New(
+		nil, newNotifyName,
+		nil,
+		nil,
+		notifyType,
+		nil,
+		api.Config.Notify[newNotifyName],
+		nil,
+		nil,
+	)
+
+	// Copy over values from the original Notify
+	err := fillNotifyTemplate(
+		template,
+		api.Config,
+		oldNotifyName,
+		serviceName,
+		webURL,
+	)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Produce a new Shoutrrr, copying the query param overrides into the template
+	notify, err := template.UseTemplate(
+		getParam(&queryParams, "options"),
+		getParam(&queryParams, "url_fields"),
+		getParam(&queryParams, "params"),
+		&logFrom,
 	)
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
@@ -448,7 +483,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Test the notify
-	err = notify.TestSend()
+	err = notify.TestSend(serviceURL)
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
@@ -458,5 +493,73 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Return 200
 	w.WriteHeader(http.StatusOK)
 	//nolint:errcheck
-	w.Write([]byte{})
+	w.Write([]byte(`{}`))
+}
+
+// fillNotifyTemplate will copy over values from the `serviceName.notifyName` in the `api` into `template`
+func fillNotifyTemplate(
+	template *shoutrrr.Shoutrrr,
+	cfg *config.Config,
+	notifyName string,
+	serviceName string,
+	webURL string,
+) (err error) {
+	// Lock OrderMutex to prevent changes while we're reading
+	cfg.OrderMutex.RLock()
+	defer cfg.OrderMutex.RUnlock()
+
+	// Get type from unedited Notify if an override wasn't already set
+	var original *shoutrrr.Shoutrrr
+	if cfg.Service[serviceName] != nil && cfg.Service[serviceName].Notify[notifyName] != nil {
+		original = cfg.Service[serviceName].Notify[notifyName]
+		if template.Type == "" {
+			template.Type = original.Type
+		}
+	}
+	templateType := template.Type
+	if templateType == "" {
+		if template.Main != nil {
+			templateType = template.Main.Type
+		}
+		if templateType == "" {
+			templateType = template.ID
+		}
+	}
+	template.Defaults = cfg.Defaults.Notify[templateType]
+	template.HardDefaults = cfg.HardDefaults.Notify[templateType]
+
+	// Type missing OR invalid (no hard defaults for this type)
+	if template.HardDefaults == nil {
+		if template.Type == "" {
+			err = fmt.Errorf("type is required")
+			return
+		}
+		err = fmt.Errorf("type %q is invalid", templateType)
+		return
+	}
+	// options/urlFields/params from the original
+	if original != nil {
+		template.Options = original.Options
+		template.URLFields = original.URLFields
+		template.Params = original.Params
+	} else {
+		// No original, so use empty options/urlFields/params
+		template.Options = map[string]string{}
+		template.URLFields = map[string]string{}
+		template.Params = map[string]string{}
+	}
+	template.ServiceStatus = &svcstatus.Status{}
+	testServiceName := "httpNotifyTest_" + serviceName
+	template.ServiceStatus.ServiceID = &testServiceName
+	template.ServiceStatus.WebURL = &webURL
+
+	// Handle undefined Defaults (reuse HardDefaults rather than create a new struct)
+	if template.Defaults == nil {
+		template.Defaults = template.HardDefaults
+	}
+	// Handle undefined Main
+	if template.Main == nil {
+		template.Main = template.Defaults
+	}
+	return
 }

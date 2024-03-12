@@ -36,7 +36,6 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 		params             map[string]string
 		main               *ShoutrrrDefaults
 		errsRegex          string
-		errsOptionsRegex   string
 		errsURLFieldsRegex string
 		errsParamsRegex    string
 	}{
@@ -731,11 +730,10 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 			// WHEN checkValuesForType is called
 			var (
 				errs          error
-				errsOptions   error
 				errsURLFields error
 				errsParams    error
 			)
-			shoutrrr.checkValuesForType("", &errs, &errsOptions, &errsURLFields, &errsParams)
+			shoutrrr.checkValuesForType("", &errs, &errsURLFields, &errsParams)
 
 			// THEN it err's when expected
 			// errs
@@ -748,17 +746,6 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 			if !match {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errsRegex, e)
-			}
-			// errsOptions
-			if tc.errsOptionsRegex == "" {
-				tc.errsOptionsRegex = "^$"
-			}
-			e = util.ErrorToString(errsOptions)
-			re = regexp.MustCompile(tc.errsOptionsRegex)
-			match = re.MatchString(e)
-			if !match {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errsOptionsRegex, e)
 			}
 			// errsURLFields
 			if tc.errsURLFieldsRegex == "" {
@@ -1317,7 +1304,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 			}
 
 			// WHEN TestSend is called
-			err := shoutrrr.TestSend()
+			err := shoutrrr.TestSend("https://example.com")
 
 			// THEN it err's when expected
 			if tc.wantErr && err == nil {

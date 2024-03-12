@@ -1,10 +1,9 @@
+import { ApprovalsToolbar, Service } from "components/approvals";
 import { ReactElement, useEffect, useMemo, useState } from "react";
 
-import ApprovalsToolbar from "components/approvals/toolbar";
 import { ApprovalsToolbarOptions } from "types/util";
 import { Container } from "react-bootstrap";
 import { OrderAPIResponse } from "types/summary";
-import Service from "components/approvals/service";
 import { fetchJSON } from "utils";
 import useLocalStorage from "hooks/local-storage";
 import { useQuery } from "@tanstack/react-query";

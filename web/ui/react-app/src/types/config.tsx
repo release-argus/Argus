@@ -14,6 +14,8 @@ import {
 
 import { TelegramParseModeOptions } from "components/modals/service-edit/notify-types/telegram";
 
+export type NonNullable<T> = Exclude<T, null | undefined>;
+
 export interface Dict<T> {
   [id: string]: T;
 }
@@ -113,7 +115,7 @@ export interface ServiceDashboardOptionsType {
 }
 export interface DockerFilterType {
   [key: string]: string | undefined;
-  type?: string;
+  type?: DockerFilterRegistryType;
   image?: string;
   tag?: string;
   username?: string;
@@ -148,9 +150,11 @@ export interface DefaultLatestVersionFiltersType {
   [key: string]: DefaultDockerFilterType | undefined;
   docker?: DefaultDockerFilterType;
 }
+
+export type DockerFilterRegistryType = "ghcr" | "hub" | "quay" | "";
 export interface DefaultDockerFilterType {
   [key: string]: string | DefaultDockerFilterRegistryType | undefined;
-  type?: string;
+  type?: DockerFilterRegistryType;
   ghcr?: DefaultDockerFilterRegistryType;
   hub?: DefaultDockerFilterRegistryType;
   quay?: DefaultDockerFilterRegistryType;
@@ -190,9 +194,9 @@ export interface HeaderType {
 
 export type CommandType = string[];
 
-export type URLCommandTypes = "regex" | "replace" | "split" | string;
+export type URLCommandTypes = "regex" | "replace" | "split";
 export interface URLCommandType {
-  [key: string]: string | URLCommandTypes | number | boolean | undefined;
+  [key: string]: string | number | boolean | undefined;
 
   type: URLCommandTypes;
   regex?: string; // regex
@@ -256,10 +260,12 @@ export interface NotifyType {
     [key: string]:
       | undefined
       | string
+      | string[]
       | number
       | boolean
       | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
+      | NotifyOpsGenieAction[]
       | { [key: string]: string };
   };
 }
@@ -444,7 +450,7 @@ export interface NotifyOpsGenieType extends NotifyType {
     port?: number;
   };
   params: {
-    actions?: string;
+    actions?: string | NotifyOpsGenieAction[];
     alias?: string;
     description?: string;
     details?: string | { [key: string]: string };
@@ -459,16 +465,12 @@ export interface NotifyOpsGenieType extends NotifyType {
     visibleto?: string | NotifyOpsGenieTarget[];
   };
 }
-// Format received from Argus
-export interface NotifyOpsGenieTargetIncoming {
-  [key: string]: undefined | string;
-  type: string;
-  id?: string;
-  name?: string;
-  username?: string;
+
+export interface NotifyOpsGenieAction {
+  arg: string;
 }
 export interface NotifyOpsGenieTarget {
-  type: string;
+  type: "team" | "user";
   sub_type: string;
   value: string;
 }
@@ -598,7 +600,7 @@ export interface WebHookType {
   [key: string]: string | boolean | number | undefined | HeaderType[];
   name?: string;
 
-  type?: string;
+  type?: "github" | "gitlab";
   url?: string;
   allow_invalid_certs?: boolean;
   custom_headers?: HeaderType[];

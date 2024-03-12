@@ -1,8 +1,8 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./shared";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyZulipType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 
 const ZULIP_CHAT = ({
   name,

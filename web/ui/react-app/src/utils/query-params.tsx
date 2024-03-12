@@ -1,5 +1,5 @@
 import { ArgType } from "types/service-edit";
-import { urlCommandsTrim } from "../components/modals/service-edit/util/url-command-trim";
+import { urlCommandsTrim } from "components/modals/service-edit/util";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DiffObject = { [key: string]: any };
@@ -103,7 +103,15 @@ export const convertToQueryParams = ({
               }
             : changedParams[key]
         );
-      } else modifiedObj = JSON.stringify(changedParams[key]);
+      }
+      // Include new undefined's in the JSONification
+      else
+        modifiedObj = JSON.stringify(changedParams[key], (key, value) => {
+          if (value === undefined) {
+            return null;
+          }
+          return value;
+        });
 
       // Skip empty objects
       if (modifiedObj === "{}") continue;

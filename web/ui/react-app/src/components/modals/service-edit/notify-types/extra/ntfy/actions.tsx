@@ -24,16 +24,23 @@ interface Props {
 }
 
 const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
-  const { trigger } = useFormContext();
+  const { trigger, getValues, setValue } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
   const addItem = useCallback(() => {
-    append({ action: "view" }, { shouldFocus: false });
+    append(
+      {
+        action: "view",
+        label: "",
+        url: "",
+      },
+      { shouldFocus: false }
+    );
   }, []);
   const removeLast = useCallback(() => {
     remove(fields.length - 1);
-  }, [fields]);
+  }, [fields.length]);
 
   const actionDefaults = useMemo(
     () => (defaults ? convertNtfyActionsFromString(defaults) : undefined),
@@ -43,22 +50,27 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => diffObjects(fieldValues, actionDefaults),
+    () => actionDefaults && diffObjects(fieldValues, actionDefaults),
     [fieldValues, defaults]
   );
   useEffect(() => {
     trigger(name);
   }, [useDefaults]);
 
-  // on load, give the defaults if not overridden
+  // on load, ensure we don't have another types actions and
+  // give the defaults if not overridden
   useEffect(() => {
-    if (useDefaults)
+    for (const item of getValues(name)) {
+      if ((item.action || "") === "") {
+        setValue(name, []);
+        break;
+      }
+    }
+    if (useDefaults) {
       actionDefaults?.forEach((dflt) => {
-        append(
-          { action: dflt.action, label: dflt.label, method: dflt.method },
-          { shouldFocus: false }
-        );
+        append({ action: dflt.action }, { shouldFocus: false });
       });
+    }
   }, []);
 
   return (
@@ -88,7 +100,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
           </ButtonGroup>
         </Col>
       </Row>
-      <Stack gap={1}>
+      <Stack>
         {fields.map(({ id }, index) => (
           <Row key={id}>
             <NtfyAction
