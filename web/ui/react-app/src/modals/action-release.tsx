@@ -110,11 +110,10 @@ const ActionReleaseModal = () => {
       isWebHook: boolean;
       unspecificTarget: boolean;
     }) =>
-      fetch(`api/v1/service/actions/${encodeURIComponent(data.service)}`, {
+      fetchJSON({url: `api/v1/service/actions/${encodeURIComponent(data.service)}`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: data.target }),
-      }),
+        body: JSON.stringify({ target: data.target })}),
     onMutate: (data) => {
       if (data.target === "ARGUS_SKIP") return;
 
@@ -212,9 +211,8 @@ const ActionReleaseModal = () => {
   const { data } = useQuery<ActionAPIType>({
     queryKey: ["actions", { service: modal.service.id }],
     queryFn: () =>
-      fetchJSON(
-        `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`
-      ),
+      fetchJSON({
+        url: `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`}),
     enabled: modal.actionType !== "EDIT" && modal.service.id !== "",
     refetchOnMount: "always",
   });

@@ -240,11 +240,18 @@ func NormaliseNewlines(data []byte) []byte {
 }
 
 // CopyIfSecret will loop through 'fields' and replace values in 'to' of '<secret>' with values in 'from' if they are non-empty.
-func CopyIfSecret(to, from map[string]string, fields []string) {
+func CopyIfSecret(from, to map[string]string, fields []string) {
 	for _, field := range fields {
 		if to[field] == "<secret>" && from[field] != "" {
 			to[field] = from[field]
 		}
+	}
+}
+
+// InitMap will initialise the map if it's nil.
+func InitMap(m *map[string]string) {
+	if *m == nil {
+		*m = make(map[string]string)
 	}
 }
 
@@ -255,6 +262,16 @@ func CopyMap[T, Y comparable](m map[T]Y) map[T]Y {
 		m2[key] = m[key]
 	}
 	return m2
+}
+
+// MergeMaps will merge `m2` into `m1` and any fields in `fields` that are '<secret>' will be replaced with the value in `m2`.
+func MergeMaps(m1, m2 map[string]string, fields []string) (m3 map[string]string) {
+	m3 = CopyMap(m1)
+	for k, v := range m2 {
+		m3[k] = v
+	}
+	CopyIfSecret(m1, m3, fields)
+	return
 }
 
 // LowercaseStringStringMap will convert all lowercase all keys in the map

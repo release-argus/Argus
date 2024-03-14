@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
@@ -620,7 +619,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			api.Config.Order = append(api.Config.Order, svc.ID)
 			apiMutex.Unlock()
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", name)
-			tc.payload = strings.ReplaceAll(tc.payload, "\n", "")
+			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
 			var req *http.Request
 			// CREATE
@@ -817,257 +816,6 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	}
 }
 
-func TestFillNotifyTemplate(t *testing.T) {
-	testFile := "TestFillNotifyTemplate.yml"
-	masterAPI := testAPI(testFile)
-	tNotify := test.TestShoutrrr(false, false)
-	tNotify.ID = "test"
-	defaultNotifyType := tNotify.Type
-	defer os.RemoveAll(testFile)
-	// GIVEN a template and a request to populate it with the relevant config values
-	tests := map[string]struct {
-		knownService       bool
-		serviceNotifyType  *string
-		knownServiceNotify bool
-		knownNotify        bool
-		notifyID           string
-		notifyType         *string
-		want               *shoutrrr.Shoutrrr
-		err                string
-	}{
-		"new Service, no Main": {
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				defaultNotifyType,
-				&map[string]string{},
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"new Service, no Main - no type": {
-			notifyType: test.StringPtr(""),
-			err:        `type is required`,
-		},
-		"new Service, no Main - invalid type": {
-			notifyType: test.StringPtr("something"),
-			err:        `type "something" is invalid`,
-		},
-		"new Service, no Main - type from ID": {
-			notifyType: test.StringPtr(""),
-			notifyID:   "gotify",
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				"",
-				&map[string]string{},
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"new Service, have Main - type from Main": {
-			notifyType:  test.StringPtr(""),
-			knownNotify: true,
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				"",
-				&map[string]string{},
-				nil,
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"new Service, have Main": {
-			knownNotify: true,
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				defaultNotifyType,
-				&map[string]string{},
-				nil,
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"same Service, no Main, no service_notify": {
-			knownService: true,
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				defaultNotifyType,
-				&map[string]string{},
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"same Service, no Main, have service_notify": {
-			knownService:       true,
-			knownServiceNotify: true,
-			want: shoutrrr.New(
-				nil, "",
-				test.CopyMapPtr(tNotify.Options),
-				test.CopyMapPtr(tNotify.Params),
-				defaultNotifyType,
-				test.CopyMapPtr(tNotify.URLFields),
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"same Service, no Main, have service_notify - type from original": {
-			notifyType:         test.StringPtr(""),
-			knownService:       true,
-			knownServiceNotify: true,
-			want: shoutrrr.New(
-				nil, "",
-				test.CopyMapPtr(tNotify.Options),
-				test.CopyMapPtr(tNotify.Params),
-				defaultNotifyType,
-				test.CopyMapPtr(tNotify.URLFields),
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"same Service, have Main, no service_notify": {
-			knownService: true,
-			knownNotify:  true,
-			want: shoutrrr.New(
-				nil, "",
-				&map[string]string{},
-				&map[string]string{},
-				defaultNotifyType,
-				&map[string]string{},
-				nil,
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-		"same Service, have Main, have service_notify": {
-			knownService:       true,
-			knownServiceNotify: true,
-			knownNotify:        true,
-			want: shoutrrr.New(
-				nil, "",
-				test.CopyMapPtr(tNotify.Options),
-				test.CopyMapPtr(tNotify.Params),
-				defaultNotifyType,
-				test.CopyMapPtr(tNotify.URLFields),
-				nil,
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-				masterAPI.Config.HardDefaults.Notify[defaultNotifyType],
-			),
-		},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			api := API{}
-			// api.Config = masterAPI.Config
-			api.Config = &config.Config{}
-			api.Config.Defaults = masterAPI.Config.Defaults
-			api.Config.HardDefaults = masterAPI.Config.HardDefaults
-			serviceName := strings.ReplaceAll(name, " ", "_")
-			if tc.notifyID == "" {
-				tc.notifyID = serviceName + "__notify"
-			}
-			// tc.notifyType used for template
-			if tc.notifyType == nil {
-				str := strings.Clone(defaultNotifyType)
-				tc.notifyType = &str
-			}
-			// notifyType used for Service/Main Notify
-			notifyType := *tc.notifyType
-			if notifyType == "" {
-				notifyType = defaultNotifyType
-			}
-			// Create the Service we'll be looking at
-			if tc.knownService {
-				api.Config.Service = make(map[string]*service.Service)
-				api.Config.Service[serviceName] = &service.Service{}
-				api.Config.Service[serviceName].Notify = make(map[string]*shoutrrr.Shoutrrr)
-				// Create the Notify in that service
-				if tc.knownServiceNotify {
-					tNotify := test.TestShoutrrr(false, false)
-					tNotify.Type = notifyType
-					tNotify.ID = tc.notifyID
-					api.Config.Service[serviceName].Notify[tc.notifyID] = tNotify
-				}
-			}
-			// Create the Notify in the .Main
-			if name == "new service, have main - type from main" {
-				fmt.Println()
-			}
-			if tc.knownNotify {
-				api.Config.Notify = shoutrrr.SliceDefaults{}
-				api.Config.Notify[tc.notifyID] = shoutrrr.NewDefaults(
-					notifyType,
-					test.CopyMapPtr(tNotify.Options),
-					test.CopyMapPtr(tNotify.Params),
-					test.CopyMapPtr(tNotify.URLFields))
-			}
-			template := test.TestShoutrrr(false, false)
-			template.Type = *tc.notifyType
-			template.ID = tc.notifyID
-			template.Main = api.Config.Notify[tc.notifyID]
-			if tc.err == "" {
-				tc.err = "^$"
-			}
-
-			// WHEN that request is sent to fillNotifyTemplate
-			err := fillNotifyTemplate(
-				template,
-				api.Config,
-				tc.notifyID,
-				serviceName,
-				"https://example.com")
-
-			// THEN the expected error is returned
-			errStr := util.ErrorToString(err)
-			if !util.RegexCheck(tc.err, errStr) {
-				t.Errorf("want error %q, not %q",
-					tc.err, errStr)
-			}
-			if tc.err != "^$" {
-				return
-			}
-			// AND the template is modified as expected
-			if api.Config.Notify[tc.notifyID] != nil {
-				tc.want.Main = api.Config.Notify[tc.notifyID]
-			}
-			if template.String("") != tc.want.String("") {
-				t.Errorf("struct mismatch!\ngot:  %q\nwant: %q",
-					template.String(""), tc.want.String(""))
-			}
-			// AND the template is given the correct Main
-			if template.Main != tc.want.Main {
-				t.Errorf("Expected .Main not given, want %v, not %v",
-					&tc.want.Main, &template.Main)
-			}
-			// AND the template is given the correct Defaults
-			if template.Defaults != tc.want.Defaults {
-				t.Errorf("Expected .Defaults not given, want %v, not %v",
-					&tc.want.Defaults, &template.Defaults)
-			}
-			// AND the template is given the correct HardDefaults
-			if template.HardDefaults != tc.want.HardDefaults {
-				t.Errorf("Expected .HardDefaults not given, want %v, not %v",
-					&tc.want.HardDefaults, &template.HardDefaults)
-			}
-		})
-	}
-}
-
 func TestHTTP_NotifyTest(t *testing.T) {
 	// GIVEN an API and a request to test a notify
 	file := "TestHTTP_NotifyTest.yml"
@@ -1085,189 +833,167 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		"no_main": test.TestShoutrrr(false, false)}
 	tests := map[string]struct {
 		queryParams map[string]string
+		payload     string
 		wantStatus  int
 		wantMsg     string
 	}{
-		"no query params": {
-			queryParams: map[string]string{},
-			wantStatus:  http.StatusBadRequest,
-			wantMsg:     "service_name and notify_name/name are required",
+		"body too large": {
+			payload: `{
+				"test": "` + strings.Repeat(strings.Repeat("abcdefghijklmnopqrstuvwxyz", 100), 100) + `"}`,
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "request body too large",
+		},
+		"no body": {
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "unexpected end of JSON input",
 		},
 		"no service, new notify": {
-			queryParams: map[string]string{
-				"notify_name": "new_notify"},
+			payload: `{
+				"name": "new_notify"}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "service_name and notify_name/name are required",
+			wantMsg:    "service_name is required",
 		},
 		"new service, no new/old notify": {
-			queryParams: map[string]string{
-				"service_name": "new_service"},
+			payload: `{
+				"service_name": "new_service"}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "service_name and notify_name/name are required",
+			wantMsg:    `name and/or name_previous are required`,
 		},
 		"new service, no main": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "ntfy"},
+				"name": "test_notify",
+				"type": "ntfy"}`,
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    "url_fields:[^ ]+ +topic: .*required",
 		},
 		"new service, no main - invalid JSON, options": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "ntfy",
-				"options":      `{"fail": "missing closing bracket"`},
+				"name": "test_notify",
+				"type": "ntfy",
+				"options": {
+					"delay": "1s",
+					"something" "else"}}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "options:.* unexpected end of JSON input",
+			wantMsg:    "invalid character .* after object key",
 		},
 		"new service, no main - options, invalid": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "ntfy",
-				"options":      `{"delay": "time"}`},
+				"name": "test_notify",
+				"type": "ntfy",
+				"options": {
+					"delay": "time"}}`,
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    `options:[^ ]+  delay: "[^"]+" <invalid>`,
 		},
 		"new service, have main - options, applied, delay ignored": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "test",
-				"options":      `{"delay": "24h"}`},
+				"name": "test",
+				"options": {
+					"delay": "24h"}}`,
 			wantStatus: http.StatusOK,
 		},
 		"new service, no main - invalid JSON, url_fields": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "ntfy",
-				"url_fields":   `{"fail": "missing closing bracket"`},
+				"name": "test_notify",
+				"type": "ntfy",
+				"url_fields": {
+					"host" "example.com"}}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "url_fields:.* unexpected end of JSON input",
+			wantMsg:    "invalid character .* after object key",
 		},
 		"new service, have main - url_fields, invalid": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "test",
-				"url_fields":   `{"port": "number?"}`},
+				"name": "test",
+				"url_fields": {
+					"port": "number"}}`,
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    `invalid port`,
 		},
-		"new service, no main - invalid JSON, params": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
-				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "ntfy",
-				"params":       `{"fail": "missing closing bracket"`},
-			wantStatus: http.StatusBadRequest,
-			wantMsg:    "params:.* unexpected end of JSON input",
-		},
-		"new service, have main - params, invalid": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
-				"service_name": "also_unknown",
-				"name":         "test",
-				"params":       `{"priority": false}`},
-			wantStatus: http.StatusBadRequest,
-			wantMsg:    `cannot unmarshal bool into Go value of type string`,
-		},
 		"new service, no main - no type": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
+			payload: `{
 				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         ""},
+				"name": "test_notify"}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    `type is required`,
+			wantMsg:    `invalid type "test_notify"`,
 		},
 		"new service, no main - unknown type": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
-				"service_name": "also_unknown",
-				"name":         "new_notify",
-				"type":         "something"},
+			payload: `{
+				"service_name": "unknown",
+				"name": "test_notify",
+				"type": "something"}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    `type "something" is invalid`,
+			wantMsg:    `invalid type "something"`,
 		},
 		"new service, no main - type from ID": {
-			queryParams: map[string]string{
-				"notify_name":  "unknown",
-				"service_name": "also_unknown",
-				"name":         validNotify.Type,
-				"type":         "",
-				"url_fields": `{
+			payload: `{
+				"service_name": "unknown",
+				"name": "` + validNotify.Type + `",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "` + validNotify.URLFields["token"] + `"}`},
+					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wantStatus: http.StatusOK,
 		},
 		"new service, have main - type from Main": {
-			queryParams: map[string]string{
-				"notify_name":  "test",
+			payload: `{
 				"service_name": "unknown",
-				"name":         "test",
-				"type":         "",
-				"url_fields": `{
+				"name": "test",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "` + validNotify.URLFields["token"] + `"}`},
+					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wantStatus: http.StatusOK,
 		},
 		"same service, have main - type from original": {
-			queryParams: map[string]string{
-				"notify_name":  "test",
+			payload: `{
 				"service_name": "test",
-				"name":         "new_notify",
-				"type":         "",
-				"url_fields": `{
+				"name": "new_notify",
+				"name_previous": "test",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "<secret>"}`},
+					"token": "<secret>"}}`,
 			wantStatus: http.StatusOK,
 		},
-		"same service, have main - can remove vars": {
-			queryParams: map[string]string{
-				"notify_name":  "test",
+		"same service, no main - can remove vars": {
+			payload: `{
 				"service_name": "test",
-				"name":         "new_notify",
-				"type":         "",
-				"url_fields": `{
+				"name": "new_notify",
+				"name_previous": "no_main",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": ""}`},
+					"token": ""}}`,
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    "url_fields:.* token: .*required",
 		},
 		"same service, no main - unsent vars inherited": {
-			queryParams: map[string]string{
-				"notify_name":  "no_main",
+			payload: `{
 				"service_name": "test",
-				"name":         "new_notify",
-				"type":         "",
-				"url_fields": `{
+				"name": "new_notify",
+				"name_previous": "no_main",
+				"type": "` + validNotify.Type + `",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
-					"path": "` + validNotify.URLFields["path"] + `"}`},
+					"path": "` + validNotify.URLFields["path"] + `"}}`,
 			wantStatus: http.StatusOK,
 		},
 		"same service, have main - fail send": {
-			queryParams: map[string]string{
-				"notify_name":  "test",
+			payload: `{
 				"service_name": "test",
-				"name":         "test",
-				"type":         validNotify.Type,
-				"url_fields": `{
+				"name": "test",
+				"name_previous": "test",
+				"type": "` + validNotify.Type + `",
+				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "invalid"}`},
+					"token": "invalid"}}`,
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    "invalid .* token",
 		},
@@ -1280,18 +1006,11 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			if tc.wantMsg == "" {
 				tc.wantMsg = "^$"
 			}
-			if tc.queryParams["url_fields"] != "" {
-				tc.queryParams["url_fields"] = trimJSON(tc.queryParams["url_fields"])
-			}
+			tc.payload = test.TrimJSON(tc.payload)
+			payload := bytes.NewReader([]byte(tc.payload))
 
 			// WHEN that request is sent
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", nil)
-			// add the params to the URL
-			params := url.Values{}
-			for k, v := range tc.queryParams {
-				params.Set(k, v)
-			}
-			req.URL.RawQuery = params.Encode()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", payload)
 			w := httptest.NewRecorder()
 			api.httpNotifyTest(w, req)
 			res := w.Result()

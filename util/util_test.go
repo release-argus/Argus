@@ -1109,6 +1109,58 @@ func TestCopyIfSecret(t *testing.T) {
 	}
 }
 
+func TestInitMap(t *testing.T) {
+	// GIVEN a map
+	tests := map[string]struct {
+		input map[string]string
+	}{
+		"nil map": {
+			input: nilMap(),
+		},
+		"empty map": {
+			input: map[string]string{},
+		},
+		"non-empty map": {
+			input: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"non-empty map with same keys but differing case": {
+			input: map[string]string{
+				"test": "123",
+				"tESt": "bar"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			had := CopyMap(tc.input)
+
+			// WHEN InitMap is called
+			InitMap(&tc.input)
+
+			// THEN the map is initialised correctly
+			if tc.input == nil {
+				t.Fatalf("map is nil")
+			}
+			// AND any values inside haven't changed
+			if len(tc.input) != len(had) {
+				t.Fatalf("want: %v\ngot:  %v",
+					had, tc.input)
+			}
+			for i := range tc.input {
+				if tc.input[i] != had[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						had, tc.input)
+				}
+			}
+		})
+	}
+
+}
+
 func TestCopyMap(t *testing.T) {
 	// GIVEN different byte strings
 	tests := map[string]struct {
@@ -1148,6 +1200,152 @@ func TestCopyMap(t *testing.T) {
 			if &got == &tc.want {
 				t.Error("map wasn't copied, they have the same addresses")
 			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestMergeMaps(t *testing.T) {
+	// GIVEN two maps and a list of fields that may contain secrets
+	tests := map[string]struct {
+		base      map[string]string
+		overrides map[string]string
+		fields    []string
+		want      map[string]string
+	}{
+		"empty maps": {
+			base:      map[string]string{},
+			overrides: map[string]string{},
+			want:      map[string]string{},
+		},
+		"nil maps": {
+			base:      nilMap(),
+			overrides: nilMap(),
+			want:      map[string]string{},
+		},
+		"empty base map": {
+			base: map[string]string{},
+			overrides: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"nil base map": {
+			base: nilMap(),
+			overrides: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"empty overrides map": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: map[string]string{},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"nil overrides map": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: nilMap(),
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"non-empty maps": {
+			base: map[string]string{
+				"test":      "123",
+				"foo":       "bar",
+				"bish":      "bash",
+				"something": "else"},
+			overrides: map[string]string{
+				"test": "456",
+				"foo":  "baz",
+				"bish": ""},
+			want: map[string]string{
+				"test":      "456",
+				"foo":       "baz",
+				"bish":      "",
+				"something": "else"},
+		},
+		"ref secret in base map": {
+			base: map[string]string{
+				"test": "123"},
+			overrides: map[string]string{
+				"test": "<secret>"},
+			want: map[string]string{
+				"test": "123"},
+			fields: []string{"test"},
+		},
+		"ref secret in base map, secret not found/empty": {
+			base: map[string]string{
+				"foo": ""},
+			overrides: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			want: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			fields: []string{"foo", "test"},
+		},
+		"secret not in fields": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>"},
+			want: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			fields: []string{"other"},
+		},
+		"non-empty maps with secrets": {
+			base: map[string]string{
+				"test":      "123",
+				"foo":       "bar",
+				"bish":      "bash",
+				"something": "else",
+				"nothing":   ""},
+			overrides: map[string]string{
+				"test":    "456",
+				"foo":     "<secret>",
+				"bish":    "<secret>",
+				"nothing": "<secret>"},
+			want: map[string]string{
+				"test":      "456",
+				"foo":       "<secret>",
+				"bish":      "bash",
+				"something": "else",
+				"nothing":   "<secret>"},
+			fields: []string{"test", "bish"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN MergeMaps is called
+			got := MergeMaps(tc.base, tc.overrides, tc.fields)
+
+			// THEN the maps are merged correctly
 			if len(got) != len(tc.want) {
 				t.Fatalf("want: %v\ngot:  %v",
 					tc.want, got)

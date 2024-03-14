@@ -34,8 +34,8 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const { error: invalidURL } = getFieldState(dataTarget + ".url", formState);
 
   const fetchVersionJSON = () =>
-    fetchJSON<ServiceRefreshType>(
-      `api/v1/${vType === 0 ? "latest" : "deployed"}_version/refresh${
+    fetchJSON<ServiceRefreshType>({
+      url: `api/v1/${vType === 0 ? "latest" : "deployed"}_version/refresh${
         serviceName ? `/${encodeURIComponent(serviceName)}` : ""
       }?${
         data &&
@@ -43,8 +43,8 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
           params: { ...data, semantic_versioning: semanticVersioning },
           defaults: original,
         })
-      }`
-    );
+      }`,
+    });
 
   const {
     data: versionData,

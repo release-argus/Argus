@@ -19,12 +19,12 @@ export const Status = (): ReactElement => {
 
   const { data: runtimeData } = useQuery<RuntimeInfo>({
     queryKey: ["status/runtime"],
-    queryFn: () => fetchJSON(`api/v1/status/runtime`),
+    queryFn: () => fetchJSON({url:"api/v1/status/runtime"}),
     staleTime: Infinity, // won't change unless Argus is restarted
   });
   const { data: buildData } = useQuery<BuildInfo>({
     queryKey: ["version"],
-    queryFn: () => fetchJSON(`api/v1/version`),
+    queryFn: () => fetchJSON({url:"api/v1/version"}),
     staleTime: Infinity, // won't change unless Argus is restarted
   });
 

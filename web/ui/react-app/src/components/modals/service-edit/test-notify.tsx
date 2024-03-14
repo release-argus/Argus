@@ -1,6 +1,5 @@
 import { Alert, Button } from "react-bootstrap";
 import { FC, useMemo, useState } from "react";
-import { convertToQueryParams, fetchJSON } from "utils";
 import {
   faCheckCircle,
   faCircleXmark,
@@ -11,6 +10,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotifyType } from "types/config";
 import { convertNotifyToAPI } from "components/modals/service-edit/util/ui-api-conversions";
+import { deepDiff } from "utils/query-params";
+import { fetchJSON } from "utils";
 import { useFormState } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import useValuesRefetch from "hooks/values-refetch";
@@ -52,21 +53,16 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
   const { data, refetchData } = useValuesRefetch(path, true);
 
   const fetchTestNotifyJSON = () =>
-    fetchJSON<{ message: string }>(
-      `api/v1/notify/test?${convertToQueryParams({
-        params: {
-          notify_name: original?.name,
-          ...extras,
-
-          options: {},
-          url_fields: {},
-          params: {},
-
-          ...convertNotifyToAPI(data),
-        },
-        defaults: original,
-      })}`
-    );
+    fetchJSON<{ message: string }>({
+      url: "api/v1/notify/test",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...deepDiff(convertNotifyToAPI(data), original),
+        ...extras,
+        name_previous: original?.name,
+      }),
+    });
 
   const {
     data: testData,
@@ -76,10 +72,11 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
   } = useQuery({
     queryKey: [
       "test_notify",
-      { id: original?.id },
       {
-        params: convertNotifyToAPI(data),
+        service: extras?.service_name,
+        notify: original?.name,
       },
+      { params: convertNotifyToAPI(data) },
     ],
     queryFn: () => fetchTestNotifyJSON(),
     enabled: false,

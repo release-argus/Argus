@@ -33,11 +33,13 @@ const EditService: FC<Props> = ({ name }) => {
   const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
     useQuery({
       queryKey: ["service/edit", "detail"],
-      queryFn: () => fetchJSON<ServiceEditOtherData>("api/v1/service/edit"),
+      queryFn: () =>
+        fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/edit" }),
     });
   const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
     queryKey: ["service/edit", { id: name }],
-    queryFn: () => fetchJSON<ServiceEditAPIType>(`api/v1/service/edit/${name}`),
+    queryFn: () =>
+      fetchJSON<ServiceEditAPIType>({ url: `api/v1/service/edit/${name}` }),
     enabled: !!name,
     refetchOnMount: "always",
   });

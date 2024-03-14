@@ -17,92 +17,216 @@
 package shoutrrr
 
 import (
-	"encoding/json"
+	"fmt"
 	"regexp"
 	"testing"
 
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestShoutrrr_UseTemplate(t *testing.T) {
+func TestShoutrrr_FromPayload(t *testing.T) {
 	testToken := "Aod9Cb0zXCeOrnD"
+	typeWithDefaults := "gotify"
+	typeWithDefaultsURLFields := map[string]string{
+		"host":  "localhost",
+		"token": testToken}
+	typeWithNoDefaults := "ntfy"
+	typeWithNoDefaultsURLFields := map[string]string{
+		"topic": "foo"}
+	typeOther := "slack"
+	serviceNotifies := &Slice{
+		"no_main_no_type": &Shoutrrr{},
+		"no_main_with_type_and_defaults": &Shoutrrr{
+			ShoutrrrBase: ShoutrrrBase{
+				Type: typeWithDefaults}},
+		"no_main_with_type_and_no_defaults": &Shoutrrr{
+			ShoutrrrBase: ShoutrrrBase{
+				Type: typeWithNoDefaults}},
+		"main_no_type": &Shoutrrr{},
+		"main_with_type_and_defaults": &Shoutrrr{
+			ShoutrrrBase: ShoutrrrBase{
+				Type: typeWithDefaults}},
+		"main_with_type_and_no_defaults": &Shoutrrr{
+			ShoutrrrBase: ShoutrrrBase{
+				Type: typeWithNoDefaults}}}
+	mains := SliceDefaults{
+		"main_no_type": &ShoutrrrDefaults{
+			ShoutrrrBase: ShoutrrrBase{
+				URLFields: typeWithNoDefaultsURLFields}},
+		"main_with_type_and_defaults": &ShoutrrrDefaults{
+			ShoutrrrBase: ShoutrrrBase{
+				Type:      typeWithDefaults,
+				URLFields: typeWithDefaultsURLFields}},
+		"main_with_type_and_no_defaults": &ShoutrrrDefaults{
+			ShoutrrrBase: ShoutrrrBase{
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields}},
+		"main_not_on_service_with_defaults": &ShoutrrrDefaults{
+			ShoutrrrBase: ShoutrrrBase{
+				Type:      typeWithDefaults,
+				URLFields: typeWithDefaultsURLFields}},
+	}
+	defaults := SliceDefaults{
+		typeWithDefaults: &ShoutrrrDefaults{}}
+	hardDefaults := SliceDefaults{
+		typeWithDefaults:   &ShoutrrrDefaults{},
+		typeWithNoDefaults: &ShoutrrrDefaults{},
+		typeOther:          &ShoutrrrDefaults{}}
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		template  Shoutrrr
-		options   string
-		urlFields string
-		params    string
-		want      Shoutrrr
-		err       string
+		payload           TestPayload
+		noServiceNotifies bool
+		want              *Shoutrrr
+		wantMain          string
+		wantDefaults      string
+		wantHardDefaults  string
+		wantServiceURL    string
+		err               string
 	}{
 		"empty": {
-			template: Shoutrrr{},
-			want:     Shoutrrr{},
-			err:      "host: <required>.* token: <required>",
+			payload: TestPayload{},
+			err:     "service_name is required",
 		},
-		"valid": {
-			template: Shoutrrr{},
-			urlFields: `
-				{
-					"host": "example.com",
-					"token": "` + testToken + `"
-				}`,
-			want: Shoutrrr{
+		"no name": {
+			payload: TestPayload{
+				ServiceName: "test"},
+			err: "name and/or name_previous are required",
+		},
+		"no name, have name_previous": {
+			payload: TestPayload{
+				ServiceName:  "test",
+				NamePrevious: "test"},
+			err: "invalid type",
+		},
+		"no Type": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "no_main_no_defaults_no_harddefaults",
+				URLFields:   typeWithNoDefaultsURLFields},
+			err: "invalid type",
+		},
+		"edit, no Main, no Defaults - No Type": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "no_main_no_type",
+				URLFields:   typeWithNoDefaultsURLFields},
+			err: "invalid type",
+		},
+		"edit, no Main, no Defaults - with Type": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "no_main_no_type",
+				Type:        &typeWithNoDefaults,
+				URLFields:   typeWithNoDefaultsURLFields},
+			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"host":  "example.com",
-						"token": testToken}}},
+					Type:      typeWithNoDefaults,
+					URLFields: typeWithNoDefaultsURLFields}},
 		},
-		"inherit secrets": {
-			template: Shoutrrr{
+		"edit, no Main, no Defaults - had Type (missing name_previous)": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "no_main_with_type_and_no_defaults",
+				URLFields:   typeWithNoDefaultsURLFields},
+			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					Type: "gotify",
-					URLFields: map[string]string{
-						"host":  "release-argus.com",
-						"token": testToken,
-					}}},
-			urlFields: `
-				{
-					"host": "example.com",
-					"token": "<secret>"
-				}`,
-			want: Shoutrrr{
+					Type:      typeWithNoDefaults,
+					URLFields: typeWithNoDefaultsURLFields}},
+		},
+		"edit, no Main, no Defaults - had Type (have name_previous)": {
+			payload: TestPayload{
+				ServiceName:  "test",
+				NamePrevious: "no_main_with_type_and_no_defaults",
+				URLFields:    typeWithNoDefaultsURLFields},
+			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"host":  "example.com",
-						"token": testToken}}},
+					Type:      typeWithNoDefaults,
+					URLFields: typeWithNoDefaultsURLFields}},
 		},
-		"invalid CheckValues": {
-			urlFields: `
-				{"host": "release-argus.com"}`,
-			template: Shoutrrr{
+		"edit, no Main, have Defaults": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "no_main_with_type_and_defaults",
+				Type:        &typeWithDefaults,
+				URLFields:   typeWithDefaultsURLFields},
+			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					Type: "gotify",
-					URLFields: map[string]string{
-						"host": "example.com",
-					}}},
-			want: Shoutrrr{
+					Type:      typeWithDefaults,
+					URLFields: typeWithDefaultsURLFields}},
+		},
+		"edit, have Main, no Defaults - Give Type": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_no_type",
+				Type:        &typeWithNoDefaults},
+			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
-					URLFields: map[string]string{
-						"host": "release-argus.com",
-					}}},
-			err: "token: <required>",
+					Type: typeWithNoDefaults}},
 		},
-		"invalid JSON - options": {
-			template: Shoutrrr{},
-			options:  "invalid",
-			err:      "options:.* invalid character",
+		"edit, have Main, no Defaults - No Type": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_no_type"},
+			err: "invalid type",
 		},
-		"invalid JSON - urlFields": {
-			template:  Shoutrrr{},
-			urlFields: "invalid",
-			err:       "url_fields:.* invalid character",
+		"edit, have Main, have Defaults": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_with_type_and_defaults",
+				Type:        &typeWithDefaults},
+			want: &Shoutrrr{
+				ShoutrrrBase: ShoutrrrBase{
+					Type: typeWithDefaults}},
 		},
-		"invalid JSON - params": {
-			template: Shoutrrr{},
-			params:   "invalid",
-			err:      "params:.* invalid character",
+		"edit, have Main, have Defaults - Fail, Different Type to Main": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_with_type_and_defaults",
+				Type:        &typeWithNoDefaults},
+			err: `type: "[^"]+" != "[^"]+"`,
+		},
+		"edit, have Main, have Defaults - Fail, Invalid field": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_with_type_and_defaults",
+				Options: map[string]string{
+					"delay": "number"}},
+			err: `delay: "number" <invalid>`,
+		},
+		"new, no Main, have Defaults, type from name": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        typeWithDefaults,
+				URLFields:   typeWithDefaultsURLFields},
+			want: &Shoutrrr{
+				ShoutrrrBase: ShoutrrrBase{
+					Type:      typeWithDefaults,
+					URLFields: typeWithDefaultsURLFields}},
+		},
+		"new, no Main, no Defaults, type from name": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        typeWithNoDefaults,
+				URLFields:   typeWithNoDefaultsURLFields},
+			want: &Shoutrrr{
+				ShoutrrrBase: ShoutrrrBase{
+					Type:      typeWithNoDefaults,
+					URLFields: typeWithNoDefaultsURLFields}},
+		},
+		"new, have Main, have Defaults": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_not_on_service_with_defaults"},
+			want: &Shoutrrr{
+				ShoutrrrBase: ShoutrrrBase{
+					Type: typeWithDefaults}},
+		},
+		"new, have Main, have Defaults - Fail, Different Type to Main": {
+			payload: TestPayload{
+				ServiceName: "test",
+				Name:        "main_not_on_service_with_defaults",
+				Type:        &typeWithNoDefaults},
+			err: `type: "[^"]+" != "[^"]+"`,
 		},
 	}
 
@@ -110,27 +234,37 @@ func TestShoutrrr_UseTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel()
 
-			tc.template.Type = "gotify"
-			tc.want.Type = tc.template.Type
-			tc.template.Main = &ShoutrrrDefaults{}
-			tc.template.Defaults = &ShoutrrrDefaults{}
-			tc.template.HardDefaults = &ShoutrrrDefaults{}
-			tc.template.ServiceStatus = &svcstatus.Status{}
-			vars := []*string{&tc.options, &tc.urlFields, &tc.params}
-			for _, v := range vars {
-				*v = trimJSON(*v)
-				if *v == "" {
-					*v = "{}"
+			if tc.want != nil {
+				vars := []struct {
+					Target string
+					Var    interface{}
+				}{
+					{Target: tc.wantMain, Var: tc.want.Main},
+					{Target: tc.wantDefaults, Var: tc.want.Defaults},
+					{Target: tc.wantHardDefaults, Var: tc.want.HardDefaults},
+				}
+				for _, v := range vars {
+					switch v.Target {
+					case "main":
+						v.Var = tc.want.Main
+					case "defaults":
+						v.Var = tc.want.Defaults
+					case "hardDefaults":
+						v.Var = tc.want.HardDefaults
+					}
 				}
 			}
 
+			var testServiceNotifies *Slice
+			if !tc.noServiceNotifies {
+				testServiceNotifies = serviceNotifies
+			}
+
 			// WHEN using the template
-			got, err := tc.template.UseTemplate(
-				&tc.options,
-				&tc.urlFields,
-				&tc.params,
-				&util.LogFrom{
-					Primary: "TestCopyAndModify", Secondary: name})
+			got, serviceURL, err := FromPayload(
+				&tc.payload,
+				testServiceNotifies,
+				mains, defaults, hardDefaults)
 
 			// THEN the Shoutrrr is created as expected
 			if tc.err == "" {
@@ -141,131 +275,160 @@ func TestShoutrrr_UseTemplate(t *testing.T) {
 				t.Errorf("Expecting error to match %q, got %q",
 					tc.err, gotErr)
 			}
-			if tc.err != "^$" && got.String("") != tc.want.String("") {
+			if tc.err != "^$" {
+				return
+			}
+			// AND the Shoutrrr is as expected
+			if got.String("") != tc.want.String("") {
 				t.Errorf("Result mismatch:\ngot:  %q\nwant: %q",
 					got.String(""), tc.want.String(""))
 			}
+			// AND the serviceURL is as expected
+			if serviceURL != tc.wantServiceURL {
+				t.Errorf("ServiceURL mismatch:\ngot:  %q\nwant: %q",
+					serviceURL, tc.wantServiceURL)
+			}
 		})
 	}
-
 }
 
-func TestShoutrrr_StringToMap(t *testing.T) {
-	// GIVEN a Shoutrrr
+func TestSortDefaults(t *testing.T) {
+	// GIVEN a set of values for a Notify
 	tests := map[string]struct {
-		str     *string
-		baseMap map[string]string
-		want    map[string]string
-		err     string
+		name         string
+		nType        string
+		main         *ShoutrrrDefaults
+		defaults     SliceDefaults
+		hardDefaults SliceDefaults
+		wantType     string
+		wantMain     string
+		wantDefaults string
+		err          string
 	}{
-		"nil": {
-			str: nil,
-			baseMap: map[string]string{
-				"test": "foo"},
-			want: map[string]string{
-				"test": "foo"},
+		"Invalid Type": {
+			name:  "test",
+			nType: "gotify",
+			err:   `invalid type "gotify"`,
 		},
-		"empty": {
-			str: stringPtr(""),
-			baseMap: map[string]string{
-				"test": "foo"},
-			want: map[string]string{
-				"test": "foo"},
-			err: "unexpected end of JSON input",
+		"Type from Name": {
+			name: "gotify",
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			wantType:     "gotify",
+			wantMain:     "hardDefaults",
+			wantDefaults: "hardDefaults",
 		},
-		"empty JSON": {
-			str: stringPtr("{}"),
-			baseMap: map[string]string{
-				"test": "foo"},
-			want: map[string]string{
-				"test": "foo"},
+		"Type from Main": {
+			name: "test",
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			main: &ShoutrrrDefaults{
+				ShoutrrrBase: ShoutrrrBase{
+					Type: "gotify"}},
+			wantType:     "gotify",
+			wantMain:     "main",
+			wantDefaults: "hardDefaults",
 		},
-		"invalid JSON": {
-			str: stringPtr(`
-				{
-					"devices": "foo",
-					"other": "<secret>",
-				}`),
-			baseMap: map[string]string{
-				"test": "foo"},
-			want: map[string]string{
-				"test": "foo"},
-			err: `invalid character.*\}`,
+		"No Main, No Defaults": {
+			name:  "test",
+			nType: "gotify",
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			wantType:     "gotify",
+			wantMain:     "hardDefaults",
+			wantDefaults: "hardDefaults",
 		},
-		"<secret> ref": {
-			str: stringPtr(`
-				{
-					"devices": "foo",
-					"other": "<secret>"
-				}`),
-			baseMap: map[string]string{
-				"devices": "<secret>",
-				"other":   "bar",
-			},
-			want: map[string]string{
-				"devices": "foo",
-				"other":   "bar",
-			},
+		"Main, No Defaults": {
+			name:  "test",
+			nType: "gotify",
+			main:  &ShoutrrrDefaults{},
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			wantType:     "gotify",
+			wantMain:     "main",
+			wantDefaults: "hardDefaults",
 		},
-		"<secret> ref <secret> stays <secret>": {
-			str: stringPtr(`
-				{
-					"devices": "foo",
-					"other": "<secret>"
-				}`),
-			baseMap: map[string]string{
-				"devices": "<secret>",
-				"other":   "<secret>",
-			},
-			want: map[string]string{
-				"devices": "foo",
-				"other":   "<secret>",
-			},
+		"No Main, Defaults": {
+			name:  "test",
+			nType: "gotify",
+			defaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			wantType:     "gotify",
+			wantMain:     "defaults",
+			wantDefaults: "defaults",
 		},
-		"<secret> ref empty is kept as <secret>": {
-			str: stringPtr(`
-				{
-					"devices": "foo",
-					"other": "<secret>"
-				}`),
-			baseMap: map[string]string{
-				"devices": "<secret>",
-			},
-			want: map[string]string{
-				"devices": "foo",
-				"other":   "<secret>",
-			},
+		"Main, Defaults": {
+			name:  "test",
+			nType: "gotify",
+			main:  &ShoutrrrDefaults{},
+			defaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			hardDefaults: SliceDefaults{
+				"gotify": &ShoutrrrDefaults{}},
+			wantType:     "gotify",
+			wantMain:     "main",
+			wantDefaults: "defaults",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
-			targetMap := make(map[string]string)
-			if tc.str != nil {
-				*tc.str = trimJSON(*tc.str)
+			// WHEN sorting the defaults
+			gotType, gotMain, gotDefaults, gotHardDefaults, err := sortDefaults(
+				tc.name, tc.nType, tc.main, tc.defaults, tc.hardDefaults)
+
+			// THEN the err is as expected
+			if tc.err == "" {
+				tc.err = "^$"
 			}
 
-			// WHEN inheriting secrets
-			err := stringToMap(tc.str, &targetMap, &tc.baseMap)
-
-			// THEN the secrets are inherited
-			got, _ := json.Marshal(targetMap)
-			want, _ := json.Marshal(tc.want)
-			if string(got) != string(want) {
-				t.Errorf("InheritSecrets() mismatch:\ngot:  %q\nwant: %q",
-					got, want)
-			}
-			// AND any errs are expected
-			errStr := util.ErrorToString(err)
-			wantErr := "^$"
-			if tc.err != "" {
-				wantErr = tc.err
-			}
-			if !regexp.MustCompile(wantErr).MatchString(errStr) {
+			gotErr := util.ErrorToString(err)
+			if !util.RegexCheck(tc.err, gotErr) {
 				t.Errorf("Expecting error to match %q, got %q",
-					wantErr, errStr)
+					tc.err, gotErr)
+			}
+			if tc.err != "^$" {
+				return
+			}
+			// AND the values are as expected
+			if gotType != tc.wantType {
+				t.Fatalf("Type mismatch:\ngot:  %q\nwant: %q",
+					gotType, tc.wantType)
+			}
+			allAddresses := fmt.Sprintf("main=%p, defaults=%p, hardDefaults=%p", gotMain, gotDefaults, gotHardDefaults)
+			// Main ref
+			if tc.wantMain == "defaults" || tc.wantMain == "hardDefaults" {
+				if (tc.wantMain == "defaults" && gotMain != tc.defaults[gotType]) ||
+					(tc.wantMain == "hardDefaults" && gotMain != tc.hardDefaults[gotType]) {
+					t.Errorf("Main mismatch:\ngot:  %p\nwant: %q\n%s",
+						gotMain, tc.wantMain, allAddresses)
+				}
+			} else if tc.wantMain != "defaults" && tc.wantMain != "hardDefaults" {
+				if gotMain == gotDefaults ||
+					gotMain == gotHardDefaults ||
+					gotMain != tc.main {
+					t.Errorf("Main mismatch:\ngot:  %p\nwant: %p\n%s",
+						gotMain, tc.main, allAddresses)
+				}
+			}
+			// Defaults ref
+			if tc.wantDefaults == "hardDefaults" {
+				if gotDefaults != tc.hardDefaults[gotType] {
+					t.Errorf("Defaults mismatch:\ngot:  %p\nwant: %q\n%s",
+						gotDefaults, tc.wantDefaults, allAddresses)
+				}
+			} else if gotDefaults != tc.defaults[gotType] {
+				t.Errorf("Defaults mismatch:\ngot:  %p\nwant: %p\n%s",
+					gotDefaults, tc.defaults[gotType], allAddresses)
+			}
+			// HardDefaults ref
+			if gotHardDefaults != tc.hardDefaults[gotType] {
+				t.Errorf("HardDefaults mismatch:\ngot:  %p\nwant: %p\n%s",
+					gotHardDefaults, tc.hardDefaults[gotType], allAddresses)
 			}
 		})
 	}

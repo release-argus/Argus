@@ -25,7 +25,7 @@ export const Approvals = (): ReactElement => {
     isFetching: isFetchingOrder,
   } = useQuery({
     queryKey: ["service/order"],
-    queryFn: () => fetchJSON<OrderAPIResponse>(`api/v1/service/order`),
+    queryFn: () => fetchJSON<OrderAPIResponse>({ url: "api/v1/service/order" }),
     gcTime: 1000 * 60 * 30, // 30 mins
     initialData: { order: monitorData.order },
   });

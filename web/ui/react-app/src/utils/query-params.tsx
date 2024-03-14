@@ -5,7 +5,7 @@ import { urlCommandsTrim } from "components/modals/service-edit/util";
 type DiffObject = { [key: string]: any };
 
 // deepDiff oldObj with newObj and return what's changed with newObj
-const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
+export const deepDiff = (newObj: DiffObject, oldObj?: DiffObject): DiffObject => {
   const diff: DiffObject = {};
 
   // if oldObj is undefined, return newObj
@@ -28,7 +28,7 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
       } else {
         const subDiff = (oldObj[key] || []).map(
           (elem: DiffObject, i: string | number) =>
-            deepDiff(elem, newObj[key][i])
+            deepDiff(newObj[key][i], elem)
         );
         if (
           subDiff.some(
@@ -44,7 +44,7 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
       typeof newObj[key] === "object"
     ) {
       // recurse on nested objects
-      const subDiff = deepDiff(oldObj[key], newObj[key]);
+      const subDiff = deepDiff(newObj[key], oldObj[key]);
       if (Object.keys(subDiff).length > 0) diff[key] = subDiff;
       // diff scalars
     } else if (oldObj[key] !== newObj[key]) diff[key] = newObj[key];
@@ -76,7 +76,7 @@ export const convertToQueryParams = ({
   prefix?: string;
 }): string => {
   const queryParams: string[] = [];
-  const changedParams = deepDiff(defaults, params);
+  const changedParams = deepDiff(params, defaults);
 
   for (const key in changedParams) {
     const paramKey = prefix ? `${prefix}[${key}]` : key;

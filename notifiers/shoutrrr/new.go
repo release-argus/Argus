@@ -15,72 +15,139 @@
 package shoutrrr
 
 import (
-	"encoding/json"
 	"fmt"
 
+	shoutrrr_vars "github.com/release-argus/Argus/notifiers/shoutrrr/types"
+	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-// UseTemplate will create a new Shoutrrr object with the given overrides applied to this template.
-func (s *Shoutrrr) UseTemplate(
-	options *string,
-	urlFields *string,
-	params *string,
+// TestPayload is the payload for testing a Notify at httpNotifyTest.
+type TestPayload struct {
+	ServiceName  string            `json:"service_name"`
+	Name         string            `json:"name"`
+	NamePrevious string            `json:"name_previous"`
+	Type         *string           `json:"type,omitempty"`
+	Options      map[string]string `json:"options"`
+	URLFields    map[string]string `json:"url_fields"`
+	Params       map[string]string `json:"params"`
+	ServiceURL   string            `json:"service_url"`
+	WebURL       string            `json:"web_url"`
+}
 
-	logFrom *util.LogFrom,
-) (shoutrrr *Shoutrrr, err error) {
-	// Notify
-	shoutrrr = &Shoutrrr{}
-	shoutrrr.Type = s.Type
-
-	err = stringToMap(options, &shoutrrr.Options, &s.Options)
-	if err != nil {
-		err = fmt.Errorf(`options:\  %s`, err)
+// FromPayload will create a Shoutrrr from a payload.
+// Copying any undefined values from the previous Service Notify.
+func FromPayload(
+	payload *TestPayload,
+	serviceNotifies *Slice,
+	mains SliceDefaults,
+	defaults SliceDefaults,
+	hardDefaults SliceDefaults,
+) (s *Shoutrrr, serviceURL string, err error) {
+	// No `service_name`
+	if payload.ServiceName == "" {
+		err = fmt.Errorf("service_name is required")
 		return
 	}
-	err = stringToMap(urlFields, &shoutrrr.URLFields, &s.URLFields)
-	if err != nil {
-		err = fmt.Errorf(`url_fields:\  %s`, err)
-		return
-	}
-	err = stringToMap(params, &shoutrrr.Params, &s.Params)
-	if err != nil {
-		err = fmt.Errorf(`params:\  %s`, err)
+	// No `name` or `name_previous`
+	if payload.NamePrevious == "" && payload.Name == "" {
+		err = fmt.Errorf("name and/or name_previous are required")
 		return
 	}
 
-	shoutrrr.Main = s.Main
-	shoutrrr.Defaults = s.Defaults
-	shoutrrr.HardDefaults = s.HardDefaults
+	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
+	nType := util.DefaultIfNil(payload.Type)
 
-	shoutrrr.ServiceStatus = s.ServiceStatus
-	shoutrrr.ServiceStatus.Init(1, 0, 0, s.ServiceStatus.ServiceID, s.ServiceStatus.WebURL)
-	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
+	// Handle NamePrevious being undefined, but that Notify existing.
+	payload.NamePrevious = util.FirstNonDefault(payload.NamePrevious, payload.Name)
+	// Original Notifier?
+	original := &Shoutrrr{}
+	if serviceNotifies != nil && (*serviceNotifies)[payload.NamePrevious] != nil {
+		original = (*serviceNotifies)[payload.NamePrevious]
+		// Copy that previous Notify Type
+		if payload.Type == nil {
+			nType = (*serviceNotifies)[payload.NamePrevious].Type
+		}
+	}
 
-	err = shoutrrr.CheckValues("")
+	// Get the Type, Main, Defaults, and HardDefaults for this Notify
+	nType, main, dfault, hardDefault, err := sortDefaults(
+		name, nType,
+		mains[name], defaults, hardDefaults)
+	if err != nil {
+		return
+	}
+
+	// Merge the payload with the original
+	util.InitMap(&payload.Options)
+	payload.Options = util.MergeMaps(original.Options, payload.Options, []string{})
+	util.InitMap(&payload.URLFields)
+	payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields, shoutrrr_vars.CensorableURLFields[:])
+	util.InitMap(&payload.Params)
+	payload.Params = util.MergeMaps(original.Params, payload.Params, shoutrrr_vars.CensorableParams[:])
+
+	// Create the Notify
+	s = New(
+		nil,
+		payload.Name,
+		&payload.Options,
+		&payload.Params,
+		nType,
+		&payload.URLFields,
+		main,
+		dfault,
+		hardDefault)
+	s.ServiceStatus = &svcstatus.Status{}
+	s.ServiceStatus.Init(
+		1, 0, 0,
+		&payload.ServiceName,
+		&payload.WebURL,
+	)
+	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
+	serviceURL = payload.ServiceURL
+
+	// Check the final Notify
+	err = s.CheckValues("")
 	return
 }
 
-// stringToMap will put baseMap into targetMap and convert str into a map[string]string and put it into targetMap.
+// sortDefaults will retrieve the Main and Defaults/HardDefaults for the Notify with this Name and Type.
 //
-// values of "<secret>" in str will be kept at the value in baseMap
-func stringToMap(str *string, targetMap *map[string]string, baseMap *map[string]string) (err error) {
-	if str == nil {
-		*targetMap = *baseMap
-		return
+// Returns the (Type, Main, Defaults, HardDefaults, error if the Type is invalid).
+func sortDefaults(
+	name string,
+	nType string,
+	main *ShoutrrrDefaults,
+	defaults SliceDefaults,
+	hardDefaults SliceDefaults,
+) (string, *ShoutrrrDefaults, *ShoutrrrDefaults, *ShoutrrrDefaults, error) {
+	// If a Main doesn't exist with this Name
+	if main == nil {
+		// Type should be already set, or in the Name.
+		nType = util.FirstNonDefault(nType, name)
+		main = defaults[nType]
+	} else {
+		// Type should be already set, in the Main, or in the Name.
+		nType = util.FirstNonDefault(nType, main.Type, name)
 	}
-	*targetMap = util.CopyMap(*baseMap)
 
-	strMap := make(map[string]string)
-	err = json.Unmarshal([]byte(*str), &strMap)
-	if err != nil {
-		return
+	// Have Type, so set the Defaults
+	dfault := defaults[nType]
+
+	// If a Hard Default doesn't exist with this Type, then this Type is invalid.
+	hardDefault := hardDefaults[nType]
+	if hardDefault == nil {
+		err := fmt.Errorf("invalid type %q", nType)
+		return nType, nil, nil, nil, err
 	}
 
-	for k, v := range strMap {
-		if v != "<secret>" || (*targetMap)[k] == "" {
-			(*targetMap)[k] = v
+	// Check whether there are Defaults for this Type
+	if dfault == nil {
+		dfault = hardDefault
+		// Main may be nil if it was set to Default
+		if main == nil {
+			main = hardDefault
 		}
 	}
-	return
+	return nType, main, dfault, hardDefault, nil
 }

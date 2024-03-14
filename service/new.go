@@ -220,9 +220,9 @@ func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map
 		}
 
 		// url_fields
-		util.CopyIfSecret(s.Notify[i].URLFields, oldNotify.URLFields, shoutrrr_vars.CensorableURLFields[:])
+		util.CopyIfSecret(oldNotify.URLFields, s.Notify[i].URLFields, shoutrrr_vars.CensorableURLFields[:])
 		// params
-		util.CopyIfSecret(s.Notify[i].Params, oldNotify.Params, shoutrrr_vars.CensorableParams[:])
+		util.CopyIfSecret(oldNotify.Params, s.Notify[i].Params, shoutrrr_vars.CensorableParams[:])
 	}
 }
 
