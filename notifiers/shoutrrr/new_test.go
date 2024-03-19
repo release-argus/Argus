@@ -85,7 +85,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 	}{
 		"empty": {
 			payload: TestPayload{},
-			err:     "service_name is required",
+			err:     "name and/or name_previous are required",
 		},
 		"no name": {
 			payload: TestPayload{

@@ -576,6 +576,9 @@ export interface NotifyGenericType extends NotifyType {
     host?: string;
     port?: number;
     path?: string;
+    custom_headers?: string;
+    json_payload_vars?: string;
+    query_vars?: string;
   };
   params: {
     contenttype?: string;

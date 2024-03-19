@@ -34,6 +34,10 @@ func (s *SliceDefaults) CheckValues(prefix string) (errs error) {
 	keys := util.SortedKeys(*s)
 	itemPrefix := prefix + "    "
 	for _, key := range keys {
+		if (*s)[key] == nil {
+			delete(*s, key)
+			continue
+		}
 		if err := (*s)[key].CheckValues(itemPrefix); err != nil {
 			errs = fmt.Errorf("%s%s  %s:\\%w",
 				util.ErrorToString(errs), prefix, key, err)

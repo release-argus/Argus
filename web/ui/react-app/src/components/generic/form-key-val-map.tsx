@@ -53,6 +53,7 @@ const FormKeyValMap: FC<Props> = ({
     () => (defaults && diffObjects(fieldValues, defaults)) ?? false,
     [fieldValues, defaults]
   );
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
   }, [useDefaults]);

@@ -851,7 +851,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			payload: `{
 				"name": "new_notify"}`,
 			wantStatus: http.StatusBadRequest,
-			wantMsg:    "service_name is required",
+			wantMsg:    `invalid type "[^"]+"`,
 		},
 		"new service, no new/old notify": {
 			payload: `{

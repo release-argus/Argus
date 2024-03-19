@@ -1,16 +1,16 @@
 import { Button, ButtonGroup, Col, FormGroup, Row } from "react-bootstrap";
-import { FC, memo, useCallback, useEffect } from "react";
+import { FC, memo, useCallback, useEffect, useMemo } from "react";
 import { FormItem, FormLabel } from "components/generic/form";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { diffObjects } from "utils/diff-objects";
 
 interface Props {
   name: string;
   label?: string;
   tooltip?: string;
-  placeholder?: (index: number) => string;
 
   defaults?: { [key: string]: string }[];
 }
@@ -19,11 +19,10 @@ const FormList: FC<Props> = ({
   name,
   label = "List",
   tooltip,
-  placeholder,
 
   defaults,
 }) => {
-  const { getValues } = useFormContext();
+  const { setValue, trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
@@ -34,12 +33,40 @@ const FormList: FC<Props> = ({
     remove(fields.length - 1);
   }, [fields.length]);
 
-  // on load, give the defaults if not overridden
+  // keep track of the array values so we can switch defaults when they're unchanged
+  const fieldValues = useWatch({ name: name });
+  // useDefaults when the fieldValues are undefined or the same as the defaults
+  const useDefaults = useMemo(
+    () => (defaults && diffObjects(fieldValues, defaults)) ?? false,
+    [fieldValues, defaults]
+  );
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
-    const useDefaults = defaults?.length && getValues(name).length == 0;
-    if (useDefaults) {
+    trigger(name);
+  }, [useDefaults]);
+
+  const placeholder = useCallback(
+    (index: number) => (useDefaults && defaults?.[index]?.arg) || "",
+    [useDefaults, defaults]
+  );
+
+  // on load, ensure we don't have another types actions
+  // and give the defaults if not overridden
+  useEffect(() => {
+    let values = fieldValues ?? [];
+    for (const item of values) {
+      if ((item.arg || "") === "") {
+        setValue(`${name}.params.actions`, []);
+        values = [];
+        break;
+      }
+    }
+
+    if (values.length === 0) {
       defaults?.forEach(() => {
-        append({}, { shouldFocus: false });
+        setTimeout(() => {
+          addItem();
+        }, 0);
       });
     }
   }, []);
@@ -80,7 +107,7 @@ const FormList: FC<Props> = ({
             key={id}
             name={`${name}.${index}.arg`}
             required
-            placeholder={placeholder ? placeholder(index) : undefined}
+            defaultVal={placeholder(index)}
             onRight={index % 2 === 1}
           />
         ))}

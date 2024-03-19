@@ -6,7 +6,7 @@ import {
   Row,
   Stack,
 } from "react-bootstrap";
-import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import { FC, memo, useCallback, useEffect, useMemo, useState } from "react";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
@@ -24,7 +24,7 @@ interface Props {
 }
 
 const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
-  const { trigger, getValues, setValue } = useFormContext();
+  const { setValue, trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
@@ -34,6 +34,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
         action: "view",
         label: "",
         url: "",
+        intent: "io.heckel.ntfy.USER_ACTION",
       },
       { shouldFocus: false }
     );
@@ -49,24 +50,31 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
-  const useDefaults = useMemo(
-    () => actionDefaults && diffObjects(fieldValues, actionDefaults),
-    [fieldValues, defaults]
-  );
+  const [useDefaults, setUseDefaults] = useState(false);
+  // useEffect rather than useMemo as it was sometimes giving partial fieldValues on load
+  useEffect(() => {
+    const result = diffObjects(fieldValues, actionDefaults)
+    if (result != useDefaults) setUseDefaults(result);
+  }, [fieldValues, actionDefaults]);
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
   }, [useDefaults]);
 
-  // on load, ensure we don't have another types actions and
-  // give the defaults if not overridden
+  // on load, ensure we don't have another types actions
+  // and give the defaults if not overridden
   useEffect(() => {
-    for (const item of getValues(name)) {
+    let values = fieldValues ?? [];
+    // ensure we don't have another types actions
+    for (const item of values) {
       if ((item.action || "") === "") {
         setValue(name, []);
+        values = [];
         break;
       }
     }
-    if (useDefaults) {
+
+    if (values.length === 0) {
       actionDefaults?.forEach((dflt) => {
         append({ action: dflt.action }, { shouldFocus: false });
       });

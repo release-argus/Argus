@@ -153,7 +153,14 @@ const EditServiceWebHook: FC<Props> = ({
               global?.secret || defaults?.secret || hard_defaults?.secret
             }
           />
-          <FormKeyValMap name={`${name}.custom_headers`} />
+          <FormKeyValMap
+            name={`${name}.custom_headers`}
+            defaults={
+              global?.custom_headers ??
+              defaults?.custom_headers ??
+              hard_defaults?.custom_headers
+            }
+          />
           <FormItem
             name={`${name}.desired_status_code`}
             col_xs={6}

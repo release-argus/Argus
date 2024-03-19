@@ -148,6 +148,8 @@ export const convertHeadersFromString = (
   }
 };
 
+// convertOpsGenieTargetFromString will convert a JSON string to a NotifyOpsGenieTarget[]
+// for opsgenie.responders and opsgenie.visibleto
 export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[]
 ): NotifyOpsGenieTarget[] | undefined => {
@@ -187,6 +189,8 @@ export const convertOpsGenieTargetFromString = (
   }
 };
 
+// convertNtfyActionsFromString will convert a JSON string to a NotifyNtfyAction[]
+// for ntfy.actions
 export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[]
 ): NotifyNtfyAction[] | undefined => {
@@ -196,21 +200,53 @@ export const convertNtfyActionsFromString = (
 
   // convert from a JSON string
   try {
-    return JSON.parse(str).map((obj: NotifyNtfyAction, i: number) => ({
-      id: i,
-      ...obj,
-      headers: obj.headers
-        ? convertStringMapToHeaderType(obj.headers as { [key: string]: string })
-        : undefined,
-      extras: obj.extras
-        ? convertStringMapToHeaderType(obj.extras as { [key: string]: string })
-        : undefined,
-    })) as NotifyNtfyAction[];
+    return JSON.parse(str).map((obj: NotifyNtfyAction, i: number) => {
+      if (obj.action === "view") {
+        return {
+          id: i,
+          action: obj.action,
+          label: obj.label,
+          url: obj.url,
+        };
+      } else if (obj.action === "http") {
+        return {
+          id: i,
+          action: obj.action,
+          label: obj.label,
+          url: obj.url,
+          method: obj.method,
+          headers: obj.headers
+            ? convertStringMapToHeaderType(
+                obj.headers as { [key: string]: string }
+              )
+            : undefined,
+          body: obj.body,
+        };
+      } else if (obj.action === "broadcast") {
+        return {
+          id: i,
+          action: obj.action,
+          label: obj.label,
+          intent: obj.intent,
+          extras: obj.extras
+            ? convertStringMapToHeaderType(
+                obj.extras as { [key: string]: string }
+              )
+            : undefined,
+        };
+      }
+      // unknown action
+      return {
+        id: i,
+        ...obj,
+      };
+    }) as NotifyNtfyAction[];
   } catch (error) {
     return [];
   }
 };
 
+// convertNotifyParams will convert a notify param to the correct types for the UI
 export const convertNotifyParams = (
   name: string,
   type?: string,
@@ -229,7 +265,8 @@ export const convertNotifyParams = (
         ...params,
         actions: convertStringToFieldArray(params?.actions),
         details: convertHeadersFromString(params?.details),
-        targets: convertOpsGenieTargetFromString(params?.targets),
+        responders: convertOpsGenieTargetFromString(params?.responders),
+        visibleto: convertOpsGenieTargetFromString(params?.visibleto),
       };
     case "generic":
       return {
@@ -243,6 +280,7 @@ export const convertNotifyParams = (
   }
 };
 
+// convertStringMapToHeaderType will convert a {[key]: string, ...} to a HeaderType[]
 const convertStringMapToHeaderType = (headers?: {
   [key: string]: string;
 }): HeaderType[] | undefined => {

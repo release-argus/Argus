@@ -45,7 +45,7 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
         name={`${name}.headers`}
         label="Headers"
         tooltip="HTTP headers"
-        defaults={defaults?.headers as HeaderType[]}
+        defaults={defaults?.headers as HeaderType[] | undefined}
         keyPlaceholder="e.g. 'Authorization'"
         valuePlaceholder="e.g. 'Bearer <token>'"
       />

@@ -1,20 +1,19 @@
 import { Alert, Button } from "react-bootstrap";
-import { FC, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
+import { extractErrors, fetchJSON } from "utils";
 import {
   faCheckCircle,
   faCircleXmark,
   faSpinner,
   faSync,
 } from "@fortawesome/free-solid-svg-icons";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotifyType } from "types/config";
 import { convertNotifyToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { deepDiff } from "utils/query-params";
-import { fetchJSON } from "utils";
-import { useFormState } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import useValuesRefetch from "hooks/values-refetch";
 
 const Result: FC<{ status: "pending" | "success" | "error"; err?: string }> = ({
   status,
@@ -48,9 +47,18 @@ interface Props {
 }
 
 const TestNotify: FC<Props> = ({ path, original, extras }) => {
-  const { isValid } = useFormState({ name: path });
+  const { trigger } = useFormContext();
   const [lastFetched, setLastFetched] = useState(0);
-  const { data, refetchData } = useValuesRefetch(path, true);
+  const data = useWatch({ name: path });
+  const { errors } = useFormState({ name: path });
+  const [filteredErrors, setFilteredErrors] = useState<{
+    [key: string]: string;
+  }>({});
+
+  // Unsure why this isn't working. Was useMemo previously
+  useEffect(() => {
+    setFilteredErrors(extractErrors(errors, path));
+  }, [errors]);
 
   const fetchTestNotifyJSON = () =>
     fetchJSON<{ message: string }>({
@@ -90,14 +98,16 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
     const currentTime = Date.now();
     if (currentTime - lastFetched < 2000) return;
 
-    if (isValid) {
-      refetchData();
-      // setTimeoout to allow for refetches ^
+    const result = await trigger(path);
+    if (result) {
       setTimeout(() => {
         testRefetch();
       });
       setLastFetched(currentTime);
     }
+    const errs = extractErrors(errors, path);
+    if (JSON.stringify(errs) !== JSON.stringify(filteredErrors))
+      setFilteredErrors(extractErrors(errors, path));
   };
 
   const ResultIcon = useMemo(() => {
@@ -129,13 +139,26 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
           variant="secondary"
           style={{ marginLeft: "auto", padding: "0 1rem" }}
           onClick={refetch}
-          disabled={!isValid || isFetching}
+          disabled={isFetching}
         >
           <FontAwesomeIcon icon={faSync} style={{ paddingRight: "0.25rem" }} />
           Send Test Message
         </Button>
       </span>
+      {/* Render either the server error or form validation error */}
       <Result status={testStatus} err={testData?.message} />
+      {Object.keys(filteredErrors).length > 0 && (
+        <Alert
+          variant="danger"
+          style={{ paddingLeft: "2rem", marginBottom: "unset" }}
+        >
+          {Object.entries(filteredErrors).map(([key, error]) => (
+            <li key={key}>
+              {key}: {error}
+            </li>
+          ))}
+        </Alert>
+      )}
     </span>
   );
 };

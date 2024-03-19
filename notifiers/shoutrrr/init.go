@@ -46,14 +46,16 @@ func (s *Slice) Init(
 		}
 		(*s)[key].ID = id
 
-		if (*mains)[key] == nil {
-			(*mains)[key] = &ShoutrrrDefaults{}
+		main := (*mains)[key]
+		if main == nil {
+			main = &ShoutrrrDefaults{}
+			main.InitMaps()
 		}
 
 		// Get Type from this, the associated Main, or the ID
 		notifyType := util.FirstNonDefault(
 			(*s)[key].Type,
-			(*mains)[key].Type,
+			main.Type,
 			id)
 
 		// Ensure defaults aren't nil
@@ -69,7 +71,7 @@ func (s *Slice) Init(
 
 		(*s)[key].Init(
 			serviceStatus,
-			(*mains)[key], (*defaults)[notifyType], (*hardDefaults)[notifyType])
+			main, (*defaults)[notifyType], (*hardDefaults)[notifyType])
 	}
 }
 

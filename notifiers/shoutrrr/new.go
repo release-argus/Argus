@@ -44,11 +44,6 @@ func FromPayload(
 	defaults SliceDefaults,
 	hardDefaults SliceDefaults,
 ) (s *Shoutrrr, serviceURL string, err error) {
-	// No `service_name`
-	if payload.ServiceName == "" {
-		err = fmt.Errorf("service_name is required")
-		return
-	}
 	// No `name` or `name_previous`
 	if payload.NamePrevious == "" && payload.Name == "" {
 		err = fmt.Errorf("name and/or name_previous are required")
