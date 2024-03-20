@@ -63,6 +63,35 @@ const EditServiceWebHook: FC<Props> = ({
     [name, itemName, itemType]
   );
 
+  const convertedDefaults = useMemo(
+    () => ({
+      allow_invalid_certs:
+        global?.allow_invalid_certs ??
+        defaults?.allow_invalid_certs ??
+        hard_defaults?.allow_invalid_certs,
+      delay: global?.delay || defaults?.delay || hard_defaults?.delay,
+      desired_status_code: globalOrDefault(
+        global?.desired_status_code,
+        defaults?.desired_status_code,
+        hard_defaults?.desired_status_code
+      ),
+      max_tries: `${
+        global?.max_tries ??
+        defaults?.max_tries ??
+        hard_defaults?.max_tries ??
+        ""
+      }`,
+      secret: global?.secret || defaults?.secret || hard_defaults?.secret,
+      silent_fails:
+        global?.silent_fails ??
+        defaults?.silent_fails ??
+        hard_defaults?.silent_fails,
+      type: defaults?.type || hard_defaults?.type,
+      url: globalOrDefault(global?.url, defaults?.url, hard_defaults?.url),
+    }),
+    [global, defaults, hard_defaults]
+  );
+
   return (
     <Accordion>
       <div style={{ display: "flex", alignItems: "center" }}>
@@ -128,30 +157,20 @@ const EditServiceWebHook: FC<Props> = ({
             type="text"
             label="Target URL"
             tooltip="Where to send the WebHook"
-            defaultVal={globalOrDefault(
-              global?.url,
-              defaults?.url,
-              hard_defaults?.url
-            )}
+            defaultVal={convertedDefaults.url}
             isURL
           />
           <BooleanWithDefault
             name={`${name}.allow_invalid_certs`}
             label="Allow Invalid Certs"
-            defaultValue={
-              global?.allow_invalid_certs ??
-              defaults?.allow_invalid_certs ??
-              hard_defaults?.allow_invalid_certs
-            }
+            defaultValue={convertedDefaults.allow_invalid_certs}
           />
           <FormItem
             name={`${name}.secret`}
             required
             col_sm={12}
             label="Secret"
-            defaultVal={
-              global?.secret || defaults?.secret || hard_defaults?.secret
-            }
+            defaultVal={convertedDefaults.secret}
           />
           <FormKeyValMap
             name={`${name}.custom_headers`}
@@ -166,22 +185,13 @@ const EditServiceWebHook: FC<Props> = ({
             col_xs={6}
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
-            defaultVal={globalOrDefault(
-              global?.desired_status_code,
-              defaults?.desired_status_code,
-              hard_defaults?.desired_status_code
-            )}
+            defaultVal={convertedDefaults.desired_status_code}
           />
           <FormItem
             name={`${name}.max_tries`}
             col_xs={6}
             label="Max tries"
-            defaultVal={`${
-              global?.max_tries ??
-              defaults?.max_tries ??
-              hard_defaults?.max_tries ??
-              ""
-            }`}
+            defaultVal={convertedDefaults.max_tries}
             onRight
           />
           <FormItem
@@ -189,20 +199,14 @@ const EditServiceWebHook: FC<Props> = ({
             col_sm={12}
             label="Delay"
             tooltip="Delay sending by this duration"
-            defaultVal={
-              global?.delay || defaults?.delay || hard_defaults?.delay
-            }
+            defaultVal={convertedDefaults.delay}
             onRight
           />
           <BooleanWithDefault
             name={`${name}.silent_fails`}
             label="Silent fails"
             tooltip="Notify if WebHook fails max tries times"
-            defaultValue={
-              global?.silent_fails ??
-              defaults?.silent_fails ??
-              hard_defaults?.silent_fails
-            }
+            defaultValue={convertedDefaults.silent_fails}
           />
         </Row>
       </Accordion.Body>

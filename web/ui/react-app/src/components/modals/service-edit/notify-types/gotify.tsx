@@ -5,6 +5,7 @@ import { NotifyGotifyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
+import { useMemo } from "react";
 
 const GOTIFY = ({
   name,
@@ -18,105 +19,125 @@ const GOTIFY = ({
   global?: NotifyGotifyType;
   defaults?: NotifyGotifyType;
   hard_defaults?: NotifyGotifyType;
-}) => (
-  <>
-    <NotifyOptions
-      name={name}
-      global={global?.options}
-      defaults={defaults?.options}
-      hard_defaults={hard_defaults?.options}
-    />
-    <>
-      <FormLabel text="URL Fields" heading />
-      <FormItem
-        name={`${name}.url_fields.host`}
-        required
-        col_sm={9}
-        label="Host"
-        tooltip="e.g. gotify.example.com"
-        defaultVal={globalOrDefault(
+}) => {
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        host: globalOrDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
-        )}
-      />
-      <FormItem
-        name={`${name}.url_fields.port`}
-        col_sm={3}
-        type="number"
-        label="Port"
-        tooltip="e.g. 443"
-        defaultVal={globalOrDefault(
-          global?.url_fields?.port,
-          defaults?.url_fields?.port,
-          hard_defaults?.url_fields?.port
-        )}
-        onRight
-      />
-      <FormItem
-        name={`${name}.url_fields.path`}
-        label="Path"
-        tooltip={
-          <>
-            e.g. gotify.example.io/
-            <span className="bold-underline">path</span>
-          </>
-        }
-        defaultVal={globalOrDefault(
+        ),
+        path: globalOrDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
-        )}
-      />
-      <FormItem
-        name={`${name}.url_fields.token`}
-        required
-        label="Token"
-        defaultVal={globalOrDefault(
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+        token: globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
-        )}
-        onRight
-      />
-    </>
-    <>
-      <FormLabel text="Params" heading />
-      <FormItem
-        name={`${name}.params.priority`}
-        col_sm={2}
-        type="number"
-        label="Priority"
-        defaultVal={globalOrDefault(
-          global?.params?.priority,
-          defaults?.params?.priority,
-          hard_defaults?.params?.priority
-        )}
-      />
-      <FormItem
-        name={`${name}.params.title`}
-        col_sm={10}
-        label="Title"
-        defaultVal={globalOrDefault(
-          global?.params?.title,
-          defaults?.params?.title,
-          hard_defaults?.params?.title
-        )}
-        onRight
-      />
-      <BooleanWithDefault
-        name={`${name}.params.disabletls`}
-        label="Disable TLS"
-        defaultValue={
+        ),
+      },
+      // Params
+      params: {
+        disabletls:
           strToBool(
             global?.params?.disabletls ||
               defaults?.params?.disabletls ||
               hard_defaults?.params?.disabletls
-          ) ?? false
-        }
+          ) ?? false,
+        priority: globalOrDefault(
+          global?.params?.priority,
+          defaults?.params?.priority,
+          hard_defaults?.params?.priority
+        ),
+        title: globalOrDefault(
+          global?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+      },
+    }),
+    [global, defaults, hard_defaults]
+  );
+
+  return (
+    <>
+      <NotifyOptions
+        name={name}
+        global={global?.options}
+        defaults={defaults?.options}
+        hard_defaults={hard_defaults?.options}
       />
+      <>
+        <FormLabel text="URL Fields" heading />
+        <FormItem
+          name={`${name}.url_fields.host`}
+          required
+          col_sm={9}
+          label="Host"
+          tooltip="e.g. gotify.example.com"
+          defaultVal={convertedDefaults.url_fields.host}
+        />
+        <FormItem
+          name={`${name}.url_fields.port`}
+          col_sm={3}
+          type="number"
+          label="Port"
+          tooltip="e.g. 443"
+          defaultVal={convertedDefaults.url_fields.port}
+          onRight
+        />
+        <FormItem
+          name={`${name}.url_fields.path`}
+          label="Path"
+          tooltip={
+            <>
+              e.g. gotify.example.io/
+              <span className="bold-underline">path</span>
+            </>
+          }
+          defaultVal={convertedDefaults.url_fields.path}
+        />
+        <FormItem
+          name={`${name}.url_fields.token`}
+          required
+          label="Token"
+          defaultVal={convertedDefaults.url_fields.token}
+          onRight
+        />
+      </>
+      <>
+        <FormLabel text="Params" heading />
+        <FormItem
+          name={`${name}.params.priority`}
+          col_sm={2}
+          type="number"
+          label="Priority"
+          defaultVal={convertedDefaults.params.priority}
+        />
+        <FormItem
+          name={`${name}.params.title`}
+          col_sm={10}
+          label="Title"
+          defaultVal={convertedDefaults.params.title}
+          onRight
+        />
+        <BooleanWithDefault
+          name={`${name}.params.disabletls`}
+          label="Disable TLS"
+          defaultValue={convertedDefaults.params.disabletls}
+        />
+      </>
     </>
-  </>
-);
+  );
+};
 
 export default GOTIFY;

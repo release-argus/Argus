@@ -1092,7 +1092,7 @@ func TestCopyIfSecret(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CopyIfSecret is called
-			CopyIfSecret(tc.input, tc.copyFrom, tc.fields)
+			CopyIfSecret(tc.copyFrom, tc.input, tc.fields)
 
 			// THEN the secrets are copied correctly
 			if len(tc.input) != len(tc.want) {

@@ -301,8 +301,9 @@ code {
 .form-error:focus {
   border-color: var(--bs-danger);
 }
-.form-check {
-  height: 100%;
+.form-check .form-check-input {
+  height: 1.5rem;
+  width: 1.5rem;
 }
 .form-check-large .form-check-input {
   height: 2.363rem;

@@ -6,21 +6,21 @@ import {
   Row,
   Stack,
 } from "react-bootstrap";
-import { FC, memo, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import { HeaderType, NotifyNtfyAction } from "types/config";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import NtfyAction from "./action";
-import { convertNtfyActionsFromString } from "components/modals/service-edit/util/api-ui-conversions";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
   name: string;
   label: string;
   tooltip: string;
-  defaults?: string;
+  defaults?: NotifyNtfyAction[];
 }
 
 const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
@@ -43,19 +43,13 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
     remove(fields.length - 1);
   }, [fields.length]);
 
-  const actionDefaults = useMemo(
-    () => (defaults ? convertNtfyActionsFromString(defaults) : undefined),
-    [defaults]
-  );
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
-  // useDefaults when the fieldValues are undefined or the same as the defaults
-  const [useDefaults, setUseDefaults] = useState(false);
-  // useEffect rather than useMemo as it was sometimes giving partial fieldValues on load
-  useEffect(() => {
-    const result = diffObjects(fieldValues, actionDefaults)
-    if (result != useDefaults) setUseDefaults(result);
-  }, [fieldValues, actionDefaults]);
+  // useDefaults when the fieldValues are unset or the same as the defaults
+  const useDefaults = useMemo(
+    () => fieldValues && defaults && diffObjects(fieldValues, defaults),
+    [fieldValues, defaults]
+  );
   // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
@@ -75,8 +69,26 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
     }
 
     if (values.length === 0) {
-      actionDefaults?.forEach((dflt) => {
-        append({ action: dflt.action }, { shouldFocus: false });
+      defaults?.forEach((dflt) => {
+        if (dflt.action === undefined) return;
+        // http
+        else if (dflt.action === "http") {
+          const headers = ((dflt?.headers ?? []) as HeaderType[]).map(
+            () => ({})
+          );
+          append(
+            { action: dflt.action, headers: headers },
+            { shouldFocus: false }
+          );
+          // broadcast
+        } else if (dflt.action === "broadcast") {
+          const extras = ((dflt?.extras ?? []) as HeaderType[]).map(() => ({}));
+          append(
+            { action: dflt.action, extras: extras },
+            { shouldFocus: false }
+          );
+          // view
+        } else append({ action: dflt.action }, { shouldFocus: false });
       });
     }
   }, []);
@@ -114,7 +126,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
             <NtfyAction
               name={`${name}.${index}`}
               removeMe={() => remove(index)}
-              defaults={useDefaults ? actionDefaults?.[index] : undefined}
+              defaults={useDefaults ? defaults?.[index] : undefined}
             />
           </Row>
         ))}

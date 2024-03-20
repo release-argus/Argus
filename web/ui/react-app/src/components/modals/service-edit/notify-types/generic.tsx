@@ -50,80 +50,84 @@ const GENERIC = ({
 
   const convertedDefaults = useMemo(
     () => ({
-      requestMethod: globalOrDefault(
-        global?.params?.requestmethod,
-        defaults?.params?.requestmethod,
-        hard_defaults?.params?.requestmethod
-      ).toLowerCase(),
       // URL Fields
-      host: globalOrDefault(
-        global?.url_fields?.host,
-        defaults?.url_fields?.host,
-        hard_defaults?.url_fields?.host
-      ),
-      path: globalOrDefault(
-        global?.url_fields?.path,
-        defaults?.url_fields?.path,
-        hard_defaults?.url_fields?.path
-      ),
-      port: globalOrDefault(
-        global?.url_fields?.port,
-        defaults?.url_fields?.port,
-        hard_defaults?.url_fields?.port
-      ),
-      customHeaders: convertHeadersFromString(
-        globalOrDefault(
-          global?.url_fields?.custom_headers,
-          defaults?.url_fields?.custom_headers,
-          hard_defaults?.url_fields?.custom_headers
-        )
-      ),
-      json_payload_vars: convertHeadersFromString(
-        globalOrDefault(
-          global?.url_fields?.json_payload_vars,
-          defaults?.url_fields?.json_payload_vars,
-          hard_defaults?.url_fields?.json_payload_vars
-        )
-      ),
-      query_vars: convertHeadersFromString(
-        globalOrDefault(
-          global?.url_fields?.query_vars,
-          defaults?.url_fields?.query_vars,
-          hard_defaults?.url_fields?.query_vars
-        )
-      ),
+      url_fields: {
+        custom_headers: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.custom_headers,
+            defaults?.url_fields?.custom_headers,
+            hard_defaults?.url_fields?.custom_headers
+          )
+        ),
+        host: globalOrDefault(
+          global?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        json_payload_vars: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.json_payload_vars,
+            defaults?.url_fields?.json_payload_vars,
+            hard_defaults?.url_fields?.json_payload_vars
+          )
+        ),
+        path: globalOrDefault(
+          global?.url_fields?.path,
+          defaults?.url_fields?.path,
+          hard_defaults?.url_fields?.path
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+        query_vars: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.query_vars,
+            defaults?.url_fields?.query_vars,
+            hard_defaults?.url_fields?.query_vars
+          )
+        ),
+      },
       // Params
-      contentType: globalOrDefault(
-        global?.params?.contenttype,
-        defaults?.params?.contenttype,
-        hard_defaults?.params?.contenttype
-      ),
-      disableTLS:
-        strToBool(
-          global?.params?.disabletls ||
-            defaults?.params?.disabletls ||
-            hard_defaults?.params?.disabletls
-        ) ?? true,
-      messageKey: globalOrDefault(
-        global?.params?.messagekey,
-        defaults?.params?.messagekey,
-        hard_defaults?.params?.messagekey
-      ),
-      template: globalOrDefault(
-        global?.params?.template,
-        defaults?.params?.template,
-        hard_defaults?.params?.template
-      ),
-      title: globalOrDefault(
-        global?.params?.title,
-        defaults?.params?.title,
-        hard_defaults?.params?.title
-      ),
-      titleKey: globalOrDefault(
-        global?.params?.titlekey,
-        defaults?.params?.titlekey,
-        hard_defaults?.params?.titlekey
-      ),
+      params: {
+        contenttype: globalOrDefault(
+          global?.params?.contenttype,
+          defaults?.params?.contenttype,
+          hard_defaults?.params?.contenttype
+        ),
+        disabletls:
+          strToBool(
+            global?.params?.disabletls ||
+              defaults?.params?.disabletls ||
+              hard_defaults?.params?.disabletls
+          ) ?? true,
+        messagekey: globalOrDefault(
+          global?.params?.messagekey,
+          defaults?.params?.messagekey,
+          hard_defaults?.params?.messagekey
+        ),
+        requestmethod: globalOrDefault(
+          global?.params?.requestmethod,
+          defaults?.params?.requestmethod,
+          hard_defaults?.params?.requestmethod
+        ).toLowerCase(),
+        template: globalOrDefault(
+          global?.params?.template,
+          defaults?.params?.template,
+          hard_defaults?.params?.template
+        ),
+        title: globalOrDefault(
+          global?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+        titlekey: globalOrDefault(
+          global?.params?.titlekey,
+          defaults?.params?.titlekey,
+          hard_defaults?.params?.titlekey
+        ),
+      },
     }),
     [global, defaults, hard_defaults]
   );
@@ -132,7 +136,7 @@ const GENERIC = ({
     useMemo(() => {
       const defaultRequestMethod = normaliseForSelect(
         GenericRequestMethodOptions,
-        convertedDefaults.requestMethod
+        convertedDefaults.params.requestmethod
       );
 
       if (defaultRequestMethod)
@@ -142,7 +146,7 @@ const GENERIC = ({
         ];
 
       return GenericRequestMethodOptions;
-    }, [convertedDefaults.requestMethod]);
+    }, [convertedDefaults.params.requestmethod]);
 
   return (
     <>
@@ -161,7 +165,7 @@ const GENERIC = ({
             col_sm={12}
             label="Host"
             tooltip="e.g. gotify.example.com"
-            defaultVal={convertedDefaults.host}
+            defaultVal={convertedDefaults.url_fields.host}
           />
           <FormItem
             name={`${name}.url_fields.port`}
@@ -169,7 +173,7 @@ const GENERIC = ({
             type="number"
             label="Port"
             tooltip="e.g. 443"
-            defaultVal={convertedDefaults.port}
+            defaultVal={convertedDefaults.url_fields.port}
           />
           <FormItem
             name={`${name}.url_fields.path`}
@@ -181,13 +185,13 @@ const GENERIC = ({
                 <span className="bold-underline">path</span>
               </>
             }
-            defaultVal={convertedDefaults.path}
+            defaultVal={convertedDefaults.url_fields.path}
             onRight
           />
           <FormKeyValMap
             name={`${name}.url_fields.custom_headers`}
             tooltip="Additional HTTP headers"
-            defaults={convertedDefaults.customHeaders}
+            defaults={convertedDefaults.url_fields.custom_headers}
           />
           {selectedTemplate && (
             <FormKeyValMap
@@ -196,7 +200,7 @@ const GENERIC = ({
               tooltip="Override 'title' and 'message' with 'titleKey' and 'messageKey' respectively"
               keyPlaceholder="e.g. key"
               valuePlaceholder="e.g. value"
-              defaults={convertedDefaults.json_payload_vars}
+              defaults={convertedDefaults.url_fields.json_payload_vars}
             />
           )}
           <FormKeyValMap
@@ -205,7 +209,7 @@ const GENERIC = ({
             tooltip="If you need to pass a query variable that is reserved, you can prefix it with an underscore"
             keyPlaceholder="e.g. foo"
             valuePlaceholder="e.g. bar"
-            defaults={convertedDefaults.query_vars}
+            defaults={convertedDefaults.url_fields.query_vars}
           />
         </>
         <FormLabel text="Params" heading />
@@ -222,7 +226,7 @@ const GENERIC = ({
           col_sm={8}
           label="Content Type"
           tooltip="The value of the Content-Type header"
-          defaultVal={convertedDefaults.contentType}
+          defaultVal={convertedDefaults.params.contenttype}
         />
         <FormItem
           name={`${name}.params.messagekey`}
@@ -230,7 +234,7 @@ const GENERIC = ({
           type="text"
           label="Message Key"
           tooltip="The key that will be used for the message value"
-          defaultVal={convertedDefaults.messageKey}
+          defaultVal={convertedDefaults.params.messagekey}
         />
         <FormItem
           name={`${name}.params.template`}
@@ -238,7 +242,7 @@ const GENERIC = ({
           type="text"
           label="Template"
           tooltip="The template used for creating the request payload"
-          defaultVal={convertedDefaults.template}
+          defaultVal={convertedDefaults.params.template}
         />
         <FormItem
           name={`${name}.params.titlekey`}
@@ -246,7 +250,7 @@ const GENERIC = ({
           type="text"
           label="Title Key"
           tooltip="The key that will be used for the title value"
-          defaultVal={convertedDefaults.titleKey}
+          defaultVal={convertedDefaults.params.titlekey}
         />
         <FormItem
           name={`${name}.params.title`}
@@ -254,12 +258,12 @@ const GENERIC = ({
           type="text"
           label="Title"
           tooltip="Text prepended to the message"
-          defaultVal={convertedDefaults.title}
+          defaultVal={convertedDefaults.params.title}
         />
         <BooleanWithDefault
           name={`${name}.params.disabletls`}
           label="Disable TLS"
-          defaultValue={convertedDefaults.disableTLS}
+          defaultValue={convertedDefaults.params.disabletls}
         />
       </>
     </>

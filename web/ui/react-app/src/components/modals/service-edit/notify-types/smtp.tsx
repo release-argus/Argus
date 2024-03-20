@@ -38,15 +38,89 @@ const SMTP = ({
 }) => {
   const { getValues, setValue } = useFormContext();
 
-  const defaultParamsAuth = globalOrDefault(
-    global?.params?.auth,
-    defaults?.params?.auth,
-    hard_defaults?.params?.auth
-  ).toLowerCase();
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        host: globalOrDefault(
+          global?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        password: globalOrDefault(
+          global?.url_fields?.password,
+          defaults?.url_fields?.password,
+          hard_defaults?.url_fields?.password
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+        username: globalOrDefault(
+          global?.url_fields?.username,
+          defaults?.url_fields?.username,
+          hard_defaults?.url_fields?.username
+        ),
+      },
+      // Params
+      params: {
+        auth: globalOrDefault(
+          global?.params?.auth,
+          defaults?.params?.auth,
+          hard_defaults?.params?.auth
+        ).toLowerCase(),
+        clienthost: globalOrDefault(
+          global?.params?.clienthost,
+          defaults?.params?.clienthost,
+          hard_defaults?.params?.clienthost
+        ),
+        encryption: globalOrDefault(
+          global?.params?.encryption,
+          defaults?.params?.encryption,
+          hard_defaults?.params?.encryption
+        ).toLowerCase(),
+        fromaddress: globalOrDefault(
+          global?.params?.fromaddress,
+          defaults?.params?.fromaddress,
+          hard_defaults?.params?.fromaddress
+        ),
+        fromname: globalOrDefault(
+          global?.params?.fromname,
+          defaults?.params?.fromname,
+          hard_defaults?.params?.fromname
+        ),
+        subject: globalOrDefault(
+          global?.params?.subject,
+          defaults?.params?.subject,
+          hard_defaults?.params?.subject
+        ),
+        toaddresses: globalOrDefault(
+          global?.params?.toaddresses,
+          defaults?.params?.toaddresses,
+          hard_defaults?.params?.toaddresses
+        ),
+        usehtml:
+          strToBool(
+            global?.params?.usehtml ||
+              defaults?.params?.usehtml ||
+              hard_defaults?.params?.usehtml
+          ) ?? false,
+        usestarttls:
+          strToBool(
+            global?.params?.usestarttls ||
+              defaults?.params?.usestarttls ||
+              hard_defaults?.params?.usestarttls
+          ) ?? true,
+      },
+    }),
+    [global, defaults, hard_defaults]
+  );
+
   const smtpAuthOptions = useMemo(() => {
     const defaultParamsAuthLabel = normaliseForSelect(
       SMTPAuthOptions,
-      defaultParamsAuth
+      convertedDefaults.params.auth
     );
 
     if (defaultParamsAuthLabel)
@@ -56,17 +130,12 @@ const SMTP = ({
       ];
 
     return SMTPAuthOptions;
-  }, [defaultParamsAuth]);
+  }, [convertedDefaults.params.auth]);
 
-  const defaultParamsEncryption = globalOrDefault(
-    global?.params?.encryption,
-    defaults?.params?.encryption,
-    hard_defaults?.params?.encryption
-  ).toLowerCase();
   const smtpEncryptionOptions = useMemo(() => {
     const defaultParamsEncryptionLabel = normaliseForSelect(
       SMTPEncryptionOptions,
-      defaultParamsEncryption
+      convertedDefaults.params.encryption
     );
 
     if (defaultParamsEncryptionLabel)
@@ -76,19 +145,19 @@ const SMTP = ({
       ];
 
     return SMTPEncryptionOptions;
-  }, [defaultParamsAuth]);
+  }, [convertedDefaults.params.encryption]);
 
   useEffect(() => {
     const currentAuth = getValues(`${name}.params.auth`);
     // Normalise selected auth, or default it
-    if (defaultParamsAuth === "")
+    if (convertedDefaults.params.auth === "")
       setValue(
         `${name}.params.auth`,
         normaliseForSelect(SMTPAuthOptions, currentAuth)?.value || "Unknown"
       );
 
     // Normalise selected encryption, or default it
-    if (defaultParamsEncryption === "")
+    if (convertedDefaults.params.encryption === "")
       setValue(
         `${name}.params.encryption`,
         normaliseForSelect(
@@ -112,20 +181,12 @@ const SMTP = ({
           name={`${name}.url_fields.username`}
           label="Username"
           tooltip="e.g. something@example.com"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.username,
-            defaults?.url_fields?.username,
-            hard_defaults?.url_fields?.username
-          )}
+          defaultVal={convertedDefaults.url_fields.username}
         />
         <FormItem
           name={`${name}.url_fields.password`}
           label="Password"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.password,
-            defaults?.url_fields?.password,
-            hard_defaults?.url_fields?.password
-          )}
+          defaultVal={convertedDefaults.url_fields.password}
           onRight
         />
         <FormItem
@@ -134,11 +195,7 @@ const SMTP = ({
           col_sm={9}
           label="Host"
           tooltip="e.g. smtp.example.com"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.host,
-            defaults?.url_fields?.host,
-            hard_defaults?.url_fields?.host
-          )}
+          defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
           name={`${name}.url_fields.port`}
@@ -146,11 +203,7 @@ const SMTP = ({
           type="number"
           label="Port"
           tooltip="e.g. 25/465/587/2525"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.port,
-            defaults?.url_fields?.port,
-            hard_defaults?.url_fields?.port
-          )}
+          defaultVal={convertedDefaults.url_fields.port}
           onRight
         />
       </>
@@ -162,32 +215,20 @@ const SMTP = ({
           col_sm={12}
           label="To Address(es)"
           tooltip="Email(s) to send to (Comma separated)"
-          defaultVal={globalOrDefault(
-            global?.params?.toaddresses,
-            defaults?.params?.toaddresses,
-            hard_defaults?.params?.toaddresses
-          )}
+          defaultVal={convertedDefaults.params.toaddresses}
         />
         <FormItem
           name={`${name}.params.fromaddress`}
           required
           label="From Address"
           tooltip="Email to send from"
-          defaultVal={globalOrDefault(
-            global?.params?.fromaddress,
-            defaults?.params?.fromaddress,
-            hard_defaults?.params?.fromaddress
-          )}
+          defaultVal={convertedDefaults.params.fromaddress}
         />
         <FormItem
           name={`${name}.params.fromname`}
           label="From Name"
           tooltip="Name to send as"
-          defaultVal={globalOrDefault(
-            global?.params?.fromname,
-            defaults?.params?.fromname,
-            hard_defaults?.params?.fromname
-          )}
+          defaultVal={convertedDefaults.params.fromname}
           onRight
         />
         <FormSelect
@@ -201,11 +242,7 @@ const SMTP = ({
           col_sm={8}
           label="Subject"
           tooltip="Email subject"
-          defaultVal={globalOrDefault(
-            global?.params?.subject,
-            defaults?.params?.subject,
-            hard_defaults?.params?.subject
-          )}
+          defaultVal={convertedDefaults.params.subject}
           onRight
         />
         <FormSelect
@@ -220,36 +257,20 @@ const SMTP = ({
           col_sm={8}
           label="Client Host"
           tooltip={`The client host name sent to the SMTP server during HELLO phase. If set to "auto", it will use the OS hostname`}
-          defaultVal={globalOrDefault(
-            global?.params?.clienthost,
-            defaults?.params?.clienthost,
-            hard_defaults?.params?.clienthost
-          )}
+          defaultVal={convertedDefaults.params.clienthost}
           onRight
         />
         <BooleanWithDefault
           name={`${name}.params.usehtml`}
           label="Use HTML"
           tooltip="Whether 'message' is in HTML"
-          defaultValue={
-            strToBool(
-              global?.params?.usehtml ||
-                defaults?.params?.usehtml ||
-                hard_defaults?.params?.usehtml
-            ) ?? false
-          }
+          defaultValue={convertedDefaults.params.usehtml}
         />
         <BooleanWithDefault
           name={`${name}.params.usestarttls`}
           label="Use StartTLS"
           tooltip="Use StartTLS encryption"
-          defaultValue={
-            strToBool(
-              global?.params?.usestarttls ||
-                defaults?.params?.usestarttls ||
-                hard_defaults?.params?.usestarttls
-            ) ?? true
-          }
+          defaultValue={convertedDefaults.params.usestarttls}
         />
       </>
     </>

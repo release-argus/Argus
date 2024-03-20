@@ -1,6 +1,5 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
 import {
-  DefaultDockerFilterRegistryType,
   DefaultDockerFilterType,
   DefaultLatestVersionFiltersType,
   DockerFilterRegistryType,
@@ -54,9 +53,27 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
   const dockerRegistry: DockerFilterType["type"] = useWatch({
     name: "latest_version.require.docker.type",
   });
-  const selectedDockerRegistry = (dockerRegistry ||
-    defaultDockerRegistry) as DockerFilterRegistryType;
+  const selectedDockerRegistry: DockerFilterRegistryType | undefined =
+    dockerRegistry || defaultDockerRegistry;
   const showUsernameField = (dockerRegistry || defaultDockerRegistry) === "hub";
+
+  const convertedDefaults = useMemo(
+    () =>
+      selectedDockerRegistry
+        ? {
+            token:
+              defaults?.docker?.[selectedDockerRegistry]?.token ||
+              hard_defaults?.docker?.[selectedDockerRegistry]?.token,
+            username:
+              defaults?.docker?.[selectedDockerRegistry]?.username ||
+              hard_defaults?.docker?.[selectedDockerRegistry]?.username,
+          }
+        : {
+            token: undefined,
+            username: undefined,
+          },
+    [selectedDockerRegistry]
+  );
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
@@ -120,18 +137,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
               name="latest_version.require.docker.username"
               col_sm={4}
               label="Username"
-              defaultVal={
-                (
-                  defaults?.docker?.[
-                    selectedDockerRegistry
-                  ] as DefaultDockerFilterRegistryType
-                )?.username ??
-                (
-                  hard_defaults?.docker?.[
-                    selectedDockerRegistry
-                  ] as DefaultDockerFilterRegistryType
-                )?.username
-              }
+              defaultVal={convertedDefaults.username}
             />
           )}
           <FormItem
@@ -140,18 +146,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             col_sm={showUsernameField ? 8 : 12}
             label="Token"
             onRight={showUsernameField}
-            defaultVal={
-              (
-                defaults?.docker?.[
-                  selectedDockerRegistry
-                ] as DefaultDockerFilterRegistryType
-              )?.token ??
-              (
-                hard_defaults?.docker?.[
-                  selectedDockerRegistry
-                ] as DefaultDockerFilterRegistryType
-              )?.token
-            }
+            defaultVal={convertedDefaults.token}
           />
         </Row>
       </Accordion.Body>

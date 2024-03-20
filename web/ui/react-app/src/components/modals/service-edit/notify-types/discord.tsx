@@ -9,6 +9,7 @@ import { NotifyDiscordType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
+import { useMemo } from "react";
 
 const DISCORD = ({
   name,
@@ -22,93 +23,117 @@ const DISCORD = ({
   global?: NotifyDiscordType;
   defaults?: NotifyDiscordType;
   hard_defaults?: NotifyDiscordType;
-}) => (
-  <>
-    <NotifyOptions
-      name={name}
-      global={global?.options}
-      defaults={defaults?.options}
-      hard_defaults={hard_defaults?.options}
-    />
-    <>
-      <FormLabel text="URL Fields" heading />
-      <FormItem
-        name={`${name}.url_fields.webhookid`}
-        required
-        label="WebHook ID"
-        tooltip={
-          <>
-            e.g. https://discord.com/api/webhooks/
-            <span className="bold-underline">webhook_id</span>
-            /token
-          </>
-        }
-        defaultVal={globalOrDefault(
-          global?.url_fields?.webhookid,
-          defaults?.url_fields?.webhookid,
-          hard_defaults?.url_fields?.webhookid
-        )}
-      />
-      <FormItem
-        name={`${name}.url_fields.token`}
-        required
-        label="Token"
-        tooltip={
-          <>
-            e.g. https://discord.com/api/webhooks/webhook_id/
-            <span className="bold-underline">token</span>
-          </>
-        }
-        defaultVal={globalOrDefault(
+}) => {
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        token: globalOrDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
-        )}
-        onRight
-      />
-    </>
-    <>
-      <FormLabel text="Params" heading />
-      <FormItemWithPreview
-        name={`${name}.params.avatar`}
-        label="Avatar"
-        tooltip="Override WebHook avatar with this URL"
-        defaultVal={
-          global?.params?.avatar ||
-          defaults?.params?.avatar ||
+        ),
+        webhookid: globalOrDefault(
+          global?.url_fields?.webhookid,
+          defaults?.url_fields?.webhookid,
+          hard_defaults?.url_fields?.webhookid
+        ),
+      },
+      // Params
+      params: {
+        avatar: globalOrDefault(
+          global?.params?.avatar,
+          defaults?.params?.avatar,
           hard_defaults?.params?.avatar
-        }
-      />
-      <FormItem
-        name={`${name}.params.username`}
-        label="Username"
-        tooltip="Override the WebHook username"
-        defaultVal={globalOrDefault(
-          global?.params?.username,
-          defaults?.params?.username,
-          hard_defaults?.params?.username
-        )}
-      />
-      <FormItem
-        name={`${name}.params.title`}
-        label="Title"
-        defaultVal={globalOrDefault(
+        ),
+        splitlines:
+          strToBool(
+            globalOrDefault(
+              global?.splitlines,
+              defaults?.splitlines,
+              hard_defaults?.splitlines
+            )
+          ) ?? true,
+        title: globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
-        )}
-        onRight
+        ),
+        username: globalOrDefault(
+          global?.params?.username,
+          defaults?.params?.username,
+          hard_defaults?.params?.username
+        ),
+      },
+    }),
+    [global, defaults, hard_defaults]
+  );
+  return (
+    <>
+      <NotifyOptions
+        name={name}
+        global={global?.options}
+        defaults={defaults?.options}
+        hard_defaults={hard_defaults?.options}
       />
-      <BooleanWithDefault
-        name={`${name}.params.splitlines}`}
-        label="Split Lines"
-        tooltip="Whether to send each line as a separate embedded item"
-        defaultValue={
-          strToBool(defaults?.splitlines || hard_defaults?.splitlines) || true
-        }
-      />
+      <>
+        <FormLabel text="URL Fields" heading />
+        <FormItem
+          name={`${name}.url_fields.webhookid`}
+          required
+          label="WebHook ID"
+          tooltip={
+            <>
+              e.g. https://discord.com/api/webhooks/
+              <span className="bold-underline">webhook_id</span>
+              /token
+            </>
+          }
+          defaultVal={convertedDefaults.url_fields.webhookid}
+        />
+        <FormItem
+          name={`${name}.url_fields.token`}
+          required
+          label="Token"
+          tooltip={
+            <>
+              e.g. https://discord.com/api/webhooks/webhook_id/
+              <span className="bold-underline">token</span>
+            </>
+          }
+          defaultVal={convertedDefaults.url_fields.token}
+          onRight
+        />
+      </>
+      <>
+        <FormLabel text="Params" heading />
+        <FormItemWithPreview
+          name={`${name}.params.avatar`}
+          label="Avatar"
+          tooltip="Override WebHook avatar with this URL"
+          defaultVal={convertedDefaults.params.avatar}
+        />
+        <FormItem
+          name={`${name}.params.username`}
+          label="Username"
+          tooltip="Override the WebHook username"
+          defaultVal={convertedDefaults.params.username}
+        />
+        <FormItem
+          name={`${name}.params.title`}
+          label="Title"
+          defaultVal={convertedDefaults.params.title}
+          onRight
+        />
+        <BooleanWithDefault
+          name={`${name}.params.splitlines}`}
+          label="Split Lines"
+          tooltip="Whether to send each line as a separate embedded item"
+          defaultValue={convertedDefaults.params.splitlines}
+        />
+      </>
     </>
-  </>
-);
+  );
+};
 
 export default DISCORD;

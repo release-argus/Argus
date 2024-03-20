@@ -12,7 +12,6 @@ const BROADCAST: FC<Props> = ({ name, defaults }) => (
     <FormItem
       name={`${name}.intent`}
       label="Intent"
-      required
       col_xs={12}
       col_sm={5}
       defaultVal={defaults?.intent}

@@ -514,9 +514,9 @@ func (s *Shoutrrr) TestSend(serviceURL string) (err error) {
 	s.SetOption("max_tries", "1")
 
 	testServiceInfo := &util.ServiceInfo{
-		ID:            *s.ServiceStatus.ServiceID,
+		ID:            util.DefaultIfNil(s.ServiceStatus.ServiceID),
 		URL:           serviceURL,
-		WebURL:        *s.ServiceStatus.WebURL,
+		WebURL:        util.DefaultIfNil(s.ServiceStatus.WebURL),
 		LatestVersion: s.ServiceStatus.LatestVersion()}
 	if testServiceInfo.LatestVersion == "" {
 		testServiceInfo.LatestVersion = "MAJOR.MINOR.PATCH"
