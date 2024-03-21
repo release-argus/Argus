@@ -98,9 +98,11 @@ const GENERIC = ({
         ),
         disabletls:
           strToBool(
-            global?.params?.disabletls ||
-              defaults?.params?.disabletls ||
+            globalOrDefault(
+              global?.params?.disabletls,
+              defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
+            )
           ) ?? true,
         messagekey: globalOrDefault(
           global?.params?.messagekey,
@@ -142,7 +144,7 @@ const GENERIC = ({
       if (defaultRequestMethod)
         return [
           { value: "", label: `${defaultRequestMethod.label} (default)` },
-          ...genericRequestMethodOptions,
+          ...GenericRequestMethodOptions,
         ];
 
       return GenericRequestMethodOptions;

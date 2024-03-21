@@ -13,7 +13,7 @@ const VIEW: FC<Props> = ({ name, defaults }) => (
     name={`${name}.url`}
     label="URL"
     required
-    col_xs={11}
+    col_xs={12}
     col_sm={5}
     defaultVal={defaults?.url}
     placeholder="e.g. 'http://example.com'"

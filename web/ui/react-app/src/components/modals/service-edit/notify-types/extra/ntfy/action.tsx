@@ -41,13 +41,13 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
           <FontAwesomeIcon icon={faTrash} />
         </Button>
       </Col>
-      <Col xs={11}>
+      <Col xs={10} sm={11}>
         <Row>
           <FormSelect
             name={`${name}.action`}
-            col_xs={5}
+            col_xs={6}
             col_sm={3}
-            label="Type"
+            label="Action Type"
             options={typeOptions}
           />
           <FormItem

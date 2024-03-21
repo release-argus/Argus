@@ -54,18 +54,31 @@ const FormItem: FC<FormItemProps> = ({
     getNestedError(errors, name);
 
   const padding = useMemo(() => {
-    if (onRight)
-      return [col_sm !== 12 ? "ps-sm-2" : "", col_xs !== 12 ? "ps-2" : ""].join(
-        " "
-      );
-    if (onMiddle)
-      return [
-        col_sm !== 12 ? "ps-sm-1 pe-sm-1" : "",
-        col_xs !== 12 ? "ps-1 pe-1" : "",
-      ].join(" ");
-    return [col_sm !== 12 ? "pe-sm-2" : "", col_xs !== 12 ? "pe-2" : ""].join(
-      " "
-    );
+    const paddingClasses = [];
+
+    // Padding for being on the right
+    if (onRight) {
+      if (col_sm !== 12) paddingClasses.push("ps-sm-2");
+      if (col_xs !== 12) paddingClasses.push("ps-2");
+    }
+    // Padding for being in the middle
+    else if (onMiddle) {
+      if (col_sm !== 12) {
+        paddingClasses.push("ps-sm-1");
+        paddingClasses.push("pe-sm-1");
+      }
+      if (col_xs !== 12) {
+        paddingClasses.push("ps-1");
+        paddingClasses.push("pe-1");
+      }
+    }
+    // Padding for being on the left
+    else {
+      if (col_sm !== 12) paddingClasses.push("pe-sm-2");
+      if (col_xs !== 12) paddingClasses.push("pe-2");
+    }
+
+    return paddingClasses.join(" ");
   }, [col_xs, col_sm, onRight, onMiddle]);
 
   return (

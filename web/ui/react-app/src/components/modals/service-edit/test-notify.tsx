@@ -1,5 +1,5 @@
 import { Alert, Button } from "react-bootstrap";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useMemo, useState } from "react";
 import { extractErrors, fetchJSON } from "utils";
 import {
   faCheckCircle,
@@ -7,7 +7,7 @@ import {
   faSpinner,
   faSync,
 } from "@fortawesome/free-solid-svg-icons";
-import { useFormContext, useFormState, useWatch } from "react-hook-form";
+import { useFormContext, useFormState } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotifyType } from "types/config";
@@ -47,26 +47,20 @@ interface Props {
 }
 
 const TestNotify: FC<Props> = ({ path, original, extras }) => {
-  const { trigger } = useFormContext();
+  const { getValues, trigger } = useFormContext();
   const [lastFetched, setLastFetched] = useState(0);
-  const data = useWatch({ name: path });
   const { errors } = useFormState({ name: path });
   const [filteredErrors, setFilteredErrors] = useState<{
     [key: string]: string;
   }>({});
 
-  // Unsure why this isn't working. Was useMemo previously
-  useEffect(() => {
-    setFilteredErrors(extractErrors(errors, path));
-  }, [errors]);
-
-  const fetchTestNotifyJSON = () =>
+  const fetchTestNotifyJSON = (dataJSON: string) =>
     fetchJSON<{ message: string }>({
       url: "api/v1/notify/test",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...deepDiff(convertNotifyToAPI(data), original),
+        ...deepDiff(convertNotifyToAPI(JSON.parse(dataJSON)), original),
         ...extras,
         name_previous: original?.name,
       }),
@@ -84,9 +78,13 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
         service: extras?.service_name,
         notify: original?.name,
       },
-      { params: convertNotifyToAPI(data) },
+      {
+        // ...getValues(path) - shallow copy as convertNotifyToAPI mutates the object
+        params: JSON.stringify(convertNotifyToAPI({ ...getValues(path) })),
+      },
     ],
-    queryFn: () => fetchTestNotifyJSON(),
+    queryFn: ({ queryKey }) =>
+      fetchTestNotifyJSON((queryKey[2] as { params: string }).params),
     enabled: false,
     notifyOnChangeProps: "all",
     retry: false,

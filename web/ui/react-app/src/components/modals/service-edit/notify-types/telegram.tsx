@@ -50,9 +50,11 @@ const TELEGRAM = ({
         ),
         notification:
           strToBool(
-            global?.params?.notification ||
-              defaults?.params?.notification ||
+            globalOrDefault(
+              global?.params?.notification,
+              defaults?.params?.notification,
               hard_defaults?.params?.notification
+            )
           ) ?? true,
         parsemode: globalOrDefault(
           global?.params?.parsemode,
@@ -61,10 +63,12 @@ const TELEGRAM = ({
         ).toLowerCase(),
         preview:
           strToBool(
-            global?.params?.preview ||
-              defaults?.params?.preview ||
+            globalOrDefault(
+              global?.params?.preview,
+              defaults?.params?.preview,
               hard_defaults?.params?.preview
-          ) || true,
+            )
+          ) ?? true,
         title: globalOrDefault(
           global?.params?.title,
           defaults?.params?.title,

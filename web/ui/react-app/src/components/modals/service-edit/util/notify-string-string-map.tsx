@@ -2,9 +2,8 @@ import {
   HeaderType,
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
+  StringFieldArray,
 } from "types/config";
-
-import { StringFieldArray } from "types/service-edit";
 
 interface StringAnyMap {
   [key: string]:

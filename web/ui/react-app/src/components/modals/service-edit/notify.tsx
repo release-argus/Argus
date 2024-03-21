@@ -56,6 +56,7 @@ const Notify: FC<Props> = ({
       setValue(`${name}.type`, globals[itemName].type);
     else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName))
       setValue(`${name}.type`, itemName);
+    // Trigger validation on name/type
     setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);

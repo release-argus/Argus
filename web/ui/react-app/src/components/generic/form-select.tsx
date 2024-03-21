@@ -23,6 +23,7 @@ interface FormSelectProps {
   isURL?: boolean;
 
   onRight?: boolean;
+  onRightXS?: boolean;
   onMiddle?: boolean;
 }
 
@@ -39,23 +40,42 @@ const FormSelect: FC<FormSelectProps> = ({
   tooltip,
   options,
   onRight,
+  onRightXS,
   onMiddle,
 }) => {
   const { errors } = useFormState();
   const error = customValidation && getNestedError(errors, name);
 
   const padding = useMemo(() => {
-    return [
-      col_sm !== 12 && onRight ? "ps-sm-2" : "",
-      col_xs !== 12 && onRight ? "ps-2" : "",
-      col_sm !== 12 && !onRight
-        ? onMiddle
-          ? "ps-sm-1 pe-sm-1"
-          : "pe-sm-2"
-        : "",
-      col_xs !== 12 && !onRight ? (onMiddle ? "ps-2 pe-2" : "pe-2") : "",
-    ].join(" ");
-  }, []);
+    const paddingClasses = [];
+
+    // Padding for being on the right
+    if (onRight) {
+      if (col_sm !== 12) paddingClasses.push("ps-sm-2");
+    }
+    if (onRight || onRightXS) {
+      if (col_xs !== 12) paddingClasses.push("ps-xs-2");
+    }
+    // Padding for being in the middle
+    else if (onMiddle) {
+      if (col_sm !== 12) {
+        paddingClasses.push("ps-sm-1");
+        paddingClasses.push("pe-sm-1");
+      }
+      if (!onRightXS && col_xs !== 12) {
+        paddingClasses.push("ps-xs-1");
+        paddingClasses.push("pe-xs-1");
+      }
+    }
+    // Padding for being on the left
+    else {
+      if (col_sm !== 12) paddingClasses.push("pe-sm-2");
+      if (col_xs !== 12) paddingClasses.push("pe-2");
+    }
+
+    return paddingClasses.join(" ");
+  }, [col_xs, col_sm, onRight, onMiddle]);
+
   return (
     <Col
       xs={col_xs}

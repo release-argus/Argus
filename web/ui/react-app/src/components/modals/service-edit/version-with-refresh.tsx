@@ -4,7 +4,7 @@ import {
   LatestVersionLookupEditType,
   ServiceRefreshType,
 } from "types/service-edit";
-import { convertToQueryParams, fetchJSON } from "utils";
+import { convertToQueryParams, fetchJSON, removeEmptyValues } from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 
 import { DeployedVersionLookupType } from "types/config";
@@ -57,9 +57,9 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       dataTarget,
       { id: serviceName },
       {
-        params: data,
+        params: JSON.stringify(removeEmptyValues(data)),
         semantic_versioning: semanticVersioning,
-        original_data: original,
+        original_data: removeEmptyValues(original ?? []),
       },
     ],
     queryFn: () => fetchVersionJSON(),

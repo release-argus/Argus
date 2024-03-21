@@ -37,6 +37,8 @@ func (w *WebHook) setCustomHeaders(req *http.Request) {
 		customHeaders = w.Main.CustomHeaders
 	case w.Defaults.CustomHeaders != nil:
 		customHeaders = w.Defaults.CustomHeaders
+	case w.HardDefaults.CustomHeaders != nil:
+		customHeaders = w.HardDefaults.CustomHeaders
 	default:
 		return
 	}

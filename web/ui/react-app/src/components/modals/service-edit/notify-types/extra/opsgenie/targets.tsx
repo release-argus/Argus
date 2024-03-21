@@ -39,32 +39,36 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
       { shouldFocus: false }
     );
   }, []);
-  const removeLast = useCallback(() => {
-    remove(fields.length - 1);
-  }, [fields.length]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => diffObjects(fieldValues, defaults),
+    () =>
+      defaults &&
+      diffObjects(fieldValues ?? fields ?? [], defaults, [
+        ".type",
+        ".sub_type",
+      ]),
     [fieldValues, defaults]
   );
   useEffect(() => {
     trigger(name);
-  }, [useDefaults]);
 
-  // on load, give the defaults if not overridden
-  useEffect(() => {
-    if (useDefaults) {
+    // Give the defaults back if the field is empty
+    if ((fieldValues ?? fields ?? [])?.length === 0)
       defaults?.forEach((dflt) => {
         append(
-          { type: dflt.type, sub_type: dflt.sub_type },
+          { type: dflt.type, sub_type: dflt.sub_type, value: "" },
           { shouldFocus: false }
         );
       });
-    }
-  }, []);
+  }, [useDefaults]);
+
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    !(useDefaults && fields.length == 1) && remove(fields.length - 1);
+  }, [fields.length, useDefaults]);
 
   return (
     <FormGroup>
@@ -99,7 +103,10 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
             <Row key={id}>
               <OpsGenieTarget
                 name={`${name}.${index}`}
-                removeMe={() => remove(index)}
+                removeMe={
+                  // Give the remove that's disabled if there's only one item and it matches the defaults
+                  fieldValues?.length === 1 ? removeLast : () => remove(index)
+                }
                 defaults={useDefaults ? defaults?.[index] : undefined}
               />
             </Row>

@@ -38,6 +38,8 @@ export const DictToList = <T,>(dict: Dict<T>, giveIndexTo?: string[]): T[] => {
   });
 };
 
+export type StringFieldArray = { [key: string]: string }[];
+
 export interface ConfigState {
   data: ConfigType;
   waiting_on: string[];
@@ -268,6 +270,12 @@ export interface NotifyType {
       | NotifyOpsGenieAction[]
       | { [key: string]: string };
   };
+}
+
+// OpsGenieDetail | GenericCustomHeaders | GenericJSONPayloadVars | GenericQueryVars
+export interface NotifyHeaderType {
+  key: string;
+  value: string;
 }
 
 export interface NotifyBarkType extends NotifyType {
@@ -592,10 +600,13 @@ export interface NotifyGenericType extends NotifyType {
 }
 
 export interface NotifyOptionsType {
-  [key: string]: string | number | undefined;
   message?: string;
   delay?: string;
   max_tries?: number;
+}
+
+export interface NotifyURLFieldsType {
+  [key: string]: undefined | string | number | boolean;
 }
 
 export interface WebHookType {

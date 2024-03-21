@@ -49,9 +49,11 @@ const GOTIFY = ({
       params: {
         disabletls:
           strToBool(
-            global?.params?.disabletls ||
-              defaults?.params?.disabletls ||
+            globalOrDefault(
+              global?.params?.disabletls,
+              defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
+            )
           ) ?? false,
         priority: globalOrDefault(
           global?.params?.priority,

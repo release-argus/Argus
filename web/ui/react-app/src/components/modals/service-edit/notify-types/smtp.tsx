@@ -102,15 +102,19 @@ const SMTP = ({
         ),
         usehtml:
           strToBool(
-            global?.params?.usehtml ||
-              defaults?.params?.usehtml ||
+            globalOrDefault(
+              global?.params?.usehtml,
+              defaults?.params?.usehtml,
               hard_defaults?.params?.usehtml
+            )
           ) ?? false,
         usestarttls:
           strToBool(
-            global?.params?.usestarttls ||
-              defaults?.params?.usestarttls ||
+            globalOrDefault(
+              global?.params?.usestarttls,
+              defaults?.params?.usestarttls,
               hard_defaults?.params?.usestarttls
+            )
           ) ?? true,
       },
     }),

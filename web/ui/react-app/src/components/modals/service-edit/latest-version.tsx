@@ -34,8 +34,8 @@ const EditServiceLatestVersion: FC<Props> = ({
     () => ({
       access_token: defaults?.access_token || hard_defaults?.access_token,
       allow_invalid_certs:
-        defaults?.allow_invalid_certs || hard_defaults?.allow_invalid_certs,
-      use_prerelease: defaults?.use_prerelease || hard_defaults?.use_prerelease,
+        defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
+      use_prerelease: defaults?.use_prerelease ?? hard_defaults?.use_prerelease,
     }),
     [defaults, hard_defaults]
   );

@@ -13,7 +13,7 @@ interface Props {
 const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => {
   const convertedDefaults = useMemo(
     () => ({
-      auto_approve: defaults?.auto_approve || hard_defaults?.auto_approve,
+      auto_approve: defaults?.auto_approve ?? hard_defaults?.auto_approve,
       icon: defaults?.icon || hard_defaults?.icon,
       icon_link_to: defaults?.icon_link_to || hard_defaults?.icon_link_to,
       web_url: defaults?.web_url || hard_defaults?.web_url,

@@ -4,8 +4,11 @@ import { urlCommandsTrim } from "components/modals/service-edit/util";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DiffObject = { [key: string]: any };
 
-// deepDiff oldObj with newObj and return what's changed with newObj
-export const deepDiff = (newObj: DiffObject, oldObj?: DiffObject): DiffObject => {
+// deepDiff newObj with oldObj and return what's changed with newObj
+export const deepDiff = (
+  newObj: DiffObject,
+  oldObj?: DiffObject
+): DiffObject => {
   const diff: DiffObject = {};
 
   // if oldObj is undefined, return newObj

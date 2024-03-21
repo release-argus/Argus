@@ -42,30 +42,30 @@ const FormKeyValMap: FC<Props> = ({
   const addItem = useCallback(() => {
     append({ key: "", value: "" }, { shouldFocus: false });
   }, []);
-  const removeLast = useCallback(() => {
-    remove(fields.length - 1);
-  }, [fields.length]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => (defaults && diffObjects(fieldValues, defaults)) ?? false,
+    () =>
+      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
+
+    // Give the defaults back if the field is empty
+    if ((fieldValues ?? fields ?? [])?.length === 0)
+      defaults?.forEach(() => {
+        addItem();
+      });
   }, [useDefaults]);
 
-  // on load, give the defaults if not overridden
-  useEffect(() => {
-    if (useDefaults) {
-      defaults?.forEach(() => {
-        append({}, { shouldFocus: false });
-      });
-    }
-  }, []);
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    !(useDefaults && fields.length == 1) && remove(fields.length - 1);
+  }, [fields.length, useDefaults]);
 
   return (
     <FormGroup>
@@ -102,7 +102,10 @@ const FormKeyValMap: FC<Props> = ({
             <FormKeyVal
               name={`${name}.${index}`}
               defaults={useDefaults ? defaults?.[index] : undefined}
-              removeMe={() => remove(index)}
+              removeMe={
+                // Give the remove that's disabled if there's only one item and it matches the defaults
+                fieldValues?.length === 1 ? removeLast : () => remove(index)
+              }
               keyPlaceholder={keyPlaceholder}
               valuePlaceholder={valuePlaceholder}
             />

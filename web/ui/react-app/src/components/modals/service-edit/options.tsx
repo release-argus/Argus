@@ -18,7 +18,7 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
     () => ({
       interval: defaults?.interval || hard_defaults?.interval,
       semantic_versioning:
-        defaults?.semantic_versioning || hard_defaults?.semantic_versioning,
+        defaults?.semantic_versioning ?? hard_defaults?.semantic_versioning,
     }),
     [defaults, hard_defaults]
   );
@@ -27,10 +27,10 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
       <Accordion.Header>Options:</Accordion.Header>
       <Accordion.Body>
         <FormCheck
-        name="options.active"
-        label="Active"
-        tooltip="Whether the service is active and checking for updates"
-        size="sm"
+          name="options.active"
+          label="Active"
+          tooltip="Whether the service is active and checking for updates"
+          size="sm"
         />
         <FormItem
           key="interval"

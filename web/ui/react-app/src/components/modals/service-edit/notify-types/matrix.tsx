@@ -49,9 +49,11 @@ const MATRIX = ({
       params: {
         disabletls:
           strToBool(
-            global?.params?.disabletls ||
-              defaults?.params?.disabletls ||
+            globalOrDefault(
+              global?.params?.disabletls,
+              defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
+            )
           ) ?? false,
         rooms: globalOrDefault(
           global?.params?.rooms,

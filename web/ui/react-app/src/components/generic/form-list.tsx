@@ -29,20 +29,24 @@ const FormList: FC<Props> = ({
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
-  const removeLast = useCallback(() => {
-    remove(fields.length - 1);
-  }, [fields.length]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => (defaults && diffObjects(fieldValues, defaults)) ?? false,
+    () =>
+      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
+
+    // Give the defaults back if the field is empty
+    if ((fieldValues ?? fields ?? [])?.length === 0)
+      defaults?.forEach(() => {
+        addItem();
+      });
   }, [useDefaults]);
 
   const placeholder = useCallback(
@@ -53,23 +57,18 @@ const FormList: FC<Props> = ({
   // on load, ensure we don't have another types actions
   // and give the defaults if not overridden
   useEffect(() => {
-    let values = fieldValues ?? [];
-    for (const item of values) {
+    for (const item of fieldValues ?? fields ?? []) {
       if ((item.arg || "") === "") {
-        setValue(`${name}.params.actions`, []);
-        values = [];
+        setValue(name, []);
         break;
       }
     }
-
-    if (values.length === 0) {
-      defaults?.forEach(() => {
-        setTimeout(() => {
-          addItem();
-        }, 0);
-      });
-    }
   }, []);
+
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    !(useDefaults && fields.length == 1) && remove(fields.length - 1);
+  }, [fields.length, useDefaults]);
 
   return (
     <FormGroup>

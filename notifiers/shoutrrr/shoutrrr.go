@@ -460,7 +460,9 @@ func (s *Shoutrrr) send(
 		triesLeft--
 
 		// Space out retries.
-		time.Sleep(5 * time.Second)
+		if triesLeft > 0 {
+			time.Sleep(5 * time.Second)
+		}
 	}
 
 	// Give up after MaxTries.

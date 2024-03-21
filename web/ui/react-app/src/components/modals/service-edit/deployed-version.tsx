@@ -40,7 +40,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
   const convertedDefaults = useMemo(
     () => ({
       allow_invalid_certs:
-        defaults?.allow_invalid_certs || hard_defaults?.allow_invalid_certs,
+        defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
       json: defaults?.json || hard_defaults?.json,
       password:
         defaults?.basic_auth?.password || hard_defaults?.basic_auth?.password,
@@ -66,8 +66,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
         <BooleanWithDefault
           name="deployed_version.allow_invalid_certs"
           label="Allow Invalid Certs"
-          defaultValue={convertedDefaults.allow_invalid_certs
-          }
+          defaultValue={convertedDefaults.allow_invalid_certs}
         />
         <FormGroup className="pt-1 mb-2">
           <FormLabel text="Basic auth credentials" />

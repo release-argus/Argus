@@ -1,8 +1,4 @@
-import {
-  ArgType,
-  NotifyEditType,
-  ServiceEditType,
-} from "types/service-edit";
+import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
 import {
   Dict,
   NotifyType,

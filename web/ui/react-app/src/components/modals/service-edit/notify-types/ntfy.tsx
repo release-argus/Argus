@@ -92,9 +92,11 @@ const NTFY = ({
         ),
         cache:
           strToBool(
-            global?.params?.cache ||
-              defaults?.params?.cache ||
+            globalOrDefault(
+              global?.params?.cache,
+              defaults?.params?.cache,
               hard_defaults?.params?.cache
+            )
           ) ?? true,
         click: globalOrDefault(
           global?.params?.click,
@@ -113,9 +115,11 @@ const NTFY = ({
         ),
         firebase:
           strToBool(
-            global?.params?.firebase ||
-              defaults?.params?.firebase ||
+            globalOrDefault(
+              global?.params?.firebase,
+              defaults?.params?.firebase,
               hard_defaults?.params?.firebase
+            )
           ) ?? true,
         icon: globalOrDefault(
           global?.params?.icon,

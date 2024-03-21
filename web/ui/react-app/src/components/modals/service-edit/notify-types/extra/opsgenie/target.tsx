@@ -1,4 +1,4 @@
-import { Button, Col } from "react-bootstrap";
+import { Button, Col, Row } from "react-bootstrap";
 import { FC, memo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
 
@@ -36,32 +36,37 @@ const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
           <FontAwesomeIcon icon={faTrash} />
         </Button>
       </Col>
-      <FormSelect
-        name={`${name}.type`}
-        col_xs={6}
-        col_sm={3}
-        options={targetTypes}
-      />
-      <FormSelect
-        name={`${name}.sub_type`}
-        col_xs={6}
-        col_sm={3}
-        options={[
-          { label: "ID", value: "id" },
-          targetType === "team"
-            ? { label: "Name", value: "name" }
-            : { label: "Username", value: "username" },
-        ]}
-        onMiddle
-      />
-      <FormItem
-        name={`${name}.value`}
-        required
-        col_xs={11}
-        col_sm={5}
-        defaultVal={defaults?.value}
-        onRight
-      />
+      <Col xs={10} sm={11}>
+        <Row>
+          <FormSelect
+            name={`${name}.type`}
+            col_xs={6}
+            col_sm={3}
+            options={targetTypes}
+          />
+          <FormSelect
+            name={`${name}.sub_type`}
+            col_xs={6}
+            col_sm={3}
+            options={[
+              { label: "ID", value: "id" },
+              targetType === "team"
+                ? { label: "Name", value: "name" }
+                : { label: "Username", value: "username" },
+            ]}
+            onMiddle
+            onRightXS
+          />
+          <FormItem
+            name={`${name}.value`}
+            required
+            col_xs={12}
+            col_sm={6}
+            defaultVal={defaults?.value}
+            onRight
+          />
+        </Row>
+      </Col>
     </>
   );
 };

@@ -69,7 +69,11 @@ const EditServiceWebHook: FC<Props> = ({
         global?.allow_invalid_certs ??
         defaults?.allow_invalid_certs ??
         hard_defaults?.allow_invalid_certs,
-      delay: global?.delay || defaults?.delay || hard_defaults?.delay,
+      delay: globalOrDefault(
+        global?.delay,
+        defaults?.delay,
+        hard_defaults?.delay
+      ),
       desired_status_code: globalOrDefault(
         global?.desired_status_code,
         defaults?.desired_status_code,
@@ -81,12 +85,16 @@ const EditServiceWebHook: FC<Props> = ({
         hard_defaults?.max_tries ??
         ""
       }`,
-      secret: global?.secret || defaults?.secret || hard_defaults?.secret,
+      secret: globalOrDefault(
+        global?.secret,
+        defaults?.secret,
+        hard_defaults?.secret
+      ),
       silent_fails:
         global?.silent_fails ??
         defaults?.silent_fails ??
         hard_defaults?.silent_fails,
-      type: defaults?.type || hard_defaults?.type,
+      type: globalOrDefault(global?.type, defaults?.type, hard_defaults?.type),
       url: globalOrDefault(global?.url, defaults?.url, hard_defaults?.url),
     }),
     [global, defaults, hard_defaults]
