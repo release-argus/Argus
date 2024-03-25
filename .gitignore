@@ -11,13 +11,15 @@
 # Dependency directories
 vendor/
 
-# Output of `go build ./cmd/argus`
+# Output of `make build`
 /argus
-
 /healthcheck
 
 # Output of `make build-all`
 /.build/
+
+# React build artifacts
+/web/ui/static
 
 # Ignore personal files
 config.yml
