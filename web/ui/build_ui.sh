@@ -1,11 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 current=$(pwd)
 
-function buildReactApp() {
+buildReactApp() {
   cd react-app
   echo "build react-app"
+  npm ci
   npm run build
   cd "${current}"
   rm -rf ./static

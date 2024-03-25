@@ -86,7 +86,7 @@ The backend of Argus is built with [Go](https://go.dev/) and the frontend with [
 
 #### Go changes
 
-To see the changes you've made by modifying any of the `.go` files, you must recompile Argus. You could recompile the whole app with a `make build`, but this will also recompile the React components. To save time (and CPU power), you can use the existing React static and recompile just the Go part by running `make go-build`. (Running this in the root dir will produce the `argus` binary)
+To see the changes you've made by modifying any of the `.go` files, you must compile Argus. Run `make build` the first time to ensure the web components are available locally. Amy future builds that don't need the web-ui to be rebuilt can be done with `make go-build` (faster than `make build`). (Running either of these in the root dir will produce an `argus` binary)
 
 #### React changes
 

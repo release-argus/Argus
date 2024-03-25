@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # go-revive
 go install github.com/mgechev/revive@latest

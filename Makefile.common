@@ -10,6 +10,7 @@ GO_ARCHITECTURES_WINDOWS ?= amd64 arm64
 
 GO_VERSION        ?= $(shell $(GO) version)
 GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
+GO_BUILD_TAGS     ?= "netgo"
 
 PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
@@ -82,16 +83,22 @@ endif
 
 .PHONY: common-build
 common-build:
-	@bash -c "trap 'echo \">> restoring assets\"; scripts/compress_web.sh -d;' EXIT; \
+	@sh -c "trap 'echo \">> restoring assets\"; scripts/compress_web.sh -d;' EXIT; \
 			echo '>> compressing assets'; \
 			scripts/compress_web.sh; \
 			echo '>> building binaries'; \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags=\"\
 					-X 'github.com/release-argus/Argus/util.Version=${BUILD_VERSION}' \
 					-X 'github.com/release-argus/Argus/util.BuildDate=${BUILD_DATE}'\" \
 				-o ${OUTPUT_BINARY} \
-			./cmd/argus/"
+				./cmd/argus/; \
+			go build \
+				-tags="${GO_BUILD_TAGS}" \
+				-o healthcheck \
+				./_healthcheck/;"
 
 .PHONY: build-darwin
 build-darwin:
@@ -101,7 +108,9 @@ build-darwin:
 		$(shell \
 			GOOS=darwin \
 			GOARCH=$(GOARCH) \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/util.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/util.BuildDate=\"${BUILD_DATE}\"'" \
@@ -119,7 +128,9 @@ build-freebsd:
 		$(shell \
 			GOOS=freebsd \
 			GOARCH=$(GOARCH) \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/util.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/util.BuildDate=\"${BUILD_DATE}\"'" \
@@ -137,7 +148,9 @@ build-linux:
 		$(shell \
 			GOOS=linux \
 			GOARCH=$(GOARCH) \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/util.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/util.BuildDate=\"${BUILD_DATE}\"'" \
@@ -155,7 +168,9 @@ build-openbsd:
 		$(shell \
 			GOOS=openbsd \
 			GOARCH=$(GOARCH) \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/util.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/util.BuildDate=\"${BUILD_DATE}\"'" \
@@ -173,7 +188,9 @@ build-windows:
 		$(shell \
 			GOOS=windows \
 			GOARCH=$(GOARCH) \
+			CGO_ENABLED=0; \
 			go build \
+				-tags="${GO_BUILD_TAGS}" \
 				-ldflags="\
 					-X 'github.com/release-argus/argus/util.Version=\"${BUILD_VERSION}\"' \
 					-X 'github.com/release-argus/argus/util.BuildDate=\"${BUILD_DATE}\"'" \
@@ -185,7 +202,7 @@ build-windows:
 
 .PHONY: compress-web
 compress-web:
-	@bash "scripts/compress_web.sh"
+	@sh "scripts/compress_web.sh"
 
 .PHONY: common-docker $(BUILD_DOCKER_ARCHS)
 common-docker: $(BUILD_DOCKER_ARCHS)
