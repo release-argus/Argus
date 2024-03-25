@@ -36,15 +36,15 @@ jobs:
         with:
           node-version: 20
 
+      - name: Build web components
+        run: make web
+
       - name: Set up Go 1.x
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           check-latest: true
           cache: true
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@master
 
       - name: Get current date
         id: date
@@ -55,7 +55,7 @@ jobs:
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
           make
           OUTPUT_BINARY=./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
-          build
+          go-build
 
       - name: Upload release asset
         id: upload-release-asset

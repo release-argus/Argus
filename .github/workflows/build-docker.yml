@@ -17,6 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build web components
+        run: make web
+
       - name: Set outputs
         id: vars
         run: |

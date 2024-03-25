@@ -1,27 +1,23 @@
 ########
 # BASE #
 ########
-ARG NODE_VERSION="20"
+ARG DEBIAN_VERSION="bookworm"
 ARG GO_VERSION="1.22"
-FROM golang:${GO_VERSION}-alpine AS go_builder
-FROM node:${NODE_VERSION}-alpine AS base
+ARG NODE_VERSION="20"
+FROM golang:${GO_VERSION}-${DEBIAN_VERSION} as go_builder
+FROM node:${NODE_VERSION}-${DEBIAN_VERSION} AS base
 
 COPY --from=go_builder /usr/local/go/ /usr/local/go/
 ENV PATH="/usr/local/go/bin:${PATH}"
 RUN npm install -g npm@latest
 
-RUN \
-  apk update && \
-  apk add --no-cache \
-    make
-
 COPY . /build/
 WORKDIR /build/
 
 ARG BUILD_VERSION="development"
-RUN make BUILD_VERSION=${BUILD_VERSION} build
-RUN chmod 755 argus
-RUN chmod 755 healthcheck
+RUN make BUILD_VERSION=${BUILD_VERSION} go-build
+RUN chmod 755 /build/argus
+RUN chmod 755 /build/healthcheck
 
 
 #########
