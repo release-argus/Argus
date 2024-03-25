@@ -64,6 +64,13 @@ ifneq (,$(wildcard vendor))
 	$(GO) mod vendor
 endif
 
+.PHONY: update-npm-deps
+update-npm-deps:
+	@echo ">> updating NPM dependencies"
+	ncu -u && npm install; \
+	cd web/ui/react-app; \
+	ncu -u && npm install; \
+
 .PHONY: common-unused
 common-unused: $(GOVENDOR)
 ifdef GOVENDOR
