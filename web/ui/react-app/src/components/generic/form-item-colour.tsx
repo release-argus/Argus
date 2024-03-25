@@ -1,9 +1,10 @@
-import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, useMemo, useState } from "react";
+import { Col, FormControl, FormGroup, InputGroup } from "react-bootstrap";
+import { useFormContext, useWatch } from "react-hook-form";
 
+import { FC } from "react";
 import FormLabel from "./form-label";
-import { JSX } from "react";
-import { useFormContext } from "react-hook-form";
+import { formPadding } from "./util";
+import { useError } from "hooks/errors";
 
 interface FormItemColourProps {
   name: string;
@@ -11,44 +12,46 @@ interface FormItemColourProps {
 
   col_xs?: number;
   col_sm?: number;
+
   label: string;
   tooltip?: string;
-  rows?: number;
-  options?: JSX.Element[];
-  value?: string;
   defaultVal?: string;
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
+/**
+ * FormItemColour is a labelled form item for a hex colour, with a colour picker
+ *
+ * @param name - The name of the field
+ * @param col_xs - The number of columns to take up on extra small screens
+ * @param col_sm - The number of columns to take up on small screens
+ * @param label - The form label to display
+ * @param tooltip - The tooltip to display
+ * @param defaultVal - The default value of the field
+ * @param position - The position of the field
+ * @param positionXS - The position of the field on extra small screens
+ * @returns A labaled form item for a hex colour, with a colour picker
+ */
 const FormItemColour: FC<FormItemColourProps> = ({
   name,
-  required,
 
   col_xs = 12,
   col_sm = 6,
 
   label,
   tooltip,
-  value,
   defaultVal,
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { register, setValue } = useFormContext();
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12 && onRight ? "ps-sm-2" : "",
-      col_xs !== 12 && onRight ? "ps-2" : "",
-      col_sm !== 12 && !onRight ? (onMiddle ? "ps-sm-2" : "pe-sm-2") : "",
-      col_xs !== 12 && !onRight ? (onMiddle ? "ps-2" : "pe-2") : "",
-    ].join(" ");
-  }, []);
-  const [hexColour, setHexColour] = useState(value);
-  const setColour = (hex: string) => {
-    setHexColour(hex);
-    setValue(name, hex, { shouldDirty: true });
-  };
+  const hexColour = useWatch({ name: name });
+  const trimmedHex = hexColour?.replace("#", "");
+  const error = useError(name, true);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
+  const setColour = (hex: string) =>
+    setValue(name, hex.substring(1), { shouldDirty: true });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
@@ -57,29 +60,39 @@ const FormItemColour: FC<FormItemColourProps> = ({
           <FormLabel text={label} tooltip={tooltip} />
         </div>
         <div style={{ display: "flex", flexWrap: "nowrap" }}>
-          <FormControl
-            required={required}
-            style={{ width: "50%" }}
-            type="text"
-            value={hexColour}
-            placeholder={defaultVal}
-            autoFocus={false}
-            {...register(name, {
-              pattern: required ? /^#[\da-f]{6}$/ : /^#[\da-f]{6}$|^$/,
-              required: required,
-            })}
-          />
-          <FormControl
-            className="form-control-color"
-            style={{ width: "50%" }}
-            type="color"
-            title="Choose your color"
-            value={hexColour || defaultVal}
-            onChange={(event) => setColour(event.target.value)}
-            autoFocus={false}
-          />
+          <InputGroup className="mb-2">
+            <InputGroup.Text>#</InputGroup.Text>
+            <FormControl
+              style={{ width: "25%" }}
+              type="text"
+              defaultValue={trimmedHex}
+              placeholder={defaultVal}
+              autoFocus={false}
+              {...register(name, {
+                pattern: {
+                  value: /^[\da-f]{6}$|^$/i,
+                  message: "Invalid colour hex",
+                },
+              })}
+              isInvalid={error !== undefined}
+            />
+            <FormControl
+              className="form-control-color"
+              style={{ width: "30%" }}
+              type="color"
+              title="Choose your color"
+              value={`#${trimmedHex}` || defaultVal}
+              onChange={(event) => {
+                setColour(event.target.value);
+              }}
+              autoFocus={false}
+            />
+          </InputGroup>
         </div>
       </FormGroup>
+      {error && (
+        <small className="error-msg">{error["message"] || "err"}</small>
+      )}
     </Col>
   );
 };

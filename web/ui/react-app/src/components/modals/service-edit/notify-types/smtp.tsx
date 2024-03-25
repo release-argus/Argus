@@ -23,6 +23,15 @@ export const SMTPEncryptionOptions = [
   { label: "None", value: "None" },
 ];
 
+/**
+ * SMTP renders the form fields for the SMTP Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this SMTP Notify
+ * @param defaults - The default values for the SMTP Notify
+ * @param hard_defaults - The hard default values for the SMTP Notify
+ * @returns The form fields for this SMTP Notify
+ */
 const SMTP = ({
   name,
 
@@ -182,18 +191,6 @@ const SMTP = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.username`}
-          label="Username"
-          tooltip="e.g. something@example.com"
-          defaultVal={convertedDefaults.url_fields.username}
-        />
-        <FormItem
-          name={`${name}.url_fields.password`}
-          label="Password"
-          defaultVal={convertedDefaults.url_fields.password}
-          onRight
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
@@ -208,7 +205,19 @@ const SMTP = ({
           label="Port"
           tooltip="e.g. 25/465/587/2525"
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
+        />
+        <FormItem
+          name={`${name}.url_fields.username`}
+          label="Username"
+          tooltip="e.g. something@example.com"
+          defaultVal={convertedDefaults.url_fields.username}
+        />
+        <FormItem
+          name={`${name}.url_fields.password`}
+          label="Password"
+          defaultVal={convertedDefaults.url_fields.password}
+          position="right"
         />
       </>
       <>
@@ -233,7 +242,7 @@ const SMTP = ({
           label="From Name"
           tooltip="Name to send as"
           defaultVal={convertedDefaults.params.fromname}
-          onRight
+          position="right"
         />
         <FormSelect
           name={`${name}.params.auth`}
@@ -247,7 +256,7 @@ const SMTP = ({
           label="Subject"
           tooltip="Email subject"
           defaultVal={convertedDefaults.params.subject}
-          onRight
+          position="right"
         />
         <FormSelect
           name={`${name}.params.encryption`}
@@ -262,7 +271,7 @@ const SMTP = ({
           label="Client Host"
           tooltip={`The client host name sent to the SMTP server during HELLO phase. If set to "auto", it will use the OS hostname`}
           defaultVal={convertedDefaults.params.clienthost}
-          onRight
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.usehtml`}

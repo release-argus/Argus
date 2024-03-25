@@ -14,6 +14,14 @@ interface Props {
   defaults?: NotifyOpsGenieTarget;
 }
 
+/**
+ * OpsGenieTarget renders fields for an OpsGenie target
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove this target
+ * @param defaults - The default values for the target
+ * @returns The form fields for this OpsGenie target
+ */
 const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
   const targetTypes: { label: string; value: NotifyOpsGenieTarget["type"] }[] =
     [
@@ -54,16 +62,15 @@ const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
                 ? { label: "Name", value: "name" }
                 : { label: "Username", value: "username" },
             ]}
-            onMiddle
-            onRightXS
+            position="middle"
+            positionXS="right"
           />
           <FormItem
             name={`${name}.value`}
             required
-            col_xs={12}
             col_sm={6}
             defaultVal={defaults?.value}
-            onRight
+            position="right"
           />
         </Row>
       </Col>

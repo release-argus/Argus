@@ -23,6 +23,15 @@ interface Props {
   defaults?: NotifyNtfyAction[];
 }
 
+/**
+ * NtfyActions is the form fields for a list of Ntfy actions
+ *
+ * @param name - The name of the field in the form
+ * @param label - The label for the field
+ * @param tooltip - The tooltip for the field
+ * @param defaults - The default values for the field
+ * @returns A set of form fields for a list of Ntfy actions
+ */
 const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   const { setValue, trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
@@ -41,7 +50,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   }, []);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues = useWatch({ name: name });
+  const fieldValues: NotifyNtfyAction[] = useWatch({ name: name });
   // useDefaults when the fieldValues are unset or the same as the defaults
   const useDefaults = useMemo(
     () =>
@@ -98,7 +107,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   useEffect(() => {
     // ensure we don't have another types actions
     for (const item of fieldValues ?? fields ?? []) {
-      if ((item.action || "") === "") {
+      if ((item.action ?? "") === "") {
         setValue(name, []);
         break;
       }

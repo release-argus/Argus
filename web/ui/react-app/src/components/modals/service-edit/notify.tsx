@@ -30,6 +30,19 @@ interface Props {
   hard_defaults?: Dict<NotifyType>;
 }
 
+/**
+ * Notify is the form fields for a Notify
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove this Notify
+ * @param serviceName - The name of the service
+ * @param originals - The original values for the Notify
+ * @param globalNotifyOptions - The options for the global Notify's
+ * @param globals - The global Notify's
+ * @param defaults - The default values for all Notify types
+ * @param hard_defaults - The hard default values for all Notify types
+ * @returns The form fields for this Notify
+ */
 const Notify: FC<Props> = ({
   name,
   removeMe,
@@ -54,7 +67,7 @@ const Notify: FC<Props> = ({
     // Set Type to that of the global for the new name if it exists
     if (globals?.[itemName]?.type)
       setValue(`${name}.type`, globals[itemName].type);
-    else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName))
+    else if ((itemType ?? "") === "" && NotifyTypesConst.includes(itemName))
       setValue(`${name}.type`, itemName);
     // Trigger validation on name/type
     setTimeout(() => {
@@ -77,7 +90,7 @@ const Notify: FC<Props> = ({
     return { options: {}, url_fields: {}, params: {} };
   }, [originals]);
   const serviceURL =
-    lvType === "github" && (lvURL?.match(/\//g) || []).length > 1
+    lvType === "github" && (lvURL?.match(/\//g) ?? []).length > 1
       ? `https://github.com/${lvURL}`
       : lvURL;
 
@@ -126,7 +139,7 @@ const Notify: FC<Props> = ({
             col_xs={6}
             label="Type"
             options={TYPE_OPTIONS}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.name`}

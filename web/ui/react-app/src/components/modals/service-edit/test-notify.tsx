@@ -1,18 +1,19 @@
 import { Alert, Button } from "react-bootstrap";
 import { FC, useMemo, useState } from "react";
-import { extractErrors, fetchJSON } from "utils";
 import {
   faCheckCircle,
   faCircleXmark,
   faSpinner,
   faSync,
 } from "@fortawesome/free-solid-svg-icons";
-import { useFormContext, useFormState } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotifyType } from "types/config";
 import { convertNotifyToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { deepDiff } from "utils/query-params";
+import { fetchJSON } from "utils";
+import { useErrors } from "hooks/errors";
+import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 
 const Result: FC<{ status: "pending" | "success" | "error"; err?: string }> = ({
@@ -49,10 +50,7 @@ interface Props {
 const TestNotify: FC<Props> = ({ path, original, extras }) => {
   const { getValues, trigger } = useFormContext();
   const [lastFetched, setLastFetched] = useState(0);
-  const { errors } = useFormState({ name: path });
-  const [filteredErrors, setFilteredErrors] = useState<{
-    [key: string]: string;
-  }>({});
+  const errors = useErrors(path, true);
 
   const fetchTestNotifyJSON = (dataJSON: string) =>
     fetchJSON<{ message: string }>({
@@ -103,9 +101,6 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
       });
       setLastFetched(currentTime);
     }
-    const errs = extractErrors(errors, path);
-    if (JSON.stringify(errs) !== JSON.stringify(filteredErrors))
-      setFilteredErrors(extractErrors(errors, path));
   };
 
   const ResultIcon = useMemo(() => {
@@ -145,12 +140,12 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
       </span>
       {/* Render either the server error or form validation error */}
       <Result status={testStatus} err={testData?.message} />
-      {Object.keys(filteredErrors).length > 0 && (
+      {errors && Object.keys(errors).length > 0 && (
         <Alert
           variant="danger"
           style={{ paddingLeft: "2rem", marginBottom: "unset" }}
         >
-          {Object.entries(filteredErrors).map(([key, error]) => (
+          {Object.entries(errors).map(([key, error]) => (
             <li key={key}>
               {key}: {error}
             </li>

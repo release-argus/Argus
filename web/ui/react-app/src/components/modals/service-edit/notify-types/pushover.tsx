@@ -5,6 +5,15 @@ import { NotifyPushoverType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * PUSHOVER renders the form fields for the Pushover Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Pushover Notify
+ * @param defaults - The default values for the Pushover Notify
+ * @param hard_defaults - The hard default values for the Pushover Notify
+ * @returns The form fields for this Pushover Notify
+ */
 const PUSHOVER = ({
   name,
 
@@ -80,7 +89,7 @@ const PUSHOVER = ({
           label="User Key"
           tooltip="Top right of Pushover dashboard"
           defaultVal={convertedDefaults.url_fields.user}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -105,7 +114,7 @@ const PUSHOVER = ({
           label="Priority"
           tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
           defaultVal={convertedDefaults.params.priority}
-          onRight
+          position="right"
         />
       </>
     </>

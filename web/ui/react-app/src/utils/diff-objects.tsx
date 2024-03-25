@@ -1,4 +1,12 @@
-// diffObjects will return true if the fieldValues (a) are undefined or the allowedDefined keys are the same as the defaults (b)
+/**
+ * diffObjects will return true if the fieldValues (a) are undefined or the allowedDefined keys are the same as the defaults (b)
+ *
+ * @param a - The fieldValues to compare
+ * @param b - The defaults to compare against
+ * @param allowedDefined - The keys that are allowed to be defined and match the defaults
+ * @param key - The key path of the current fieldValues
+ * @returns Whether the fieldValues are different from the defaults
+ */
 export function diffObjects<T>(
   a?: T,
   b?: T,
@@ -6,7 +14,7 @@ export function diffObjects<T>(
   key?: string
 ): boolean {
   // no defaults
-  if (b === undefined && a !== undefined) return (a || "") == (b || "");
+  if (b === undefined && a !== undefined) return (a ?? "") == (b ?? "");
   // a is completely unchanged
   if (a == null) return true;
   // if the default is null, return false
@@ -39,7 +47,7 @@ export function diffObjects<T>(
     return true;
   } else if (typeof b === "string") {
     // a is undefined/empty
-    if ((a || "") === "") return true;
+    if ((a ?? "") === "") return true;
     // a is defined, and on a key that's allowed and is the same as b
     if (
       containsEndsWith(
@@ -63,8 +71,15 @@ export function diffObjects<T>(
       )
     );
 }
-// containsEndsWith will return true if the list contains a string that this substring ends with
-// if list is undefined, it will return undefinedListDefault (default=false)
+/**
+ * containsEndsWith will return true if the list contains a string that this substring ends with
+ * if list is undefined, it will return undefinedListDefault (default=false)
+ *
+ * @param substring - The string to check if it ends with any of the items in the list
+ * @param list - The list of strings to check against
+ * @param undefinedListDefault - The default value to return if the list is undefined (default=false)
+ * @returns Whether the substring ends with any of the items in the list
+ */
 const containsEndsWith = (
   substring: string,
   list?: string[],

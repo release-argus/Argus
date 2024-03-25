@@ -5,6 +5,15 @@ import { NotifyTeamsType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * TEAMS renders the form fields for the Teams Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Teams Notify
+ * @param defaults - The default values for the Teams Notify
+ * @param hard_defaults - The hard default values for the Teams Notify
+ * @returns The form fields for this Teams Notify
+ */
 const TEAMS = ({
   name,
 
@@ -84,7 +93,7 @@ const TEAMS = ({
           name={`${name}.url_fields.tenant`}
           label="Tenant"
           defaultVal={convertedDefaults.url_fields.tenant}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.group`}
@@ -95,7 +104,7 @@ const TEAMS = ({
           name={`${name}.url_fields.groupowner`}
           label="Group Owner"
           defaultVal={convertedDefaults.url_fields.groupowner}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -111,7 +120,7 @@ const TEAMS = ({
           col_sm={7}
           label="Host"
           defaultVal={convertedDefaults.params.host}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}

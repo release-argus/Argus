@@ -16,6 +16,15 @@ import { OpsGenieTargets } from "components/modals/service-edit/notify-types/ext
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * OPSGENIE renders the form fields for the OpsGenie Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this OpsGenie Notify
+ * @param defaults - The default values for the OpsGenie Notify
+ * @param hard_defaults - The hard default values for the OpsGenie Notify
+ * @returns The form fields for this OpsGenie Notify
+ */
 const OPSGENIE = ({
   name,
 
@@ -152,7 +161,7 @@ const OPSGENIE = ({
           type="number"
           label="Port"
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.apikey`}
@@ -181,7 +190,7 @@ const OPSGENIE = ({
           label="Description"
           tooltip="Description field of the alert"
           defaultVal={convertedDefaults.params.description}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.note`}
@@ -209,7 +218,7 @@ const OPSGENIE = ({
           label="Priority"
           tooltip="Priority level of the alert. 1/2/3/4/5"
           defaultVal={convertedDefaults.params.priority}
-          onRight
+          position="right"
         />
         <OpsGenieTargets
           name={`${name}.params.responders`}
@@ -228,7 +237,7 @@ const OPSGENIE = ({
           label="Tags"
           tooltip="Tags of the alert"
           defaultVal={convertedDefaults.params.tags}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
@@ -241,7 +250,7 @@ const OPSGENIE = ({
           label="User"
           tooltip="Display name of the request owner"
           defaultVal={convertedDefaults.params.user}
-          onRight
+          position="right"
         />
       </>
       <OpsGenieTargets

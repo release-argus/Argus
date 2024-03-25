@@ -5,6 +5,7 @@ import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { StringFieldArray } from "types/config";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
@@ -12,9 +13,18 @@ interface Props {
   label?: string;
   tooltip?: string;
 
-  defaults?: { [key: string]: string }[];
+  defaults?: StringFieldArray;
 }
 
+/**
+ * FormList is the form fields for a list of strings
+ *
+ * @param name - The name of the field in the form
+ * @param label - The label for the field
+ * @param tooltip - The tooltip for the field
+ * @param defaults - The default values for the field
+ * @returns A set of form fields for a list of strings
+ */
 const FormList: FC<Props> = ({
   name,
   label = "List",
@@ -31,7 +41,7 @@ const FormList: FC<Props> = ({
   }, []);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues = useWatch({ name: name });
+  const fieldValues: StringFieldArray = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
@@ -107,7 +117,7 @@ const FormList: FC<Props> = ({
             name={`${name}.${index}.arg`}
             required
             defaultVal={placeholder(index)}
-            onRight={index % 2 === 1}
+            position={index % 2 === 1 ? "right" : "left"}
           />
         ))}
       </Row>

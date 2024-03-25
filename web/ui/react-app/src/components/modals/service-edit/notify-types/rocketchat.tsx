@@ -5,6 +5,15 @@ import { NotifyRocketChatType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * ROCKET_CHAT renders the form fields for the Rocket.Chat Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Rocket.Chat Notify
+ * @param defaults - The default values for the Rocket.Chat Notify
+ * @param hard_defaults - The hard default values for the Rocket.Chat Notify
+ * @returns The form fields for this Rocket.Chat Notify
+ */
 const ROCKET_CHAT = ({
   name,
 
@@ -73,12 +82,6 @@ const ROCKET_CHAT = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.username`}
-          col_sm={12}
-          label="Username"
-          defaultVal={convertedDefaults.url_fields.username}
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
@@ -93,7 +96,7 @@ const ROCKET_CHAT = ({
           type="number"
           label="Port"
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
@@ -111,7 +114,13 @@ const ROCKET_CHAT = ({
           required
           label="Channel"
           defaultVal={convertedDefaults.url_fields.channel}
-          onRight
+          position="right"
+        />
+        <FormItem
+          name={`${name}.url_fields.username`}
+          col_sm={12}
+          label="Username"
+          defaultVal={convertedDefaults.url_fields.username}
         />
         <FormItem
           name={`${name}.url_fields.tokena`}
@@ -124,7 +133,7 @@ const ROCKET_CHAT = ({
           required
           label="Token B"
           defaultVal={convertedDefaults.url_fields.tokenb}
-          onRight
+          position="right"
         />
       </>
     </>

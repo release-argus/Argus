@@ -11,6 +11,13 @@ import {
 import { convertValuesToString } from "./notify-string-string-map";
 import removeEmptyValues from "utils/remove-empty-values";
 
+/**
+ * convertUIServiceDataEditToAPI will convert the ServiceEditType to a ServiceType,
+ * ready to be sent to the API
+ *
+ * @param data - The ServiceEditType to convert
+ * @returns The ServiceType to send to the API
+ */
 export const convertUIServiceDataEditToAPI = (
   data: ServiceEditType
 ): ServiceType => {
@@ -108,7 +115,12 @@ export const convertUIServiceDataEditToAPI = (
   return payload;
 };
 
-// urlCommandTrim will remove any keys not used for the type
+/**
+ * urlCommandTrim will remove any keys not used for the type
+ *
+ * @param command - The URLCommandType to trim
+ * @returns The URLCommandType with only the relevant keys for the type
+ */
 const urlCommandTrim = (command: URLCommandType) => {
   if (command.type === "regex")
     return { type: "regex", regex: command.regex, template: command.template };
@@ -122,7 +134,12 @@ const urlCommandTrim = (command: URLCommandType) => {
   };
 };
 
-// urlCommandsTrim will remove any unsued keye for the type for all URLCommandTypes in the list
+/**
+ * urlCommandsTrim will remove any keys not used for the type for all URLCommandTypes in the list
+ *
+ * @param commands - The URLCommandType[] to trim
+ * @returns The URLCommandType[] with only the relevant keys for each type
+ */
 export const urlCommandsTrim = (commands: {
   [key: string]: URLCommandType;
 }) => {

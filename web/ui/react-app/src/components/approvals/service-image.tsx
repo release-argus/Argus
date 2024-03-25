@@ -17,17 +17,14 @@ interface Props {
 
 export const ServiceImage: FC<Props> = ({ service, visible }) => {
   const delayedRender = useDelayedRender(500);
-  const icon = useMemo(
-    () => (service.type === "github" ? faGithub : faWindowMaximize),
-    [service.type]
-  );
 
   const imageStyles = {
     minWidth: "fit-content",
     height: "6rem",
   };
 
-  const ServiceIcon = () => {
+  const icon = useMemo(() => {
+    // URL icon
     if (service?.icon)
       return (
         <Card.Img
@@ -37,6 +34,8 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
           className="service-image"
         />
       );
+
+    // Loading spinner
     if (service?.loading)
       return (
         <div
@@ -53,14 +52,15 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
         </div>
       );
 
+    // Default icon
     return (
       <FontAwesomeIcon
-        icon={icon}
+        icon={service.type === "github" ? faGithub : faWindowMaximize}
         style={imageStyles}
         className="service-image"
       />
     );
-  };
+  }, [service.icon]);
 
   return (
     <div
@@ -73,7 +73,7 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
         rel="noreferrer noopener"
         style={{ color: "inherit", display: "contents" }}
       >
-        <ServiceIcon />
+        {icon}
       </a>
     </div>
   );

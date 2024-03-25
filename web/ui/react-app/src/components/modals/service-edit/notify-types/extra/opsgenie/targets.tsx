@@ -24,6 +24,15 @@ interface Props {
   defaults?: NotifyOpsGenieTarget[];
 }
 
+/**
+ * OpsGenieTargets is the form fields for a list of OpsGenie targets
+ *
+ * @param name - The name of the field in the form
+ * @param label - The label for the field
+ * @param tooltip - The tooltip for the field
+ * @param defaults - The default values for the field
+ * @returns A set of form fields for a list of OpsGenie targets
+ */
 const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
   const { trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
@@ -41,7 +50,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
   }, []);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues = useWatch({ name: name });
+  const fieldValues: NotifyOpsGenieTarget[] = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>

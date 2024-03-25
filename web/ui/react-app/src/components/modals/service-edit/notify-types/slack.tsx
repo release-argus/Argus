@@ -10,6 +10,15 @@ import { NotifySlackType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * SLACK renders the form fields for the Slack Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Slack Notify
+ * @param defaults - The default values for the Slack Notify
+ * @param hard_defaults - The hard default values for the Slack Notify
+ * @returns The form fields for this Slack Notify
+ */
 const SLACK = ({
   name,
 
@@ -94,7 +103,7 @@ const SLACK = ({
           required
           label="Channel"
           defaultVal={convertedDefaults.url_fields.channel}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -109,7 +118,7 @@ const SLACK = ({
           label="Color"
           tooltip="Message left-hand border color in hex, e.g. #ffffff"
           defaultVal={convertedDefaults.params.color}
-          onRight
+          position="right"
         />
         <FormItemWithPreview
           name={`${name}.params.icon`}

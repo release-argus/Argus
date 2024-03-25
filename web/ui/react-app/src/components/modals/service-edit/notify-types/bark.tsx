@@ -53,6 +53,15 @@ export const BarkSoundOptions = [
   { label: "Update", value: "update" },
 ];
 
+/**
+ * BARK is the form fields for a Bark notification
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Bark
+ * @param defaults - The default values for Bark
+ * @param hard_defaults - The hard default values for Bark
+ * @returns The form fields for this Bark
+ */
 const BARK = ({
   name,
 
@@ -203,30 +212,34 @@ const BARK = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.devicekey`}
-          required
-          label="Device Key"
-          defaultVal={convertedDefaults.url_fields.devicekey}
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
+          col_sm={9}
           required
           label="Host"
           defaultVal={convertedDefaults.url_fields.host}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.port`}
+          col_sm={3}
           required
           label="Port"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
           label="Path"
           tooltip="Server path"
           defaultVal={convertedDefaults.url_fields.path}
-          onRight
+        />
+        <FormItem
+          name={`${name}.url_fields.devicekey`}
+          required
+          label="Device Key"
+          defaultVal={convertedDefaults.url_fields.devicekey}
+          position="right"
         />
       </>
       <>

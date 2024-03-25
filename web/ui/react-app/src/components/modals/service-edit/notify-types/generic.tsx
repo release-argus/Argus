@@ -33,6 +33,15 @@ const GenericRequestMethodOptions: {
   ] as const
 ).map((method) => ({ label: method, value: method }));
 
+/**
+ * GENERIC renders the form fields for the Generic Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Generic Notify
+ * @param defaults - The default values for the Generic Notify
+ * @param hard_defaults - The hard default values for the Generic Notify
+ * @returns The form fields for this Generic Notify
+ */
 const GENERIC = ({
   name,
 
@@ -46,7 +55,9 @@ const GENERIC = ({
   defaults?: NotifyGenericType;
   hard_defaults?: NotifyGenericType;
 }) => {
-  const selectedTemplate = useWatch({ name: `${name}.params.template` });
+  const selectedTemplate: string | undefined = useWatch({
+    name: `${name}.params.template`,
+  });
 
   const convertedDefaults = useMemo(
     () => ({
@@ -172,9 +183,9 @@ const GENERIC = ({
           <FormItem
             name={`${name}.url_fields.port`}
             col_sm={4}
-            type="number"
             label="Port"
             tooltip="e.g. 443"
+            isNumber
             defaultVal={convertedDefaults.url_fields.port}
           />
           <FormItem
@@ -188,7 +199,7 @@ const GENERIC = ({
               </>
             }
             defaultVal={convertedDefaults.url_fields.path}
-            onRight
+            position="right"
           />
           <FormKeyValMap
             name={`${name}.url_fields.custom_headers`}
@@ -221,34 +232,35 @@ const GENERIC = ({
           label="Request Method"
           tooltip="The HTTP request method"
           options={genericRequestMethodOptions}
-          onMiddle
         />
         <FormItem
           name={`${name}.params.contenttype`}
-          col_sm={8}
+          col_sm={4}
           label="Content Type"
           tooltip="The value of the Content-Type header"
           defaultVal={convertedDefaults.params.contenttype}
+          position="right"
+        />
+        <FormItem
+          name={`${name}.params.template`}
+          col_sm={4}
+          type="text"
+          label="Template"
+          tooltip="The template used for creating the request payload"
+          defaultVal={convertedDefaults.params.template}
+          position="right"
         />
         <FormItem
           name={`${name}.params.messagekey`}
-          col_sm={4}
+          col_sm={6}
           type="text"
           label="Message Key"
           tooltip="The key that will be used for the message value"
           defaultVal={convertedDefaults.params.messagekey}
         />
         <FormItem
-          name={`${name}.params.template`}
-          col_sm={8}
-          type="text"
-          label="Template"
-          tooltip="The template used for creating the request payload"
-          defaultVal={convertedDefaults.params.template}
-        />
-        <FormItem
           name={`${name}.params.titlekey`}
-          col_sm={4}
+          col_sm={6}
           type="text"
           label="Title Key"
           tooltip="The key that will be used for the title value"
@@ -256,11 +268,12 @@ const GENERIC = ({
         />
         <FormItem
           name={`${name}.params.title`}
-          col_sm={8}
+          col_sm={12}
           type="text"
           label="Title"
           tooltip="Text prepended to the message"
           defaultVal={convertedDefaults.params.title}
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.disabletls`}

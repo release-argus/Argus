@@ -7,16 +7,22 @@ interface Props {
   defaults?: NotifyNtfyAction;
 }
 
+/**
+ * BROADCAST renders the form fields for the Broadcast Ntfy action
+ *
+ * @param name - The name of the field in the form
+ * @param defaults - The default values for the Broadcast Ntfy action
+ * @returns The form fields for the Broadcast Ntfy action
+ */
 const BROADCAST: FC<Props> = ({ name, defaults }) => (
   <>
     <FormItem
       name={`${name}.intent`}
       label="Intent"
-      col_xs={12}
       col_sm={5}
       defaultVal={defaults?.intent}
       placeholder="e.g. 'io.heckel.ntfy.USER_ACTION'"
-      onRight
+      position="right"
     />
     <FormKeyValMap
       name={`${name}.extras`}

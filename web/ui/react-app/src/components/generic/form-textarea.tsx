@@ -1,12 +1,13 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
+import { formPadding } from "./util";
+import { useError } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
   name: string;
-  registerParams?: Record<string, unknown>;
   required?: boolean;
 
   col_xs?: number;
@@ -14,42 +15,51 @@ interface FormItemProps {
   label?: string;
   tooltip?: string | JSX.Element;
 
-  rows?: number;
-
-  value?: string | number;
-
-  isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  rows?: number;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
+/**
+ * FormTextArea is a labelled form textarea
+ *
+ * @param name - The name of the form item
+ * @param required - Whether the form item is required
+ * @param col_xs - The number of columns the form item should take up on extra small screens
+ * @param col_sm - The number of columns the form item should take up on small screens
+ * @param label - The label of the form item
+ * @param tooltip - The tooltip of the form item
+ * @param defaultVal - The default value of the form item
+ * @param placeholder - The placeholder of the form item
+ * @param rows - The number of rows for the textarea
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
+ * @returns  A labeled form textarea
+ */
 const FormTextArea: FC<FormItemProps> = ({
   name,
-  registerParams = {},
   required,
 
   col_xs = 12,
   col_sm = 6,
   label,
   tooltip,
-  rows,
+
   defaultVal,
   placeholder,
-  onRight,
-  onMiddle,
+
+  rows,
+  position = "left",
+  positionXS = position,
 }) => {
   const { register } = useFormContext();
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12 && onRight ? "ps-sm-2" : "",
-      col_xs !== 12 && onRight ? "ps-2" : "",
-      col_sm !== 12 && !onRight ? (onMiddle ? "ps-sm-2" : "pe-sm-2") : "",
-      col_xs !== 12 && !onRight ? (onMiddle ? "ps-2" : "pe-2") : "",
-    ].join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const error = useError(name, required);
+
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
+
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
       <FormGroup>
@@ -63,19 +73,21 @@ const FormTextArea: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value) => {
-              let validation = true;
+            validate: (value: string | undefined) => {
               const testValue = value || defaultVal || "";
+              // Validate that it's non-empty (including default value)
               if (required) {
-                validation = /.+/.test(testValue);
-                if (!validation) return "Required";
+                const validation = /.+/.test(testValue);
+                return validation ? true : "Required";
               }
-
-              return validation || "error";
+              return true;
             },
-            ...registerParams,
           })}
+          isInvalid={!!error}
         />
+        {error && (
+          <small className="error-msg">{error["message"] || "err"}</small>
+        )}
       </FormGroup>
     </Col>
   );

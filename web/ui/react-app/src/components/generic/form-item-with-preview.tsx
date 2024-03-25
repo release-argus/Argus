@@ -3,6 +3,7 @@ import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
+import { useError } from "hooks/errors";
 
 interface Props {
   name: string;
@@ -13,6 +14,16 @@ interface Props {
   placeholder?: string;
 }
 
+/**
+ * FormItemWithPreview is a labelled form item with a preview image
+ *
+ * @param name - The name of the form item
+ * @param label - The label of the form item
+ * @param tooltip - The tooltip of the form item
+ * @param defaultVal - The default value of the form item
+ * @param placeholder - The placeholder of the form item
+ * @returns A labeled form item with a preview image
+ */
 const FormItemWithPreview: FC<Props> = ({
   name,
 
@@ -22,7 +33,8 @@ const FormItemWithPreview: FC<Props> = ({
   placeholder,
 }) => {
   const { register } = useFormContext();
-  const formValue = useWatch({ name: name });
+  const formValue: string | undefined = useWatch({ name: name });
+  const error = useError(name, true);
   const preview = useMemo(() => {
     const url = formValue || defaultVal || "";
     try {
@@ -53,14 +65,36 @@ const FormItemWithPreview: FC<Props> = ({
             type="text"
             value={formValue}
             placeholder={placeholder || defaultVal}
-            pattern="^https?://.+"
-            style={{ width: preview ? "90%" : "100%" }}
+            style={{ marginRight: preview ? "1rem" : undefined }}
             autoFocus={false}
-            {...register(name)}
+            {...register(name, {
+              validate: (value: string | undefined) => {
+                // Allow empty values
+                if ((value ?? "") === "") return true;
+
+                // Validate that it's a URL (with prefix)
+                try {
+                  const parsedURL = new URL(value as string);
+                  if (!["http:", "https:"].includes(parsedURL.protocol))
+                    throw new Error("Invalid protocol");
+                } catch (error) {
+                  if (/^https?:\/\//.test(value as string)) {
+                    return "Invalid URL";
+                  }
+                  return "Invalid URL - http(s):// prefix required";
+                }
+
+                return true;
+              },
+            })}
+            isInvalid={!!error}
           />
           {preview}
         </div>
       </FormGroup>
+      {error && (
+        <small className="error-msg">{error["message"] || "err"}</small>
+      )}
     </Col>
   );
 };

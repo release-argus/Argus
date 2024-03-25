@@ -4,6 +4,7 @@ import {
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
   StringFieldArray,
+  StringStringMap,
   WebHookType,
 } from "types/config";
 import {
@@ -15,6 +16,14 @@ import {
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { urlCommandsTrimArray } from "./url-command-trim";
 
+/**
+ * convertAPIServiceDataEditToUI will convert the API service data to the format needed for the web UI
+ *
+ * @param name - The name of the service
+ * @param serviceData - The service data from the API
+ * @param otherOptionsData - The other options data, containingglobals/defaults/hardDefaults
+ * @returns The converted service data
+ */
 export const convertAPIServiceDataEditToUI = (
   name: string,
   serviceData?: ServiceEditAPIType,
@@ -66,8 +75,8 @@ export const convertAPIServiceDataEditToUI = (
       })),
       webhook: serviceData?.webhook?.map((item) => {
         // Determine webhook name and type
-        const whName = item.name || "";
-        const whType = item.type || "";
+        const whName = item.name ?? "";
+        const whType = item.type ?? "";
 
         // Construct custom headers
         const customHeaders = item.custom_headers
@@ -98,22 +107,22 @@ export const convertAPIServiceDataEditToUI = (
       notify: serviceData?.notify?.map((item) => ({
         ...item,
         oldIndex: item.name,
+        url_fields: {
+          ...convertNotifyURLFields(
+            item.name ?? "",
+            item.type,
+            item.url_fields,
+            otherOptionsData
+          ),
+        },
         params: {
           avatar: "", // controlled param
           color: "", // ^
           icon: "", // ^
           ...convertNotifyParams(
-            item.name || "",
+            item.name ?? "",
             item.type,
             item.params,
-            otherOptionsData
-          ),
-        },
-        url_fields: {
-          ...convertNotifyURLFields(
-            item.name || "",
-            item.type,
-            item.url_fields,
             otherOptionsData
           ),
         },
@@ -142,7 +151,13 @@ export const convertAPIServiceDataEditToUI = (
   };
 };
 
-// convertStringToFieldArray will convert a JSON string to a {[key]: string}[]
+/**
+ * convertStringToFieldArray will convert a JSON string to a {[key]: string}[]
+ *
+ * @param str - JSON list or string to convert
+ * @param key - key to use for the object
+ * @returns The converted list, or undefined if the input is empty
+ */
 export const convertStringToFieldArray = (
   str?: string,
   key = "arg"
@@ -181,11 +196,19 @@ export const convertHeadersFromString = (
   }
 };
 
-// convertOpsGenieTargetFromString will convert a JSON string to a NotifyOpsGenieTarget[]
-//
-// If global/defaults/hardDefaults are provided, it will only return the values in select fields
-//
-// for opsgenie.responders and opsgenie.visibleto
+/**
+ * convertOpsGenieTargetFromString will convert a JSON string to a NotifyOpsGenieTarget[]
+ *
+ * (If global/defaults/hardDefaults are provided, it will only return the values in select fields)
+ *
+ * for opsgenie.responders and opsgenie.visibleto
+ *
+ * @param str - JSON to convert
+ * @param global - The global defaults
+ * @param defaults - The defaults
+ * @param hardDefaults - The hard defaults
+ * @returns The converted object, or undefined if the input is empty
+ */
 export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[],
   global?: string,
@@ -233,11 +256,19 @@ export const convertOpsGenieTargetFromString = (
   }
 };
 
-// convertNtfyActionsFromString will convert a JSON string to a NotifyNtfyAction[]
-//
-// If global/defaults/hardDefaults are provided, it will only return the values in select fields
-//
-// for ntfy.actions
+/**
+ * convertOpsGenieTargetToString will convert a JSON string to a NotifyNtfyAction[]
+ *
+ * (If global/defaults/hardDefaults are provided, it will only return the values in select fields)
+ *
+ * for ntify.actions
+ *
+ * @param str - JSON to convert
+ * @param global - The global defaults
+ * @param defaults - The defaults
+ * @param hardDefaults - The hard defaults
+ * @returns The converted object, or undefined if the input is empty
+ */
 export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[],
   global?: string,
@@ -278,11 +309,9 @@ export const convertNtfyActionsFromString = (
             method: firstDefault ? "" : obj.method,
             headers: firstDefault
               ? convertStringMapToHeaderType(
-                  obj.headers as { [key: string]: string }
+                  obj.headers as StringStringMap
                 )?.map((item) => ({ ...item, key: "", value: "" }))
-              : convertStringMapToHeaderType(
-                  obj.headers as { [key: string]: string }
-                ),
+              : convertStringMapToHeaderType(obj.headers as StringStringMap),
             body: obj.body,
           };
 
@@ -295,11 +324,9 @@ export const convertNtfyActionsFromString = (
             intent: firstDefault ? "" : obj.intent,
             extras: firstDefault
               ? convertStringMapToHeaderType(
-                  obj.extras as { [key: string]: string }
+                  obj.extras as StringStringMap
                 )?.map((item) => ({ ...item, key: "", value: "" }))
-              : convertStringMapToHeaderType(
-                  obj.extras as { [key: string]: string }
-                ),
+              : convertStringMapToHeaderType(obj.extras as StringStringMap),
           };
 
         // Unknown action
@@ -314,11 +341,19 @@ export const convertNtfyActionsFromString = (
   }
 };
 
-// convertNotifyURLFields will convert a notify url_fields to the correct types for the UI
+/**
+ * convertNotifyURLFields will convert a notify url_fields object to the correct types for the UI
+ *
+ * @param name - The react-hook-form path to the notify object
+ * @param type - The type of notify
+ * @param urlFields - The url_fields object to convert
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted URL Fields
+ */
 export const convertNotifyURLFields = (
   name: string,
   type?: string,
-  urlFields?: { [key: string]: string },
+  urlFields?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
   const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
@@ -365,11 +400,19 @@ export const convertNotifyURLFields = (
   return urlFields;
 };
 
-// convertNotifyParams will convert a notify param to the correct types for the UI
+/**
+ * convertNotifyURLFields will convert a notify params object to the correct types for the UI
+ *
+ * @param name - The react-hook-form path to the notify object
+ * @param type - The type of notify
+ * @param urlFields - The params object to convert
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted Params
+ */
 export const convertNotifyParams = (
   name: string,
   type?: string,
-  params?: { [key: string]: string },
+  params?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
   const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
@@ -440,11 +483,25 @@ export const convertNotifyParams = (
           ),
     };
 
+  if (notifyType === "slack")
+    return {
+      ...params,
+      // Add # to the color if it's a hex code
+      color: /^[\da-f]{6}$/i.test(params?.color ?? "")
+        ? `#${params?.color}`
+        : params?.color,
+    };
+
   // Other
   return params;
 };
 
-// convertStringMapToHeaderType will convert a {[key]: string, ...} to a HeaderType[]
+/**
+ * convertStringMapToHeaderType will convert a {[key]: string, ...} to a HeaderType[]
+ *
+ * @param headers The {KEY:VAL, ...} object to convert
+ * @returns Converted headers, {key: KEY, value: VAL}[] or undefined if the input is empty
+ */
 const convertStringMapToHeaderType = (headers?: {
   [key: string]: string;
 }): HeaderType[] | undefined => {

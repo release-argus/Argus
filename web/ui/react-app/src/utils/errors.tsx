@@ -1,15 +1,38 @@
-import { FieldErrors, FieldValues } from "react-hook-form";
+import { FieldError, FieldErrors, FieldValues } from "react-hook-form";
 
-// extractErrors will extract and flatten errors with the option to filter only
-// errors starting with the provided path
-//
-// e.g. { first: { second: [ {item1: {message: "reason"}}, {item2: {message: "otherReason"}} ] } }
-// becomes { first.second.0.item1: "reason", first.second.1.item2: "otherReason"}
+import { StringStringMap } from "types/config";
+
+/**
+ * getNestedError gets the error for a potentially nested key in a react-hook-form errors object
+ *
+ * @param errors - The errors object from react-hook-form
+ * @param key - The key to get the error for
+ * @returns The error for the provided key
+ */
+export const getNestedError = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errors: any,
+  key: string
+): FieldError | undefined =>
+  key
+    .split(".")
+    .reduce((acc, key) => (acc && acc[key] ? acc[key] : undefined), errors);
+
+/**
+ * Extracts and flattens errors from a react-hook-form errors object
+ *
+ * e.g. { first: { second: [ {item1: {message: "reason"}}, {item2: {message: "otherReason"}} ] } }
+ * becomes { first.second.0.item1: "reason", first.second.1.item2: "otherReason"}
+ *
+ * @param errors - The errors object from react-hook-form
+ * @param name - The path to filter the errors by
+ * @returns The flattened errors object for the provided path
+ */
 export const extractErrors = (
   errors: FieldErrors<FieldValues>,
   path = ""
-): { [key: string]: string } => {
-  const flatErrors: { [key: string]: string } = {};
+): StringStringMap => {
+  const flatErrors: StringStringMap = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traverse = (prefix: string, obj: any) => {
     for (const key in obj) {

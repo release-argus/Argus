@@ -5,13 +5,18 @@ import { Accordion } from "react-bootstrap";
 import { BooleanWithDefault } from "components/generic";
 import { ServiceOptionsType } from "types/config";
 
-// import { useFormContext } from "react-hook-form";
-
 interface Props {
   defaults?: ServiceOptionsType;
   hard_defaults?: ServiceOptionsType;
 }
 
+/**
+ * EditServiceOptions renders the form fields for the service options
+ *
+ * @param defaults - The default values for the service options
+ * @param hard_defaults - The hard default values for the service options
+ * @returns The form fields for the service options
+ */
 const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
   // const { register } = useFormContext();
   const convertedDefaults = useMemo(

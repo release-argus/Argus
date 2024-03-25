@@ -7,6 +7,15 @@ import { globalOrDefault } from "components/modals/service-edit/notify-types/uti
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
+/**
+ * GOTIFY renders the form fields for the Gotify Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Gotify Notify
+ * @param defaults - The default values for the Gotify Notify
+ * @param hard_defaults - The hard default values for the Gotify Notify
+ * @returns The form fields for this Gotify Notify
+ */
 const GOTIFY = ({
   name,
 
@@ -91,11 +100,11 @@ const GOTIFY = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
           tooltip="e.g. 443"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
@@ -113,7 +122,7 @@ const GOTIFY = ({
           required
           label="Token"
           defaultVal={convertedDefaults.url_fields.token}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -130,7 +139,7 @@ const GOTIFY = ({
           col_sm={10}
           label="Title"
           defaultVal={convertedDefaults.params.title}
-          onRight
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.disabletls`}

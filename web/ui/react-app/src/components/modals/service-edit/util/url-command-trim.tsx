@@ -1,6 +1,12 @@
 import { URLCommandType } from "types/config";
 
-// urlCommandTrim will remove any keys not used for the type
+/**
+ * urlCommandTrim will remove any keys not used for the type
+ *
+ * @param command - The URLCommandType to trim
+ * @param sending - Whether the command is being sent to the server
+ * @returns A URLCommandType with only the relevant keys for the type
+ */
 export const urlCommandTrim = (
   command: URLCommandType,
   sending: boolean
@@ -31,7 +37,12 @@ export const urlCommandTrim = (
   };
 };
 
-// urlCommandsTrim will remove any unsued keye for the type for all URLCommandTypes in the list
+/**
+ * urlCommandsTrim will remove any keys not used for the type for all URLCommandTypes in the list
+ *
+ * @param commands - The URLCommandType[] to trim
+ * @returns A URLCommandType[] with only the relevant keys for each type
+ */
 export const urlCommandsTrim = (commands: {
   [key: string]: URLCommandType;
 }): URLCommandType[] => {

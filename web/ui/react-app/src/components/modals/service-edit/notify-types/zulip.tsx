@@ -5,6 +5,15 @@ import { NotifyZulipType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * ZULIP_CHAT renders the form fields for the Zulip Chat Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Zulip Chat Notify
+ * @param defaults - The default values for the Zulip Chat Notify
+ * @param hard_defaults - The hard default values for the Zulip Chat Notify
+ * @returns The form fields for this Zulip Chat Notify
+ */
 const ZULIP_CHAT = ({
   name,
 
@@ -77,7 +86,7 @@ const ZULIP_CHAT = ({
           required
           label="Bot Key"
           defaultVal={convertedDefaults.url_fields.botkey}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.host`}
@@ -99,7 +108,7 @@ const ZULIP_CHAT = ({
           name={`${name}.params.topic`}
           label="Topic"
           defaultVal={convertedDefaults.params.topic}
-          onRight
+          position="right"
         />
       </>
     </>

@@ -4,6 +4,15 @@ import { memo, useMemo } from "react";
 import { NotifyOptionsType } from "types/config";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 
+/**
+ * NotifyOptions is the form fields for all Notify Options
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Notify Options
+ * @param defaults - The default values for the Notify Options of this type
+ * @param hard_defaults - The hard default values for the Notify Options of this type
+ * @returns The form fields for this Notify Options
+ */
 export const NotifyOptions = ({
   name,
 
@@ -55,7 +64,7 @@ export const NotifyOptions = ({
         type="number"
         label="Max tries"
         defaultVal={convertedDefaults.max_tries}
-        onRight
+        position="right"
       />
       <FormTextArea
         name={`${name}.options.message`}

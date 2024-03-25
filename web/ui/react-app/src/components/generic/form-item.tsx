@@ -1,9 +1,10 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
-import { getNestedError } from "utils";
+import { formPadding } from "./util";
+import { useError } from "hooks/errors";
+import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
   name: string;
@@ -18,15 +19,38 @@ interface FormItemProps {
   tooltip?: string | JSX.Element;
   type?: "text" | "number" | "url";
 
-  isURL?: boolean;
+  isNumber?: boolean;
   isRegex?: boolean;
+  isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
+/**
+ * FormItem is a labelled form item
+ *
+ * @param name - The name of the form item
+ * @param registerParams - Additional parameters for the form item
+ * @param required - Whether the form item is required
+ * @param unique - Whether the form item should be unique
+ * @param col_xs - The number of columns the form item should take up on extra small screens
+ * @param col_sm - The number of columns the form item should take up on small screens
+ * @param label - The label of the form item
+ * @param smallLabel - Whether the label should be small
+ * @param tooltip - The tooltip of the form item
+ * @param type - The type of the form item
+ * @param isNumber - Whether the form item should be a number
+ * @param isRegex - Whether the form item should be a regex
+ * @param isURL - Whether the form item should be a URL
+ * @param defaultVal - The default value of the form item
+ * @param placeholder - The placeholder of the form item
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
+ * @returns A labeled form item
+ */
 const FormItem: FC<FormItemProps> = ({
   name,
   registerParams = {},
@@ -39,47 +63,25 @@ const FormItem: FC<FormItemProps> = ({
   smallLabel,
   tooltip,
   type = "text",
-  isURL,
+
+  isNumber,
   isRegex,
+  isURL,
   defaultVal,
   placeholder,
 
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { getValues, register } = useFormContext();
-  const { errors } = useFormState();
-  const error =
-    (required || isURL || isRegex || registerParams["validate"]) &&
-    getNestedError(errors, name);
+  const error = useError(
+    name,
+    required || isNumber || isRegex || isURL || registerParams["validate"]
+      ? true
+      : false
+  );
 
-  const padding = useMemo(() => {
-    const paddingClasses = [];
-
-    // Padding for being on the right
-    if (onRight) {
-      if (col_sm !== 12) paddingClasses.push("ps-sm-2");
-      if (col_xs !== 12) paddingClasses.push("ps-2");
-    }
-    // Padding for being in the middle
-    else if (onMiddle) {
-      if (col_sm !== 12) {
-        paddingClasses.push("ps-sm-1");
-        paddingClasses.push("pe-sm-1");
-      }
-      if (col_xs !== 12) {
-        paddingClasses.push("ps-1");
-        paddingClasses.push("pe-1");
-      }
-    }
-    // Padding for being on the left
-    else {
-      if (col_sm !== 12) paddingClasses.push("pe-sm-2");
-      if (col_xs !== 12) paddingClasses.push("pe-2");
-    }
-
-    return paddingClasses.join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
@@ -93,17 +95,28 @@ const FormItem: FC<FormItemProps> = ({
           />
         )}
         <FormControl
-          className={error && "form-error"}
           type={type}
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value) => {
+            validate: (value: string | undefined) => {
               let validation = true;
               const testValue = value || defaultVal || "";
-              if (required) validation = /.+/.test(testValue);
-              if (!validation) return required === true ? "Required" : required;
 
+              // Validate that it's non-empty (including default value)
+              if (required) {
+                validation = /.+/.test(testValue);
+                if (!validation)
+                  return required === true ? "Required" : required;
+              }
+
+              // Validate that it's a number
+              if (isNumber) {
+                validation = !isNaN(Number(testValue));
+                if (!validation) return "Should be a number";
+              }
+
+              // Validate that it's a URL (with prefix)
               if (isURL) {
                 try {
                   validation = required
@@ -116,6 +129,7 @@ const FormItem: FC<FormItemProps> = ({
                 }
               }
 
+              // Validate that it's valid RegEx
               if (isRegex) {
                 try {
                   new RegExp(testValue);
@@ -124,6 +138,7 @@ const FormItem: FC<FormItemProps> = ({
                 }
               }
 
+              // Should be unique if it's changed from the default
               if (unique && testValue !== defaultVal) {
                 const parts = name.split(".");
                 const parent = parts.slice(0, parts.length - 2).join(".");
@@ -141,10 +156,11 @@ const FormItem: FC<FormItemProps> = ({
                 return validation || "Should be unique";
               }
 
-              return validation || "error";
+              return validation;
             },
             ...registerParams,
           })}
+          isInvalid={!!error}
         />
         {error && (
           <small className="error-msg">{error["message"] || "err"}</small>

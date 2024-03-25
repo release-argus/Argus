@@ -9,6 +9,15 @@ import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * MATTERMOST renders the form fields for the MatterMost Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this MatterMost Notify
+ * @param defaults - The default values for the MatterMost Notify
+ * @param hard_defaults - The hard default values for the MatterMost Notify
+ * @returns The form fields for this MatterMost Notify
+ */
 const MATTERMOST = ({
   name,
 
@@ -94,7 +103,7 @@ const MATTERMOST = ({
           label="Port"
           tooltip="e.g. 443"
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
@@ -111,7 +120,7 @@ const MATTERMOST = ({
           name={`${name}.url_fields.username`}
           label="Username"
           defaultVal={convertedDefaults.url_fields.username}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.token`}
@@ -125,7 +134,7 @@ const MATTERMOST = ({
           label="Channel"
           tooltip="e.g. releases"
           defaultVal={convertedDefaults.url_fields.channel}
-          onRight
+          position="right"
         />
       </>
       <>

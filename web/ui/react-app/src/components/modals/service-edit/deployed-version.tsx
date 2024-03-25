@@ -19,6 +19,15 @@ interface Props {
   hard_defaults?: DeployedVersionLookupType;
 }
 
+/**
+ * EditServiceDeployedVersion renders the form fields for the deployed version
+ *
+ * @param serviceName - The name of the service
+ * @param original - The original values for the deployed version
+ * @param defaults - The default values for the deployed version
+ * @param hard_defaults - The hard default values for the deployed version
+ * @returns The form fields for the deployed version
+ */
 const EditServiceDeployedVersion: FC<Props> = ({
   serviceName,
   original,
@@ -28,7 +37,9 @@ const EditServiceDeployedVersion: FC<Props> = ({
   const { setValue } = useFormContext();
 
   // RegEx Template toggle
-  const templateToggle = useWatch({ name: "deployed_version.template_toggle" });
+  const templateToggle: boolean | undefined = useWatch({
+    name: "deployed_version.template_toggle",
+  });
   useEffect(() => {
     // Clear the template if the toggle is false
     if (templateToggle === false) {
@@ -84,7 +95,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
               col_xs={6}
               label="Password"
               defaultVal={convertedDefaults.password}
-              onRight
+              position="right"
             />
           </Row>
         </FormGroup>
@@ -116,7 +127,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             }
             defaultVal={convertedDefaults.regex}
             isRegex
-            onRight
+            position="middle"
           />
           <FormCheck
             name={`deployed_version.template_toggle`}
@@ -126,7 +137,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             smallLabel
             col_sm={1}
             col_xs={2}
-            onRight
+            position="right"
           />
           {templateToggle && (
             <FormItem

@@ -11,6 +11,13 @@ interface Props {
   removeMe?: () => void;
 }
 
+/**
+ * Command renders fields of a command with any number of arguments
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove the command
+ * @returns A set of form fields for this command
+ */
 const Command: FC<Props> = ({ name, removeMe }) => {
   const { fields, append, remove } = useFieldArray({
     name: name,
@@ -33,7 +40,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
             name={`${name}.${argIndex}.arg`}
             required
             placeholder={placeholder(argIndex)}
-            onRight={argIndex % 2 === 1}
+            position={argIndex % 2 === 1 ? "right" : "left"}
           />
         ))}
       </Row>

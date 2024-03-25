@@ -16,6 +16,15 @@ export const TelegramParseModeOptions = [
   { label: "Markdown v2", value: "MarkdownV2" },
 ];
 
+/**
+ * TELEGRAM renders the form fields for the Telegram Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Telegram Notify
+ * @param defaults - The default values for the Telegram Notify
+ * @param hard_defaults - The hard default values for the Telegram Notify
+ * @returns The form fields for this Telegram Notify
+ */
 const TELEGRAM = ({
   name,
 
@@ -137,7 +146,7 @@ const TELEGRAM = ({
           col_sm={4}
           label="Parse Mode"
           options={telegramParseModeOptions}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}

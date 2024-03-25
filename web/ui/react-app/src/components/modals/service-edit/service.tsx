@@ -26,6 +26,12 @@ interface Props {
   name: string;
 }
 
+/**
+ * EditService renders the form fields for editing a service
+ *
+ * @param name - The name of the service
+ * @returns The form fields for editing a service
+ */
 const EditService: FC<Props> = ({ name }) => {
   const { reset } = useFormContext();
   const [loading, setLoading] = useState(true);
@@ -85,9 +91,9 @@ const EditService: FC<Props> = ({ name }) => {
           }}
           col_sm={12}
           label="Name"
-          onRight
+          position="right"
         />
-        <FormItem name="comment" col_sm={12} label="Comment" onRight />
+        <FormItem name="comment" col_sm={12} label="Comment" position="right" />
       </FormGroup>
       <EditServiceOptions
         defaults={otherOptionsData?.defaults?.service?.options}

@@ -7,6 +7,15 @@ import { globalOrDefault } from "components/modals/service-edit/notify-types/uti
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
+/**
+ * MATRIX renders the form fields for the Matrix Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Matrix Notify
+ * @param defaults - The default values for the Matrix Notify
+ * @param hard_defaults - The hard default values for the Matrix Notify
+ * @returns The form fields for this Matrix Notify
+ */
 const MATRIX = ({
   name,
 
@@ -76,19 +85,6 @@ const MATRIX = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.username`}
-          label="Username"
-          tooltip="e.g. something@example.com"
-          defaultVal={convertedDefaults.url_fields.username}
-        />
-        <FormItem
-          name={`${name}.url_fields.password`}
-          required
-          label="Password"
-          defaultVal={convertedDefaults.url_fields.password}
-          onRight
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
@@ -99,11 +95,24 @@ const MATRIX = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
           tooltip="e.g. 25/465/587/2525"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
+        />
+        <FormItem
+          name={`${name}.url_fields.username`}
+          label="Username"
+          tooltip="e.g. something@example.com"
+          defaultVal={convertedDefaults.url_fields.username}
+        />
+        <FormItem
+          name={`${name}.url_fields.password`}
+          required
+          label="Password"
+          defaultVal={convertedDefaults.url_fields.password}
+          position="right"
         />
       </>
       <>

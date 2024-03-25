@@ -11,6 +11,15 @@ import { globalOrDefault } from "components/modals/service-edit/notify-types/uti
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
+/**
+ * DISCORD renders the form fields for the Discord Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Discord Notify
+ * @param defaults - The default values for the Discord Notify
+ * @param hard_defaults - The hard default values for the Discord Notify
+ * @returns The form fields for this Discord Notify
+ */
 const DISCORD = ({
   name,
 
@@ -102,7 +111,7 @@ const DISCORD = ({
             </>
           }
           defaultVal={convertedDefaults.url_fields.token}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -123,7 +132,7 @@ const DISCORD = ({
           name={`${name}.params.title`}
           label="Title"
           defaultVal={convertedDefaults.params.title}
-          onRight
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.splitlines}`}

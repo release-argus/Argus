@@ -14,6 +14,16 @@ interface Props {
   valuePlaceholder?: string;
 }
 
+/**
+ * FormKeyVal is the form fields for a key-value pair
+ *
+ * @param name - The name of the field in the form
+ * @param defaults - The default values for the field
+ * @param removeMe - The function to remove the field
+ * @param keyPlaceholder - The placeholder for the key field
+ * @param valuePlaceholder - The placeholder for the value field
+ * @returns Key-Value pair form fields
+ */
 const FormKeyVal: FC<Props> = ({
   name,
   defaults,
@@ -37,20 +47,18 @@ const FormKeyVal: FC<Props> = ({
           name={`${name}.key`}
           unique
           required
-          col_xs={12}
           col_sm={6}
           defaultVal={defaults?.key}
           placeholder={keyPlaceholder}
-          onMiddle
+          position="middle"
         />
         <FormItem
           name={`${name}.value`}
           required
-          col_xs={12}
           col_sm={6}
           defaultVal={defaults?.value}
           placeholder={valuePlaceholder}
-          onRight
+          position="right"
         />
       </Row>
     </Col>

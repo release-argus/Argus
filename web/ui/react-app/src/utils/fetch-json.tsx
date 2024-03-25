@@ -9,13 +9,26 @@ type Props = {
   body?: string;
 };
 
-// fetchJSON will GET the JSON data, rewritten for use in React-Query
-const fetchJSON = async <T,>({url, method="GET", headers, body}: Props): Promise<T> => {
+/**
+ * fetchJSON will retrieve JSON data from a URL using the specified method, headers, and body
+ *
+ * @param url - The URL to fetch data from
+ * @param method - The HTTP method to use, either GET or POST
+ * @param headers - Optional headers to include in the request
+ * @param body - Optional request body, applicable for POST requests
+ * @returns The JSON data returned from the request
+ */
+const fetchJSON = async <T,>({
+  url,
+  method = "GET",
+  headers,
+  body,
+}: Props): Promise<T> => {
   const response = await Promise.race([
-    fetch(url,{
+    fetch(url, {
       method: method,
       headers: headers,
-      body: body
+      body: body,
     }),
     new Promise<Response>((_, reject) =>
       setTimeout(() => reject(new Error("Timeout")), 10000)

@@ -1,9 +1,12 @@
 import { Accordion, Row } from "react-bootstrap";
+import {
+  DefaultLatestVersionLookupType,
+  LatestVersionLookupType,
+} from "types/config";
 import { FC, memo, useMemo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
-import { DefaultLatestVersionLookupType } from "types/config";
 import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
@@ -17,18 +20,32 @@ interface Props {
   hard_defaults?: DefaultLatestVersionLookupType;
 }
 
+/**
+ * EditServiceLatestVersion renders the form fields for the latest version
+ *
+ * @param serviceName - The name of the service
+ * @param original - The original values for the latest version
+ * @param defaults - The default values for the latest version
+ * @param hard_defaults - The hard default values for the latest version
+ * @returns The form fields for the latest version
+ */
 const EditServiceLatestVersion: FC<Props> = ({
   serviceName,
   original,
   defaults,
   hard_defaults,
 }) => {
-  const latestVersionTypeOptions = [
+  const latestVersionTypeOptions: {
+    label: string;
+    value: NonNullable<LatestVersionLookupType["type"]>;
+  }[] = [
     { label: "GitHub", value: "github" },
     { label: "URL", value: "url" },
   ];
 
-  const latestVersionType = useWatch({ name: `latest_version.type` });
+  const latestVersionType: LatestVersionLookupType["type"] = useWatch({
+    name: `latest_version.type`,
+  });
 
   const convertedDefaults = useMemo(
     () => ({
@@ -58,7 +75,7 @@ const EditServiceLatestVersion: FC<Props> = ({
             col_sm={8}
             col_xs={8}
             label={latestVersionType === "github" ? "Repo" : "URL"}
-            onRight
+            position="right"
           />
           {latestVersionType === "github" ? (
             <>

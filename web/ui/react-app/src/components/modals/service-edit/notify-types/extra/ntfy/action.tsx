@@ -14,6 +14,14 @@ interface Props {
   removeMe: () => void;
 }
 
+/**
+ * NtfyAction is the form fields for a Ntfy action
+ *
+ * @param name - The name of the field in the form
+ * @param defaults - The default values for the action
+ * @param removeMe - The function to remove this action
+ * @returns The form fields for this action
+ */
 const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
   const typeOptions: { label: string; value: NotifyNtfyActionTypes }[] = [
     { label: "View", value: "view" },
@@ -26,9 +34,9 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
     broadcast = "Take picture",
   }
 
-  const targetType = useWatch({
+  const targetType: keyof typeof typeLabelMap = useWatch({
     name: `${name}.action`,
-  }) as keyof typeof typeLabelMap;
+  });
 
   return (
     <>
@@ -59,7 +67,8 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
             col_sm={4}
             defaultVal={defaults?.label}
             placeholder={`e.g. '${typeLabelMap[targetType]}'`}
-            onMiddle
+            position="middle"
+            positionXS="right"
           />
           <RenderAction
             name={name}

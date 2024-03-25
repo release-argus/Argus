@@ -5,6 +5,15 @@ import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
+/**
+ * IFTTT renders the form fields for the IFTTT Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this IFTTT Notify
+ * @param defaults - The default values for the IFTTT Notify
+ * @param hard_defaults - The hard default values for the IFTTT Notify
+ * @returns The form fields for this IFTTT Notify
+ */
 const IFTTT = ({
   name,
 
@@ -118,7 +127,7 @@ const IFTTT = ({
           label="Use Title As Value"
           tooltip="Set the corresponding value field to the title"
           defaultVal={convertedDefaults.params.usetitleasvalue}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.value1`}
@@ -131,14 +140,14 @@ const IFTTT = ({
           col_sm={4}
           label="Value2"
           defaultVal={convertedDefaults.params.value2}
-          onMiddle
+          position="middle"
         />
         <FormItem
           name={`${name}.params.value3`}
           col_sm={4}
           label="Value3"
           defaultVal={convertedDefaults.params.value3}
-          onRight
+          position="right"
         />
       </>
     </>

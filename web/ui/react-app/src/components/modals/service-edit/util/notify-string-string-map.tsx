@@ -20,6 +20,13 @@ interface StringStringMap {
   [key: string]: string;
 }
 
+/**
+ * convertValuesToString will convert the values of an object to a properly formatted strings
+ *
+ * @param obj - The object to convert
+ * @param notifyType - The type of Notify to convert
+ * @returns The object with string values
+ */
 export const convertValuesToString = (
   obj: StringAnyMap,
   notifyType?: string
@@ -31,7 +38,7 @@ export const convertValuesToString = (
         // `value` empty means defaults were used. Skip.
         if (
           !(value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value || "") !== ""
+            (item) => (item.value ?? "") !== ""
           )
         ) {
           return result;
@@ -74,20 +81,35 @@ export const convertValuesToString = (
     return result;
   }, {} as StringStringMap);
 
-// flattenStringFieldArray will extract the values into a JSON string
+/**
+ * FlattenStringFieldArray will extract the values into a JSON string
+ *
+ * @param obj - The StringFieldArray to flatten { arg: "value1" }[]
+ * @returns A JSON string of the values ["value1", "value2", ...]
+ */
 const FlattenStringFieldArray = (obj: StringFieldArray): string =>
   JSON.stringify(obj.map((item) => Object.values(item)[0]));
 
-// flattenHeaderArray will convert {key:KEY, val:VAL}[] to {KEY:VAL, ...}
+/**
+ * flattenHeaderArray will convert {key:KEY, val:VAL}[] to {KEY:VAL, ...}
+ *
+ * @param headers - The HeaderType[] to flatten { key: "KEY", value: "VAL" }[]
+ * @returns The flattened object { KEY: VAL, ... }
+ */
 const flattenHeaderArray = (headers?: HeaderType[]) => {
   if (!headers) return undefined;
   return headers.reduce((obj, header) => {
     obj[header.key] = header.value;
     return obj;
-  }, {} as { [key: string]: string });
+  }, {} as StringStringMap);
 };
 
-// convertNtfyActionsToString will convert the NotifyNtfyAction[] to a JSON string
+/**
+ * convertNtfyActionsToString will convert the NotifyNtfyAction[] to a JSON string
+ *
+ * @param obj - The NotifyNtfyAction[] to convert
+ * @returns A JSON string of the actions
+ */
 const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
   JSON.stringify(
     obj.map((item) => {
@@ -119,7 +141,12 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
     })
   );
 
-// convertOpsGenieTargetToString will convert the NotifyOpsGenieTarget[] to a JSON string
+/**
+ * convertOpsGenieTargetToString will convert the NotifyOpsGenieTarget[] to a JSON string
+ *
+ * @param obj - The NotifyOpsGenieTarget[] to convert
+ * @returns A JSON string of the targets
+ */
 const convertOpsGenieTargetToString = (obj: NotifyOpsGenieTarget[]): string =>
   JSON.stringify(
     obj.map(({ type, sub_type, value }) => ({

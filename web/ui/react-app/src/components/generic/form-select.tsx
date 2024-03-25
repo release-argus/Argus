@@ -1,14 +1,14 @@
 import { Col, Form, FormGroup } from "react-bootstrap";
-import { Controller, useFormState } from "react-hook-form";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
+import { Controller } from "react-hook-form";
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
-import { getNestedError } from "utils";
+import { formPadding } from "./util";
+import { useError } from "hooks/errors";
 
 interface FormSelectProps {
   name: string;
-  required?: boolean;
   customValidation?: (value: string) => string | boolean;
 
   key?: string;
@@ -22,14 +22,29 @@ interface FormSelectProps {
 
   isURL?: boolean;
 
-  onRight?: boolean;
-  onRightXS?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
+/**
+ * FormSelect is a labelled select form item
+ *
+ * @param name - The name of the form item
+ * @param required - Whether the form item is required
+ * @param customValidation - Custom validation function for the form item
+ * @param key - The key of the form item
+ * @param col_xs - The number of columns the form item should take up on extra small screens
+ * @param col_sm - The number of columns the form item should take up on small screens
+ * @param label - The label of the form item
+ * @param smallLabel - Whether the label should be small
+ * @param tooltip - The tooltip of the form item
+ * @param options - The options for the select field
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
+ * @returns A labeled select form item
+ */
 const FormSelect: FC<FormSelectProps> = ({
   name,
-  required,
   customValidation,
 
   key = name,
@@ -39,42 +54,11 @@ const FormSelect: FC<FormSelectProps> = ({
   smallLabel,
   tooltip,
   options,
-  onRight,
-  onRightXS,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
-  const { errors } = useFormState();
-  const error = customValidation && getNestedError(errors, name);
-
-  const padding = useMemo(() => {
-    const paddingClasses = [];
-
-    // Padding for being on the right
-    if (onRight) {
-      if (col_sm !== 12) paddingClasses.push("ps-sm-2");
-    }
-    if (onRight || onRightXS) {
-      if (col_xs !== 12) paddingClasses.push("ps-xs-2");
-    }
-    // Padding for being in the middle
-    else if (onMiddle) {
-      if (col_sm !== 12) {
-        paddingClasses.push("ps-sm-1");
-        paddingClasses.push("pe-sm-1");
-      }
-      if (!onRightXS && col_xs !== 12) {
-        paddingClasses.push("ps-xs-1");
-        paddingClasses.push("pe-xs-1");
-      }
-    }
-    // Padding for being on the left
-    else {
-      if (col_sm !== 12) paddingClasses.push("pe-sm-2");
-      if (col_xs !== 12) paddingClasses.push("pe-2");
-    }
-
-    return paddingClasses.join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const error = useError(name, customValidation !== undefined);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col
@@ -90,7 +74,7 @@ const FormSelect: FC<FormSelectProps> = ({
         <Controller
           name={name}
           render={({ field }) => (
-            <Form.Select {...field} aria-label={label} required={required}>
+            <Form.Select {...field} aria-label={label}>
               {options.map((opt) => (
                 <option
                   className="form-select-option"

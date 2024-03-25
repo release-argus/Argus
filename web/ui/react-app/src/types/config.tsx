@@ -38,7 +38,8 @@ export const DictToList = <T,>(dict: Dict<T>, giveIndexTo?: string[]): T[] => {
   });
 };
 
-export type StringFieldArray = { [key: string]: string }[];
+export type StringStringMap = { [key: string]: string };
+export type StringFieldArray = StringStringMap[];
 
 export interface ConfigState {
   data: ConfigType;
@@ -190,6 +191,7 @@ export interface BasicAuthType {
 }
 
 export interface HeaderType {
+  id?: string;
   key: string;
   value: string;
 }
@@ -268,7 +270,7 @@ export interface NotifyType {
       | NotifyNtfyAction[]
       | NotifyOpsGenieTarget[]
       | NotifyOpsGenieAction[]
-      | { [key: string]: string };
+      | StringStringMap;
   };
 }
 
@@ -442,12 +444,12 @@ export interface NotifyNtfyAction {
 
   // http
   method: string;
-  headers?: HeaderType[] | { [key: string]: string };
+  headers?: HeaderType[] | StringStringMap;
   body?: string;
 
   // broadcast
   intent?: string;
-  extras?: HeaderType[] | { [key: string]: string };
+  extras?: HeaderType[] | StringStringMap;
 }
 
 export interface NotifyOpsGenieType extends NotifyType {
@@ -461,7 +463,7 @@ export interface NotifyOpsGenieType extends NotifyType {
     actions?: string | NotifyOpsGenieAction[];
     alias?: string;
     description?: string;
-    details?: string | { [key: string]: string };
+    details?: string | StringStringMap;
     entity?: string;
     note?: string;
     priority?: string;

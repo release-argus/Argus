@@ -6,6 +6,12 @@ export interface Props {
   addNotification: (notification: NotificationType) => void;
 }
 
+/**
+ * handleNotifications handles notifications for events
+ *
+ * @param props - The evemt tp ptocess
+ * @returns void
+ */
 export const handleNotifications = (props: Props) => {
   if (props.event.page !== "APPROVALS") return;
   // APPROVALS
@@ -57,7 +63,7 @@ export const handleNotifications = (props: Props) => {
               props.event.service_data?.status?.latest_version || "Unknown"
             }`,
             small:
-              props.event.service_data?.status?.latest_version_timestamp || "",
+              props.event.service_data?.status?.latest_version_timestamp ?? "",
             delay: 5000,
           });
           break;

@@ -1,5 +1,12 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
+/**
+ * useLocalStorage is a hook to get and set a value in local storage
+ *
+ * @param localStorageKey - The key to store the value in local storage
+ * @param initialState - The initial state of the value
+ * @returns The value and a function to set the value
+ */
 export function useLocalStorage<S>(
   localStorageKey: string,
   initialState: S

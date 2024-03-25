@@ -3,6 +3,7 @@ import { FC, JSX, useMemo } from "react";
 
 import { FormCheckType } from "react-bootstrap/esm/FormCheck";
 import FormLabel from "./form-label";
+import { formPadding } from "./util";
 import { useFormContext } from "react-hook-form";
 
 interface FormCheckProps {
@@ -16,10 +17,25 @@ interface FormCheckProps {
   tooltip?: string | JSX.Element;
   type?: FormCheckType;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
+/**
+ * FormCheck is labelled form check
+ *
+ * @param name - The name of the field
+ * @param col_xs - The number of columns to take up on extra small screens
+ * @param col_sm - The number of columns to take up on small screens
+ * @param size - The size of the form check
+ * @param label - The form label to display
+ * @param smallLabel - Whether the label should be small
+ * @param tooltip - The tooltip to display
+ * @param type - The type of the form check (checkbox/radio/switch)
+ * @param position - The position of the form check
+ * @param positionXS - The position of the form check on extra small screens
+ * @returns A labaled form check
+ */
 const FormCheck: FC<FormCheckProps> = ({
   name,
 
@@ -31,23 +47,11 @@ const FormCheck: FC<FormCheckProps> = ({
   tooltip,
   type = "checkbox",
 
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { register } = useFormContext();
-
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12
-        ? onRight
-          ? "ps-sm-2"
-          : onMiddle
-          ? "ps-sm-1 pe-sm-1"
-          : "pe-sm-2"
-        : "",
-      col_xs !== 12 ? (onRight ? "ps-2" : onMiddle ? "ps-1 pe-1" : "pe-2") : "",
-    ].join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   const registrationProps = useMemo(() => {
     return name ? { ...register(name) } : {};

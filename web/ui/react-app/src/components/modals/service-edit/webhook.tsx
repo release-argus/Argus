@@ -24,6 +24,17 @@ interface Props {
   hard_defaults?: WebHookType;
 }
 
+/**
+ * EditServiceWebHook is the form fields for a WebHook
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove this WebHook
+ * @param globalOptions - The options for the global WebHook's
+ * @param globals - The global WebHook's
+ * @param defaults - The default values for a WebHook
+ * @param hard_defaults - The hard default values for a WebHook
+ * @returns The form fields for this WebHook
+ */
 const EditServiceWebHook: FC<Props> = ({
   name,
   removeMe,
@@ -69,6 +80,10 @@ const EditServiceWebHook: FC<Props> = ({
         global?.allow_invalid_certs ??
         defaults?.allow_invalid_certs ??
         hard_defaults?.allow_invalid_certs,
+      custom_headers:
+        global?.custom_headers ??
+        defaults?.custom_headers ??
+        hard_defaults?.custom_headers,
       delay: globalOrDefault(
         global?.delay,
         defaults?.delay,
@@ -148,7 +163,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Type"
             tooltip="Style of WebHook to emulate"
             options={webHookTypeOptions}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.name`}
@@ -156,7 +171,6 @@ const EditServiceWebHook: FC<Props> = ({
             unique
             col_sm={12}
             label={"Name"}
-            onRight
           />
           <FormItem
             name={`${name}.url`}
@@ -182,25 +196,23 @@ const EditServiceWebHook: FC<Props> = ({
           />
           <FormKeyValMap
             name={`${name}.custom_headers`}
-            defaults={
-              global?.custom_headers ??
-              defaults?.custom_headers ??
-              hard_defaults?.custom_headers
-            }
+            defaults={convertedDefaults.custom_headers}
           />
           <FormItem
             name={`${name}.desired_status_code`}
             col_xs={6}
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
+            isNumber
             defaultVal={convertedDefaults.desired_status_code}
           />
           <FormItem
             name={`${name}.max_tries`}
             col_xs={6}
             label="Max tries"
+            isNumber
             defaultVal={convertedDefaults.max_tries}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.delay`}
@@ -208,7 +220,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Delay"
             tooltip="Delay sending by this duration"
             defaultVal={convertedDefaults.delay}
-            onRight
+            position="right"
           />
           <BooleanWithDefault
             name={`${name}.silent_fails`}

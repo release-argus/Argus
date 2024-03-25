@@ -4,7 +4,13 @@ import { urlCommandsTrim } from "components/modals/service-edit/util";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DiffObject = { [key: string]: any };
 
-// deepDiff newObj with oldObj and return what's changed with newObj
+/**
+ * deepDiff will compare two objects and return the differences between them
+ *
+ * @param newObj - The new object to compare
+ * @param oldObj - The old object to compare
+ * @returns The differences between the two objects
+ */
 export const deepDiff = (
   newObj: DiffObject,
   oldObj?: DiffObject
@@ -56,8 +62,15 @@ export const deepDiff = (
   return diff;
 };
 
-// stringifyQueryParam will return a query param string for a given key/value pair
-// if value is undefined/null, it will return an empty string if omitUndefined is true
+/**
+ * stringifyQueryParam will return a query param string for a given key/value pair
+ * if value is undefined/null, it will return an empty string if omitUndefined is true
+ *
+ * @param key - The key of the query param
+ * @param value - The value of the query param
+ * @param omitUndefined - Whether to omit undefined values
+ * @returns An encoded query param string
+ */
 export const stringifyQueryParam = (
   key: string,
   value?: string | number | boolean,

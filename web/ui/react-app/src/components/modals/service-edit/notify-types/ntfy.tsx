@@ -31,6 +31,15 @@ export const NtfyPriorityOptions = [
   { label: "Max", value: "max" },
 ];
 
+/**
+ * NTY renders the form fields for the Ntfy Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Ntfy Notify
+ * @param defaults - The default values for the Ntfy Notify
+ * @param hard_defaults - The hard default values for the Ntfy Notify
+ * @returns The form fields for this Ntfy Notify
+ */
 const NTFY = ({
   name,
 
@@ -214,17 +223,6 @@ const NTFY = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.username`}
-          label="Username"
-          defaultVal={convertedDefaults.url_fields.username}
-        />
-        <FormItem
-          name={`${name}.url_fields.password`}
-          label="Password"
-          defaultVal={convertedDefaults.url_fields.password}
-          onRight
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
@@ -237,7 +235,18 @@ const NTFY = ({
           label="Port"
           type="number"
           defaultVal={convertedDefaults.url_fields.port}
-          onRight
+          position="right"
+        />
+        <FormItem
+          name={`${name}.url_fields.username`}
+          label="Username"
+          defaultVal={convertedDefaults.url_fields.username}
+        />
+        <FormItem
+          name={`${name}.url_fields.password`}
+          label="Password"
+          defaultVal={convertedDefaults.url_fields.password}
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.topic`}
@@ -246,7 +255,6 @@ const NTFY = ({
           label="Topic"
           tooltip="Target topic"
           defaultVal={convertedDefaults.url_fields.topic}
-          onRight
         />
       </>
       <>
@@ -263,14 +271,14 @@ const NTFY = ({
           col_sm={3}
           label="Priority"
           options={ntfyPriorityOptions}
-          onMiddle
+          position="middle"
         />
         <FormItem
           name={`${name}.params.tags`}
           label="Tags"
           tooltip="Comma-separated list of tags that may or may not map to emojis"
           defaultVal={convertedDefaults.params.tags}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.attach`}
@@ -285,7 +293,7 @@ const NTFY = ({
           label="Filename"
           tooltip="File name of the attachment"
           defaultVal={convertedDefaults.params.filename}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.email`}
@@ -297,7 +305,7 @@ const NTFY = ({
           name={`${name}.params.title`}
           label="Title"
           defaultVal={convertedDefaults.params.title}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.click`}

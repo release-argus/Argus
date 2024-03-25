@@ -22,6 +22,13 @@ type Props = {
   hard_defaults?: DefaultLatestVersionFiltersType;
 };
 
+/**
+ * EditServiceLatestVersionRequire renders the form fields for the latest version require
+ *
+ * @param defaults - The default values for the latest version require
+ * @param hard_defaults - The hard default values for the latest version require
+ * @returns The form fields for the latest version require
+ */
 const EditServiceLatestVersionRequire: FC<Props> = ({
   defaults,
   hard_defaults,
@@ -99,7 +106,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             label={"RegEx Version"}
             tooltip="Version found must match, e.g. exclude '*-beta' versions with '^[0-9.]+$'"
             isRegex
-            onRight
+            position="right"
           />
 
           <FormGroup className="pt-1">
@@ -114,7 +121,6 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
           <FormLabel text="Docker" />
           <FormSelect
             name="latest_version.require.docker.type"
-            col_xs={12}
             col_sm={12}
             label="Type"
             options={dockerRegistryOptions}
@@ -123,13 +129,12 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             name="latest_version.require.docker.image"
             label="Image"
             col_xs={6}
-            onRight={false}
           />
           <FormItem
             name="latest_version.require.docker.tag"
             col_xs={6}
             label="Tag"
-            onRight
+            position="right"
           />
           {showUsernameField && (
             <FormItem
@@ -145,8 +150,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             key="token"
             col_sm={showUsernameField ? 8 : 12}
             label="Token"
-            onRight={showUsernameField}
             defaultVal={convertedDefaults.token}
+            position={showUsernameField ? "right" : "left"}
           />
         </Row>
       </Accordion.Body>
