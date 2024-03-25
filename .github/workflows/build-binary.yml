@@ -31,10 +31,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Set up Go 1.x
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          check-latest: true
           cache: true
 
       - name: Check out code into the Go module directory
@@ -49,7 +55,7 @@ jobs:
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
           make
           OUTPUT_BINARY=./bin/${{ github.event.release.tag_name }}_${{ matrix.os }}_${{ matrix.arch }}
-          go-build
+          build
 
       - name: Upload release asset
         id: upload-release-asset
