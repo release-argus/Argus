@@ -44,4 +44,4 @@ web: web-install web-build
 build: web common-build
 
 .PHONY: build-all
-build-all: compress-web build-darwin build-freebsd build-linux build-openbsd build-windows
+build-all: web-build compress-web build-darwin build-freebsd build-linux build-openbsd build-windows

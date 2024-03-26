@@ -11,10 +11,11 @@
 # Dependency directories
 vendor/
 
-# Output of `go build ./cmd/argus`
+# Output of `make build`
 /argus
-
 /healthcheck
+# React build artifacts
+/web/ui/static
 
 # Output of `make build-all`
 /.build/

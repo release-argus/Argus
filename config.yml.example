@@ -4,6 +4,6 @@ service:
       type: github
       url: release-argus/argus
     dashboard:
-      icon: https://github.com/release-argus/Argus/raw/master/web/ui/static/favicon.svg
+      icon: https://raw.githubusercontent.com/release-argus/Argus/master/web/ui/react-app/public/favicon.svg
       icon_link-to: https://release-argus.io
       web_url: https://github.com/release-argus/Argus/blob/master/CHANGELOG.md

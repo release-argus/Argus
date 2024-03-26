@@ -17,6 +17,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build web components
+        run: make web
+
       - name: Set outputs
         id: vars
         run: |
@@ -81,7 +84,6 @@ jobs:
           provenance: false
           build-args: |
             BUILD_VERSION=${{ github.event.release.tag_name }}
-            GO_VERSION=${{ env.GO_VERSION }}
 
       - name: Build and push (master)
         id: docker_build_master
@@ -101,4 +103,3 @@ jobs:
           provenance: false
           build-args: |
             BUILD_VERSION=${{ env.sha_short }}
-            GO_VERSION=${{ env.GO_VERSION }}
