@@ -30,6 +30,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -283,7 +284,7 @@ func TestConvertAndCensorWebHook(t *testing.T) {
 				"shazam",
 				nil, "", "", nil, nil, nil),
 			want: &api_type.WebHook{
-				Secret: stringPtr("<secret>")},
+				Secret: test.StringPtr("<secret>")},
 		},
 		"copy and censor headers": {
 			wh: webhook.New(
@@ -350,9 +351,9 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 					"https://example.com")},
 			want: &api_type.WebHookSlice{
 				"test": {
-					Type:   stringPtr("github"),
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("<secret>"),
+					Type:   test.StringPtr("github"),
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("<secret>"),
 					CustomHeaders: &[]api_type.Header{
 						{Key: "X-Test", Value: "<secret>"}}}},
 		},
@@ -373,14 +374,14 @@ func TestConvertAndCensorWebHookSliceDefaults(t *testing.T) {
 					"https://release-argus.io")},
 			want: &api_type.WebHookSlice{
 				"test": {
-					Type:   stringPtr("github"),
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("<secret>"),
+					Type:   test.StringPtr("github"),
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("<secret>"),
 					CustomHeaders: &[]api_type.Header{
 						{Key: "X-Test", Value: "<secret>"}}},
 				"other": {
-					Type: stringPtr("gitlab"),
-					URL:  stringPtr("https://release-argus.io")}},
+					Type: test.StringPtr("gitlab"),
+					URL:  test.StringPtr("https://release-argus.io")}},
 		},
 	}
 
@@ -429,9 +430,9 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 					nil, nil, nil)},
 			want: &api_type.WebHookSlice{
 				"test": {
-					Type:   stringPtr("github"),
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("<secret>"),
+					Type:   test.StringPtr("github"),
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("<secret>"),
 					CustomHeaders: &[]api_type.Header{
 						{Key: "X-Test", Value: "<secret>"}}}},
 		},
@@ -456,14 +457,14 @@ func TestConvertAndCensorWebHookSlice(t *testing.T) {
 					nil, nil, nil)},
 			want: &api_type.WebHookSlice{
 				"test": {
-					Type:   stringPtr("github"),
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("<secret>"),
+					Type:   test.StringPtr("github"),
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("<secret>"),
 					CustomHeaders: &[]api_type.Header{
 						{Key: "X-Test", Value: "<secret>"}}},
 				"other": {
-					Type: stringPtr("gitlab"),
-					URL:  stringPtr("https://release-argus.io")}},
+					Type: test.StringPtr("gitlab"),
+					URL:  test.StringPtr("https://release-argus.io")}},
 		},
 	}
 
@@ -706,25 +707,25 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 			input: latestver.New(
 				nil, nil, nil, nil, nil, nil, "", "",
 				&filter.URLCommandSlice{
-					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
-					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
+					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}},
 				nil, nil, nil),
 			want: &api_type.LatestVersion{
 				URLCommands: &api_type.URLCommandSlice{
-					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
-					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: stringPtr("([0-9.]+)")}}},
+					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
+					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}}},
 		},
 		"filled": {
 			input: latestver.New(
-				stringPtr("accessToken"),             // access_token
-				boolPtr(true),                        // allow_invalid_certs
+				test.StringPtr("accessToken"),        // access_token
+				test.BoolPtr(true),                   // allow_invalid_certs
 				latestver.NewGitHubData("ETAG", nil), // github_data
 				opt.New( // options
-					boolPtr(true),  // active
-					"1h1m",         // interval
-					boolPtr(false), // semantic_versioning
+					test.BoolPtr(true),  // active
+					"1h1m",              // interval
+					test.BoolPtr(false), // semantic_versioning
 					nil, nil),
 				&filter.Require{ // require
 					RegexContent: ".*"},
@@ -737,21 +738,21 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 				"github",              // type
 				"release-argus/argus", // url
 				&filter.URLCommandSlice{ // url_commands
-					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
-					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
-				boolPtr(false), // use_prerelease
+					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
+					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}},
+				test.BoolPtr(false), // use_prerelease
 				nil, nil),
 			want: &api_type.LatestVersion{
 				Type:              "github",
 				URL:               "release-argus/argus",
 				AccessToken:       "<secret>",
-				AllowInvalidCerts: boolPtr(true),
-				UsePreRelease:     boolPtr(false),
+				AllowInvalidCerts: test.BoolPtr(true),
+				UsePreRelease:     test.BoolPtr(false),
 				URLCommands: &api_type.URLCommandSlice{
-					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
-					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
+					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}},
 				Require: &api_type.LatestVersionRequire{
 					RegexContent: ".*"}},
 		},
@@ -799,12 +800,12 @@ func TestConvertAndCensorService(t *testing.T) {
 				ID:      "Test",
 				Comment: "Comment on the Service",
 				Options: opt.Options{
-					Active: boolPtr(false)},
+					Active: test.BoolPtr(false)},
 				LatestVersion: *latestver.New(
-					stringPtr("lv_accessToken"),
+					test.StringPtr("lv_accessToken"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: deployedver.New(
-					boolPtr(true),
+					test.BoolPtr(true),
 					nil, nil, "", nil, "", nil, nil, "", nil, nil),
 				Notify: shoutrrr.Slice{
 					"gotify": shoutrrr.New(
@@ -818,7 +819,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					{"echo", "foo"}},
 				WebHook: webhook.Slice{
 					"test_wh": webhook.New(
-						boolPtr(true),
+						test.BoolPtr(true),
 						nil, "", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 				Dashboard: *service.NewDashboardOptions(
 					nil,
@@ -834,7 +835,7 @@ func TestConvertAndCensorService(t *testing.T) {
 			want: &api_type.Service{
 				Comment: "Comment on the Service",
 				Options: &api_type.ServiceOptions{
-					Active: boolPtr(false)},
+					Active: test.BoolPtr(false)},
 				LatestVersion: &api_type.LatestVersion{
 					AccessToken: "<secret>",
 					URLCommands: &api_type.URLCommandSlice{}},
@@ -846,9 +847,9 @@ func TestConvertAndCensorService(t *testing.T) {
 							"url": "http://gotify"}}},
 				WebHook: &api_type.WebHookSlice{
 					"test_wh": &api_type.WebHook{
-						AllowInvalidCerts: boolPtr(true)}},
+						AllowInvalidCerts: test.BoolPtr(true)}},
 				DeployedVersionLookup: &api_type.DeployedVersionLookup{
-					AllowInvalidCerts: boolPtr(true)},
+					AllowInvalidCerts: test.BoolPtr(true)},
 				Dashboard: &api_type.DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
 		},
@@ -901,7 +902,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 				Service: service.Defaults{
 					Options: opt.OptionsDefaults{},
 					LatestVersion: *latestver.NewDefaults(
-						stringPtr("censor"),
+						test.StringPtr("censor"),
 						nil, nil,
 						filter.NewRequireDefaults(
 							filter.NewDockerCheckDefaults(

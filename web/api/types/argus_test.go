@@ -479,7 +479,13 @@ func TestServiceSummary_String(t *testing.T) {
 				Type:    stringPtr("github"),
 				Command: intPtr(1),
 				WebHook: intPtr(2)},
-			want: `{"id":"foo","type":"github","command":1,"webhook":2}`,
+			want: `
+				{
+					"id": "foo",
+					"type": "github",
+					"command": 1,
+					"webhook": 2
+				}`,
 		},
 		"full": {
 			summary: &ServiceSummary{
@@ -495,7 +501,21 @@ func TestServiceSummary_String(t *testing.T) {
 				WebHook:                  intPtr(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3"}},
-			want: `{"id":"bar","active":true,"comment":"test","type":"gitlab","url":"http://example.com","icon":"https://example.com/icon.png","icon_link_to":"https://release-argus.io","has_deployed_version":true,"command":2,"webhook":1,"status":{"approved_version":"1.2.3"}}`,
+			want: `
+				{
+					"id": "bar",
+					"active": true,
+					"comment": "test",
+					"type": "gitlab",
+					"url": "http://example.com",
+					"icon": "https://example.com/icon.png",
+					"icon_link_to": "https://release-argus.io",
+					"has_deployed_version": true,
+					"command": 2,
+					"webhook": 1,
+					"status": {
+						"approved_version": "1.2.3"
+				}}`,
 		},
 	}
 
@@ -503,6 +523,8 @@ func TestServiceSummary_String(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			tc.want = trimJSON(tc.want)
 
 			// WHEN the Summary is stringified with String
 			got := tc.summary.String()
@@ -776,12 +798,24 @@ func TestStatus_String(t *testing.T) {
 				RegexMissesContent:       1,
 				RegexMissesVersion:       2,
 			},
-			want: `{"approved_version":"1.2.4","deployed_version":"1.2.3","deployed_version_timestamp":"2022-01-01T01:01:01Z","latest_version":"1.2.4","latest_version_timestamp":"2022-01-01T01:01:01Z","last_queried":"2022-01-01T01:01:01Z","regex_misses_content":1,"regex_misses_version":2}`},
+			want: `
+				{
+					"approved_version": "1.2.4",
+					"deployed_version": "1.2.3",
+					"deployed_version_timestamp": "2022-01-01T01:01:01Z",
+					"latest_version": "1.2.4",
+					"latest_version_timestamp": "2022-01-01T01:01:01Z",
+					"last_queried": "2022-01-01T01:01:01Z",
+					"regex_misses_content": 1,
+					"regex_misses_version": 2
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			tc.want = trimJSON(tc.want)
 
 			// WHEN the Status is stringified with String
 			got := tc.status.String()
@@ -824,17 +858,19 @@ func TestWebHook_String(t *testing.T) {
 				MaxTries:          uintPtr(7),
 				SilentFails:       boolPtr(false),
 			},
-			want: `{
-"name":"foobar",
-"type":"url",
-"url":"https://release-argus.io",
-"allow_invalid_certs":true,
-"secret":"secret",
-"custom_headers":[{"key":"X-Header","value":"bosh"}],
-"desired_status_code":200,
-"delay":"1h",
-"max_tries":7,
-"silent_fails":false}`,
+			want: `
+				{
+					"name": "foobar",
+					"type": "url",
+					"url": "https: //release-argus.io",
+					"allow_invalid_certs": true,
+					"secret": "secret",
+					"custom_headers": [{"key": "X-Header","value": "bosh"}],
+					"desired_status_code": 200,
+					"delay": "1h",
+					"max_tries": 7,
+					"silent_fails": false
+				}`,
 		},
 	}
 
@@ -846,7 +882,7 @@ func TestWebHook_String(t *testing.T) {
 			got := tc.webhook.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got: %q, want: %q",
 					got, tc.want)
@@ -884,30 +920,33 @@ func TestWebHookSlice_String(t *testing.T) {
 					MaxTries:          uintPtr(7),
 					SilentFails:       boolPtr(false)},
 			},
-			want: `{
-"0":{
-"name":"foobar",
-"type":"url",
-"url":"https://release-argus.io",
-"allow_invalid_certs":true,
-"secret":"secret",
-"custom_headers":[{"key":"X-Header","value":"bosh"}],
-"desired_status_code":200,
-"delay":"1h",
-"max_tries":7,
-"silent_fails":false}
-}`,
+			want: `
+				{
+					"0": {
+						"name": "foobar",
+						"type": "url",
+						"url": "https://release-argus.io",
+						"allow_invalid_certs": true,
+						"secret": "secret",
+						"custom_headers": [{"key": "X-Header","value": "bosh"}],
+						"desired_status_code": 200,
+						"delay": "1h",
+						"max_tries": 7,
+						"silent_fails": false
+					}
+				}`,
 		},
 		"multiple webhooks": {
 			slice: &WebHookSlice{
 				"0": {URL: stringPtr("bish")},
 				"1": {Secret: stringPtr("bash")},
 				"2": {Type: stringPtr("github")}},
-			want: `{
-"0":{"url":"bish"},
-"1":{"secret":"bash"},
-"2":{"type":"github"}
-}`,
+			want: `
+				{
+					"0": {"url": "bish"},
+					"1": {"secret": "bash"},
+					"2": {"type": "github"}
+				}`,
 		},
 	}
 
@@ -919,7 +958,7 @@ func TestWebHookSlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got: %q\nwant: %q",
 					got, tc.want)
@@ -955,16 +994,18 @@ func TestNotifySlice_String(t *testing.T) {
 						"devices": "bang"},
 				}},
 			want: `
-{"0":{
-	"name":"foo",
-	"type":"discord",
-	"options":{
-		"message":"hello world"},
-	"url_fields":{
-		"username":"bing"},
-	"params":{
-		"devices":"bang"}
-}}`,
+				{
+					"0": {
+						"name": "foo",
+						"type": "discord",
+						"options": {
+							"message": "hello world"},
+						"url_fields": {
+							"username": "bing"},
+						"params": {
+							"devices": "bang"}
+					}
+				}`,
 		},
 		"multiple": {
 			slice: &NotifySlice{
@@ -980,20 +1021,22 @@ func TestNotifySlice_String(t *testing.T) {
 				},
 				"other": {
 					Type: "gotify"}},
-			want: `{
-"0":{
-	"name":"foo",
-	"type":"discord",
-	"options":{
-		"message":"hello world"},
-	"url_fields":{
-		"username":"bing"},
-	"params":{
-		"devices":"bang"}
-},
-"other":{
-	"type":"gotify"
-}}`,
+			want: `
+				{
+					"0": {
+						"name": "foo",
+						"type": "discord",
+						"options": {
+							"message": "hello world"},
+						"url_fields": {
+							"username": "bing"},
+						"params": {
+							"devices": "bang"}
+					},
+					"other": {
+						"type": "gotify"
+					}
+				}`,
 		},
 	}
 
@@ -1005,8 +1048,7 @@ func TestNotifySlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1043,18 +1085,19 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 				Regex:        "bam",
 				HardDefaults: &DeployedVersionLookup{},
 				Defaults:     &DeployedVersionLookup{}},
-			want: `{
-"url":"https://release-argus.io",
-"allow_invalid_certs":false,
-"basic_auth":{
-	"username":"user",
-	"password":"pass"},
-"headers":[
-	{"key":"X-Header","value":"bosh"},
-	{"key":"X-Other","value":"bash"}],
-"json":"boo",
-"regex":"bam"
-}`,
+			want: `
+				{
+					"url": "https://release-argus.io",
+					"allow_invalid_certs": false,
+					"basic_auth": {
+						"username": "user",
+						"password": "pass"},
+					"headers": [
+						{"key": "X-Header","value": "bosh"},
+						{"key": "X-Other","value": "bash"}],
+					"json": "boo",
+					"regex": "bam"
+				}`,
 		},
 	}
 
@@ -1066,8 +1109,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 			got := tc.dvl.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1096,11 +1138,12 @@ func TestURLCommandSlice_String(t *testing.T) {
 				{Type: "replace", Old: stringPtr("want-rid"), New: stringPtr("replacement")},
 				{Type: "split", Text: stringPtr("split on me"), Index: 5},
 			},
-			want: `[
-{"type":"regex","regex":"bam"},
-{"type":"replace","new":"replacement","old":"want-rid"},
-{"type":"split","index":5,"text":"split on me"}
-]`,
+			want: `
+				[
+					{"type": "regex","regex": "bam"},
+					{"type": "replace","new": "replacement","old": "want-rid"},
+					{"type": "split","index": 5,"text": "split on me"}
+				]`,
 		},
 	}
 
@@ -1112,7 +1155,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1146,17 +1189,18 @@ func TestDefaults_String(t *testing.T) {
 							"url": "https://gotify.example.com"}}},
 				WebHook: WebHook{
 					Secret: stringPtr("bar")}},
-			want: `{
-"service":{
-	"latest_version":{
-		"access_token":"foo"}},
-"notify":{
-	"gotify":{
-		"url_fields":{
-			"url":"https://gotify.example.com"}}},
-"webhook":{
-	"secret":"bar"}
-}`,
+			want: `
+				{
+					"service": {
+						"latest_version": {
+							"access_token": "foo"}},
+					"notify": {
+						"gotify": {
+							"url_fields": {
+								"url": "https://gotify.example.com"}}},
+					"webhook": {
+						"secret": "bar"}
+				}`,
 		},
 	}
 
@@ -1168,8 +1212,7 @@ func TestDefaults_String(t *testing.T) {
 			got := tc.dflts.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
+			tc.want = trimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1237,33 +1280,33 @@ func TestLatestVersion_String(t *testing.T) {
 				Require: &LatestVersionRequire{
 					RegexContent: ".*"}},
 			want: `
-{
-	"type":"github",
-	"url":"release-argus/argus",
-	"access_token":"\u003csecret\u003e",
-	"allow_invalid_certs":true,
-	"use_prerelease":false,
-	"url_commands":[
-		{"type":"replace","new":"withThis","old":"this"},
-		{"type":"split","index":8,"text":"splitThis"},
-		{"type":"regex","regex":"([0-9.]+)"}
-	],
-	"require":{
-		"regex_content":".*"
-	}
-}`},
+				{
+					"type": "github",
+					"url": "release-argus/argus",
+					"access_token": "\u003csecret\u003e",
+					"allow_invalid_certs": true,
+					"use_prerelease": false,
+					"url_commands": [
+						{"type": "replace","new": "withThis","old": "this"},
+						{"type": "split","index": 8,"text": "splitThis"},
+						{"type": "regex","regex": "([0-9.]+)"}
+					],
+					"require": {
+						"regex_content": ".*"
+					}
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.want = trimJSON(tc.want)
+
 			// WHEN the LatestVersion is stringified with String
 			got := tc.input.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1296,18 +1339,31 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 						Username: "userForHub"},
 					Quay: &RequireDockerCheckRegistryDefaults{
 						Token: "tokenForQuay"}}},
-			want: `{"docker":{"type":"ghcr","ghcr":{"token":"tokenForGHCR"},"hub":{"token":"tokenForHub","username":"userForHub"},"quay":{"token":"tokenForQuay"}}}`},
+			want: `
+				{
+					"docker": {
+						"type": "ghcr",
+						"ghcr": {
+							"token": "tokenForGHCR"},
+						"hub": {
+							"token": "tokenForHub",
+							"username": "userForHub"},
+						"quay": {
+							"token": "tokenForQuay"}
+					}
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.want = trimJSON(tc.want)
+
 			// WHEN the LatestVersionRequireDefaults are stringified with String
 			got := tc.lvrd.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1340,30 +1396,30 @@ func TestLatestVersionRequire_String(t *testing.T) {
 				RegexContent: ".*",
 				RegexVersion: `([0-9.]+)`},
 			want: `
-{
-	"command":["echo","hello"],
-	"docker":{
-		"type":"hub",
-		"image":"release-argus/argus",
-		"tag":"{{ version }}",
-		"username":"user",
-		"token":"\u003csecret\u003e"
-	},
-	"regex_content":".*",
-	"regex_version":"([0-9.]+)"
-}`},
+				{
+					"command": ["echo","hello"],
+					"docker": {
+						"type": "hub",
+						"image": "release-argus/argus",
+						"tag": "{{ version }}",
+						"username": "user",
+						"token": "\u003csecret\u003e"
+					},
+					"regex_content": ".*",
+					"regex_version": "([0-9.]+)"
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.want = trimJSON(tc.want)
+
 			// WHEN the LatestVersionRequire is stringified with String
 			got := tc.input.String()
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)

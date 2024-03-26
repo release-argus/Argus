@@ -1,5 +1,5 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
-import { FC, memo, useEffect } from "react";
+import { FC, memo, useEffect, useMemo } from "react";
 import {
   FormCheck,
   FormItem,
@@ -19,6 +19,15 @@ interface Props {
   hard_defaults?: DeployedVersionLookupType;
 }
 
+/**
+ * EditServiceDeployedVersion renders the form fields for the deployed version
+ *
+ * @param serviceName - The name of the service
+ * @param original - The original values for the deployed version
+ * @param defaults - The default values for the deployed version
+ * @param hard_defaults - The hard default values for the deployed version
+ * @returns The form fields for the deployed version
+ */
 const EditServiceDeployedVersion: FC<Props> = ({
   serviceName,
   original,
@@ -28,7 +37,9 @@ const EditServiceDeployedVersion: FC<Props> = ({
   const { setValue } = useFormContext();
 
   // RegEx Template toggle
-  const templateToggle = useWatch({ name: "deployed_version.template_toggle" });
+  const templateToggle: boolean | undefined = useWatch({
+    name: "deployed_version.template_toggle",
+  });
   useEffect(() => {
     // Clear the template if the toggle is false
     if (templateToggle === false) {
@@ -36,6 +47,20 @@ const EditServiceDeployedVersion: FC<Props> = ({
       setValue("deployed_version.template_toggle", false);
     }
   }, [templateToggle]);
+
+  const convertedDefaults = useMemo(
+    () => ({
+      allow_invalid_certs:
+        defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
+      json: defaults?.json || hard_defaults?.json,
+      password:
+        defaults?.basic_auth?.password || hard_defaults?.basic_auth?.password,
+      regex: defaults?.regex || hard_defaults?.regex,
+      username:
+        defaults?.basic_auth?.username || hard_defaults?.basic_auth?.username,
+    }),
+    [defaults, hard_defaults]
+  );
 
   return (
     <Accordion>
@@ -52,9 +77,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
         <BooleanWithDefault
           name="deployed_version.allow_invalid_certs"
           label="Allow Invalid Certs"
-          defaultValue={
-            defaults?.allow_invalid_certs || hard_defaults?.allow_invalid_certs
-          }
+          defaultValue={convertedDefaults.allow_invalid_certs}
         />
         <FormGroup className="pt-1 mb-2">
           <FormLabel text="Basic auth credentials" />
@@ -64,21 +87,15 @@ const EditServiceDeployedVersion: FC<Props> = ({
               name="deployed_version.basic_auth.username"
               col_xs={6}
               label="Username"
-              defaultVal={
-                defaults?.basic_auth?.username ||
-                hard_defaults?.basic_auth?.username
-              }
+              defaultVal={convertedDefaults.username}
             />
             <FormItem
               key="password"
               name="deployed_version.basic_auth.password"
               col_xs={6}
               label="Password"
-              defaultVal={
-                defaults?.basic_auth?.password ||
-                hard_defaults?.basic_auth?.password
-              }
-              onRight
+              defaultVal={convertedDefaults.password}
+              position="right"
             />
           </Row>
         </FormGroup>
@@ -94,7 +111,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">data.version</span>
               </>
             }
-            defaultVal={defaults?.json || hard_defaults?.json}
+            defaultVal={convertedDefaults.json}
           />
           <FormItem
             name="deployed_version.regex"
@@ -108,9 +125,9 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">v([0-9.]+)</span>
               </>
             }
-            defaultVal={defaults?.regex || hard_defaults?.regex}
+            defaultVal={convertedDefaults.regex}
             isRegex
-            onRight
+            position="middle"
           />
           <FormCheck
             name={`deployed_version.template_toggle`}
@@ -120,7 +137,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             smallLabel
             col_sm={1}
             col_xs={2}
-            onRight
+            position="right"
           />
           {templateToggle && (
             <FormItem

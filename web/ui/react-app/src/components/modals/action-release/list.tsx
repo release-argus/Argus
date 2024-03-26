@@ -20,6 +20,18 @@ interface Props {
   delayedRender: any;
 }
 
+/**
+ * ModalList renders a list of items to approve
+ *
+ * @param itemType - The type of item to render
+ * @param modalType - The type of modal to render
+ * @param serviceID - The ID of the service
+ * @param data - The data to render for that type
+ * @param sent - The list of sent items
+ * @param onClickAcknowledge - The function to call when an item is acknowledged
+ * @param delayedRender - The delayed render function
+ * @returns A list of `itemType` items to approve
+ */
 export const ModalList: FC<Props> = ({
   itemType,
   modalType,
@@ -55,7 +67,7 @@ export const ModalList: FC<Props> = ({
             title={title}
             failed={item.failed}
             sending={sending}
-            next_runnable={item.next_runnable || ""}
+            next_runnable={item.next_runnable ?? ""}
             ack={onClickAcknowledge}
           />
         );

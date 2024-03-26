@@ -32,6 +32,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -59,32 +60,32 @@ func TestHTTP_Config(t *testing.T) {
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
-						ListenHost: stringPtr("127.0.0.1")}}},
+						ListenHost: test.StringPtr("127.0.0.1")}}},
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{},
-			"latest_version":{
-				"require":{
-					"docker":{}
-				}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{},
-	"webhook":{},
-	"service":{}
-}`,
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
+						}
+					},
+					"defaults": {
+						"service": {
+							"options": {},
+							"latest_version": {
+								"require": {
+									"docker": {}
+								}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {},
+					"webhook": {},
+					"service": {}
+				}`,
 		},
 		"1. settings + defaults": {
 			defaults: &config.Defaults{
@@ -93,9 +94,9 @@ func TestHTTP_Config(t *testing.T) {
 						OptionsBase: opt.OptionsBase{
 							Interval: "1h"}},
 					LatestVersion: *latestver.NewDefaults(
-						stringPtr("foo"),
-						boolPtr(true),
-						boolPtr(false),
+						test.StringPtr("foo"),
+						test.BoolPtr(true),
+						test.BoolPtr(false),
 						filter.NewRequireDefaults(
 							filter.NewDockerCheckDefaults(
 								"ghcr",
@@ -104,47 +105,47 @@ func TestHTTP_Config(t *testing.T) {
 								"tokenForQuay",
 								nil)))}},
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{
-				"interval":"1h"
-			},
-			"latest_version":{
-				"access_token":"\u003csecret\u003e",
-				"allow_invalid_certs":true,
-				"use_prerelease":false,
-				"require":{
-					"docker":{
-						"type":"ghcr",
-						"ghcr":{
-							"token":"\u003csecret\u003e"
-						},
-						"hub":{
-							"token":"\u003csecret\u003e",
-							"username":"usernameForHub"
-						},
-						"quay":{
-							"token":"\u003csecret\u003e"
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
 						}
-					}
-				}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{},
-	"webhook":{},
-	"service":{}
-}`,
+					},
+					"defaults": {
+						"service": {
+							"options": {
+								"interval": "1h"
+							},
+							"latest_version": {
+								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
+								"use_prerelease": false,
+								"require": {
+									"docker": {
+										"type": "ghcr",
+										"ghcr": {
+											"token": "\u003csecret\u003e"
+										},
+										"hub": {
+											"token": "\u003csecret\u003e",
+											"username": "usernameForHub"
+										},
+										"quay": {
+											"token": "\u003csecret\u003e"
+										}
+									}
+								}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {},
+					"webhook": {},
+					"service": {}
+				}`,
 		},
 		"2. settings + defaults (with notify+command+webhook service defaults)": {
 			defaults: &config.Defaults{
@@ -153,9 +154,9 @@ func TestHTTP_Config(t *testing.T) {
 						OptionsBase: opt.OptionsBase{
 							Interval: "1h"}},
 					LatestVersion: *latestver.NewDefaults(
-						stringPtr("foo"),
-						boolPtr(true),
-						boolPtr(false),
+						test.StringPtr("foo"),
+						test.BoolPtr(true),
+						test.BoolPtr(false),
 						filter.NewRequireDefaults(
 							filter.NewDockerCheckDefaults(
 								"ghcr",
@@ -173,59 +174,59 @@ func TestHTTP_Config(t *testing.T) {
 						"wh3": {},
 						"wh4": {}}}},
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{
-				"interval":"1h"
-			},
-			"latest_version":{
-				"access_token":"\u003csecret\u003e",
-				"allow_invalid_certs":true,
-				"use_prerelease":false,
-				"require":{
-					"docker":{
-						"type":"ghcr",
-						"ghcr":{
-							"token":"\u003csecret\u003e"
-						},
-						"hub":{
-							"token":"\u003csecret\u003e",
-							"username":"usernameForHub"
-						},
-						"quay":{
-							"token":"\u003csecret\u003e"
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
 						}
-					}
-				}
-			},
-			"notify":{
-				"n1":{}
-			},
-			"command":[
-				["command","arg1","arg2"]
-			],
-			"webhook":{
-				"wh1":{},
-				"wh2":{},
-				"wh3":{},
-				"wh4":{}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{},
-	"webhook":{},
-	"service":{}
-}`,
+					},
+					"defaults": {
+						"service": {
+							"options": {
+								"interval": "1h"
+							},
+							"latest_version": {
+								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
+								"use_prerelease": false,
+								"require": {
+									"docker": {
+										"type": "ghcr",
+										"ghcr": {
+											"token": "\u003csecret\u003e"
+										},
+										"hub": {
+											"token": "\u003csecret\u003e",
+											"username": "usernameForHub"
+										},
+										"quay": {
+											"token": "\u003csecret\u003e"
+										}
+									}
+								}
+							},
+							"notify": {
+								"n1": {}
+							},
+							"command": [
+								["command","arg1","arg2"]
+							],
+							"webhook": {
+								"wh1": {},
+								"wh2": {},
+								"wh3": {},
+								"wh4": {}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {},
+					"webhook": {},
+					"service": {}
+				}`,
 		},
 		"3. settings + defaults (with notify+command+webhook service defaults) + notify": {
 			notify: &shoutrrr.SliceDefaults{
@@ -238,77 +239,77 @@ func TestHTTP_Config(t *testing.T) {
 					&map[string]string{
 						"token": "secret123"})},
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{
-				"interval":"1h"
-			},
-			"latest_version":{
-				"access_token":"\u003csecret\u003e",
-				"allow_invalid_certs":true,
-				"use_prerelease":false,
-				"require":{
-					"docker":{
-						"type":"ghcr",
-						"ghcr":{
-							"token":"\u003csecret\u003e"
-						},
-						"hub":{
-							"token":"\u003csecret\u003e",
-							"username":"usernameForHub"
-						},
-						"quay":{
-							"token":"\u003csecret\u003e"
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
 						}
-					}
-				}
-			},
-			"notify":{
-				"n1":{}
-			},
-			"command":[
-				["command","arg1","arg2"]
-			],
-			"webhook":{
-				"wh1":{},
-				"wh2":{},
-				"wh3":{},
-				"wh4":{}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{
-		"foo":{
-			"type":"gotify",
-			"options":{
-				"message":"hello world"
-			},
-			"url_fields":{
-				"token":"\u003csecret\u003e"
-			},
-			"params":{
-				"title":"UPDATE"
-			}
-		}
-	},
-	"webhook":{},
-	"service":{}
-}`,
+					},
+					"defaults": {
+						"service": {
+							"options": {
+								"interval": "1h"
+							},
+							"latest_version": {
+								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
+								"use_prerelease": false,
+								"require": {
+									"docker": {
+										"type": "ghcr",
+										"ghcr": {
+											"token": "\u003csecret\u003e"
+										},
+										"hub": {
+											"token": "\u003csecret\u003e",
+											"username": "usernameForHub"
+										},
+										"quay": {
+											"token": "\u003csecret\u003e"
+										}
+									}
+								}
+							},
+							"notify": {
+								"n1": {}
+							},
+							"command": [
+								["command","arg1","arg2"]
+							],
+							"webhook": {
+								"wh1": {},
+								"wh2": {},
+								"wh3": {},
+								"wh4": {}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {
+						"foo": {
+							"type": "gotify",
+							"options": {
+								"message": "hello world"
+							},
+							"url_fields": {
+								"token": "\u003csecret\u003e"
+							},
+							"params": {
+								"title": "UPDATE"
+							}
+						}
+					},
+					"webhook": {},
+					"service": {}
+				}`,
 		},
 		"4. settings + defaults (with notify+command+webhook service defaults) + notify + webhook": {
 			webhook: &webhook.SliceDefaults{
 				"foo": webhook.NewDefaults(
-					boolPtr(true), // allow_invalid_certs
+					test.BoolPtr(true), // allow_invalid_certs
 					&webhook.Headers{
 						{Key: "X-Header", Value: "value"}},
 					"4s",                    // delay
@@ -319,203 +320,203 @@ func TestHTTP_Config(t *testing.T) {
 					"github",                // type
 					"https://example.com")}, // url
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{
-				"interval":"1h"
-			},
-			"latest_version":{
-				"access_token":"\u003csecret\u003e",
-				"allow_invalid_certs":true,
-				"use_prerelease":false,
-				"require":{
-					"docker":{
-						"type":"ghcr",
-						"ghcr":{
-							"token":"\u003csecret\u003e"
-						},
-						"hub":{
-							"token":"\u003csecret\u003e",
-							"username":"usernameForHub"
-						},
-						"quay":{
-							"token":"\u003csecret\u003e"
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
 						}
-					}
-				}
-			},
-			"notify":{
-				"n1":{}
-			},
-			"command":[
-				["command","arg1","arg2"]
-			],
-			"webhook":{
-				"wh1":{},
-				"wh2":{},
-				"wh3":{},
-				"wh4":{}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{
-		"foo":{
-			"type":"gotify",
-			"options":{
-				"message":"hello world"
-			},
-			"url_fields":{
-				"token":"\u003csecret\u003e"
-			},
-			"params":{
-				"title":"UPDATE"
-			}
-		}
-	},
-	"webhook":{
-		"foo":{
-			"type":"github",
-			"url":"https://example.com",
-			"allow_invalid_certs":true,
-			"secret":"\u003csecret\u003e",
-			"custom_headers":[
-				{"key":"X-Header","value":"\u003csecret\u003e"}],
-			"delay":"4s"}},
-	"service":{}
-}`,
+					},
+					"defaults": {
+						"service": {
+							"options": {
+								"interval": "1h"
+							},
+							"latest_version": {
+								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
+								"use_prerelease": false,
+								"require": {
+									"docker": {
+										"type": "ghcr",
+										"ghcr": {
+											"token": "\u003csecret\u003e"
+										},
+										"hub": {
+											"token": "\u003csecret\u003e",
+											"username": "usernameForHub"
+										},
+										"quay": {
+											"token": "\u003csecret\u003e"
+										}
+									}
+								}
+							},
+							"notify": {
+								"n1": {}
+							},
+							"command": [
+								["command","arg1","arg2"]
+							],
+							"webhook": {
+								"wh1": {},
+								"wh2": {},
+								"wh3": {},
+								"wh4": {}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {
+						"foo": {
+							"type": "gotify",
+							"options": {
+								"message": "hello world"
+							},
+							"url_fields": {
+								"token": "\u003csecret\u003e"
+							},
+							"params": {
+								"title": "UPDATE"
+							}
+						}
+					},
+					"webhook": {
+						"foo": {
+							"type": "github",
+							"url": "https://example.com",
+							"allow_invalid_certs": true,
+							"secret": "\u003csecret\u003e",
+							"custom_headers": [
+								{"key": "X-Header","value": "\u003csecret\u003e"}],
+							"delay": "4s"}},
+					"service": {}
+				}`,
 		},
 		"5. settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service": {
 			service: &service.Slice{
 				"alpha": &service.Service{
 					LatestVersion: *latestver.New(
-						stringPtr("aToken"),
+						test.StringPtr("aToken"),
 						nil, nil, nil, nil, nil,
 						"github",
 						"release-argus/Argus",
 						nil, nil, nil, nil)},
 				"bravo": &service.Service{
 					LatestVersion: *latestver.New(
-						stringPtr("otherToken"),
+						test.StringPtr("otherToken"),
 						nil, nil, nil, nil, nil,
 						"url",
 						"https://example.com/version",
 						nil, nil, nil, nil)}},
 			order: &[]string{"alpha", "bravo"},
 			wantBody: `
-{
-	"settings":{
-		"log":{},
-		"web":{
-			"listen_host":"127.0.0.1"
-		}
-	},
-	"defaults":{
-		"service":{
-			"options":{
-				"interval":"1h"
-			},
-			"latest_version":{
-				"access_token":"\u003csecret\u003e",
-				"allow_invalid_certs":true,
-				"use_prerelease":false,
-				"require":{
-					"docker":{
-						"type":"ghcr",
-						"ghcr":{
-							"token":"\u003csecret\u003e"
-						},
-						"hub":{
-							"token":"\u003csecret\u003e",
-							"username":"usernameForHub"
-						},
-						"quay":{
-							"token":"\u003csecret\u003e"
+				{
+					"settings": {
+						"log": {},
+						"web": {
+							"listen_host": "127.0.0.1"
 						}
-					}
-				}
-			},
-			"notify":{
-				"n1":{}
-			},
-			"command":[
-				["command","arg1","arg2"]
-			],
-			"webhook":{
-				"wh1":{},
-				"wh2":{},
-				"wh3":{},
-				"wh4":{}
-			},
-			"deployed_version":{},
-			"dashboard":{}
-		},
-		"webhook":{}
-	},
-	"notify":{
-		"foo":{
-			"type":"gotify",
-			"options":{
-				"message":"hello world"
-			},
-			"url_fields":{
-				"token":"\u003csecret\u003e"
-			},
-			"params":{
-				"title":"UPDATE"
-			}
-		}
-	},
-	"webhook":{
-		"foo":{
-			"type":"github",
-			"url":"https://example.com",
-			"allow_invalid_certs":true,
-			"secret":"\u003csecret\u003e",
-			"custom_headers":[
-				{"key":"X-Header","value":"\u003csecret\u003e"}],
-			"delay":"4s"}},
-	"service":{
-		"alpha":{
-			"options":{},
-			"latest_version":{
-				"type":"github",
-				"url":"release-argus/Argus",
-				"access_token":"\u003csecret\u003e",
-				"url_commands":[]
-			},
-			"command":[],
-			"notify":{},
-			"webhook":{},
-			"dashboard":{}
-		},
-		"bravo":{
-			"options":{},
-			"latest_version":{
-				"type":"url",
-				"url":"https://example.com/version",
-				"access_token":"\u003csecret\u003e",
-				"url_commands":[]
-			},"command":[],
-			"notify":{},
-			"webhook":{},
-			"dashboard":{}
-		}
-	},
-	"order":[
-		"alpha",
-		"bravo"
-	]
-}`,
+					},
+					"defaults": {
+						"service": {
+							"options": {
+								"interval": "1h"
+							},
+							"latest_version": {
+								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
+								"use_prerelease": false,
+								"require": {
+									"docker": {
+										"type": "ghcr",
+										"ghcr": {
+											"token": "\u003csecret\u003e"
+										},
+										"hub": {
+											"token": "\u003csecret\u003e",
+											"username": "usernameForHub"
+										},
+										"quay": {
+											"token": "\u003csecret\u003e"
+										}
+									}
+								}
+							},
+							"notify": {
+								"n1": {}
+							},
+							"command": [
+								["command","arg1","arg2"]
+							],
+							"webhook": {
+								"wh1": {},
+								"wh2": {},
+								"wh3": {},
+								"wh4": {}
+							},
+							"deployed_version": {},
+							"dashboard": {}
+						},
+						"webhook": {}
+					},
+					"notify": {
+						"foo": {
+							"type": "gotify",
+							"options": {
+								"message": "hello world"
+							},
+							"url_fields": {
+								"token": "\u003csecret\u003e"
+							},
+							"params": {
+								"title": "UPDATE"
+							}
+						}
+					},
+					"webhook": {
+						"foo": {
+							"type": "github",
+							"url": "https://example.com",
+							"allow_invalid_certs": true,
+							"secret": "\u003csecret\u003e",
+							"custom_headers": [
+								{"key": "X-Header","value": "\u003csecret\u003e"}],
+							"delay": "4s"}},
+					"service": {
+						"alpha": {
+							"options": {},
+							"latest_version": {
+								"type": "github",
+								"url": "release-argus/Argus",
+								"access_token": "\u003csecret\u003e",
+								"url_commands": []
+							},
+							"command": [],
+							"notify": {},
+							"webhook": {},
+							"dashboard": {}
+						},
+						"bravo": {
+							"options": {},
+							"latest_version": {
+								"type": "url",
+								"url": "https://example.com/version",
+								"access_token": "\u003csecret\u003e",
+								"url_commands": []
+							},"command": [],
+							"notify": {},
+							"webhook": {},
+							"dashboard": {}
+						}
+					},
+					"order": [
+						"alpha",
+						"bravo"
+					]
+				}`,
 		},
 	}
 	order := make([]string, len(tests))
@@ -557,6 +558,7 @@ func TestHTTP_Config(t *testing.T) {
 			if tc.order != nil {
 				api.Config.Order = *tc.order
 			}
+			tc.wantBody = trimJSON(tc.wantBody) + "\n"
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)
@@ -572,8 +574,6 @@ func TestHTTP_Config(t *testing.T) {
 					err)
 			}
 			got := string(data)
-			tc.wantBody = strings.ReplaceAll(tc.wantBody, "\n", "")
-			tc.wantBody = strings.ReplaceAll(tc.wantBody, "\t", "") + "\n"
 			if got != tc.wantBody {
 				t.Fatalf("want %q\ngot: %q",
 					tc.wantBody, got)

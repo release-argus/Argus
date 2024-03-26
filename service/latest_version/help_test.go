@@ -18,6 +18,7 @@ package latestver
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -97,4 +98,12 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 	lookup.Defaults = &LookupDefaults{}
 	lookup.HardDefaults = &LookupDefaults{}
 	return lookup
+}
+
+func trimJSON(str string) string {
+	str = strings.TrimSpace(str)
+	str = strings.ReplaceAll(str, "\n", "")
+	str = strings.ReplaceAll(str, "\t", "")
+	str = strings.ReplaceAll(str, ": ", ":")
+	return str
 }

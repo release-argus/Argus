@@ -5,6 +5,7 @@ import FormItemWithPreview from "./form-item-with-preview";
 import FormKeyVal from "./form-key-val";
 import FormKeyValMap from "./form-key-val-map";
 import FormLabel from "./form-label";
+import FormList from "./form-list";
 import FormSelect from "./form-select";
 import FormTextArea from "./form-textarea";
 
@@ -16,6 +17,7 @@ export {
   FormKeyValMap,
   FormKeyVal,
   FormLabel,
+  FormList,
   FormSelect,
   FormTextArea,
 };

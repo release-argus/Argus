@@ -8,7 +8,7 @@ import {
 } from "react-bootstrap";
 import { CommandType, HeaderType, NotifyType, WebHookType } from "types/config";
 import { FormProvider, useForm } from "react-hook-form";
-import { flattenErrors, removeEmptyValues } from "utils";
+import { extractErrors, removeEmptyValues } from "utils";
 import { useCallback, useContext, useState } from "react";
 
 import { DeleteModal } from "./delete-confirm";
@@ -165,18 +165,16 @@ const ServiceEditModal = () => {
                     {/* Render either the server error or form validation error */}
                     {err ? (
                       <>
-                        <>
-                          {err.split("\\").map((line) => (
-                            <pre key={line} className="no-margin">
-                              {line}
-                            </pre>
-                          ))}
-                        </>
+                        {err.split("\\").map((line) => (
+                          <pre key={line} className="no-margin">
+                            {line}
+                          </pre>
+                        ))}
                       </>
                     ) : (
                       <ul>
                         {Object.entries(
-                          flattenErrors(form.formState.errors)
+                          extractErrors(form.formState.errors)
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

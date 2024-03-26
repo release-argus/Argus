@@ -20,6 +20,7 @@ import (
 	"time"
 
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
+	shoutrrr_vars "github.com/release-argus/Argus/notifiers/shoutrrr/types"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -316,28 +317,16 @@ func (n *Notify) Censor() *Notify {
 	}
 
 	// url_fields
-	urlFieldsToCensor := []string{
-		"altid",
-		"apikey",
-		"botkey",
-		"password",
-		"token",
-		"tokena",
-		"tokenb",
-	}
 	n.URLFields = util.CopyMap(n.URLFields)
-	for _, field := range urlFieldsToCensor {
+	for _, field := range shoutrrr_vars.CensorableURLFields {
 		if n.URLFields[field] != "" {
 			n.URLFields[field] = "<secret>"
 		}
 	}
 
 	// params
-	paramsToCensor := []string{
-		"devices",
-	}
 	n.Params = util.CopyMap(n.Params)
-	for _, param := range paramsToCensor {
+	for _, param := range shoutrrr_vars.CensorableParams {
 		if n.Params[param] != "" {
 			n.Params[param] = "<secret>"
 		}

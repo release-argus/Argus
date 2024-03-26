@@ -5,15 +5,17 @@ import {
   FormSelect,
 } from "components/generic/form";
 import { NotifyGenericRequestMethods, NotifyGenericType } from "types/config";
-import { useEffect, useMemo } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import {
+  convertHeadersFromString,
+  normaliseForSelect,
+} from "components/modals/service-edit/util";
 
 import { BooleanWithDefault } from "components/generic";
-import { NotifyOptions } from "./shared";
-import { convertHeadersFromString } from "../util/api-ui-conversions";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
+import { useMemo } from "react";
+import { useWatch } from "react-hook-form";
 
 const GenericRequestMethodOptions: {
   label: NotifyGenericRequestMethods;
@@ -31,6 +33,15 @@ const GenericRequestMethodOptions: {
   ] as const
 ).map((method) => ({ label: method, value: method }));
 
+/**
+ * GENERIC renders the form fields for the Generic Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Generic Notify
+ * @param defaults - The default values for the Generic Notify
+ * @param hard_defaults - The hard default values for the Generic Notify
+ * @returns The form fields for this Generic Notify
+ */
 const GENERIC = ({
   name,
 
@@ -44,48 +55,111 @@ const GENERIC = ({
   defaults?: NotifyGenericType;
   hard_defaults?: NotifyGenericType;
 }) => {
-  const { getValues, setValue } = useFormContext();
+  const selectedTemplate: string | undefined = useWatch({
+    name: `${name}.params.template`,
+  });
 
-  useEffect(() => {
-    const header_url_fields = [
-      "custom_headers",
-      "json_payload_vars",
-      "query_vars",
-    ];
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        custom_headers: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.custom_headers,
+            defaults?.url_fields?.custom_headers,
+            hard_defaults?.url_fields?.custom_headers
+          )
+        ),
+        host: globalOrDefault(
+          global?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        json_payload_vars: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.json_payload_vars,
+            defaults?.url_fields?.json_payload_vars,
+            hard_defaults?.url_fields?.json_payload_vars
+          )
+        ),
+        path: globalOrDefault(
+          global?.url_fields?.path,
+          defaults?.url_fields?.path,
+          hard_defaults?.url_fields?.path
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+        query_vars: convertHeadersFromString(
+          globalOrDefault(
+            global?.url_fields?.query_vars,
+            defaults?.url_fields?.query_vars,
+            hard_defaults?.url_fields?.query_vars
+          )
+        ),
+      },
+      // Params
+      params: {
+        contenttype: globalOrDefault(
+          global?.params?.contenttype,
+          defaults?.params?.contenttype,
+          hard_defaults?.params?.contenttype
+        ),
+        disabletls:
+          strToBool(
+            globalOrDefault(
+              global?.params?.disabletls,
+              defaults?.params?.disabletls,
+              hard_defaults?.params?.disabletls
+            )
+          ) ?? true,
+        messagekey: globalOrDefault(
+          global?.params?.messagekey,
+          defaults?.params?.messagekey,
+          hard_defaults?.params?.messagekey
+        ),
+        requestmethod: globalOrDefault(
+          global?.params?.requestmethod,
+          defaults?.params?.requestmethod,
+          hard_defaults?.params?.requestmethod
+        ).toLowerCase(),
+        template: globalOrDefault(
+          global?.params?.template,
+          defaults?.params?.template,
+          hard_defaults?.params?.template
+        ),
+        title: globalOrDefault(
+          global?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+        titlekey: globalOrDefault(
+          global?.params?.titlekey,
+          defaults?.params?.titlekey,
+          hard_defaults?.params?.titlekey
+        ),
+      },
+    }),
+    [global, defaults, hard_defaults]
+  );
 
-    for (const field of header_url_fields) {
-      const value = getValues(`${name}.url_fields.${field}`);
-
-      if (typeof value === "string")
-        setValue(
-          `${name}.url_fields.${field}`,
-          convertHeadersFromString(value)
-        );
-    }
-  }, []);
-
-  const selectedTemplate = useWatch({ name: `${name}.params.template` });
-
-  const defaultParamsRequestMethod = globalOrDefault(
-    global?.params?.requestmethod,
-    defaults?.params?.requestmethod,
-    hard_defaults?.params?.requestmethod
-  ).toLowerCase();
   const genericRequestMethodOptions: { label: string; value: string }[] =
     useMemo(() => {
       const defaultRequestMethod = normaliseForSelect(
         GenericRequestMethodOptions,
-        defaultParamsRequestMethod
+        convertedDefaults.params.requestmethod
       );
 
       if (defaultRequestMethod)
         return [
           { value: "", label: `${defaultRequestMethod.label} (default)` },
-          ...genericRequestMethodOptions,
+          ...GenericRequestMethodOptions,
         ];
 
       return GenericRequestMethodOptions;
-    }, [defaultParamsRequestMethod]);
+    }, [convertedDefaults.params.requestmethod]);
 
   return (
     <>
@@ -104,23 +178,15 @@ const GENERIC = ({
             col_sm={12}
             label="Host"
             tooltip="e.g. gotify.example.com"
-            defaultVal={globalOrDefault(
-              global?.url_fields?.host,
-              defaults?.url_fields?.host,
-              hard_defaults?.url_fields?.host
-            )}
+            defaultVal={convertedDefaults.url_fields.host}
           />
           <FormItem
             name={`${name}.url_fields.port`}
             col_sm={4}
-            type="number"
             label="Port"
             tooltip="e.g. 443"
-            defaultVal={globalOrDefault(
-              global?.url_fields?.port,
-              defaults?.url_fields?.port,
-              hard_defaults?.url_fields?.port
-            )}
+            isNumber
+            defaultVal={convertedDefaults.url_fields.port}
           />
           <FormItem
             name={`${name}.url_fields.path`}
@@ -132,16 +198,13 @@ const GENERIC = ({
                 <span className="bold-underline">path</span>
               </>
             }
-            defaultVal={globalOrDefault(
-              global?.url_fields?.path,
-              defaults?.url_fields?.path,
-              hard_defaults?.url_fields?.path
-            )}
-            onRight
+            defaultVal={convertedDefaults.url_fields.path}
+            position="right"
           />
           <FormKeyValMap
             name={`${name}.url_fields.custom_headers`}
             tooltip="Additional HTTP headers"
+            defaults={convertedDefaults.url_fields.custom_headers}
           />
           {selectedTemplate && (
             <FormKeyValMap
@@ -150,6 +213,7 @@ const GENERIC = ({
               tooltip="Override 'title' and 'message' with 'titleKey' and 'messageKey' respectively"
               keyPlaceholder="e.g. key"
               valuePlaceholder="e.g. value"
+              defaults={convertedDefaults.url_fields.json_payload_vars}
             />
           )}
           <FormKeyValMap
@@ -158,6 +222,7 @@ const GENERIC = ({
             tooltip="If you need to pass a query variable that is reserved, you can prefix it with an underscore"
             keyPlaceholder="e.g. foo"
             valuePlaceholder="e.g. bar"
+            defaults={convertedDefaults.url_fields.query_vars}
           />
         </>
         <FormLabel text="Params" heading />
@@ -167,77 +232,53 @@ const GENERIC = ({
           label="Request Method"
           tooltip="The HTTP request method"
           options={genericRequestMethodOptions}
-          onMiddle
         />
         <FormItem
           name={`${name}.params.contenttype`}
-          col_sm={8}
+          col_sm={4}
           label="Content Type"
           tooltip="The value of the Content-Type header"
-          defaultVal={globalOrDefault(
-            global?.params?.contenttype,
-            defaults?.params?.contenttype,
-            hard_defaults?.params?.contenttype
-          )}
-        />
-        <FormItem
-          name={`${name}.params.messagekey`}
-          col_sm={4}
-          type="text"
-          label="Message Key"
-          tooltip="The key that will be used for the message value"
-          defaultVal={globalOrDefault(
-            global?.params?.messagekey,
-            defaults?.params?.messagekey,
-            hard_defaults?.params?.messagekey
-          )}
+          defaultVal={convertedDefaults.params.contenttype}
+          position="right"
         />
         <FormItem
           name={`${name}.params.template`}
-          col_sm={8}
+          col_sm={4}
           type="text"
           label="Template"
           tooltip="The template used for creating the request payload"
-          defaultVal={globalOrDefault(
-            global?.params?.template,
-            defaults?.params?.template,
-            hard_defaults?.params?.template
-          )}
+          defaultVal={convertedDefaults.params.template}
+          position="right"
+        />
+        <FormItem
+          name={`${name}.params.messagekey`}
+          col_sm={6}
+          type="text"
+          label="Message Key"
+          tooltip="The key that will be used for the message value"
+          defaultVal={convertedDefaults.params.messagekey}
         />
         <FormItem
           name={`${name}.params.titlekey`}
-          col_sm={4}
+          col_sm={6}
           type="text"
           label="Title Key"
           tooltip="The key that will be used for the title value"
-          defaultVal={globalOrDefault(
-            global?.params?.titlekey,
-            defaults?.params?.titlekey,
-            hard_defaults?.params?.titlekey
-          )}
+          defaultVal={convertedDefaults.params.titlekey}
         />
         <FormItem
           name={`${name}.params.title`}
-          col_sm={8}
+          col_sm={12}
           type="text"
           label="Title"
           tooltip="Text prepended to the message"
-          defaultVal={globalOrDefault(
-            global?.params?.title,
-            defaults?.params?.title,
-            hard_defaults?.params?.title
-          )}
+          defaultVal={convertedDefaults.params.title}
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.disabletls`}
           label="Disable TLS"
-          defaultValue={
-            strToBool(
-              global?.params?.disabletls ||
-                defaults?.params?.disabletls ||
-                hard_defaults?.params?.disabletls
-            ) ?? true
-          }
+          defaultValue={convertedDefaults.params.disabletls}
         />
       </>
     </>

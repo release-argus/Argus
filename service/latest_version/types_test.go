@@ -376,12 +376,21 @@ func TestGitHubData_String(t *testing.T) {
 					{URL: "https://test.com/1.2.3"},
 					{URL: "https://test.com/3.2.1"},
 				}},
-			want: `{"etag":"argus","releases":[{"url":"https://test.com/1.2.3"},{"url":"https://test.com/3.2.1"}]}`},
+			want: `
+				{
+					"etag": "argus",
+					"releases": [
+						{"url": "https://test.com/1.2.3"},
+						{"url": "https://test.com/3.2.1"}
+					]
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			tc.want = trimJSON(tc.want)
 
 			// WHEN the GitHubData is stringified with String
 			got := tc.githubData.String()

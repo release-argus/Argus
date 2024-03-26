@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -89,7 +90,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			regexMissesContent: 1,
 			regexMissesVersion: 3,
 			dvl: deployedver.New(
-				boolPtr(true),
+				test.BoolPtr(true),
 				&deployedver.BasicAuth{
 					Username: "jim",
 					Password: "whoops"},
@@ -98,21 +99,21 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					{Key: "X-Test-1", Value: "bar"}},
 				"version",
 				opt.New(
-					boolPtr(true), "10m", boolPtr(true),
+					test.BoolPtr(true), "10m", test.BoolPtr(true),
 					&opt.OptionsDefaults{},
 					&opt.OptionsDefaults{}),
-				`([0-9]+\.[0-9]+\.[0-9]+)`, stringPtr("$1.$2.$3"),
+				`([0-9]+\.[0-9]+\.[0-9]+)`, test.StringPtr("$1.$2.$3"),
 				&svcstatus.Status{},
 				"https://release-argus.io",
 				&deployedver.LookupDefaults{},
 				&deployedver.LookupDefaults{}),
 			dvlStatus: &svcstatus.Status{
 				Fails:     svcstatus.Fails{},
-				ServiceID: stringPtr("service-id"),
-				WebURL:    stringPtr("https://release-argus.io")},
+				ServiceID: test.StringPtr("service-id"),
+				WebURL:    test.StringPtr("https://release-argus.io")},
 			want: &api_type.DeployedVersionLookup{
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: boolPtr(true),
+				AllowInvalidCerts: test.BoolPtr(true),
 				BasicAuth: &api_type.BasicAuth{
 					Username: "jim",
 					Password: "<secret>"},
@@ -121,7 +122,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					{Key: "X-Test-1", Value: "<secret>"}},
 				JSON:          "version",
 				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
-				RegexTemplate: stringPtr("$1.$2.$3")},
+				RegexTemplate: test.StringPtr("$1.$2.$3")},
 		},
 	}
 
@@ -175,15 +176,15 @@ func TestConvertURLCommandSlice(t *testing.T) {
 		},
 		"regex": {
 			slice: &filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-9.]+")}},
+				{Type: "regex", Regex: test.StringPtr("[0-9.]+")}},
 			want: &api_type.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-9.]+")}},
+				{Type: "regex", Regex: test.StringPtr("[0-9.]+")}},
 		},
 		"replace": {
 			slice: &filter.URLCommandSlice{
-				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")}},
+				{Type: "replace", Old: test.StringPtr("foo"), New: test.StringPtr("bar")}},
 			want: &api_type.URLCommandSlice{
-				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")}},
+				{Type: "replace", Old: test.StringPtr("foo"), New: test.StringPtr("bar")}},
 		},
 		"split": {
 			slice: &filter.URLCommandSlice{
@@ -193,12 +194,12 @@ func TestConvertURLCommandSlice(t *testing.T) {
 		},
 		"one of each": {
 			slice: &filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-9.]+")},
-				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")},
+				{Type: "regex", Regex: test.StringPtr("[0-9.]+")},
+				{Type: "replace", Old: test.StringPtr("foo"), New: test.StringPtr("bar")},
 				{Type: "split", Index: 7}},
 			want: &api_type.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-9.]+")},
-				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")},
+				{Type: "regex", Regex: test.StringPtr("[0-9.]+")},
+				{Type: "replace", Old: test.StringPtr("foo"), New: test.StringPtr("bar")},
 				{Type: "split", Index: 7}},
 		},
 	}

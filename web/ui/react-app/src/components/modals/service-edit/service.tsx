@@ -16,7 +16,7 @@ import EditServiceWebHooks from "components/modals/service-edit/webhooks";
 import { FormItem } from "components/generic/form";
 import { Loading } from "./loading";
 import { WebHookType } from "types/config";
-import { convertAPIServiceDataEditToUI } from "./util/api-ui-conversions";
+import { convertAPIServiceDataEditToUI } from "components/modals/service-edit/util";
 import { fetchJSON } from "utils";
 import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,12 @@ interface Props {
   name: string;
 }
 
+/**
+ * EditService renders the form fields for editing a service
+ *
+ * @param name - The name of the service
+ * @returns The form fields for editing a service
+ */
 const EditService: FC<Props> = ({ name }) => {
   const { reset } = useFormContext();
   const [loading, setLoading] = useState(true);
@@ -33,11 +39,13 @@ const EditService: FC<Props> = ({ name }) => {
   const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
     useQuery({
       queryKey: ["service/edit", "detail"],
-      queryFn: () => fetchJSON<ServiceEditOtherData>("api/v1/service/edit"),
+      queryFn: () =>
+        fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/edit" }),
     });
   const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
     queryKey: ["service/edit", { id: name }],
-    queryFn: () => fetchJSON<ServiceEditAPIType>(`api/v1/service/edit/${name}`),
+    queryFn: () =>
+      fetchJSON<ServiceEditAPIType>({ url: `api/v1/service/edit/${name}` }),
     enabled: !!name,
     refetchOnMount: "always",
   });
@@ -83,9 +91,9 @@ const EditService: FC<Props> = ({ name }) => {
           }}
           col_sm={12}
           label="Name"
-          onRight
+          position="right"
         />
-        <FormItem name="comment" col_sm={12} label="Comment" onRight />
+        <FormItem name="comment" col_sm={12} label="Comment" position="right" />
       </FormGroup>
       <EditServiceOptions
         defaults={otherOptionsData?.defaults?.service?.options}
@@ -112,6 +120,8 @@ const EditService: FC<Props> = ({ name }) => {
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
       />
       <EditServiceNotifys
+        serviceName={name}
+        originals={defaultData?.notify}
         globals={otherOptionsData?.notify}
         defaults={otherOptionsData?.defaults?.notify}
         hard_defaults={otherOptionsData?.hard_defaults?.notify}

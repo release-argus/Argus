@@ -1,22 +1,23 @@
-import {
-  ArgType,
-  NotifyEditType,
-  NotifyHeaderType,
-  ServiceEditType,
-} from "types/service-edit";
+import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
 import {
   Dict,
-  HeaderType,
-  NotifyNtfyAction,
   NotifyType,
   ServiceType,
   URLCommandType,
+  URLCommandTypes,
   WebHookType,
 } from "types/config";
 
 import { convertValuesToString } from "./notify-string-string-map";
 import removeEmptyValues from "utils/remove-empty-values";
 
+/**
+ * convertUIServiceDataEditToAPI will convert the ServiceEditType to a ServiceType,
+ * ready to be sent to the API
+ *
+ * @param data - The ServiceEditType to convert
+ * @returns The ServiceType to send to the API
+ */
 export const convertUIServiceDataEditToAPI = (
   data: ServiceEditType
 ): ServiceType => {
@@ -41,6 +42,7 @@ export const convertUIServiceDataEditToAPI = (
     use_prerelease: data.latest_version?.use_prerelease,
     url_commands: data.latest_version?.url_commands?.map((command) => ({
       ...urlCommandTrim(command),
+      type: command.type as URLCommandTypes,
       index: command.index ? Number(command.index) : undefined,
     })),
   };
@@ -49,7 +51,7 @@ export const convertUIServiceDataEditToAPI = (
     payload.latest_version.require = {
       regex_content: data.latest_version.require?.regex_content,
       regex_version: data.latest_version.require?.regex_version,
-      command: (data.latest_version.require.command || []).map(
+      command: (data.latest_version.require.command ?? []).map(
         (obj) => (obj as ArgType).arg
       ),
       docker: {
@@ -71,8 +73,8 @@ export const convertUIServiceDataEditToAPI = (
         regex: data.deployed_version?.regex,
         regex_template: data.deployed_version?.regex_template,
         basic_auth: {
-          username: data.deployed_version?.basic_auth?.username || "",
-          password: data.deployed_version?.basic_auth?.password || "",
+          username: data.deployed_version?.basic_auth?.username ?? "",
+          password: data.deployed_version?.basic_auth?.password ?? "",
         },
       }
     : {};
@@ -113,7 +115,12 @@ export const convertUIServiceDataEditToAPI = (
   return payload;
 };
 
-// urlCommandTrim will remove any keys not used for the type
+/**
+ * urlCommandTrim will remove any keys not used for the type
+ *
+ * @param command - The URLCommandType to trim
+ * @returns The URLCommandType with only the relevant keys for the type
+ */
 const urlCommandTrim = (command: URLCommandType) => {
   if (command.type === "regex")
     return { type: "regex", regex: command.regex, template: command.template };
@@ -127,7 +134,12 @@ const urlCommandTrim = (command: URLCommandType) => {
   };
 };
 
-// urlCommandsTrim will remove any unsued keye for the type for all URLCommandTypes in the list
+/**
+ * urlCommandsTrim will remove any keys not used for the type for all URLCommandTypes in the list
+ *
+ * @param commands - The URLCommandType[] to trim
+ * @returns The URLCommandType[] with only the relevant keys for each type
+ */
 export const urlCommandsTrim = (commands: {
   [key: string]: URLCommandType;
 }) => {
@@ -136,32 +148,10 @@ export const urlCommandsTrim = (commands: {
 
 export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
-  if (notify.url_fields)
-    notify.url_fields = convertValuesToString(notify.url_fields);
-  if (notify.params) {
-    notify.params = convertValuesToString(notify.params);
-    if (notify.type === "ntfy") {
-      // http actions should have headers as {KEY:VAL}, not {key:KEY, val:VAL}
-      notify.params.actions = Array.isArray(notify.params?.actions)
-        ? (notify.params?.actions as NotifyNtfyAction[]).map((action) => ({
-            ...action,
-            headers:
-              action.headers &&
-              convertHeaderTypeToMap(action.headers as NotifyHeaderType[]),
-            extras:
-              action.extras &&
-              convertHeaderTypeToMap(action.extras as NotifyHeaderType[]),
-          }))
-        : undefined;
-    }
-  }
+  if (notify?.url_fields)
+    notify.url_fields = convertValuesToString(notify.url_fields, notify.type);
+  if (notify?.params)
+    notify.params = convertValuesToString(notify.params, notify.type);
 
   return notify as NotifyType;
-};
-
-const convertHeaderTypeToMap = (headers: HeaderType[]) => {
-  return headers.reduce((obj, header) => {
-    obj[header.key] = header.value;
-    return obj;
-  }, {} as { [key: string]: string });
 };

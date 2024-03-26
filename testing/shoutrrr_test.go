@@ -426,24 +426,24 @@ func TestFindShoutrrr(t *testing.T) {
 			// if the notifier should have been found in the root or in a service
 			if tc.foundInRoot != nil {
 				if *tc.foundInRoot {
-					if tc.cfg.Notify[tc.flag].String("") != got["test"].String("") {
+					if tc.cfg.Notify[tc.flag].String("") != got.String("") {
 						t.Fatalf("want:\n%v\n\ngot:\n%v",
-							tc.cfg.Notify[tc.flag].String(""), got["test"].String(""))
+							tc.cfg.Notify[tc.flag].String(""), got.String(""))
 					}
 				} else {
-					if tc.cfg.Service["argus"].Notify[tc.flag].String("") != got["test"].String("") {
+					if tc.cfg.Service["argus"].Notify[tc.flag].String("") != got.String("") {
 						t.Fatalf("want: %v\ngot: %v",
-							tc.cfg.Service["argus"].Notify[tc.flag].String(""), got["test"].String(""))
+							tc.cfg.Service["argus"].Notify[tc.flag].String(""), got.String(""))
 					}
 					// would have been given in the Init
-					got["test"].Defaults = tc.cfg.Defaults.Notify[got["test"].Type]
+					got.Defaults = tc.cfg.Defaults.Notify[got.Type]
 				}
 			}
 			// if there were defaults for that type
-			if tc.cfg.Defaults.Notify[got["test"].Type] != nil {
-				if tc.cfg.Defaults.Notify[got["test"].Type].String("") != got["test"].Defaults.String("") {
+			if tc.cfg.Defaults.Notify[got.Type] != nil {
+				if tc.cfg.Defaults.Notify[got.Type].String("") != got.Defaults.String("") {
 					t.Fatalf("defaults were not applied\nwant: %v\ngot: %v",
-						tc.cfg.Defaults.Notify[got["test"].Type].String(""), got["test"].Defaults.String(""))
+						tc.cfg.Defaults.Notify[got.Type].String(""), got.Defaults.String(""))
 				}
 			}
 		})

@@ -7,13 +7,13 @@ import {
   Stack,
 } from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import { HeaderType, NotifyHeaderType } from "types/config";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import FormKeyVal from "./form-key-val";
 import { FormLabel } from "components/generic/form";
-import { HeaderType } from "types/config";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
@@ -26,6 +26,17 @@ interface Props {
   defaults?: HeaderType[];
 }
 
+/**
+ * FormKeyValMap is the form fields for a key-value map
+ *
+ * @param name - The name of the field in the form
+ * @param label - The label for the field
+ * @param tooltip - The tooltip for the field
+ * @param keyPlaceholder - The placeholder for the key field
+ * @param valuePlaceholder - The placeholder for the value field
+ * @param defaults - The default values for the field
+ * @returns Form field for a key-value map
+ */
 const FormKeyValMap: FC<Props> = ({
   name,
   label = "Headers",
@@ -42,34 +53,35 @@ const FormKeyValMap: FC<Props> = ({
   const addItem = useCallback(() => {
     append({ key: "", value: "" }, { shouldFocus: false });
   }, []);
-  const removeLast = useCallback(() => {
-    remove(fields.length - 1);
-  }, [fields]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues = useWatch({ name: name });
+  const fieldValues: NotifyHeaderType[] = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
-    () => diffObjects(fieldValues, defaults),
+    () =>
+      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
     [fieldValues, defaults]
   );
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
+
+    // Give the defaults back if the field is empty
+    if ((fieldValues ?? fields ?? [])?.length === 0)
+      defaults?.forEach(() => {
+        addItem();
+      });
   }, [useDefaults]);
 
-  // on load, give the defaults if not overridden
-  useEffect(() => {
-    if (useDefaults) {
-      defaults?.forEach(() => {
-        append({}, { shouldFocus: false });
-      });
-    }
-  }, []);
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    !(useDefaults && fields.length == 1) && remove(fields.length - 1);
+  }, [fields.length, useDefaults]);
 
   return (
     <FormGroup>
       <Row>
-        <Col>
+        <Col className="pt-1">
           <FormLabel text={label} tooltip={tooltip} />
         </Col>
         <Col>
@@ -101,7 +113,10 @@ const FormKeyValMap: FC<Props> = ({
             <FormKeyVal
               name={`${name}.${index}`}
               defaults={useDefaults ? defaults?.[index] : undefined}
-              removeMe={() => remove(index)}
+              removeMe={
+                // Give the remove that's disabled if there's only one item and it matches the defaults
+                fieldValues?.length === 1 ? removeLast : () => remove(index)
+              }
               keyPlaceholder={keyPlaceholder}
               valuePlaceholder={valuePlaceholder}
             />

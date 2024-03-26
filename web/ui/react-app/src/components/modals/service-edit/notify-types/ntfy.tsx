@@ -4,14 +4,17 @@ import {
   FormLabel,
   FormSelect,
 } from "components/generic/form";
+import {
+  convertNtfyActionsFromString,
+  normaliseForSelect,
+} from "components/modals/service-edit/util";
 import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
-import NotifyOptions from "./shared";
-import { NtfyActions } from "./extra";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { NtfyActions } from "components/modals/service-edit/notify-types/extra";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
@@ -28,6 +31,15 @@ export const NtfyPriorityOptions = [
   { label: "Max", value: "max" },
 ];
 
+/**
+ * NTY renders the form fields for the Ntfy Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this Ntfy Notify
+ * @param defaults - The default values for the Ntfy Notify
+ * @param hard_defaults - The hard default values for the Ntfy Notify
+ * @returns The form fields for this Ntfy Notify
+ */
 const NTFY = ({
   name,
 
@@ -43,35 +55,115 @@ const NTFY = ({
 }) => {
   const { getValues, setValue } = useFormContext();
 
-  const defaultParamsScheme = globalOrDefault(
-    global?.params?.scheme,
-    defaults?.params?.scheme,
-    hard_defaults?.params?.scheme
-  ).toLowerCase();
-  const ntfySchemeOptions = useMemo(() => {
-    const defaultScheme = normaliseForSelect(
-      NtfySchemeOptions,
-      defaultParamsScheme
-    );
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        host: globalOrDefault(
+          global?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        password: globalOrDefault(
+          global?.url_fields?.password,
+          defaults?.url_fields?.password,
+          hard_defaults?.url_fields?.password
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+        topic: globalOrDefault(
+          global?.url_fields?.topic,
+          defaults?.url_fields?.topic,
+          hard_defaults?.url_fields?.topic
+        ),
+        username: globalOrDefault(
+          global?.url_fields?.username,
+          defaults?.url_fields?.username,
+          hard_defaults?.url_fields?.username
+        ),
+      },
+      // Params
+      params: {
+        actions: convertNtfyActionsFromString(
+          globalOrDefault(
+            global?.params?.actions as string | undefined,
+            defaults?.params?.actions as string | undefined,
+            hard_defaults?.params?.actions as string | undefined
+          )
+        ),
+        attach: globalOrDefault(
+          global?.params?.attach,
+          defaults?.params?.attach,
+          hard_defaults?.params?.attach
+        ),
+        cache:
+          strToBool(
+            globalOrDefault(
+              global?.params?.cache,
+              defaults?.params?.cache,
+              hard_defaults?.params?.cache
+            )
+          ) ?? true,
+        click: globalOrDefault(
+          global?.params?.click,
+          defaults?.params?.click,
+          hard_defaults?.params?.click
+        ),
+        email: globalOrDefault(
+          global?.params?.email,
+          defaults?.params?.email,
+          hard_defaults?.params?.email
+        ),
+        filename: globalOrDefault(
+          global?.params?.filename,
+          defaults?.params?.filename,
+          hard_defaults?.params?.filename
+        ),
+        firebase:
+          strToBool(
+            globalOrDefault(
+              global?.params?.firebase,
+              defaults?.params?.firebase,
+              hard_defaults?.params?.firebase
+            )
+          ) ?? true,
+        icon: globalOrDefault(
+          global?.params?.icon,
+          defaults?.params?.icon,
+          hard_defaults?.params?.icon
+        ),
+        priority: globalOrDefault(
+          global?.params?.priority,
+          defaults?.params?.priority,
+          hard_defaults?.params?.priority
+        ).toLowerCase(),
+        scheme: globalOrDefault(
+          global?.params?.scheme,
+          defaults?.params?.scheme,
+          hard_defaults?.params?.scheme
+        ).toLowerCase(),
+        tags: globalOrDefault(
+          global?.params?.tags,
+          defaults?.params?.tags,
+          hard_defaults?.params?.tags
+        ),
+        title: globalOrDefault(
+          global?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+      },
+    }),
+    [global, defaults, hard_defaults]
+  );
 
-    if (defaultScheme)
-      return [
-        { value: "", label: `${defaultScheme.label} (default)` },
-        ...NtfySchemeOptions,
-      ];
-
-    return NtfySchemeOptions;
-  }, [defaultParamsScheme]);
-
-  const defaultParamsPriority = globalOrDefault(
-    global?.params?.priority,
-    defaults?.params?.priority,
-    hard_defaults?.params?.priority
-  ).toLowerCase();
   const ntfyPriorityOptions = useMemo(() => {
     const defaultPriority = normaliseForSelect(
       NtfyPriorityOptions,
-      defaultParamsPriority
+      convertedDefaults.params.priority
     );
 
     if (defaultPriority)
@@ -81,27 +173,42 @@ const NTFY = ({
       ];
 
     return NtfyPriorityOptions;
-  }, [defaultParamsPriority]);
+  }, [convertedDefaults.params.priority]);
+
+  const ntfySchemeOptions = useMemo(() => {
+    const defaultScheme = normaliseForSelect(
+      NtfySchemeOptions,
+      convertedDefaults.params.scheme
+    );
+
+    if (defaultScheme)
+      return [
+        { value: "", label: `${defaultScheme.label} (default)` },
+        ...NtfySchemeOptions,
+      ];
+
+    return NtfySchemeOptions;
+  }, [convertedDefaults.params.scheme]);
 
   useEffect(() => {
-    // Normalise selected scheme, or default it
-    if (defaultParamsScheme === "")
-      setValue(
-        `${name}.params.scheme`,
-        normaliseForSelect(
-          NtfySchemeOptions,
-          getValues(`${name}.params.scheme`)
-        )?.value || "https"
-      );
-
     // Normalise selected priority, or default it
-    if (defaultParamsPriority === "")
+    if (convertedDefaults.params.priority === "")
       setValue(
         `${name}.params.priority`,
         normaliseForSelect(
           NtfyPriorityOptions,
           getValues(`${name}.params.priority`)
         )?.value || "default"
+      );
+
+    // Normalise selected scheme, or default it
+    if (convertedDefaults.params.scheme === "")
+      setValue(
+        `${name}.params.scheme`,
+        normaliseForSelect(
+          NtfySchemeOptions,
+          getValues(`${name}.params.scheme`)
+        )?.value || "https"
       );
   }, []);
 
@@ -116,46 +223,30 @@ const NTFY = ({
       <>
         <FormLabel text="URL Fields" heading />
         <FormItem
-          name={`${name}.url_fields.username`}
-          label="Username"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.username,
-            defaults?.url_fields?.username,
-            hard_defaults?.url_fields?.username
-          )}
-        />
-        <FormItem
-          name={`${name}.url_fields.password`}
-          label="Password"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.password,
-            defaults?.url_fields?.password,
-            hard_defaults?.url_fields?.password
-          )}
-          onRight
-        />
-        <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
           label="Host"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.host,
-            defaults?.url_fields?.host,
-            hard_defaults?.url_fields?.host
-          )}
+          defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
           label="Port"
           type="number"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.port,
-            defaults?.url_fields?.port,
-            hard_defaults?.url_fields?.port
-          )}
-          onRight
+          defaultVal={convertedDefaults.url_fields.port}
+          position="right"
+        />
+        <FormItem
+          name={`${name}.url_fields.username`}
+          label="Username"
+          defaultVal={convertedDefaults.url_fields.username}
+        />
+        <FormItem
+          name={`${name}.url_fields.password`}
+          label="Password"
+          defaultVal={convertedDefaults.url_fields.password}
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.topic`}
@@ -163,12 +254,7 @@ const NTFY = ({
           col_sm={12}
           label="Topic"
           tooltip="Target topic"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.topic,
-            defaults?.url_fields?.topic,
-            hard_defaults?.url_fields?.topic
-          )}
-          onRight
+          defaultVal={convertedDefaults.url_fields.topic}
         />
       </>
       <>
@@ -185,116 +271,72 @@ const NTFY = ({
           col_sm={3}
           label="Priority"
           options={ntfyPriorityOptions}
-          onMiddle
+          position="middle"
         />
         <FormItem
-          name={`${name}.url_fields.tags`}
+          name={`${name}.params.tags`}
           label="Tags"
           tooltip="Comma-separated list of tags that may or may not map to emojis"
-          defaultVal={globalOrDefault(
-            global?.params?.tags,
-            defaults?.params?.tags,
-            hard_defaults?.params?.tags
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.tags}
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.attach`}
+          name={`${name}.params.attach`}
           col_sm={8}
           label="Attach"
           tooltip="URL of an attachment"
-          defaultVal={globalOrDefault(
-            global?.params?.attach,
-            defaults?.params?.attach,
-            hard_defaults?.params?.attach
-          )}
+          defaultVal={convertedDefaults.params.attach}
         />
         <FormItem
-          name={`${name}.url_fields.filename`}
+          name={`${name}.params.filename`}
           col_sm={4}
           label="Filename"
           tooltip="File name of the attachment"
-          defaultVal={globalOrDefault(
-            global?.params?.filename,
-            defaults?.params?.filename,
-            hard_defaults?.params?.filename
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.filename}
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.email`}
+          name={`${name}.params.email`}
           label="E-mail"
           tooltip="E-mail address to send to"
-          defaultVal={globalOrDefault(
-            global?.params?.email,
-            defaults?.params?.email,
-            hard_defaults?.params?.email
-          )}
+          defaultVal={convertedDefaults.params.email}
         />
         <FormItem
-          name={`${name}.url_fields.title`}
+          name={`${name}.params.title`}
           label="Title"
-          defaultVal={globalOrDefault(
-            global?.params?.title,
-            defaults?.params?.title,
-            hard_defaults?.params?.title
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.title}
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.click`}
+          name={`${name}.params.click`}
           col_sm={12}
           label="Click"
           tooltip="URL to open when notification is clicked"
-          defaultVal={globalOrDefault(
-            global?.params?.click,
-            defaults?.params?.click,
-            hard_defaults?.params?.click
-          )}
+          defaultVal={convertedDefaults.params.click}
         />
         <FormItemWithPreview
           name={`${name}.params.icon`}
           label="Icon"
           tooltip="URL to an icon"
-          defaultVal={
-            global?.params?.icon ||
-            defaults?.params?.icon ||
-            hard_defaults?.params?.icon
-          }
+          defaultVal={convertedDefaults.params.icon}
         />
         <NtfyActions
           name={`${name}.params.actions`}
           label="Actions"
           tooltip="Custom action buttons for notifications"
-          defaults={globalOrDefault(
-            global?.params?.actions as string | undefined,
-            defaults?.params?.actions as string | undefined,
-            hard_defaults?.params?.actions as string | undefined
-          )}
+          defaults={convertedDefaults.params.actions}
         />
         <BooleanWithDefault
           name={`${name}.params.cache`}
           label="Cache"
           tooltip="Cache messages"
-          defaultValue={
-            strToBool(
-              global?.params?.cache ||
-                defaults?.params?.cache ||
-                hard_defaults?.params?.cache
-            ) ?? true
-          }
+          defaultValue={convertedDefaults.params.cache}
         />
         <BooleanWithDefault
           name={`${name}.params.firebase`}
           label="Firebase"
           tooltip="Send to Firebase Cloud Messaging"
-          defaultValue={
-            strToBool(
-              global?.params?.firebase ||
-                defaults?.params?.firebase ||
-                hard_defaults?.params?.firebase
-            ) ?? true
-          }
+          defaultValue={convertedDefaults.params.firebase}
         />
       </>
     </>

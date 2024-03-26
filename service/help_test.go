@@ -19,6 +19,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -229,4 +230,12 @@ func testWebHook(failing bool) *webhook.WebHook {
 		wh.Secret = "notArgus"
 	}
 	return wh
+}
+
+func trimJSON(str string) string {
+	str = strings.TrimSpace(str)
+	str = strings.ReplaceAll(str, "\n", "")
+	str = strings.ReplaceAll(str, "\t", "")
+	str = strings.ReplaceAll(str, ": ", ":")
+	return str
 }

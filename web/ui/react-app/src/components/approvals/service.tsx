@@ -1,12 +1,10 @@
 import { Button, Card } from "react-bootstrap";
 import { FC, memo, useCallback, useContext, useMemo, useState } from "react";
 import { ModalType, ServiceSummaryType } from "types/summary";
+import { ServiceImage, ServiceInfo, UpdateInfo } from "components/approvals";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
-import { ServiceImage } from "./service-image";
-import { ServiceInfo } from "./service-info";
-import UpdateInfo from "./service-update-info";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {

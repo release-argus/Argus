@@ -11,6 +11,13 @@ interface Props {
   removeMe?: () => void;
 }
 
+/**
+ * Command renders fields of a command with any number of arguments
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove the command
+ * @returns A set of form fields for this command
+ */
 const Command: FC<Props> = ({ name, removeMe }) => {
   const { fields, append, remove } = useFieldArray({
     name: name,
@@ -18,6 +25,11 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
+  const placeholder = (index: number) => {
+    if (index === 0) return `e.g. "/bin/bash"`;
+    if (index === 1) return `e.g. "/opt/script.sh"`;
+    return `e.g. "-arg${index - 1}"`;
+  };
 
   return (
     <Col xs={12}>
@@ -27,14 +39,8 @@ const Command: FC<Props> = ({ name, removeMe }) => {
             key={id}
             name={`${name}.${argIndex}.arg`}
             required
-            placeholder={
-              argIndex === 0
-                ? `e.g. "/bin/bash"`
-                : argIndex === 1
-                ? `e.g. "/opt/script.sh"`
-                : `e.g. "-arg${argIndex - 1}"`
-            }
-            onRight={argIndex % 2 === 1}
+            placeholder={placeholder(argIndex)}
+            position={argIndex % 2 === 1 ? "right" : "left"}
           />
         ))}
       </Row>

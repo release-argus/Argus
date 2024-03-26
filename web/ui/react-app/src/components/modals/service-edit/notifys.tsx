@@ -3,15 +3,22 @@ import { Dict, NotifyType } from "types/config";
 import { FC, memo, useCallback, useMemo } from "react";
 
 import Notify from "./notify";
+import { NotifyEditType } from "types/service-edit";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
+  serviceName: string;
+
+  originals?: NotifyEditType[];
   globals?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
   hard_defaults?: Dict<NotifyType>;
 }
 
 const EditServiceNotifys: FC<Props> = ({
+  serviceName,
+
+  originals,
   globals,
   defaults,
   hard_defaults,
@@ -59,6 +66,8 @@ const EditServiceNotifys: FC<Props> = ({
               key={id}
               name={`notify.${index}`}
               removeMe={() => remove(index)}
+              serviceName={serviceName}
+              originals={originals}
               globalNotifyOptions={globalNotifyOptions}
               globals={globals}
               defaults={defaults}

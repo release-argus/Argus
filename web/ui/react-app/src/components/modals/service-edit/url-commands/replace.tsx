@@ -1,6 +1,12 @@
 import { FormItem } from "components/generic/form";
 
-const REGEX = ({ name }: { name: string }) => (
+/**
+ * REPLACE renders the form fields for the Replace URL Command
+ *
+ * @param name - The name of the field in the form
+ * @returns The form fields for this Replace URL Command
+ */
+const REPLACE = ({ name }: { name: string }) => (
   <>
     <FormItem
       key="old"
@@ -10,18 +16,18 @@ const REGEX = ({ name }: { name: string }) => (
       required
       col_xs={7}
       col_sm={4}
-      onRight
+      position="middle"
+      positionXS="right"
     />
     <FormItem
       key="new"
       name={`${name}.new`}
       label="With"
       smallLabel
-      col_xs={12}
       col_sm={4}
-      onRight
+      position="right"
     />
   </>
 );
 
-export default REGEX;
+export default REPLACE;

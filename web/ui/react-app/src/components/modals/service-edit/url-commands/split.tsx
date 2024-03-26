@@ -1,6 +1,12 @@
 import { FormItem } from "components/generic/form";
 
-const REGEX = ({ name }: { name: string }) => (
+/**
+ * SPLIT renders the form fields for the Split URL Command
+ *
+ * @param name - The name of the field in the form
+ * @returns The form fields for this Split URL Command
+ */
+const SPLIT = ({ name }: { name: string }) => (
   <>
     <FormItem
       key="text"
@@ -10,7 +16,7 @@ const REGEX = ({ name }: { name: string }) => (
       required
       col_xs={5}
       col_sm={6}
-      onRight
+      position="middle"
     />
     <FormItem
       key="index"
@@ -21,9 +27,9 @@ const REGEX = ({ name }: { name: string }) => (
       col_xs={2}
       col_sm={2}
       type="number"
-      onRight
+      position="right"
     />
   </>
 );
 
-export default REGEX;
+export default SPLIT;

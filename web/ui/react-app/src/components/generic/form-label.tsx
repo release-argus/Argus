@@ -11,6 +11,16 @@ interface FormLabelProps {
   small?: boolean;
 }
 
+/**
+ * FormLabel is a label for a form item
+ *
+ * @param text - The text of the label
+ * @param tooltip - The tooltip of the label
+ * @param heading - Whether the label is a heading
+ * @param required - Whether the label is required
+ * @param small - Whether the label is small
+ * @returns A label for a form item
+ */
 const FormLabel: FC<FormLabelProps> = ({
   text,
   tooltip,

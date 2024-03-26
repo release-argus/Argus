@@ -30,11 +30,12 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := map[string]struct {
-		env    map[string]string
-		root   *Headers
-		main   *Headers
-		dfault *Headers
-		want   map[string]string
+		env         map[string]string
+		root        *Headers
+		main        *Headers
+		dfault      *Headers
+		hardDefault *Headers
+		want        map[string]string
 	}{
 		"nil root": {
 			root: nil,
@@ -78,6 +79,14 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 		},
 		"header from .Defaults": {
 			dfault: &Headers{
+				{Key: "X-Service", Value: "{{ service_id }}"},
+				{Key: "X-Version", Value: "{{ version }}"}},
+			want: map[string]string{
+				"X-Service": serviceID,
+				"X-Version": latestVersion},
+		},
+		"header from .HardDefaults": {
+			hardDefault: &Headers{
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"}},
 			want: map[string]string{
@@ -142,8 +151,9 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			webhook := WebHook{
 				ServiceStatus: &svcstatus.Status{
 					ServiceID: &serviceID},
-				Main:     &WebHookDefaults{},
-				Defaults: &WebHookDefaults{}}
+				Main:         &WebHookDefaults{},
+				Defaults:     &WebHookDefaults{},
+				HardDefaults: &WebHookDefaults{}}
 			url := "https://example.com"
 			webhook.ServiceStatus.Init(
 				0, 0, 0,
@@ -153,12 +163,13 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			webhook.CustomHeaders = tc.root
 			webhook.Main.CustomHeaders = tc.main
 			webhook.Defaults.CustomHeaders = tc.dfault
+			webhook.HardDefaults.CustomHeaders = tc.hardDefault
 
 			// WHEN setCustomHeaders is called on this request
 			webhook.setCustomHeaders(req)
 
 			// THEN the function returns the correct result
-			if tc.root == nil && tc.main == nil && tc.dfault == nil {
+			if tc.root == nil && tc.main == nil && tc.dfault == nil && tc.hardDefault == nil {
 				if len(req.Header) != 0 {
 					t.Fatalf("custom headers was nil but Headers are %v",
 						req.Header)

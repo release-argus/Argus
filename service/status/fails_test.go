@@ -482,7 +482,7 @@ shoutrrr: {bash: true, bish: true, bosh: true},
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			fails := Fails{}
 			fails.Command.Init(len(tc.commandFails))

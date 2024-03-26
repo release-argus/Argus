@@ -38,7 +38,13 @@ func TestRelease_String(t *testing.T) {
 			release: &Release{Assets: []Asset{
 				{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
 				{ID: 2, Name: "test2"}}},
-			want: `{"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"},{"id":2,"name":"test2"}]}`},
+			want: `
+				{
+					"assets": [
+						{"id": 1, "name": "test", "url": "https://test.com", "browser_download_url": "https://test.com/download"},
+						{"id": 2, "name": "test2"}
+					]
+				}`},
 		"all fields defined": {
 			release: &Release{
 				URL:        "https://test.com",
@@ -48,13 +54,23 @@ func TestRelease_String(t *testing.T) {
 				Assets: []Asset{
 					{ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"}}},
 			release_semantic_version: "1.2.3",
-			want:                     `{"url":"https://test.com","assets_url":"https://test.com/assets","tag_name":"v1.2.3","prerelease":true,"assets":[{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}]}`},
+			want: `
+				{
+					"url": "https://test.com",
+					"assets_url": "https://test.com/assets",
+					"tag_name": "v1.2.3",
+					"prerelease": true,
+					"assets": [
+						{"id": 1, "name": "test", "url": "https://test.com", "browser_download_url": "https://test.com/download"}
+					]
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tc.want = trimJSON(tc.want)
 			if tc.release_semantic_version != "" {
 				tc.release.SemanticVersion, _ = semver.NewVersion(tc.release_semantic_version)
 			}
@@ -81,16 +97,24 @@ func TestAsset_String(t *testing.T) {
 			want:  ""},
 		"empty": {
 			asset: &Asset{},
-			want:  `{"id":0}`},
+			want:  `{"id": 0}`},
 		"all fields defined": {
 			asset: &Asset{
 				ID: 1, Name: "test", URL: "https://test.com", BrowserDownloadURL: "https://test.com/download"},
-			want: `{"id":1,"name":"test","url":"https://test.com","browser_download_url":"https://test.com/download"}`},
+			want: `
+				{
+					"id": 1,
+					"name": "test",
+					"url": "https://test.com",
+					"browser_download_url": "https://test.com/download"
+				}`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			tc.want = trimJSON(tc.want)
 
 			// WHEN the Asset is stringified with String
 			got := tc.asset.String()

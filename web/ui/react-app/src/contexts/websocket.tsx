@@ -67,7 +67,7 @@ export const WebSocketProvider = (props: Props) => {
 
   const { data: orderData } = useQuery({
     queryKey: ["service/order"],
-    queryFn: () => fetchJSON<OrderAPIResponse>(`api/v1/service/order`),
+    queryFn: () => fetchJSON<OrderAPIResponse>({ url: "api/v1/service/order" }),
     gcTime: 1000 * 60 * 30, // 30 mins
   });
   useEffect(() => {
@@ -80,9 +80,9 @@ export const WebSocketProvider = (props: Props) => {
       });
 
       orderData.order.forEach((service) => {
-        fetchJSON<ServiceSummaryType | undefined>(
-          `api/v1/service/summary/${encodeURIComponent(service)}`
-        ).then((data) => {
+        fetchJSON<ServiceSummaryType | undefined>({
+          url: `api/v1/service/summary/${encodeURIComponent(service)}`,
+        }).then((data) => {
           if (data)
             setMonitorData({
               page: "APPROVALS",

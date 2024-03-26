@@ -1,16 +1,30 @@
-import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
+import {
+  FormItem,
+  FormKeyValMap,
+  FormLabel,
+  FormList,
+} from "components/generic/form";
 import {
   convertHeadersFromString,
   convertOpsGenieTargetFromString,
-} from "../util/api-ui-conversions";
-import { useEffect, useMemo } from "react";
+  convertStringToFieldArray,
+} from "components/modals/service-edit/util";
 
 import { NotifyOpsGenieType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { OpsGenieTargets } from "./extra";
-import { globalOrDefault } from "./util";
-import { useFormContext } from "react-hook-form";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
+import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { useMemo } from "react";
 
+/**
+ * OPSGENIE renders the form fields for the OpsGenie Notify
+ *
+ * @param name - The name of the field in the form
+ * @param global - The global values for this OpsGenie Notify
+ * @param defaults - The default values for the OpsGenie Notify
+ * @param hard_defaults - The hard default values for the OpsGenie Notify
+ * @returns The form fields for this OpsGenie Notify
+ */
 const OPSGENIE = ({
   name,
 
@@ -24,55 +38,105 @@ const OPSGENIE = ({
   defaults?: NotifyOpsGenieType;
   hard_defaults?: NotifyOpsGenieType;
 }) => {
-  const { getValues, setValue } = useFormContext();
-
   const convertedDefaults = useMemo(
     () => ({
-      details: convertHeadersFromString(
-        globalOrDefault(
-          global?.params?.details as string,
-          defaults?.params?.details as string,
-          hard_defaults?.params?.details as string
-        )
-      ),
-      responders: convertOpsGenieTargetFromString(
-        globalOrDefault(
-          global?.params?.responders as string,
-          defaults?.params?.responders as string,
-          hard_defaults?.params?.responders as string
-        )
-      ),
-      visibleto: convertOpsGenieTargetFromString(
-        globalOrDefault(
-          global?.params?.visibleto as string,
-          defaults?.params?.visibleto as string,
-          hard_defaults?.params?.visibleto as string
-        )
-      ),
+      // URL Fields
+      url_fields: {
+        apiKey: globalOrDefault(
+          global?.url_fields?.apikey,
+          defaults?.url_fields?.apikey,
+          hard_defaults?.url_fields?.apikey
+        ),
+        host: globalOrDefault(
+          global?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        port: globalOrDefault(
+          global?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+      },
+      // Params
+      params: {
+        actions: convertStringToFieldArray(
+          globalOrDefault(
+            global?.params?.actions as string,
+            defaults?.params?.actions as string,
+            hard_defaults?.params?.actions as string
+          )
+        ),
+        alias: globalOrDefault(
+          global?.params?.alias,
+          defaults?.params?.alias,
+          hard_defaults?.params?.alias
+        ),
+        description: globalOrDefault(
+          global?.params?.description,
+          defaults?.params?.description,
+          hard_defaults?.params?.description
+        ),
+        details: convertHeadersFromString(
+          globalOrDefault(
+            global?.params?.details as string,
+            defaults?.params?.details as string,
+            hard_defaults?.params?.details as string
+          )
+        ),
+        entity: globalOrDefault(
+          global?.params?.entity,
+          defaults?.params?.entity,
+          hard_defaults?.params?.entity
+        ),
+        note: globalOrDefault(
+          global?.params?.note,
+          defaults?.params?.note,
+          hard_defaults?.params?.note
+        ),
+        priority: globalOrDefault(
+          global?.params?.priority,
+          defaults?.params?.priority,
+          hard_defaults?.params?.priority
+        ),
+        responders: convertOpsGenieTargetFromString(
+          globalOrDefault(
+            global?.params?.responders as string,
+            defaults?.params?.responders as string,
+            hard_defaults?.params?.responders as string
+          )
+        ),
+        source: globalOrDefault(
+          global?.params?.source,
+          defaults?.params?.source,
+          hard_defaults?.params?.source
+        ),
+        tags: globalOrDefault(
+          global?.params?.tags,
+          defaults?.params?.tags,
+          hard_defaults?.params?.tags
+        ),
+        title: globalOrDefault(
+          global?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+        user: globalOrDefault(
+          global?.params?.user,
+          defaults?.params?.user,
+          hard_defaults?.params?.user
+        ),
+        visibleto: convertOpsGenieTargetFromString(
+          globalOrDefault(
+            global?.params?.visibleto as string,
+            defaults?.params?.visibleto as string,
+            hard_defaults?.params?.visibleto as string
+          )
+        ),
+      },
     }),
     [global, defaults, hard_defaults]
   );
-
-  useEffect(() => {
-    const details = getValues(`${name}.params.details`);
-
-    if (typeof details === "string")
-      setValue(`${name}.params.details`, convertHeadersFromString(details));
-
-    const responders = getValues(`${name}.paramms.responders`);
-    if (typeof responders === "string")
-      setValue(
-        `${name}.params.responders`,
-        convertOpsGenieTargetFromString(responders)
-      );
-
-    const visibleto = getValues(`${name}.params.visibleto`);
-    if (typeof visibleto === "string")
-      setValue(
-        `${name}.params.visibleto`,
-        convertOpsGenieTargetFromString(visibleto)
-      );
-  }, []);
 
   return (
     <>
@@ -89,79 +153,50 @@ const OPSGENIE = ({
           col_sm={9}
           label="Host"
           tooltip="The OpsGenie API host. Use 'api.eu.opsgenie.com' for EU instances"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.host,
-            defaults?.url_fields?.host,
-            hard_defaults?.url_fields?.host
-          )}
+          defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
           type="number"
           label="Port"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.port,
-            defaults?.url_fields?.port,
-            hard_defaults?.url_fields?.port
-          )}
-          onRight
+          defaultVal={convertedDefaults.url_fields.port}
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.apikey`}
           required
           col_sm={12}
           label="API Key"
-          defaultVal={globalOrDefault(
-            global?.url_fields?.apikey,
-            defaults?.url_fields?.apikey,
-            hard_defaults?.url_fields?.apikey
-          )}
+          defaultVal={convertedDefaults.url_fields.apiKey}
         />
       </>
       <>
         <FormLabel text="Params" heading />
-        <FormItem
+        <FormList
           name={`${name}.params.actions`}
           label="Actions"
           tooltip="Custom actions that will be available for the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.actions,
-            defaults?.params?.actions,
-            hard_defaults?.params?.actions
-          )}
+          defaults={convertedDefaults.params.actions}
         />
         <FormItem
           name={`${name}.params.alias`}
           label="Alias"
           tooltip="Client-defined identifier of the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.alias,
-            defaults?.params?.alias,
-            hard_defaults?.params?.alias
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.alias}
         />
         <FormItem
           name={`${name}.params.description`}
           label="Description"
           tooltip="Description field of the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.description,
-            defaults?.params?.description,
-            hard_defaults?.params?.description
-          )}
+          defaultVal={convertedDefaults.params.description}
+          position="right"
         />
         <FormItem
           name={`${name}.params.note`}
           label="Note"
           tooltip="Additional note that will be added while creating the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.note,
-            defaults?.params?.note,
-            hard_defaults?.params?.note
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.note}
         />
         <FormKeyValMap
           name={`${name}.params.details`}
@@ -169,84 +204,60 @@ const OPSGENIE = ({
           tooltip="Map of key-val custom props of the alert"
           keyPlaceholder="e.g. X-Authorization"
           valuePlaceholder="e.g. 'Bearer TOKEN'"
-          defaults={convertedDefaults.details}
+          defaults={convertedDefaults.params.details}
         />
         <FormItem
           name={`${name}.params.entity`}
           label="Entity"
           tooltip="Entity field of the alert that is generally used to specify which domain the Source field of the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.entity,
-            defaults?.params?.entity,
-            hard_defaults?.params?.entity
-          )}
+          defaultVal={convertedDefaults.params.entity}
         />
         <FormItem
           name={`${name}.params.priority`}
           type="number"
           label="Priority"
           tooltip="Priority level of the alert. 1/2/3/4/5"
-          defaultVal={globalOrDefault(
-            global?.params?.priority,
-            defaults?.params?.priority,
-            hard_defaults?.params?.priority
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.priority}
+          position="right"
         />
         <OpsGenieTargets
           name={`${name}.params.responders`}
           label="Responders"
           tooltip="Teams, users, escalations and schedules that the alert will be routed to"
-          defaults={convertedDefaults.responders}
+          defaults={convertedDefaults.params.responders}
         />
         <FormItem
           name={`${name}.params.source`}
           label="Source"
           tooltip="Source field of the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.source,
-            defaults?.params?.source,
-            hard_defaults?.params?.source
-          )}
+          defaultVal={convertedDefaults.params.source}
         />
         <FormItem
           name={`${name}.params.tags`}
           label="Tags"
           tooltip="Tags of the alert"
-          defaultVal={globalOrDefault(
-            global?.params?.tags,
-            defaults?.params?.tags,
-            hard_defaults?.params?.tags
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.tags}
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
           label="Title"
           tooltip="Notification title, optionally set by the sender"
-          defaultVal={globalOrDefault(
-            global?.params?.title,
-            defaults?.params?.title,
-            hard_defaults?.params?.title
-          )}
+          defaultVal={convertedDefaults.params.title}
         />
         <FormItem
           name={`${name}.params.user`}
           label="User"
           tooltip="Display name of the request owner"
-          defaultVal={globalOrDefault(
-            global?.params?.user,
-            defaults?.params?.user,
-            hard_defaults?.params?.user
-          )}
-          onRight
+          defaultVal={convertedDefaults.params.user}
+          position="right"
         />
       </>
       <OpsGenieTargets
         name={`${name}.params.visibleto`}
         label="Visible To"
         tooltip="Teams and users that the alert will become visible to without sending any notification"
-        defaults={convertedDefaults.visibleto}
+        defaults={convertedDefaults.params.visibleto}
       />
     </>
   );

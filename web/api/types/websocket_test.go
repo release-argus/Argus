@@ -30,10 +30,11 @@ func TestWebSocketMessage_String(t *testing.T) {
 	}{
 		"empty": {
 			websocketMessage: WebSocketMessage{},
-			want: `{
-"page":"",
-"type":""
-}`,
+			want: `
+				{
+					"page": "",
+					"type": ""
+				}`,
 		},
 		"filled": {
 			websocketMessage: WebSocketMessage{
@@ -47,38 +48,45 @@ func TestWebSocketMessage_String(t *testing.T) {
 				ServiceData: &ServiceSummary{
 					ID: "summary id"},
 				CommandData: map[string]*CommandSummary{
-					"alpha": {Failed: boolPtr(true), NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)}},
+					"alpha": {
+						Failed:       boolPtr(true),
+						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)}},
 				WebHookData: map[string]*WebHookSummary{
-					"omega": {Failed: boolPtr(true), NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}}},
-			want: `{
-"version":1,
-"page":"foo",
-"type":"bar",
-"sub_type":"baz",
-"target":"bish",
-"order":[
-"zing",
-"zap",
-"wallop"
-],
-"service_data":{
-	"id":"summary id"},
-"command_data":{
-	"alpha":{"failed":
-	true,
-	"next_runnable":"2010-01-01T00:00:00Z"}},
-	"webhook_data":{
-		"omega":{
-			"failed":true,
-			"next_runnable":"2020-02-02T00:00:00Z"
-		}
-	}
-}`,
+					"omega": {
+						Failed:       boolPtr(true),
+						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}}},
+			want: `
+				{
+					"version": 1,
+					"page": "foo",
+					"type": "bar",
+					"sub_type": "baz",
+					"target": "bish",
+					"order": [
+					"zing",
+					"zap",
+					"wallop"
+					],
+					"service_data": {
+						"id": "summary id"},
+					"command_data": {
+						"alpha": {"failed":
+						true,
+						"next_runnable": "2010-01-01T00:00:00Z"}},
+						"webhook_data": {
+							"omega": {
+								"failed": true,
+								"next_runnable": "2020-02-02T00:00:00Z"
+							}
+						}
+				}`,
 		}}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			tc.want = trimJSON(tc.want)
 
 			// WHEN the GitHubData is stringified with String
 			got := tc.websocketMessage.String()

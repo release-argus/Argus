@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -408,4 +410,76 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	//nolint:errcheck
 	w.Write([]byte{})
+}
+
+// httpNotifyTest handles testing a Notify.
+//
+// # POST
+//
+// Body:
+//
+//	service_name: string
+//	name_previous?: string (the name of the notify before the current changes)
+//	name?: string (required if name_previous not set)
+//	type?: string
+//	options?: map[string]string
+//	url_fields?: map[string]string
+//	params?: map[string]string
+//	service_url?: string
+//	web_url?: string
+func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
+	// Set headers
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Type", "application/json")
+
+	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	api.Log.Verbose("-", logFrom, true)
+
+	// Payload
+	payload := http.MaxBytesReader(w, r.Body, 102400)
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(payload); err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+	var parsedPayload shoutrrr.TestPayload
+	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Get the Notify
+	var serviceNotifies shoutrrr.Slice
+	api.Config.OrderMutex.RLock()
+	if api.Config.Service[parsedPayload.ServiceName] != nil {
+		serviceNotifies = api.Config.Service[parsedPayload.ServiceName].Notify
+	}
+	testNotify, serviceURL, err := shoutrrr.FromPayload(
+		&parsedPayload,
+		&serviceNotifies,
+		api.Config.Notify,
+		api.Config.Defaults.Notify,
+		api.Config.HardDefaults.Notify)
+	api.Config.OrderMutex.RUnlock()
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Test the notify
+	err = testNotify.TestSend(serviceURL)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Return 200
+	w.WriteHeader(http.StatusOK)
+	//nolint:errcheck
+	w.Write([]byte(`{}`))
 }

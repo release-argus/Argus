@@ -629,7 +629,7 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout
 
 			msg := "var is not default from PrintlnIfNotDefault"
 			stdout := os.Stdout
@@ -1044,6 +1044,123 @@ func TestNormaliseNewlines(t *testing.T) {
 	}
 }
 
+func TestCopyIfSecret(t *testing.T) {
+	// GIVEN maps with secrets to be copied
+	tests := map[string]struct {
+		input    map[string]string
+		copyFrom map[string]string
+		want     map[string]string
+		fields   []string
+	}{
+		"empty map": {
+			input: map[string]string{},
+			copyFrom: map[string]string{
+				"foo": "bar"},
+			want:   map[string]string{},
+			fields: []string{"foo"},
+		},
+		"copy only '<secret>'s in fields": {
+			input: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>"},
+			copyFrom: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "<secret>"},
+			fields: []string{"test"},
+		},
+		"copy only '<secret>'s in fields that also exist in from": {
+			input: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>",
+				"bar":  "<secret>"},
+			copyFrom: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "<secret>",
+				"bar":  "<secret>"},
+			fields: []string{"test", "bar"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CopyIfSecret is called
+			CopyIfSecret(tc.copyFrom, tc.input, tc.fields)
+
+			// THEN the secrets are copied correctly
+			if len(tc.input) != len(tc.want) {
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, tc.input)
+			}
+			for i := range tc.input {
+				if tc.input[i] != tc.want[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, tc.input)
+				}
+			}
+		})
+	}
+}
+
+func TestInitMap(t *testing.T) {
+	// GIVEN a map
+	tests := map[string]struct {
+		input map[string]string
+	}{
+		"nil map": {
+			input: nilMap(),
+		},
+		"empty map": {
+			input: map[string]string{},
+		},
+		"non-empty map": {
+			input: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"non-empty map with same keys but differing case": {
+			input: map[string]string{
+				"test": "123",
+				"tESt": "bar"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			had := CopyMap(tc.input)
+
+			// WHEN InitMap is called
+			InitMap(&tc.input)
+
+			// THEN the map is initialised correctly
+			if tc.input == nil {
+				t.Fatalf("map is nil")
+			}
+			// AND any values inside haven't changed
+			if len(tc.input) != len(had) {
+				t.Fatalf("want: %v\ngot:  %v",
+					had, tc.input)
+			}
+			for i := range tc.input {
+				if tc.input[i] != had[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						had, tc.input)
+				}
+			}
+		})
+	}
+
+}
+
 func TestCopyMap(t *testing.T) {
 	// GIVEN different byte strings
 	tests := map[string]struct {
@@ -1083,6 +1200,152 @@ func TestCopyMap(t *testing.T) {
 			if &got == &tc.want {
 				t.Error("map wasn't copied, they have the same addresses")
 			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("want: %v\ngot:  %v",
+					tc.want, got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("want: %v\ngot:  %v",
+						tc.want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestMergeMaps(t *testing.T) {
+	// GIVEN two maps and a list of fields that may contain secrets
+	tests := map[string]struct {
+		base      map[string]string
+		overrides map[string]string
+		fields    []string
+		want      map[string]string
+	}{
+		"empty maps": {
+			base:      map[string]string{},
+			overrides: map[string]string{},
+			want:      map[string]string{},
+		},
+		"nil maps": {
+			base:      nilMap(),
+			overrides: nilMap(),
+			want:      map[string]string{},
+		},
+		"empty base map": {
+			base: map[string]string{},
+			overrides: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"nil base map": {
+			base: nilMap(),
+			overrides: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"empty overrides map": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: map[string]string{},
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"nil overrides map": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: nilMap(),
+			want: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+		},
+		"non-empty maps": {
+			base: map[string]string{
+				"test":      "123",
+				"foo":       "bar",
+				"bish":      "bash",
+				"something": "else"},
+			overrides: map[string]string{
+				"test": "456",
+				"foo":  "baz",
+				"bish": ""},
+			want: map[string]string{
+				"test":      "456",
+				"foo":       "baz",
+				"bish":      "",
+				"something": "else"},
+		},
+		"ref secret in base map": {
+			base: map[string]string{
+				"test": "123"},
+			overrides: map[string]string{
+				"test": "<secret>"},
+			want: map[string]string{
+				"test": "123"},
+			fields: []string{"test"},
+		},
+		"ref secret in base map, secret not found/empty": {
+			base: map[string]string{
+				"foo": ""},
+			overrides: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			want: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			fields: []string{"foo", "test"},
+		},
+		"secret not in fields": {
+			base: map[string]string{
+				"test": "123",
+				"foo":  "bar"},
+			overrides: map[string]string{
+				"test": "<secret>",
+				"foo":  "<secret>"},
+			want: map[string]string{
+				"foo":  "<secret>",
+				"test": "<secret>"},
+			fields: []string{"other"},
+		},
+		"non-empty maps with secrets": {
+			base: map[string]string{
+				"test":      "123",
+				"foo":       "bar",
+				"bish":      "bash",
+				"something": "else",
+				"nothing":   ""},
+			overrides: map[string]string{
+				"test":    "456",
+				"foo":     "<secret>",
+				"bish":    "<secret>",
+				"nothing": "<secret>"},
+			want: map[string]string{
+				"test":      "456",
+				"foo":       "<secret>",
+				"bish":      "bash",
+				"something": "else",
+				"nothing":   "<secret>"},
+			fields: []string{"test", "bish"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN MergeMaps is called
+			got := MergeMaps(tc.base, tc.overrides, tc.fields)
+
+			// THEN the maps are merged correctly
 			if len(got) != len(tc.want) {
 				t.Fatalf("want: %v\ngot:  %v",
 					tc.want, got)
@@ -1331,43 +1594,43 @@ func TestEvalEnvVars(t *testing.T) {
 		want  string
 	}{
 		"no env vars": {
-			input: "hello there ${foo}",
-			want:  "hello there ${foo}",
+			input: "hello there ${not an env var}",
+			want:  "hello there ${not an env var}",
 		},
 		"1 env var": {
-			input: "hello there ${foo}",
-			env:   map[string]string{"foo": "bar"},
+			env:   map[string]string{"TESTEVALENVVARS_ONE": "bar"},
+			input: "hello there ${TESTEVALENVVARS_ONE}",
 			want:  "hello there bar",
 		},
 		"2 env vars": {
-			input: "hello there ${foo} ${bar}",
 			env: map[string]string{
-				"foo": "bar",
-				"bar": "baz"},
-			want: "hello there bar baz",
+				"TESTEVALENVVARS_TWO":   "bar",
+				"TESTEVALENVVARS_THREE": "baz"},
+			input: "hello there ${TESTEVALENVVARS_TWO} ${TESTEVALENVVARS_THREE}",
+			want:  "hello there bar baz",
 		},
 		"unset env var": {
-			input: "hello there ${foo}",
-			want:  "hello there ${foo}",
+			input: "hello there ${TESTEVALENVVARS_UNSET}",
+			want:  "hello there ${TESTEVALENVVARS_UNSET}",
 		},
 		"empty env var": {
-			input: "hello there ${foo}",
-			env:   map[string]string{"foo": ""},
+			env:   map[string]string{"TESTEVALENVVARS_FOUR": ""},
+			input: "hello there ${TESTEVALENVVARS_FOUR}",
 			want:  "hello there ",
 		},
 		"nested env vars not evaluated": {
-			input: "hello there ${foo} ${bar}",
 			env: map[string]string{
-				"foo": "bar",
-				"bar": "${baz}",
-				"baz": "qux"},
-			want: "hello there bar ${baz}",
+				"TESTEVALENVVARS_FIVE":  "bar",
+				"TESTEVALENVVARS_SIX":   "${TESTEVALENVVARS_SEVEN}",
+				"TESTEVALENVVARS_SEVEN": "qux"},
+			input: "hello there ${TESTEVALENVVARS_FIVE} ${TESTEVALENVVARS_SIX}",
+			want:  "hello there bar ${TESTEVALENVVARS_SEVEN}",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)

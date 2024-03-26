@@ -18,7 +18,7 @@ package service
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -2453,7 +2453,7 @@ func TestService_GiveSecrets(t *testing.T) {
 func TestFromPayload_ReadFromFail(t *testing.T) {
 	// GIVEN an invalid payload
 	payloadStr := "this is a long payload"
-	payload := ioutil.NopCloser(bytes.NewReader([]byte(payloadStr)))
+	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
 	payload = http.MaxBytesReader(nil, payload, 5)
 
 	// WHEN we call New
@@ -2510,11 +2510,16 @@ func TestFromPayload(t *testing.T) {
 			errRegex: "^json: cannot unmarshal bool into Go struct field Service.name of type string$",
 		},
 		"invalid SecretRefs payload": {
-			payload:  `{"webhook": {"foo": {"oldIndex": false}}}`,
+			payload: `{
+				"webhook": {
+					"foo": {
+						"oldIndex": false}}}`,
 			errRegex: "^json: cannot unmarshal bool into Go struct field whSecretRef.webhook.oldIndex of type string",
 		},
 		"active True becomes nil": {
-			payload: `{"options":{"active":true}}`,
+			payload: `{
+				"options": {
+					"active": true}}`,
 			// Defaults as otherwise everything will be zero, so won't print
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2524,7 +2529,9 @@ func TestFromPayload(t *testing.T) {
 				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
 		},
 		"active nil stays nil": {
-			payload: `{"options":{"active":null}}`,
+			payload: `{
+				"options": {
+					"active": null}}`,
 			// Defaults as otherwise everything will be zero, so won't print
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2534,7 +2541,9 @@ func TestFromPayload(t *testing.T) {
 				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
 		},
 		"active False stays false": {
-			payload: `{"options":{"active":false}}`,
+			payload: `{
+				"options": {
+					"active": false}}`,
 			// Defaults as otherwise everything will be zero, so won't print
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2544,7 +2553,11 @@ func TestFromPayload(t *testing.T) {
 				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
 		},
 		"Require.Docker removed if no Image&Tag": {
-			payload: `{"latest_version":{"require":{"docker":{"type":"ghcr"}}}}`,
+			payload: `{
+				"latest_version": {
+					"require": {
+						"docker": {
+							"type": "ghcr"}}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2553,12 +2566,12 @@ func TestFromPayload(t *testing.T) {
 		},
 		"Require.Docker stays if have Type&Image&Tag": {
 			payload: `{
-				"latest_version":{
-					"require":{
-						"docker":{
-							"type":"ghcr",
-							"image":"release-argus-argus",
-							"tag":"latest"}}}}`,
+				"latest_version": {
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus-argus",
+							"tag": "latest"}}}}`,
 			want: &Service{
 				Options: opt.Options{Defaults: &opt.OptionsDefaults{}},
 				LatestVersion: latestver.Lookup{
@@ -2618,8 +2631,7 @@ func TestFromPayload(t *testing.T) {
 					"basic_auth": {
 						"password": "<secret>"},
 					"headers": [
-						{"key": "X-Foo", "value": "<secret>", "oldIndex": 0}
-					]}}`,
+						{"key": "X-Foo", "value": "<secret>", "oldIndex": 0}]}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2700,8 +2712,7 @@ func TestFromPayload(t *testing.T) {
 						"type": "teams",
 						"url_fields": {
 							"altid": "<secret>"},
-						"oldIndex": "teams-initial"}
-				}}`,
+						"oldIndex": "teams-initial"}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
@@ -2884,13 +2895,13 @@ func TestFromPayload(t *testing.T) {
 						"type": "github",
 						"secret": "<secret>",
 						"custom_headers": [
-							{"key":"X-Foo", "Value": "<secret>", "oldIndex": 0}],
+							{"key": "X-Foo", "Value": "<secret>", "oldIndex": 0}],
 						"oldIndex": "github-initial"},
 					"gitlab-": {
 						"type": "gitlab",
 						"secret": "<secret>",
 						"custom_headers": [
-							{"key":"X-Bar", "Value": "<secret>", "oldIndex": 0}],
+							{"key": "X-Bar", "Value": "<secret>", "oldIndex": 0}],
 						"oldIndex": "gitlab-initial"}}}}`,
 			want: &Service{
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
@@ -3065,8 +3076,9 @@ func TestFromPayload(t *testing.T) {
 			t.Parallel()
 
 			// Convert the string payload to a ReadCloser
+			tc.payload = trimJSON(tc.payload)
 			reader := bytes.NewReader([]byte(tc.payload))
-			payload := ioutil.NopCloser(reader)
+			payload := io.NopCloser(reader)
 			if tc.serviceHardDefaults == nil {
 				tc.serviceHardDefaults = &Defaults{}
 			}

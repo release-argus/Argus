@@ -435,7 +435,7 @@ func TestLookup_Track(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - can't run in parallel because of stdout
+			// t.Parallel() - cannot run in parallel because of stdout
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
