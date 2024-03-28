@@ -113,7 +113,7 @@ const FormItem: FC<FormItemProps> = ({
               // Validate that it's a number
               if (isNumber) {
                 validation = !isNaN(Number(testValue));
-                if (!validation) return "Should be a number";
+                if (!validation) return "Must be a number";
               }
 
               // Validate that it's a URL (with prefix)
@@ -153,7 +153,7 @@ const FormItem: FC<FormItemProps> = ({
                           (item: { [x: string]: string }) => item[uniqueName]
                         )
                         .filter((item: string) => item === value).length === 1;
-                return validation || "Should be unique";
+                return validation || "Must be unique";
               }
 
               return validation;

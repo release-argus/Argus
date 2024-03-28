@@ -6,7 +6,7 @@ import {
 
 import { NotifyJoinType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 const JOIN = ({
@@ -26,7 +26,7 @@ const JOIN = ({
     () => ({
       // URL Fields
       url_fields: {
-        apikey: globalOrDefault(
+        apikey: firstNonDefault(
           global?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
@@ -34,17 +34,17 @@ const JOIN = ({
       },
       // Params
       params: {
-        devices: globalOrDefault(
+        devices: firstNonDefault(
           global?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         ),
-        icon: globalOrDefault(
+        icon: firstNonDefault(
           global?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

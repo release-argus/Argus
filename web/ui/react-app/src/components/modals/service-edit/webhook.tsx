@@ -12,7 +12,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 
 interface Props {
   name: string;
@@ -84,23 +84,22 @@ const EditServiceWebHook: FC<Props> = ({
         global?.custom_headers ??
         defaults?.custom_headers ??
         hard_defaults?.custom_headers,
-      delay: globalOrDefault(
+      delay: firstNonDefault(
         global?.delay,
         defaults?.delay,
         hard_defaults?.delay
       ),
-      desired_status_code: globalOrDefault(
+      desired_status_code: firstNonDefault(
         global?.desired_status_code,
         defaults?.desired_status_code,
         hard_defaults?.desired_status_code
       ),
-      max_tries: `${
-        global?.max_tries ??
-        defaults?.max_tries ??
-        hard_defaults?.max_tries ??
-        ""
-      }`,
-      secret: globalOrDefault(
+      max_tries: firstNonDefault(
+        global?.max_tries,
+        defaults?.max_tries,
+        hard_defaults?.max_tries
+      ),
+      secret: firstNonDefault(
         global?.secret,
         defaults?.secret,
         hard_defaults?.secret
@@ -109,8 +108,8 @@ const EditServiceWebHook: FC<Props> = ({
         global?.silent_fails ??
         defaults?.silent_fails ??
         hard_defaults?.silent_fails,
-      type: globalOrDefault(global?.type, defaults?.type, hard_defaults?.type),
-      url: globalOrDefault(global?.url, defaults?.url, hard_defaults?.url),
+      type: firstNonDefault(global?.type, defaults?.type, hard_defaults?.type),
+      url: firstNonDefault(global?.url, defaults?.url, hard_defaults?.url),
     }),
     [global, defaults, hard_defaults]
   );

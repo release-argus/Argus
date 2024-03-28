@@ -2,7 +2,7 @@ import { FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyGoogleChatType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 const GOOGLE_CHAT = ({
@@ -22,7 +22,7 @@ const GOOGLE_CHAT = ({
     () => ({
       // URL Fields
       url_fields: {
-        raw: globalOrDefault(
+        raw: firstNonDefault(
           global?.url_fields?.raw,
           defaults?.url_fields?.raw,
           hard_defaults?.url_fields?.raw

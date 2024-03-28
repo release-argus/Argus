@@ -140,6 +140,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
               className="btn-unchecked"
               style={{ float: "left" }}
               onClick={removeLast}
+              disabled={fields.length === 0}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>

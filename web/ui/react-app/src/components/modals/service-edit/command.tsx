@@ -25,6 +25,13 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    if (fields.length > 1) return remove(fields.length - 1);
+    if (removeMe) return removeMe();
+    return undefined;
+  }, [fields.length]);
+
   const placeholder = (index: number) => {
     if (index === 0) return `e.g. "/bin/bash"`;
     if (index === 1) return `e.g. "/opt/script.sh"`;
@@ -61,11 +68,8 @@ const Command: FC<Props> = ({ name, removeMe }) => {
         <Button
           className="btn-unchecked mb-3"
           style={{ float: "right" }}
-          onClick={() =>
-            fields.length < 2 && removeMe
-              ? removeMe()
-              : remove(fields.length - 1)
-          }
+          onClick={removeLast}
+          disabled={fields.length === 0}
         >
           <FontAwesomeIcon icon={faMinus} />
         </Button>

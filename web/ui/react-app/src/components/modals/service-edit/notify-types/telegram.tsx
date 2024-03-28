@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTelegramType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
@@ -44,7 +44,7 @@ const TELEGRAM = ({
     () => ({
       // URL Fields
       url_fields: {
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -52,33 +52,33 @@ const TELEGRAM = ({
       },
       // Params
       params: {
-        chats: globalOrDefault(
+        chats: firstNonDefault(
           global?.params?.chats,
           defaults?.params?.chats,
           hard_defaults?.params?.chats
         ),
         notification:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.notification,
               defaults?.params?.notification,
               hard_defaults?.params?.notification
             )
           ) ?? true,
-        parsemode: globalOrDefault(
+        parsemode: firstNonDefault(
           global?.params?.parsemode,
           defaults?.params?.parsemode,
           hard_defaults?.params?.parsemode
         ).toLowerCase(),
         preview:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.preview,
               defaults?.params?.preview,
               hard_defaults?.params?.preview
             )
           ) ?? true,
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

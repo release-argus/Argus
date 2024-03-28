@@ -2,7 +2,7 @@ import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTeamsType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -31,22 +31,22 @@ const TEAMS = ({
     () => ({
       // URL Fields
       url_fields: {
-        altid: globalOrDefault(
+        altid: firstNonDefault(
           global?.url_fields?.altid,
           defaults?.url_fields?.altid,
           hard_defaults?.url_fields?.altid
         ),
-        group: globalOrDefault(
+        group: firstNonDefault(
           global?.url_fields?.group,
           defaults?.url_fields?.group,
           hard_defaults?.url_fields?.group
         ),
-        groupowner: globalOrDefault(
+        groupowner: firstNonDefault(
           global?.url_fields?.groupowner,
           defaults?.url_fields?.groupowner,
           hard_defaults?.url_fields?.groupowner
         ),
-        tenant: globalOrDefault(
+        tenant: firstNonDefault(
           global?.url_fields?.tenant,
           defaults?.url_fields?.tenant,
           hard_defaults?.url_fields?.tenant
@@ -54,17 +54,17 @@ const TEAMS = ({
       },
       // Params
       params: {
-        color: globalOrDefault(
+        color: firstNonDefault(
           global?.params?.color,
           defaults?.params?.color,
           hard_defaults?.params?.color
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.params?.host,
           defaults?.params?.host,
           hard_defaults?.params?.host
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

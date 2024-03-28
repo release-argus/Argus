@@ -53,8 +53,6 @@ func FromPayload(
 	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
 	nType := util.DefaultIfNil(payload.Type)
 
-	// Handle NamePrevious being undefined, but that Notify existing.
-	payload.NamePrevious = util.FirstNonDefault(payload.NamePrevious, payload.Name)
 	// Original Notifier?
 	original := &Shoutrrr{}
 	if serviceNotifies != nil && (*serviceNotifies)[payload.NamePrevious] != nil {

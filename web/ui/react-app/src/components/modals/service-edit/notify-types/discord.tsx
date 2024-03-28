@@ -7,7 +7,7 @@ import {
 import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
@@ -37,12 +37,12 @@ const DISCORD = ({
     () => ({
       // URL Fields
       url_fields: {
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
-        webhookid: globalOrDefault(
+        webhookid: firstNonDefault(
           global?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
@@ -50,25 +50,25 @@ const DISCORD = ({
       },
       // Params
       params: {
-        avatar: globalOrDefault(
+        avatar: firstNonDefault(
           global?.params?.avatar,
           defaults?.params?.avatar,
           hard_defaults?.params?.avatar
         ),
         splitlines:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.splitlines,
               defaults?.splitlines,
               hard_defaults?.splitlines
             )
           ) ?? true,
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
-        username: globalOrDefault(
+        username: firstNonDefault(
           global?.params?.username,
           defaults?.params?.username,
           hard_defaults?.params?.username

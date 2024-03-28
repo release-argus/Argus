@@ -13,7 +13,7 @@ import {
   ServiceEditType,
 } from "types/service-edit";
 
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { urlCommandsTrimArray } from "./url-command-trim";
 
 /**
@@ -101,7 +101,7 @@ export const convertAPIServiceDataEditToUI = (
         return {
           ...item,
           custom_headers: customHeaders,
-          oldIndex: item.custom_headers ? whName : undefined,
+          oldIndex: item.name,
         };
       }),
       notify: serviceData?.notify?.map((item) => ({
@@ -155,11 +155,13 @@ export const convertAPIServiceDataEditToUI = (
  * convertStringToFieldArray will convert a JSON string to a {[key]: string}[]
  *
  * @param str - JSON list or string to convert
+ * @param omitValues - If true, will omit the values from the object
  * @param key - key to use for the object
  * @returns The converted list, or undefined if the input is empty
  */
 export const convertStringToFieldArray = (
   str?: string,
+  omitValues?: boolean,
   key = "arg"
 ): StringFieldArray | undefined => {
   if (str === undefined || str === "") return undefined;
@@ -173,11 +175,19 @@ export const convertStringToFieldArray = (
   }
 
   // map the []string to {arg: string} for the form
+  if (omitValues) return list.map(() => ({ [key]: "" }));
   return list.map((arg: string) => ({ [key]: arg }));
 };
 
+/**
+ * convertHeadersFromString will convert a JSON string to a HeaderType[]
+ * @param str - JSON to convert
+ * @param omitValues - If true, will omit the values from the object
+ * @returns
+ */
 export const convertHeadersFromString = (
-  str?: string | NotifyHeaderType[]
+  str?: string | NotifyHeaderType[],
+  omitValues?: boolean
 ): NotifyHeaderType[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
@@ -186,6 +196,12 @@ export const convertHeadersFromString = (
 
   // convert from a JSON string
   try {
+    if (omitValues)
+      return Object.entries(JSON.parse(str)).map(() => ({
+        key: "",
+        value: "",
+      })) as NotifyHeaderType[];
+
     return Object.entries(JSON.parse(str)).map(([key, value], i) => ({
       id: i,
       key: key,
@@ -199,46 +215,42 @@ export const convertHeadersFromString = (
 /**
  * convertOpsGenieTargetFromString will convert a JSON string to a NotifyOpsGenieTarget[]
  *
- * (If global/defaults/hardDefaults are provided, it will only return the values in select fields)
+ * (If defaults are provided and str is undefined/empty, it will only return the values in select fields)
  *
  * for opsgenie.responders and opsgenie.visibleto
  *
  * @param str - JSON to convert
- * @param global - The global defaults
  * @param defaults - The defaults
- * @param hardDefaults - The hard defaults
  * @returns The converted object, or undefined if the input is empty
  */
 export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[],
-  global?: string,
-  defaults?: string,
-  hardDefaults?: string
+  defaults?: string
 ): NotifyOpsGenieTarget[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
 
-  const firstDefault = globalOrDefault(global, defaults, hardDefaults);
-
   // undefined/empty
-  if ((str === undefined || str === "") && firstDefault === "")
+  if ((str === undefined || str === "") && (defaults ?? "") === "")
     return undefined;
+
+  const usingStr = str ? true : false;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str || firstDefault).map(
+    return JSON.parse(str || defaults || "").map(
       (
         obj: { id: string; type: string; name: string; username: string },
         i: number
       ) => {
-        const id = firstDefault ? undefined : i;
+        const id = usingStr ? i : undefined;
         // team/user - id
         if (obj.id) {
           return {
             id: id,
             type: obj.type,
             sub_type: "id",
-            value: firstDefault ? "" : obj.id,
+            value: usingStr ? obj.id : "",
           };
         } else {
           // team/user - username/name
@@ -246,7 +258,7 @@ export const convertOpsGenieTargetFromString = (
             id: id,
             type: obj.type,
             sub_type: obj.type === "user" ? "username" : "name",
-            value: firstDefault ? "" : obj.name || obj.username,
+            value: usingStr ? obj.name || obj.username : "",
           };
         }
       }
@@ -259,44 +271,39 @@ export const convertOpsGenieTargetFromString = (
 /**
  * convertOpsGenieTargetToString will convert a JSON string to a NotifyNtfyAction[]
  *
- * (If global/defaults/hardDefaults are provided, it will only return the values in select fields)
+ * (If defaults are provided and str is undefined/empty, it will only return the values in select fields)
  *
  * for ntify.actions
  *
  * @param str - JSON to convert
- * @param global - The global defaults
  * @param defaults - The defaults
- * @param hardDefaults - The hard defaults
  * @returns The converted object, or undefined if the input is empty
  */
 export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[],
-  global?: string,
-  defaults?: string,
-  hardDefaults?: string
+  defaults?: string
 ): NotifyNtfyAction[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
 
-  const firstDefault = globalOrDefault(global, defaults, hardDefaults);
-
   // undefined/empty
-  if ((str === undefined || str === "") && firstDefault === "")
-    return undefined;
+  if ((str ?? "") === "" && (defaults ?? "") === "") return undefined;
+
+  const usingStr = str ? true : false;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str || firstDefault).map(
+    return JSON.parse(str || defaults || "").map(
       (obj: NotifyNtfyAction, i: number) => {
-        const id = firstDefault ? undefined : i;
+        const id = usingStr ? i : undefined;
 
         // View
         if (obj.action === "view")
           return {
             id: id,
             action: obj.action,
-            label: firstDefault ? "" : obj.label,
-            url: firstDefault ? "" : obj.url,
+            label: usingStr ? obj.label : "",
+            url: usingStr ? obj.url : "",
           };
 
         // HTTP
@@ -304,14 +311,13 @@ export const convertNtfyActionsFromString = (
           return {
             id: id,
             action: obj.action,
-            label: firstDefault ? "" : obj.label,
-            url: firstDefault ? "" : obj.url,
-            method: firstDefault ? "" : obj.method,
-            headers: firstDefault
-              ? convertStringMapToHeaderType(
-                  obj.headers as StringStringMap
-                )?.map((item) => ({ ...item, key: "", value: "" }))
-              : convertStringMapToHeaderType(obj.headers as StringStringMap),
+            label: usingStr ? obj.label : "",
+            url: usingStr ? obj.url : "",
+            method: usingStr ? obj.method : "",
+            headers: convertStringMapToHeaderType(
+              obj.headers as StringStringMap,
+              !usingStr
+            ),
             body: obj.body,
           };
 
@@ -320,13 +326,12 @@ export const convertNtfyActionsFromString = (
           return {
             id: id,
             action: obj.action,
-            label: firstDefault ? "" : obj.label,
-            intent: firstDefault ? "" : obj.intent,
-            extras: firstDefault
-              ? convertStringMapToHeaderType(
-                  obj.extras as StringStringMap
-                )?.map((item) => ({ ...item, key: "", value: "" }))
-              : convertStringMapToHeaderType(obj.extras as StringStringMap),
+            label: usingStr ? obj.label : "",
+            intent: usingStr ? obj.intent : "",
+            extras: convertStringMapToHeaderType(
+              obj.extras as StringStringMap,
+              !usingStr
+            ),
           };
 
         // Unknown action
@@ -365,35 +370,38 @@ export const convertNotifyURLFields = (
       custom_headers: urlFields?.custom_headers
         ? convertHeadersFromString(urlFields.custom_headers)
         : convertHeadersFromString(
-            globalOrDefault(
+            firstNonDefault(
               otherOptionsData?.notify?.[name]?.urlFields?.custom_headers,
               otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
                 ?.custom_headers,
               otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
                 ?.custom_headers
-            )
+            ),
+            true
           ),
       json_payload_vars: urlFields?.json_payload_vars
         ? convertHeadersFromString(urlFields.json_payload_vars)
         : convertHeadersFromString(
-            globalOrDefault(
+            firstNonDefault(
               otherOptionsData?.notify?.[name]?.urlFields?.json_payload_vars,
               otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
                 ?.json_payload_vars,
               otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
                 ?.json_payload_vars
-            )
+            ),
+            true
           ),
       query_vars: urlFields?.query_vars
         ? convertHeadersFromString(urlFields.query_vars)
         : convertHeadersFromString(
-            globalOrDefault(
+            firstNonDefault(
               otherOptionsData?.notify?.[name]?.urlFields?.query_vars,
               otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
                 ?.query_vars,
               otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
                 ?.query_vars
-            )
+            ),
+            true
           ),
     };
 
@@ -421,18 +429,14 @@ export const convertNotifyParams = (
   if (notifyType === "ntfy")
     return {
       ...params,
-      actions: params?.actions
-        ? convertNtfyActionsFromString(params.actions)
-        : convertNtfyActionsFromString(
-            params?.actions,
-            otherOptionsData?.notify?.[name]?.params?.actions as
-              | string
-              | undefined,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params
-              ?.actions as string | undefined,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.actions as string | undefined
-          ),
+      actions: convertNtfyActionsFromString(
+        params?.actions,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.params?.actions,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params?.actions
+        )
+      ),
     };
 
   // OpsGenie
@@ -442,45 +446,43 @@ export const convertNotifyParams = (
       actions: params?.actions
         ? convertStringToFieldArray(params.actions)
         : convertStringToFieldArray(
-            globalOrDefault(
+            firstNonDefault(
               otherOptionsData?.notify?.[name]?.params?.actions,
               otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
               otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
                 ?.actions
-            )
+            ),
+            true
           ),
       details: params?.details
         ? convertHeadersFromString(params.details)
         : convertHeadersFromString(
-            globalOrDefault(
+            firstNonDefault(
               otherOptionsData?.notify?.[name]?.params?.details,
               otherOptionsData?.defaults?.notify?.[notifyType]?.params?.details,
               otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
                 ?.details
-            )
+            ),
+            true
           ),
-      responders: params?.responders
-        ? convertOpsGenieTargetFromString(params.responders)
-        : convertOpsGenieTargetFromString(
-            globalOrDefault(
-              otherOptionsData?.notify?.[name]?.params?.responders,
-              otherOptionsData?.defaults?.notify?.[notifyType]?.params
-                ?.responders,
-              otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-                ?.responders
-            )
-          ),
-      visibleto: params?.visibileto
-        ? convertOpsGenieTargetFromString(params.visibleto)
-        : convertOpsGenieTargetFromString(
-            globalOrDefault(
-              otherOptionsData?.notify?.[name]?.params?.visibleto,
-              otherOptionsData?.defaults?.notify?.[notifyType]?.params
-                ?.visibleto,
-              otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-                ?.visibleto
-            )
-          ),
+      responders: convertOpsGenieTargetFromString(
+        params?.responders,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.params?.responders,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.params?.responders,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+            ?.responders
+        )
+      ),
+      visibleto: convertOpsGenieTargetFromString(
+        params?.visibleto,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.params?.visibleto,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.params?.visibleto,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+            ?.visibleto
+        )
+      ),
     };
 
   if (notifyType === "slack")
@@ -499,13 +501,17 @@ export const convertNotifyParams = (
 /**
  * convertStringMapToHeaderType will convert a {[key]: string, ...} to a HeaderType[]
  *
- * @param headers The {KEY:VAL, ...} object to convert
+ * @param headers - The {KEY:VAL, ...} object to convert
+ * @param omitValues - If true, will omit the values from the object
  * @returns Converted headers, {key: KEY, value: VAL}[] or undefined if the input is empty
  */
-const convertStringMapToHeaderType = (headers?: {
-  [key: string]: string;
-}): HeaderType[] | undefined => {
+const convertStringMapToHeaderType = (
+  headers?: StringStringMap,
+  omitValues?: boolean
+): HeaderType[] | undefined => {
   if (!headers) return undefined;
+  if (omitValues)
+    return Object.keys(headers).map((key) => ({ key, value: "" }));
   return Object.keys(headers).map((key) => ({
     key: key,
     value: headers[key],

@@ -3,7 +3,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 import { BooleanWithDefault } from "components/generic";
 import { NotifyGotifyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
@@ -33,22 +33,22 @@ const GOTIFY = ({
     () => ({
       // URL Fields
       url_fields: {
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        path: globalOrDefault(
+        path: firstNonDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -58,18 +58,18 @@ const GOTIFY = ({
       params: {
         disabletls:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.disabletls,
               defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
             )
           ) ?? false,
-        priority: globalOrDefault(
+        priority: firstNonDefault(
           global?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

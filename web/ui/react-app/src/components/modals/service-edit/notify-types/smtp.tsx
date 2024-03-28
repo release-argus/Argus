@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySMTPType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { normaliseForSelect } from "components/modals/service-edit/util/normalise-selects";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
@@ -51,22 +51,22 @@ const SMTP = ({
     () => ({
       // URL Fields
       url_fields: {
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        password: globalOrDefault(
+        password: firstNonDefault(
           global?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
-        username: globalOrDefault(
+        username: firstNonDefault(
           global?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
@@ -74,44 +74,44 @@ const SMTP = ({
       },
       // Params
       params: {
-        auth: globalOrDefault(
+        auth: firstNonDefault(
           global?.params?.auth,
           defaults?.params?.auth,
           hard_defaults?.params?.auth
         ).toLowerCase(),
-        clienthost: globalOrDefault(
+        clienthost: firstNonDefault(
           global?.params?.clienthost,
           defaults?.params?.clienthost,
           hard_defaults?.params?.clienthost
         ),
-        encryption: globalOrDefault(
+        encryption: firstNonDefault(
           global?.params?.encryption,
           defaults?.params?.encryption,
           hard_defaults?.params?.encryption
         ).toLowerCase(),
-        fromaddress: globalOrDefault(
+        fromaddress: firstNonDefault(
           global?.params?.fromaddress,
           defaults?.params?.fromaddress,
           hard_defaults?.params?.fromaddress
         ),
-        fromname: globalOrDefault(
+        fromname: firstNonDefault(
           global?.params?.fromname,
           defaults?.params?.fromname,
           hard_defaults?.params?.fromname
         ),
-        subject: globalOrDefault(
+        subject: firstNonDefault(
           global?.params?.subject,
           defaults?.params?.subject,
           hard_defaults?.params?.subject
         ),
-        toaddresses: globalOrDefault(
+        toaddresses: firstNonDefault(
           global?.params?.toaddresses,
           defaults?.params?.toaddresses,
           hard_defaults?.params?.toaddresses
         ),
         usehtml:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.usehtml,
               defaults?.params?.usehtml,
               hard_defaults?.params?.usehtml
@@ -119,7 +119,7 @@ const SMTP = ({
           ) ?? false,
         usestarttls:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.usestarttls,
               defaults?.params?.usestarttls,
               hard_defaults?.params?.usestarttls

@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushbulletType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 const PUSHBULLET = ({
@@ -22,12 +22,12 @@ const PUSHBULLET = ({
     () => ({
       // URL Fields
       url_fields: {
-        targets: globalOrDefault(
+        targets: firstNonDefault(
           global?.url_fields?.targets,
           defaults?.url_fields?.targets,
           hard_defaults?.url_fields?.targets
         ),
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -35,7 +35,7 @@ const PUSHBULLET = ({
       },
       // Params
       params: {
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

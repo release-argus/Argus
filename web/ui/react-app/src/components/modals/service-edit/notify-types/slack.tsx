@@ -7,7 +7,7 @@ import {
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySlackType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -36,12 +36,12 @@ const SLACK = ({
     () => ({
       // URL Fields
       url_fields: {
-        channel: globalOrDefault(
+        channel: firstNonDefault(
           global?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         ),
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
@@ -49,22 +49,22 @@ const SLACK = ({
       },
       // Params
       params: {
-        botname: globalOrDefault(
+        botname: firstNonDefault(
           global?.params?.botname,
           defaults?.params?.botname,
           hard_defaults?.params?.botname
         ),
-        color: globalOrDefault(
+        color: firstNonDefault(
           global?.params?.color,
           defaults?.params?.color,
           hard_defaults?.params?.color
         ),
-        icon: globalOrDefault(
+        icon: firstNonDefault(
           global?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { useFormContext } from "react-hook-form";
 
@@ -80,22 +80,22 @@ const BARK = ({
     () => ({
       // URL Fields
       url_fields: {
-        devicekey: globalOrDefault(
+        devicekey: firstNonDefault(
           global?.url_fields?.devicekey,
           defaults?.url_fields?.devicekey,
           hard_defaults?.url_fields?.devicekey
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        path: globalOrDefault(
+        path: firstNonDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
@@ -103,42 +103,42 @@ const BARK = ({
       },
       // Params
       params: {
-        badge: globalOrDefault(
+        badge: firstNonDefault(
           global?.params?.badge,
           defaults?.params?.badge,
           hard_defaults?.params?.badge
         ),
-        copy: globalOrDefault(
+        copy: firstNonDefault(
           global?.params?.copy,
           defaults?.params?.copy,
           hard_defaults?.params?.copy
         ),
-        group: globalOrDefault(
+        group: firstNonDefault(
           global?.params?.group,
           defaults?.params?.group,
           hard_defaults?.params?.group
         ),
-        icon: globalOrDefault(
+        icon: firstNonDefault(
           global?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
-        scheme: globalOrDefault(
+        scheme: firstNonDefault(
           global?.params?.scheme,
           defaults?.params?.scheme,
           hard_defaults?.params?.scheme
         ).toLowerCase(),
-        sound: globalOrDefault(
+        sound: firstNonDefault(
           global?.params?.sound,
           defaults?.params?.sound,
           hard_defaults?.params?.sound
         ).toLowerCase(),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
-        url: globalOrDefault(
+        url: firstNonDefault(
           global?.params?.url,
           defaults?.params?.url,
           hard_defaults?.params?.url
@@ -186,7 +186,7 @@ const BARK = ({
         normaliseForSelect(
           BarkSchemeOptions,
           getValues(`${name}.params.scheme`)
-        )?.value ?? "https"
+        )?.value || "https"
       );
 
     // Normalise selected sound, or default it

@@ -128,10 +128,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				ServiceName: "test",
 				Name:        "no_main_with_type_and_no_defaults",
 				URLFields:   typeWithNoDefaultsURLFields},
-			want: &Shoutrrr{
-				ShoutrrrBase: ShoutrrrBase{
-					Type:      typeWithNoDefaults,
-					URLFields: typeWithNoDefaultsURLFields}},
+			err: "invalid type",
 		},
 		"edit, no Main, no Defaults - had Type (have name_previous)": {
 			payload: TestPayload{

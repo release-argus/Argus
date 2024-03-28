@@ -14,7 +14,7 @@ import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NtfyActions } from "components/modals/service-edit/notify-types/extra";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
@@ -59,27 +59,27 @@ const NTFY = ({
     () => ({
       // URL Fields
       url_fields: {
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        password: globalOrDefault(
+        password: firstNonDefault(
           global?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
-        topic: globalOrDefault(
+        topic: firstNonDefault(
           global?.url_fields?.topic,
           defaults?.url_fields?.topic,
           hard_defaults?.url_fields?.topic
         ),
-        username: globalOrDefault(
+        username: firstNonDefault(
           global?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
@@ -88,69 +88,69 @@ const NTFY = ({
       // Params
       params: {
         actions: convertNtfyActionsFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.params?.actions as string | undefined,
             defaults?.params?.actions as string | undefined,
             hard_defaults?.params?.actions as string | undefined
           )
         ),
-        attach: globalOrDefault(
+        attach: firstNonDefault(
           global?.params?.attach,
           defaults?.params?.attach,
           hard_defaults?.params?.attach
         ),
         cache:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.cache,
               defaults?.params?.cache,
               hard_defaults?.params?.cache
             )
           ) ?? true,
-        click: globalOrDefault(
+        click: firstNonDefault(
           global?.params?.click,
           defaults?.params?.click,
           hard_defaults?.params?.click
         ),
-        email: globalOrDefault(
+        email: firstNonDefault(
           global?.params?.email,
           defaults?.params?.email,
           hard_defaults?.params?.email
         ),
-        filename: globalOrDefault(
+        filename: firstNonDefault(
           global?.params?.filename,
           defaults?.params?.filename,
           hard_defaults?.params?.filename
         ),
         firebase:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.firebase,
               defaults?.params?.firebase,
               hard_defaults?.params?.firebase
             )
           ) ?? true,
-        icon: globalOrDefault(
+        icon: firstNonDefault(
           global?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
-        priority: globalOrDefault(
+        priority: firstNonDefault(
           global?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ).toLowerCase(),
-        scheme: globalOrDefault(
+        scheme: firstNonDefault(
           global?.params?.scheme,
           defaults?.params?.scheme,
           hard_defaults?.params?.scheme
         ).toLowerCase(),
-        tags: globalOrDefault(
+        tags: firstNonDefault(
           global?.params?.tags,
           defaults?.params?.tags,
           hard_defaults?.params?.tags
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

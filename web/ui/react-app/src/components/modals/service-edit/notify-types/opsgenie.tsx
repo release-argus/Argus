@@ -13,7 +13,7 @@ import {
 import { NotifyOpsGenieType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -42,17 +42,17 @@ const OPSGENIE = ({
     () => ({
       // URL Fields
       url_fields: {
-        apiKey: globalOrDefault(
+        apiKey: firstNonDefault(
           global?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
@@ -61,73 +61,73 @@ const OPSGENIE = ({
       // Params
       params: {
         actions: convertStringToFieldArray(
-          globalOrDefault(
+          firstNonDefault(
             global?.params?.actions as string,
             defaults?.params?.actions as string,
             hard_defaults?.params?.actions as string
           )
         ),
-        alias: globalOrDefault(
+        alias: firstNonDefault(
           global?.params?.alias,
           defaults?.params?.alias,
           hard_defaults?.params?.alias
         ),
-        description: globalOrDefault(
+        description: firstNonDefault(
           global?.params?.description,
           defaults?.params?.description,
           hard_defaults?.params?.description
         ),
         details: convertHeadersFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.params?.details as string,
             defaults?.params?.details as string,
             hard_defaults?.params?.details as string
           )
         ),
-        entity: globalOrDefault(
+        entity: firstNonDefault(
           global?.params?.entity,
           defaults?.params?.entity,
           hard_defaults?.params?.entity
         ),
-        note: globalOrDefault(
+        note: firstNonDefault(
           global?.params?.note,
           defaults?.params?.note,
           hard_defaults?.params?.note
         ),
-        priority: globalOrDefault(
+        priority: firstNonDefault(
           global?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
         responders: convertOpsGenieTargetFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.params?.responders as string,
             defaults?.params?.responders as string,
             hard_defaults?.params?.responders as string
           )
         ),
-        source: globalOrDefault(
+        source: firstNonDefault(
           global?.params?.source,
           defaults?.params?.source,
           hard_defaults?.params?.source
         ),
-        tags: globalOrDefault(
+        tags: firstNonDefault(
           global?.params?.tags,
           defaults?.params?.tags,
           hard_defaults?.params?.tags
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
-        user: globalOrDefault(
+        user: firstNonDefault(
           global?.params?.user,
           defaults?.params?.user,
           hard_defaults?.params?.user
         ),
         visibleto: convertOpsGenieTargetFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.params?.visibleto as string,
             defaults?.params?.visibleto as string,
             hard_defaults?.params?.visibleto as string

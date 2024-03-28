@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyRocketChatType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -31,37 +31,37 @@ const ROCKET_CHAT = ({
     () => ({
       // URL Fields
       url_fields: {
-        channel: globalOrDefault(
+        channel: firstNonDefault(
           global?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        path: globalOrDefault(
+        path: firstNonDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
-        tokena: globalOrDefault(
+        tokena: firstNonDefault(
           global?.url_fields?.tokena,
           defaults?.url_fields?.tokena,
           hard_defaults?.url_fields?.tokena
         ),
-        tokenb: globalOrDefault(
+        tokenb: firstNonDefault(
           global?.url_fields?.tokenb,
           defaults?.url_fields?.tokenb,
           hard_defaults?.url_fields?.tokenb
         ),
-        username: globalOrDefault(
+        username: firstNonDefault(
           global?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username

@@ -53,7 +53,7 @@ export const convertValuesToString = (
         // OpsGenie - `arg` empty means defaults were used. Skip.
         if (
           !(value as StringFieldArray).find(
-            (item) => (item.label ?? item.arg ?? "") !== ""
+            (item) => (item.label || item.arg || "") !== ""
           )
         ) {
           return result;

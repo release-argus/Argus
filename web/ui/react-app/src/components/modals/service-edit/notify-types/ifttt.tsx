@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyIFTTTType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -31,7 +31,7 @@ const IFTTT = ({
     () => ({
       // URL Fields
       url_fields: {
-        webhookid: globalOrDefault(
+        webhookid: firstNonDefault(
           global?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
@@ -39,37 +39,37 @@ const IFTTT = ({
       },
       // Params
       params: {
-        events: globalOrDefault(
+        events: firstNonDefault(
           global?.params?.events,
           defaults?.params?.events,
           hard_defaults?.params?.events
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
-        usemessageasvalue: globalOrDefault(
+        usemessageasvalue: firstNonDefault(
           global?.params?.usemessageasvalue,
           defaults?.params?.usemessageasvalue,
           hard_defaults?.params?.usemessageasvalue
         ),
-        usetitleasvalue: globalOrDefault(
+        usetitleasvalue: firstNonDefault(
           global?.params?.usetitleasvalue,
           defaults?.params?.usetitleasvalue,
           hard_defaults?.params?.usetitleasvalue
         ),
-        value1: globalOrDefault(
+        value1: firstNonDefault(
           global?.params?.value1,
           defaults?.params?.value1,
           hard_defaults?.params?.value1
         ),
-        value2: globalOrDefault(
+        value2: firstNonDefault(
           global?.params?.value2,
           defaults?.params?.value2,
           hard_defaults?.params?.value2
         ),
-        value3: globalOrDefault(
+        value3: firstNonDefault(
           global?.params?.value3,
           defaults?.params?.value3,
           hard_defaults?.params?.value3

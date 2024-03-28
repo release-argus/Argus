@@ -100,6 +100,7 @@ const FormKeyValMap: FC<Props> = ({
               className="btn-unchecked mb-1"
               variant="danger"
               style={{ float: "left" }}
+              disabled={fields.length === 0}
               onClick={removeLast}
             >
               <FontAwesomeIcon icon={faMinus} />

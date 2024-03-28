@@ -12,7 +12,7 @@ import {
 
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 import { useWatch } from "react-hook-form";
@@ -64,36 +64,36 @@ const GENERIC = ({
       // URL Fields
       url_fields: {
         custom_headers: convertHeadersFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.url_fields?.custom_headers,
             defaults?.url_fields?.custom_headers,
             hard_defaults?.url_fields?.custom_headers
           )
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         json_payload_vars: convertHeadersFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.url_fields?.json_payload_vars,
             defaults?.url_fields?.json_payload_vars,
             hard_defaults?.url_fields?.json_payload_vars
           )
         ),
-        path: globalOrDefault(
+        path: firstNonDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         query_vars: convertHeadersFromString(
-          globalOrDefault(
+          firstNonDefault(
             global?.url_fields?.query_vars,
             defaults?.url_fields?.query_vars,
             hard_defaults?.url_fields?.query_vars
@@ -102,40 +102,40 @@ const GENERIC = ({
       },
       // Params
       params: {
-        contenttype: globalOrDefault(
+        contenttype: firstNonDefault(
           global?.params?.contenttype,
           defaults?.params?.contenttype,
           hard_defaults?.params?.contenttype
         ),
         disabletls:
           strToBool(
-            globalOrDefault(
+            firstNonDefault(
               global?.params?.disabletls,
               defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
             )
           ) ?? true,
-        messagekey: globalOrDefault(
+        messagekey: firstNonDefault(
           global?.params?.messagekey,
           defaults?.params?.messagekey,
           hard_defaults?.params?.messagekey
         ),
-        requestmethod: globalOrDefault(
+        requestmethod: firstNonDefault(
           global?.params?.requestmethod,
           defaults?.params?.requestmethod,
           hard_defaults?.params?.requestmethod
         ).toLowerCase(),
-        template: globalOrDefault(
+        template: firstNonDefault(
           global?.params?.template,
           defaults?.params?.template,
           hard_defaults?.params?.template
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
-        titlekey: globalOrDefault(
+        titlekey: firstNonDefault(
           global?.params?.titlekey,
           defaults?.params?.titlekey,
           hard_defaults?.params?.titlekey

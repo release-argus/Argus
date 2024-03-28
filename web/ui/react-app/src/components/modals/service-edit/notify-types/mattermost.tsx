@@ -6,7 +6,7 @@ import {
 
 import { NotifyMatterMostType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -35,32 +35,32 @@ const MATTERMOST = ({
     () => ({
       // URL Fields
       url_fields: {
-        channel: globalOrDefault(
+        channel: firstNonDefault(
           global?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         ),
-        host: globalOrDefault(
+        host: firstNonDefault(
           global?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
-        path: globalOrDefault(
+        path: firstNonDefault(
           global?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
-        port: globalOrDefault(
+        port: firstNonDefault(
           global?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
-        username: globalOrDefault(
+        username: firstNonDefault(
           global?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
@@ -68,7 +68,7 @@ const MATTERMOST = ({
       },
       // Params
       params: {
-        icon: globalOrDefault(
+        icon: firstNonDefault(
           global?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon

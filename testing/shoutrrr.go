@@ -44,7 +44,7 @@ func NotifyTest(
 
 	// Default webURL if not set
 	if notify.ServiceStatus.WebURL == nil {
-		webURL := "https://example.com/web_url"
+		webURL := ""
 		notify.ServiceStatus.WebURL = &webURL
 	}
 	err := notify.TestSend("https://example.com/service_url")

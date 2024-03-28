@@ -2,7 +2,7 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushoverType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 import { useMemo } from "react";
 
 /**
@@ -31,12 +31,12 @@ const PUSHOVER = ({
     () => ({
       // URL Fields
       url_fields: {
-        token: globalOrDefault(
+        token: firstNonDefault(
           global?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
-        user: globalOrDefault(
+        user: firstNonDefault(
           global?.url_fields?.user,
           defaults?.url_fields?.user,
           hard_defaults?.url_fields?.user
@@ -44,17 +44,17 @@ const PUSHOVER = ({
       },
       // Params
       params: {
-        devices: globalOrDefault(
+        devices: firstNonDefault(
           global?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         ),
-        priority: globalOrDefault(
+        priority: firstNonDefault(
           global?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
-        title: globalOrDefault(
+        title: firstNonDefault(
           global?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title

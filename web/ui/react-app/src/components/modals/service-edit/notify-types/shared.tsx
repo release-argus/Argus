@@ -2,7 +2,7 @@ import { FormItem, FormLabel, FormTextArea } from "components/generic/form";
 import { memo, useMemo } from "react";
 
 import { NotifyOptionsType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 
 /**
  * NotifyOptions is the form fields for all Notify Options
@@ -29,17 +29,17 @@ export const NotifyOptions = ({
   const convertedDefaults = useMemo(
     () => ({
       // Options
-      delay: globalOrDefault(
+      delay: firstNonDefault(
         global?.delay,
         defaults?.delay,
         hard_defaults?.delay
       ),
-      max_tries: globalOrDefault(
+      max_tries: firstNonDefault(
         global?.max_tries,
         defaults?.max_tries,
         hard_defaults?.max_tries
       ),
-      message: globalOrDefault(
+      message: firstNonDefault(
         global?.message,
         defaults?.message,
         hard_defaults?.message

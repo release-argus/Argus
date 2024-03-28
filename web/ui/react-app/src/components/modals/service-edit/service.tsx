@@ -84,8 +84,7 @@ const EditService: FC<Props> = ({ name }) => {
                   : // Name hasn't changed or name isn't in use
                     name === value || !monitorData.order.includes(value);
               return (
-                validation ||
-                (value === "" ? "Required" : "name should be unique")
+                validation || (value === "" ? "Required" : "Must be unique")
               );
             },
           }}
