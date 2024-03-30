@@ -1,26 +1,35 @@
 import { FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyGoogleChatType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `Google Chat`
+ *
+ * @param name - The path to this `Google Chat` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Google Chat` `Notify`
+ */
 const GOOGLE_CHAT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyGoogleChatType;
+  main?: NotifyGoogleChatType;
   defaults?: NotifyGoogleChatType;
   hard_defaults?: NotifyGoogleChatType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -34,7 +43,7 @@ const GOOGLE_CHAT = ({
         label="Raw"
         tooltip="e.g. chat.googleapis.com/v1/spaces/foo/messages?key=bar&token=baz"
         defaultVal={globalOrDefault(
-          global?.url_fields?.raw,
+          main?.url_fields?.raw,
           defaults?.url_fields?.raw,
           hard_defaults?.url_fields?.raw
         )}

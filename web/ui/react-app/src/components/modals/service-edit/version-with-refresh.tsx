@@ -4,7 +4,7 @@ import {
   LatestVersionLookupEditType,
   ServiceRefreshType,
 } from "types/service-edit";
-import { convertToQueryParams, fetchJSON } from "utils";
+import { convertToQueryParams, fetchJSON, removeEmptyValues } from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 
 import { DeployedVersionLookupType } from "types/config";
@@ -20,6 +20,14 @@ interface Props {
   original?: LatestVersionLookupEditType | DeployedVersionLookupType;
 }
 
+/**
+ * Returns the version with a button to refresh
+ *
+ * @param vType - 0: Latest, 1: Deployed
+ * @param serviceName - The name of the service
+ * @param original - The original values in the form
+ * @returns The version with a button to refresh the version
+ */
 const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const [lastFetched, setLastFetched] = useState(0);
   const { monitorData } = useWebSocket();
@@ -57,9 +65,9 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       dataTarget,
       { id: serviceName },
       {
-        params: data,
+        params: JSON.stringify(removeEmptyValues(data)),
         semantic_versioning: semanticVersioning,
-        original_data: original,
+        original_data: removeEmptyValues(original ?? []),
       },
     ],
     queryFn: () => fetchVersionJSON(),

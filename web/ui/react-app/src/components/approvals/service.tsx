@@ -14,6 +14,14 @@ interface Props {
   editable: boolean;
 }
 
+/**
+ * Returns a card that displays the service's information, including the service's image,
+ * version info, and update info.
+ *
+ * @param service - The service to display
+ * @param editable - Whether edit mode is enabled
+ * @returns A component that displays the service
+ */
 const Service: FC<Props> = ({ service, editable = false }) => {
   const [showUpdateInfo, setShowUpdateInfoMain] = useState(false);
 

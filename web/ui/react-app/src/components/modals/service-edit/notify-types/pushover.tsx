@@ -1,26 +1,35 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./shared";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushoverType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `PushOver`
+ *
+ * @param name - The path to this `PushOver` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `PushOver` `Notify`
+ */
 const PUSHOVER = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyPushoverType;
+  main?: NotifyPushoverType;
   defaults?: NotifyPushoverType;
   hard_defaults?: NotifyPushoverType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -33,7 +42,7 @@ const PUSHOVER = ({
         label="API Token/Key"
         tooltip="'Create an Application/API Token' on the Pushover dashboard'"
         defaultVal={globalOrDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
@@ -45,7 +54,7 @@ const PUSHOVER = ({
         label="User Key"
         tooltip="Top right of Pushover dashboard"
         defaultVal={globalOrDefault(
-          global?.url_fields?.user,
+          main?.url_fields?.user,
           defaults?.url_fields?.user,
           hard_defaults?.url_fields?.user
         )}
@@ -60,7 +69,7 @@ const PUSHOVER = ({
         label="Devices"
         tooltip="e.g. device1,device2... (deviceX=Name column in the 'Your Devices' list)"
         defaultVal={globalOrDefault(
-          global?.params?.devices,
+          main?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         )}
@@ -70,7 +79,7 @@ const PUSHOVER = ({
         col_sm={9}
         label="Title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
@@ -82,7 +91,7 @@ const PUSHOVER = ({
         label="Priority"
         tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
         defaultVal={globalOrDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         )}

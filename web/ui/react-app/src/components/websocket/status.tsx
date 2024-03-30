@@ -10,6 +10,12 @@ interface Props {
   connected: BooleanType;
 }
 
+/**
+ * Returns a component that displays the connection status of the WebSocket if it is not connected.
+ *
+ * @param connected - The connection status of the WebSocket
+ * @returns A component that displays the connection status of the WebSocket if it is not connected
+ */
 export const WebSocketStatus: FC<Props> = ({ connected }) => {
   const delayedRender = useDelayedRender(1000);
   const fallback = (

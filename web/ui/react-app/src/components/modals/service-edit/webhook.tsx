@@ -12,43 +12,57 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { globalOrDefault } from "./notify-types/util";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
 interface Props {
   name: string;
   removeMe: () => void;
 
   globalOptions: JSX.Element;
-  globals?: Dict<WebHookType>;
+  mains?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
 }
 
+/**
+ * Returns the form fields for a WebHook
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove this WebHook
+ * @param globalOptions - The options for the global WebHook's
+ * @param mains - The main WebHook's
+ * @param defaults - The default values for a WebHook
+ * @param hard_defaults - The hard default values for a WebHook
+ * @returns The form fields for this WebHook
+ */
 const EditServiceWebHook: FC<Props> = ({
   name,
   removeMe,
 
   globalOptions,
-  globals,
+  mains,
   defaults,
   hard_defaults,
 }) => {
-  const webHookTypeOptions = [
+  const webHookTypeOptions: {
+    label: string;
+    value: NonNullable<WebHookType["type"]>;
+  }[] = [
     { label: "GitHub", value: "github" },
     { label: "GitLab", value: "gitlab" },
   ];
 
   const { setValue, trigger } = useFormContext();
 
-  const itemName = useWatch({ name: `${name}.name` });
-  const itemType = useWatch({ name: `${name}.type` });
-  const global = globals && globals[itemName];
+  const itemName: string = useWatch({ name: `${name}.name` });
+  const itemType: WebHookType["type"] = useWatch({ name: `${name}.type` });
+  const main = mains?.[itemName];
   useEffect(() => {
-    global?.type && setValue(`${name}.type`, global.type);
-  }, [global]);
+    main?.type && setValue(`${name}.type`, main.type);
+  }, [main]);
   useEffect(() => {
-    if (globals?.[itemName]?.type !== undefined)
-      setValue(`${name}.type`, globals[itemName].type);
+    if (mains?.[itemName]?.type !== undefined)
+      setValue(`${name}.type`, mains[itemName].type);
     setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
@@ -80,11 +94,10 @@ const EditServiceWebHook: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this WebHook as a base" />
               <Form.Select
                 value={
-                  globals
-                    ? itemName !== "" &&
-                      Object.keys(globals).indexOf(itemName) !== -1
-                      ? itemName
-                      : ""
+                  mains &&
+                  itemName !== "" &&
+                  Object.keys(mains).indexOf(itemName) !== -1
+                    ? itemName
                     : ""
                 }
                 onChange={(e) => setValue(`${name}.name`, e.target.value)}
@@ -98,10 +111,10 @@ const EditServiceWebHook: FC<Props> = ({
             customValidation={(value) => {
               if (
                 itemType !== undefined &&
-                globals?.[itemName]?.type &&
-                itemType !== globals?.[itemName]?.type
+                mains?.[itemName]?.type &&
+                itemType !== mains?.[itemName]?.type
               ) {
-                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+                return `${value} does not match the global "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
               }
               return true;
             }}
@@ -127,7 +140,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Target URL"
             tooltip="Where to send the WebHook"
             defaultVal={globalOrDefault(
-              global?.url,
+              main?.url,
               defaults?.url,
               hard_defaults?.url
             )}
@@ -137,7 +150,7 @@ const EditServiceWebHook: FC<Props> = ({
             name={`${name}.allow_invalid_certs`}
             label="Allow Invalid Certs"
             defaultValue={
-              global?.allow_invalid_certs ||
+              main?.allow_invalid_certs ||
               defaults?.allow_invalid_certs ||
               hard_defaults?.allow_invalid_certs
             }
@@ -148,7 +161,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_sm={12}
             label="Secret"
             defaultVal={
-              global?.secret || defaults?.secret || hard_defaults?.secret
+              main?.secret || defaults?.secret || hard_defaults?.secret
             }
           />
           <FormKeyValMap name={`${name}.custom_headers`} />
@@ -158,7 +171,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
             defaultVal={globalOrDefault(
-              global?.desired_status_code,
+              main?.desired_status_code,
               defaults?.desired_status_code,
               hard_defaults?.desired_status_code
             )}
@@ -168,7 +181,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_xs={6}
             label="Max tries"
             defaultVal={`${
-              global?.max_tries ||
+              main?.max_tries ||
               defaults?.max_tries ||
               hard_defaults?.max_tries ||
               ""
@@ -180,9 +193,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_sm={12}
             label="Delay"
             tooltip="Delay sending by this duration"
-            defaultVal={
-              global?.delay || defaults?.delay || hard_defaults?.delay
-            }
+            defaultVal={main?.delay || defaults?.delay || hard_defaults?.delay}
             onRight
           />
           <BooleanWithDefault
@@ -190,7 +201,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Silent fails"
             tooltip="Notify if WebHook fails max tries times"
             defaultValue={
-              global?.silent_fails ||
+              main?.silent_fails ||
               defaults?.silent_fails ||
               hard_defaults?.silent_fails
             }

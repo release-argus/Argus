@@ -2,27 +2,36 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyGotifyType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 
+/**
+ * Returns the form fields for `Gotify`
+ *
+ * @param name - The path to this `Gotify` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Gotify` `Notify`
+ */
 const GOTIFY = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyGotifyType;
+  main?: NotifyGotifyType;
   defaults?: NotifyGotifyType;
   hard_defaults?: NotifyGotifyType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -35,7 +44,7 @@ const GOTIFY = ({
         label="Host"
         tooltip="e.g. gotify.example.com"
         defaultVal={globalOrDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         )}
@@ -47,7 +56,7 @@ const GOTIFY = ({
         label="Port"
         tooltip="e.g. 443"
         defaultVal={globalOrDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
@@ -63,7 +72,7 @@ const GOTIFY = ({
           </>
         }
         defaultVal={globalOrDefault(
-          global?.url_fields?.path,
+          main?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         )}
@@ -73,7 +82,7 @@ const GOTIFY = ({
         required
         label="Token"
         defaultVal={globalOrDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
@@ -88,7 +97,7 @@ const GOTIFY = ({
         type="number"
         label="Priority"
         defaultVal={globalOrDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         )}
@@ -98,7 +107,7 @@ const GOTIFY = ({
         col_sm={10}
         label="Title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
@@ -109,7 +118,7 @@ const GOTIFY = ({
         label="Disable TLS"
         defaultValue={
           strToBool(
-            global?.params?.disabletls ||
+            main?.params?.disabletls ||
               defaults?.params?.disabletls ||
               hard_defaults?.params?.disabletls
           ) ?? false

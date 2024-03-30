@@ -19,6 +19,15 @@ interface Props {
   hard_defaults?: DeployedVersionLookupType;
 }
 
+/**
+ * Returns the `deployed_version` form fields
+ *
+ * @param serviceName - The name of the service
+ * @param original - The original values of the form
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default
+ * @returns The form fields for the `deployed_version`
+ */
 const EditServiceDeployedVersion: FC<Props> = ({
   serviceName,
   original,
@@ -28,7 +37,9 @@ const EditServiceDeployedVersion: FC<Props> = ({
   const { setValue } = useFormContext();
 
   // RegEx Template toggle
-  const templateToggle = useWatch({ name: "deployed_version.template_toggle" });
+  const templateToggle: boolean = useWatch({
+    name: "deployed_version.template_toggle",
+  });
   useEffect(() => {
     // Clear the template if the toggle is false
     if (templateToggle === false) {

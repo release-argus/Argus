@@ -6,27 +6,36 @@ import {
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
-import NotifyOptions from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 
+/**
+ * Returns the form fields for `Discord`
+ *
+ * @param name - The path to this `Discord` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Discord` `Notify`
+ */
 const DISCORD = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyDiscordType;
+  main?: NotifyDiscordType;
   defaults?: NotifyDiscordType;
   hard_defaults?: NotifyDiscordType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -44,7 +53,7 @@ const DISCORD = ({
           </>
         }
         defaultVal={globalOrDefault(
-          global?.url_fields?.webhookid,
+          main?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
         )}
@@ -60,7 +69,7 @@ const DISCORD = ({
           </>
         }
         defaultVal={globalOrDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
@@ -74,7 +83,7 @@ const DISCORD = ({
         label="Avatar"
         tooltip="Override WebHook avatar with this URL"
         defaultVal={
-          global?.params?.avatar ||
+          main?.params?.avatar ||
           defaults?.params?.avatar ||
           hard_defaults?.params?.avatar
         }
@@ -84,7 +93,7 @@ const DISCORD = ({
         label="Username"
         tooltip="Override the WebHook username"
         defaultVal={globalOrDefault(
-          global?.params?.username,
+          main?.params?.username,
           defaults?.params?.username,
           hard_defaults?.params?.username
         )}
@@ -93,7 +102,7 @@ const DISCORD = ({
         name={`${name}.params.title`}
         label="Title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}

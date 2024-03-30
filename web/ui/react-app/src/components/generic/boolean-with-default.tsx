@@ -13,22 +13,25 @@ import { strToBool } from "utils";
 interface Props {
   name: string;
 
-  col_xs?: number;
-  col_sm?: number;
   label?: string;
-  defaultValue?: boolean;
   tooltip?: string;
-  onRight?: boolean;
+  defaultValue?: boolean;
 }
 
+/**
+ * Returns a form field with buttons to choose between true, false, and default
+ *
+ * @param name - The name of the field
+ * @param label - The form label to display
+ * @param tooltip - The tooltip to display
+ * @param defaultValue - The default value of the field
+ * @returns A form field at name with a label, tooltip and buttons to choose between true, false, and default
+ */
 const BooleanWithDefault: FC<Props> = ({
   name,
-  col_xs = 12,
-  col_sm = 12,
   label,
   defaultValue,
   tooltip,
-  onRight,
 }) => {
   const { getValues, setValue } = useFormContext();
   const options = [
@@ -56,20 +59,9 @@ const BooleanWithDefault: FC<Props> = ({
     setValue(name, strToBool(getValues(name)));
   }, []);
 
-  const leftPadding = [
-    col_sm !== 12 && onRight ? "ps-2" : "",
-    col_xs !== 12 && onRight ? "ps-2" : "",
-  ].join(" ");
-  const rightPadding = [
-    col_sm !== 12 && !onRight ? "pe-2" : "",
-    col_xs !== 12 && !onRight ? "pe-2" : "",
-  ].join(" ");
-
   return (
     <Col
-      xs={col_xs}
-      sm={col_sm}
-      className={`${leftPadding} ${rightPadding} pt-1 pb-1`}
+      className="pt-1 pb-1"
       style={{ display: "flex", alignItems: "center" }}
     >
       <>

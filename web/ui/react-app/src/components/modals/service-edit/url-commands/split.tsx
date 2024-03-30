@@ -1,6 +1,12 @@
 import { FormItem } from "components/generic/form";
 
-const REGEX = ({ name }: { name: string }) => (
+/**
+ * Returns the form fields for a `Split` url_command
+ *
+ * @param name - The name of the field in the form
+ * @returns The form fields for this Split url_command
+ */
+const SPLIT = ({ name }: { name: string }) => (
   <>
     <FormItem
       key="text"
@@ -26,4 +32,4 @@ const REGEX = ({ name }: { name: string }) => (
   </>
 );
 
-export default REGEX;
+export default SPLIT;

@@ -29,6 +29,18 @@ interface Props {
   ack: (target: string, isWebHook: boolean) => void;
 }
 
+/**
+ * Returns a function that sets a timeout to enable the item to be sent when it
+ * is after the items nextRunnable time, or disables the item if it is sending.
+ *
+ * @param sendable - Whether the item can be sent
+ * @param sending - Whether the item is being sent
+ * @param setSendable - Function to set whether the item can be sent
+ * @param now - The current time
+ * @param nextRunnable - The time the item can be sent
+ * @returns A function that sets a timeout to enable the item to be sent when it
+ * is after the items nextRunnable time, or disables the item if it is sending
+ */
 const sendableTimeout = (
   sendable: boolean,
   sending: boolean,
@@ -50,6 +62,17 @@ const sendableTimeout = (
   }
 };
 
+/**
+ * Renders the item's information with buttons based on the modal type.
+ *
+ * @param itemType - The type of the item (e.g. COMMAND/WEBHOOK)
+ * @param modalType - The type of the modal
+ * @param title - The title of the item
+ * @param failed - Whether the item failed
+ * @param sending - Whether the item is being sent
+ * @param next_runnable - The time the item can next be sent
+ * @returns A component that displays the item's information with buttons based on the modal type
+ */
 export const Item: FC<Props> = ({
   itemType,
   modalType,

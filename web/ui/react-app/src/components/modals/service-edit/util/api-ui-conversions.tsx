@@ -2,9 +2,9 @@ import {
   HeaderType,
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
+  StringStringMap,
 } from "types/config";
 import {
-  NotifyHeaderType,
   ServiceEditAPIType,
   ServiceEditOtherData,
   ServiceEditType,
@@ -12,6 +12,14 @@ import {
 
 import { urlCommandsTrimArray } from "./url-command-trim";
 
+/**
+ * Returns the converted service data for the UI
+ *
+ * @param name - The name of the service
+ * @param serviceData - The service data from the API
+ * @param otherOptionsData - The other options data, containingglobals/defaults/hardDefaults
+ * @returns The converted service data for use in the UI
+ */
 export const convertAPIServiceDataEditToUI = (
   name: string,
   serviceData?: ServiceEditAPIType,
@@ -39,7 +47,7 @@ export const convertAPIServiceDataEditToUI = (
           ),
           docker: {
             ...serviceData?.latest_version?.require?.docker,
-            type: serviceData?.latest_version?.require?.docker?.type || "",
+            type: serviceData?.latest_version?.require?.docker?.type ?? "",
           },
         },
       },
@@ -47,16 +55,16 @@ export const convertAPIServiceDataEditToUI = (
       deployed_version: {
         ...serviceData?.deployed_version,
         basic_auth: {
-          username: serviceData?.deployed_version?.basic_auth?.username || "",
-          password: serviceData?.deployed_version?.basic_auth?.password || "",
+          username: serviceData?.deployed_version?.basic_auth?.username ?? "",
+          password: serviceData?.deployed_version?.basic_auth?.password ?? "",
         },
         headers:
           serviceData?.deployed_version?.headers?.map((header, key) => ({
             ...header,
             oldIndex: key,
-          })) || [],
+          })) ?? [],
         template_toggle:
-          (serviceData?.deployed_version?.regex_template || "") !== "",
+          (serviceData?.deployed_version?.regex_template ?? "") !== "",
       },
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),
@@ -77,7 +85,7 @@ export const convertAPIServiceDataEditToUI = (
           color: "", // ^
           icon: "", // ^
           ...convertNotifyParams(
-            item.name as string,
+            item.name ?? "",
             item.type,
             item.params,
             otherOptionsData
@@ -108,9 +116,16 @@ export const convertAPIServiceDataEditToUI = (
   };
 };
 
+/**
+ * Returns the converted headers for the UI
+ *
+ * @param str - JSON to convert
+ * @param omitValues - If true, will omit the values from the object
+ * @returns The converted object for use in the UI
+ */
 export const convertHeadersFromString = (
-  str?: string | NotifyHeaderType[]
-): NotifyHeaderType[] | undefined => {
+  str?: string | HeaderType[]
+): HeaderType[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
   // undefined/empty
@@ -122,28 +137,38 @@ export const convertHeadersFromString = (
       id: i,
       key: key,
       value: value,
-    })) as NotifyHeaderType[];
+    })) as HeaderType[];
   } catch (error) {
     return [];
   }
 };
 
+/**
+ * Returns the converted notify.X.params.(responders|visibleto) for the UI
+ *
+ * (If defaults are provided and str is undefined/empty, it will only return the values in select fields)
+ *
+ * @param str - JSON to convert
+ * @param defaults - The defaults
+ * @returns The converted object for use in the UI
+ */
 export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[]
 ): NotifyOpsGenieTarget[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
+
   // undefined/empty
-  if (str === undefined || str === "") return undefined;
+  if ((str ?? "") === "") return undefined;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str).map(
+    return JSON.parse(str || "").map(
       (
         obj: { id: string; type: string; name: string; username: string },
         i: number
       ) => {
-        // id
+        // team/user - id
         if (obj.id) {
           return {
             id: i,
@@ -152,7 +177,7 @@ export const convertOpsGenieTargetFromString = (
             value: obj.id,
           };
         } else {
-          // username/name
+          // team/user - username/name
           return {
             id: i,
             type: obj.type,
@@ -167,16 +192,27 @@ export const convertOpsGenieTargetFromString = (
   }
 };
 
+/**
+ * Returns the converted notify.X.actions for the UI
+ *
+ * (If defaults are provided and str is undefined/empty, it will only return the values in select fields)
+ *
+ * @param str - JSON to convert
+ * @param defaults - The defaults
+ * @returns The converted object for use in the UI
+ */
 export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[]
 ): NotifyNtfyAction[] | undefined => {
   // already converted
   if (typeof str === "object") return str;
-  if (str === undefined || str === "") return undefined;
+
+  // undefined/empty
+  if ((str ?? "") === "") return undefined;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str).map((obj: NotifyNtfyAction, i: number) => ({
+    return JSON.parse(str || "").map((obj: NotifyNtfyAction, i: number) => ({
       id: i,
       ...obj,
       headers: obj.headers
@@ -191,10 +227,19 @@ export const convertNtfyActionsFromString = (
   }
 };
 
+/**
+ * Returns the converted notify.X.params for the UI
+ *
+ * @param name - The react-hook-form path to the notify object
+ * @param type - The type of notify
+ * @param urlFields - The params object to convert
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted Params for use in the UI
+ */
 export const convertNotifyParams = (
   name: string,
   type?: string,
-  params?: { [key: string]: string },
+  params?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
   const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;

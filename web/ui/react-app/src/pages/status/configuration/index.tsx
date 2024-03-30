@@ -7,6 +7,9 @@ import { stringify } from "yaml";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useQuery } from "@tanstack/react-query";
 
+/**
+ * @returns The configuration page, which includes a preformatted YAML object of the config.yml.
+ */
 export const Config = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
   const [mutatedData, setMutatedData] = useState<
@@ -16,7 +19,7 @@ export const Config = (): ReactElement => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, isFetching } = useQuery<Record<string, any>>({
     queryKey: ["config"],
-    queryFn: () => fetchJSON(`api/v1/config`),
+    queryFn: () => fetchJSON("api/v1/config"),
     staleTime: 0,
   });
 
@@ -60,6 +63,13 @@ export const Config = (): ReactElement => {
   );
 };
 
+/**
+ * Recursively trims the object, removing empty objects.
+ *
+ * @param obj - The object to trim
+ * @param path - The path of the object
+ * @returns The trimmed object
+ */
 const trimConfig = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   obj: Record<string, any>,
@@ -84,6 +94,13 @@ const trimConfig = (
   return obj;
 };
 
+/**
+ * Orders the services in the object according to the order array.
+ *
+ * @param object - The object to order
+ * @param order - The ordering to apply
+ * @returns The ordered object
+ */
 const orderServices = <T extends Record<string, unknown>>(
   object: T,
   order?: Array<keyof T>
@@ -96,6 +113,12 @@ const orderServices = <T extends Record<string, unknown>>(
   return orderedObject;
 };
 
+/**
+ * Updates the configuration object, ordering the services and removing the order key.
+ *
+ * @param config - The configuration object
+ * @returns The configuration object with the services ordered and the order key removed
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const updateConfig = (config: Record<string, any>) => {
   trimConfig(config);

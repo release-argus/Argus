@@ -5,26 +5,35 @@ import {
 } from "components/generic/form";
 
 import { NotifyJoinType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `Join`
+ *
+ * @param name - The path to this `Join` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Join` `Notify`
+ */
 const JOIN = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyJoinType;
+  main?: NotifyJoinType;
   defaults?: NotifyJoinType;
   hard_defaults?: NotifyJoinType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -36,7 +45,7 @@ const JOIN = ({
         col_sm={12}
         label="API Key"
         defaultVal={globalOrDefault(
-          global?.url_fields?.apikey,
+          main?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
         )}
@@ -51,7 +60,7 @@ const JOIN = ({
         label="Devices"
         tooltip="e.g. ID1,ID2..."
         defaultVal={globalOrDefault(
-          global?.params?.devices,
+          main?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         )}
@@ -61,7 +70,7 @@ const JOIN = ({
         label="Icon"
         tooltip="URL of icon to use"
         defaultVal={
-          global?.params?.icon ||
+          main?.params?.icon ||
           defaults?.params?.icon ||
           hard_defaults?.params?.icon
         }
@@ -72,7 +81,7 @@ const JOIN = ({
         label="Title"
         tooltip="e.g. 'Release - {{ service_id }}'"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}

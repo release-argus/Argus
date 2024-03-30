@@ -1,26 +1,35 @@
 import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./shared";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTeamsType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `Teams`
+ *
+ * @param name - The path to this `Teams` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Teams` `Notify`
+ */
 const TEAMS = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyTeamsType;
+  main?: NotifyTeamsType;
   defaults?: NotifyTeamsType;
   hard_defaults?: NotifyTeamsType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -30,7 +39,7 @@ const TEAMS = ({
         name={`${name}.url_fields.altid`}
         label="Alt ID"
         defaultVal={globalOrDefault(
-          global?.url_fields?.altid,
+          main?.url_fields?.altid,
           defaults?.url_fields?.altid,
           hard_defaults?.url_fields?.altid
         )}
@@ -39,7 +48,7 @@ const TEAMS = ({
         name={`${name}.url_fields.tenant`}
         label="Tenant"
         defaultVal={globalOrDefault(
-          global?.url_fields?.tenant,
+          main?.url_fields?.tenant,
           defaults?.url_fields?.tenant,
           hard_defaults?.url_fields?.tenant
         )}
@@ -49,7 +58,7 @@ const TEAMS = ({
         name={`${name}.url_fields.group`}
         label="Group"
         defaultVal={globalOrDefault(
-          global?.url_fields?.group,
+          main?.url_fields?.group,
           defaults?.url_fields?.group,
           hard_defaults?.url_fields?.group
         )}
@@ -58,7 +67,7 @@ const TEAMS = ({
         name={`${name}.url_fields.groupowner`}
         label="Group Owner"
         defaultVal={globalOrDefault(
-          global?.url_fields?.groupowner,
+          main?.url_fields?.groupowner,
           defaults?.url_fields?.groupowner,
           hard_defaults?.url_fields?.groupowner
         )}
@@ -72,7 +81,7 @@ const TEAMS = ({
         col_sm={5}
         label="Color"
         defaultVal={
-          global?.params?.color ||
+          main?.params?.color ||
           defaults?.params?.color ||
           hard_defaults?.params?.color
         }
@@ -82,7 +91,7 @@ const TEAMS = ({
         col_sm={7}
         label="Host"
         defaultVal={globalOrDefault(
-          global?.params?.host,
+          main?.params?.host,
           defaults?.params?.host,
           hard_defaults?.params?.host
         )}
@@ -93,7 +102,7 @@ const TEAMS = ({
         col_sm={12}
         label="Title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}

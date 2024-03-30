@@ -28,6 +28,16 @@ interface Props {
   setShowUpdateInfo: () => void;
 }
 
+/**
+ * Returns the service's information, including the lqtest version, the deployed version,
+ * the last time the service was queried, and the update options if latest and deployed versions differ.
+ *
+ * @param service - The service the information belongs to
+ * @param updateAvailable - Whether an update is available
+ * @param updateSkipped - Whether the update has been skipped
+ * @param setShowUpdateInfo - Function to show the update information
+ * @returns A component that displays the service's version information
+ */
 export const ServiceInfo: FC<Props> = ({
   service,
   updateAvailable,

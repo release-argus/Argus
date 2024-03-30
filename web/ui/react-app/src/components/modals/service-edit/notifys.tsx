@@ -3,19 +3,26 @@ import { Dict, NotifyType } from "types/config";
 import { FC, memo, useCallback, useMemo } from "react";
 
 import Notify from "./notify";
+import { NotifyEditType } from "types/service-edit";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
-  globals?: Dict<NotifyType>;
+  originals?: NotifyEditType[];
+  mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
   hard_defaults?: Dict<NotifyType>;
 }
 
-const EditServiceNotifys: FC<Props> = ({
-  globals,
-  defaults,
-  hard_defaults,
-}) => {
+/**
+ * Returns the form fields for `notify`
+ *
+ * @param originals - The original values in the form
+ * @param mains - The main notify's
+ * @param defaults - The default values for each `notify` types
+ * @param hard_defaults - The hard default values for each `notify` types
+ * @returns The form fields for `notify`
+ */
+const EditServiceNotifys: FC<Props> = ({ mains, defaults, hard_defaults }) => {
   const { fields, append, remove } = useFieldArray({
     name: "notify",
   });
@@ -38,15 +45,15 @@ const EditServiceNotifys: FC<Props> = ({
         <option className="form-select-option" value="">
           --Not global--
         </option>
-        {globals &&
-          Object.keys(globals).map((n) => (
+        {mains &&
+          Object.keys(mains).map((n) => (
             <option className="form-select-option" value={n} key={n}>
               {n}
             </option>
           ))}
       </>
     ),
-    [globals]
+    [mains]
   );
 
   return (
@@ -59,8 +66,8 @@ const EditServiceNotifys: FC<Props> = ({
               key={id}
               name={`notify.${index}`}
               removeMe={() => remove(index)}
-              globalNotifyOptions={globalNotifyOptions}
-              globals={globals}
+              globalOptions={globalNotifyOptions}
+              mains={mains}
               defaults={defaults}
               hard_defaults={hard_defaults}
             />

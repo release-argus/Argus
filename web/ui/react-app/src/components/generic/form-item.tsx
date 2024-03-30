@@ -18,8 +18,8 @@ interface FormItemProps {
   tooltip?: string | JSX.Element;
   type?: "text" | "number" | "url";
 
-  isURL?: boolean;
   isRegex?: boolean;
+  isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 
@@ -27,6 +27,27 @@ interface FormItemProps {
   onMiddle?: boolean;
 }
 
+/**
+ * Returns a form item
+ *
+ * @param name - The name of the form item
+ * @param registerParams - Additional parameters for the form item
+ * @param required - Whether the form item is required
+ * @param unique - Whether the form item should be unique
+ * @param col_xs - The number of columns the form item should take up on extra small screens
+ * @param col_sm - The number of columns the form item should take up on small screens
+ * @param label - The label of the form item
+ * @param smallLabel - Whether the label should be small
+ * @param tooltip - The tooltip of the form item
+ * @param type - The type of the form item
+ * @param isRegex - Whether the form item should be a regex
+ * @param isURL - Whether the form item should be a URL
+ * @param defaultVal - The default value of the form item
+ * @param placeholder - The placeholder of the form item
+ * @param onRight - Whether the form item should be on the right
+ * @param onMiddle - Whether the form item should be in the middle
+ * @returns A form item at name with a label and tooltip
+ */
 const FormItem: FC<FormItemProps> = ({
   name,
   registerParams = {},
@@ -39,8 +60,8 @@ const FormItem: FC<FormItemProps> = ({
   smallLabel,
   tooltip,
   type = "text",
-  isURL,
   isRegex,
+  isURL,
   defaultVal,
   placeholder,
 
@@ -83,12 +104,27 @@ const FormItem: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value) => {
+            validate: (value: string | undefined) => {
               let validation = true;
               const testValue = value || defaultVal || "";
-              if (required) validation = /.+/.test(testValue);
-              if (!validation) return required === true ? "Required" : required;
 
+              // Validate that it's non-empty (including default value)
+              if (required) {
+                validation = /.+/.test(testValue);
+                if (!validation)
+                  return required === true ? "Required" : required;
+              }
+
+              // Validate that it's valid RegEx
+              if (isRegex) {
+                try {
+                  new RegExp(testValue);
+                } catch (error) {
+                  return "Invalid RegEx";
+                }
+              }
+
+              // Validate that it's a URL (with prefix)
               if (isURL) {
                 try {
                   validation = required
@@ -101,14 +137,7 @@ const FormItem: FC<FormItemProps> = ({
                 }
               }
 
-              if (isRegex) {
-                try {
-                  new RegExp(testValue);
-                } catch (error) {
-                  return "Invalid RegEx";
-                }
-              }
-
+              // Should be unique if it's changed from the default
               if (unique && testValue !== defaultVal) {
                 const parts = name.split(".");
                 const parent = parts.slice(0, parts.length - 2).join(".");
@@ -123,10 +152,10 @@ const FormItem: FC<FormItemProps> = ({
                           (item: { [x: string]: string }) => item[uniqueName]
                         )
                         .filter((item: string) => item === value).length === 1;
-                return validation || "Should be unique";
+                return validation || "Must be unique";
               }
 
-              return validation || "error";
+              return validation;
             },
             ...registerParams,
           })}

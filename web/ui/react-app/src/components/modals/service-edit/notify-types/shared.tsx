@@ -1,19 +1,28 @@
 import { FormItem, FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyOptionsType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "../util/util";
 import { memo } from "react";
 
+/**
+ * Returns the form fields for the `notify.X.options` section
+ *
+ * @param name - The path to these `options` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `options` section of this `Notify`
+ */
 export const NotifyOptions = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyOptionsType;
+  main?: NotifyOptionsType;
   defaults?: NotifyOptionsType;
   hard_defaults?: NotifyOptionsType;
 }) => (
@@ -25,7 +34,7 @@ export const NotifyOptions = ({
       label="Delay"
       tooltip="e.g. 1h2m3s = 1 hour, 2 minutes and 3 seconds"
       defaultVal={globalOrDefault(
-        global?.delay,
+        main?.delay,
         defaults?.delay,
         hard_defaults?.delay
       )}
@@ -36,7 +45,7 @@ export const NotifyOptions = ({
       type="number"
       label="Max tries"
       defaultVal={globalOrDefault(
-        global?.max_tries,
+        main?.max_tries,
         defaults?.max_tries,
         hard_defaults?.max_tries
       )}
@@ -48,7 +57,7 @@ export const NotifyOptions = ({
       rows={3}
       label="Message"
       defaultVal={globalOrDefault(
-        global?.message,
+        main?.message,
         defaults?.message,
         hard_defaults?.message
       )}

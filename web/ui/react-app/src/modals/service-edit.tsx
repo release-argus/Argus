@@ -33,10 +33,17 @@ export interface EditForm {
   dashboardAutoApprove?: boolean;
 }
 
+/**
+ * @param data - The data to convert
+ * @returns The data with empty values removed and converted to API format
+ */
 const getPayload = (data: ServiceEditType) => {
   return removeEmptyValues(convertUIServiceDataEditToAPI(data));
 };
 
+/**
+ * @returns The modal for editing a service
+ */
 const ServiceEditModal = () => {
   // modal.actionType:
   // EDIT
@@ -51,7 +58,6 @@ const ServiceEditModal = () => {
     handleModal("", { id: "", loading: true });
   }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: ServiceEditType) => {
     setErr(null);
     const payload = getPayload(data);
@@ -165,13 +171,11 @@ const ServiceEditModal = () => {
                     {/* Render either the server error or form validation error */}
                     {err ? (
                       <>
-                        <>
-                          {err.split("\\").map((line) => (
-                            <pre key={line} className="no-margin">
-                              {line}
-                            </pre>
-                          ))}
-                        </>
+                        {err.split("\\").map((line) => (
+                          <pre key={line} className="no-margin">
+                            {line}
+                          </pre>
+                        ))}
                       </>
                     ) : (
                       <ul>

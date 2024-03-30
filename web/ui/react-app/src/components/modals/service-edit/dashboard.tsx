@@ -10,6 +10,13 @@ interface Props {
   hard_defaults?: ServiceDashboardOptionsType;
 }
 
+/**
+ * Returns the `dashboard` form fields
+ *
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `dashboard` options
+ */
 const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => (
   <Accordion>
     <Accordion.Header>Dashboard:</Accordion.Header>

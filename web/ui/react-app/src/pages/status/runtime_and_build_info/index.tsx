@@ -14,6 +14,9 @@ const titleMappings: Dictionary<string> = {
 };
 const ignoreCapitalize = ["GOMAXPROCS", "GOGC", "GODEBUG"];
 
+/**
+ * @returns The status page, which includes tables of runtime info and of build info.
+ */
 export const Status = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
 

@@ -1,4 +1,6 @@
-// getBasename - the path prefix for this app
+/**
+ * @returns The path prefix for this app
+ */
 const getBasename = () => {
   let basename = window.location.pathname;
   const paths = ["/approvals", "/status", "/flags", "/config"];

@@ -1,5 +1,11 @@
 import { parse } from "yaml";
 
+/**
+ * Returns the YAML response from the server
+ *
+ * @param url - The URL to fetch the YAML from
+ * @returns The parsed YAML data from the server
+ */
 const fetchYAML = async (url: string) => {
   const response = await Promise.race([
     fetch(url),

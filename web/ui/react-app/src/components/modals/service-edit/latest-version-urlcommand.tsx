@@ -4,6 +4,7 @@ import { FC, memo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormSelect } from "components/generic/form";
 import RenderURLCommand from "./url-commands/render";
+import { URLCommandTypes } from "types/config";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useWatch } from "react-hook-form";
 
@@ -12,14 +13,21 @@ interface Props {
   removeMe: () => void;
 }
 
+/**
+ * Returns the form fields for a URL command
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove the command
+ * @returns The form fields for this URL command
+ */
 const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
-  const urlCommandTypeOptions = [
+  const urlCommandTypeOptions: { label: string; value: URLCommandTypes }[] = [
     { label: "RegEx", value: "regex" },
     { label: "Replace", value: "replace" },
     { label: "Split", value: "split" },
   ];
 
-  const commandType = useWatch({ name: `${name}.type` });
+  const commandType: URLCommandTypes = useWatch({ name: `${name}.type` });
 
   return (
     <>
