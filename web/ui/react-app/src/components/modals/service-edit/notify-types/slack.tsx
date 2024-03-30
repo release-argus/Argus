@@ -7,25 +7,34 @@ import {
 
 import { NotifyOptions } from "./shared";
 import { NotifySlackType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "../util/util";
 
+/**
+ * Returns the form fields for `Slack`
+ *
+ * @param name - The path to this `Slack` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Slack` Notify
+ */
 const SLACK = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifySlackType;
+  main?: NotifySlackType;
   defaults?: NotifySlackType;
   hard_defaults?: NotifySlackType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -44,7 +53,7 @@ const SLACK = ({
           </>
         }
         defaultVal={globalOrDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
@@ -54,7 +63,7 @@ const SLACK = ({
         required
         label="Channel"
         defaultVal={globalOrDefault(
-          global?.url_fields?.channel,
+          main?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         )}
@@ -67,7 +76,7 @@ const SLACK = ({
         name={`${name}.params.botname`}
         label="Bot Name"
         defaultVal={globalOrDefault(
-          global?.params?.botname,
+          main?.params?.botname,
           defaults?.params?.botname,
           hard_defaults?.params?.botname
         )}
@@ -77,7 +86,7 @@ const SLACK = ({
         label="Color"
         tooltip="Message left-hand border color in hex, e.g. #ffffff"
         defaultVal={
-          global?.params?.color ||
+          main?.params?.color ||
           defaults?.params?.color ||
           hard_defaults?.params?.color
         }
@@ -88,7 +97,7 @@ const SLACK = ({
         label="Icon"
         tooltip="Use emoji or URL as icon (based on presence of http(s):// prefix)"
         defaultVal={
-          global?.params?.icon ||
+          main?.params?.icon ||
           defaults?.params?.icon ||
           hard_defaults?.params?.icon
         }
@@ -100,7 +109,7 @@ const SLACK = ({
         label="Title"
         tooltip="Text prepended to the message"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}

@@ -1,13 +1,11 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, useMemo } from "react";
+import { FC, JSX, useMemo } from "react";
 
 import FormLabel from "./form-label";
-import { JSX } from "react";
 import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
   name: string;
-  registerParams?: Record<string, unknown>;
   required?: boolean;
 
   col_xs?: number;
@@ -15,30 +13,43 @@ interface FormItemProps {
   label?: string;
   tooltip?: string | JSX.Element;
 
-  rows?: number;
-
-  value?: string | number;
-
-  isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 
+  rows?: number;
   onRight?: boolean;
   onMiddle?: boolean;
 }
 
+/**
+ * Returns a form textarea
+ *
+ * @param name - The name of the form item
+ * @param required - Whether the form item is required
+ * @param col_xs - The number of columns the form item should take up on extra small screens
+ * @param col_sm - The number of columns the form item should take up on small screens
+ * @param label - The label of the form item
+ * @param tooltip - The tooltip of the form item
+ * @param defaultVal - The default value of the form item
+ * @param placeholder - The placeholder of the form item
+ * @param rows - The number of rows for the textarea
+ * @param onRight - Whether the form item should be on the right
+ * @param onMiddle - Whether the form item should be in the middle
+ * @returns A form textarea with a label and tooltip
+ */
 const FormTextArea: FC<FormItemProps> = ({
   name,
-  registerParams = {},
   required,
 
   col_xs = 12,
   col_sm = 6,
   label,
   tooltip,
-  rows,
+
   defaultVal,
   placeholder,
+
+  rows,
   onRight,
   onMiddle,
 }) => {
@@ -51,6 +62,7 @@ const FormTextArea: FC<FormItemProps> = ({
       col_xs !== 12 && !onRight ? (onMiddle ? "ps-2" : "pe-2") : "",
     ].join(" ");
   }, [col_xs, col_sm, onRight, onMiddle]);
+
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
       <FormGroup>
@@ -64,17 +76,15 @@ const FormTextArea: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value) => {
-              let validation = true;
-              const testValue = value || defaultVal || "";
+            validate: (value: string | undefined) => {
+              // Validate that it's non-empty (including default value)
               if (required) {
-                validation = /.+/.test(testValue);
-                if (!validation) return "Required";
+                const testValue = value || defaultVal || "";
+                const validation = /.+/.test(testValue);
+                return validation ? true : "Required";
               }
-
-              return validation || "error";
+              return true;
             },
-            ...registerParams,
           })}
         />
       </FormGroup>

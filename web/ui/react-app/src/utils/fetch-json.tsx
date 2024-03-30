@@ -1,4 +1,9 @@
-// fetchJSON will GET the JSON data, rewritten for use in React-Query
+/**
+ * Returns the JSON response from the server
+ *
+ * @param url - The URL to fetch data from
+ * @returns The JSON data returned from the request to the server
+ */
 const fetchJSON = async <T,>(url: string): Promise<T> => {
   const response = await Promise.race([
     fetch(url),

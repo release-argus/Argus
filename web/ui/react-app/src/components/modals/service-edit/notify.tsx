@@ -1,5 +1,5 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
-import { Dict, NotifyType, NotifyTypesConst } from "types/config";
+import { Dict, NotifyType, NotifyTypes, NotifyTypesConst } from "types/config";
 import { FC, JSX, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -13,31 +13,42 @@ interface Props {
   name: string;
   removeMe: () => void;
 
-  globalNotifyOptions: JSX.Element;
-  globals?: Dict<NotifyType>;
+  globalOptions: JSX.Element;
+  mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
   hard_defaults?: Dict<NotifyType>;
 }
 
+/**
+ * returns the form fields for a notify
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove this Notify
+ * @param globalOptions - The options for the global Notify's
+ * @param mains - The main Notify's
+ * @param defaults - The default values for all Notify types
+ * @param hard_defaults - The hard default values for all Notify types
+ * @returns The form fields for this Notify
+ */
 const Notify: FC<Props> = ({
   name,
   removeMe,
 
-  globalNotifyOptions,
-  globals,
+  globalOptions,
+  mains,
   defaults,
   hard_defaults,
 }) => {
   const { setValue, trigger } = useFormContext();
 
-  const itemName = useWatch({ name: `${name}.name` });
-  const itemType = useWatch({ name: `${name}.type` });
+  const itemName: string = useWatch({ name: `${name}.name` });
+  const itemType: NotifyTypes = useWatch({ name: `${name}.type` });
   useEffect(() => {
     // Set Type to that of the global for the new name if it exists
-    if (globals?.[itemName]?.type !== undefined)
-      setValue(`${name}.type`, globals[itemName].type);
-    else if ((itemType || "") === "" && NotifyTypesConst.includes(itemName))
+    if (mains?.[itemName]?.type) setValue(`${name}.type`, mains[itemName].type);
+    else if (itemType && (NotifyTypesConst as string[]).includes(itemName))
       setValue(`${name}.type`, itemName);
+    // Trigger validation on name/type
     setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
@@ -68,13 +79,13 @@ const Notify: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this Notify as a base" />
               <Form.Select
                 value={
-                  globals && Object.keys(globals).indexOf(itemName) !== -1
+                  mains && Object.keys(mains).indexOf(itemName) !== -1
                     ? itemName
                     : ""
                 }
                 onChange={(e) => setValue(`${name}.name`, e.target.value)}
               >
-                {globalNotifyOptions}
+                {globalOptions}
               </Form.Select>
             </FormGroup>
           </Col>
@@ -83,10 +94,10 @@ const Notify: FC<Props> = ({
             customValidation={(value) => {
               if (
                 itemType !== undefined &&
-                globals?.[itemName]?.type &&
-                itemType !== globals?.[itemName]?.type
+                mains?.[itemName]?.type &&
+                itemType !== mains?.[itemName]?.type
               ) {
-                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+                return `${value} does not match the global for "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
               }
               return true;
             }}
@@ -105,7 +116,7 @@ const Notify: FC<Props> = ({
           <RenderNotify
             name={name}
             type={itemType}
-            globalNotify={globals?.[itemName]}
+            main={mains?.[itemName]}
             defaults={defaults?.[itemType]}
             hard_defaults={hard_defaults?.[itemType]}
           />

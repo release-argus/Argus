@@ -11,6 +11,13 @@ interface Props {
   delayedRender: any;
 }
 
+/**
+ * Renders a loading placeholder of the action-release modal
+ *
+ * @param modalType - The type of the modal
+ * @param delayedRender - The delayed render function
+ * @returns A loading component that has the confirmation button disabled if the modal type is "SKIP"
+ */
 export const Loading: FC<Props> = ({ modalType, delayedRender }) => {
   return (
     <Card bg="secondary" className={"no-margin service"}>

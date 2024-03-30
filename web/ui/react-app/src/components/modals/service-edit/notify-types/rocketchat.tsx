@@ -2,25 +2,34 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyOptions } from "./shared";
 import { NotifyRocketChatType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "../util/util";
 
+/**
+ * Returns the form fields for `Rocket.Chat`
+ *
+ * @param name - The path to this `Rocket.Chat` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Rocket.Chat` `Notify`
+ */
 const ROCKET_CHAT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyRocketChatType;
+  main?: NotifyRocketChatType;
   defaults?: NotifyRocketChatType;
   hard_defaults?: NotifyRocketChatType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -31,7 +40,7 @@ const ROCKET_CHAT = ({
         col_sm={12}
         label="Username"
         defaultVal={globalOrDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         )}
@@ -43,7 +52,7 @@ const ROCKET_CHAT = ({
         label="Host"
         tooltip="e.g. rocketchat.example.io"
         defaultVal={globalOrDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         )}
@@ -55,7 +64,7 @@ const ROCKET_CHAT = ({
         type="number"
         label="Port"
         defaultVal={globalOrDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
@@ -71,7 +80,7 @@ const ROCKET_CHAT = ({
           </>
         }
         defaultVal={globalOrDefault(
-          global?.url_fields?.path,
+          main?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         )}
@@ -81,7 +90,7 @@ const ROCKET_CHAT = ({
         required
         label="Channel"
         defaultVal={globalOrDefault(
-          global?.url_fields?.channel,
+          main?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         )}
@@ -92,7 +101,7 @@ const ROCKET_CHAT = ({
         required
         label="Token A"
         defaultVal={globalOrDefault(
-          global?.url_fields?.tokena,
+          main?.url_fields?.tokena,
           defaults?.url_fields?.tokena,
           hard_defaults?.url_fields?.tokena
         )}
@@ -102,7 +111,7 @@ const ROCKET_CHAT = ({
         required
         label="Token B"
         defaultVal={globalOrDefault(
-          global?.url_fields?.tokenb,
+          main?.url_fields?.tokenb,
           defaults?.url_fields?.tokenb,
           hard_defaults?.url_fields?.tokenb
         )}

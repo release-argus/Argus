@@ -6,7 +6,7 @@ import FormLabel from "./form-label";
 import { useFormContext } from "react-hook-form";
 
 interface FormCheckProps {
-  name?: string;
+  name: string;
 
   col_xs?: number;
   col_sm?: number;
@@ -20,6 +20,21 @@ interface FormCheckProps {
   onMiddle?: boolean;
 }
 
+/**
+ * Returns a form checkbox
+ *
+ * @param name - The name of the field
+ * @param col_xs - The number of columns to take up on extra small screens
+ * @param col_sm - The number of columns to take up on small screens
+ * @param size - The size of the checkbox
+ * @param label - The form label to display
+ * @param smallLabel - Whether the label should be small
+ * @param tooltip - The tooltip to display
+ * @param type - The type of the checkbox
+ * @param onRight - Whether the checkbox should be on the right
+ * @param onMiddle - Whether the checkbox should be in the middle
+ * @returns A form checkbox with a label and tooltip
+ */
 const FormCheck: FC<FormCheckProps> = ({
   name,
 
@@ -49,10 +64,6 @@ const FormCheck: FC<FormCheckProps> = ({
     ].join(" ");
   }, [col_xs, col_sm, onRight, onMiddle]);
 
-  const registrationProps = useMemo(() => {
-    return name ? { ...register(name) } : {};
-  }, [name]);
-
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
       <FormGroup>
@@ -63,7 +74,7 @@ const FormCheck: FC<FormCheckProps> = ({
           className={`form-check${size === "lg" ? "-large" : ""}`}
           type={type}
           autoFocus={false}
-          {...registrationProps}
+          {...register(name)}
         />
       </FormGroup>
     </Col>

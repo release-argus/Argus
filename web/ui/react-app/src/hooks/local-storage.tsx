@@ -1,5 +1,12 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
+/**
+ * Returns the value from local storage and a function to set this value
+ *
+ * @param localStorageKey - The key to store the value in local storage
+ * @param initialState - The initial state of the value
+ * @returns The value and a function to set the value
+ */
 export function useLocalStorage<S>(
   localStorageKey: string,
   initialState: S

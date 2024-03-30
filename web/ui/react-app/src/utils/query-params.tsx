@@ -1,11 +1,20 @@
 import { ArgType } from "types/service-edit";
-import { urlCommandsTrim } from "../components/modals/service-edit/util/url-command-trim";
+import { urlCommandsTrim } from "components/modals/service-edit/util";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DiffObject = { [key: string]: any };
 
-// deepDiff oldObj with newObj and return what's changed with newObj
-const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
+/**
+ * Returns the differences between the two objects
+ *
+ * @param newObj - The new object to compare
+ * @param oldObj - The old object to compare
+ * @returns The differences between the two objects
+ */
+export const deepDiff = (
+  newObj: DiffObject,
+  oldObj?: DiffObject
+): DiffObject => {
   const diff: DiffObject = {};
 
   // if oldObj is undefined, return newObj
@@ -28,7 +37,7 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
       } else {
         const subDiff = (oldObj[key] || []).map(
           (elem: DiffObject, i: string | number) =>
-            deepDiff(elem, newObj[key][i])
+            deepDiff(newObj[key][i], elem)
         );
         if (
           subDiff.some(
@@ -44,7 +53,7 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
       typeof newObj[key] === "object"
     ) {
       // recurse on nested objects
-      const subDiff = deepDiff(oldObj[key], newObj[key]);
+      const subDiff = deepDiff(newObj[key], oldObj[key]);
       if (Object.keys(subDiff).length > 0) diff[key] = subDiff;
       // diff scalars
     } else if (oldObj[key] !== newObj[key]) diff[key] = newObj[key];
@@ -53,8 +62,14 @@ const deepDiff = (oldObj: DiffObject, newObj: DiffObject): DiffObject => {
   return diff;
 };
 
-// stringifyQueryParam will return a query param string for a given key/value pair
-// if value is undefined/null, it will return an empty string if omitUndefined is true
+/**
+ * Returns an encoded query param string for a given key/value pair
+ *
+ * @param key - The key of the query param
+ * @param value - The value of the query param
+ * @param omitUndefined - Whether to omit undefined values
+ * @returns An encoded query param string
+ */
 export const stringifyQueryParam = (
   key: string,
   value?: string | number | boolean,
@@ -64,6 +79,14 @@ export const stringifyQueryParam = (
     ? ""
     : `${key}=${encodeURIComponent(value ?? "")}`;
 
+/**
+ * Returns the query params for the given object changes
+ *
+ * @param params - The new object
+ * @param defaults - The old object
+ * @param prefix - The prefix of the query params
+ * @returns The query params of any changed values between the two objects
+ */
 export const convertToQueryParams = ({
   params,
   defaults,
@@ -76,7 +99,7 @@ export const convertToQueryParams = ({
   prefix?: string;
 }): string => {
   const queryParams: string[] = [];
-  const changedParams = deepDiff(defaults, params);
+  const changedParams = deepDiff(params, defaults);
 
   for (const key in changedParams) {
     const paramKey = prefix ? `${prefix}[${key}]` : key;
@@ -103,7 +126,15 @@ export const convertToQueryParams = ({
               }
             : changedParams[key]
         );
-      } else modifiedObj = JSON.stringify(changedParams[key]);
+      }
+      // Include new undefined's in the JSONification
+      else
+        modifiedObj = JSON.stringify(changedParams[key], (key, value) => {
+          if (value === undefined) {
+            return null;
+          }
+          return value;
+        });
 
       // Skip empty objects
       if (modifiedObj === "{}") continue;

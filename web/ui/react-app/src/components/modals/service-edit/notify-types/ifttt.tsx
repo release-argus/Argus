@@ -1,26 +1,35 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyIFTTTType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `IFTTT`
+ *
+ * @param name - The path to this `IFTTT` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `IFTTT` `Notify`
+ */
 const IFTTT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyIFTTTType;
+  main?: NotifyIFTTTType;
   defaults?: NotifyIFTTTType;
   hard_defaults?: NotifyIFTTTType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -32,7 +41,7 @@ const IFTTT = ({
         col_sm={12}
         label="WebHook ID"
         defaultVal={globalOrDefault(
-          global?.url_fields?.webhookid,
+          main?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
         )}
@@ -47,7 +56,7 @@ const IFTTT = ({
         label="Events"
         tooltip="e.g. event1,event2..."
         defaultVal={globalOrDefault(
-          global?.params?.events,
+          main?.params?.events,
           defaults?.params?.events,
           hard_defaults?.params?.events
         )}
@@ -58,7 +67,7 @@ const IFTTT = ({
         label="Title"
         tooltip="Optional notification title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
@@ -69,7 +78,7 @@ const IFTTT = ({
         label="Use Message As Value"
         tooltip="Set the corresponding value field to the message"
         defaultVal={globalOrDefault(
-          global?.params?.usemessageasvalue,
+          main?.params?.usemessageasvalue,
           defaults?.params?.usemessageasvalue,
           hard_defaults?.params?.usemessageasvalue
         )}
@@ -80,7 +89,7 @@ const IFTTT = ({
         label="Use Title As Value"
         tooltip="Set the corresponding value field to the title"
         defaultVal={globalOrDefault(
-          global?.params?.usetitleasvalue,
+          main?.params?.usetitleasvalue,
           defaults?.params?.usetitleasvalue,
           hard_defaults?.params?.usetitleasvalue
         )}
@@ -91,7 +100,7 @@ const IFTTT = ({
         col_sm={4}
         label="Value1"
         defaultVal={globalOrDefault(
-          global?.params?.value1,
+          main?.params?.value1,
           defaults?.params?.value1,
           hard_defaults?.params?.value1
         )}
@@ -101,7 +110,7 @@ const IFTTT = ({
         col_sm={4}
         label="Value2"
         defaultVal={globalOrDefault(
-          global?.params?.value2,
+          main?.params?.value2,
           defaults?.params?.value2,
           hard_defaults?.params?.value2
         )}
@@ -112,7 +121,7 @@ const IFTTT = ({
         col_sm={4}
         label="Value3"
         defaultVal={globalOrDefault(
-          global?.params?.value3,
+          main?.params?.value3,
           defaults?.params?.value3,
           hard_defaults?.params?.value3
         )}

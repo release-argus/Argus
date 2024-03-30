@@ -3,11 +3,19 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { useEffect } from "react";
 
+/**
+ * The form fields for a `RegEx` url_command
+ *
+ * @param name - The name of the field in the form
+ * @returns The form fields for this RegEx url_command
+ */
 const REGEX = ({ name }: { name: string }) => {
   const { setValue } = useFormContext();
 
   // Template toggle
-  const templateToggle = useWatch({ name: `${name}.template_toggle` });
+  const templateToggle: boolean | undefined = useWatch({
+    name: `${name}.template_toggle`,
+  });
   useEffect(() => {
     // Clear the template if the toggle is false
     if (templateToggle === false) {
@@ -20,7 +28,7 @@ const REGEX = ({ name }: { name: string }) => {
     <>
       <FormItem
         name={`${name}.regex`}
-        required={templateToggle ? "Required for template" : false}
+        required
         label="RegEx"
         smallLabel
         col_sm={5}

@@ -14,6 +14,14 @@ interface Props {
   removeMe: () => void;
 }
 
+/**
+ * NtfyAction is the form fields for a Ntfy action
+ *
+ * @param name - The name of the field in the form
+ * @param defaults - The default values for the action
+ * @param removeMe - The function to remove this action
+ * @returns The form fields for this action
+ */
 const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
   const { setValue } = useFormContext();
   const typeOptions = [
@@ -27,9 +35,9 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
     broadcast = "Take picture",
   }
 
-  const targetType = useWatch({
+  const targetType: keyof typeof typeLabelMap = useWatch({
     name: `${name}.action`,
-  }) as keyof typeof typeLabelMap;
+  });
 
   // Set Select's to the defaults
   useEffect(() => {
@@ -40,7 +48,7 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 
   return (
     <>
-      <Col xs={1} style={{ paddingBottom: "0.25rem" }}>
+      <Col xs={2} sm={1} style={{ padding: "0.25rem" }}>
         <Button
           className="btn-secondary-outlined btn-icon-center"
           variant="secondary"
@@ -49,13 +57,13 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
           <FontAwesomeIcon icon={faTrash} />
         </Button>
       </Col>
-      <Col xs={11}>
+      <Col xs={10} sm={11}>
         <Row>
           <FormSelect
             name={`${name}.action`}
-            col_xs={5}
+            col_xs={6}
             col_sm={3}
-            label="Type"
+            label="Action Type"
             options={typeOptions}
           />
           <FormItem

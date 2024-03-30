@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-// A hook to determine whether a CSS media query finds any matches.
+/**
+ * Returns whether the CSS media query matches
+ *
+ * @param query - The CSS media query to match
+ * @returns Whether the CSS media query matches
+ */
 export const useMedia = (query: string): boolean => {
   const mediaQuery = window.matchMedia(query);
   const [matches, setMatches] = useState(mediaQuery.matches);

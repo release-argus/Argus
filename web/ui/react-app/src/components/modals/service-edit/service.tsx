@@ -16,7 +16,7 @@ import EditServiceWebHooks from "components/modals/service-edit/webhooks";
 import { FormItem } from "components/generic/form";
 import { Loading } from "./loading";
 import { WebHookType } from "types/config";
-import { convertAPIServiceDataEditToUI } from "./util/api-ui-conversions";
+import { convertAPIServiceDataEditToUI } from "components/modals/service-edit/util";
 import { fetchJSON } from "utils";
 import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,12 @@ interface Props {
   name: string;
 }
 
+/**
+ * Returns the form fields for creating/editing a service
+ *
+ * @param name - The name of the service
+ * @returns The form fields for creating/editing a service
+ */
 const EditService: FC<Props> = ({ name }) => {
   const { reset } = useFormContext();
   const [loading, setLoading] = useState(true);
@@ -76,8 +82,7 @@ const EditService: FC<Props> = ({ name }) => {
                   : // Name hasn't changed or name isn't in use
                     name === value || !monitorData.order.includes(value);
               return (
-                validation ||
-                (value === "" ? "Required" : "name should be unique")
+                validation || (value === "" ? "Required" : "Must be unique")
               );
             },
           }}
@@ -107,12 +112,12 @@ const EditService: FC<Props> = ({ name }) => {
       />
       <EditServiceCommands name="command" />
       <EditServiceWebHooks
-        globals={otherOptionsData?.webhook}
+        mains={otherOptionsData?.webhook}
         defaults={otherOptionsData?.defaults?.webhook as WebHookType}
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
       />
       <EditServiceNotifys
-        globals={otherOptionsData?.notify}
+        mains={otherOptionsData?.notify}
         defaults={otherOptionsData?.defaults?.notify}
         hard_defaults={otherOptionsData?.hard_defaults?.notify}
       />

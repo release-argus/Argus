@@ -9,6 +9,13 @@ interface Props {
   disabled?: boolean;
 }
 
+/**
+ * Returns a delete confirmation modal
+ *
+ * @param onDelete - The function to call when the delete button is clicked
+ * @param disabled - Whether the delete confirmation button is disabled
+ * @returns A delete confirmation modal
+ */
 export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
   const [modalShow, setModalShow] = useState(false);
   const [deleting, setDeleting] = useState(false);

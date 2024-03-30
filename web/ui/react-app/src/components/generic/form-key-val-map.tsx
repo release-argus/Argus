@@ -26,6 +26,17 @@ interface Props {
   defaults?: HeaderType[];
 }
 
+/**
+ * Returns the form fields for a key-value map
+ *
+ * @param name - The name of the field in the form
+ * @param label - The label for the field
+ * @param tooltip - The tooltip for the field
+ * @param keyPlaceholder - The placeholder for the key field
+ * @param valuePlaceholder - The placeholder for the value field
+ * @param defaults - The default values for the field
+ * @returns The form fields for a key-value map at name with a label and tooltip
+ */
 const FormKeyValMap: FC<Props> = ({
   name,
   label = "Headers",
@@ -47,12 +58,13 @@ const FormKeyValMap: FC<Props> = ({
   }, [fields]);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues = useWatch({ name: name });
+  const fieldValues: HeaderType[] = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () => diffObjects(fieldValues, defaults),
     [fieldValues, defaults]
   );
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
   }, [useDefaults]);
@@ -69,7 +81,7 @@ const FormKeyValMap: FC<Props> = ({
   return (
     <FormGroup>
       <Row>
-        <Col>
+        <Col className="pt-1">
           <FormLabel text={label} tooltip={tooltip} />
         </Col>
         <Col>

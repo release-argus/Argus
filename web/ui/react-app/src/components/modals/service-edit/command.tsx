@@ -11,6 +11,13 @@ interface Props {
   removeMe?: () => void;
 }
 
+/**
+ * Returns the form fields for a command
+ *
+ * @param name - The name of the field in the form
+ * @param removeMe - The function to remove the command
+ * @returns The form fields for this command with any number of arguments
+ */
 const Command: FC<Props> = ({ name, removeMe }) => {
   const { fields, append, remove } = useFieldArray({
     name: name,

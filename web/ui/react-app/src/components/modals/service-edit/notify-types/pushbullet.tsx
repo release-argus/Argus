@@ -1,26 +1,35 @@
 import { FormItem, FormLabel } from "components/generic/form";
 
-import { NotifyOptions } from "./shared";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushbulletType } from "types/config";
-import { globalOrDefault } from "./util";
+import { globalOrDefault } from "components/modals/service-edit/util";
 
+/**
+ * Returns the form fields for `PushBullet`
+ *
+ * @param name - The path to this `PushBullet` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `PushBullet` `Notify`
+ */
 const PUSHBULLET = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyPushbulletType;
+  main?: NotifyPushbulletType;
   defaults?: NotifyPushbulletType;
   hard_defaults?: NotifyPushbulletType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -32,7 +41,7 @@ const PUSHBULLET = ({
         col_sm={12}
         label="Access Token"
         defaultVal={globalOrDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
@@ -44,7 +53,7 @@ const PUSHBULLET = ({
         label="Targets"
         tooltip="e.g. DEVICE1,DEVICE2..."
         defaultVal={globalOrDefault(
-          global?.url_fields?.targets,
+          main?.url_fields?.targets,
           defaults?.url_fields?.targets,
           hard_defaults?.url_fields?.targets
         )}
@@ -57,7 +66,7 @@ const PUSHBULLET = ({
         col_sm={12}
         label="Title"
         defaultVal={globalOrDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}

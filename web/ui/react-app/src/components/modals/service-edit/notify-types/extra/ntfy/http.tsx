@@ -12,6 +12,13 @@ interface Props {
   defaults?: NotifyNtfyAction;
 }
 
+/**
+ * HTTP renders the form fields for the HTTP Ntfy Action
+ *
+ * @param name - The name of the field in the form
+ * @param defaults - The default values for the HTTP Ntfy Action
+ * @returns The form fields for this HTTP Ntfy Action
+ */
 const HTTP: FC<Props> = ({ name, defaults }) => {
   const methodOptions = [
     { label: "POST", value: "post" },
@@ -25,7 +32,6 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
     <>
       <FormSelect
         name={`${name}.method`}
-        col_xs={12}
         col_sm={5}
         label="Type"
         options={methodOptions}
@@ -35,28 +41,24 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
         name={`${name}.url`}
         label="URL"
         required
-        col_xs={12}
         col_sm={12}
         defaultVal={defaults?.url}
         placeholder="e.g. 'https://ntfy.sh/mytopic'"
-        onRight
       />
       <FormKeyValMap
         name={`${name}.headers`}
         label="Headers"
         tooltip="HTTP headers"
-        defaults={defaults?.headers as HeaderType[]}
+        defaults={defaults?.headers as HeaderType[] | undefined}
         keyPlaceholder="e.g. 'Authorization'"
         valuePlaceholder="e.g. 'Bearer <token>'"
       />
       <FormTextArea
         name={`${name}.body`}
         label="Body"
-        col_xs={12}
         col_sm={12}
         defaultVal={defaults?.body}
         placeholder={`e.g. '{"key": "value"}'`}
-        onRight
       />
     </>
   );

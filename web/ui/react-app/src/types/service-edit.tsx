@@ -9,8 +9,11 @@ import {
   NotifyOptionsType,
   NotifyType,
   NotifyTypes,
+  NotifyURLFieldsType,
   ServiceDashboardOptionsType,
   ServiceOptionsType,
+  StringFieldArray,
+  StringStringMap,
   URLCommandType,
   WebHookType,
 } from "./config";
@@ -92,45 +95,13 @@ export interface DeployedVersionLookupEditType {
 }
 
 export interface NotifyEditType {
-  [key: string]:
-    | string
-    | number
-    | undefined
-    | NotifyTypes
-    | NotifyOptionsType
-    | {
-        [key: string]:
-          | undefined
-          | string
-          | number
-          | boolean
-          | NotifyNtfyAction[]
-          | NotifyOpsGenieTarget[]
-          | NotifyHeaderType[]
-          | { [key: string]: string };
-      };
   name?: string;
   oldIndex?: string;
 
   type?: NotifyTypes;
   options?: NotifyOptionsType;
-  url_fields?: { [key: string]: undefined | string | number | boolean };
-  params?: {
-    [key: string]:
-      | undefined
-      | string
-      | number
-      | boolean
-      | NotifyNtfyAction[]
-      | NotifyOpsGenieTarget[]
-      | NotifyHeaderType[];
-  };
-}
-
-// OpsGenieDetail | GenericCustomHeaders | GenericJSONPayloadVars | GenericQueryVars
-export interface NotifyHeaderType {
-  key: string;
-  value: string;
+  url_fields?: NotifyURLFieldsType;
+  params?: NotifyParamsType;
 }
 
 export interface HeaderEditType extends HeaderType {
@@ -141,12 +112,22 @@ export interface WebHookEditType extends WebHookType {
   oldIndex?: string; // Index of existing secret
 }
 
+export interface NotifyParamsType {
+  [key: string]:
+    | undefined
+    | string
+    | number
+    | boolean
+    | HeaderType[]
+    | NotifyNtfyAction[]
+    | NotifyOpsGenieTarget[]
+    | StringFieldArray;
+}
+
 /////////////////////////////////
 //             API             //
 /////////////////////////////////
 export interface ServiceEditAPIType {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
   comment?: string;
   options?: ServiceOptionsType;
   latest_version?: LatestVersionLookupEditType;
@@ -158,17 +139,10 @@ export interface ServiceEditAPIType {
 }
 
 export interface NotifyEditAPIType {
-  [key: string]:
-    | string
-    | undefined
-    | NotifyOptionsType
-    | { [key: string]: string };
   name?: string;
 
   type?: NotifyTypes;
   options?: NotifyOptionsType;
-  url_fields?: { [key: string]: string };
-  params?: {
-    [key: string]: string;
-  };
+  url_fields?: StringStringMap;
+  params?: StringStringMap;
 }

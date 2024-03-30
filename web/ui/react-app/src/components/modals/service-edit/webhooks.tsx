@@ -1,24 +1,31 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
 import { Dict, WebHookType } from "types/config";
-import { FC, useMemo } from "react";
+import { FC, useCallback, useMemo } from "react";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
-  globals?: Dict<WebHookType>;
+  mains?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
 }
 
-const EditServiceWebHooks: FC<Props> = ({
-  globals,
-  defaults,
-  hard_defaults,
-}) => {
+/**
+ * Returns the form fields for `webhook`
+ *
+ * @param mains - The global WebHook's
+ * @param defaults - The default values for a WebHook
+ * @param hard_defaults - The hard default values for a WebHook
+ * @returns The form fields for `webhook`
+ */
+const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
   const { fields, append, remove } = useFieldArray({
     name: "webhook",
   });
+  const addItem = useCallback(() => {
+    append({ type: "github", name: "" }, { shouldFocus: false });
+  }, []);
 
   const globalWebHookOptions = useMemo(
     () => (
@@ -26,15 +33,15 @@ const EditServiceWebHooks: FC<Props> = ({
         <option className="form-select-option" value="">
           Not global
         </option>
-        {globals &&
-          Object.keys(globals).map((n) => (
+        {mains &&
+          Object.keys(mains).map((n) => (
             <option className="form-select-option" value={n} key={n}>
               {n}
             </option>
           ))}
       </>
     ),
-    [globals]
+    [mains]
   );
 
   return (
@@ -48,7 +55,7 @@ const EditServiceWebHooks: FC<Props> = ({
               name={`webhook.${index}`}
               removeMe={() => remove(index)}
               globalOptions={globalWebHookOptions}
-              globals={globals}
+              mains={mains}
               defaults={defaults}
               hard_defaults={hard_defaults}
             />
@@ -57,9 +64,7 @@ const EditServiceWebHooks: FC<Props> = ({
             className={fields.length > 0 ? "" : "mt-2"}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
-            onClick={() => {
-              append({ type: "github", name: "" }, { shouldFocus: false });
-            }}
+            onClick={addItem}
           >
             Add WebHook
           </Button>

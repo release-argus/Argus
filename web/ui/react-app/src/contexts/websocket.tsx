@@ -34,6 +34,15 @@ interface WebSocketCtx {
   setMonitorData: Dispatch<WebSocketResponse>;
 }
 
+/**
+ * The WebSocket context, which provides the WebSocket connection and monitor data.
+ *
+ * @param ws - The WebSocket connection
+ * @param connected - Whether the WebSocket connection is established
+ * @param monitorData - The monitor data
+ * @param setMonitorData - Function to set the monitor data
+ * @returns The WebSocket context
+ */
 export const WebSocketContext = createContext<WebSocketCtx>({
   ws: undefined,
   connected: false,
@@ -47,6 +56,9 @@ interface Props {
 }
 
 const ws = new ReconnectingWebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
+/**
+ * @returns The WebSocket provider, which provides the WebSocket connection and monitor data.
+ */
 export const WebSocketProvider = (props: Props) => {
   const queryClient = useQueryClient();
   const [monitorData, setMonitorData] = useReducer(reducerMonitor, {

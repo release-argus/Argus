@@ -2,27 +2,36 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyMatrixType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 
+/**
+ * Returns the form fields for `Matrix`
+ *
+ * @param name - The path to this `Matrix` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Matrix` `Notify`
+ */
 const MATRIX = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyMatrixType;
+  main?: NotifyMatrixType;
   defaults?: NotifyMatrixType;
   hard_defaults?: NotifyMatrixType;
 }) => (
   <>
     <NotifyOptions
       name={name}
-      global={global?.options}
+      main={main?.options}
       defaults={defaults?.options}
       hard_defaults={hard_defaults?.options}
     />
@@ -33,7 +42,7 @@ const MATRIX = ({
         label="Username"
         tooltip="e.g. something@example.com"
         defaultVal={globalOrDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         )}
@@ -43,7 +52,7 @@ const MATRIX = ({
         required
         label="Password"
         defaultVal={globalOrDefault(
-          global?.url_fields?.password,
+          main?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         )}
@@ -56,7 +65,7 @@ const MATRIX = ({
         label="Host"
         tooltip="e.g. smtp.example.com"
         defaultVal={globalOrDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         )}
@@ -68,7 +77,7 @@ const MATRIX = ({
         label="Port"
         tooltip="e.g. 25/465/587/2525"
         defaultVal={globalOrDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
@@ -83,7 +92,7 @@ const MATRIX = ({
         label="Rooms"
         tooltip="e.g. !ROOM_ID,ALIAS"
         defaultVal={globalOrDefault(
-          global?.params?.rooms,
+          main?.params?.rooms,
           defaults?.params?.rooms,
           hard_defaults?.params?.rooms
         )}
@@ -93,7 +102,7 @@ const MATRIX = ({
         label="Disable TLS"
         defaultValue={
           strToBool(
-            global?.params?.disabletls ||
+            main?.params?.disabletls ||
               defaults?.params?.disabletls ||
               hard_defaults?.params?.disabletls
           ) ?? false

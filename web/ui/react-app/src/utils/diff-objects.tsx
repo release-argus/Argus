@@ -1,3 +1,10 @@
+/**
+ * Returns whether a is different from b
+ *
+ * @param a - The fieldValues to compare
+ * @param b - The defaults to compare against
+ * @returns Whether the fieldValues are different from the defaults
+ */
 export function diffObjects<T>(a?: T, b?: T): boolean {
   // no defaults
   if (b === undefined && a !== undefined) return false;

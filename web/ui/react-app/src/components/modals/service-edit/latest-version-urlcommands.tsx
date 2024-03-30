@@ -1,22 +1,42 @@
 /* eslint-disable react/prop-types */
 import { Button, ButtonGroup, Col, Row } from "react-bootstrap";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { memo, useCallback } from "react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import FormURLCommand from "./latest-version-urlcommand";
-import { memo } from "react";
 import { useFieldArray } from "react-hook-form";
 
+/**
+ * @returns The form fields for a list of `latest_version.url_commands`
+ */
 const FormURLCommands = () => {
   const { fields, append, remove } = useFieldArray({
     name: "latest_version.url_commands",
   });
 
+  const addItem = useCallback(() => {
+    append(
+      {
+        type: "regex",
+        regex: "",
+        text: "",
+        index: 0,
+        old: "",
+        new: "",
+      },
+      { shouldFocus: false }
+    );
+  }, []);
+  const removeLast = useCallback(() => {
+    remove(fields.length - 1);
+  }, [fields.length]);
+
   return (
     <>
       <Row>
-        <Col>
+        <Col className="pt-1">
           <FormLabel text="URL Commands" />
         </Col>
         <Col>
@@ -26,19 +46,7 @@ const FormURLCommands = () => {
               className="btn-unchecked"
               variant="success"
               style={{ float: "right" }}
-              onClick={() =>
-                append(
-                  {
-                    type: "regex",
-                    regex: "",
-                    text: "",
-                    index: 0,
-                    old: "",
-                    new: "",
-                  },
-                  { shouldFocus: false }
-                )
-              }
+              onClick={addItem}
             >
               <FontAwesomeIcon icon={faPlus} />
             </Button>
@@ -47,7 +55,7 @@ const FormURLCommands = () => {
               className="btn-unchecked"
               variant="danger"
               style={{ float: "left" }}
-              onClick={() => remove(fields.length - 1)}
+              onClick={removeLast}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>

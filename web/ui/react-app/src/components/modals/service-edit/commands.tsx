@@ -1,5 +1,5 @@
 import { Accordion, Button, FormGroup, Row } from "react-bootstrap";
-import { FC, memo } from "react";
+import { FC, memo, useCallback } from "react";
 
 import Command from "./command";
 import { useFieldArray } from "react-hook-form";
@@ -8,10 +8,20 @@ interface Props {
   name: string;
 }
 
+/**
+ * Returns the form fields for all commands in a service
+ *
+ * @param name - The name of the field in the form
+ * @returns The set of form fields for a list of `command`
+ */
 const EditServiceCommands: FC<Props> = ({ name }) => {
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
+
+  const addItem = useCallback(() => {
+    append({ args: [{ arg: "" }] }, { shouldFocus: false });
+  }, []);
 
   return (
     <Accordion>
@@ -32,9 +42,7 @@ const EditServiceCommands: FC<Props> = ({ name }) => {
             <Button
               className={fields.length > 0 ? "" : "mt-2"}
               variant="secondary"
-              onClick={() =>
-                append({ args: [{ arg: "" }] }, { shouldFocus: false })
-              }
+              onClick={addItem}
             >
               Add Command
             </Button>

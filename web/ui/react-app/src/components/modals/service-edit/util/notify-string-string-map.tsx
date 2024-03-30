@@ -2,6 +2,7 @@ import {
   HeaderType,
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
+  StringFieldArray,
 } from "types/config";
 
 interface StringAnyMap {
@@ -10,19 +11,26 @@ interface StringAnyMap {
     | number
     | boolean
     | undefined
+    | HeaderType[]
     | NotifyNtfyAction[]
     | NotifyOpsGenieTarget[]
-    | HeaderType[];
+    | StringFieldArray;
 }
 interface StringStringMap {
   [key: string]: string;
 }
 
+/**
+ * Returns a properly formatted string of the notify.(params|url_fields) for the API
+ *
+ * @param obj - The object to convert
+ * @returns The object with string values
+ */
 export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
   Object.entries(obj).reduce((result, [key, value]) => {
     if (typeof value === "object") {
       // opsGenie.responders || opsGenie.visibleto
-      if (["responders", "visibleto"].includes(key)) {
+      if ("responders" === key || "visibleto" === key) {
         // `value` empty means defaults were used. Skip.
         if (
           (value as NotifyOpsGenieTarget[]).find(
@@ -39,9 +47,7 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
       } else if (key === "actions") {
         // `label` empty means defaults were used. Skip.
         if (
-          (value as NotifyNtfyAction[]).find(
-            (item) => (item.label || "") === ""
-          )
+          (value as NotifyNtfyAction[]).find((item) => (item.label || "") == "")
         ) {
           return result;
         }
@@ -52,7 +58,7 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         // `value` empty means defaults were used. Skip.
         if (
           (value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value || "") === ""
+            (item) => (item.value ?? "") === ""
           )
         ) {
           return result;
@@ -70,7 +76,12 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
     return result;
   }, {} as StringStringMap);
 
-// convertNtfyActionsToString will convert the NotifyNtfyAction[] to a JSON string
+/**
+ * Returns a JSON string of the Ntfy actions for the API
+ *
+ * @param obj - The NotifyNtfyAction[] to convert
+ * @returns A JSON string of the actions
+ */
 const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
   JSON.stringify(
     obj.map((item) => {
@@ -80,6 +91,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           label: item.label,
           url: item.url,
         };
+      // http - headers as {KEY:VAL}, not {key:KEY, val:VAL}
       else if (item.action === "http")
         return {
           action: item.action,
@@ -89,6 +101,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           headers: item.headers,
           body: item.body,
         };
+      // broadcast - extras as {KEY:VAL}, not {key:KEY, val:VAL}
       else if (item.action === "broadcast")
         return {
           action: item.action,
@@ -100,7 +113,12 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
     })
   );
 
-// convertOpsGenieTargetToString will convert the NotifyOpsGenieTarget[] to a JSON string
+/**
+ * Returns a JSON string of the OpsGenie targets for the API
+ *
+ * @param obj - The NotifyOpsGenieTarget[] to convert
+ * @returns A JSON string of the targets
+ */
 const convertOpsGenieTargetToString = (obj: NotifyOpsGenieTarget[]): string =>
   JSON.stringify(
     obj.map(({ type, sub_type, value }) => ({

@@ -5,14 +5,16 @@ import {
   FormSelect,
 } from "components/generic/form";
 import { NotifyGenericRequestMethods, NotifyGenericType } from "types/config";
+import {
+  convertHeadersFromString,
+  normaliseForSelect,
+} from "components/modals/service-edit/util";
 import { useEffect, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
-import { NotifyOptions } from "./shared";
-import { convertHeadersFromString } from "../util/api-ui-conversions";
-import { globalOrDefault } from "./util";
-import { normaliseForSelect } from "../util/normalise-selects";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { globalOrDefault } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 
 const GenericRequestMethodOptions: {
@@ -31,16 +33,25 @@ const GenericRequestMethodOptions: {
   ] as const
 ).map((method) => ({ label: method, value: method }));
 
+/**
+ * Returns the form fields for `Generic`
+ *
+ * @param name - The path to this `Generic` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Generic` `Notify`
+ */
 const GENERIC = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyGenericType;
+  main?: NotifyGenericType;
   defaults?: NotifyGenericType;
   hard_defaults?: NotifyGenericType;
 }) => {
@@ -67,7 +78,7 @@ const GENERIC = ({
   const selectedTemplate = useWatch({ name: `${name}.params.template` });
 
   const defaultParamsRequestMethod = globalOrDefault(
-    global?.params?.requestmethod,
+    main?.params?.requestmethod,
     defaults?.params?.requestmethod,
     hard_defaults?.params?.requestmethod
   ).toLowerCase();
@@ -81,7 +92,7 @@ const GENERIC = ({
       if (defaultRequestMethod)
         return [
           { value: "", label: `${defaultRequestMethod.label} (default)` },
-          ...genericRequestMethodOptions,
+          ...GenericRequestMethodOptions,
         ];
 
       return GenericRequestMethodOptions;
@@ -91,7 +102,7 @@ const GENERIC = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
@@ -105,7 +116,7 @@ const GENERIC = ({
             label="Host"
             tooltip="e.g. gotify.example.com"
             defaultVal={globalOrDefault(
-              global?.url_fields?.host,
+              main?.url_fields?.host,
               defaults?.url_fields?.host,
               hard_defaults?.url_fields?.host
             )}
@@ -117,7 +128,7 @@ const GENERIC = ({
             label="Port"
             tooltip="e.g. 443"
             defaultVal={globalOrDefault(
-              global?.url_fields?.port,
+              main?.url_fields?.port,
               defaults?.url_fields?.port,
               hard_defaults?.url_fields?.port
             )}
@@ -133,7 +144,7 @@ const GENERIC = ({
               </>
             }
             defaultVal={globalOrDefault(
-              global?.url_fields?.path,
+              main?.url_fields?.path,
               defaults?.url_fields?.path,
               hard_defaults?.url_fields?.path
             )}
@@ -175,7 +186,7 @@ const GENERIC = ({
           label="Content Type"
           tooltip="The value of the Content-Type header"
           defaultVal={globalOrDefault(
-            global?.params?.contenttype,
+            main?.params?.contenttype,
             defaults?.params?.contenttype,
             hard_defaults?.params?.contenttype
           )}
@@ -187,7 +198,7 @@ const GENERIC = ({
           label="Message Key"
           tooltip="The key that will be used for the message value"
           defaultVal={globalOrDefault(
-            global?.params?.messagekey,
+            main?.params?.messagekey,
             defaults?.params?.messagekey,
             hard_defaults?.params?.messagekey
           )}
@@ -199,7 +210,7 @@ const GENERIC = ({
           label="Template"
           tooltip="The template used for creating the request payload"
           defaultVal={globalOrDefault(
-            global?.params?.template,
+            main?.params?.template,
             defaults?.params?.template,
             hard_defaults?.params?.template
           )}
@@ -211,7 +222,7 @@ const GENERIC = ({
           label="Title Key"
           tooltip="The key that will be used for the title value"
           defaultVal={globalOrDefault(
-            global?.params?.titlekey,
+            main?.params?.titlekey,
             defaults?.params?.titlekey,
             hard_defaults?.params?.titlekey
           )}
@@ -223,7 +234,7 @@ const GENERIC = ({
           label="Title"
           tooltip="Text prepended to the message"
           defaultVal={globalOrDefault(
-            global?.params?.title,
+            main?.params?.title,
             defaults?.params?.title,
             hard_defaults?.params?.title
           )}
@@ -233,7 +244,7 @@ const GENERIC = ({
           label="Disable TLS"
           defaultValue={
             strToBool(
-              global?.params?.disabletls ||
+              main?.params?.disabletls ||
                 defaults?.params?.disabletls ||
                 hard_defaults?.params?.disabletls
             ) ?? true

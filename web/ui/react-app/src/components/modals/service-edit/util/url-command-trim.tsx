@@ -1,7 +1,17 @@
 import { URLCommandType } from "types/config";
 
-// urlCommandTrim will remove any keys not used for the type
-export const urlCommandTrim = (command: URLCommandType, sending: boolean) => {
+/**
+ * Returns a `url_command` object with only the relevant keys for the type
+ *
+ * @param command - The URLCommandType to trim
+ * @param sending - Whether the command is being sent to the server
+ * @returns A URLCommandType with only the relevant keys for the type
+ */
+export const urlCommandTrim = (
+  command: URLCommandType,
+  sending: boolean
+): URLCommandType => {
+  // regex
   if (command.type === "regex")
     if (sending)
       return {
@@ -16,10 +26,13 @@ export const urlCommandTrim = (command: URLCommandType, sending: boolean) => {
         regex: command.regex,
         index: command.index ? Number(command.index) : undefined,
         template: command.template ? command.template : undefined,
-        template_toggle: (command.template || "") !== "",
+        template_toggle: (command.template ?? "") !== "",
       };
+
+  // replace
   if (command.type === "replace")
     return { type: "replace", old: command.old, new: command.new };
+
   // else, it's a split
   return {
     type: "split",
@@ -28,7 +41,12 @@ export const urlCommandTrim = (command: URLCommandType, sending: boolean) => {
   };
 };
 
-// urlCommandsTrim will remove any unsued keye for the type for all URLCommandTypes in the list
+/**
+ * urlCommandsTrim will remove any keys not used for fhe type for all URLCommandTypes in the list
+ *
+ * @param commands - The url_command(s) to trim
+ * @returns A URLCommandType[] with only the relevant keys for each type
+ */
 export const urlCommandsTrim = (commands: {
   [key: string]: URLCommandType;
 }): URLCommandType[] => {

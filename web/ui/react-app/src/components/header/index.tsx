@@ -3,6 +3,9 @@ import { Container, Nav, NavDropdown, Navbar } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "theme";
 
+/**
+ * @returns The navbar for the application
+ */
 const Header = () => {
   return (
     <Navbar className="navbar" variant="dark" expand="sm">

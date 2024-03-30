@@ -1,9 +1,12 @@
 import { Accordion, Row } from "react-bootstrap";
+import {
+  DefaultLatestVersionLookupType,
+  LatestVersionLookupType,
+} from "types/config";
 import { FC, memo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
 
 import { BooleanWithDefault } from "components/generic";
-import { DefaultLatestVersionLookupType } from "types/config";
 import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
@@ -17,18 +20,32 @@ interface Props {
   hard_defaults?: DefaultLatestVersionLookupType;
 }
 
+/**
+ * Returns the `latest_version` form fields
+ *
+ * @param serviceName - The name of the service
+ * @param original - The original values in the form
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `latest_version`
+ */
 const EditServiceLatestVersion: FC<Props> = ({
   serviceName,
   original,
   defaults,
   hard_defaults,
 }) => {
-  const latestVersionTypeOptions = [
+  const latestVersionTypeOptions: {
+    label: string;
+    value: NonNullable<LatestVersionLookupType["type"]>;
+  }[] = [
     { label: "GitHub", value: "github" },
     { label: "URL", value: "url" },
   ];
 
-  const latestVersionType = useWatch({ name: `latest_version.type` });
+  const latestVersionType: LatestVersionLookupType["type"] = useWatch({
+    name: `latest_version.type`,
+  });
 
   return (
     <Accordion>
@@ -57,20 +74,20 @@ const EditServiceLatestVersion: FC<Props> = ({
                 name="latest_version.access_token"
                 col_sm={12}
                 label="Access Token"
+                tooltip="GitHub Personal Access Token to handle possible rate limits and/or private repos"
                 defaultVal={
                   defaults?.access_token || hard_defaults?.access_token
                 }
                 isURL={latestVersionType !== "github"}
               />
-              <>
-                <BooleanWithDefault
-                  name="latest_version.use_prerelease"
-                  label="Use pre-releases"
-                  defaultValue={
-                    defaults?.use_prerelease || hard_defaults?.use_prerelease
-                  }
-                />
-              </>
+              <BooleanWithDefault
+                name="latest_version.use_prerelease"
+                label="Use pre-releases"
+                tooltip="Include releases marked 'Pre-release' in the latest version check"
+                defaultValue={
+                  defaults?.use_prerelease || hard_defaults?.use_prerelease
+                }
+              />
             </>
           ) : (
             <BooleanWithDefault

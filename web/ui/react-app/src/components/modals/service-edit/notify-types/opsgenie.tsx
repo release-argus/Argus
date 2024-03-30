@@ -2,25 +2,34 @@ import { FormItem, FormKeyValMap, FormLabel } from "components/generic/form";
 import {
   convertHeadersFromString,
   convertOpsGenieTargetFromString,
-} from "../util/api-ui-conversions";
+  globalOrDefault,
+} from "components/modals/service-edit/util";
 import { useEffect, useMemo } from "react";
 
 import { NotifyOpsGenieType } from "types/config";
-import { NotifyOptions } from "./shared";
-import { OpsGenieTargets } from "./extra";
-import { globalOrDefault } from "./util";
+import NotifyOptions from "components/modals/service-edit/notify-types/shared";
+import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
 import { useFormContext } from "react-hook-form";
 
+/**
+ * Returns the form fields for `OpsGenie`
+ *
+ * @param name - The path to this `OpsGenie` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `OpsGenie` `Notify`
+ */
 const OPSGENIE = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyOpsGenieType;
+  main?: NotifyOpsGenieType;
   defaults?: NotifyOpsGenieType;
   hard_defaults?: NotifyOpsGenieType;
 }) => {
@@ -30,27 +39,27 @@ const OPSGENIE = ({
     () => ({
       details: convertHeadersFromString(
         globalOrDefault(
-          global?.params?.details as string,
+          main?.params?.details as string,
           defaults?.params?.details as string,
           hard_defaults?.params?.details as string
         )
       ),
       responders: convertOpsGenieTargetFromString(
         globalOrDefault(
-          global?.params?.responders as string,
+          main?.params?.responders as string,
           defaults?.params?.responders as string,
           hard_defaults?.params?.responders as string
         )
       ),
       visibleto: convertOpsGenieTargetFromString(
         globalOrDefault(
-          global?.params?.visibleto as string,
+          main?.params?.visibleto as string,
           defaults?.params?.visibleto as string,
           hard_defaults?.params?.visibleto as string
         )
       ),
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   useEffect(() => {
@@ -78,7 +87,7 @@ const OPSGENIE = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
@@ -90,7 +99,7 @@ const OPSGENIE = ({
           label="Host"
           tooltip="The OpsGenie API host. Use 'api.eu.opsgenie.com' for EU instances"
           defaultVal={globalOrDefault(
-            global?.url_fields?.host,
+            main?.url_fields?.host,
             defaults?.url_fields?.host,
             hard_defaults?.url_fields?.host
           )}
@@ -101,7 +110,7 @@ const OPSGENIE = ({
           type="number"
           label="Port"
           defaultVal={globalOrDefault(
-            global?.url_fields?.port,
+            main?.url_fields?.port,
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
           )}
@@ -113,7 +122,7 @@ const OPSGENIE = ({
           col_sm={12}
           label="API Key"
           defaultVal={globalOrDefault(
-            global?.url_fields?.apikey,
+            main?.url_fields?.apikey,
             defaults?.url_fields?.apikey,
             hard_defaults?.url_fields?.apikey
           )}
@@ -126,9 +135,9 @@ const OPSGENIE = ({
           label="Actions"
           tooltip="Custom actions that will be available for the alert"
           defaultVal={globalOrDefault(
-            global?.params?.actions,
-            defaults?.params?.actions,
-            hard_defaults?.params?.actions
+            main?.params?.actions as string,
+            defaults?.params?.actions as string,
+            hard_defaults?.params?.actions as string
           )}
         />
         <FormItem
@@ -136,7 +145,7 @@ const OPSGENIE = ({
           label="Alias"
           tooltip="Client-defined identifier of the alert"
           defaultVal={globalOrDefault(
-            global?.params?.alias,
+            main?.params?.alias,
             defaults?.params?.alias,
             hard_defaults?.params?.alias
           )}
@@ -147,7 +156,7 @@ const OPSGENIE = ({
           label="Description"
           tooltip="Description field of the alert"
           defaultVal={globalOrDefault(
-            global?.params?.description,
+            main?.params?.description,
             defaults?.params?.description,
             hard_defaults?.params?.description
           )}
@@ -157,7 +166,7 @@ const OPSGENIE = ({
           label="Note"
           tooltip="Additional note that will be added while creating the alert"
           defaultVal={globalOrDefault(
-            global?.params?.note,
+            main?.params?.note,
             defaults?.params?.note,
             hard_defaults?.params?.note
           )}
@@ -176,7 +185,7 @@ const OPSGENIE = ({
           label="Entity"
           tooltip="Entity field of the alert that is generally used to specify which domain the Source field of the alert"
           defaultVal={globalOrDefault(
-            global?.params?.entity,
+            main?.params?.entity,
             defaults?.params?.entity,
             hard_defaults?.params?.entity
           )}
@@ -187,7 +196,7 @@ const OPSGENIE = ({
           label="Priority"
           tooltip="Priority level of the alert. 1/2/3/4/5"
           defaultVal={globalOrDefault(
-            global?.params?.priority,
+            main?.params?.priority,
             defaults?.params?.priority,
             hard_defaults?.params?.priority
           )}
@@ -204,7 +213,7 @@ const OPSGENIE = ({
           label="Source"
           tooltip="Source field of the alert"
           defaultVal={globalOrDefault(
-            global?.params?.source,
+            main?.params?.source,
             defaults?.params?.source,
             hard_defaults?.params?.source
           )}
@@ -214,7 +223,7 @@ const OPSGENIE = ({
           label="Tags"
           tooltip="Tags of the alert"
           defaultVal={globalOrDefault(
-            global?.params?.tags,
+            main?.params?.tags,
             defaults?.params?.tags,
             hard_defaults?.params?.tags
           )}
@@ -225,7 +234,7 @@ const OPSGENIE = ({
           label="Title"
           tooltip="Notification title, optionally set by the sender"
           defaultVal={globalOrDefault(
-            global?.params?.title,
+            main?.params?.title,
             defaults?.params?.title,
             hard_defaults?.params?.title
           )}
@@ -235,7 +244,7 @@ const OPSGENIE = ({
           label="User"
           tooltip="Display name of the request owner"
           defaultVal={globalOrDefault(
-            global?.params?.user,
+            main?.params?.user,
             defaults?.params?.user,
             hard_defaults?.params?.user
           )}
