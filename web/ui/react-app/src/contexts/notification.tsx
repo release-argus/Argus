@@ -28,10 +28,8 @@ interface NotificationCtx {
  */
 const NotificationContext = createContext<NotificationCtx>({
   notifications: [],
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  addNotification: (notification: NotificationType) => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  removeNotification: (id: number | undefined) => {},
+  addNotification: (_notification: NotificationType) => {},
+  removeNotification: (_id: number | undefined) => {},
 });
 
 /**

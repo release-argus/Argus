@@ -12,14 +12,13 @@ interface ModalCtx {
 
 /**
  * The modal context, which provides modals to the application.
- * 
+ *
  * @param modalType - The type of modal to display
  * @param service - The service to display in the modal
  * @returns The modal context
  */
 const ModalContext = createContext<ModalCtx>({
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  handleModal: (modalType: ModalType, service: ServiceSummaryType) => {},
+  handleModal: (_modalType: ModalType, _service: ServiceSummaryType) => {},
   modal: { actionType: "", service: { id: "", loading: true } },
 });
 

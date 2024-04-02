@@ -129,7 +129,7 @@ export const convertToQueryParams = ({
       }
       // Include new undefined's in the JSONification
       else
-        modifiedObj = JSON.stringify(changedParams[key], (key, value) => {
+        modifiedObj = JSON.stringify(changedParams[key], (_key, value) => {
           if (value === undefined) {
             return null;
           }
