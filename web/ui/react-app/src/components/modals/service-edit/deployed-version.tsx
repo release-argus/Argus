@@ -89,7 +89,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 defaults?.basic_auth?.password ||
                 hard_defaults?.basic_auth?.password
               }
-              onRight
+              position="right"
             />
           </Row>
         </FormGroup>
@@ -121,7 +121,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             }
             defaultVal={defaults?.regex || hard_defaults?.regex}
             isRegex
-            onRight
+            position="middle"
           />
           <FormCheck
             name={`deployed_version.template_toggle`}
@@ -131,7 +131,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             smallLabel
             col_sm={1}
             col_xs={2}
-            onRight
+            position="right"
           />
           {templateToggle && (
             <FormItem

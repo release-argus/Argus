@@ -1,9 +1,10 @@
 import { Col, Form, FormGroup } from "react-bootstrap";
 import { Controller, useFormState } from "react-hook-form";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
+import { formPadding } from "./util";
 import { getNestedError } from "utils";
 
 interface FormSelectProps {
@@ -21,8 +22,8 @@ interface FormSelectProps {
 
   isURL?: boolean;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
 /**
@@ -38,8 +39,8 @@ interface FormSelectProps {
  * @param smallLabel - Whether the label should be small
  * @param tooltip - The tooltip of the form item
  * @param options - The options for the select field
- * @param onRight - Whether the form item should be on the right
- * @param onMiddle - Whether the form item should be in the middle
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
  * @returns A labeled select form item
  */
 const FormSelect: FC<FormSelectProps> = ({
@@ -53,24 +54,14 @@ const FormSelect: FC<FormSelectProps> = ({
   smallLabel,
   tooltip,
   options,
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { errors } = useFormState();
   const error = customValidation && getNestedError(errors, name);
 
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12 && onRight ? "ps-sm-2" : "",
-      col_xs !== 12 && onRight ? "ps-2" : "",
-      col_sm !== 12 && !onRight
-        ? onMiddle
-          ? "ps-sm-1 pe-sm-1"
-          : "pe-sm-2"
-        : "",
-      col_xs !== 12 && !onRight ? (onMiddle ? "ps-2 pe-2" : "pe-2") : "",
-    ].join(" ");
-  }, []);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
+
   return (
     <Col
       xs={col_xs}

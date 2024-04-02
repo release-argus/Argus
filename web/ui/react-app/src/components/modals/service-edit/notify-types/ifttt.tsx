@@ -74,9 +74,9 @@ const IFTTT = ({
       />
       <FormItem
         name={`${name}.params.usemessageasvalue`}
-        type="number"
         label="Use Message As Value"
         tooltip="Set the corresponding value field to the message"
+        isNumber
         defaultVal={globalOrDefault(
           main?.params?.usemessageasvalue,
           defaults?.params?.usemessageasvalue,
@@ -85,15 +85,15 @@ const IFTTT = ({
       />
       <FormItem
         name={`${name}.params.usetitleasvalue`}
-        type="number"
         label="Use Title As Value"
         tooltip="Set the corresponding value field to the title"
+        isNumber
         defaultVal={globalOrDefault(
           main?.params?.usetitleasvalue,
           defaults?.params?.usetitleasvalue,
           hard_defaults?.params?.usetitleasvalue
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.params.value1`}
@@ -114,7 +114,7 @@ const IFTTT = ({
           defaults?.params?.value2,
           hard_defaults?.params?.value2
         )}
-        onMiddle
+        position="middle"
       />
       <FormItem
         name={`${name}.params.value3`}
@@ -125,7 +125,7 @@ const IFTTT = ({
           defaults?.params?.value3,
           hard_defaults?.params?.value3
         )}
-        onRight
+        position="right"
       />
     </>
   </>

@@ -63,6 +63,16 @@ const RENDER_TYPE_COMPONENTS: {
   generic: GENERIC,
 };
 
+/**
+ * Returns the component for this notify type
+ *
+ * @param name - The name of the notify in the form
+ * @param type - The type of notify
+ * @param main - The main notify options
+ * @param defaults - The default values for all notify types
+ * @param hard_defaults - The hard default values for all notify types
+ * @returns
+ */
 const RenderNotify: FC<RenderTypeProps> = ({
   name,
   type,

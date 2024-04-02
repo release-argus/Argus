@@ -52,15 +52,15 @@ const GOTIFY = ({
       <FormItem
         name={`${name}.url_fields.port`}
         col_sm={3}
-        type="number"
         label="Port"
         tooltip="e.g. 443"
+        isNumber
         defaultVal={globalOrDefault(
           main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.path`}
@@ -86,7 +86,7 @@ const GOTIFY = ({
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
-        onRight
+        position="right"
       />
     </>
     <>
@@ -94,8 +94,8 @@ const GOTIFY = ({
       <FormItem
         name={`${name}.params.priority`}
         col_sm={2}
-        type="number"
         label="Priority"
+        isNumber
         defaultVal={globalOrDefault(
           main?.params?.priority,
           defaults?.params?.priority,
@@ -111,15 +111,15 @@ const GOTIFY = ({
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
-        onRight
+        position="right"
       />
       <BooleanWithDefault
         name={`${name}.params.disabletls`}
         label="Disable TLS"
         defaultValue={
           strToBool(
-            main?.params?.disabletls ||
-              defaults?.params?.disabletls ||
+            main?.params?.disabletls ??
+              defaults?.params?.disabletls ??
               hard_defaults?.params?.disabletls
           ) ?? false
         }

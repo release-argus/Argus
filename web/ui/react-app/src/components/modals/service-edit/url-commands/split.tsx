@@ -16,7 +16,7 @@ const SPLIT = ({ name }: { name: string }) => (
       required
       col_xs={5}
       col_sm={6}
-      onRight
+      position="middle"
     />
     <FormItem
       key="index"
@@ -26,8 +26,8 @@ const SPLIT = ({ name }: { name: string }) => (
       required
       col_xs={2}
       col_sm={2}
-      type="number"
-      onRight
+      isNumber
+      position="right"
     />
   </>
 );

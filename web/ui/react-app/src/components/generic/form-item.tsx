@@ -1,8 +1,9 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { FC, JSX } from "react";
+import { FieldError, useFormContext, useFormState } from "react-hook-form";
 
 import FormLabel from "./form-label";
+import { formPadding } from "./util";
 import { getNestedError } from "utils";
 
 interface FormItemProps {
@@ -18,13 +19,14 @@ interface FormItemProps {
   tooltip?: string | JSX.Element;
   type?: "text" | "number" | "url";
 
+  isNumber?: boolean;
   isRegex?: boolean;
   isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
 /**
@@ -40,12 +42,13 @@ interface FormItemProps {
  * @param smallLabel - Whether the label should be small
  * @param tooltip - The tooltip of the form item
  * @param type - The type of the form item
+ * @param isNumber - Whether the form item should be a number
  * @param isRegex - Whether the form item should be a regex
  * @param isURL - Whether the form item should be a URL
  * @param defaultVal - The default value of the form item
  * @param placeholder - The placeholder of the form item
- * @param onRight - Whether the form item should be on the right
- * @param onMiddle - Whether the form item should be in the middle
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
  * @returns A form item at name with a label and tooltip
  */
 const FormItem: FC<FormItemProps> = ({
@@ -60,32 +63,26 @@ const FormItem: FC<FormItemProps> = ({
   smallLabel,
   tooltip,
   type = "text",
+
+  isNumber,
   isRegex,
   isURL,
   defaultVal,
   placeholder,
 
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { getValues, register } = useFormContext();
   const { errors } = useFormState();
-  const error =
-    (required || isURL || isRegex || registerParams["validate"]) &&
-    getNestedError(errors, name);
+  const error = ((required ||
+    isNumber ||
+    isRegex ||
+    isURL ||
+    registerParams["validate"]) &&
+    getNestedError(errors, name)) as FieldError | undefined;
 
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12
-        ? onRight
-          ? "ps-sm-2"
-          : onMiddle
-          ? "ps-sm-1 pe-sm-1"
-          : "pe-sm-2"
-        : "",
-      col_xs !== 12 ? (onRight ? "ps-2" : onMiddle ? "ps-1 pe-1" : "pe-2") : "",
-    ].join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
@@ -99,7 +96,6 @@ const FormItem: FC<FormItemProps> = ({
           />
         )}
         <FormControl
-          className={error && "form-error"}
           type={type}
           placeholder={defaultVal || placeholder}
           autoFocus={false}
@@ -113,6 +109,12 @@ const FormItem: FC<FormItemProps> = ({
                 validation = /.+/.test(testValue);
                 if (!validation)
                   return required === true ? "Required" : required;
+              }
+
+              // Validate that it's a number
+              if (isNumber) {
+                validation = !isNaN(Number(testValue));
+                if (!validation) return "Must be a number";
               }
 
               // Validate that it's valid RegEx
@@ -159,6 +161,7 @@ const FormItem: FC<FormItemProps> = ({
             },
             ...registerParams,
           })}
+          isInvalid={!!error}
         />
         {error && (
           <small className="error-msg">{error["message"] || "err"}</small>

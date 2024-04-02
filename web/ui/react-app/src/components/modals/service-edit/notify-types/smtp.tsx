@@ -132,15 +132,15 @@ const SMTP = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
           tooltip="e.g. 25/465/587/2525"
+          isNumber
           defaultVal={globalOrDefault(
             main?.url_fields?.port,
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
           )}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.username`}
@@ -160,7 +160,7 @@ const SMTP = ({
             defaults?.url_fields?.password,
             hard_defaults?.url_fields?.password
           )}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -197,7 +197,7 @@ const SMTP = ({
             defaults?.params?.fromname,
             hard_defaults?.params?.fromname
           )}
-          onRight
+          position="right"
         />
         <FormSelect
           name={`${name}.params.auth`}
@@ -215,7 +215,7 @@ const SMTP = ({
             defaults?.params?.subject,
             hard_defaults?.params?.subject
           )}
-          onRight
+          position="right"
         />
         <FormSelect
           name={`${name}.params.encryption`}
@@ -234,7 +234,7 @@ const SMTP = ({
             defaults?.params?.clienthost,
             hard_defaults?.params?.clienthost
           )}
-          onRight
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.usehtml`}

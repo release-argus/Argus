@@ -36,16 +36,6 @@ const ROCKET_CHAT = ({
     <>
       <FormLabel text="URL Fields" heading />
       <FormItem
-        name={`${name}.url_fields.username`}
-        col_sm={12}
-        label="Username"
-        defaultVal={globalOrDefault(
-          main?.url_fields?.username,
-          defaults?.url_fields?.username,
-          hard_defaults?.url_fields?.username
-        )}
-      />
-      <FormItem
         name={`${name}.url_fields.host`}
         required
         col_sm={9}
@@ -61,14 +51,14 @@ const ROCKET_CHAT = ({
         required
         name={`${name}.url_fields.port`}
         col_sm={3}
-        type="number"
         label="Port"
+        isNumber
         defaultVal={globalOrDefault(
           main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.path`}
@@ -94,7 +84,17 @@ const ROCKET_CHAT = ({
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         )}
-        onRight
+        position="right"
+      />
+      <FormItem
+        name={`${name}.url_fields.username`}
+        col_sm={12}
+        label="Username"
+        defaultVal={globalOrDefault(
+          main?.url_fields?.username,
+          defaults?.url_fields?.username,
+          hard_defaults?.url_fields?.username
+        )}
       />
       <FormItem
         name={`${name}.url_fields.tokena`}
@@ -115,7 +115,7 @@ const ROCKET_CHAT = ({
           defaults?.url_fields?.tokenb,
           hard_defaults?.url_fields?.tokenb
         )}
-        onRight
+        position="right"
       />
     </>
   </>

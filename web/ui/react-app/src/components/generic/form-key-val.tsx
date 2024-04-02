@@ -50,7 +50,7 @@ const FormKeyVal: FC<Props> = ({
           col_sm={6}
           defaultVal={defaults?.key}
           placeholder={keyPlaceholder}
-          onMiddle
+          position="middle"
         />
         <FormItem
           name={`${name}.value`}
@@ -58,7 +58,7 @@ const FormKeyVal: FC<Props> = ({
           col_sm={6}
           defaultVal={defaults?.value}
           placeholder={valuePlaceholder}
-          onRight
+          position="right"
         />
       </Row>
     </Col>

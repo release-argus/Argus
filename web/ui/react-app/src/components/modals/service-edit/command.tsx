@@ -41,7 +41,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
                 ? `e.g. "/opt/script.sh"`
                 : `e.g. "-arg${argIndex - 1}"`
             }
-            onRight={argIndex % 2 === 1}
+            position={argIndex % 2 === 1 ? "right" : "left"}
           />
         ))}
       </Row>

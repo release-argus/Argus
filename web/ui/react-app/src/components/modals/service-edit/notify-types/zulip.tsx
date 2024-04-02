@@ -55,7 +55,7 @@ const ZULIP_CHAT = ({
           defaults?.url_fields?.botkey,
           hard_defaults?.url_fields?.botkey
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.host`}
@@ -89,7 +89,7 @@ const ZULIP_CHAT = ({
           defaults?.params?.topic,
           hard_defaults?.params?.topic
         )}
-        onRight
+        position="right"
       />
     </>
   </>

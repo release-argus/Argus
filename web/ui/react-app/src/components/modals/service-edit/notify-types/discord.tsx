@@ -73,7 +73,7 @@ const DISCORD = ({
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         )}
-        onRight
+        position="right"
       />
     </>
     <>
@@ -106,7 +106,7 @@ const DISCORD = ({
           defaults?.params?.title,
           hard_defaults?.params?.title
         )}
-        onRight
+        position="right"
       />
       <BooleanWithDefault
         name={`${name}.params.splitlines}`}

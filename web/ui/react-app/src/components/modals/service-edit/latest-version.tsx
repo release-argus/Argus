@@ -65,7 +65,7 @@ const EditServiceLatestVersion: FC<Props> = ({
             col_sm={8}
             col_xs={8}
             label={latestVersionType === "github" ? "Repo" : "URL"}
-            onRight
+            position="right"
           />
           {latestVersionType === "github" ? (
             <>

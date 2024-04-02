@@ -52,7 +52,7 @@ const TEAMS = ({
           defaults?.url_fields?.tenant,
           hard_defaults?.url_fields?.tenant
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.group`}
@@ -71,7 +71,7 @@ const TEAMS = ({
           defaults?.url_fields?.groupowner,
           hard_defaults?.url_fields?.groupowner
         )}
-        onRight
+        position="right"
       />
     </>
     <>
@@ -95,7 +95,7 @@ const TEAMS = ({
           defaults?.params?.host,
           hard_defaults?.params?.host
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.params.title`}

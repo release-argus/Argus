@@ -111,7 +111,7 @@ const TELEGRAM = ({
           col_sm={4}
           label="Parse Mode"
           options={telegramParseModeOptions}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}

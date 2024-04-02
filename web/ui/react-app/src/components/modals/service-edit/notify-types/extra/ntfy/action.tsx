@@ -75,7 +75,8 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
             col_sm={4}
             defaultVal={defaults?.label}
             placeholder={`e.g. '${typeLabelMap[targetType]}'`}
-            onMiddle
+            position="middle"
+            positionXS="right"
           />
           <RenderAction
             name={name}

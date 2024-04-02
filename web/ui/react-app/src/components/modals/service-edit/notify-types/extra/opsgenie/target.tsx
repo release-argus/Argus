@@ -62,14 +62,15 @@ const OpsGenieTarget: FC<Props> = ({ name, removeMe, defaults }) => {
                 ? { label: "Name", value: "name" }
                 : { label: "Username", value: "username" },
             ]}
-            onMiddle
+            position="middle"
+            positionXS="right"
           />
           <FormItem
             name={`${name}.value`}
             required
             col_sm={6}
             defaultVal={defaults?.value}
-            onRight
+            position="right"
           />
         </Row>
       </Col>
