@@ -2,7 +2,8 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushbulletType } from "types/config";
-import { globalOrDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "components/modals/service-edit/util";
+import { useMemo } from "react";
 
 /**
  * Returns the form fields for `PushBullet`
@@ -25,54 +26,71 @@ const PUSHBULLET = ({
   main?: NotifyPushbulletType;
   defaults?: NotifyPushbulletType;
   hard_defaults?: NotifyPushbulletType;
-}) => (
-  <>
-    <NotifyOptions
-      name={name}
-      main={main?.options}
-      defaults={defaults?.options}
-      hard_defaults={hard_defaults?.options}
-    />
-    <>
-      <FormLabel text="URL Fields" heading />
-      <FormItem
-        name={`${name}.url_fields.token`}
-        required
-        col_sm={12}
-        label="Access Token"
-        defaultVal={globalOrDefault(
-          main?.url_fields?.token,
-          defaults?.url_fields?.token,
-          hard_defaults?.url_fields?.token
-        )}
-      />
-      <FormItem
-        name={`${name}.url_fields.targets`}
-        required
-        col_sm={12}
-        label="Targets"
-        tooltip="e.g. DEVICE1,DEVICE2..."
-        defaultVal={globalOrDefault(
+}) => {
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        targets: firstNonDefault(
           main?.url_fields?.targets,
           defaults?.url_fields?.targets,
           hard_defaults?.url_fields?.targets
-        )}
-      />
-    </>
-    <>
-      <FormLabel text="Params" heading />
-      <FormItem
-        name={`${name}.params.title`}
-        col_sm={12}
-        label="Title"
-        defaultVal={globalOrDefault(
+        ),
+        token: firstNonDefault(
+          main?.url_fields?.token,
+          defaults?.url_fields?.token,
+          hard_defaults?.url_fields?.token
+        ),
+      },
+      // Params
+      params: {
+        title: firstNonDefault(
           main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
-        )}
+        ),
+      },
+    }),
+    [main, defaults, hard_defaults]
+  );
+
+  return (
+    <>
+      <NotifyOptions
+        name={name}
+        main={main?.options}
+        defaults={defaults?.options}
+        hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
+      <>
+        <FormItem
+          name={`${name}.url_fields.token`}
+          required
+          col_sm={12}
+          label="Access Token"
+          defaultVal={convertedDefaults.url_fields.token}
+        />
+        <FormItem
+          name={`${name}.url_fields.targets`}
+          required
+          col_sm={12}
+          label="Targets"
+          tooltip="e.g. DEVICE1,DEVICE2..."
+          defaultVal={convertedDefaults.url_fields.targets}
+        />
+      </>
+      <FormLabel text="Params" heading />
+      <>
+        <FormItem
+          name={`${name}.params.title`}
+          col_sm={12}
+          label="Title"
+          defaultVal={convertedDefaults.params.title}
+        />
+      </>
     </>
-  </>
-);
+  );
+};
 
 export default PUSHBULLET;

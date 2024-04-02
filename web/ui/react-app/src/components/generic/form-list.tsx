@@ -1,61 +1,47 @@
-import {
-  Button,
-  ButtonGroup,
-  Col,
-  FormGroup,
-  Row,
-  Stack,
-} from "react-bootstrap";
+import { Button, ButtonGroup, Col, FormGroup, Row } from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import { FormItem, FormLabel } from "components/generic/form";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import FormKeyVal from "./form-key-val";
-import { FormLabel } from "components/generic/form";
-import { HeaderType } from "types/config";
+import { StringFieldArray } from "types/config";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
   name: string;
   label?: string;
   tooltip?: string;
-  keyPlaceholder?: string;
-  valuePlaceholder?: string;
 
-  defaults?: HeaderType[];
+  defaults?: StringFieldArray;
 }
 
 /**
- * Returns the form fields for a key-value map
+ * Returns a set of form fields for a list of strings
  *
  * @param name - The name of the field in the form
  * @param label - The label for the field
  * @param tooltip - The tooltip for the field
- * @param keyPlaceholder - The placeholder for the key field
- * @param valuePlaceholder - The placeholder for the value field
  * @param defaults - The default values for the field
- * @returns The form fields for a key-value map at name with a label and tooltip
+ * @returns A set of form fields for a list of strings
  */
-const FormKeyValMap: FC<Props> = ({
+const FormList: FC<Props> = ({
   name,
-  label = "Headers",
+  label = "List",
   tooltip,
-  keyPlaceholder,
-  valuePlaceholder,
 
   defaults,
 }) => {
-  const { trigger } = useFormContext();
+  const { setValue, trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
   const addItem = useCallback(() => {
-    append({ key: "", value: "" }, { shouldFocus: false });
+    append({ arg: "" }, { shouldFocus: false });
   }, []);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues: HeaderType[] = useWatch({ name: name });
+  const fieldValues: StringFieldArray = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
@@ -67,11 +53,27 @@ const FormKeyValMap: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? []).length === 0)
+    if ((fieldValues ?? fields ?? [])?.length === 0)
       defaults?.forEach(() => {
         addItem();
       });
   }, [useDefaults]);
+
+  const placeholder = useCallback(
+    (index: number) => (useDefaults && defaults?.[index]?.arg) || "",
+    [useDefaults, defaults]
+  );
+
+  // on load, ensure we don't have another types actions
+  // and give the defaults if not overridden
+  useEffect(() => {
+    for (const item of fieldValues ?? fields ?? []) {
+      if ((item.arg ?? "") === "") {
+        setValue(name, []);
+        break;
+      }
+    }
+  }, []);
 
   // remove the last item if it's not the only one or doesn't match the defaults
   const removeLast = useCallback(() => {
@@ -100,32 +102,27 @@ const FormKeyValMap: FC<Props> = ({
               className="btn-unchecked mb-1"
               variant="danger"
               style={{ float: "left" }}
-              disabled={fields.length === 0}
               onClick={removeLast}
+              disabled={fields.length === 0}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>
           </ButtonGroup>
         </Col>
       </Row>
-      <Stack>
+      <Row>
         {fields.map(({ id }, index) => (
-          <Row key={id}>
-            <FormKeyVal
-              name={`${name}.${index}`}
-              defaults={useDefaults ? defaults?.[index] : undefined}
-              removeMe={
-                // Give the remove that's disabled if there's only one item and it matches the defaults
-                fieldValues?.length === 1 ? removeLast : () => remove(index)
-              }
-              keyPlaceholder={keyPlaceholder}
-              valuePlaceholder={valuePlaceholder}
-            />
-          </Row>
+          <FormItem
+            key={id}
+            name={`${name}.${index}.arg`}
+            required
+            defaultVal={placeholder(index)}
+            position={index % 2 === 1 ? "right" : "left"}
+          />
         ))}
-      </Stack>
+      </Row>
     </FormGroup>
   );
 };
 
-export default memo(FormKeyValMap);
+export default memo(FormList);

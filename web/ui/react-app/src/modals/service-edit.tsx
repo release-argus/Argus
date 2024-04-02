@@ -8,7 +8,7 @@ import {
 } from "react-bootstrap";
 import { CommandType, HeaderType, NotifyType, WebHookType } from "types/config";
 import { FormProvider, useForm } from "react-hook-form";
-import { flattenErrors, removeEmptyValues } from "utils";
+import { extractErrors, removeEmptyValues } from "utils";
 import { useCallback, useContext, useState } from "react";
 
 import { DeleteModal } from "./delete-confirm";
@@ -180,7 +180,7 @@ const ServiceEditModal = () => {
                     ) : (
                       <ul>
                         {Object.entries(
-                          flattenErrors(form.formState.errors)
+                          extractErrors(form.formState.errors)
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

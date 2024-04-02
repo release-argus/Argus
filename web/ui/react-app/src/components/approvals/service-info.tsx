@@ -53,20 +53,18 @@ export const ServiceInfo: FC<Props> = ({
     [handleModal]
   );
 
-  // If version hasn't been found or a new version has been found
-  const serviceWarning = useMemo(
-    () =>
-      service?.status?.deployed_version === undefined ||
-      service?.status?.deployed_version === "" ||
-      (updateAvailable && !updateSkipped),
+  const status = useMemo(
+    () => ({
+      // If version hasn't been found or a new version has been found (and not skipped)
+      warning:
+        (service?.status?.deployed_version ?? "") === "" ||
+        (updateAvailable && !updateSkipped),
+      // If the latest version is the same as the approved version
+      updateApproved:
+        service?.status?.latest_version !== undefined &&
+        service.status.latest_version === service?.status?.approved_version,
+    }),
     [service, updateAvailable, updateSkipped]
-  );
-
-  const updateApproved = useMemo(
-    () =>
-      service?.status?.latest_version !== undefined &&
-      service.status.latest_version === service?.status?.approved_version,
-    [service]
   );
 
   const deployedVersionIcon = service.has_deployed_version ? (
@@ -140,7 +138,7 @@ export const ServiceInfo: FC<Props> = ({
       style={{
         padding: "0px",
       }}
-      className={serviceWarning ? "service-warning rounded-bottom" : "default"}
+      className={status.warning ? "service-warning rounded-bottom" : "default"}
     >
       <ListGroup className="list-group-flush">
         {updateAvailable && !updateSkipped ? (
@@ -150,7 +148,7 @@ export const ServiceInfo: FC<Props> = ({
               className={"service-item update-options service-warning"}
               variant="secondary"
             >
-              {updateApproved && (service.webhook || service.command)
+              {status.updateApproved && (service.webhook || service.command)
                 ? `${service.webhook ? "WebHooks" : "Commands"} already sent:`
                 : "Update available:"}
             </ListGroup.Item>
@@ -175,7 +173,7 @@ export const ServiceInfo: FC<Props> = ({
                 }`}
                 variant="success"
                 onClick={() =>
-                  showModal(updateApproved ? "RESEND" : "SEND", service)
+                  showModal(status.updateApproved ? "RESEND" : "SEND", service)
                 }
                 disabled={!(service.webhook || service.command)}
               >
@@ -199,7 +197,7 @@ export const ServiceInfo: FC<Props> = ({
         ) : (
           <ListGroup.Item
             key="deployed_v"
-            variant={serviceWarning ? "warning" : "secondary"}
+            variant={status.warning ? "warning" : "secondary"}
             className={
               "service-item" +
               (service.webhook || service.command ? "" : " justify-left")
@@ -246,7 +244,7 @@ export const ServiceInfo: FC<Props> = ({
       </ListGroup>
       <Card.Footer
         className={
-          serviceWarning || !service?.status?.last_queried
+          status.warning || !service?.status?.last_queried
             ? "service-warning rounded-bottom"
             : ""
         }
@@ -254,7 +252,7 @@ export const ServiceInfo: FC<Props> = ({
         <small
           className={
             "text-muted same-color" +
-            (serviceWarning ? " service-warning rounded-bottom" : "")
+            (status.warning ? " service-warning rounded-bottom" : "")
           }
         >
           {service?.status?.last_queried ? (

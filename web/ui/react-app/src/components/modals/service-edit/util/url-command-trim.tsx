@@ -44,7 +44,7 @@ export const urlCommandTrim = (
 /**
  * urlCommandsTrim will remove any keys not used for fhe type for all URLCommandTypes in the list
  *
- * @param commands - The url_command(s) to trim
+ * @param commands - The URLCommandType[] to trim
  * @returns A URLCommandType[] with only the relevant keys for each type
  */
 export const urlCommandsTrim = (commands: {

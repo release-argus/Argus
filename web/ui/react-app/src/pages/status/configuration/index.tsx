@@ -19,7 +19,7 @@ export const Config = (): ReactElement => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, isFetching } = useQuery<Record<string, any>>({
     queryKey: ["config"],
-    queryFn: () => fetchJSON("api/v1/config"),
+    queryFn: () => fetchJSON({ url: `api/v1/config` }),
     staleTime: 0,
   });
 

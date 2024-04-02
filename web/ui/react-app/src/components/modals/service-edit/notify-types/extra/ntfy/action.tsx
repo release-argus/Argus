@@ -1,12 +1,12 @@
 import { Button, Col, Row } from "react-bootstrap";
-import { FC, memo, useEffect } from "react";
+import { FC, memo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
-import { useFormContext, useWatch } from "react-hook-form";
+import { NotifyNtfyAction, NotifyNtfyActionTypes } from "types/config";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NotifyNtfyAction } from "types/config";
 import RenderAction from "./render";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { useWatch } from "react-hook-form";
 
 interface Props {
   name: string;
@@ -23,8 +23,7 @@ interface Props {
  * @returns The form fields for this action
  */
 const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
-  const { setValue } = useFormContext();
-  const typeOptions = [
+  const typeOptions: { label: string; value: NotifyNtfyActionTypes }[] = [
     { label: "View", value: "view" },
     { label: "HTTP", value: "http" },
     { label: "Broadcast", value: "broadcast" },
@@ -38,13 +37,6 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
   const targetType: keyof typeof typeLabelMap = useWatch({
     name: `${name}.action`,
   });
-
-  // Set Select's to the defaults
-  useEffect(() => {
-    if (defaults !== undefined) setValue(`${name}.action`, defaults.action);
-    if (defaults?.method !== undefined)
-      setValue(`${name}.method`, defaults.method);
-  }, []);
 
   return (
     <>

@@ -6,7 +6,8 @@ import {
 
 import { NotifyJoinType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "components/modals/service-edit/util";
+import { useMemo } from "react";
 
 /**
  * Returns the form fields for `Join`
@@ -29,65 +30,83 @@ const JOIN = ({
   main?: NotifyJoinType;
   defaults?: NotifyJoinType;
   hard_defaults?: NotifyJoinType;
-}) => (
-  <>
-    <NotifyOptions
-      name={name}
-      main={main?.options}
-      defaults={defaults?.options}
-      hard_defaults={hard_defaults?.options}
-    />
-    <>
-      <FormLabel text="URL Fields" heading />
-      <FormItem
-        name={`${name}.url_fields.apikey`}
-        required
-        col_sm={12}
-        label="API Key"
-        defaultVal={globalOrDefault(
+}) => {
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        apikey: firstNonDefault(
           main?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
-        )}
-      />
-    </>
-    <>
-      <FormLabel text="Params" heading />
-      <FormItem
-        name={`${name}.params.devices`}
-        required
-        col_sm={12}
-        label="Devices"
-        tooltip="e.g. ID1,ID2..."
-        defaultVal={globalOrDefault(
+        ),
+      },
+      // Params
+      params: {
+        devices: firstNonDefault(
           main?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
-        )}
-      />
-      <FormItemWithPreview
-        name={`${name}.params.icon`}
-        label="Icon"
-        tooltip="URL of icon to use"
-        defaultVal={
-          main?.params?.icon ||
-          defaults?.params?.icon ||
+        ),
+        icon: firstNonDefault(
+          main?.params?.icon,
+          defaults?.params?.icon,
           hard_defaults?.params?.icon
-        }
-      />
-      <FormItem
-        name={`${name}.params.title`}
-        col_sm={12}
-        label="Title"
-        tooltip="e.g. 'Release - {{ service_id }}'"
-        defaultVal={globalOrDefault(
+        ),
+        title: firstNonDefault(
           main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
-        )}
+        ),
+      },
+    }),
+    [main, defaults, hard_defaults]
+  );
+
+  return (
+    <>
+      <NotifyOptions
+        name={name}
+        main={main?.options}
+        defaults={defaults?.options}
+        hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
+      <>
+        <FormItem
+          name={`${name}.url_fields.apikey`}
+          required
+          col_sm={12}
+          label="API Key"
+          defaultVal={convertedDefaults.url_fields.apikey}
+        />
+      </>
+      <FormLabel text="Params" heading />
+      <>
+        <FormItem
+          name={`${name}.params.devices`}
+          required
+          col_sm={12}
+          label="Devices"
+          tooltip="e.g. ID1,ID2..."
+          defaultVal={convertedDefaults.params.devices}
+        />
+        <FormItemWithPreview
+          name={`${name}.params.icon`}
+          label="Icon"
+          tooltip="URL of icon to use"
+          defaultVal={convertedDefaults.params.icon}
+        />
+        <FormItem
+          name={`${name}.params.title`}
+          col_sm={12}
+          label="Title"
+          tooltip="e.g. 'Release - {{ service_id }}'"
+          defaultVal={convertedDefaults.params.title}
+        />
+      </>
     </>
-  </>
-);
+  );
+};
 
 export default JOIN;
