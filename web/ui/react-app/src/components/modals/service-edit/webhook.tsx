@@ -114,7 +114,7 @@ const EditServiceWebHook: FC<Props> = ({
                 mains?.[itemName]?.type &&
                 itemType !== mains?.[itemName]?.type
               ) {
-                return `${value} does not match the global "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+                return `${value} does not match the global for "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
               }
               return true;
             }}
@@ -122,7 +122,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Type"
             tooltip="Style of WebHook to emulate"
             options={webHookTypeOptions}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.name`}
@@ -130,7 +130,6 @@ const EditServiceWebHook: FC<Props> = ({
             unique
             col_sm={12}
             label={"Name"}
-            onRight
           />
           <FormItem
             name={`${name}.url`}
@@ -164,12 +163,20 @@ const EditServiceWebHook: FC<Props> = ({
               main?.secret || defaults?.secret || hard_defaults?.secret
             }
           />
-          <FormKeyValMap name={`${name}.custom_headers`} />
+          <FormKeyValMap
+            name={`${name}.custom_headers`}
+            defaults={
+              main?.custom_headers ??
+              defaults?.custom_headers ??
+              hard_defaults?.custom_headers
+            }
+          />
           <FormItem
             name={`${name}.desired_status_code`}
             col_xs={6}
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
+            isNumber
             defaultVal={globalOrDefault(
               main?.desired_status_code,
               defaults?.desired_status_code,
@@ -180,13 +187,14 @@ const EditServiceWebHook: FC<Props> = ({
             name={`${name}.max_tries`}
             col_xs={6}
             label="Max tries"
+            isNumber
             defaultVal={`${
               main?.max_tries ||
               defaults?.max_tries ||
               hard_defaults?.max_tries ||
               ""
             }`}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.delay`}
@@ -194,7 +202,7 @@ const EditServiceWebHook: FC<Props> = ({
             label="Delay"
             tooltip="Delay sending by this duration"
             defaultVal={main?.delay || defaults?.delay || hard_defaults?.delay}
-            onRight
+            position="right"
           />
           <BooleanWithDefault
             name={`${name}.silent_fails`}

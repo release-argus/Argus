@@ -1,8 +1,9 @@
 import { Col, FormCheck as FormCheckRB, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
 import { FormCheckType } from "react-bootstrap/esm/FormCheck";
 import FormLabel from "./form-label";
+import { formPadding } from "./util";
 import { useFormContext } from "react-hook-form";
 
 interface FormCheckProps {
@@ -16,8 +17,8 @@ interface FormCheckProps {
   tooltip?: string | JSX.Element;
   type?: FormCheckType;
 
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
 /**
@@ -31,8 +32,8 @@ interface FormCheckProps {
  * @param smallLabel - Whether the label should be small
  * @param tooltip - The tooltip to display
  * @param type - The type of the checkbox
- * @param onRight - Whether the checkbox should be on the right
- * @param onMiddle - Whether the checkbox should be in the middle
+ * @param position - The position of the field
+ * @param positionXS - The position of the field on extra small screens
  * @returns A form checkbox with a label and tooltip
  */
 const FormCheck: FC<FormCheckProps> = ({
@@ -46,23 +47,12 @@ const FormCheck: FC<FormCheckProps> = ({
   tooltip,
   type = "checkbox",
 
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { register } = useFormContext();
 
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12
-        ? onRight
-          ? "ps-sm-2"
-          : onMiddle
-          ? "ps-sm-1 pe-sm-1"
-          : "pe-sm-2"
-        : "",
-      col_xs !== 12 ? (onRight ? "ps-2" : onMiddle ? "ps-1 pe-1" : "pe-2") : "",
-    ].join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>

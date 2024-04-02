@@ -107,14 +107,14 @@ const OPSGENIE = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
+          isNumber
           defaultVal={globalOrDefault(
             main?.url_fields?.port,
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
           )}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.apikey`}
@@ -149,7 +149,6 @@ const OPSGENIE = ({
             defaults?.params?.alias,
             hard_defaults?.params?.alias
           )}
-          onRight
         />
         <FormItem
           name={`${name}.params.description`}
@@ -160,6 +159,7 @@ const OPSGENIE = ({
             defaults?.params?.description,
             hard_defaults?.params?.description
           )}
+          position="right"
         />
         <FormItem
           name={`${name}.params.note`}
@@ -170,7 +170,6 @@ const OPSGENIE = ({
             defaults?.params?.note,
             hard_defaults?.params?.note
           )}
-          onRight
         />
         <FormKeyValMap
           name={`${name}.params.details`}
@@ -192,15 +191,15 @@ const OPSGENIE = ({
         />
         <FormItem
           name={`${name}.params.priority`}
-          type="number"
           label="Priority"
           tooltip="Priority level of the alert. 1/2/3/4/5"
+          isNumber
           defaultVal={globalOrDefault(
             main?.params?.priority,
             defaults?.params?.priority,
             hard_defaults?.params?.priority
           )}
-          onRight
+          position="right"
         />
         <OpsGenieTargets
           name={`${name}.params.responders`}
@@ -227,7 +226,7 @@ const OPSGENIE = ({
             defaults?.params?.tags,
             hard_defaults?.params?.tags
           )}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
@@ -248,7 +247,7 @@ const OPSGENIE = ({
             defaults?.params?.user,
             hard_defaults?.params?.user
           )}
-          onRight
+          position="right"
         />
       </>
       <OpsGenieTargets

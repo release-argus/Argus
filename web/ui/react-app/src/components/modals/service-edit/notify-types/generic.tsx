@@ -124,9 +124,9 @@ const GENERIC = ({
           <FormItem
             name={`${name}.url_fields.port`}
             col_sm={4}
-            type="number"
             label="Port"
             tooltip="e.g. 443"
+            isNumber
             defaultVal={globalOrDefault(
               main?.url_fields?.port,
               defaults?.url_fields?.port,
@@ -148,11 +148,18 @@ const GENERIC = ({
               defaults?.url_fields?.path,
               hard_defaults?.url_fields?.path
             )}
-            onRight
+            position="right"
           />
           <FormKeyValMap
             name={`${name}.url_fields.custom_headers`}
             tooltip="Additional HTTP headers"
+            defaults={convertHeadersFromString(
+              globalOrDefault(
+                main?.url_fields?.custom_headers,
+                defaults?.url_fields?.custom_headers,
+                hard_defaults?.url_fields?.custom_headers
+              )
+            )}
           />
           {selectedTemplate && (
             <FormKeyValMap
@@ -161,6 +168,13 @@ const GENERIC = ({
               tooltip="Override 'title' and 'message' with 'titleKey' and 'messageKey' respectively"
               keyPlaceholder="e.g. key"
               valuePlaceholder="e.g. value"
+              defaults={convertHeadersFromString(
+                globalOrDefault(
+                  main?.url_fields?.json_payload_vars,
+                  defaults?.url_fields?.json_payload_vars,
+                  hard_defaults?.url_fields?.json_payload_vars
+                )
+              )}
             />
           )}
           <FormKeyValMap
@@ -169,6 +183,13 @@ const GENERIC = ({
             tooltip="If you need to pass a query variable that is reserved, you can prefix it with an underscore"
             keyPlaceholder="e.g. foo"
             valuePlaceholder="e.g. bar"
+            defaults={convertHeadersFromString(
+              globalOrDefault(
+                main?.url_fields?.query_vars,
+                defaults?.url_fields?.query_vars,
+                hard_defaults?.url_fields?.query_vars
+              )
+            )}
           />
         </>
         <FormLabel text="Params" heading />
@@ -178,11 +199,10 @@ const GENERIC = ({
           label="Request Method"
           tooltip="The HTTP request method"
           options={genericRequestMethodOptions}
-          onMiddle
         />
         <FormItem
           name={`${name}.params.contenttype`}
-          col_sm={8}
+          col_sm={4}
           label="Content Type"
           tooltip="The value of the Content-Type header"
           defaultVal={globalOrDefault(
@@ -190,10 +210,24 @@ const GENERIC = ({
             defaults?.params?.contenttype,
             hard_defaults?.params?.contenttype
           )}
+          position="right"
+        />
+        <FormItem
+          name={`${name}.params.template`}
+          col_sm={4}
+          type="text"
+          label="Template"
+          tooltip="The template used for creating the request payload"
+          defaultVal={globalOrDefault(
+            main?.params?.template,
+            defaults?.params?.template,
+            hard_defaults?.params?.template
+          )}
+          position="right"
         />
         <FormItem
           name={`${name}.params.messagekey`}
-          col_sm={4}
+          col_sm={6}
           type="text"
           label="Message Key"
           tooltip="The key that will be used for the message value"
@@ -204,20 +238,8 @@ const GENERIC = ({
           )}
         />
         <FormItem
-          name={`${name}.params.template`}
-          col_sm={8}
-          type="text"
-          label="Template"
-          tooltip="The template used for creating the request payload"
-          defaultVal={globalOrDefault(
-            main?.params?.template,
-            defaults?.params?.template,
-            hard_defaults?.params?.template
-          )}
-        />
-        <FormItem
           name={`${name}.params.titlekey`}
-          col_sm={4}
+          col_sm={6}
           type="text"
           label="Title Key"
           tooltip="The key that will be used for the title value"
@@ -229,7 +251,7 @@ const GENERIC = ({
         />
         <FormItem
           name={`${name}.params.title`}
-          col_sm={8}
+          col_sm={12}
           type="text"
           label="Title"
           tooltip="Text prepended to the message"
@@ -238,6 +260,7 @@ const GENERIC = ({
             defaults?.params?.title,
             hard_defaults?.params?.title
           )}
+          position="right"
         />
         <BooleanWithDefault
           name={`${name}.params.disabletls`}

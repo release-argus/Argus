@@ -23,7 +23,7 @@ const VIEW: FC<Props> = ({ name, defaults }) => (
     col_sm={5}
     defaultVal={defaults?.url}
     placeholder="e.g. 'http://example.com'"
-    onRight
+    position="right"
   />
 );
 

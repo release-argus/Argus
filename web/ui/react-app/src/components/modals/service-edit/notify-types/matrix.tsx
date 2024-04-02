@@ -38,27 +38,6 @@ const MATRIX = ({
     <>
       <FormLabel text="URL Fields" heading />
       <FormItem
-        name={`${name}.url_fields.username`}
-        label="Username"
-        tooltip="e.g. something@example.com"
-        defaultVal={globalOrDefault(
-          main?.url_fields?.username,
-          defaults?.url_fields?.username,
-          hard_defaults?.url_fields?.username
-        )}
-      />
-      <FormItem
-        name={`${name}.url_fields.password`}
-        required
-        label="Password"
-        defaultVal={globalOrDefault(
-          main?.url_fields?.password,
-          defaults?.url_fields?.password,
-          hard_defaults?.url_fields?.password
-        )}
-        onRight
-      />
-      <FormItem
         name={`${name}.url_fields.host`}
         required
         col_sm={9}
@@ -81,7 +60,28 @@ const MATRIX = ({
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
-        onRight
+        position="right"
+      />
+      <FormItem
+        name={`${name}.url_fields.username`}
+        label="Username"
+        tooltip="e.g. something@example.com"
+        defaultVal={globalOrDefault(
+          main?.url_fields?.username,
+          defaults?.url_fields?.username,
+          hard_defaults?.url_fields?.username
+        )}
+      />
+      <FormItem
+        name={`${name}.url_fields.password`}
+        required
+        label="Password"
+        defaultVal={globalOrDefault(
+          main?.url_fields?.password,
+          defaults?.url_fields?.password,
+          hard_defaults?.url_fields?.password
+        )}
+        position="right"
       />
     </>
     <>

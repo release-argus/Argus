@@ -1,6 +1,5 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
 import {
-  DefaultDockerFilterRegistryType,
   DefaultDockerFilterType,
   DefaultLatestVersionFiltersType,
   DockerFilterRegistryType,
@@ -89,7 +88,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             label={"RegEx Version"}
             tooltip="Version found must match, e.g. exclude '*-beta' versions with '^[0-9.]+$'"
             isRegex
-            onRight
+            position="right"
           />
 
           <FormGroup className="pt-1">
@@ -117,7 +116,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             name="latest_version.require.docker.tag"
             col_xs={6}
             label="Tag"
-            onRight
+            position="right"
           />
           {showUsernameField && (
             <FormItem
@@ -127,16 +126,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
               label="Username"
               defaultVal={
                 selectedDockerRegistry &&
-                ((
-                  defaults?.docker?.[
-                    selectedDockerRegistry
-                  ] as DefaultDockerFilterRegistryType
-                )?.username ||
-                  (
-                    hard_defaults?.docker?.[
-                      selectedDockerRegistry
-                    ] as DefaultDockerFilterRegistryType
-                  )?.username)
+                (defaults?.docker?.[selectedDockerRegistry]?.username ||
+                  hard_defaults?.docker?.[selectedDockerRegistry]?.username)
               }
             />
           )}
@@ -145,20 +136,12 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             key="token"
             col_sm={showUsernameField ? 8 : 12}
             label="Token"
-            onRight={showUsernameField}
             defaultVal={
               selectedDockerRegistry &&
-              ((
-                defaults?.docker?.[
-                  selectedDockerRegistry
-                ] as DefaultDockerFilterRegistryType
-              )?.token ||
-                (
-                  hard_defaults?.docker?.[
-                    selectedDockerRegistry
-                  ] as DefaultDockerFilterRegistryType
-                )?.token)
+              (defaults?.docker?.[selectedDockerRegistry]?.token ||
+                hard_defaults?.docker?.[selectedDockerRegistry]?.token)
             }
+            position={showUsernameField ? "right" : "left"}
           />
         </Row>
       </Accordion.Body>

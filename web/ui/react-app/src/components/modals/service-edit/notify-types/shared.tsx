@@ -42,14 +42,14 @@ export const NotifyOptions = ({
     <FormItem
       name={`${name}.options.max_tries`}
       col_xs={6}
-      type="number"
       label="Max tries"
+      isNumber
       defaultVal={globalOrDefault(
         main?.max_tries,
         defaults?.max_tries,
         hard_defaults?.max_tries
       )}
-      onRight
+      position="right"
     />
     <FormTextArea
       name={`${name}.options.message`}

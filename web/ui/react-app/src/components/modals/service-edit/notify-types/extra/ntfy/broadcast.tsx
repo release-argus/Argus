@@ -22,7 +22,7 @@ const BROADCAST: FC<Props> = ({ name, defaults }) => (
       col_sm={5}
       defaultVal={defaults?.intent}
       placeholder="e.g. 'io.heckel.ntfy.USER_ACTION'"
-      onRight
+      position="right"
     />
     <FormKeyValMap
       name={`${name}.extras`}

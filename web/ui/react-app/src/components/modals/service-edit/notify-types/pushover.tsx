@@ -58,7 +58,7 @@ const PUSHOVER = ({
           defaults?.url_fields?.user,
           hard_defaults?.url_fields?.user
         )}
-        onRight
+        position="right"
       />
     </>
     <>
@@ -87,15 +87,15 @@ const PUSHOVER = ({
       <FormItem
         name={`${name}.params.priority`}
         col_sm={3}
-        type="number"
         label="Priority"
         tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
+        isNumber
         defaultVal={globalOrDefault(
           main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         )}
-        onRight
+        position="right"
       />
     </>
   </>

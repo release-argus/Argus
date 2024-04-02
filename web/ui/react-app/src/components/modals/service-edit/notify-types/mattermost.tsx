@@ -54,15 +54,15 @@ const MATTERMOST = ({
       <FormItem
         name={`${name}.url_fields.port`}
         col_sm={3}
-        type="number"
         label="Port"
         tooltip="e.g. 443"
+        isNumber
         defaultVal={globalOrDefault(
           main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.path`}
@@ -87,7 +87,7 @@ const MATTERMOST = ({
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         )}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url_fields.token`}
@@ -109,7 +109,7 @@ const MATTERMOST = ({
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         )}
-        onRight
+        position="right"
       />
     </>
     <>

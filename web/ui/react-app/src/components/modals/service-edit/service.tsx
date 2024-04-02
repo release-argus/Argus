@@ -88,9 +88,8 @@ const EditService: FC<Props> = ({ name }) => {
           }}
           col_sm={12}
           label="Name"
-          onRight
         />
-        <FormItem name="comment" col_sm={12} label="Comment" onRight />
+        <FormItem name="comment" col_sm={12} label="Comment" />
       </FormGroup>
       <EditServiceOptions
         defaults={otherOptionsData?.defaults?.service?.options}

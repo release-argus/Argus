@@ -16,7 +16,7 @@ import { globalOrDefault } from "../util/util";
  * @param main - The main values
  * @param defaults - The default values
  * @param hard_defaults - The hard default values
- * @returns The form fields for this `Slack` Notify
+ * @returns The form fields for this `Slack` `Notify`
  */
 const SLACK = ({
   name,
@@ -67,7 +67,7 @@ const SLACK = ({
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         )}
-        onRight
+        position="right"
       />
     </>
     <>
@@ -90,7 +90,7 @@ const SLACK = ({
           defaults?.params?.color ||
           hard_defaults?.params?.color
         }
-        onRight
+        position="right"
       />
       <FormItemWithPreview
         name={`${name}.params.icon`}

@@ -145,7 +145,7 @@ const NTFY = ({
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
           )}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.username`}
@@ -164,7 +164,7 @@ const NTFY = ({
             defaults?.url_fields?.password,
             hard_defaults?.url_fields?.password
           )}
-          onRight
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.topic`}
@@ -177,7 +177,6 @@ const NTFY = ({
             defaults?.url_fields?.topic,
             hard_defaults?.url_fields?.topic
           )}
-          onRight
         />
       </>
       <>
@@ -194,10 +193,10 @@ const NTFY = ({
           col_sm={3}
           label="Priority"
           options={ntfyPriorityOptions}
-          onMiddle
+          position="middle"
         />
         <FormItem
-          name={`${name}.url_fields.tags`}
+          name={`${name}.params.tags`}
           label="Tags"
           tooltip="Comma-separated list of tags that may or may not map to emojis"
           defaultVal={globalOrDefault(
@@ -205,10 +204,10 @@ const NTFY = ({
             defaults?.params?.tags,
             hard_defaults?.params?.tags
           )}
-          onRight
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.attach`}
+          name={`${name}.params.attach`}
           col_sm={8}
           label="Attach"
           tooltip="URL of an attachment"
@@ -219,7 +218,7 @@ const NTFY = ({
           )}
         />
         <FormItem
-          name={`${name}.url_fields.filename`}
+          name={`${name}.params.filename`}
           col_sm={4}
           label="Filename"
           tooltip="File name of the attachment"
@@ -228,10 +227,10 @@ const NTFY = ({
             defaults?.params?.filename,
             hard_defaults?.params?.filename
           )}
-          onRight
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.email`}
+          name={`${name}.params.email`}
           label="E-mail"
           tooltip="E-mail address to send to"
           defaultVal={globalOrDefault(
@@ -241,17 +240,17 @@ const NTFY = ({
           )}
         />
         <FormItem
-          name={`${name}.url_fields.title`}
+          name={`${name}.params.title`}
           label="Title"
           defaultVal={globalOrDefault(
             main?.params?.title,
             defaults?.params?.title,
             hard_defaults?.params?.title
           )}
-          onRight
+          position="right"
         />
         <FormItem
-          name={`${name}.url_fields.click`}
+          name={`${name}.params.click`}
           col_sm={12}
           label="Click"
           tooltip="URL to open when notification is clicked"

@@ -35,7 +35,7 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
         col_sm={5}
         label="Type"
         options={methodOptions}
-        onRight
+        position="right"
       />
       <FormItem
         name={`${name}.url`}

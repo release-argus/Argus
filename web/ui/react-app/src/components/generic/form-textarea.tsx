@@ -1,7 +1,8 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
+import { formPadding } from "./util";
 import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
@@ -17,8 +18,8 @@ interface FormItemProps {
   placeholder?: string;
 
   rows?: number;
-  onRight?: boolean;
-  onMiddle?: boolean;
+  position?: "left" | "middle" | "right";
+  positionXS?: "left" | "middle" | "right";
 }
 
 /**
@@ -33,8 +34,8 @@ interface FormItemProps {
  * @param defaultVal - The default value of the form item
  * @param placeholder - The placeholder of the form item
  * @param rows - The number of rows for the textarea
- * @param onRight - Whether the form item should be on the right
- * @param onMiddle - Whether the form item should be in the middle
+ * @param position - The position of the form item
+ * @param positionXS - The position of the form item on extra small screens
  * @returns A form textarea with a label and tooltip
  */
 const FormTextArea: FC<FormItemProps> = ({
@@ -50,18 +51,12 @@ const FormTextArea: FC<FormItemProps> = ({
   placeholder,
 
   rows,
-  onRight,
-  onMiddle,
+  position = "left",
+  positionXS = position,
 }) => {
   const { register } = useFormContext();
-  const padding = useMemo(() => {
-    return [
-      col_sm !== 12 && onRight ? "ps-sm-2" : "",
-      col_xs !== 12 && onRight ? "ps-2" : "",
-      col_sm !== 12 && !onRight ? (onMiddle ? "ps-sm-2" : "pe-sm-2") : "",
-      col_xs !== 12 && !onRight ? (onMiddle ? "ps-2" : "pe-2") : "",
-    ].join(" ");
-  }, [col_xs, col_sm, onRight, onMiddle]);
+
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>

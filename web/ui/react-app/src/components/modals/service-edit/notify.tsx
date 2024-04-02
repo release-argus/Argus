@@ -104,7 +104,7 @@ const Notify: FC<Props> = ({
             col_xs={6}
             label="Type"
             options={TYPE_OPTIONS}
-            onRight
+            position="right"
           />
           <FormItem
             name={`${name}.name`}

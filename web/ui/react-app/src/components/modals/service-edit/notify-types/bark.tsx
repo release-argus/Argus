@@ -160,7 +160,6 @@ const BARK = ({
             defaults?.url_fields?.host,
             hard_defaults?.url_fields?.host
           )}
-          onRight
         />
         <FormItem
           name={`${name}.url_fields.port`}
@@ -172,6 +171,7 @@ const BARK = ({
             defaults?.url_fields?.port,
             hard_defaults?.url_fields?.port
           )}
+          position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
@@ -192,7 +192,7 @@ const BARK = ({
             defaults?.url_fields?.devicekey,
             hard_defaults?.url_fields?.devicekey
           )}
-          onRight
+          position="right"
         />
       </>
       <>
@@ -207,9 +207,9 @@ const BARK = ({
         <FormItem
           name={`${name}.params.badge`}
           col_sm={3}
-          type="number"
           label="Badge"
           tooltip="The number displayed next to the App icon"
+          isNumber
           defaultVal={globalOrDefault(
             main?.params?.badge,
             defaults?.params?.badge,

@@ -16,7 +16,8 @@ const REPLACE = ({ name }: { name: string }) => (
       required
       col_xs={7}
       col_sm={4}
-      onRight
+      position="middle"
+      positionXS="right"
     />
     <FormItem
       key="new"
@@ -24,7 +25,7 @@ const REPLACE = ({ name }: { name: string }) => (
       label="With"
       smallLabel
       col_sm={4}
-      onRight
+      position="right"
     />
   </>
 );
