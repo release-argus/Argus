@@ -1,10 +1,10 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, JSX } from "react";
-import { FieldError, useFormContext, useFormState } from "react-hook-form";
 
 import FormLabel from "./form-label";
 import { formPadding } from "./util";
-import { getNestedError } from "utils";
+import { useError } from "hooks/errors";
+import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
   name: string;
@@ -74,13 +74,12 @@ const FormItem: FC<FormItemProps> = ({
   positionXS = position,
 }) => {
   const { getValues, register } = useFormContext();
-  const { errors } = useFormState();
-  const error = ((required ||
-    isNumber ||
-    isRegex ||
-    isURL ||
-    registerParams["validate"]) &&
-    getNestedError(errors, name)) as FieldError | undefined;
+  const error = useError(
+    name,
+    required || isNumber || isRegex || isURL || registerParams["validate"]
+      ? true
+      : false
+  );
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
 

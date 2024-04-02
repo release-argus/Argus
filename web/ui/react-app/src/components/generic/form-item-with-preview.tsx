@@ -3,6 +3,7 @@ import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
+import { useError } from "hooks/errors";
 
 interface Props {
   name: string;
@@ -33,6 +34,7 @@ const FormItemWithPreview: FC<Props> = ({
 }) => {
   const { register } = useFormContext();
   const formValue: string | undefined = useWatch({ name: name });
+  const error = useError(name, true);
   const preview = useMemo(() => {
     const url = formValue || defaultVal || "";
     try {
@@ -85,10 +87,14 @@ const FormItemWithPreview: FC<Props> = ({
                 return true;
               },
             })}
+            isInvalid={!!error}
           />
           {preview}
         </div>
       </FormGroup>
+      {error && (
+        <small className="error-msg">{error["message"] || "err"}</small>
+      )}
     </Col>
   );
 };
