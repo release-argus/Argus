@@ -4,6 +4,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { FC } from "react";
 import FormLabel from "./form-label";
 import { formPadding } from "./util";
+import { useError } from "hooks/errors";
 
 interface FormItemColourProps {
   name: string;
@@ -46,6 +47,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
   const { register, setValue } = useFormContext();
   const hexColour = useWatch({ name: name });
   const trimmedHex = hexColour?.replace("#", "");
+  const error = useError(name, true);
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
   const setColour = (hex: string) =>
     setValue(name, hex.substring(1), { shouldDirty: true });
@@ -71,6 +73,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
                   message: "Invalid colour hex",
                 },
               })}
+              isInvalid={error !== undefined}
             />
             <FormControl
               className="form-control-color"
@@ -86,6 +89,9 @@ const FormItemColour: FC<FormItemColourProps> = ({
           </InputGroup>
         </div>
       </FormGroup>
+      {error && (
+        <small className="error-msg">{error["message"] || "err"}</small>
+      )}
     </Col>
   );
 };

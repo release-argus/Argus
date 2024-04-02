@@ -1,11 +1,11 @@
 import { Col, Form, FormGroup } from "react-bootstrap";
-import { Controller, useFormState } from "react-hook-form";
 import { FC, JSX } from "react";
 
+import { Controller } from "react-hook-form";
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
 import { formPadding } from "./util";
-import { getNestedError } from "utils";
+import { useError } from "hooks/errors";
 
 interface FormSelectProps {
   name: string;
@@ -57,9 +57,7 @@ const FormSelect: FC<FormSelectProps> = ({
   position = "left",
   positionXS = position,
 }) => {
-  const { errors } = useFormState();
-  const error = customValidation && getNestedError(errors, name);
-
+  const error = useError(name, customValidation !== undefined);
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (

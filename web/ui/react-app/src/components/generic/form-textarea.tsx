@@ -3,6 +3,7 @@ import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
 import { formPadding } from "./util";
+import { useError } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
 
 interface FormItemProps {
@@ -55,6 +56,7 @@ const FormTextArea: FC<FormItemProps> = ({
   positionXS = position,
 }) => {
   const { register } = useFormContext();
+  const error = useError(name, required);
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
@@ -81,7 +83,11 @@ const FormTextArea: FC<FormItemProps> = ({
               return true;
             },
           })}
+          isInvalid={!!error}
         />
+        {error && (
+          <small className="error-msg">{error["message"] || "err"}</small>
+        )}
       </FormGroup>
     </Col>
   );
