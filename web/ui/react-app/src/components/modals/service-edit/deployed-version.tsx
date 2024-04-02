@@ -1,5 +1,5 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
-import { FC, memo, useEffect } from "react";
+import { FC, memo, useEffect, useMemo } from "react";
 import {
   FormCheck,
   FormItem,
@@ -48,6 +48,14 @@ const EditServiceDeployedVersion: FC<Props> = ({
     }
   }, [templateToggle]);
 
+  const convertedDefaults = useMemo(
+    () => ({
+      allow_invalid_certs:
+        defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
+    }),
+    [defaults, hard_defaults]
+  );
+
   return (
     <Accordion>
       <Accordion.Header>Deployed Version:</Accordion.Header>
@@ -63,9 +71,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
         <BooleanWithDefault
           name="deployed_version.allow_invalid_certs"
           label="Allow Invalid Certs"
-          defaultValue={
-            defaults?.allow_invalid_certs || hard_defaults?.allow_invalid_certs
-          }
+          defaultValue={convertedDefaults.allow_invalid_certs}
         />
         <FormGroup className="pt-1 mb-2">
           <FormLabel text="Basic auth credentials" />
@@ -75,20 +81,12 @@ const EditServiceDeployedVersion: FC<Props> = ({
               name="deployed_version.basic_auth.username"
               col_xs={6}
               label="Username"
-              defaultVal={
-                defaults?.basic_auth?.username ||
-                hard_defaults?.basic_auth?.username
-              }
             />
             <FormItem
               key="password"
               name="deployed_version.basic_auth.password"
               col_xs={6}
               label="Password"
-              defaultVal={
-                defaults?.basic_auth?.password ||
-                hard_defaults?.basic_auth?.password
-              }
               position="right"
             />
           </Row>
@@ -105,7 +103,6 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">data.version</span>
               </>
             }
-            defaultVal={defaults?.json || hard_defaults?.json}
           />
           <FormItem
             name="deployed_version.regex"
@@ -119,7 +116,6 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">v([0-9.]+)</span>
               </>
             }
-            defaultVal={defaults?.regex || hard_defaults?.regex}
             isRegex
             position="middle"
           />

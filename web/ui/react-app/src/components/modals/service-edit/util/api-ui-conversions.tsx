@@ -2,7 +2,9 @@ import {
   HeaderType,
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
+  StringFieldArray,
   StringStringMap,
+  WebHookType,
 } from "types/config";
 import {
   ServiceEditAPIType,
@@ -10,6 +12,7 @@ import {
   ServiceEditType,
 } from "types/service-edit";
 
+import { firstNonDefault } from "./first-non-default";
 import { urlCommandsTrimArray } from "./url-command-trim";
 
 /**
@@ -29,6 +32,7 @@ export const convertAPIServiceDataEditToUI = (
     // Edit service defaults
     return {
       ...serviceData,
+      name: name,
       options: {
         ...serviceData?.options,
         active: serviceData?.options?.active !== false,
@@ -51,7 +55,6 @@ export const convertAPIServiceDataEditToUI = (
           },
         },
       },
-      name: name,
       deployed_version: {
         ...serviceData?.deployed_version,
         basic_auth: {
@@ -69,17 +72,48 @@ export const convertAPIServiceDataEditToUI = (
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),
       })),
-      webhook: serviceData?.webhook?.map((item) => ({
-        ...item,
-        custom_headers: item.custom_headers?.map((header, index) => ({
-          ...header,
-          oldIndex: index,
-        })),
-        oldIndex: item.name,
-      })),
+      webhook: serviceData?.webhook?.map((item) => {
+        // Determine webhook name and type
+        const whName = item.name ?? "";
+        const whType = item.type ?? "";
+
+        // Construct custom headers
+        const customHeaders = item.custom_headers
+          ? item.custom_headers.map((header, index) => ({
+              ...header,
+              oldIndex: index,
+            }))
+          : otherOptionsData?.webhook?.[whName]?.custom_headers ??
+            (
+              otherOptionsData?.defaults?.webhook?.[whType] as
+                | WebHookType
+                | undefined
+            )?.custom_headers ??
+            (
+              otherOptionsData?.hard_defaults?.webhook?.[whType] as
+                | WebHookType
+                | undefined
+            )?.custom_headers ??
+            [];
+
+        // Return modified item
+        return {
+          ...item,
+          custom_headers: customHeaders,
+          oldIndex: item.name,
+        };
+      }),
       notify: serviceData?.notify?.map((item) => ({
         ...item,
         oldIndex: item.name,
+        url_fields: {
+          ...convertNotifyURLFields(
+            item.name ?? "",
+            item.type,
+            item.url_fields,
+            otherOptionsData
+          ),
+        },
         params: {
           avatar: "", // controlled param
           color: "", // ^
@@ -117,26 +151,70 @@ export const convertAPIServiceDataEditToUI = (
 };
 
 /**
- * Returns the converted headers for the UI
+ * Returns the converted field array for the UI
+ *
+ * (If defaults are provided and str is undefined/empty, it will only return only empty fields)
+ *
+ * @param str - JSON list or string to convert
+ * @param defaults - The defaults
+ * @param key - key to use for the object
+ * @returns The converted object for use in the UI
+ */
+export const convertStringToFieldArray = (
+  str?: string,
+  defaults?: string,
+  key = "arg"
+): StringFieldArray | undefined => {
+  // already converted
+  if (typeof str === "object") return str;
+  if (!str && typeof defaults === "object") return defaults;
+
+  // undefined/empty
+  const s = str || defaults || "";
+  if (s === "") return [];
+
+  let list: string[];
+  try {
+    list = JSON.parse(s as string);
+    list = Array.isArray(list) ? list : [s as string];
+  } catch (error) {
+    list = [s as string];
+  }
+
+  // map the []string to {arg: string} for the form
+  if (!str) return list.map(() => ({ [key]: "" }));
+  return list.map((arg: string) => ({ [key]: arg }));
+};
+
+/**
+ * Returns the converted notify.X.headers for the UI
+ *
+ * (If defaults are provided and str is undefined/empty, it will only return only empty fields)
  *
  * @param str - JSON to convert
- * @param omitValues - If true, will omit the values from the object
+ * @param defaults - The defaults
  * @returns The converted object for use in the UI
  */
 export const convertHeadersFromString = (
-  str?: string | HeaderType[]
-): HeaderType[] | undefined => {
+  str?: string | HeaderType[],
+  defaults?: string | HeaderType[]
+): HeaderType[] => {
   // already converted
   if (typeof str === "object") return str;
+  if (!str && typeof defaults === "object") return defaults;
+
   // undefined/empty
-  if (str === undefined || str === "") return undefined;
+  const s = (str || defaults || "") as string;
+  if (s === "") return [];
+
+  const usingStr = str ? true : false;
 
   // convert from a JSON string
   try {
-    return Object.entries(JSON.parse(str)).map(([key, value], i) => ({
-      id: i,
-      key: key,
-      value: value,
+    return Object.entries(JSON.parse(s)).map(([key, value], i) => ({
+      id: usingStr ? i : undefined,
+      key: usingStr ? key : "",
+      value: usingStr ? value : "",
     })) as HeaderType[];
   } catch (error) {
     return [];
@@ -153,36 +231,42 @@ export const convertHeadersFromString = (
  * @returns The converted object for use in the UI
  */
 export const convertOpsGenieTargetFromString = (
-  str?: string | NotifyOpsGenieTarget[]
-): NotifyOpsGenieTarget[] | undefined => {
+  str?: string | NotifyOpsGenieTarget[],
+  defaults?: string | NotifyOpsGenieTarget[]
+): NotifyOpsGenieTarget[] => {
   // already converted
   if (typeof str === "object") return str;
+  if (!str && typeof defaults === "object") return defaults;
 
   // undefined/empty
-  if ((str ?? "") === "") return undefined;
+  const s = (str || defaults || "") as string;
+  if (s === "") return [];
+
+  const usingStr = str ? true : false;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str || "").map(
+    return JSON.parse(s).map(
       (
         obj: { id: string; type: string; name: string; username: string },
         i: number
       ) => {
+        const id = usingStr ? i : undefined;
         // team/user - id
         if (obj.id) {
           return {
-            id: i,
+            id: id,
             type: obj.type,
             sub_type: "id",
-            value: obj.id,
+            value: usingStr ? obj.id : "",
           };
         } else {
           // team/user - username/name
           return {
-            id: i,
+            id: id,
             type: obj.type,
             sub_type: obj.type === "user" ? "username" : "name",
-            value: obj.name || obj.username,
+            value: usingStr ? obj.name || obj.username : "",
           };
         }
       }
@@ -202,29 +286,126 @@ export const convertOpsGenieTargetFromString = (
  * @returns The converted object for use in the UI
  */
 export const convertNtfyActionsFromString = (
-  str?: string | NotifyNtfyAction[]
-): NotifyNtfyAction[] | undefined => {
+  str?: string | NotifyNtfyAction[],
+  defaults?: string | NotifyNtfyAction[]
+): NotifyNtfyAction[] => {
   // already converted
   if (typeof str === "object") return str;
+  if (!str && typeof defaults === "object") return defaults;
 
   // undefined/empty
-  if ((str ?? "") === "") return undefined;
+  const s = (str || defaults || "") as string;
+  if (s === "") return [];
+
+  const usingStr = str ? true : false;
 
   // convert from a JSON string
   try {
-    return JSON.parse(str || "").map((obj: NotifyNtfyAction, i: number) => ({
-      id: i,
-      ...obj,
-      headers: obj.headers
-        ? convertStringMapToHeaderType(obj.headers as { [key: string]: string })
-        : undefined,
-      extras: obj.extras
-        ? convertStringMapToHeaderType(obj.extras as { [key: string]: string })
-        : undefined,
-    })) as NotifyNtfyAction[];
+    return JSON.parse(s).map((obj: NotifyNtfyAction, i: number) => {
+      const id = usingStr ? i : undefined;
+
+      // View
+      if (obj.action === "view")
+        return {
+          id: id,
+          action: obj.action,
+          label: usingStr ? obj.label : "",
+          url: usingStr ? obj.url : "",
+        };
+
+      // HTTP
+      if (obj.action === "http")
+        return {
+          id: id,
+          action: obj.action,
+          label: usingStr ? obj.label : "",
+          url: usingStr ? obj.url : "",
+          method: usingStr ? obj.method : "",
+          headers: convertStringMapToHeaderType(
+            obj.headers as StringStringMap,
+            !usingStr
+          ),
+          body: obj.body,
+        };
+
+      // Broadcast
+      if (obj.action === "broadcast")
+        return {
+          id: id,
+          action: obj.action,
+          label: usingStr ? obj.label : "",
+          intent: usingStr ? obj.intent : "",
+          extras: convertStringMapToHeaderType(
+            obj.extras as StringStringMap,
+            !usingStr
+          ),
+        };
+
+      // Unknown action
+      return {
+        id: id,
+        ...obj,
+      };
+    }) as NotifyNtfyAction[];
   } catch (error) {
     return [];
   }
+};
+
+/**
+ * Returns the converted notify.X.url_fields for the UI
+ *
+ * @param name - The react-hook-form path to the notify object
+ * @param type - The type of notify
+ * @param urlFields - The url_fields object to convert
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted URL Fields for use in the UI
+ */
+export const convertNotifyURLFields = (
+  name: string,
+  type?: string,
+  urlFields?: StringStringMap,
+  otherOptionsData?: ServiceEditOtherData
+) => {
+  const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
+
+  // Generic
+  if (notifyType === "generic")
+    return {
+      ...urlFields,
+      custom_headers: convertHeadersFromString(
+        urlFields?.custom_headers,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.urlFields?.custom_headers,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
+            ?.custom_headers,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+            ?.custom_headers
+        )
+      ),
+      json_payload_vars: convertHeadersFromString(
+        urlFields?.json_payload_vars,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.urlFields?.json_payload_vars,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
+            ?.json_payload_vars,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+            ?.json_payload_vars
+        )
+      ),
+      query_vars: convertHeadersFromString(
+        // urlFields.query_vars,
+        firstNonDefault(
+          otherOptionsData?.notify?.[name]?.urlFields?.query_vars,
+          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
+            ?.query_vars,
+          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+            ?.query_vars
+        )
+      ),
+    };
+
+  return urlFields;
 };
 
 /**
@@ -243,34 +424,96 @@ export const convertNotifyParams = (
   otherOptionsData?: ServiceEditOtherData
 ) => {
   const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
+
   switch (notifyType) {
+    // NTFY
     case "ntfy":
       return {
         ...params,
-        actions: convertNtfyActionsFromString(params?.actions),
+        actions: convertNtfyActionsFromString(
+          params?.actions,
+          firstNonDefault(
+            otherOptionsData?.notify?.[name]?.params?.actions,
+            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
+            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+              ?.actions
+          )
+        ),
       };
+
+    // OpsGenie
     case "opsgenie":
       return {
         ...params,
-        details: convertHeadersFromString(params?.details),
-        targets: convertOpsGenieTargetFromString(params?.targets),
+        actions: convertStringToFieldArray(
+          params?.actions,
+          firstNonDefault(
+            otherOptionsData?.notify?.[name]?.params?.actions,
+            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
+            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+              ?.actions
+          )
+        ),
+        details: convertHeadersFromString(
+          params?.details,
+          firstNonDefault(
+            otherOptionsData?.notify?.[name]?.params?.details,
+            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.details,
+            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+              ?.details
+          )
+        ),
+        responders: convertOpsGenieTargetFromString(
+          params?.responders,
+          firstNonDefault(
+            otherOptionsData?.notify?.[name]?.params?.responders,
+            otherOptionsData?.defaults?.notify?.[notifyType]?.params
+              ?.responders,
+            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+              ?.responders
+          )
+        ),
+        visibleto: convertOpsGenieTargetFromString(
+          params?.visibleto,
+          firstNonDefault(
+            otherOptionsData?.notify?.[name]?.params?.visibleto,
+            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.visibleto,
+            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
+              ?.visibleto
+          )
+        ),
       };
-    case "generic":
+
+    // Slack
+    case "slack":
       return {
         ...params,
-        custom_headers: convertHeadersFromString(params?.custom_headers),
-        json_payload_vars: convertHeadersFromString(params?.json_payload_vars),
-        query_vars: convertHeadersFromString(params?.query_vars),
+        // Add # to the color if it's a hex code
+        color: /^[\da-f]{6}$/i.test(params?.color ?? "")
+          ? `#${params?.color}`
+          : params?.color,
       };
+
+    // Other
     default:
       return params;
   }
 };
 
-const convertStringMapToHeaderType = (headers?: {
-  [key: string]: string;
-}): HeaderType[] | undefined => {
-  if (!headers) return undefined;
+/**
+ * Returns the headers in the format {key: KEY, value: VAL}[] for the UI
+ *
+ * @param headers - The {KEY:VAL, ...} object to convert
+ * @param omitValues - If true, will omit the values from the object
+ * @returns Converted headers, {key: KEY, value: VAL}[] for use in the UI
+ */
+const convertStringMapToHeaderType = (
+  headers?: StringStringMap,
+  omitValues?: boolean
+): HeaderType[] => {
+  if (!headers) return [];
+  if (omitValues)
+    return Object.keys(headers).map((key) => ({ key, value: "" }));
   return Object.keys(headers).map((key) => ({
     key: key,
     value: headers[key],

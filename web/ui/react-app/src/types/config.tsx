@@ -210,10 +210,30 @@ export interface URLCommandType {
   old?: string; // replace
   new?: string; // replace
 }
-export const NotifyTypesConst = [
+export type NotifyTypes =
+  | "bark"
+  | "discord"
+  | "smtp" // email
+  | "googlechat"
+  | "gotify"
+  | "ifttt"
+  | "join"
+  | "mattermost"
+  | "matrix"
+  | "ntfy"
+  | "opsgenie"
+  | "pushbullet"
+  | "pushover"
+  | "rocketchat"
+  | "slack"
+  | "teams"
+  | "telegram"
+  | "zulip"
+  | "generic";
+export const NotifyTypesConst: NotifyTypes[] = [
   "bark",
   "discord",
-  "smtp",
+  "smtp", // email
   "googlechat",
   "gotify",
   "ifttt",
@@ -229,8 +249,8 @@ export const NotifyTypesConst = [
   "teams",
   "telegram",
   "zulip",
+  "generic",
 ];
-export type NotifyTypes = (typeof NotifyTypesConst)[number];
 export interface NotifyDefaults {
   barl: NotifyBarkType;
   discord: NotifyDiscordType;

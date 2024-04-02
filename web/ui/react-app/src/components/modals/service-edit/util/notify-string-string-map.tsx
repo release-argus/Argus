@@ -11,10 +11,10 @@ interface StringAnyMap {
     | number
     | boolean
     | undefined
-    | HeaderType[]
+    | StringFieldArray
     | NotifyNtfyAction[]
     | NotifyOpsGenieTarget[]
-    | StringFieldArray;
+    | HeaderType[];
 }
 interface StringStringMap {
   [key: string]: string;
@@ -24,9 +24,13 @@ interface StringStringMap {
  * Returns a properly formatted string of the notify.(params|url_fields) for the API
  *
  * @param obj - The object to convert
+ * @param notifyType - The type of Notify to convert
  * @returns The object with string values
  */
-export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
+export const convertValuesToString = (
+  obj: StringAnyMap,
+  notifyType?: string
+): StringStringMap =>
   Object.entries(obj).reduce((result, [key, value]) => {
     if (typeof value === "object") {
       // opsGenie.responders || opsGenie.visibleto
@@ -43,16 +47,22 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         result[key] = convertOpsGenieTargetToString(
           value as NotifyOpsGenieTarget[]
         );
-        // ntfy.actions
+        // (ntfy|opsgenie).actions
       } else if (key === "actions") {
-        // `label` empty means defaults were used. Skip.
+        // Ntfy - `label` empty means defaults were used. Skip.
+        // OpsGenie - `arg` empty means defaults were used. Skip.
         if (
-          (value as NotifyNtfyAction[]).find((item) => (item.label || "") == "")
+          (value as StringFieldArray).find(
+            (item) => (item.label || item.arg || "") == ""
+          )
         ) {
           return result;
         }
         // convert to string
-        result[key] = convertNtfyActionsToString(value as NotifyNtfyAction[]);
+        result[key] =
+          notifyType === "ntfy"
+            ? convertNtfyActionsToString(value as NotifyNtfyAction[])
+            : FlattenStringFieldArray(value as StringFieldArray);
         // opsGenie.details
       } else {
         // `value` empty means defaults were used. Skip.
@@ -63,18 +73,36 @@ export const convertValuesToString = (obj: StringAnyMap): StringStringMap =>
         ) {
           return result;
         }
-        result[key] = JSON.stringify(
-          (value as HeaderType[]).reduce(
-            (acc, { key, value }) => ({ ...acc, [key]: value }),
-            {}
-          )
-        );
+        result[key] = JSON.stringify(flattenHeaderArray(value as HeaderType[]));
       }
     } else {
       result[key] = String(value);
     }
     return result;
   }, {} as StringStringMap);
+
+/**
+ * Returns a flattened JSON string of the object for the API
+ *
+ * @param obj - The StringFieldArray to flatten { arg: "value1" }[]
+ * @returns A JSON string of the values ["value1", "value2", ...]
+ */
+const FlattenStringFieldArray = (obj: StringFieldArray): string =>
+  JSON.stringify(obj.map((item) => Object.values(item)[0]));
+
+/**
+ * Returns a flattened object of headers for the API
+ *
+ * @param headers - The HeaderType[] to flatten { key: "KEY", value: "VAL" }[]
+ * @returns The flattened object { KEY: VAL, ... }
+ */
+const flattenHeaderArray = (headers?: HeaderType[]) => {
+  if (!headers) return undefined;
+  return headers.reduce((obj, header) => {
+    obj[header.key] = header.value;
+    return obj;
+  }, {} as StringStringMap);
+};
 
 /**
  * Returns a JSON string of the Ntfy actions for the API
@@ -98,7 +126,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           label: item.label,
           url: item.url,
           method: item.method,
-          headers: item.headers,
+          headers: flattenHeaderArray(item.headers as HeaderType[] | undefined),
           body: item.body,
         };
       // broadcast - extras as {KEY:VAL}, not {key:KEY, val:VAL}
@@ -107,7 +135,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           action: item.action,
           label: item.label,
           intent: item.intent,
-          extras: item.extras,
+          extras: flattenHeaderArray(item.extras as HeaderType[] | undefined),
         };
       else return item;
     })

@@ -233,9 +233,9 @@ export default function reducerMonitor(
       // Check whether we've missed any additions
       for (const id of action.order) {
         if (state.service[id] === undefined)
-          fetchJSON<ServiceSummaryType | undefined>(
-            `api/v1/service/summary/${encodeURIComponent(id)}`
-          ).then((data) => {
+          fetchJSON<ServiceSummaryType | undefined>({
+            url: `api/v1/service/summary/${encodeURIComponent(id)}`,
+          }).then((data) => {
             if (data) state.service[id] = data;
           });
       }

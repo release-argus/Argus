@@ -56,6 +56,7 @@ const FormURLCommands = () => {
               variant="danger"
               style={{ float: "left" }}
               onClick={removeLast}
+              disabled={fields.length === 0}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>

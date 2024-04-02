@@ -1,5 +1,10 @@
-// normaliseForSelect will take an any-case value and check whether it's in the provided options array and
-// return the value if it is
+/**
+ * Returns the option from the provided options array that matches the value
+ *
+ * @param options - The options to search
+ * @param value - The value to search for
+ * @returns The option that matches the value, case-insensitive
+ */
 export const normaliseForSelect = (
   options: { value: string; label: string }[],
   value?: string

@@ -20,7 +20,7 @@ export const Flags = (): ReactElement => {
     Dictionary<string | boolean | undefined>
   >({
     queryKey: ["flags"],
-    queryFn: () => fetchJSON(`api/v1/flags`),
+    queryFn: () => fetchJSON({ url: `api/v1/flags` }),
     staleTime: Infinity,
   });
 

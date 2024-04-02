@@ -118,10 +118,10 @@ export interface NotifyParamsType {
     | string
     | number
     | boolean
-    | HeaderType[]
+    | StringFieldArray
     | NotifyNtfyAction[]
     | NotifyOpsGenieTarget[]
-    | StringFieldArray;
+    | HeaderType[];
 }
 
 /////////////////////////////////

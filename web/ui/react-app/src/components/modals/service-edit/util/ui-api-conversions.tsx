@@ -116,8 +116,9 @@ export const convertUIServiceDataEditToAPI = (
 export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
   if (notify?.url_fields)
-    notify.url_fields = convertValuesToString(notify.url_fields);
-  if (notify?.params) notify.params = convertValuesToString(notify.params);
+    notify.url_fields = convertValuesToString(notify.url_fields, notify.type);
+  if (notify?.params)
+    notify.params = convertValuesToString(notify.params, notify.type);
 
   return notify as NotifyType;
 };

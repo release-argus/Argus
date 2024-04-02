@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { globalOrDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "components/modals/service-edit/util";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { useFormContext } from "react-hook-form";
 
@@ -76,16 +76,82 @@ const BARK = ({
   hard_defaults?: NotifyBarkType;
 }) => {
   const { getValues, setValue } = useFormContext();
+  const convertedDefaults = useMemo(
+    () => ({
+      // URL Fields
+      url_fields: {
+        devicekey: firstNonDefault(
+          main?.url_fields?.devicekey,
+          defaults?.url_fields?.devicekey,
+          hard_defaults?.url_fields?.devicekey
+        ),
+        host: firstNonDefault(
+          main?.url_fields?.host,
+          defaults?.url_fields?.host,
+          hard_defaults?.url_fields?.host
+        ),
+        path: firstNonDefault(
+          main?.url_fields?.path,
+          defaults?.url_fields?.path,
+          hard_defaults?.url_fields?.path
+        ),
+        port: firstNonDefault(
+          main?.url_fields?.port,
+          defaults?.url_fields?.port,
+          hard_defaults?.url_fields?.port
+        ),
+      },
+      // Params
+      params: {
+        badge: firstNonDefault(
+          main?.params?.badge,
+          defaults?.params?.badge,
+          hard_defaults?.params?.badge
+        ),
+        copy: firstNonDefault(
+          main?.params?.copy,
+          defaults?.params?.copy,
+          hard_defaults?.params?.copy
+        ),
+        group: firstNonDefault(
+          main?.params?.group,
+          defaults?.params?.group,
+          hard_defaults?.params?.group
+        ),
+        icon: firstNonDefault(
+          main?.params?.icon,
+          defaults?.params?.icon,
+          hard_defaults?.params?.icon
+        ),
+        scheme: firstNonDefault(
+          main?.params?.scheme,
+          defaults?.params?.scheme,
+          hard_defaults?.params?.scheme
+        ).toLowerCase(),
+        sound: firstNonDefault(
+          main?.params?.sound,
+          defaults?.params?.sound,
+          hard_defaults?.params?.sound
+        ).toLowerCase(),
+        title: firstNonDefault(
+          main?.params?.title,
+          defaults?.params?.title,
+          hard_defaults?.params?.title
+        ),
+        url: firstNonDefault(
+          main?.params?.url,
+          defaults?.params?.url,
+          hard_defaults?.params?.url
+        ),
+      },
+    }),
+    [main, defaults, hard_defaults]
+  );
 
-  const defaultParamsScheme = globalOrDefault(
-    main?.params?.scheme,
-    defaults?.params?.scheme,
-    hard_defaults?.params?.scheme
-  ).toLowerCase();
   const barkSchemeOptions = useMemo(() => {
     const defaultScheme = normaliseForSelect(
       BarkSchemeOptions,
-      defaultParamsScheme
+      convertedDefaults.params.scheme
     );
 
     if (defaultScheme)
@@ -95,17 +161,12 @@ const BARK = ({
       ];
 
     return BarkSchemeOptions;
-  }, [defaultParamsScheme]);
+  }, [convertedDefaults.params.scheme]);
 
-  const defaultParamsSound = globalOrDefault(
-    main?.params?.sound,
-    defaults?.params?.sound,
-    hard_defaults?.params?.sound
-  ).toLowerCase();
   const barkSoundOptions = useMemo(() => {
     const defaultSound = normaliseForSelect(
       BarkSoundOptions,
-      defaultParamsSound
+      convertedDefaults.params.sound
     );
 
     if (defaultSound)
@@ -115,11 +176,11 @@ const BARK = ({
       ];
 
     return BarkSoundOptions;
-  }, [defaultParamsSound]);
+  }, [convertedDefaults.params.sound]);
 
   useEffect(() => {
     // Normalise selected scheme, or default it
-    if (defaultParamsScheme === "")
+    if (convertedDefaults.params.scheme === "")
       setValue(
         `${name}.params.scheme`,
         normaliseForSelect(
@@ -130,13 +191,13 @@ const BARK = ({
 
     // Normalise selected sound, or default it
     if (
-      defaultParamsSound === "" &&
+      convertedDefaults.params.sound === "" &&
       getValues(`${name}.params.sound`) !== undefined
     )
       setValue(
         `${name}.params.sound`,
         normaliseForSelect(BarkSoundOptions, getValues(`${name}.params.sound`))
-          ?.value || ""
+          ?.value ?? ""
       );
   }, []);
 
@@ -148,55 +209,40 @@ const BARK = ({
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           col_sm={9}
           required
           label="Host"
-          defaultVal={globalOrDefault(
-            main?.url_fields?.host,
-            defaults?.url_fields?.host,
-            hard_defaults?.url_fields?.host
-          )}
+          defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
           required
           label="Port"
-          defaultVal={globalOrDefault(
-            main?.url_fields?.port,
-            defaults?.url_fields?.port,
-            hard_defaults?.url_fields?.port
-          )}
+          isNumber
+          defaultVal={convertedDefaults.url_fields.port}
           position="right"
         />
         <FormItem
           name={`${name}.url_fields.path`}
           label="Path"
           tooltip="Server path"
-          defaultVal={globalOrDefault(
-            main?.url_fields?.path,
-            defaults?.url_fields?.path,
-            hard_defaults?.url_fields?.path
-          )}
+          defaultVal={convertedDefaults.url_fields.path}
         />
         <FormItem
           name={`${name}.url_fields.devicekey`}
           required
           label="Device Key"
-          defaultVal={globalOrDefault(
-            main?.url_fields?.devicekey,
-            defaults?.url_fields?.devicekey,
-            hard_defaults?.url_fields?.devicekey
-          )}
+          defaultVal={convertedDefaults.url_fields.devicekey}
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormSelect
           name={`${name}.params.scheme`}
           col_sm={3}
@@ -210,66 +256,45 @@ const BARK = ({
           label="Badge"
           tooltip="The number displayed next to the App icon"
           isNumber
-          defaultVal={globalOrDefault(
-            main?.params?.badge,
-            defaults?.params?.badge,
-            hard_defaults?.params?.badge
-          )}
+          defaultVal={convertedDefaults.params.badge}
+          position="middle"
         />
         <FormItem
           name={`${name}.params.copy`}
           label="Copy"
           tooltip="The value to be copied"
-          defaultVal={globalOrDefault(
-            main?.params?.copy,
-            defaults?.params?.copy,
-            hard_defaults?.params?.copy
-          )}
+          defaultVal={convertedDefaults.params.copy}
+          position="right"
         />
         <FormItem
           name={`${name}.params.group`}
           label="Group"
           tooltip="The group of the notification"
-          defaultVal={globalOrDefault(
-            main?.params?.group,
-            defaults?.params?.group,
-            hard_defaults?.params?.group
-          )}
+          defaultVal={convertedDefaults.params.group}
         />
         <FormSelect
           name={`${name}.params.sound`}
-          col_sm={6}
           label="Sound"
           options={barkSoundOptions}
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
           label="Title"
-          defaultVal={globalOrDefault(
-            main?.params?.title,
-            defaults?.params?.title,
-            hard_defaults?.params?.title
-          )}
+          defaultVal={convertedDefaults.params.title}
         />
         <FormItem
           name={`${name}.params.url`}
           label="URL"
           tooltip="URL to open when notification is tapped"
-          defaultVal={globalOrDefault(
-            main?.params?.url,
-            defaults?.params?.url,
-            hard_defaults?.params?.url
-          )}
+          defaultVal={convertedDefaults.params.url}
+          position="right"
         />
         <FormItemWithPreview
           name={`${name}.params.icon`}
           label="Icon"
           tooltip="URL to an icon"
-          defaultVal={globalOrDefault(
-            main?.params?.icon,
-            defaults?.params?.icon,
-            hard_defaults?.params?.icon
-          )}
+          defaultVal={convertedDefaults.params.icon}
         />
       </>
     </>

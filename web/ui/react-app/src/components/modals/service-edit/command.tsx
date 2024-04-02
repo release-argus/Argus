@@ -25,6 +25,19 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
+  // remove the last argument
+  const removeLast = useCallback(() => {
+    if (fields.length > 1) return remove(fields.length - 1);
+    // if there's only 1 arg left, remove the command
+    if (removeMe) return removeMe();
+    return undefined;
+  }, [fields.length]);
+
+  const placeholder = (index: number) => {
+    if (index === 0) return `e.g. "/bin/bash"`;
+    if (index === 1) return `e.g. "/opt/script.sh"`;
+    return `e.g. "-arg${index - 1}"`;
+  };
 
   return (
     <Col xs={12}>
@@ -34,13 +47,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
             key={id}
             name={`${name}.${argIndex}.arg`}
             required
-            placeholder={
-              argIndex === 0
-                ? `e.g. "/bin/bash"`
-                : argIndex === 1
-                ? `e.g. "/opt/script.sh"`
-                : `e.g. "-arg${argIndex - 1}"`
-            }
+            placeholder={placeholder(argIndex)}
             position={argIndex % 2 === 1 ? "right" : "left"}
           />
         ))}
@@ -62,11 +69,8 @@ const Command: FC<Props> = ({ name, removeMe }) => {
         <Button
           className="btn-unchecked mb-3"
           style={{ float: "right" }}
-          onClick={() =>
-            fields.length < 2 && removeMe
-              ? removeMe()
-              : remove(fields.length - 1)
-          }
+          onClick={removeLast}
+          disabled={fields.length === 0}
         >
           <FontAwesomeIcon icon={faMinus} />
         </Button>

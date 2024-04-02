@@ -12,7 +12,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { globalOrDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "components/modals/service-edit/util";
 
 interface Props {
   name: string;
@@ -72,6 +72,46 @@ const EditServiceWebHook: FC<Props> = ({
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
     [name, itemName, itemType]
+  );
+
+  const convertedDefaults = useMemo(
+    () => ({
+      allow_invalid_certs:
+        main?.allow_invalid_certs ??
+        defaults?.allow_invalid_certs ??
+        hard_defaults?.allow_invalid_certs,
+      custom_headers:
+        main?.custom_headers ??
+        defaults?.custom_headers ??
+        hard_defaults?.custom_headers,
+      delay: firstNonDefault(
+        main?.delay,
+        defaults?.delay,
+        hard_defaults?.delay
+      ),
+      desired_status_code: firstNonDefault(
+        main?.desired_status_code,
+        defaults?.desired_status_code,
+        hard_defaults?.desired_status_code
+      ),
+      max_tries: firstNonDefault(
+        main?.max_tries,
+        defaults?.max_tries,
+        hard_defaults?.max_tries
+      ),
+      secret: firstNonDefault(
+        main?.secret,
+        defaults?.secret,
+        hard_defaults?.secret
+      ),
+      silent_fails:
+        main?.silent_fails ??
+        defaults?.silent_fails ??
+        hard_defaults?.silent_fails,
+      type: firstNonDefault(main?.type, defaults?.type, hard_defaults?.type),
+      url: firstNonDefault(main?.url, defaults?.url, hard_defaults?.url),
+    }),
+    [main, defaults, hard_defaults]
   );
 
   return (
@@ -138,38 +178,24 @@ const EditServiceWebHook: FC<Props> = ({
             type="text"
             label="Target URL"
             tooltip="Where to send the WebHook"
-            defaultVal={globalOrDefault(
-              main?.url,
-              defaults?.url,
-              hard_defaults?.url
-            )}
+            defaultVal={convertedDefaults.url}
             isURL
           />
           <BooleanWithDefault
             name={`${name}.allow_invalid_certs`}
             label="Allow Invalid Certs"
-            defaultValue={
-              main?.allow_invalid_certs ||
-              defaults?.allow_invalid_certs ||
-              hard_defaults?.allow_invalid_certs
-            }
+            defaultValue={convertedDefaults.allow_invalid_certs}
           />
           <FormItem
             name={`${name}.secret`}
             required
             col_sm={12}
             label="Secret"
-            defaultVal={
-              main?.secret || defaults?.secret || hard_defaults?.secret
-            }
+            defaultVal={convertedDefaults.secret}
           />
           <FormKeyValMap
             name={`${name}.custom_headers`}
-            defaults={
-              main?.custom_headers ??
-              defaults?.custom_headers ??
-              hard_defaults?.custom_headers
-            }
+            defaults={convertedDefaults.custom_headers}
           />
           <FormItem
             name={`${name}.desired_status_code`}
@@ -177,23 +203,14 @@ const EditServiceWebHook: FC<Props> = ({
             label="Desired Status Code"
             tooltip="Treat the WebHook as successful when this status code is received (0=2XX)"
             isNumber
-            defaultVal={globalOrDefault(
-              main?.desired_status_code,
-              defaults?.desired_status_code,
-              hard_defaults?.desired_status_code
-            )}
+            defaultVal={convertedDefaults.desired_status_code}
           />
           <FormItem
             name={`${name}.max_tries`}
             col_xs={6}
             label="Max tries"
             isNumber
-            defaultVal={`${
-              main?.max_tries ||
-              defaults?.max_tries ||
-              hard_defaults?.max_tries ||
-              ""
-            }`}
+            defaultVal={convertedDefaults.max_tries}
             position="right"
           />
           <FormItem
@@ -201,18 +218,14 @@ const EditServiceWebHook: FC<Props> = ({
             col_sm={12}
             label="Delay"
             tooltip="Delay sending by this duration"
-            defaultVal={main?.delay || defaults?.delay || hard_defaults?.delay}
+            defaultVal={convertedDefaults.delay}
             position="right"
           />
           <BooleanWithDefault
             name={`${name}.silent_fails`}
             label="Silent fails"
             tooltip="Notify if WebHook fails max tries times"
-            defaultValue={
-              main?.silent_fails ||
-              defaults?.silent_fails ||
-              hard_defaults?.silent_fails
-            }
+            defaultValue={convertedDefaults.silent_fails}
           />
         </Row>
       </Accordion.Body>

@@ -10,6 +10,7 @@ import { FormItem, FormLabel, FormSelect } from "components/generic/form";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import Command from "./command";
+import { firstNonDefault } from "components/modals/service-edit/util";
 
 const DockerRegistryOptions = [
   { label: "Docker Hub", value: "hub" },
@@ -63,6 +64,26 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
   const selectedDockerRegistry: DockerFilterRegistryType | undefined =
     dockerRegistry || defaultDockerRegistry;
   const showUsernameField = (dockerRegistry || defaultDockerRegistry) === "hub";
+
+  const convertedDefaults = useMemo(
+    () =>
+      selectedDockerRegistry
+        ? {
+            token: firstNonDefault(
+              defaults?.docker?.[selectedDockerRegistry]?.token,
+              hard_defaults?.docker?.[selectedDockerRegistry]?.token
+            ),
+            username: firstNonDefault(
+              defaults?.docker?.[selectedDockerRegistry]?.username,
+              hard_defaults?.docker?.[selectedDockerRegistry]?.username
+            ),
+          }
+        : {
+            token: undefined,
+            username: undefined,
+          },
+    [selectedDockerRegistry]
+  );
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
@@ -124,11 +145,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
               name="latest_version.require.docker.username"
               col_sm={4}
               label="Username"
-              defaultVal={
-                selectedDockerRegistry &&
-                (defaults?.docker?.[selectedDockerRegistry]?.username ||
-                  hard_defaults?.docker?.[selectedDockerRegistry]?.username)
-              }
+              defaultVal={convertedDefaults.username}
             />
           )}
           <FormItem
@@ -136,11 +153,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
             key="token"
             col_sm={showUsernameField ? 8 : 12}
             label="Token"
-            defaultVal={
-              selectedDockerRegistry &&
-              (defaults?.docker?.[selectedDockerRegistry]?.token ||
-                hard_defaults?.docker?.[selectedDockerRegistry]?.token)
-            }
+            defaultVal={convertedDefaults.token}
             position={showUsernameField ? "right" : "left"}
           />
         </Row>

@@ -14,14 +14,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import { NotifyNtfyAction } from "types/config";
 import NtfyAction from "./action";
-import { convertNtfyActionsFromString } from "components/modals/service-edit/util/api-ui-conversions";
+import { convertNtfyActionsFromString } from "components/modals/service-edit/util";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
   name: string;
   label: string;
   tooltip: string;
-  defaults?: string;
+  defaults?: NotifyNtfyAction[];
 }
 
 /**
@@ -34,7 +34,7 @@ interface Props {
  * @returns A set of form fields for a list of Ntfy actions
  */
 const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
-  const { trigger } = useFormContext();
+  const { setValue, trigger } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
@@ -49,35 +49,50 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
       { shouldFocus: false }
     );
   }, []);
-  const removeLast = useCallback(() => {
-    remove(fields.length - 1);
-  }, [fields]);
 
-  const actionDefaults = useMemo(
-    () => (defaults ? convertNtfyActionsFromString(defaults) : undefined),
-    [defaults]
-  );
   // keep track of the array values so we can switch defaults when they're unchanged
   const fieldValues: NotifyNtfyAction[] = useWatch({ name: name });
   // useDefaults when the fieldValues are unset or the same as the defaults
   const useDefaults = useMemo(
-    () => diffObjects(fieldValues, actionDefaults),
+    () =>
+      defaults &&
+      diffObjects(fieldValues ?? fields ?? [], defaults, [".action"]),
     [fieldValues, defaults]
   );
+
+  // Keep only selects/length of arrays
+  const trimmedDefaults = useMemo(
+    () => convertNtfyActionsFromString(undefined, JSON.stringify(defaults)),
+    [defaults]
+  );
+  // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
+
+    // Give the defaults back if the field is empty
+    if ((fieldValues ?? fields ?? [])?.length === 0) {
+      trimmedDefaults.forEach((dflt) => {
+        append(dflt, { shouldFocus: false });
+      });
+    }
   }, [useDefaults]);
 
-  // on load, give the defaults if not overridden
+  // on load, ensure we don't have another types actions
+  // and give the defaults if not overridden
   useEffect(() => {
-    if (useDefaults)
-      actionDefaults?.forEach((dflt) => {
-        append(
-          { action: dflt.action, label: dflt.label, method: dflt.method },
-          { shouldFocus: false }
-        );
-      });
+    // ensure we don't have another types actions
+    for (const item of fieldValues ?? fields ?? []) {
+      if ((item.action ?? "") === "") {
+        setValue(name, []);
+        break;
+      }
+    }
   }, []);
+
+  // remove the last item if it's not the only one or doesn't match the defaults
+  const removeLast = useCallback(() => {
+    !(useDefaults && fields.length == 1) && remove(fields.length - 1);
+  }, [fields.length, useDefaults]);
 
   return (
     <FormGroup>
@@ -100,6 +115,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
               className="btn-unchecked"
               style={{ float: "left" }}
               onClick={removeLast}
+              disabled={fields.length === 0}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>
@@ -111,8 +127,11 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
           <Row key={id}>
             <NtfyAction
               name={`${name}.${index}`}
-              removeMe={() => remove(index)}
-              defaults={useDefaults ? actionDefaults?.[index] : undefined}
+              removeMe={
+                // Give the remove that's disabled if there's only one item and it matches the defaults
+                fieldValues?.length === 1 ? removeLast : () => remove(index)
+              }
+              defaults={useDefaults ? defaults?.[index] : undefined}
             />
           </Row>
         ))}
