@@ -10,7 +10,7 @@ buildReactApp() {
   npm run build
   cd "${current}"
   rm -rf ./static
-  mv ./react-app/build ./static
+  mv ./react-app/dist ./static
 }
 
 for i in "$@"; do
