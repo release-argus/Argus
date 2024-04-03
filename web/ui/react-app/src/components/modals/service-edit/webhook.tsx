@@ -7,12 +7,12 @@ import {
   FormLabel,
   FormSelect,
 } from "components/generic/form";
+import { firstNonDefault, firstNonEmpty } from "utils";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { firstNonDefault } from "components/modals/service-edit/util";
 
 interface Props {
   name: string;
@@ -80,10 +80,11 @@ const EditServiceWebHook: FC<Props> = ({
         main?.allow_invalid_certs ??
         defaults?.allow_invalid_certs ??
         hard_defaults?.allow_invalid_certs,
-      custom_headers:
-        main?.custom_headers ??
-        defaults?.custom_headers ??
-        hard_defaults?.custom_headers,
+      custom_headers: firstNonEmpty(
+        main?.custom_headers,
+        defaults?.custom_headers,
+        hard_defaults?.custom_headers
+      ),
       delay: firstNonDefault(
         main?.delay,
         defaults?.delay,

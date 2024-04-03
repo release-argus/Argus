@@ -79,12 +79,23 @@ export const convertUIServiceDataEditToAPI = (
   if (data.webhook)
     payload.webhook = data.webhook.reduce((acc, webhook) => {
       webhook = removeEmptyValues(webhook);
+      // Defaults were being shown if key/value were empty
+      const removeCustomHeaders = (webhook.custom_headers ?? []).find(
+        (header) => header.key === "" || header.value === ""
+      );
       acc[webhook.name as string] = {
         ...webhook,
-        desired_status_code: webhook?.desired_status_code
-          ? Number(webhook?.desired_status_code)
-          : undefined,
-        max_tries: webhook.max_tries ? Number(webhook.max_tries) : undefined,
+        custom_headers: removeCustomHeaders
+          ? undefined
+          : webhook.custom_headers,
+        desired_status_code:
+          webhook?.desired_status_code !== undefined
+            ? Number(webhook?.desired_status_code)
+            : undefined,
+        max_tries:
+          webhook.max_tries !== undefined
+            ? Number(webhook.max_tries)
+            : undefined,
       };
       return acc;
     }, {} as Dict<WebHookType>);

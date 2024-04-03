@@ -11,7 +11,7 @@ import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
 import VersionWithRefresh from "./version-with-refresh";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { useWatch } from "react-hook-form";
 
 interface Props {

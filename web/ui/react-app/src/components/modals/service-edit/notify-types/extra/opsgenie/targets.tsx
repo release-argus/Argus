@@ -16,6 +16,7 @@ import { NotifyOpsGenieTarget } from "types/config";
 import OpsGenieTarget from "./target";
 import { convertOpsGenieTargetFromString } from "components/modals/service-edit/util";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -55,7 +56,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      defaults &&
+      !isEmptyArray(defaults) &&
       diffObjects(fieldValues ?? fields ?? [], defaults, [
         ".type",
         ".sub_type",

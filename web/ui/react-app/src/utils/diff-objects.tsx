@@ -1,3 +1,5 @@
+import isEmptyOrNull from "./is-empty-or-null";
+
 /**
  * Returns whether a is different from b after allowing for only values at
  * allowedDefined to be the value in b
@@ -43,7 +45,7 @@ export function diffObjects<T>(
     return true;
   } else if (typeof b === "string") {
     // a is undefined/empty
-    if ((a ?? "") === "") return true;
+    if (isEmptyOrNull(a)) return true;
     // a is defined, and on a key that's allowed and is the same as b
     if (
       containsEndsWith(

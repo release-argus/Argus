@@ -13,7 +13,7 @@ import {
 import { NotifyOpsGenieType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**

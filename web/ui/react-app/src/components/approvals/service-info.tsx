@@ -20,6 +20,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
+import { isEmptyOrNull } from "utils";
 
 interface Props {
   service: ServiceSummaryType;
@@ -57,7 +58,7 @@ export const ServiceInfo: FC<Props> = ({
     () => ({
       // If version hasn't been found or a new version has been found (and not skipped)
       warning:
-        (service?.status?.deployed_version ?? "") === "" ||
+        isEmptyOrNull(service?.status?.deployed_version) ||
         (updateAvailable && !updateSkipped),
       // If the latest version is the same as the approved version
       updateApproved:

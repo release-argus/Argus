@@ -4,7 +4,7 @@ import { FormCheck, FormItem } from "components/generic/form";
 import { Accordion } from "react-bootstrap";
 import { BooleanWithDefault } from "components/generic";
 import { ServiceOptionsType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 
 interface Props {
   defaults?: ServiceOptionsType;

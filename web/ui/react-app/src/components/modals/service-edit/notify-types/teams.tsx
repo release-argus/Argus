@@ -2,7 +2,7 @@ import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTeamsType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**

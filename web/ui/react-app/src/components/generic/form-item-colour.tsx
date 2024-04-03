@@ -45,7 +45,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
   positionXS = position,
 }) => {
   const { register, setValue } = useFormContext();
-  const hexColour = useWatch({ name: name });
+  const hexColour: string = useWatch({ name: name });
   const trimmedHex = hexColour?.replace("#", "");
   const error = useError(name, true);
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -66,6 +66,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
               type="text"
               defaultValue={trimmedHex}
               placeholder={defaultVal}
+              maxLength={6}
               autoFocus={false}
               {...register(name, {
                 pattern: {
@@ -80,10 +81,8 @@ const FormItemColour: FC<FormItemColourProps> = ({
               style={{ width: "30%" }}
               type="color"
               title="Choose your color"
-              value={hexColour || defaultVal}
-              onChange={(event) => {
-                setColour(event.target.value);
-              }}
+              value={`#${trimmedHex || defaultVal?.replace("#", "")}`}
+              onChange={(event) => setColour(event.target.value)}
               autoFocus={false}
             />
           </InputGroup>

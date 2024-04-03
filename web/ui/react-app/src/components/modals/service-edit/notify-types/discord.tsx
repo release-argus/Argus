@@ -7,7 +7,7 @@ import {
 import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 

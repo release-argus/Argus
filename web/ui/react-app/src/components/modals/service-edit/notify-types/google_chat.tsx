@@ -2,7 +2,7 @@ import { FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyGoogleChatType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**

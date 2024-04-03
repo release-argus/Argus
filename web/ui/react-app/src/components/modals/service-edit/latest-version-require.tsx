@@ -7,10 +7,10 @@ import {
 } from "types/config";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { firstNonDefault, isEmptyOrNull } from "utils";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import Command from "./command";
-import { firstNonDefault } from "components/modals/service-edit/util";
 
 const DockerRegistryOptions = [
   { label: "Docker Hub", value: "hub" },
@@ -87,7 +87,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
-    if ((selectedDockerRegistry ?? "") === "")
+    if (isEmptyOrNull(selectedDockerRegistry))
       setValue("latest_version.require.docker.type", "hub");
   }, []);
 

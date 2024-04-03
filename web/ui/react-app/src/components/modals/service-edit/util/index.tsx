@@ -18,7 +18,6 @@ import {
 } from "./url-command-trim";
 
 import { convertValuesToString } from "./notify-string-string-map";
-import { firstNonDefault } from "./first-non-default";
 import { normaliseForSelect } from "./normalise-selects";
 
 export {
@@ -32,7 +31,6 @@ export {
   convertNotifyToAPI,
   convertUIServiceDataEditToAPI,
   convertValuesToString,
-  firstNonDefault,
   normaliseForSelect,
   urlCommandsTrim,
   urlCommandTrim,

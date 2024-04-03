@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { useFormContext } from "react-hook-form";
 

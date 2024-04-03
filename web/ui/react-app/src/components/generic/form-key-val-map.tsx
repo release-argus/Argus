@@ -15,6 +15,7 @@ import FormKeyVal from "./form-key-val";
 import { FormLabel } from "components/generic/form";
 import { HeaderType } from "types/config";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -59,7 +60,9 @@ const FormKeyValMap: FC<Props> = ({
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
+      (!isEmptyArray(defaults) &&
+        diffObjects(fieldValues ?? fields ?? [], defaults)) ??
+      false,
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not

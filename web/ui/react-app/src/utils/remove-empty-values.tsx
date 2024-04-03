@@ -4,6 +4,9 @@
  * @param obj - The object to remove empty values from
  * @returns The object with all empty values removed
  */
+
+import isEmptyOrNull from "./is-empty-or-null";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeEmptyValues = (obj: { [x: string]: any }) => {
   for (const key in obj) {
@@ -23,7 +26,7 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
         continue;
       }
       // "" Empty/undefined string
-    } else if ((obj[key] ?? "") === "") delete obj[key];
+    } else if (isEmptyOrNull(obj[key])) delete obj[key];
   }
   return obj;
 };
