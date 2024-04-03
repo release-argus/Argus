@@ -47,8 +47,9 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
           <Modal.Title>Confirm Delete</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Are you sure you want to delete this item? This action cannot be
-          undone.
+          Are you sure you want to delete this item?
+          <br />
+          This action cannot be undone.
           {deleting && (
             <FontAwesomeIcon
               icon={faSpinner}

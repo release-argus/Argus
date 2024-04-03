@@ -92,10 +92,9 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       refetchSemanticVersioning();
       refetchData();
       // setTimeout to allow time for refetches ^
-      setTimeout(() => {
-        refetchVersion();
-      });
+      const timeout = setTimeout(() => refetchVersion());
       setLastFetched(currentTime);
+      return () => clearTimeout(timeout);
     }
   };
 

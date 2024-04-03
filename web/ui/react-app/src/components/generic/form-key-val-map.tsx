@@ -60,9 +60,7 @@ const FormKeyValMap: FC<Props> = ({
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      (!isEmptyArray(defaults) &&
-        diffObjects(fieldValues ?? fields ?? [], defaults)) ??
-      false,
+      isEmptyArray(defaults) ? false : !diffObjects(fieldValues, defaults),
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
@@ -70,7 +68,7 @@ const FormKeyValMap: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? []).length === 0)
+    if ((fieldValues ?? []).length === 0)
       defaults?.forEach(() => {
         addItem();
       });

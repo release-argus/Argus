@@ -63,10 +63,11 @@ const EditServiceWebHook: FC<Props> = ({
   useEffect(() => {
     if (mains?.[itemName]?.type !== undefined)
       setValue(`${name}.type`, mains[itemName].type);
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
     }, 25);
+    return () => clearTimeout(timeout);
   }, [itemName]);
 
   const header = useMemo(

@@ -7,18 +7,32 @@ import {
   Row,
 } from "react-bootstrap";
 import { CommandType, HeaderType, NotifyType, WebHookType } from "types/config";
+import {
+  FC,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { extractErrors, removeEmptyValues } from "utils";
-import { useCallback, useContext, useState } from "react";
+import {
+  ServiceEditAPIType,
+  ServiceEditOtherData,
+  ServiceEditType,
+} from "types/service-edit";
+import { extractErrors, fetchJSON, removeEmptyValues } from "utils";
 
 import { DeleteModal } from "./delete-confirm";
 import EditService from "components/modals/service-edit/service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { HelpTooltip } from "components/generic";
+import { Loading } from "components/modals/service-edit/loading";
 import { ModalContext } from "contexts/modal";
-import { ServiceEditType } from "types/service-edit";
+import { convertAPIServiceDataEditToUI } from "components/modals/service-edit/util";
 import { convertUIServiceDataEditToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { useQuery } from "@tanstack/react-query";
 
 export interface EditForm {
   optionsSemanticVersioning?: boolean;
@@ -40,33 +54,190 @@ export interface EditForm {
 const getPayload = (data: ServiceEditType) => {
   return removeEmptyValues(convertUIServiceDataEditToAPI(data));
 };
-
 /**
- * @returns The modal for editing a service
+ * @returns The service edit modal
  */
 const ServiceEditModal = () => {
-  // modal.actionType:
-  // EDIT
   const { handleModal, modal } = useContext(ModalContext);
-  const form = useForm<ServiceEditType>({ mode: "onBlur" });
+  if (modal.actionType !== "EDIT") {
+    return null;
+  }
+  return (
+    <ServiceEditModalGetData
+      serviceID={modal.service.id}
+      hideModal={() => handleModal("", { id: "", loading: true })}
+    />
+  );
+};
+
+interface ServiceEditModalGetDataProps {
+  serviceID: string;
+  hideModal: () => void;
+}
+/**
+ * Gets the data for and returns the service edit modal
+ *
+ * @param serviceID - The ID of the service to edit
+ * @param hideModal - The function to hide the modal
+ * @returns The service edit modal with the data fetched and a loading modal while fetching
+ */
+const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
+  serviceID,
+  hideModal,
+}) => {
+  const [loadingModal, setLoadingModal] = useState(true);
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoadingModal(false), 200);
+    return () => clearTimeout(timeout);
+  }, []);
+  const { data: otherOptionsData, isFetched: isFetchedOtherOptionsData } =
+    useQuery({
+      queryKey: ["service/edit", "detail"],
+      queryFn: () =>
+        fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/edit" }),
+    });
+  const {
+    data: serviceData,
+    isSuccess: isSuccessServiceData,
+    isRefetching,
+  } = useQuery({
+    queryKey: ["service/edit", { id: serviceID }],
+    queryFn: () =>
+      fetchJSON<ServiceEditAPIType>({
+        url: `api/v1/service/edit/${serviceID}`,
+      }),
+    enabled: !!serviceID,
+    refetchOnMount: "always",
+  });
+
+  const defaultData: ServiceEditType = useMemo(
+    () =>
+      convertAPIServiceDataEditToUI(serviceID, serviceData, otherOptionsData),
+    [serviceData, otherOptionsData, isRefetching]
+  );
+
+  // Not fetchedZ yet
+  if (
+    loadingModal ||
+    !isFetchedOtherOptionsData ||
+    (!isSuccessServiceData && serviceID) ||
+    !otherOptionsData
+  ) {
+    return (
+      <Modal size="lg" show onHide={hideModal}>
+        <ServiceEditModalHeader />
+        <Modal.Body>
+          <Container
+            fluid
+            className="font-weight-bold"
+            style={{ paddingLeft: "0.25rem", paddingRight: "0.25rem" }}
+          >
+            <Loading name={serviceID} />
+          </Container>
+        </Modal.Body>
+        <Modal.Footer
+          style={{ display: "flex", justifyContent: "space-between" }}
+        >
+          <ButtonGroup>
+            {serviceID && (
+              <DeleteModal onDelete={() => {}} disabled={!loadingModal} />
+            )}
+          </ButtonGroup>
+          <span>
+            <Button
+              id="modal-cancel"
+              variant="secondary"
+              onClick={() => hideModal()}
+              disabled={!loadingModal}
+            >
+              Cancel
+            </Button>
+            <Button
+              id="modal-action"
+              variant="primary"
+              type="submit"
+              className="ms-2"
+              disabled
+            >
+              Confirm
+            </Button>
+          </span>
+        </Modal.Footer>
+      </Modal>
+    );
+  }
+
+  // Service edit modal
+  return (
+    <ServiceEditModalWithData
+      serviceID={serviceID}
+      defaultData={defaultData}
+      otherOptionsData={otherOptionsData}
+      hideModal={hideModal}
+    />
+  );
+};
+
+/**
+ * @returns The header for the service edit modal
+ */
+const ServiceEditModalHeader = () => (
+  <Modal.Header closeButton>
+    <Modal.Title>
+      <strong>Edit Service</strong>
+      <HelpTooltip
+        text="Greyed out placeholder text represents a default that you can override. (current secrets can be kept by leaving them as '<secret>')"
+        placement="bottom"
+      />
+    </Modal.Title>
+  </Modal.Header>
+);
+
+interface ServiceEditModalWithDataProps {
+  serviceID: string;
+  defaultData: ServiceEditType;
+  otherOptionsData: ServiceEditOtherData;
+  hideModal: () => void;
+}
+/**
+ * Returns a modal for editing the service
+ *
+ * @param serviceID - The ID of the service to edit
+ * @param defaultData - The default data for the service
+ * @param otherOptionsData - The mains/defaults/hardDefaults for the service
+ * @param hideModal - The function to hide the modal
+ * @returns The modal for editing a service
+ */
+const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
+  serviceID,
+  defaultData,
+  otherOptionsData,
+  hideModal,
+}) => {
+  const form = useForm<ServiceEditType>({
+    mode: "onBlur",
+    defaultValues: defaultData ?? {},
+  });
+  useEffect(() => {
+    if (defaultData) form.reset(defaultData);
+  }, [defaultData]);
   // null if submitting
   const [err, setErr] = useState<string | null>("");
 
-  const hideModal = useCallback(() => {
+  const resetAndHideModal = useCallback(() => {
     form.reset({});
     setErr("");
-    handleModal("", { id: "", loading: true });
+    hideModal();
   }, []);
 
   const onSubmit = async (data: ServiceEditType) => {
     setErr(null);
     const payload = getPayload(data);
-    const serviceName = modal.service.id;
 
     await fetch(
-      serviceName ? `api/v1/service/edit/${serviceName}` : "api/v1/service/new",
+      serviceID ? `api/v1/service/edit/${serviceID}` : "api/v1/service/new",
       {
-        method: serviceName ? "PUT" : "POST",
+        method: serviceID ? "PUT" : "POST",
         body: JSON.stringify(payload),
       }
     )
@@ -88,8 +259,8 @@ const ServiceEditModal = () => {
   };
 
   const onDelete = async () => {
-    console.log(`Deleting ${modal.service.id}`);
-    await fetch(`api/v1/service/delete/${modal.service.id}`, {
+    console.log(`Deleting ${serviceID}`);
+    await fetch(`api/v1/service/delete/${serviceID}`, {
       method: "DELETE",
     }).then(() => {
       hideModal();
@@ -99,34 +270,26 @@ const ServiceEditModal = () => {
   return (
     <FormProvider {...form}>
       <Form id="service-edit">
-        <Modal
-          size="lg"
-          show={modal.actionType === "EDIT"}
-          onHide={() => hideModal()}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <strong>Edit Service</strong>
-              <HelpTooltip
-                text="Greyed out placeholder text represents a default that you can override. (current secrets can be kept by leaving them as '<secret>')"
-                placement="bottom"
-              />
-            </Modal.Title>
-          </Modal.Header>
+        <Modal size="lg" show animation={false} onHide={resetAndHideModal}>
+          <ServiceEditModalHeader />
           <Modal.Body>
             <Container
               fluid
               className="font-weight-bold"
-              style={{ paddingLeft: "0px" }}
+              style={{ paddingLeft: "0.25rem", paddingRight: "0.25rem" }}
             >
-              <EditService name={modal.service.id} />
+              <EditService
+                name={serviceID}
+                defaultData={defaultData}
+                otherOptionsData={otherOptionsData}
+              />
             </Container>
           </Modal.Body>
           <Modal.Footer
             style={{ display: "flex", justifyContent: "space-between" }}
           >
             <ButtonGroup>
-              {modal.service.id !== "" && (
+              {serviceID && (
                 <DeleteModal
                   onDelete={() => onDelete()}
                   disabled={err === null}

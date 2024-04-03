@@ -621,7 +621,7 @@ export interface NotifyOptionsType {
 }
 
 export interface NotifyURLFieldsType {
-  [key: string]: undefined | string | number | boolean;
+  [key: string]: undefined | string | number | boolean | HeaderType[];
 }
 
 export interface WebHookType {

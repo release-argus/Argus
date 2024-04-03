@@ -56,8 +56,9 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are unset or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      !isEmptyArray(defaults) &&
-      diffObjects(fieldValues ?? fields ?? [], defaults, [".action"]),
+      isEmptyArray(defaults)
+        ? false
+        : !diffObjects(fieldValues, defaults, [".action"]),
     [fieldValues, defaults]
   );
 
@@ -71,7 +72,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0) {
+    if ((fieldValues ?? []).length === 0) {
       trimmedDefaults.forEach((dflt) => {
         append(dflt, { shouldFocus: false });
       });
@@ -82,7 +83,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // and give the defaults if not overridden
   useEffect(() => {
     // ensure we don't have another types actions
-    for (const item of fieldValues ?? fields ?? []) {
+    for (const item of fieldValues ?? []) {
       if (isEmptyOrNull(item.action)) {
         setValue(name, []);
         break;
