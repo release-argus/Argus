@@ -61,6 +61,7 @@ const BooleanWithDefault: FC<Props> = ({
 
   return (
     <Col
+      xs={12}
       className="pt-1 pb-1"
       style={{ display: "flex", alignItems: "center" }}
     >

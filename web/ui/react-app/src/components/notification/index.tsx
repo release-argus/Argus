@@ -38,15 +38,11 @@ const Notification: FC<NotificationType> = ({
   useEffect(() => {
     if (delay !== 0) {
       const timer = setTimeout(
-        () => {
-          removeNotification(id);
-        },
+        () => removeNotification(id),
         delay ? delay : 10000
       );
 
-      return () => {
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [delay, id, removeNotification]);
 

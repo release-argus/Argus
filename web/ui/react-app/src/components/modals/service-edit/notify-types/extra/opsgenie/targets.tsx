@@ -56,11 +56,9 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      !isEmptyArray(defaults) &&
-      diffObjects(fieldValues ?? fields ?? [], defaults, [
-        ".type",
-        ".sub_type",
-      ]),
+      isEmptyArray(defaults)
+        ? false
+        : !diffObjects(fieldValues, defaults, [".type", ".sub_type"]),
     [fieldValues, defaults]
   );
   const trimmedDefaults = useMemo(
@@ -71,7 +69,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0)
+    if ((fieldValues ?? [])?.length === 0)
       trimmedDefaults?.forEach((dflt) => {
         append(dflt, { shouldFocus: false });
       });

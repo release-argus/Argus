@@ -28,8 +28,8 @@ export const Loading: FC<Props> = ({ name }) => {
     "Options:",
     "Latest Version:",
     "Deployed Version:",
-    "Commands:",
-    "WebHooks:",
+    "Command:",
+    "WebHook:",
     "Notify:",
     "Dashboard:",
   ];

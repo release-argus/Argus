@@ -49,10 +49,11 @@ const Notify: FC<Props> = ({
     else if (itemType && (NotifyTypesConst as string[]).includes(itemName))
       setValue(`${name}.type`, itemName);
     // Trigger validation on name/type
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
     }, 25);
+    return () => clearTimeout(timeout);
   }, [itemName]);
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,

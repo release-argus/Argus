@@ -7,11 +7,18 @@ import {
   WebHookType,
 } from "types/config";
 import {
+  NotifyEditType,
   ServiceEditAPIType,
   ServiceEditOtherData,
   ServiceEditType,
+  WebHookEditType,
 } from "types/service-edit";
-import { firstNonDefault, firstNonEmpty, isEmptyOrNull } from "utils";
+import {
+  firstNonDefault,
+  firstNonEmpty,
+  isEmptyArray,
+  isEmptyOrNull,
+} from "utils";
 
 import { urlCommandsTrimArray } from "./url-command-trim";
 
@@ -73,61 +80,76 @@ export const convertAPIServiceDataEditToUI = (
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),
       })),
-      webhook: serviceData?.webhook?.map((item) => {
-        // Determine webhook name and type
-        const whName = item.name ?? "";
-        const whType = item.type ?? "";
+      webhook: serviceData.webhook
+        ? Object.entries(serviceData.webhook).reduce(
+            (acc: WebHookEditType[], [_key, value]) => {
+              // Determine webhook name and type
+              const whName = value.name ?? "";
+              const whType = value.type ?? "";
 
-        // Construct custom headers
-        const customHeaders = item.custom_headers
-          ? item.custom_headers.map((header, index) => ({
-              ...header,
-              oldIndex: index,
-            }))
-          : firstNonEmpty(
-              otherOptionsData?.webhook?.[whName]?.custom_headers,
-              (
-                otherOptionsData?.defaults?.webhook?.[whType] as
-                  | WebHookType
-                  | undefined
-              )?.custom_headers,
-              (
-                otherOptionsData?.hard_defaults?.webhook?.[whType] as
-                  | WebHookType
-                  | undefined
-              )?.custom_headers
-            ).map(() => ({ key: "", value: "" }));
+              // Construct custom headers
+              const customHeaders = !isEmptyArray(value.custom_headers)
+                ? value.custom_headers?.map((header, index) => ({
+                    ...header,
+                    oldIndex: index,
+                  }))
+                : firstNonEmpty(
+                    otherOptionsData?.webhook?.[whName]?.custom_headers,
+                    (
+                      otherOptionsData?.defaults?.webhook?.[whType] as
+                        | WebHookType
+                        | undefined
+                    )?.custom_headers,
+                    (
+                      otherOptionsData?.hard_defaults?.webhook?.[whType] as
+                        | WebHookType
+                        | undefined
+                    )?.custom_headers
+                  ).map(() => ({ key: "", value: "" }));
 
-        // Return modified item
-        return {
-          ...item,
-          custom_headers: customHeaders,
-          oldIndex: item.name,
-        };
-      }),
-      notify: serviceData?.notify?.map((item) => ({
-        ...item,
-        oldIndex: item.name,
-        url_fields: {
-          ...convertNotifyURLFields(
-            item.name ?? "",
-            item.type,
-            item.url_fields,
-            otherOptionsData
-          ),
-        },
-        params: {
-          avatar: "", // controlled param
-          color: "", // ^
-          icon: "", // ^
-          ...convertNotifyParams(
-            item.name ?? "",
-            item.type,
-            item.params,
-            otherOptionsData
-          ),
-        },
-      })),
+              const transformedWebhook = {
+                ...value,
+                custom_headers: customHeaders,
+                oldIndex: whName,
+              };
+              return [...acc, transformedWebhook];
+            },
+            []
+          )
+        : [],
+      notify: serviceData.notify
+        ? Object.entries(serviceData.notify).reduce(
+            (acc: NotifyEditType[], [_key, value]) => {
+              // Determine notify name and type
+              const notifyName = value.name ?? "";
+              const notifyType = value.type ?? "";
+
+              const transformedNotify = {
+                ...value,
+                id: notifyName,
+                url_fields: convertNotifyURLFields(
+                  notifyName,
+                  notifyType,
+                  value.url_fields,
+                  otherOptionsData
+                ),
+                params: {
+                  avatar: "", // controlled param
+                  color: "", // ^
+                  icon: "", // ^
+                  ...convertNotifyParams(
+                    notifyName,
+                    notifyType,
+                    value.params,
+                    otherOptionsData
+                  ),
+                },
+              };
+              return [...acc, transformedNotify];
+            },
+            []
+          )
+        : [],
       dashboard: {
         auto_approve: undefined,
         icon: "",
@@ -143,6 +165,12 @@ export const convertAPIServiceDataEditToUI = (
       type: "github",
       require: { docker: { type: "" } },
     },
+    deployed_version: {
+      headers: [],
+    },
+    command: [],
+    webhook: [],
+    notify: [],
     dashboard: {
       auto_approve: undefined,
       icon: "",
@@ -213,11 +241,14 @@ export const convertHeadersFromString = (
 
   // convert from a JSON string
   try {
-    return Object.entries(JSON.parse(s)).map(([key, value], i) => ({
-      id: usingStr ? i : undefined,
-      key: usingStr ? key : "",
-      value: usingStr ? value : "",
-    })) as HeaderType[];
+    return Object.entries(JSON.parse(s)).map(([key, value], i) => {
+      const id = usingStr ? { id: i } : {};
+      return {
+        ...id,
+        key: usingStr ? key : "",
+        value: usingStr ? value : "",
+      };
+    }) as HeaderType[];
   } catch (error) {
     return [];
   }
@@ -253,11 +284,11 @@ export const convertOpsGenieTargetFromString = (
         obj: { id: string; type: string; name: string; username: string },
         i: number
       ) => {
-        const id = usingStr ? i : undefined;
+        const id = usingStr ? { id: i } : {};
         // team/user - id
         if (obj.id) {
           return {
-            id: id,
+            ...id,
             type: obj.type,
             sub_type: "id",
             value: usingStr ? obj.id : "",
@@ -265,7 +296,7 @@ export const convertOpsGenieTargetFromString = (
         } else {
           // team/user - username/name
           return {
-            id: id,
+            ...id,
             type: obj.type,
             sub_type: obj.type === "user" ? "username" : "name",
             value: usingStr ? obj.name || obj.username : "",
@@ -304,12 +335,12 @@ export const convertNtfyActionsFromString = (
   // convert from a JSON string
   try {
     return JSON.parse(s).map((obj: NotifyNtfyAction, i: number) => {
-      const id = usingStr ? i : undefined;
+      const id = usingStr ? { id: i } : {};
 
       // View
       if (obj.action === "view")
         return {
-          id: id,
+          ...id,
           action: obj.action,
           label: usingStr ? obj.label : "",
           url: usingStr ? obj.url : "",
@@ -318,7 +349,7 @@ export const convertNtfyActionsFromString = (
       // HTTP
       if (obj.action === "http")
         return {
-          id: id,
+          ...id,
           action: obj.action,
           label: usingStr ? obj.label : "",
           url: usingStr ? obj.url : "",
@@ -333,7 +364,7 @@ export const convertNtfyActionsFromString = (
       // Broadcast
       if (obj.action === "broadcast")
         return {
-          id: id,
+          ...id,
           action: obj.action,
           label: usingStr ? obj.label : "",
           intent: usingStr ? obj.intent : "",
@@ -345,7 +376,7 @@ export const convertNtfyActionsFromString = (
 
       // Unknown action
       return {
-        id: id,
+        ...id,
         ...obj,
       };
     }) as NotifyNtfyAction[];

@@ -53,12 +53,8 @@ const sendableTimeout = (
     let timeout = differenceInMilliseconds(nextRunnable, now);
     // if we're already after nextRunnable, just wait a second
     if (now > nextRunnable) timeout = 1000;
-    const timer = setTimeout(function () {
-      setSendable(true);
-    }, timeout);
-    return () => {
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => setSendable(true), timeout);
+    return () => clearTimeout(timer);
   }
 };
 
