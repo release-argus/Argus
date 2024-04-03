@@ -5,6 +5,8 @@ import {
   StringFieldArray,
 } from "types/config";
 
+import { isEmptyOrNull } from "utils";
+
 interface StringAnyMap {
   [key: string]:
     | string
@@ -37,8 +39,8 @@ export const convertValuesToString = (
       if ("responders" === key || "visibleto" === key) {
         // `value` empty means defaults were used. Skip.
         if (
-          (value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value || "") === ""
+          (value as NotifyOpsGenieTarget[]).find((item) =>
+            isEmptyOrNull(item.value)
           )
         ) {
           return result;
@@ -67,8 +69,8 @@ export const convertValuesToString = (
       } else {
         // `value` empty means defaults were used. Skip.
         if (
-          (value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value ?? "") === ""
+          (value as NotifyOpsGenieTarget[]).find((item) =>
+            isEmptyOrNull(item.value)
           )
         ) {
           return result;
@@ -76,7 +78,14 @@ export const convertValuesToString = (
         result[key] = JSON.stringify(flattenHeaderArray(value as HeaderType[]));
       }
     } else {
-      result[key] = String(value);
+      // Give # to slack hex colours
+      if (notifyType === "slack" && key === "color") {
+        result[key] = (
+          /^[\da-f]{6}$/i.test(value as string) ? `#${value}` : value
+        ) as string;
+
+        // Convert to string
+      } else result[key] = String(value);
     }
     return result;
   }, {} as StringStringMap);

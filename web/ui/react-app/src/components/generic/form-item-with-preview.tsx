@@ -3,6 +3,7 @@ import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
+import { isEmptyOrNull } from "utils";
 import { useError } from "hooks/errors";
 
 interface Props {
@@ -70,7 +71,7 @@ const FormItemWithPreview: FC<Props> = ({
             {...register(name, {
               validate: (value: string | undefined) => {
                 // Allow empty values
-                if ((value ?? "") === "") return true;
+                if (isEmptyOrNull(value)) return true;
 
                 // Validate that it's a URL (with prefix)
                 try {

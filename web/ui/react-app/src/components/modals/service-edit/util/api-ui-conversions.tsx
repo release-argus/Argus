@@ -11,8 +11,8 @@ import {
   ServiceEditOtherData,
   ServiceEditType,
 } from "types/service-edit";
+import { firstNonDefault, firstNonEmpty, isEmptyOrNull } from "utils";
 
-import { firstNonDefault } from "./first-non-default";
 import { urlCommandsTrimArray } from "./url-command-trim";
 
 /**
@@ -66,8 +66,9 @@ export const convertAPIServiceDataEditToUI = (
             ...header,
             oldIndex: key,
           })) ?? [],
-        template_toggle:
-          (serviceData?.deployed_version?.regex_template ?? "") !== "",
+        template_toggle: !isEmptyOrNull(
+          serviceData?.deployed_version?.regex_template
+        ),
       },
       command: serviceData?.command?.map((args) => ({
         args: args.map((arg) => ({ arg })),
@@ -83,18 +84,19 @@ export const convertAPIServiceDataEditToUI = (
               ...header,
               oldIndex: index,
             }))
-          : otherOptionsData?.webhook?.[whName]?.custom_headers ??
-            (
-              otherOptionsData?.defaults?.webhook?.[whType] as
-                | WebHookType
-                | undefined
-            )?.custom_headers ??
-            (
-              otherOptionsData?.hard_defaults?.webhook?.[whType] as
-                | WebHookType
-                | undefined
-            )?.custom_headers ??
-            [];
+          : firstNonEmpty(
+              otherOptionsData?.webhook?.[whName]?.custom_headers,
+              (
+                otherOptionsData?.defaults?.webhook?.[whType] as
+                  | WebHookType
+                  | undefined
+              )?.custom_headers,
+              (
+                otherOptionsData?.hard_defaults?.webhook?.[whType] as
+                  | WebHookType
+                  | undefined
+              )?.custom_headers
+            ).map(() => ({ key: "", value: "" }));
 
         // Return modified item
         return {
@@ -488,10 +490,8 @@ export const convertNotifyParams = (
     case "slack":
       return {
         ...params,
-        // Add # to the color if it's a hex code
-        color: /^[\da-f]{6}$/i.test(params?.color ?? "")
-          ? `#${params?.color}`
-          : params?.color,
+        // Remove hashtag from hex
+        color: (params?.color ?? "").replace("%23", "#").replace("#", ""),
       };
 
     // Other
@@ -513,7 +513,7 @@ const convertStringMapToHeaderType = (
 ): HeaderType[] => {
   if (!headers) return [];
   if (omitValues)
-    return Object.keys(headers).map((key) => ({ key, value: "" }));
+    return Object.keys(headers).map(() => ({ key: "", value: "" }));
   return Object.keys(headers).map((key) => ({
     key: key,
     value: headers[key],

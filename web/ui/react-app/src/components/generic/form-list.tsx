@@ -7,6 +7,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { StringFieldArray } from "types/config";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -45,7 +46,9 @@ const FormList: FC<Props> = ({
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
+      (!isEmptyArray(defaults) &&
+        diffObjects(fieldValues ?? fields ?? [], defaults)) ??
+      false,
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
@@ -68,7 +71,8 @@ const FormList: FC<Props> = ({
   // and give the defaults if not overridden
   useEffect(() => {
     for (const item of fieldValues ?? fields ?? []) {
-      if ((item.arg ?? "") === "") {
+      const keys = Object.keys(item);
+      if (keys.length > 1 || !keys.includes("arg")) {
         setValue(name, []);
         break;
       }

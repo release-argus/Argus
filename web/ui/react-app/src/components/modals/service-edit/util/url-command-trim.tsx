@@ -1,4 +1,5 @@
 import { URLCommandType } from "types/config";
+import { isEmptyOrNull } from "utils";
 
 /**
  * Returns a `url_command` object with only the relevant keys for the type
@@ -26,7 +27,7 @@ export const urlCommandTrim = (
         regex: command.regex,
         index: command.index ? Number(command.index) : undefined,
         template: command.template ? command.template : undefined,
-        template_toggle: (command.template ?? "") !== "",
+        template_toggle: !isEmptyOrNull(command.template),
       };
 
   // replace

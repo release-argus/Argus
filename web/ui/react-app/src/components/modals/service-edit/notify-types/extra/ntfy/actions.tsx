@@ -8,6 +8,7 @@ import {
 } from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { isEmptyArray, isEmptyOrNull } from "utils";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -55,7 +56,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are unset or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      defaults &&
+      !isEmptyArray(defaults) &&
       diffObjects(fieldValues ?? fields ?? [], defaults, [".action"]),
     [fieldValues, defaults]
   );
@@ -82,7 +83,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   useEffect(() => {
     // ensure we don't have another types actions
     for (const item of fieldValues ?? fields ?? []) {
-      if ((item.action ?? "") === "") {
+      if (isEmptyOrNull(item.action)) {
         setValue(name, []);
         break;
       }

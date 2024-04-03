@@ -2,7 +2,7 @@ import { FormItem, FormLabel, FormTextArea } from "components/generic/form";
 import { memo, useMemo } from "react";
 
 import { NotifyOptionsType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 
 /**
  * Returns the form fields for the `notify.X.options` section

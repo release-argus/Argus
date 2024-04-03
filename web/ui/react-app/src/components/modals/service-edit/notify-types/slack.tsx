@@ -7,7 +7,7 @@ import {
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySlackType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
