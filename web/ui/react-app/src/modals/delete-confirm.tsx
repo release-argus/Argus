@@ -5,10 +5,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
-  onDelete: () => void;
+  onDelete?: () => void;
   disabled?: boolean;
 }
 
+/**
+ * Returns a delete confirmation modal
+ *
+ * @param onDelete - The function to call when the delete button is clicked
+ * @param disabled - Whether the delete confirmation button is disabled
+ * @returns A delete confirmation modal
+ */
 export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
   const [modalShow, setModalShow] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -16,7 +23,7 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
   const handleConfirm = async () => {
     setDeleting(true);
     // Call the onConfirm function
-    onDelete();
+    onDelete && onDelete();
 
     // Close the modal
     setModalShow(false);
@@ -40,8 +47,9 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
           <Modal.Title>Confirm Delete</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Are you sure you want to delete this item? This action cannot be
-          undone.
+          Are you sure you want to delete this item?
+          <br />
+          This action cannot be undone.
           {deleting && (
             <FontAwesomeIcon
               icon={faSpinner}

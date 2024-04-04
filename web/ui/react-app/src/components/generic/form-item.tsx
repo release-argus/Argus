@@ -30,7 +30,7 @@ interface FormItemProps {
 }
 
 /**
- * FormItem is a labelled form item
+ * Returns a form item
  *
  * @param name - The name of the form item
  * @param registerParams - Additional parameters for the form item
@@ -49,7 +49,7 @@ interface FormItemProps {
  * @param placeholder - The placeholder of the form item
  * @param position - The position of the form item
  * @param positionXS - The position of the form item on extra small screens
- * @returns A labeled form item
+ * @returns A form item at name with a label and tooltip
  */
 const FormItem: FC<FormItemProps> = ({
   name,
@@ -116,6 +116,15 @@ const FormItem: FC<FormItemProps> = ({
                 if (!validation) return "Must be a number";
               }
 
+              // Validate that it's valid RegEx
+              if (isRegex) {
+                try {
+                  new RegExp(testValue);
+                } catch (error) {
+                  return "Invalid RegEx";
+                }
+              }
+
               // Validate that it's a URL (with prefix)
               if (isURL) {
                 try {
@@ -126,15 +135,6 @@ const FormItem: FC<FormItemProps> = ({
                     return "Invalid URL - http(s):// prefix required";
                 } catch (error) {
                   return "Invalid URL";
-                }
-              }
-
-              // Validate that it's valid RegEx
-              if (isRegex) {
-                try {
-                  new RegExp(testValue);
-                } catch (error) {
-                  return "Invalid RegEx";
                 }
               }
 

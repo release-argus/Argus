@@ -2,9 +2,7 @@ import { NotificationContext } from "contexts/notification";
 import { useContext } from "react";
 
 /**
- * useNotifications is a hook to use the NotificationContext
- *
- * @returns The NotificationContext
+ * @returns The notifications context
  */
 const useNotifications = () => {
   return useContext(NotificationContext);

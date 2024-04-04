@@ -15,6 +15,14 @@ interface Props {
   visible: boolean;
 }
 
+/**
+ * Returns the service's image, with a loading spinner if the image is not loaded yet
+ * and a link to the service. If the service has no icon, the service type icon (github/url) is displayed.
+ *
+ * @param service - The service the image belongs to
+ * @param visible - Whether the image should be visible
+ * @returns A component that displays the image of the service
+ */
 export const ServiceImage: FC<Props> = ({ service, visible }) => {
   const delayedRender = useDelayedRender(500);
 
@@ -68,7 +76,7 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
       style={{ height: "7rem", display: visible ? "flex" : "none" }}
     >
       <a
-        href={service.icon_link_to ?? undefined}
+        href={service.icon_link_to || undefined}
         target="_blank"
         rel="noreferrer noopener"
         style={{ color: "inherit", display: "contents" }}

@@ -3,29 +3,29 @@ import { FormItem, FormLabel } from "components/generic/form";
 import { BooleanWithDefault } from "components/generic";
 import { NotifyMatrixType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
 /**
- * MATRIX renders the form fields for the Matrix Notify
+ * Returns the form fields for `Matrix`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Matrix Notify
- * @param defaults - The default values for the Matrix Notify
- * @param hard_defaults - The hard default values for the Matrix Notify
- * @returns The form fields for this Matrix Notify
+ * @param name - The path to this `Matrix` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Matrix` `Notify`
  */
 const MATRIX = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyMatrixType;
+  main?: NotifyMatrixType;
   defaults?: NotifyMatrixType;
   hard_defaults?: NotifyMatrixType;
 }) => {
@@ -34,22 +34,22 @@ const MATRIX = ({
       // URL Fields
       url_fields: {
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         password: firstNonDefault(
-          global?.url_fields?.password,
+          main?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         username: firstNonDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         ),
@@ -59,31 +59,31 @@ const MATRIX = ({
         disabletls:
           strToBool(
             firstNonDefault(
-              global?.params?.disabletls,
+              main?.params?.disabletls,
               defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
             )
           ) ?? false,
         rooms: firstNonDefault(
-          global?.params?.rooms,
+          main?.params?.rooms,
           defaults?.params?.rooms,
           hard_defaults?.params?.rooms
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           required
@@ -115,8 +115,8 @@ const MATRIX = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.rooms`}
           col_sm={12}

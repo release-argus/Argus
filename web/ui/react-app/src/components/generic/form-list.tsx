@@ -7,6 +7,7 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { StringFieldArray } from "types/config";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 /**
- * FormList is the form fields for a list of strings
+ * Returns a set of form fields for a list of strings
  *
  * @param name - The name of the field in the form
  * @param label - The label for the field
@@ -45,7 +46,9 @@ const FormList: FC<Props> = ({
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
+      isEmptyArray(defaults)
+        ? false
+        : !diffObjects(fieldValues ?? [], defaults),
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
@@ -53,7 +56,7 @@ const FormList: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0)
+    if ((fieldValues ?? [])?.length === 0)
       defaults?.forEach(() => {
         addItem();
       });
@@ -67,8 +70,9 @@ const FormList: FC<Props> = ({
   // on load, ensure we don't have another types actions
   // and give the defaults if not overridden
   useEffect(() => {
-    for (const item of fieldValues ?? fields ?? []) {
-      if ((item.arg || "") === "") {
+    for (const item of fieldValues ?? []) {
+      const keys = Object.keys(item);
+      if (keys.length !== 1 || !keys.includes("arg")) {
         setValue(name, []);
         break;
       }

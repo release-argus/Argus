@@ -4,10 +4,10 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useEffect } from "react";
 
 /**
- * REGEX is the form fields for a RegEx URL Command
+ * The form fields for a `RegEx` url_command
  *
  * @param name - The name of the field in the form
- * @returns The form fields for this RegEx URL Command
+ * @returns The form fields for this RegEx url_command
  */
 const REGEX = ({ name }: { name: string }) => {
   const { setValue } = useFormContext();
@@ -38,10 +38,10 @@ const REGEX = ({ name }: { name: string }) => {
         positionXS="right"
       />
       <FormItem
-        type="number"
         name={`${name}.index`}
         label="Index"
         smallLabel
+        isNumber
         placeholder="0"
         col_sm={2}
         col_xs={2}

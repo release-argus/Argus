@@ -12,11 +12,11 @@ interface Props {
 }
 
 /**
- * Command renders fields of a command with any number of arguments
+ * Returns the form fields for a command
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove the command
- * @returns A set of form fields for this command
+ * @returns The form fields for this command with any number of arguments
  */
 const Command: FC<Props> = ({ name, removeMe }) => {
   const { fields, append, remove } = useFieldArray({
@@ -25,9 +25,10 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
-  // remove the last item if it's not the only one or doesn't match the defaults
+  // remove the last argument
   const removeLast = useCallback(() => {
     if (fields.length > 1) return remove(fields.length - 1);
+    // if there's only 1 arg left, remove the command
     if (removeMe) return removeMe();
     return undefined;
   }, [fields.length]);

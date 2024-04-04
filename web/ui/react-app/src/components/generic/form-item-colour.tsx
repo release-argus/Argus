@@ -8,7 +8,6 @@ import { useError } from "hooks/errors";
 
 interface FormItemColourProps {
   name: string;
-  required?: boolean;
 
   col_xs?: number;
   col_sm?: number;
@@ -21,7 +20,7 @@ interface FormItemColourProps {
 }
 
 /**
- * FormItemColour is a labelled form item for a hex colour, with a colour picker
+ * Returns a form item for a hex colour with a colour picker
  *
  * @param name - The name of the field
  * @param col_xs - The number of columns to take up on extra small screens
@@ -31,7 +30,7 @@ interface FormItemColourProps {
  * @param defaultVal - The default value of the field
  * @param position - The position of the field
  * @param positionXS - The position of the field on extra small screens
- * @returns A labaled form item for a hex colour, with a colour picker
+ * @returns A form item for a hex colour with a colour picker, label and tooltip
  */
 const FormItemColour: FC<FormItemColourProps> = ({
   name,
@@ -46,7 +45,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
   positionXS = position,
 }) => {
   const { register, setValue } = useFormContext();
-  const hexColour = useWatch({ name: name });
+  const hexColour: string = useWatch({ name: name });
   const trimmedHex = hexColour?.replace("#", "");
   const error = useError(name, true);
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -67,6 +66,7 @@ const FormItemColour: FC<FormItemColourProps> = ({
               type="text"
               defaultValue={trimmedHex}
               placeholder={defaultVal}
+              maxLength={6}
               autoFocus={false}
               {...register(name, {
                 pattern: {
@@ -81,10 +81,8 @@ const FormItemColour: FC<FormItemColourProps> = ({
               style={{ width: "30%" }}
               type="color"
               title="Choose your color"
-              value={`#${trimmedHex}` || defaultVal}
-              onChange={(event) => {
-                setColour(event.target.value);
-              }}
+              value={`#${trimmedHex || defaultVal?.replace("#", "")}`}
+              onChange={(event) => setColour(event.target.value)}
               autoFocus={false}
             />
           </InputGroup>

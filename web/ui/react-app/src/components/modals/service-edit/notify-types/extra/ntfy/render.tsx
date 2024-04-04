@@ -22,6 +22,13 @@ const RENDER_TYPE_COMPONENTS: {
   view: VIEW,
 };
 
+/**
+ *
+ * @param name - The name of the field in the form
+ * @param targetType - The type of the field
+ * @param defaults - The default values for the field
+ * @returns The form fields for ntfy.params.actions
+ */
 const RenderAction: FC<RenderTypeProps> = ({ name, targetType, defaults }) => {
   const RenderTypeComponent =
     RENDER_TYPE_COMPONENTS[(targetType || "view") as NotifyNtfyActionTypes];

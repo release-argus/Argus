@@ -8,6 +8,9 @@ import { fetchJSON } from "utils";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useQuery } from "@tanstack/react-query";
 
+/**
+ * @returns The CLI flags page, which includes a table of all the command-line flags.
+ */
 export const Flags = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
   const [flags, setFlags] =
@@ -17,7 +20,7 @@ export const Flags = (): ReactElement => {
     Dictionary<string | boolean | undefined>
   >({
     queryKey: ["flags"],
-    queryFn: () => fetchJSON({url: "api/v1/flags"}),
+    queryFn: () => fetchJSON({ url: `api/v1/flags` }),
     staleTime: Infinity,
   });
 

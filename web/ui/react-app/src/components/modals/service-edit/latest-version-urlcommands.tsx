@@ -8,6 +8,9 @@ import { FormLabel } from "components/generic/form";
 import FormURLCommand from "./latest-version-urlcommand";
 import { useFieldArray } from "react-hook-form";
 
+/**
+ * @returns The form fields for a list of `latest_version.url_commands`
+ */
 const FormURLCommands = () => {
   const { fields, append, remove } = useFieldArray({
     name: "latest_version.url_commands",

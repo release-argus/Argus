@@ -15,14 +15,14 @@ interface Props {
 }
 
 /**
- * FormKeyVal is the form fields for a key-value pair
+ * Returns the form fields for a key-value pair
  *
  * @param name - The name of the field in the form
  * @param defaults - The default values for the field
  * @param removeMe - The function to remove the field
  * @param keyPlaceholder - The placeholder for the key field
  * @param valuePlaceholder - The placeholder for the value field
- * @returns Key-Value pair form fields
+ * @returns The form fields for a key-value pair at name
  */
 const FormKeyVal: FC<Props> = ({
   name,

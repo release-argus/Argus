@@ -1,10 +1,10 @@
 import { FormItem } from "components/generic/form";
 
 /**
- * REPLACE renders the form fields for the Replace URL Command
+ * Returns the form fields for the `Replace` url_command
  *
  * @param name - The name of the field in the form
- * @returns The form fields for this Replace URL Command
+ * @returns The form fields for this Replace url_command
  */
 const REPLACE = ({ name }: { name: string }) => (
   <>

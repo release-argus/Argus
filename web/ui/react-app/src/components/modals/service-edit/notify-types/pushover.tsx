@@ -2,28 +2,28 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushoverType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * PUSHOVER renders the form fields for the Pushover Notify
+ * Returns the form fields for `PushOver`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Pushover Notify
- * @param defaults - The default values for the Pushover Notify
- * @param hard_defaults - The hard default values for the Pushover Notify
- * @returns The form fields for this Pushover Notify
+ * @param name - The path to this `PushOver` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `PushOver` `Notify`
  */
 const PUSHOVER = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyPushoverType;
+  main?: NotifyPushoverType;
   defaults?: NotifyPushoverType;
   hard_defaults?: NotifyPushoverType;
 }) => {
@@ -32,12 +32,12 @@ const PUSHOVER = ({
       // URL Fields
       url_fields: {
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
         user: firstNonDefault(
-          global?.url_fields?.user,
+          main?.url_fields?.user,
           defaults?.url_fields?.user,
           hard_defaults?.url_fields?.user
         ),
@@ -45,35 +45,35 @@ const PUSHOVER = ({
       // Params
       params: {
         devices: firstNonDefault(
-          global?.params?.devices,
+          main?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         ),
         priority: firstNonDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.token`}
           required
@@ -92,8 +92,8 @@ const PUSHOVER = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.devices`}
           col_sm={12}
@@ -110,9 +110,9 @@ const PUSHOVER = ({
         <FormItem
           name={`${name}.params.priority`}
           col_sm={3}
-          type="number"
           label="Priority"
           tooltip="Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet"
+          isNumber
           defaultVal={convertedDefaults.params.priority}
           position="right"
         />

@@ -12,6 +12,14 @@ interface Props {
   editable: boolean;
 }
 
+/**
+ * Returns a card that displays the service's information, including the service's image,
+ * version info, and update info.
+ *
+ * @param service - The service to display
+ * @param editable - Whether edit mode is enabled
+ * @returns A component that displays the service
+ */
 const Service: FC<Props> = ({ service, editable = false }) => {
   const [showUpdateInfo, setShowUpdateInfoMain] = useState(false);
 
@@ -27,22 +35,23 @@ const Service: FC<Props> = ({ service, editable = false }) => {
     []
   );
 
-  const updateAvailable = useMemo(
-    (): boolean =>
-      (service?.status?.deployed_version ?? undefined) !==
-      (service?.status?.latest_version ?? undefined),
-    [service?.status?.latest_version, service?.status?.deployed_version]
-  );
-
-  const updateSkipped = useMemo(
-    (): boolean =>
-      updateAvailable &&
-      service?.status?.approved_version ===
-        `SKIP_${service?.status?.latest_version}`,
+  const updateStatus = useMemo(
+    () => ({
+      // Update available if latest version and deployed version are both defined and differ
+      available:
+        (service?.status?.deployed_version || undefined) !==
+        (service?.status?.latest_version || undefined),
+      // Update is available and approved version is a skip of that latest version
+      skipped:
+        (service?.status?.deployed_version || undefined) !==
+          (service?.status?.latest_version || undefined) &&
+        service?.status?.approved_version ===
+          `SKIP_${service?.status?.latest_version}`,
+    }),
     [
-      updateAvailable,
       service?.status?.approved_version,
       service?.status?.latest_version,
+      service?.status?.deployed_version,
     ]
   );
 
@@ -89,17 +98,21 @@ const Service: FC<Props> = ({ service, editable = false }) => {
       >
         <UpdateInfo
           service={service}
-          visible={updateAvailable && showUpdateInfo && !updateSkipped}
+          visible={
+            updateStatus.available && showUpdateInfo && !updateStatus.skipped
+          }
         />
         <ServiceImage
           service={service}
-          visible={!(updateAvailable && showUpdateInfo && !updateSkipped)}
+          visible={
+            !(updateStatus.available && showUpdateInfo && !updateStatus.skipped)
+          }
         />
         <ServiceInfo
           service={service}
           setShowUpdateInfo={setShowUpdateInfo}
-          updateAvailable={updateAvailable}
-          updateSkipped={updateSkipped}
+          updateAvailable={updateStatus.available}
+          updateSkipped={updateStatus.skipped}
         />
       </Card>
     </Card>

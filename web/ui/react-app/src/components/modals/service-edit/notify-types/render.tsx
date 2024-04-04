@@ -26,7 +26,7 @@ import GENERIC from "./generic";
 interface RenderTypeProps {
   name: string;
   type: NotifyTypes;
-  globalNotify?: NotifyType;
+  main?: NotifyType;
   defaults?: Dict<NotifyType>;
   hard_defaults?: NotifyType;
 }
@@ -35,7 +35,7 @@ const RENDER_TYPE_COMPONENTS: {
   [key in NotifyTypes]: FC<{
     name: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    global: any;
+    main: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     defaults: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,10 +63,20 @@ const RENDER_TYPE_COMPONENTS: {
   generic: GENERIC,
 };
 
+/**
+ * Returns the component for this notify type
+ *
+ * @param name - The name of the notify in the form
+ * @param type - The type of notify
+ * @param main - The main notify options
+ * @param defaults - The default values for all notify types
+ * @param hard_defaults - The hard default values for all notify types
+ * @returns
+ */
 const RenderNotify: FC<RenderTypeProps> = ({
   name,
   type,
-  globalNotify,
+  main,
   defaults,
   hard_defaults,
 }) => {
@@ -74,7 +84,7 @@ const RenderNotify: FC<RenderTypeProps> = ({
   return (
     <RenderTypeComponent
       name={name}
-      global={globalNotify}
+      main={main}
       defaults={defaults}
       hard_defaults={hard_defaults}
     />

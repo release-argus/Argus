@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTelegramType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
@@ -17,24 +17,24 @@ export const TelegramParseModeOptions = [
 ];
 
 /**
- * TELEGRAM renders the form fields for the Telegram Notify
+ * Returns the form fields for `Telegram`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Telegram Notify
- * @param defaults - The default values for the Telegram Notify
- * @param hard_defaults - The hard default values for the Telegram Notify
- * @returns The form fields for this Telegram Notify
+ * @param name - The path to this `Telegram` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Telegram` `Notify`
  */
 const TELEGRAM = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyTelegramType;
+  main?: NotifyTelegramType;
   defaults?: NotifyTelegramType;
   hard_defaults?: NotifyTelegramType;
 }) => {
@@ -45,7 +45,7 @@ const TELEGRAM = ({
       // URL Fields
       url_fields: {
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
@@ -53,39 +53,39 @@ const TELEGRAM = ({
       // Params
       params: {
         chats: firstNonDefault(
-          global?.params?.chats,
+          main?.params?.chats,
           defaults?.params?.chats,
           hard_defaults?.params?.chats
         ),
         notification:
           strToBool(
             firstNonDefault(
-              global?.params?.notification,
+              main?.params?.notification,
               defaults?.params?.notification,
               hard_defaults?.params?.notification
             )
           ) ?? true,
         parsemode: firstNonDefault(
-          global?.params?.parsemode,
+          main?.params?.parsemode,
           defaults?.params?.parsemode,
           hard_defaults?.params?.parsemode
         ).toLowerCase(),
         preview:
           strToBool(
             firstNonDefault(
-              global?.params?.preview,
+              main?.params?.preview,
               defaults?.params?.preview,
               hard_defaults?.params?.preview
             )
           ) ?? true,
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   const telegramParseModeOptions = useMemo(() => {
@@ -117,12 +117,12 @@ const TELEGRAM = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.token`}
           required
@@ -131,8 +131,8 @@ const TELEGRAM = ({
           defaultVal={convertedDefaults.url_fields.token}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.chats`}
           required

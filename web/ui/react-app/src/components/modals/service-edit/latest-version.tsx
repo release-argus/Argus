@@ -11,6 +11,7 @@ import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
 import VersionWithRefresh from "./version-with-refresh";
+import { firstNonDefault } from "utils";
 import { useWatch } from "react-hook-form";
 
 interface Props {
@@ -21,13 +22,13 @@ interface Props {
 }
 
 /**
- * EditServiceLatestVersion renders the form fields for the latest version
+ * Returns the `latest_version` form fields
  *
  * @param serviceName - The name of the service
- * @param original - The original values for the latest version
- * @param defaults - The default values for the latest version
- * @param hard_defaults - The hard default values for the latest version
- * @returns The form fields for the latest version
+ * @param original - The original values in the form
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `latest_version`
  */
 const EditServiceLatestVersion: FC<Props> = ({
   serviceName,
@@ -49,7 +50,10 @@ const EditServiceLatestVersion: FC<Props> = ({
 
   const convertedDefaults = useMemo(
     () => ({
-      access_token: defaults?.access_token || hard_defaults?.access_token,
+      access_token: firstNonDefault(
+        defaults?.access_token,
+        hard_defaults?.access_token
+      ),
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
       use_prerelease: defaults?.use_prerelease ?? hard_defaults?.use_prerelease,

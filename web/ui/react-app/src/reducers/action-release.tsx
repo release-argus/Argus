@@ -1,7 +1,13 @@
 import { ActionModalData } from "types/summary";
-
 import { WebSocketResponse } from "types/websocket";
 
+/**
+ * Returns a reducer that handles actions on the action modal.
+ *
+ * @param state - The current state of the action modal
+ * @param action - The action to perform on the action modal
+ * @returns The new state of the action modal
+ */
 export default function reducerActionModal(
   state: ActionModalData,
   action: WebSocketResponse

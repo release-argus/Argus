@@ -14,6 +14,17 @@ import { NotificationType } from "types/notification";
 import { formatRelative } from "date-fns";
 import useNotification from "hooks/notifications";
 
+/**
+ * Returns a notification with the given data.
+ *
+ * @param id - The id of the notification
+ * @param title - The title of the notification
+ * @param type - The type of the notification
+ * @param body - The body of the notification
+ * @param small - The time the notification was created
+ * @param delay - The time to wait before removing the notification
+ * @returns A notification with a title, type, body, and time created
+ */
 const Notification: FC<NotificationType> = ({
   id,
   title,
@@ -27,15 +38,11 @@ const Notification: FC<NotificationType> = ({
   useEffect(() => {
     if (delay !== 0) {
       const timer = setTimeout(
-        () => {
-          removeNotification(id);
-        },
+        () => removeNotification(id),
         delay ? delay : 10000
       );
 
-      return () => {
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [delay, id, removeNotification]);
 

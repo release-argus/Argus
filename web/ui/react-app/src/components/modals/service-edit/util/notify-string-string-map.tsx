@@ -5,23 +5,18 @@ import {
   StringFieldArray,
 } from "types/config";
 
+import { isEmptyOrNull } from "utils";
+
 interface StringAnyMap {
-  [key: string]:
-    | string
-    | number
-    | boolean
-    | undefined
-    | StringFieldArray
-    | NotifyNtfyAction[]
-    | NotifyOpsGenieTarget[]
-    | HeaderType[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 interface StringStringMap {
   [key: string]: string;
 }
 
 /**
- * convertValuesToString will convert the values of an object to a properly formatted strings
+ * Returns a properly formatted string of the notify.(params|url_fields) for the API
  *
  * @param obj - The object to convert
  * @param notifyType - The type of Notify to convert
@@ -37,8 +32,8 @@ export const convertValuesToString = (
       if ("responders" === key || "visibleto" === key) {
         // `value` empty means defaults were used. Skip.
         if (
-          !(value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value ?? "") !== ""
+          (value as NotifyOpsGenieTarget[]).find((item) =>
+            isEmptyOrNull(item.value)
           )
         ) {
           return result;
@@ -52,8 +47,8 @@ export const convertValuesToString = (
         // Ntfy - `label` empty means defaults were used. Skip.
         // OpsGenie - `arg` empty means defaults were used. Skip.
         if (
-          !(value as StringFieldArray).find(
-            (item) => (item.label || item.arg || "") !== ""
+          (value as StringFieldArray).find(
+            (item) => (item.label || item.arg || "") == ""
           )
         ) {
           return result;
@@ -67,8 +62,8 @@ export const convertValuesToString = (
       } else {
         // `value` empty means defaults were used. Skip.
         if (
-          !(value as NotifyOpsGenieTarget[]).find(
-            (item) => (item.value ?? "") !== ""
+          (value as NotifyOpsGenieTarget[]).find((item) =>
+            isEmptyOrNull(item.value)
           )
         ) {
           return result;
@@ -76,13 +71,20 @@ export const convertValuesToString = (
         result[key] = JSON.stringify(flattenHeaderArray(value as HeaderType[]));
       }
     } else {
-      result[key] = String(value);
+      // Give # to slack hex colours
+      if (notifyType === "slack" && key === "color") {
+        result[key] = (
+          /^[\da-f]{6}$/i.test(value as string) ? `#${value}` : value
+        ) as string;
+
+        // Convert to string
+      } else result[key] = String(value);
     }
     return result;
   }, {} as StringStringMap);
 
 /**
- * FlattenStringFieldArray will extract the values into a JSON string
+ * Returns a flattened JSON string of the object for the API
  *
  * @param obj - The StringFieldArray to flatten { arg: "value1" }[]
  * @returns A JSON string of the values ["value1", "value2", ...]
@@ -91,7 +93,7 @@ const FlattenStringFieldArray = (obj: StringFieldArray): string =>
   JSON.stringify(obj.map((item) => Object.values(item)[0]));
 
 /**
- * flattenHeaderArray will convert {key:KEY, val:VAL}[] to {KEY:VAL, ...}
+ * Returns a flattened object of headers for the API
  *
  * @param headers - The HeaderType[] to flatten { key: "KEY", value: "VAL" }[]
  * @returns The flattened object { KEY: VAL, ... }
@@ -105,7 +107,7 @@ const flattenHeaderArray = (headers?: HeaderType[]) => {
 };
 
 /**
- * convertNtfyActionsToString will convert the NotifyNtfyAction[] to a JSON string
+ * Returns a JSON string of the Ntfy actions for the API
  *
  * @param obj - The NotifyNtfyAction[] to convert
  * @returns A JSON string of the actions
@@ -142,7 +144,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
   );
 
 /**
- * convertOpsGenieTargetToString will convert the NotifyOpsGenieTarget[] to a JSON string
+ * Returns a JSON string of the OpsGenie targets for the API
  *
  * @param obj - The NotifyOpsGenieTarget[] to convert
  * @returns A JSON string of the targets

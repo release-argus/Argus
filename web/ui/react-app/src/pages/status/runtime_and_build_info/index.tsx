@@ -14,17 +14,20 @@ const titleMappings: Dictionary<string> = {
 };
 const ignoreCapitalize = ["GOMAXPROCS", "GOGC", "GODEBUG"];
 
+/**
+ * @returns The status page, which includes tables of runtime info and of build info.
+ */
 export const Status = (): ReactElement => {
   const delayedRender = useDelayedRender(750);
 
   const { data: runtimeData } = useQuery<RuntimeInfo>({
     queryKey: ["status/runtime"],
-    queryFn: () => fetchJSON({url:"api/v1/status/runtime"}),
+    queryFn: () => fetchJSON({ url: `api/v1/status/runtime` }),
     staleTime: Infinity, // won't change unless Argus is restarted
   });
   const { data: buildData } = useQuery<BuildInfo>({
     queryKey: ["version"],
-    queryFn: () => fetchJSON({url:"api/v1/version"}),
+    queryFn: () => fetchJSON({ url: `api/v1/version` }),
     staleTime: Infinity, // won't change unless Argus is restarted
   });
 

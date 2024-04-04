@@ -14,7 +14,7 @@ import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NtfyActions } from "components/modals/service-edit/notify-types/extra";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
@@ -32,24 +32,24 @@ export const NtfyPriorityOptions = [
 ];
 
 /**
- * NTY renders the form fields for the Ntfy Notify
+ * Returns the form fields for `NTFY`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Ntfy Notify
- * @param defaults - The default values for the Ntfy Notify
- * @param hard_defaults - The hard default values for the Ntfy Notify
- * @returns The form fields for this Ntfy Notify
+ * @param name - The path to this `NTFY` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `NTFY` `Notify`
  */
 const NTFY = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyNtfyType;
+  main?: NotifyNtfyType;
   defaults?: NotifyNtfyType;
   hard_defaults?: NotifyNtfyType;
 }) => {
@@ -60,27 +60,27 @@ const NTFY = ({
       // URL Fields
       url_fields: {
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         password: firstNonDefault(
-          global?.url_fields?.password,
+          main?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         topic: firstNonDefault(
-          global?.url_fields?.topic,
+          main?.url_fields?.topic,
           defaults?.url_fields?.topic,
           hard_defaults?.url_fields?.topic
         ),
         username: firstNonDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         ),
@@ -89,75 +89,75 @@ const NTFY = ({
       params: {
         actions: convertNtfyActionsFromString(
           firstNonDefault(
-            global?.params?.actions as string | undefined,
+            main?.params?.actions as string | undefined,
             defaults?.params?.actions as string | undefined,
             hard_defaults?.params?.actions as string | undefined
           )
         ),
         attach: firstNonDefault(
-          global?.params?.attach,
+          main?.params?.attach,
           defaults?.params?.attach,
           hard_defaults?.params?.attach
         ),
         cache:
           strToBool(
             firstNonDefault(
-              global?.params?.cache,
+              main?.params?.cache,
               defaults?.params?.cache,
               hard_defaults?.params?.cache
             )
           ) ?? true,
         click: firstNonDefault(
-          global?.params?.click,
+          main?.params?.click,
           defaults?.params?.click,
           hard_defaults?.params?.click
         ),
         email: firstNonDefault(
-          global?.params?.email,
+          main?.params?.email,
           defaults?.params?.email,
           hard_defaults?.params?.email
         ),
         filename: firstNonDefault(
-          global?.params?.filename,
+          main?.params?.filename,
           defaults?.params?.filename,
           hard_defaults?.params?.filename
         ),
         firebase:
           strToBool(
             firstNonDefault(
-              global?.params?.firebase,
+              main?.params?.firebase,
               defaults?.params?.firebase,
               hard_defaults?.params?.firebase
             )
           ) ?? true,
         icon: firstNonDefault(
-          global?.params?.icon,
+          main?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
         priority: firstNonDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ).toLowerCase(),
         scheme: firstNonDefault(
-          global?.params?.scheme,
+          main?.params?.scheme,
           defaults?.params?.scheme,
           hard_defaults?.params?.scheme
         ).toLowerCase(),
         tags: firstNonDefault(
-          global?.params?.tags,
+          main?.params?.tags,
           defaults?.params?.tags,
           hard_defaults?.params?.tags
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   const ntfyPriorityOptions = useMemo(() => {
@@ -216,24 +216,26 @@ const NTFY = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           required
           col_sm={9}
           label="Host"
+          tooltip="e.g. ntfy.example.com"
           defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
           label="Port"
-          type="number"
+          tooltip="e.g. 443"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
           position="right"
         />
@@ -257,8 +259,8 @@ const NTFY = ({
           defaultVal={convertedDefaults.url_fields.topic}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormSelect
           name={`${name}.params.scheme`}
           col_sm={3}

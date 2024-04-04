@@ -1,5 +1,5 @@
 import { Col, FormCheck as FormCheckRB, FormGroup } from "react-bootstrap";
-import { FC, JSX, useMemo } from "react";
+import { FC, JSX } from "react";
 
 import { FormCheckType } from "react-bootstrap/esm/FormCheck";
 import FormLabel from "./form-label";
@@ -7,7 +7,7 @@ import { formPadding } from "./util";
 import { useFormContext } from "react-hook-form";
 
 interface FormCheckProps {
-  name?: string;
+  name: string;
 
   col_xs?: number;
   col_sm?: number;
@@ -22,19 +22,19 @@ interface FormCheckProps {
 }
 
 /**
- * FormCheck is labelled form check
+ * Returns a form checkbox
  *
  * @param name - The name of the field
  * @param col_xs - The number of columns to take up on extra small screens
  * @param col_sm - The number of columns to take up on small screens
- * @param size - The size of the form check
+ * @param size - The size of the checkbox
  * @param label - The form label to display
  * @param smallLabel - Whether the label should be small
  * @param tooltip - The tooltip to display
- * @param type - The type of the form check (checkbox/radio/switch)
- * @param position - The position of the form check
- * @param positionXS - The position of the form check on extra small screens
- * @returns A labaled form check
+ * @param type - The type of the checkbox
+ * @param position - The position of the field
+ * @param positionXS - The position of the field on extra small screens
+ * @returns A form checkbox with a label and tooltip
  */
 const FormCheck: FC<FormCheckProps> = ({
   name,
@@ -51,11 +51,8 @@ const FormCheck: FC<FormCheckProps> = ({
   positionXS = position,
 }) => {
   const { register } = useFormContext();
-  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
-  const registrationProps = useMemo(() => {
-    return name ? { ...register(name) } : {};
-  }, [name]);
+  const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
   return (
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
@@ -67,7 +64,7 @@ const FormCheck: FC<FormCheckProps> = ({
           className={`form-check${size === "lg" ? "-large" : ""}`}
           type={type}
           autoFocus={false}
-          {...registrationProps}
+          {...register(name)}
         />
       </FormGroup>
     </Col>

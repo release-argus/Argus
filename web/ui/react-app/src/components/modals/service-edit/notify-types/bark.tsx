@@ -8,7 +8,7 @@ import { useEffect, useMemo } from "react";
 
 import { NotifyBarkType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { normaliseForSelect } from "components/modals/service-edit/util";
 import { useFormContext } from "react-hook-form";
 
@@ -54,24 +54,24 @@ export const BarkSoundOptions = [
 ];
 
 /**
- * BARK is the form fields for a Bark notification
+ * Returns the form fields for `Bark`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Bark
- * @param defaults - The default values for Bark
- * @param hard_defaults - The hard default values for Bark
- * @returns The form fields for this Bark
+ * @param name - The path to this `Bark` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Bark` `Notify`
  */
 const BARK = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyBarkType;
+  main?: NotifyBarkType;
   defaults?: NotifyBarkType;
   hard_defaults?: NotifyBarkType;
 }) => {
@@ -81,22 +81,22 @@ const BARK = ({
       // URL Fields
       url_fields: {
         devicekey: firstNonDefault(
-          global?.url_fields?.devicekey,
+          main?.url_fields?.devicekey,
           defaults?.url_fields?.devicekey,
           hard_defaults?.url_fields?.devicekey
         ),
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         path: firstNonDefault(
-          global?.url_fields?.path,
+          main?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
@@ -104,48 +104,48 @@ const BARK = ({
       // Params
       params: {
         badge: firstNonDefault(
-          global?.params?.badge,
+          main?.params?.badge,
           defaults?.params?.badge,
           hard_defaults?.params?.badge
         ),
         copy: firstNonDefault(
-          global?.params?.copy,
+          main?.params?.copy,
           defaults?.params?.copy,
           hard_defaults?.params?.copy
         ),
         group: firstNonDefault(
-          global?.params?.group,
+          main?.params?.group,
           defaults?.params?.group,
           hard_defaults?.params?.group
         ),
         icon: firstNonDefault(
-          global?.params?.icon,
+          main?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
         scheme: firstNonDefault(
-          global?.params?.scheme,
+          main?.params?.scheme,
           defaults?.params?.scheme,
           hard_defaults?.params?.scheme
         ).toLowerCase(),
         sound: firstNonDefault(
-          global?.params?.sound,
+          main?.params?.sound,
           defaults?.params?.sound,
           hard_defaults?.params?.sound
         ).toLowerCase(),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
         url: firstNonDefault(
-          global?.params?.url,
+          main?.params?.url,
           defaults?.params?.url,
           hard_defaults?.params?.url
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   const barkSchemeOptions = useMemo(() => {
@@ -205,19 +205,18 @@ const BARK = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           col_sm={9}
           required
           label="Host"
           defaultVal={convertedDefaults.url_fields.host}
-          position="right"
         />
         <FormItem
           name={`${name}.url_fields.port`}
@@ -242,8 +241,8 @@ const BARK = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormSelect
           name={`${name}.params.scheme`}
           col_sm={3}
@@ -254,16 +253,18 @@ const BARK = ({
         <FormItem
           name={`${name}.params.badge`}
           col_sm={3}
-          type="number"
           label="Badge"
           tooltip="The number displayed next to the App icon"
+          isNumber
           defaultVal={convertedDefaults.params.badge}
+          position="middle"
         />
         <FormItem
           name={`${name}.params.copy`}
           label="Copy"
           tooltip="The value to be copied"
           defaultVal={convertedDefaults.params.copy}
+          position="right"
         />
         <FormItem
           name={`${name}.params.group`}
@@ -273,9 +274,9 @@ const BARK = ({
         />
         <FormSelect
           name={`${name}.params.sound`}
-          col_sm={6}
           label="Sound"
           options={barkSoundOptions}
+          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
@@ -287,6 +288,7 @@ const BARK = ({
           label="URL"
           tooltip="URL to open when notification is tapped"
           defaultVal={convertedDefaults.params.url}
+          position="right"
         />
         <FormItemWithPreview
           name={`${name}.params.icon`}

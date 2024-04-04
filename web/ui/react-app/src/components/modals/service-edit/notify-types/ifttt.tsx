@@ -2,28 +2,28 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import { NotifyIFTTTType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * IFTTT renders the form fields for the IFTTT Notify
+ * Returns the form fields for `IFTTT`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this IFTTT Notify
- * @param defaults - The default values for the IFTTT Notify
- * @param hard_defaults - The hard default values for the IFTTT Notify
- * @returns The form fields for this IFTTT Notify
+ * @param name - The path to this `IFTTT` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `IFTTT` `Notify`
  */
 const IFTTT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyIFTTTType;
+  main?: NotifyIFTTTType;
   defaults?: NotifyIFTTTType;
   hard_defaults?: NotifyIFTTTType;
 }) => {
@@ -32,7 +32,7 @@ const IFTTT = ({
       // URL Fields
       url_fields: {
         webhookid: firstNonDefault(
-          global?.url_fields?.webhookid,
+          main?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
         ),
@@ -40,55 +40,55 @@ const IFTTT = ({
       // Params
       params: {
         events: firstNonDefault(
-          global?.params?.events,
+          main?.params?.events,
           defaults?.params?.events,
           hard_defaults?.params?.events
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
         usemessageasvalue: firstNonDefault(
-          global?.params?.usemessageasvalue,
+          main?.params?.usemessageasvalue,
           defaults?.params?.usemessageasvalue,
           hard_defaults?.params?.usemessageasvalue
         ),
         usetitleasvalue: firstNonDefault(
-          global?.params?.usetitleasvalue,
+          main?.params?.usetitleasvalue,
           defaults?.params?.usetitleasvalue,
           hard_defaults?.params?.usetitleasvalue
         ),
         value1: firstNonDefault(
-          global?.params?.value1,
+          main?.params?.value1,
           defaults?.params?.value1,
           hard_defaults?.params?.value1
         ),
         value2: firstNonDefault(
-          global?.params?.value2,
+          main?.params?.value2,
           defaults?.params?.value2,
           hard_defaults?.params?.value2
         ),
         value3: firstNonDefault(
-          global?.params?.value3,
+          main?.params?.value3,
           defaults?.params?.value3,
           hard_defaults?.params?.value3
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.webhookid`}
           required
@@ -97,8 +97,8 @@ const IFTTT = ({
           defaultVal={convertedDefaults.url_fields.webhookid}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.events`}
           required
@@ -116,16 +116,16 @@ const IFTTT = ({
         />
         <FormItem
           name={`${name}.params.usemessageasvalue`}
-          type="number"
           label="Use Message As Value"
           tooltip="Set the corresponding value field to the message"
+          isNumber
           defaultVal={convertedDefaults.params.usemessageasvalue}
         />
         <FormItem
           name={`${name}.params.usetitleasvalue`}
-          type="number"
           label="Use Title As Value"
           tooltip="Set the corresponding value field to the title"
+          isNumber
           defaultVal={convertedDefaults.params.usetitleasvalue}
           position="right"
         />

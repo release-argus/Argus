@@ -13,28 +13,22 @@ import { strToBool } from "utils";
 interface Props {
   name: string;
 
-  col_xs?: number;
-  col_sm?: number;
   label?: string;
   tooltip?: string;
   defaultValue?: boolean;
 }
 
 /**
- * BooleanWithDefault is a form field with buttons to choose between true, false, and default
+ * Returns a form field with buttons to choose between true, false, and default
  *
  * @param name - The name of the field
- * @param col_xs - The number of columns to take up on extra small screens
- * @param col_sm - The number of columns to take up on small screens
  * @param label - The form label to display
  * @param tooltip - The tooltip to display
  * @param defaultValue - The default value of the field
- * @returns A labeled form field with buttons to choose between true, false, and default
+ * @returns A form field at name with a label, tooltip and buttons to choose between true, false, and default
  */
 const BooleanWithDefault: FC<Props> = ({
   name,
-  col_xs = 12,
-  col_sm = 12,
   label,
   defaultValue,
   tooltip,
@@ -67,8 +61,7 @@ const BooleanWithDefault: FC<Props> = ({
 
   return (
     <Col
-      xs={col_xs}
-      sm={col_sm}
+      xs={12}
       className="pt-1 pb-1"
       style={{ display: "flex", alignItems: "center" }}
     >

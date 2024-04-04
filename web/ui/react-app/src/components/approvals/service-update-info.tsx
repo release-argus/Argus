@@ -15,6 +15,13 @@ interface Props {
   visible: boolean;
 }
 
+/**
+ * Returns information on the latest version and deployed version along with the times found.
+ *
+ * @param service - The service the update information belongs to
+ * @param visible - Whether the update information should be visible
+ * @returns A component that displays the service's update information
+ */
 const UpdateInfo: FC<Props> = ({ service, visible }) => (
   <Container
     fluid

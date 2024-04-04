@@ -10,10 +10,11 @@ interface Props {
 }
 
 /**
- * HelpTooltip is a tooltip with a question mark icon
+ * Returns a tooltip inside a question mark icon
+ *
  * @param text - The text to display in the tooltip
  * @param placement - The placement of the tooltip
- * @returns A tooltip with a question mark icon
+ * @returns A tooltip inside a question mark icon
  */
 const HelpTooltip: FC<Props> = ({ text, placement = "top" }) => (
   <OverlayTrigger

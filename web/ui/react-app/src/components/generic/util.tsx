@@ -6,13 +6,13 @@ type formPaddingProps = {
 };
 
 /**
- * formPadding is a utility function that returns the padding classes for a form item
+ * Returns the padding classes for a form item
  *
  * @param col_xs - The number of columns the item takes up on XS
  * @param col_sm - The number of columns the item takes up on SM+
  * @param position - The position of the item on SM+
  * @param positionXS - The position of the item on XS
- * @returns A string containing the padding classes for the form item
+ * @returns The padding classes for a form item
  */
 export const formPadding = ({
   col_xs,

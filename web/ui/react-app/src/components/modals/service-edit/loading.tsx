@@ -15,18 +15,26 @@ import { useDelayedRender } from "hooks/delayed-render";
 interface Props {
   name: string;
 }
+
+/**
+ * The disabled edit form for a service whilst loading
+ *
+ * @param name - The name of the service
+ * @returns The edit form for the service, but disabled whilst loading
+ */
 export const Loading: FC<Props> = ({ name }) => {
   const delayedRender = useDelayedRender(500);
   const accordionHeaders = [
     "Options:",
     "Latest Version:",
     "Deployed Version:",
-    "Commands:",
-    "WebHooks:",
+    "Command:",
+    "WebHook:",
     "Notify:",
     "Dashboard:",
   ];
   const formControlClassName = "pt-1 pb-1 col-form col-sm-12 col-12";
+
   return (
     <Stack gap={3}>
       <FormGroup className="mb-2">

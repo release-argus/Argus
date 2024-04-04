@@ -3,13 +3,16 @@ import { FC, useEffect } from "react";
 import { faAdjust, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useMedia } from "hooks/media";
 import useLocalStorage from "hooks/local-storage";
+import { useMedia } from "hooks/media";
 
 export type themeName = "light" | "dark";
 export type themeSetting = themeName | "auto";
 export const themeLocalStorageKey = "user-prefers-color-scheme";
 
+/**
+ * @returns A button group that allows the user to toggle between light, dark, and auto themes
+ */
 export const ThemeToggle: FC = () => {
   const [activeTheme, setActiveTheme] = useLocalStorage<themeSetting>(
     themeLocalStorageKey,

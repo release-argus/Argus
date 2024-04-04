@@ -7,30 +7,30 @@ import {
   FormLabel,
   FormSelect,
 } from "components/generic/form";
+import { firstNonDefault, firstNonEmpty } from "utils";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
 
 interface Props {
   name: string;
   removeMe: () => void;
 
   globalOptions: JSX.Element;
-  globals?: Dict<WebHookType>;
+  mains?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
 }
 
 /**
- * EditServiceWebHook is the form fields for a WebHook
+ * Returns the form fields for a WebHook
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove this WebHook
  * @param globalOptions - The options for the global WebHook's
- * @param globals - The global WebHook's
+ * @param mains - The main WebHook's
  * @param defaults - The default values for a WebHook
  * @param hard_defaults - The hard default values for a WebHook
  * @returns The form fields for this WebHook
@@ -40,7 +40,7 @@ const EditServiceWebHook: FC<Props> = ({
   removeMe,
 
   globalOptions,
-  globals,
+  mains,
   defaults,
   hard_defaults,
 }) => {
@@ -56,17 +56,18 @@ const EditServiceWebHook: FC<Props> = ({
 
   const itemName: string = useWatch({ name: `${name}.name` });
   const itemType: WebHookType["type"] = useWatch({ name: `${name}.type` });
-  const global = globals?.[itemName];
+  const main = mains?.[itemName];
   useEffect(() => {
-    global?.type && setValue(`${name}.type`, global.type);
-  }, [global]);
+    main?.type && setValue(`${name}.type`, main.type);
+  }, [main]);
   useEffect(() => {
-    if (globals?.[itemName]?.type !== undefined)
-      setValue(`${name}.type`, globals[itemName].type);
-    setTimeout(() => {
+    if (mains?.[itemName]?.type !== undefined)
+      setValue(`${name}.type`, mains[itemName].type);
+    const timeout = setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
     }, 25);
+    return () => clearTimeout(timeout);
   }, [itemName]);
 
   const header = useMemo(
@@ -77,41 +78,42 @@ const EditServiceWebHook: FC<Props> = ({
   const convertedDefaults = useMemo(
     () => ({
       allow_invalid_certs:
-        global?.allow_invalid_certs ??
+        main?.allow_invalid_certs ??
         defaults?.allow_invalid_certs ??
         hard_defaults?.allow_invalid_certs,
-      custom_headers:
-        global?.custom_headers ??
-        defaults?.custom_headers ??
-        hard_defaults?.custom_headers,
+      custom_headers: firstNonEmpty(
+        main?.custom_headers,
+        defaults?.custom_headers,
+        hard_defaults?.custom_headers
+      ),
       delay: firstNonDefault(
-        global?.delay,
+        main?.delay,
         defaults?.delay,
         hard_defaults?.delay
       ),
       desired_status_code: firstNonDefault(
-        global?.desired_status_code,
+        main?.desired_status_code,
         defaults?.desired_status_code,
         hard_defaults?.desired_status_code
       ),
       max_tries: firstNonDefault(
-        global?.max_tries,
+        main?.max_tries,
         defaults?.max_tries,
         hard_defaults?.max_tries
       ),
       secret: firstNonDefault(
-        global?.secret,
+        main?.secret,
         defaults?.secret,
         hard_defaults?.secret
       ),
       silent_fails:
-        global?.silent_fails ??
+        main?.silent_fails ??
         defaults?.silent_fails ??
         hard_defaults?.silent_fails,
-      type: firstNonDefault(global?.type, defaults?.type, hard_defaults?.type),
-      url: firstNonDefault(global?.url, defaults?.url, hard_defaults?.url),
+      type: firstNonDefault(main?.type, defaults?.type, hard_defaults?.type),
+      url: firstNonDefault(main?.url, defaults?.url, hard_defaults?.url),
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
@@ -134,9 +136,9 @@ const EditServiceWebHook: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this WebHook as a base" />
               <Form.Select
                 value={
-                  globals &&
+                  mains &&
                   itemName !== "" &&
-                  Object.keys(globals).indexOf(itemName) !== -1
+                  Object.keys(mains).indexOf(itemName) !== -1
                     ? itemName
                     : ""
                 }
@@ -151,10 +153,10 @@ const EditServiceWebHook: FC<Props> = ({
             customValidation={(value) => {
               if (
                 itemType !== undefined &&
-                globals?.[itemName]?.type &&
-                itemType !== globals?.[itemName]?.type
+                mains?.[itemName]?.type &&
+                itemType !== mains?.[itemName]?.type
               ) {
-                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+                return `${value} does not match the global for "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
               }
               return true;
             }}

@@ -9,6 +9,9 @@ import useLocalStorage from "hooks/local-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "contexts/websocket";
 
+/**
+ * @returns The approvals page, which includes a toolbar and a list of services.
+ */
 export const Approvals = (): ReactElement => {
   const { monitorData, setMonitorData } = useWebSocket();
   const toolbarDefaults: ApprovalsToolbarOptions = {
@@ -48,35 +51,34 @@ export const Approvals = (): ReactElement => {
     });
   }, [toolbarOptions]);
 
-  const filteredServices = useMemo(
-    () =>
-      Object.values(monitorData.order)
-        .filter((service) => {
-          if (
-            service.includes(toolbarOptions.search) &&
-            monitorData.service[service]
-          ) {
-            const svc = monitorData.service[service];
-            const skipped =
-              `SKIP_${svc.status?.latest_version}` ===
-              svc.status?.approved_version;
-            const upToDate =
-              svc.status?.deployed_version === svc.status?.latest_version;
-            return (
-              // hideUpToDate - deployed_version NOT latest_version
-              (!toolbarOptions.hide.includes(0) || !upToDate) &&
-              // hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version
-              (!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
-              // hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version
-              (!toolbarOptions.hide.includes(2) || !skipped) &&
-              // hideInactive - active NOT false
-              (!toolbarOptions.hide.includes(3) || svc.active !== false)
-            );
-          }
-        })
-        .map((service) => monitorData.service[service]),
-    [toolbarOptions, monitorData.service, monitorData.order]
-  );
+  const filteredServices = useMemo(() => {
+    const search = toolbarOptions.search.toLowerCase();
+    return Object.values(monitorData.order)
+      .filter((service) => {
+        if (
+          service.toLowerCase().includes(search) &&
+          monitorData.service[service]
+        ) {
+          const svc = monitorData.service[service];
+          const skipped =
+            `SKIP_${svc.status?.latest_version}` ===
+            svc.status?.approved_version;
+          const upToDate =
+            svc.status?.deployed_version === svc.status?.latest_version;
+          return (
+            // hideUpToDate - deployed_version NOT latest_version
+            (!toolbarOptions.hide.includes(0) || !upToDate) &&
+            // hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version
+            (!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
+            // hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version
+            (!toolbarOptions.hide.includes(2) || !skipped) &&
+            // hideInactive - active NOT false
+            (!toolbarOptions.hide.includes(3) || svc.active !== false)
+          );
+        }
+      })
+      .map((service) => monitorData.service[service]);
+  }, [toolbarOptions, monitorData.service, monitorData.order]);
 
   return (
     <>

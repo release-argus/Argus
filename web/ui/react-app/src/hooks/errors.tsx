@@ -4,7 +4,7 @@ import { extractErrors, getNestedError } from "utils";
 import { StringStringMap } from "types/config";
 
 /**
- * useError is a hook to get the error of a field
+ * Returns the error of a field in a form
  *
  * @param name - The name of the field in the form
  * @param wanted - Whether the error is wanted

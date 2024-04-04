@@ -7,10 +7,9 @@ export interface Props {
 }
 
 /**
- * handleNotifications handles notifications for events
+ * Adds a notification based on the event type and subtype
  *
- * @param props - The evemt tp ptocess
- * @returns void
+ * @param props - The event and the function to add a notification
  */
 export const handleNotifications = (props: Props) => {
   if (props.event.page !== "APPROVALS") return;

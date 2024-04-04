@@ -1,9 +1,9 @@
 /**
- * cleanEmpty will remove keys with empty values from obj as well as any key:values that are the same as defaults
+ * Recursively removes empty keys from an object and any key:value's that are the same as defaults
  *
  * @param obj - The object to clean
  * @param defaults - The default values to compare against
- * @returns A new object with empty keys removed and any key:values removed that are the same as defaults
+ * @returns A new object with empty keys removed and any key:value's removed that are the same as defaults
  */
 const cleanEmpty = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

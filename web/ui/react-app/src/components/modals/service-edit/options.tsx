@@ -4,6 +4,7 @@ import { FormCheck, FormItem } from "components/generic/form";
 import { Accordion } from "react-bootstrap";
 import { BooleanWithDefault } from "components/generic";
 import { ServiceOptionsType } from "types/config";
+import { firstNonDefault } from "utils";
 
 interface Props {
   defaults?: ServiceOptionsType;
@@ -11,22 +12,22 @@ interface Props {
 }
 
 /**
- * EditServiceOptions renders the form fields for the service options
+ * Returns the `options` form fields
  *
- * @param defaults - The default values for the service options
- * @param hard_defaults - The hard default values for the service options
- * @returns The form fields for the service options
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `options`
  */
 const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
-  // const { register } = useFormContext();
   const convertedDefaults = useMemo(
     () => ({
-      interval: defaults?.interval || hard_defaults?.interval,
+      interval: firstNonDefault(defaults?.interval, hard_defaults?.interval),
       semantic_versioning:
         defaults?.semantic_versioning ?? hard_defaults?.semantic_versioning,
     }),
     [defaults, hard_defaults]
   );
+
   return (
     <Accordion>
       <Accordion.Header>Options:</Accordion.Header>

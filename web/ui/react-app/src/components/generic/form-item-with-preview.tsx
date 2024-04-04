@@ -3,6 +3,7 @@ import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
+import { isEmptyOrNull } from "utils";
 import { useError } from "hooks/errors";
 
 interface Props {
@@ -15,14 +16,14 @@ interface Props {
 }
 
 /**
- * FormItemWithPreview is a labelled form item with a preview image
+ * Returns a form item with a preview image
  *
  * @param name - The name of the form item
  * @param label - The label of the form item
  * @param tooltip - The tooltip of the form item
  * @param defaultVal - The default value of the form item
  * @param placeholder - The placeholder of the form item
- * @returns A labeled form item with a preview image
+ * @returns A form item at name with a preview image, label and tooltip
  */
 const FormItemWithPreview: FC<Props> = ({
   name,
@@ -70,7 +71,7 @@ const FormItemWithPreview: FC<Props> = ({
             {...register(name, {
               validate: (value: string | undefined) => {
                 // Allow empty values
-                if ((value ?? "") === "") return true;
+                if (isEmptyOrNull(value)) return true;
 
                 // Validate that it's a URL (with prefix)
                 try {

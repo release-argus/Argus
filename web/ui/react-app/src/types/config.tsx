@@ -116,6 +116,8 @@ export interface ServiceDashboardOptionsType {
   icon_link_to?: string;
   web_url?: string;
 }
+
+export type DockerFilterRegistryType = "ghcr" | "hub" | "quay" | "";
 export interface DockerFilterType {
   [key: string]: string | undefined;
   type?: DockerFilterRegistryType;
@@ -154,7 +156,6 @@ export interface DefaultLatestVersionFiltersType {
   docker?: DefaultDockerFilterType;
 }
 
-export type DockerFilterRegistryType = "ghcr" | "hub" | "quay" | "";
 export interface DefaultDockerFilterType {
   [key: string]: string | DefaultDockerFilterRegistryType | undefined;
   type?: DockerFilterRegistryType;
@@ -191,7 +192,6 @@ export interface BasicAuthType {
 }
 
 export interface HeaderType {
-  id?: string;
   key: string;
   value: string;
 }
@@ -211,10 +211,30 @@ export interface URLCommandType {
   old?: string; // replace
   new?: string; // replace
 }
-export const NotifyTypesConst = [
+export type NotifyTypes =
+  | "bark"
+  | "discord"
+  | "smtp" // email
+  | "googlechat"
+  | "gotify"
+  | "ifttt"
+  | "join"
+  | "mattermost"
+  | "matrix"
+  | "ntfy"
+  | "opsgenie"
+  | "pushbullet"
+  | "pushover"
+  | "rocketchat"
+  | "slack"
+  | "teams"
+  | "telegram"
+  | "zulip"
+  | "generic";
+export const NotifyTypesConst: NotifyTypes[] = [
   "bark",
   "discord",
-  "smtp",
+  "smtp", // email
   "googlechat",
   "gotify",
   "ifttt",
@@ -230,8 +250,8 @@ export const NotifyTypesConst = [
   "teams",
   "telegram",
   "zulip",
+  "generic",
 ];
-export type NotifyTypes = (typeof NotifyTypesConst)[number];
 export interface NotifyDefaults {
   barl: NotifyBarkType;
   discord: NotifyDiscordType;
@@ -259,25 +279,8 @@ export interface NotifyType {
 
   type?: NotifyTypes;
   options?: NotifyOptionsType;
-  url_fields?: { [key: string]: undefined | string | number | boolean };
-  params?: {
-    [key: string]:
-      | undefined
-      | string
-      | string[]
-      | number
-      | boolean
-      | NotifyNtfyAction[]
-      | NotifyOpsGenieTarget[]
-      | NotifyOpsGenieAction[]
-      | StringStringMap;
-  };
-}
-
-// OpsGenieDetail | GenericCustomHeaders | GenericJSONPayloadVars | GenericQueryVars
-export interface NotifyHeaderType {
-  key: string;
-  value: string;
+  url_fields?: NotifyURLFieldsType;
+  params?: NotifyParamsType;
 }
 
 export interface NotifyBarkType extends NotifyType {
@@ -608,7 +611,21 @@ export interface NotifyOptionsType {
 }
 
 export interface NotifyURLFieldsType {
-  [key: string]: undefined | string | number | boolean;
+  [key: string]: undefined | string | number | boolean | HeaderType[];
+}
+
+export interface NotifyParamsType {
+  [key: string]:
+    | undefined
+    | string
+    | number
+    | boolean
+    | StringFieldArray
+    | StringStringMap
+    | NotifyNtfyAction[]
+    | NotifyOpsGenieAction[]
+    | NotifyOpsGenieTarget[]
+    | HeaderType[];
 }
 
 export interface WebHookType {

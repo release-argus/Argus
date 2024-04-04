@@ -2,28 +2,28 @@ import { FormItem, FormItemColour, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTeamsType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * TEAMS renders the form fields for the Teams Notify
+ * Returns the form fields for `Teams`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Teams Notify
- * @param defaults - The default values for the Teams Notify
- * @param hard_defaults - The hard default values for the Teams Notify
- * @returns The form fields for this Teams Notify
+ * @param name - The path to this `Teams` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Teams` `Notify`
  */
 const TEAMS = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyTeamsType;
+  main?: NotifyTeamsType;
   defaults?: NotifyTeamsType;
   hard_defaults?: NotifyTeamsType;
 }) => {
@@ -32,22 +32,22 @@ const TEAMS = ({
       // URL Fields
       url_fields: {
         altid: firstNonDefault(
-          global?.url_fields?.altid,
+          main?.url_fields?.altid,
           defaults?.url_fields?.altid,
           hard_defaults?.url_fields?.altid
         ),
         group: firstNonDefault(
-          global?.url_fields?.group,
+          main?.url_fields?.group,
           defaults?.url_fields?.group,
           hard_defaults?.url_fields?.group
         ),
         groupowner: firstNonDefault(
-          global?.url_fields?.groupowner,
+          main?.url_fields?.groupowner,
           defaults?.url_fields?.groupowner,
           hard_defaults?.url_fields?.groupowner
         ),
         tenant: firstNonDefault(
-          global?.url_fields?.tenant,
+          main?.url_fields?.tenant,
           defaults?.url_fields?.tenant,
           hard_defaults?.url_fields?.tenant
         ),
@@ -55,35 +55,35 @@ const TEAMS = ({
       // Params
       params: {
         color: firstNonDefault(
-          global?.params?.color,
+          main?.params?.color,
           defaults?.params?.color,
           hard_defaults?.params?.color
         ),
         host: firstNonDefault(
-          global?.params?.host,
+          main?.params?.host,
           defaults?.params?.host,
           hard_defaults?.params?.host
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.altid`}
           label="Alt ID"
@@ -107,26 +107,26 @@ const TEAMS = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
-        <FormItemColour
-          name={`${name}.params.color`}
-          col_sm={5}
-          label="Color"
-          defaultVal={convertedDefaults.params.color}
-        />
         <FormItem
           name={`${name}.params.host`}
-          col_sm={7}
+          col_sm={6}
           label="Host"
           defaultVal={convertedDefaults.params.host}
-          position="right"
         />
         <FormItem
           name={`${name}.params.title`}
-          col_sm={12}
+          col_sm={6}
           label="Title"
           defaultVal={convertedDefaults.params.title}
+          position="right"
+        />
+        <FormItemColour
+          name={`${name}.params.color`}
+          col_sm={6}
+          label="Color"
+          defaultVal={convertedDefaults.params.color}
         />
       </>
     </>

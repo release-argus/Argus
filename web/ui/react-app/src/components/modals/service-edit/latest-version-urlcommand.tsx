@@ -14,7 +14,7 @@ interface Props {
 }
 
 /**
- * FormURLCommand is the form fields for a URL command
+ * Returns the form fields for a URL command
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove the command

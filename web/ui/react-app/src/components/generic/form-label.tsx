@@ -12,7 +12,7 @@ interface FormLabelProps {
 }
 
 /**
- * FormLabel is a label for a form item
+ * Returns a label for a form item
  *
  * @param text - The text of the label
  * @param tooltip - The tooltip of the label

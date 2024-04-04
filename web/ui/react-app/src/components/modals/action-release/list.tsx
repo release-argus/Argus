@@ -21,7 +21,7 @@ interface Props {
 }
 
 /**
- * ModalList renders a list of items to approve
+ * Returns a list of items to approve
  *
  * @param itemType - The type of item to render
  * @param modalType - The type of modal to render

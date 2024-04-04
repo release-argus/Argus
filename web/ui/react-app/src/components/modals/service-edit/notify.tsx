@@ -15,7 +15,6 @@ import { NotifyEditType } from "types/service-edit";
 import RenderNotify from "./notify-types/render";
 import { TYPE_OPTIONS } from "./notify-types/types";
 import TestNotify from "components/modals/service-edit/test-notify";
-import { convertNotifyToAPI } from "components/modals/service-edit/util";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
@@ -24,21 +23,21 @@ interface Props {
 
   serviceName: string;
   originals?: NotifyEditType[];
-  globalNotifyOptions: JSX.Element;
-  globals?: Dict<NotifyType>;
+  globalOptions: JSX.Element;
+  mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
   hard_defaults?: Dict<NotifyType>;
 }
 
 /**
- * Notify is the form fields for a Notify
+ * Returns the form fields for a notify
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove this Notify
  * @param serviceName - The name of the service
  * @param originals - The original values for the Notify
- * @param globalNotifyOptions - The options for the global Notify's
- * @param globals - The global Notify's
+ * @param globalOptions - The options for the global Notify's
+ * @param mains - The main Notify's
  * @param defaults - The default values for all Notify types
  * @param hard_defaults - The hard default values for all Notify types
  * @returns The form fields for this Notify
@@ -49,8 +48,8 @@ const Notify: FC<Props> = ({
 
   serviceName,
   originals,
-  globalNotifyOptions,
-  globals,
+  globalOptions,
+  mains,
   defaults,
   hard_defaults,
 }) => {
@@ -65,32 +64,27 @@ const Notify: FC<Props> = ({
   const webURL: string | undefined = useWatch({ name: "dashboard.web_url" });
   useEffect(() => {
     // Set Type to that of the global for the new name if it exists
-    if (globals?.[itemName]?.type)
-      setValue(`${name}.type`, globals[itemName].type);
-    else if ((itemType ?? "") === "" && NotifyTypesConst.includes(itemName))
+    if (mains?.[itemName]?.type) setValue(`${name}.type`, mains[itemName].type);
+    else if (itemType && (NotifyTypesConst as string[]).includes(itemName))
       setValue(`${name}.type`, itemName);
     // Trigger validation on name/type
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
     }, 25);
+    return () => clearTimeout(timeout);
   }, [itemName]);
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
     [name, itemName, itemType]
   );
+
   const original = useMemo(() => {
-    if (originals) {
-      for (const o of originals) {
-        if (o.oldIndex === itemName) {
-          return convertNotifyToAPI(o);
-        }
-      }
-    }
-    return { options: {}, url_fields: {}, params: {} };
+    const original = originals?.find((o) => o.oldIndex === itemName);
+    return original || { options: {}, url_fields: {}, params: {} };
   }, [originals]);
   const serviceURL =
-    lvType === "github" && (lvURL?.match(/\//g) ?? []).length > 1
+    lvType === "github" && (lvURL?.match(/\//g) ?? []).length == 1
       ? `https://github.com/${lvURL}`
       : lvURL;
 
@@ -114,13 +108,13 @@ const Notify: FC<Props> = ({
               <FormLabel text="Global?" tooltip="Use this Notify as a base" />
               <Form.Select
                 value={
-                  globals && Object.keys(globals).indexOf(itemName) !== -1
+                  mains && Object.keys(mains).indexOf(itemName) !== -1
                     ? itemName
                     : ""
                 }
                 onChange={(e) => setValue(`${name}.name`, e.target.value)}
               >
-                {globalNotifyOptions}
+                {globalOptions}
               </Form.Select>
             </FormGroup>
           </Col>
@@ -129,10 +123,10 @@ const Notify: FC<Props> = ({
             customValidation={(value) => {
               if (
                 itemType !== undefined &&
-                globals?.[itemName]?.type &&
-                itemType !== globals?.[itemName]?.type
+                mains?.[itemName]?.type &&
+                itemType !== mains?.[itemName]?.type
               ) {
-                return `${value} does not match the global for "${itemName}" of ${globals?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
+                return `${value} does not match the global for "${itemName}" of ${mains?.[itemName]?.type}. Either change the type to match that, or choose a new name`;
               }
               return true;
             }}
@@ -151,7 +145,7 @@ const Notify: FC<Props> = ({
           <RenderNotify
             name={name}
             type={itemType}
-            globalNotify={globals?.[itemName]}
+            main={mains?.[itemName]}
             defaults={defaults?.[itemType]}
             hard_defaults={hard_defaults?.[itemType]}
           />

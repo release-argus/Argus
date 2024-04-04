@@ -3,7 +3,7 @@ import { ModalType, ServiceModal, ServiceSummaryType } from "types/summary";
 import { useState } from "react";
 
 /**
- * useModal is a hook to handle the state of the ServiceModa
+ * @returns The modal and a function to handle the modal
  */
 const useModal = () => {
   const [modal, setModal] = useState<ServiceModal>({

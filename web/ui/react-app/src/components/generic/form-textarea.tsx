@@ -24,7 +24,7 @@ interface FormItemProps {
 }
 
 /**
- * FormTextArea is a labelled form textarea
+ * Returns a form textarea
  *
  * @param name - The name of the form item
  * @param required - Whether the form item is required
@@ -37,7 +37,7 @@ interface FormItemProps {
  * @param rows - The number of rows for the textarea
  * @param position - The position of the form item
  * @param positionXS - The position of the form item on extra small screens
- * @returns  A labeled form textarea
+ * @returns A form textarea with a label and tooltip
  */
 const FormTextArea: FC<FormItemProps> = ({
   name,
@@ -74,9 +74,9 @@ const FormTextArea: FC<FormItemProps> = ({
           autoFocus={false}
           {...register(name, {
             validate: (value: string | undefined) => {
-              const testValue = value || defaultVal || "";
               // Validate that it's non-empty (including default value)
               if (required) {
+                const testValue = value || defaultVal || "";
                 const validation = /.+/.test(testValue);
                 return validation ? true : "Required";
               }

@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySMTPType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { normaliseForSelect } from "components/modals/service-edit/util/normalise-selects";
 import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
@@ -24,24 +24,24 @@ export const SMTPEncryptionOptions = [
 ];
 
 /**
- * SMTP renders the form fields for the SMTP Notify
+ * Returns the form fields for `SMTP`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this SMTP Notify
- * @param defaults - The default values for the SMTP Notify
- * @param hard_defaults - The hard default values for the SMTP Notify
- * @returns The form fields for this SMTP Notify
+ * @param name - The path to this `SMTP` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `SMTP` `Notify`
  */
 const SMTP = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifySMTPType;
+  main?: NotifySMTPType;
   defaults?: NotifySMTPType;
   hard_defaults?: NotifySMTPType;
 }) => {
@@ -52,22 +52,22 @@ const SMTP = ({
       // URL Fields
       url_fields: {
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         password: firstNonDefault(
-          global?.url_fields?.password,
+          main?.url_fields?.password,
           defaults?.url_fields?.password,
           hard_defaults?.url_fields?.password
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         username: firstNonDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         ),
@@ -75,44 +75,44 @@ const SMTP = ({
       // Params
       params: {
         auth: firstNonDefault(
-          global?.params?.auth,
+          main?.params?.auth,
           defaults?.params?.auth,
           hard_defaults?.params?.auth
         ).toLowerCase(),
         clienthost: firstNonDefault(
-          global?.params?.clienthost,
+          main?.params?.clienthost,
           defaults?.params?.clienthost,
           hard_defaults?.params?.clienthost
         ),
         encryption: firstNonDefault(
-          global?.params?.encryption,
+          main?.params?.encryption,
           defaults?.params?.encryption,
           hard_defaults?.params?.encryption
         ).toLowerCase(),
         fromaddress: firstNonDefault(
-          global?.params?.fromaddress,
+          main?.params?.fromaddress,
           defaults?.params?.fromaddress,
           hard_defaults?.params?.fromaddress
         ),
         fromname: firstNonDefault(
-          global?.params?.fromname,
+          main?.params?.fromname,
           defaults?.params?.fromname,
           hard_defaults?.params?.fromname
         ),
         subject: firstNonDefault(
-          global?.params?.subject,
+          main?.params?.subject,
           defaults?.params?.subject,
           hard_defaults?.params?.subject
         ),
         toaddresses: firstNonDefault(
-          global?.params?.toaddresses,
+          main?.params?.toaddresses,
           defaults?.params?.toaddresses,
           hard_defaults?.params?.toaddresses
         ),
         usehtml:
           strToBool(
             firstNonDefault(
-              global?.params?.usehtml,
+              main?.params?.usehtml,
               defaults?.params?.usehtml,
               hard_defaults?.params?.usehtml
             )
@@ -120,14 +120,14 @@ const SMTP = ({
         usestarttls:
           strToBool(
             firstNonDefault(
-              global?.params?.usestarttls,
+              main?.params?.usestarttls,
               defaults?.params?.usestarttls,
               hard_defaults?.params?.usestarttls
             )
           ) ?? true,
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   const smtpAuthOptions = useMemo(() => {
@@ -184,12 +184,12 @@ const SMTP = ({
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           required
@@ -201,9 +201,9 @@ const SMTP = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
           tooltip="e.g. 25/465/587/2525"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
           position="right"
         />
@@ -220,8 +220,8 @@ const SMTP = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.toaddresses`}
           required

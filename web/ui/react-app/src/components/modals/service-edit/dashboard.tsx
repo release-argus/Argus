@@ -4,19 +4,30 @@ import { FormItem, FormItemWithPreview } from "components/generic/form";
 import { Accordion } from "react-bootstrap";
 import { BooleanWithDefault } from "components/generic";
 import { ServiceDashboardOptionsType } from "types/config";
+import { firstNonDefault } from "utils";
 
 interface Props {
   defaults?: ServiceDashboardOptionsType;
   hard_defaults?: ServiceDashboardOptionsType;
 }
 
+/**
+ * Returns the `dashboard` form fields
+ *
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `dashboard` options
+ */
 const EditServiceDashboard: FC<Props> = ({ defaults, hard_defaults }) => {
   const convertedDefaults = useMemo(
     () => ({
       auto_approve: defaults?.auto_approve ?? hard_defaults?.auto_approve,
-      icon: defaults?.icon || hard_defaults?.icon,
-      icon_link_to: defaults?.icon_link_to || hard_defaults?.icon_link_to,
-      web_url: defaults?.web_url || hard_defaults?.web_url,
+      icon: firstNonDefault(defaults?.icon, hard_defaults?.icon),
+      icon_link_to: firstNonDefault(
+        defaults?.icon_link_to,
+        hard_defaults?.icon_link_to
+      ),
+      web_url: firstNonDefault(defaults?.web_url, hard_defaults?.web_url),
     }),
     [defaults, hard_defaults]
   );

@@ -4,34 +4,37 @@
   "description": "Automated checks for new software releases",
   "homepage": "https://release-argus.io",
   "private": true,
+  "type": "module",
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.5.1",
-    "@fortawesome/free-brands-svg-icons": "^6.5.1",
-    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/fontawesome-svg-core": "^6.5.2",
+    "@fortawesome/free-brands-svg-icons": "^6.5.2",
+    "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@tanstack/react-query": "^5.28.8",
+    "@tanstack/react-query": "^5.28.14",
     "@types/bootstrap": "^5.2.10",
     "@types/jest": "^29.5.12",
-    "@types/react": "^18.2.70",
-    "@types/react-dom": "^18.2.22",
+    "@types/react": "^18.2.74",
+    "@types/react-dom": "^18.2.24",
+    "@vitejs/plugin-react": "^4.2.1",
     "bootstrap": "^5.3.3",
     "date-fns": "^3.6.0",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.2",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.51.1",
+    "react-hook-form": "^7.50.1",
     "react-router-dom": "^6.22.3",
-    "react-scripts": "^5.0.1",
     "reconnecting-websocket": "^4.4.0",
     "styled-components": "^6.1.8",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.4",
+    "vite": "^5.2.8",
+    "vite-tsconfig-paths": "^4.3.2",
+    "yaml": "^2.4.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "proxy": "http://localhost:8080",
   "eslintConfig": {
@@ -53,8 +56,8 @@
     ]
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^5.28.8",
-    "@types/node": "^20.11.30",
+    "@tanstack/react-query-devtools": "^5.28.14",
+    "@types/node": "^20.12.4",
     "@types/styled-components": "^5.1.34"
   }
 }

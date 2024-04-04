@@ -10,13 +10,13 @@ type Props = {
 };
 
 /**
- * fetchJSON will retrieve JSON data from a URL using the specified method, headers, and body
+ * Returns the JSON response from the server
  *
  * @param url - The URL to fetch data from
- * @param method - The HTTP method to use, either GET or POST
+ * @param method - The HTTP method to use
  * @param headers - Optional headers to include in the request
  * @param body - Optional request body, applicable for POST requests
- * @returns The JSON data returned from the request
+ * @returns The JSON data returned from the request to the server
  */
 const fetchJSON = async <T,>({
   url,

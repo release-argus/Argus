@@ -22,6 +22,14 @@ import { formatRelative } from "date-fns";
 import reducerActionModal from "reducers/action-release";
 import { useDelayedRender } from "hooks/delayed-render";
 
+/**
+ * Returns whether the service is sending any commands or webhooks
+ *
+ * @param serviceName - The service name
+ * @param sentCommands - The sent commands
+ * @param sentWebHooks - The sent webhooks
+ * @returns Whether the service is sending any commands or webhooks
+ */
 const isSendingService = (
   serviceName: string,
   sentCommands: string[],
@@ -37,6 +45,10 @@ const isSendingService = (
   return false;
 };
 
+/**
+ * @returns The action release modal, which allows the user to send/retry
+ * sending webhooks or commands as long as they are runnable.
+ */
 const ActionReleaseModal = () => {
   // modal.actionType:
   // RESEND - 0 WebHooks failed. Resend Modal
@@ -110,10 +122,12 @@ const ActionReleaseModal = () => {
       isWebHook: boolean;
       unspecificTarget: boolean;
     }) =>
-      fetchJSON({url: `api/v1/service/actions/${encodeURIComponent(data.service)}`,
+      fetchJSON({
+        url: `api/v1/service/actions/${encodeURIComponent(data.service)}`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: data.target })}),
+        body: JSON.stringify({ target: data.target }),
+      }),
     onMutate: (data) => {
       if (data.target === "ARGUS_SKIP") return;
 
@@ -212,7 +226,8 @@ const ActionReleaseModal = () => {
     queryKey: ["actions", { service: modal.service.id }],
     queryFn: () =>
       fetchJSON({
-        url: `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`}),
+        url: `api/v1/service/actions/${encodeURIComponent(modal.service.id)}`,
+      }),
     enabled: modal.actionType !== "EDIT" && modal.service.id !== "",
     refetchOnMount: "always",
   });

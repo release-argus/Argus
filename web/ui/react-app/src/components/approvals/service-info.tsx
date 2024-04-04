@@ -20,6 +20,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
+import { isEmptyOrNull } from "utils";
 
 interface Props {
   service: ServiceSummaryType;
@@ -28,6 +29,16 @@ interface Props {
   setShowUpdateInfo: () => void;
 }
 
+/**
+ * Returns the service's information, including the lqtest version, the deployed version,
+ * the last time the service was queried, and the update options if latest and deployed versions differ.
+ *
+ * @param service - The service the information belongs to
+ * @param updateAvailable - Whether an update is available
+ * @param updateSkipped - Whether the update has been skipped
+ * @param setShowUpdateInfo - Function to show the update information
+ * @returns A component that displays the service's version information
+ */
 export const ServiceInfo: FC<Props> = ({
   service,
   updateAvailable,
@@ -43,20 +54,18 @@ export const ServiceInfo: FC<Props> = ({
     [handleModal]
   );
 
-  // If version hasn't been found or a new version has been found
-  const serviceWarning = useMemo(
-    () =>
-      service?.status?.deployed_version === undefined ||
-      service?.status?.deployed_version === "" ||
-      (updateAvailable && !updateSkipped),
+  const status = useMemo(
+    () => ({
+      // If version hasn't been found or a new version has been found (and not skipped)
+      warning:
+        isEmptyOrNull(service?.status?.deployed_version) ||
+        (updateAvailable && !updateSkipped),
+      // If the latest version is the same as the approved version
+      updateApproved:
+        service?.status?.latest_version !== undefined &&
+        service.status.latest_version === service?.status?.approved_version,
+    }),
     [service, updateAvailable, updateSkipped]
-  );
-
-  const updateApproved = useMemo(
-    () =>
-      service?.status?.latest_version !== undefined &&
-      service.status.latest_version === service?.status?.approved_version,
-    [service]
   );
 
   const deployedVersionIcon = service.has_deployed_version ? (
@@ -130,7 +139,7 @@ export const ServiceInfo: FC<Props> = ({
       style={{
         padding: "0px",
       }}
-      className={serviceWarning ? "service-warning rounded-bottom" : "default"}
+      className={status.warning ? "service-warning rounded-bottom" : "default"}
     >
       <ListGroup className="list-group-flush">
         {updateAvailable && !updateSkipped ? (
@@ -140,7 +149,7 @@ export const ServiceInfo: FC<Props> = ({
               className={"service-item update-options service-warning"}
               variant="secondary"
             >
-              {updateApproved && (service.webhook || service.command)
+              {status.updateApproved && (service.webhook || service.command)
                 ? `${service.webhook ? "WebHooks" : "Commands"} already sent:`
                 : "Update available:"}
             </ListGroup.Item>
@@ -165,7 +174,7 @@ export const ServiceInfo: FC<Props> = ({
                 }`}
                 variant="success"
                 onClick={() =>
-                  showModal(updateApproved ? "RESEND" : "SEND", service)
+                  showModal(status.updateApproved ? "RESEND" : "SEND", service)
                 }
                 disabled={!(service.webhook || service.command)}
               >
@@ -189,7 +198,7 @@ export const ServiceInfo: FC<Props> = ({
         ) : (
           <ListGroup.Item
             key="deployed_v"
-            variant={serviceWarning ? "warning" : "secondary"}
+            variant={status.warning ? "warning" : "secondary"}
             className={
               "service-item" +
               (service.webhook || service.command ? "" : " justify-left")
@@ -236,7 +245,7 @@ export const ServiceInfo: FC<Props> = ({
       </ListGroup>
       <Card.Footer
         className={
-          serviceWarning || !service?.status?.last_queried
+          status.warning || !service?.status?.last_queried
             ? "service-warning rounded-bottom"
             : ""
         }
@@ -244,7 +253,7 @@ export const ServiceInfo: FC<Props> = ({
         <small
           className={
             "text-muted same-color" +
-            (serviceWarning ? " service-warning rounded-bottom" : "")
+            (status.warning ? " service-warning rounded-bottom" : "")
           }
         >
           {service?.status?.last_queried ? (

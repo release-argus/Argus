@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 
 /**
- * useDelayedRender is a hook to delay rendering of a component
+ * Returns the component after a delay
  *
- * @param delay - The delay in milliseconds
+ * @param delay - The delay to wait before rendering
  * @returns A function to render the component after the delay
  */
 export const useDelayedRender = (delay: number): any => {

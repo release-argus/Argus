@@ -15,6 +15,7 @@ import { FormLabel } from "components/generic/form";
 import { NotifyOpsGenieTarget } from "types/config";
 import OpsGenieTarget from "./target";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -54,18 +55,16 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      defaults &&
-      diffObjects(fieldValues ?? fields ?? [], defaults, [
-        ".type",
-        ".sub_type",
-      ]),
+      isEmptyArray(defaults)
+        ? false
+        : !diffObjects(fieldValues, defaults, [".type", ".sub_type"]),
     [fieldValues, defaults]
   );
   useEffect(() => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0)
+    if ((fieldValues ?? [])?.length === 0)
       defaults?.forEach((dflt) => {
         append(
           { type: dflt.type, sub_type: dflt.sub_type, value: "" },
@@ -108,20 +107,18 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
         </Col>
       </Row>
       <Stack>
-        {fields.map(({ id }, index) => {
-          return (
-            <Row key={id}>
-              <OpsGenieTarget
-                name={`${name}.${index}`}
-                removeMe={
-                  // Give the remove that's disabled if there's only one item and it matches the defaults
-                  fieldValues?.length === 1 ? removeLast : () => remove(index)
-                }
-                defaults={useDefaults ? defaults?.[index] : undefined}
-              />
-            </Row>
-          );
-        })}
+        {fields.map(({ id }, index) => (
+          <Row key={id}>
+            <OpsGenieTarget
+              name={`${name}.${index}`}
+              removeMe={
+                // Give the remove that's disabled if there's only one item and it matches the defaults
+                fieldValues?.length === 1 ? removeLast : () => remove(index)
+              }
+              defaults={useDefaults ? defaults?.[index] : undefined}
+            />
+          </Row>
+        ))}
       </Stack>
     </FormGroup>
   );

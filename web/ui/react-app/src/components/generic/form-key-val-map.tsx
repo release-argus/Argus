@@ -7,14 +7,15 @@ import {
   Stack,
 } from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
-import { HeaderType, NotifyHeaderType } from "types/config";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import FormKeyVal from "./form-key-val";
 import { FormLabel } from "components/generic/form";
+import { HeaderType } from "types/config";
 import { diffObjects } from "utils/diff-objects";
+import { isEmptyArray } from "utils";
 
 interface Props {
   name: string;
@@ -27,7 +28,7 @@ interface Props {
 }
 
 /**
- * FormKeyValMap is the form fields for a key-value map
+ * Returns the form fields for a key-value map
  *
  * @param name - The name of the field in the form
  * @param label - The label for the field
@@ -35,7 +36,7 @@ interface Props {
  * @param keyPlaceholder - The placeholder for the key field
  * @param valuePlaceholder - The placeholder for the value field
  * @param defaults - The default values for the field
- * @returns Form field for a key-value map
+ * @returns The form fields for a key-value map at name with a label and tooltip
  */
 const FormKeyValMap: FC<Props> = ({
   name,
@@ -55,11 +56,11 @@ const FormKeyValMap: FC<Props> = ({
   }, []);
 
   // keep track of the array values so we can switch defaults when they're unchanged
-  const fieldValues: NotifyHeaderType[] = useWatch({ name: name });
+  const fieldValues: HeaderType[] = useWatch({ name: name });
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      (defaults && diffObjects(fieldValues ?? fields ?? [], defaults)) ?? false,
+      isEmptyArray(defaults) ? false : !diffObjects(fieldValues, defaults),
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
@@ -67,7 +68,7 @@ const FormKeyValMap: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0)
+    if ((fieldValues ?? []).length === 0)
       defaults?.forEach(() => {
         addItem();
       });

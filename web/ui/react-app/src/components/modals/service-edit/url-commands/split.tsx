@@ -1,10 +1,10 @@
 import { FormItem } from "components/generic/form";
 
 /**
- * SPLIT renders the form fields for the Split URL Command
+ * Returns the form fields for a `Split` url_command
  *
  * @param name - The name of the field in the form
- * @returns The form fields for this Split URL Command
+ * @returns The form fields for this Split url_command
  */
 const SPLIT = ({ name }: { name: string }) => (
   <>
@@ -26,7 +26,7 @@ const SPLIT = ({ name }: { name: string }) => (
       required
       col_xs={2}
       col_sm={2}
-      type="number"
+      isNumber
       position="right"
     />
   </>

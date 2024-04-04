@@ -3,29 +3,29 @@ import { FormItem, FormLabel } from "components/generic/form";
 import { BooleanWithDefault } from "components/generic";
 import { NotifyGotifyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
 /**
- * GOTIFY renders the form fields for the Gotify Notify
+ * Returns the form fields for `Gotify`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Gotify Notify
- * @param defaults - The default values for the Gotify Notify
- * @param hard_defaults - The hard default values for the Gotify Notify
- * @returns The form fields for this Gotify Notify
+ * @param name - The path to this `Gotify` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Gotify` `Notify`
  */
 const GOTIFY = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyGotifyType;
+  main?: NotifyGotifyType;
   defaults?: NotifyGotifyType;
   hard_defaults?: NotifyGotifyType;
 }) => {
@@ -34,22 +34,22 @@ const GOTIFY = ({
       // URL Fields
       url_fields: {
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         path: firstNonDefault(
-          global?.url_fields?.path,
+          main?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
@@ -59,36 +59,36 @@ const GOTIFY = ({
         disabletls:
           strToBool(
             firstNonDefault(
-              global?.params?.disabletls,
+              main?.params?.disabletls,
               defaults?.params?.disabletls,
               hard_defaults?.params?.disabletls
             )
           ) ?? false,
         priority: firstNonDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           required
@@ -115,6 +115,7 @@ const GOTIFY = ({
               <span className="bold-underline">path</span>
             </>
           }
+          isNumber
           defaultVal={convertedDefaults.url_fields.path}
         />
         <FormItem
@@ -125,13 +126,13 @@ const GOTIFY = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.priority`}
           col_sm={2}
-          type="number"
           label="Priority"
+          isNumber
           defaultVal={convertedDefaults.params.priority}
         />
         <FormItem

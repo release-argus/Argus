@@ -2,28 +2,28 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyRocketChatType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * ROCKET_CHAT renders the form fields for the Rocket.Chat Notify
+ * Returns the form fields for `Rocket.Chat`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Rocket.Chat Notify
- * @param defaults - The default values for the Rocket.Chat Notify
- * @param hard_defaults - The hard default values for the Rocket.Chat Notify
- * @returns The form fields for this Rocket.Chat Notify
+ * @param name - The path to this `Rocket.Chat` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Rocket.Chat` `Notify`
  */
 const ROCKET_CHAT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyRocketChatType;
+  main?: NotifyRocketChatType;
   defaults?: NotifyRocketChatType;
   hard_defaults?: NotifyRocketChatType;
 }) => {
@@ -32,55 +32,55 @@ const ROCKET_CHAT = ({
       // URL Fields
       url_fields: {
         channel: firstNonDefault(
-          global?.url_fields?.channel,
+          main?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         ),
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         path: firstNonDefault(
-          global?.url_fields?.path,
+          main?.url_fields?.path,
           defaults?.url_fields?.path,
           hard_defaults?.url_fields?.path
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
         tokena: firstNonDefault(
-          global?.url_fields?.tokena,
+          main?.url_fields?.tokena,
           defaults?.url_fields?.tokena,
           hard_defaults?.url_fields?.tokena
         ),
         tokenb: firstNonDefault(
-          global?.url_fields?.tokenb,
+          main?.url_fields?.tokenb,
           defaults?.url_fields?.tokenb,
           hard_defaults?.url_fields?.tokenb
         ),
         username: firstNonDefault(
-          global?.url_fields?.username,
+          main?.url_fields?.username,
           defaults?.url_fields?.username,
           hard_defaults?.url_fields?.username
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           required
@@ -90,11 +90,11 @@ const ROCKET_CHAT = ({
           defaultVal={convertedDefaults.url_fields.host}
         />
         <FormItem
-          required
           name={`${name}.url_fields.port`}
+          required
           col_sm={3}
-          type="number"
           label="Port"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
           position="right"
         />

@@ -20,13 +20,13 @@ interface Props {
 }
 
 /**
- * EditServiceDeployedVersion renders the form fields for the deployed version
+ * Returns the `deployed_version` form fields
  *
  * @param serviceName - The name of the service
- * @param original - The original values for the deployed version
- * @param defaults - The default values for the deployed version
- * @param hard_defaults - The hard default values for the deployed version
- * @returns The form fields for the deployed version
+ * @param original - The original values of the form
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default
+ * @returns The form fields for the `deployed_version`
  */
 const EditServiceDeployedVersion: FC<Props> = ({
   serviceName,
@@ -37,7 +37,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
   const { setValue } = useFormContext();
 
   // RegEx Template toggle
-  const templateToggle: boolean | undefined = useWatch({
+  const templateToggle: boolean = useWatch({
     name: "deployed_version.template_toggle",
   });
   useEffect(() => {
@@ -52,12 +52,6 @@ const EditServiceDeployedVersion: FC<Props> = ({
     () => ({
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
-      json: defaults?.json || hard_defaults?.json,
-      password:
-        defaults?.basic_auth?.password || hard_defaults?.basic_auth?.password,
-      regex: defaults?.regex || hard_defaults?.regex,
-      username:
-        defaults?.basic_auth?.username || hard_defaults?.basic_auth?.username,
     }),
     [defaults, hard_defaults]
   );
@@ -87,14 +81,12 @@ const EditServiceDeployedVersion: FC<Props> = ({
               name="deployed_version.basic_auth.username"
               col_xs={6}
               label="Username"
-              defaultVal={convertedDefaults.username}
             />
             <FormItem
               key="password"
               name="deployed_version.basic_auth.password"
               col_xs={6}
               label="Password"
-              defaultVal={convertedDefaults.password}
               position="right"
             />
           </Row>
@@ -111,7 +103,6 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">data.version</span>
               </>
             }
-            defaultVal={convertedDefaults.json}
           />
           <FormItem
             name="deployed_version.regex"
@@ -125,7 +116,6 @@ const EditServiceDeployedVersion: FC<Props> = ({
                 <span className="bold-underline">v([0-9.]+)</span>
               </>
             }
-            defaultVal={convertedDefaults.regex}
             isRegex
             position="middle"
           />

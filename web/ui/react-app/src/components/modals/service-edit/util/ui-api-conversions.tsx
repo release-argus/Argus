@@ -1,22 +1,15 @@
 import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
-import {
-  Dict,
-  NotifyType,
-  ServiceType,
-  URLCommandType,
-  URLCommandTypes,
-  WebHookType,
-} from "types/config";
+import { Dict, NotifyType, ServiceType, WebHookType } from "types/config";
 
 import { convertValuesToString } from "./notify-string-string-map";
 import removeEmptyValues from "utils/remove-empty-values";
+import { urlCommandTrim } from "./url-command-trim";
 
 /**
- * convertUIServiceDataEditToAPI will convert the ServiceEditType to a ServiceType,
- * ready to be sent to the API
+ * Returns the properly formatted service data for the API
  *
- * @param data - The ServiceEditType to convert
- * @returns The ServiceType to send to the API
+ * @param data - The service to convert
+ * @returns The formatted service to send to the API
  */
 export const convertUIServiceDataEditToAPI = (
   data: ServiceEditType
@@ -41,8 +34,7 @@ export const convertUIServiceDataEditToAPI = (
     allow_invalid_certs: data.latest_version?.allow_invalid_certs,
     use_prerelease: data.latest_version?.use_prerelease,
     url_commands: data.latest_version?.url_commands?.map((command) => ({
-      ...urlCommandTrim(command),
-      type: command.type as URLCommandTypes,
+      ...urlCommandTrim(command, true),
       index: command.index ? Number(command.index) : undefined,
     })),
   };
@@ -87,12 +79,23 @@ export const convertUIServiceDataEditToAPI = (
   if (data.webhook)
     payload.webhook = data.webhook.reduce((acc, webhook) => {
       webhook = removeEmptyValues(webhook);
+      // Defaults were being shown if key/value were empty
+      const removeCustomHeaders = (webhook.custom_headers ?? []).find(
+        (header) => header.key === "" || header.value === ""
+      );
       acc[webhook.name as string] = {
         ...webhook,
-        desired_status_code: webhook?.desired_status_code
-          ? Number(webhook?.desired_status_code)
-          : undefined,
-        max_tries: webhook.max_tries ? Number(webhook.max_tries) : undefined,
+        custom_headers: removeCustomHeaders
+          ? undefined
+          : webhook.custom_headers,
+        desired_status_code:
+          webhook?.desired_status_code !== undefined
+            ? Number(webhook?.desired_status_code)
+            : undefined,
+        max_tries:
+          webhook.max_tries !== undefined
+            ? Number(webhook.max_tries)
+            : undefined,
       };
       return acc;
     }, {} as Dict<WebHookType>);
@@ -116,36 +119,11 @@ export const convertUIServiceDataEditToAPI = (
 };
 
 /**
- * urlCommandTrim will remove any keys not used for the type
+ * Returns a properly formatted notify object for the API
  *
- * @param command - The URLCommandType to trim
- * @returns The URLCommandType with only the relevant keys for the type
+ * @param notify - The notify object to convert
+ * @returns The notify object with string values and any empty values removed
  */
-const urlCommandTrim = (command: URLCommandType) => {
-  if (command.type === "regex")
-    return { type: "regex", regex: command.regex, template: command.template };
-  if (command.type === "replace")
-    return { type: "replace", old: command.old, new: command.new };
-  // else, it's a split
-  return {
-    type: "split",
-    text: command.text,
-    index: command.index ? Number(command.index) : undefined,
-  };
-};
-
-/**
- * urlCommandsTrim will remove any keys not used for the type for all URLCommandTypes in the list
- *
- * @param commands - The URLCommandType[] to trim
- * @returns The URLCommandType[] with only the relevant keys for each type
- */
-export const urlCommandsTrim = (commands: {
-  [key: string]: URLCommandType;
-}) => {
-  return Object.values(commands).map((value) => urlCommandTrim(value));
-};
-
 export const convertNotifyToAPI = (notify: NotifyEditType) => {
   notify = removeEmptyValues(notify);
   if (notify?.url_fields)

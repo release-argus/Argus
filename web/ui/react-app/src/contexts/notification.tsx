@@ -18,14 +18,23 @@ interface NotificationCtx {
   removeNotification: (id: number | undefined) => void;
 }
 
+/**
+ * The notification context, which provides notifications to the application.
+ *
+ * @param notifications - The notifications to display
+ * @param addNotification - Function to add a notification
+ * @param removeNotification - Function to remove a notification
+ * @returns The notification context
+ */
 const NotificationContext = createContext<NotificationCtx>({
   notifications: [],
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  addNotification: (notification: NotificationType) => {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
-  removeNotification: (id: number | undefined) => {},
+  addNotification: (_notification: NotificationType) => {},
+  removeNotification: (_id: number | undefined) => {},
 });
 
+/**
+ * @returns The notification provider, which provides notifications to the application.
+ */
 const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
 

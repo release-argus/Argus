@@ -7,29 +7,29 @@ import {
 import { BooleanWithDefault } from "components/generic";
 import { NotifyDiscordType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { strToBool } from "utils";
 import { useMemo } from "react";
 
 /**
- * DISCORD renders the form fields for the Discord Notify
+ * Returns the form fields for `Discord`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Discord Notify
- * @param defaults - The default values for the Discord Notify
- * @param hard_defaults - The hard default values for the Discord Notify
- * @returns The form fields for this Discord Notify
+ * @param name - The path to this `Discord` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Discord` `Notify`
  */
 const DISCORD = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyDiscordType;
+  main?: NotifyDiscordType;
   defaults?: NotifyDiscordType;
   hard_defaults?: NotifyDiscordType;
 }) => {
@@ -38,12 +38,12 @@ const DISCORD = ({
       // URL Fields
       url_fields: {
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
         webhookid: firstNonDefault(
-          global?.url_fields?.webhookid,
+          main?.url_fields?.webhookid,
           defaults?.url_fields?.webhookid,
           hard_defaults?.url_fields?.webhookid
         ),
@@ -51,42 +51,42 @@ const DISCORD = ({
       // Params
       params: {
         avatar: firstNonDefault(
-          global?.params?.avatar,
+          main?.params?.avatar,
           defaults?.params?.avatar,
           hard_defaults?.params?.avatar
         ),
         splitlines:
           strToBool(
             firstNonDefault(
-              global?.splitlines,
+              main?.splitlines,
               defaults?.splitlines,
               hard_defaults?.splitlines
             )
           ) ?? true,
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
         username: firstNonDefault(
-          global?.params?.username,
+          main?.params?.username,
           defaults?.params?.username,
           hard_defaults?.params?.username
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.webhookid`}
           required
@@ -114,8 +114,8 @@ const DISCORD = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItemWithPreview
           name={`${name}.params.avatar`}
           label="Avatar"

@@ -20,6 +20,14 @@ interface Props {
   original?: LatestVersionLookupEditType | DeployedVersionLookupType;
 }
 
+/**
+ * Returns the version with a button to refresh
+ *
+ * @param vType - 0: Latest, 1: Deployed
+ * @param serviceName - The name of the service
+ * @param original - The original values in the form
+ * @returns The version with a button to refresh the version
+ */
 const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const [lastFetched, setLastFetched] = useState(0);
   const { monitorData } = useWebSocket();
@@ -84,10 +92,9 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       refetchSemanticVersioning();
       refetchData();
       // setTimeout to allow time for refetches ^
-      setTimeout(() => {
-        refetchVersion();
-      });
+      const timeout = setTimeout(() => refetchVersion());
       setLastFetched(currentTime);
+      return () => clearTimeout(timeout);
     }
   };
 

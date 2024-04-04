@@ -7,6 +7,7 @@ import {
 } from "types/config";
 import { FC, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { firstNonDefault, isEmptyOrNull } from "utils";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import Command from "./command";
@@ -23,11 +24,11 @@ type Props = {
 };
 
 /**
- * EditServiceLatestVersionRequire renders the form fields for the latest version require
+ * Returns the `latest_version.require` form fields
  *
- * @param defaults - The default values for the latest version require
- * @param hard_defaults - The hard default values for the latest version require
- * @returns The form fields for the latest version require
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for the `latest_version.require`
  */
 const EditServiceLatestVersionRequire: FC<Props> = ({
   defaults,
@@ -68,12 +69,14 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
     () =>
       selectedDockerRegistry
         ? {
-            token:
-              defaults?.docker?.[selectedDockerRegistry]?.token ||
-              hard_defaults?.docker?.[selectedDockerRegistry]?.token,
-            username:
-              defaults?.docker?.[selectedDockerRegistry]?.username ||
-              hard_defaults?.docker?.[selectedDockerRegistry]?.username,
+            token: firstNonDefault(
+              defaults?.docker?.[selectedDockerRegistry]?.token,
+              hard_defaults?.docker?.[selectedDockerRegistry]?.token
+            ),
+            username: firstNonDefault(
+              defaults?.docker?.[selectedDockerRegistry]?.username,
+              hard_defaults?.docker?.[selectedDockerRegistry]?.username
+            ),
           }
         : {
             token: undefined,
@@ -84,7 +87,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 
   useEffect(() => {
     // Default to Docker Hub if no registry is selected and no default registry.
-    if ((selectedDockerRegistry ?? "") === "")
+    if (isEmptyOrNull(selectedDockerRegistry))
       setValue("latest_version.require.docker.type", "hub");
   }, []);
 

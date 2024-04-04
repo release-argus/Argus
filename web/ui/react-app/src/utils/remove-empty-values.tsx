@@ -1,4 +1,12 @@
-// removeEmptyValues will remove all empty strings/lists from an object recursively
+/**
+ * Recursively trims the object, removing empty objects/values.
+ *
+ * @param obj - The object to remove empty values from
+ * @returns The object with all empty values removed
+ */
+
+import isEmptyOrNull from "./is-empty-or-null";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeEmptyValues = (obj: { [x: string]: any }) => {
   for (const key in obj) {
@@ -13,12 +21,12 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
       // Check object
       removeEmptyValues(obj[key]);
       // Empty object
-      if (obj[key] == null || Object.keys(obj[key]).length === 0) {
+      if (Object.keys(obj[key] ?? []).length === 0) {
         delete obj[key];
         continue;
       }
       // "" Empty/undefined string
-    } else if (obj[key] === "" || obj[key] === undefined) delete obj[key];
+    } else if (isEmptyOrNull(obj[key])) delete obj[key];
   }
   return obj;
 };

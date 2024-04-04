@@ -2,19 +2,28 @@ import { FormLabel, FormTextArea } from "components/generic/form";
 
 import { NotifyGoogleChatType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
+/**
+ * Returns the form fields for `Google Chat`
+ *
+ * @param name - The path to this `Google Chat` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Google Chat` `Notify`
+ */
 const GOOGLE_CHAT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyGoogleChatType;
+  main?: NotifyGoogleChatType;
   defaults?: NotifyGoogleChatType;
   hard_defaults?: NotifyGoogleChatType;
 }) => {
@@ -23,25 +32,25 @@ const GOOGLE_CHAT = ({
       // URL Fields
       url_fields: {
         raw: firstNonDefault(
-          global?.url_fields?.raw,
+          main?.url_fields?.raw,
           defaults?.url_fields?.raw,
           hard_defaults?.url_fields?.raw
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormTextArea
           name={`${name}.url_fields.raw`}
           required

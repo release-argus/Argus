@@ -2,19 +2,28 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyPushbulletType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
+/**
+ * Returns the form fields for `PushBullet`
+ *
+ * @param name - The path to this `PushBullet` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `PushBullet` `Notify`
+ */
 const PUSHBULLET = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyPushbulletType;
+  main?: NotifyPushbulletType;
   defaults?: NotifyPushbulletType;
   hard_defaults?: NotifyPushbulletType;
 }) => {
@@ -23,12 +32,12 @@ const PUSHBULLET = ({
       // URL Fields
       url_fields: {
         targets: firstNonDefault(
-          global?.url_fields?.targets,
+          main?.url_fields?.targets,
           defaults?.url_fields?.targets,
           hard_defaults?.url_fields?.targets
         ),
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
@@ -36,25 +45,25 @@ const PUSHBULLET = ({
       // Params
       params: {
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.token`}
           required
@@ -71,8 +80,8 @@ const PUSHBULLET = ({
           defaultVal={convertedDefaults.url_fields.targets}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.title`}
           col_sm={12}

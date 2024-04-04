@@ -5,7 +5,7 @@ import { urlCommandsTrim } from "components/modals/service-edit/util";
 type DiffObject = { [key: string]: any };
 
 /**
- * deepDiff will compare two objects and return the differences between them
+ * Returns the differences between the two objects
  *
  * @param newObj - The new object to compare
  * @param oldObj - The old object to compare
@@ -63,8 +63,7 @@ export const deepDiff = (
 };
 
 /**
- * stringifyQueryParam will return a query param string for a given key/value pair
- * if value is undefined/null, it will return an empty string if omitUndefined is true
+ * Returns an encoded query param string for a given key/value pair
  *
  * @param key - The key of the query param
  * @param value - The value of the query param
@@ -80,6 +79,14 @@ export const stringifyQueryParam = (
     ? ""
     : `${key}=${encodeURIComponent(value ?? "")}`;
 
+/**
+ * Returns the query params for the given object changes
+ *
+ * @param params - The new object
+ * @param defaults - The old object
+ * @param prefix - The prefix of the query params
+ * @returns The query params of any changed values between the two objects
+ */
 export const convertToQueryParams = ({
   params,
   defaults,
@@ -122,7 +129,7 @@ export const convertToQueryParams = ({
       }
       // Include new undefined's in the JSONification
       else
-        modifiedObj = JSON.stringify(changedParams[key], (key, value) => {
+        modifiedObj = JSON.stringify(changedParams[key], (_key, value) => {
           if (value === undefined) {
             return null;
           }

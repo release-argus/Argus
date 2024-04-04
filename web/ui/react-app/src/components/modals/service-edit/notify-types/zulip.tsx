@@ -2,28 +2,28 @@ import { FormItem, FormLabel } from "components/generic/form";
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyZulipType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * ZULIP_CHAT renders the form fields for the Zulip Chat Notify
+ * Returns the form fields for `Zulip Chat`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Zulip Chat Notify
- * @param defaults - The default values for the Zulip Chat Notify
- * @param hard_defaults - The hard default values for the Zulip Chat Notify
- * @returns The form fields for this Zulip Chat Notify
+ * @param name - The path to this `Zulip Chat` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Zulip Chat` `Notify`
  */
 const ZULIP_CHAT = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyZulipType;
+  main?: NotifyZulipType;
   defaults?: NotifyZulipType;
   hard_defaults?: NotifyZulipType;
 }) => {
@@ -32,17 +32,17 @@ const ZULIP_CHAT = ({
       // URL Fields
       url_fields: {
         botkey: firstNonDefault(
-          global?.url_fields?.botkey,
+          main?.url_fields?.botkey,
           defaults?.url_fields?.botkey,
           hard_defaults?.url_fields?.botkey
         ),
         botmail: firstNonDefault(
-          global?.url_fields?.botmail,
+          main?.url_fields?.botmail,
           defaults?.url_fields?.botmail,
           hard_defaults?.url_fields?.botmail
         ),
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
@@ -50,30 +50,30 @@ const ZULIP_CHAT = ({
       // Params
       params: {
         stream: firstNonDefault(
-          global?.params?.stream,
+          main?.params?.stream,
           defaults?.params?.stream,
           hard_defaults?.params?.stream
         ),
         topic: firstNonDefault(
-          global?.params?.topic,
+          main?.params?.topic,
           defaults?.params?.topic,
           hard_defaults?.params?.topic
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.botmail`}
           required
@@ -97,8 +97,8 @@ const ZULIP_CHAT = ({
           defaultVal={convertedDefaults.url_fields.host}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.stream`}
           label="Stream"

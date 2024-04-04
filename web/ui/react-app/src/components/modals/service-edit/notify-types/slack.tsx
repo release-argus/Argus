@@ -7,28 +7,28 @@ import {
 
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifySlackType } from "types/config";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * SLACK renders the form fields for the Slack Notify
+ * Returns the form fields for `Slack`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this Slack Notify
- * @param defaults - The default values for the Slack Notify
- * @param hard_defaults - The hard default values for the Slack Notify
- * @returns The form fields for this Slack Notify
+ * @param name - The path to this `Slack` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Slack` `Notify`
  */
 const SLACK = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifySlackType;
+  main?: NotifySlackType;
   defaults?: NotifySlackType;
   hard_defaults?: NotifySlackType;
 }) => {
@@ -37,12 +37,12 @@ const SLACK = ({
       // URL Fields
       url_fields: {
         channel: firstNonDefault(
-          global?.url_fields?.channel,
+          main?.url_fields?.channel,
           defaults?.url_fields?.channel,
           hard_defaults?.url_fields?.channel
         ),
         token: firstNonDefault(
-          global?.url_fields?.token,
+          main?.url_fields?.token,
           defaults?.url_fields?.token,
           hard_defaults?.url_fields?.token
         ),
@@ -50,40 +50,40 @@ const SLACK = ({
       // Params
       params: {
         botname: firstNonDefault(
-          global?.params?.botname,
+          main?.params?.botname,
           defaults?.params?.botname,
           hard_defaults?.params?.botname
         ),
         color: firstNonDefault(
-          global?.params?.color,
+          main?.params?.color,
           defaults?.params?.color,
           hard_defaults?.params?.color
         ),
         icon: firstNonDefault(
-          global?.params?.icon,
+          main?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.token`}
           required
@@ -106,8 +106,8 @@ const SLACK = ({
           position="right"
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.botname`}
           label="Bot Name"

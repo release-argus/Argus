@@ -7,13 +7,15 @@ import {
   Stack,
 } from "react-bootstrap";
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
-import { HeaderType, NotifyNtfyAction } from "types/config";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { isEmptyArray, isEmptyOrNull } from "utils";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
+import { NotifyNtfyAction } from "types/config";
 import NtfyAction from "./action";
+import { convertNtfyActionsFromString } from "components/modals/service-edit/util";
 import { diffObjects } from "utils/diff-objects";
 
 interface Props {
@@ -54,50 +56,25 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // useDefaults when the fieldValues are unset or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      defaults &&
-      diffObjects(fieldValues ?? fields ?? [], defaults, [".action"]),
+      isEmptyArray(defaults)
+        ? false
+        : !diffObjects(fieldValues, defaults, [".action"]),
     [fieldValues, defaults]
+  );
+
+  // Keep only selects/length of arrays
+  const trimmedDefaults = useMemo(
+    () => convertNtfyActionsFromString(undefined, JSON.stringify(defaults)),
+    [defaults]
   );
   // trigger validation on change of defaults being used/not
   useEffect(() => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? fields ?? [])?.length === 0) {
-      defaults?.forEach((dflt) => {
-        if (dflt.action === undefined) return;
-
-        // HTTP
-        if (dflt.action === "http") {
-          const headers = ((dflt?.headers ?? []) as HeaderType[]).map(
-            () => ({})
-          );
-          append(
-            { action: dflt.action, headers: headers },
-            { shouldFocus: false }
-          );
-        }
-
-        // Broadcast
-        else if (dflt.action === "broadcast") {
-          const extras = ((dflt?.extras ?? []) as HeaderType[]).map(() => ({}));
-          append(
-            {
-              action: dflt.action,
-              label: "",
-              url: "",
-              method: "",
-              headers: [],
-              body: "",
-              intent: "",
-              extras: extras,
-            },
-            { shouldFocus: false }
-          );
-        }
-
-        // View
-        else append({ action: dflt.action }, { shouldFocus: false });
+    if ((fieldValues ?? []).length === 0) {
+      trimmedDefaults.forEach((dflt) => {
+        append(dflt, { shouldFocus: false });
       });
     }
   }, [useDefaults]);
@@ -106,8 +83,8 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // and give the defaults if not overridden
   useEffect(() => {
     // ensure we don't have another types actions
-    for (const item of fieldValues ?? fields ?? []) {
-      if ((item.action ?? "") === "") {
+    for (const item of fieldValues ?? []) {
+      if (isEmptyOrNull(item.action)) {
         setValue(name, []);
         break;
       }

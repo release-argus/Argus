@@ -25,6 +25,16 @@ type Props = {
   setValues: React.Dispatch<React.SetStateAction<ApprovalsToolbarOptions>>;
 };
 
+/**
+ * Returns the toolbar for the approvals page, which includes a search bar, hide options, and edit mode toggle.
+ * - Hide options - Select box with filters to hide services that are up-to-date, updatable, skipped, or inactive.
+ * - Edit mode - Toggles the ability to add/edit services.
+ * - Search bar - Filter services by name.
+ *
+ * @param values - The values of the toolbar
+ * @param setValues - The function to set the values of the toolbar
+ * @returns A component that displays the toolbar for the approvals page
+ */
 const ApprovalsToolbar: FC<Props> = ({ values, setValues }) => {
   const setValue = (param: keyof typeof values, value: TypeMappingItem) => {
     setValues((prevState) => ({

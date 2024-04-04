@@ -10,16 +10,26 @@ interface Props {
   serviceName: string;
 
   originals?: NotifyEditType[];
-  globals?: Dict<NotifyType>;
+  mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
   hard_defaults?: Dict<NotifyType>;
 }
 
+/**
+ * Returns the form fields for `notify`
+ *
+ * @param serviceName - The name of the service
+ * @param originals - The original values in the form
+ * @param mains - The main notify's
+ * @param defaults - The default values for each `notify` types
+ * @param hard_defaults - The hard default values for each `notify` types
+ * @returns The form fields for `notify`
+ */
 const EditServiceNotifys: FC<Props> = ({
   serviceName,
 
   originals,
-  globals,
+  mains,
   defaults,
   hard_defaults,
 }) => {
@@ -45,15 +55,15 @@ const EditServiceNotifys: FC<Props> = ({
         <option className="form-select-option" value="">
           --Not global--
         </option>
-        {globals &&
-          Object.keys(globals).map((n) => (
+        {mains &&
+          Object.keys(mains).map((n) => (
             <option className="form-select-option" value={n} key={n}>
               {n}
             </option>
           ))}
       </>
     ),
-    [globals]
+    [mains]
   );
 
   return (
@@ -68,8 +78,8 @@ const EditServiceNotifys: FC<Props> = ({
               removeMe={() => remove(index)}
               serviceName={serviceName}
               originals={originals}
-              globalNotifyOptions={globalNotifyOptions}
-              globals={globals}
+              globalOptions={globalNotifyOptions}
+              mains={mains}
               defaults={defaults}
               hard_defaults={hard_defaults}
             />

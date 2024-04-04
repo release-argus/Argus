@@ -6,19 +6,28 @@ import {
 
 import { NotifyJoinType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
+/**
+ * Returns the form fields for `Join`
+ *
+ * @param name - The path to this `Join` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `Join` `Notify`
+ */
 const JOIN = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyJoinType;
+  main?: NotifyJoinType;
   defaults?: NotifyJoinType;
   hard_defaults?: NotifyJoinType;
 }) => {
@@ -27,7 +36,7 @@ const JOIN = ({
       // URL Fields
       url_fields: {
         apikey: firstNonDefault(
-          global?.url_fields?.apikey,
+          main?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
         ),
@@ -35,35 +44,35 @@ const JOIN = ({
       // Params
       params: {
         devices: firstNonDefault(
-          global?.params?.devices,
+          main?.params?.devices,
           defaults?.params?.devices,
           hard_defaults?.params?.devices
         ),
         icon: firstNonDefault(
-          global?.params?.icon,
+          main?.params?.icon,
           defaults?.params?.icon,
           hard_defaults?.params?.icon
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.apikey`}
           required
@@ -72,8 +81,8 @@ const JOIN = ({
           defaultVal={convertedDefaults.url_fields.apikey}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormItem
           name={`${name}.params.devices`}
           required

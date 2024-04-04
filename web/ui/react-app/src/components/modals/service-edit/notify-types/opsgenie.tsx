@@ -13,28 +13,28 @@ import {
 import { NotifyOpsGenieType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { OpsGenieTargets } from "components/modals/service-edit/notify-types/extra";
-import { firstNonDefault } from "components/modals/service-edit/notify-types/util";
+import { firstNonDefault } from "utils";
 import { useMemo } from "react";
 
 /**
- * OPSGENIE renders the form fields for the OpsGenie Notify
+ * Returns the form fields for `OpsGenie`
  *
- * @param name - The name of the field in the form
- * @param global - The global values for this OpsGenie Notify
- * @param defaults - The default values for the OpsGenie Notify
- * @param hard_defaults - The hard default values for the OpsGenie Notify
- * @returns The form fields for this OpsGenie Notify
+ * @param name - The path to this `OpsGenie` in the form
+ * @param main - The main values
+ * @param defaults - The default values
+ * @param hard_defaults - The hard default values
+ * @returns The form fields for this `OpsGenie` `Notify`
  */
 const OPSGENIE = ({
   name,
 
-  global,
+  main,
   defaults,
   hard_defaults,
 }: {
   name: string;
 
-  global?: NotifyOpsGenieType;
+  main?: NotifyOpsGenieType;
   defaults?: NotifyOpsGenieType;
   hard_defaults?: NotifyOpsGenieType;
 }) => {
@@ -43,17 +43,17 @@ const OPSGENIE = ({
       // URL Fields
       url_fields: {
         apiKey: firstNonDefault(
-          global?.url_fields?.apikey,
+          main?.url_fields?.apikey,
           defaults?.url_fields?.apikey,
           hard_defaults?.url_fields?.apikey
         ),
         host: firstNonDefault(
-          global?.url_fields?.host,
+          main?.url_fields?.host,
           defaults?.url_fields?.host,
           hard_defaults?.url_fields?.host
         ),
         port: firstNonDefault(
-          global?.url_fields?.port,
+          main?.url_fields?.port,
           defaults?.url_fields?.port,
           hard_defaults?.url_fields?.port
         ),
@@ -62,92 +62,92 @@ const OPSGENIE = ({
       params: {
         actions: convertStringToFieldArray(
           firstNonDefault(
-            global?.params?.actions as string,
+            main?.params?.actions as string,
             defaults?.params?.actions as string,
             hard_defaults?.params?.actions as string
           )
         ),
         alias: firstNonDefault(
-          global?.params?.alias,
+          main?.params?.alias,
           defaults?.params?.alias,
           hard_defaults?.params?.alias
         ),
         description: firstNonDefault(
-          global?.params?.description,
+          main?.params?.description,
           defaults?.params?.description,
           hard_defaults?.params?.description
         ),
         details: convertHeadersFromString(
           firstNonDefault(
-            global?.params?.details as string,
+            main?.params?.details as string,
             defaults?.params?.details as string,
             hard_defaults?.params?.details as string
           )
         ),
         entity: firstNonDefault(
-          global?.params?.entity,
+          main?.params?.entity,
           defaults?.params?.entity,
           hard_defaults?.params?.entity
         ),
         note: firstNonDefault(
-          global?.params?.note,
+          main?.params?.note,
           defaults?.params?.note,
           hard_defaults?.params?.note
         ),
         priority: firstNonDefault(
-          global?.params?.priority,
+          main?.params?.priority,
           defaults?.params?.priority,
           hard_defaults?.params?.priority
         ),
         responders: convertOpsGenieTargetFromString(
           firstNonDefault(
-            global?.params?.responders as string,
+            main?.params?.responders as string,
             defaults?.params?.responders as string,
             hard_defaults?.params?.responders as string
           )
         ),
         source: firstNonDefault(
-          global?.params?.source,
+          main?.params?.source,
           defaults?.params?.source,
           hard_defaults?.params?.source
         ),
         tags: firstNonDefault(
-          global?.params?.tags,
+          main?.params?.tags,
           defaults?.params?.tags,
           hard_defaults?.params?.tags
         ),
         title: firstNonDefault(
-          global?.params?.title,
+          main?.params?.title,
           defaults?.params?.title,
           hard_defaults?.params?.title
         ),
         user: firstNonDefault(
-          global?.params?.user,
+          main?.params?.user,
           defaults?.params?.user,
           hard_defaults?.params?.user
         ),
         visibleto: convertOpsGenieTargetFromString(
           firstNonDefault(
-            global?.params?.visibleto as string,
+            main?.params?.visibleto as string,
             defaults?.params?.visibleto as string,
             hard_defaults?.params?.visibleto as string
           )
         ),
       },
     }),
-    [global, defaults, hard_defaults]
+    [main, defaults, hard_defaults]
   );
 
   return (
     <>
       <NotifyOptions
         name={name}
-        global={global?.options}
+        main={main?.options}
         defaults={defaults?.options}
         hard_defaults={hard_defaults?.options}
       />
+      <FormLabel text="URL Fields" heading />
       <>
-        <FormLabel text="URL Fields" heading />
         <FormItem
           name={`${name}.url_fields.host`}
           col_sm={9}
@@ -158,8 +158,8 @@ const OPSGENIE = ({
         <FormItem
           name={`${name}.url_fields.port`}
           col_sm={3}
-          type="number"
           label="Port"
+          isNumber
           defaultVal={convertedDefaults.url_fields.port}
           position="right"
         />
@@ -171,8 +171,8 @@ const OPSGENIE = ({
           defaultVal={convertedDefaults.url_fields.apiKey}
         />
       </>
+      <FormLabel text="Params" heading />
       <>
-        <FormLabel text="Params" heading />
         <FormList
           name={`${name}.params.actions`}
           label="Actions"
@@ -214,9 +214,9 @@ const OPSGENIE = ({
         />
         <FormItem
           name={`${name}.params.priority`}
-          type="number"
           label="Priority"
           tooltip="Priority level of the alert. 1/2/3/4/5"
+          isNumber
           defaultVal={convertedDefaults.params.priority}
           position="right"
         />
@@ -252,13 +252,13 @@ const OPSGENIE = ({
           defaultVal={convertedDefaults.params.user}
           position="right"
         />
+        <OpsGenieTargets
+          name={`${name}.params.visibleto`}
+          label="Visible To"
+          tooltip="Teams and users that the alert will become visible to without sending any notification"
+          defaults={convertedDefaults.params.visibleto}
+        />
       </>
-      <OpsGenieTargets
-        name={`${name}.params.visibleto`}
-        label="Visible To"
-        tooltip="Teams and users that the alert will become visible to without sending any notification"
-        defaults={convertedDefaults.params.visibleto}
-      />
     </>
   );
 };

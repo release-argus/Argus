@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import { MonitorSummaryType, ServiceSummaryType } from "types/summary";
 
 import { WebSocketResponse } from "types/websocket";
 import { fetchJSON } from "utils";
 
+/**
+ * Returns a reducer that handles actions on the monitor.
+ *
+ * @param state - The current state of the monitor
+ * @param action - The action to perform on the monitor
+ * @returns The new state of the monitor WebSocket
+ */
 export default function reducerMonitor(
   state: MonitorSummaryType,
   action: WebSocketResponse
@@ -159,7 +165,7 @@ export default function reducerMonitor(
         service.icon_link_to =
           action.service_data?.icon_link_to || service.icon_link_to;
         service.has_deployed_version =
-          action.service_data?.has_deployed_version ||
+          action.service_data?.has_deployed_version ??
           service.has_deployed_version;
         service.command = action.service_data?.command ?? service.command;
         service.webhook = action.service_data?.webhook ?? service.webhook;
