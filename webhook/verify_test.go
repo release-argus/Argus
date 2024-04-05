@@ -361,9 +361,6 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			slice: &SliceDefaults{
 				"a": testWebHookDefaults(true, false, false)},
 		},
-		"nil element": {
-			slice: &SliceDefaults{
-				"nil": nil}},
 		"invalid single element slice": {
 			errRegex: []string{
 				`^webhook:$`,

@@ -116,7 +116,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "no_main_no_type",
-				Type:        &typeWithNoDefaults,
+				Type:        typeWithNoDefaults,
 				URLFields:   typeWithNoDefaultsURLFields},
 			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
@@ -144,7 +144,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "no_main_with_type_and_defaults",
-				Type:        &typeWithDefaults,
+				Type:        typeWithDefaults,
 				URLFields:   typeWithDefaultsURLFields},
 			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
@@ -155,7 +155,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "main_no_type",
-				Type:        &typeWithNoDefaults},
+				Type:        typeWithNoDefaults},
 			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
 					Type: typeWithNoDefaults}},
@@ -170,7 +170,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "main_with_type_and_defaults",
-				Type:        &typeWithDefaults},
+				Type:        typeWithDefaults},
 			want: &Shoutrrr{
 				ShoutrrrBase: ShoutrrrBase{
 					Type: typeWithDefaults}},
@@ -179,7 +179,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "main_with_type_and_defaults",
-				Type:        &typeWithNoDefaults},
+				Type:        typeWithNoDefaults},
 			err: `type: "[^"]+" != "[^"]+"`,
 		},
 		"edit, have Main, have Defaults - Fail, Invalid field": {
@@ -222,7 +222,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			payload: TestPayload{
 				ServiceName: "test",
 				Name:        "main_not_on_service_with_defaults",
-				Type:        &typeWithNoDefaults},
+				Type:        typeWithNoDefaults},
 			err: `type: "[^"]+" != "[^"]+"`,
 		},
 	}

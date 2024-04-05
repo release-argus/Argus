@@ -821,7 +821,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	file := "TestHTTP_NotifyTest.yml"
 	api := testAPI(file)
 	defer os.RemoveAll(file)
-	validNotify := test.TestShoutrrr(false, false)
+	validNotify := test.Shoutrrr(false, false)
 	api.Config.Notify = shoutrrr.SliceDefaults{}
 	api.Config.Notify["test"] = shoutrrr.NewDefaults(
 		"gotify",
@@ -829,8 +829,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		test.CopyMapPtr(validNotify.Params),
 		test.CopyMapPtr(validNotify.URLFields))
 	api.Config.Service["test"].Notify = map[string]*shoutrrr.Shoutrrr{
-		"test":    test.TestShoutrrr(false, false),
-		"no_main": test.TestShoutrrr(false, false)}
+		"test":    test.Shoutrrr(false, false),
+		"no_main": test.Shoutrrr(false, false)}
 	tests := map[string]struct {
 		queryParams map[string]string
 		payload     string

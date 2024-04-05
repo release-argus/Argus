@@ -33,7 +33,7 @@ func testShoutrrrrGotifyToken() (token string) {
 	return
 }
 
-func TestShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefaults {
+func ShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefaults {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)
@@ -53,7 +53,7 @@ func TestShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrD
 	return shoutrrr
 }
 
-func TestShoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
+func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
 		url = strings.Replace(url, "valid", "invalid", 1)

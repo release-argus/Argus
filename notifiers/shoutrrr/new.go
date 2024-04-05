@@ -27,7 +27,7 @@ type TestPayload struct {
 	ServiceName  string            `json:"service_name"`
 	Name         string            `json:"name"`
 	NamePrevious string            `json:"name_previous"`
-	Type         *string           `json:"type,omitempty"`
+	Type         string            `json:"type,omitempty"`
 	Options      map[string]string `json:"options"`
 	URLFields    map[string]string `json:"url_fields"`
 	Params       map[string]string `json:"params"`
@@ -36,7 +36,7 @@ type TestPayload struct {
 }
 
 // FromPayload will create a Shoutrrr from a payload.
-// Copying any undefined values from the previous Service Notify.
+// Replacing any undefined values with that of the previous Notify.
 func FromPayload(
 	payload *TestPayload,
 	serviceNotifies *Slice,
@@ -51,21 +51,18 @@ func FromPayload(
 	}
 
 	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)
-	nType := util.DefaultIfNil(payload.Type)
 
 	// Original Notifier?
 	original := &Shoutrrr{}
 	if serviceNotifies != nil && (*serviceNotifies)[payload.NamePrevious] != nil {
 		original = (*serviceNotifies)[payload.NamePrevious]
-		// Copy that previous Notify Type
-		if payload.Type == nil {
-			nType = (*serviceNotifies)[payload.NamePrevious].Type
-		}
+		// Copy that previous Notify Type if not set
+		payload.Type = util.FirstNonDefault(payload.Type, (*serviceNotifies)[payload.NamePrevious].Type)
 	}
 
 	// Get the Type, Main, Defaults, and HardDefaults for this Notify
 	nType, main, dfault, hardDefault, err := sortDefaults(
-		name, nType,
+		name, payload.Type,
 		mains[name], defaults, hardDefaults)
 	if err != nil {
 		return

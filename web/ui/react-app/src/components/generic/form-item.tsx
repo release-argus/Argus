@@ -17,7 +17,7 @@ interface FormItemProps {
   label?: string;
   smallLabel?: boolean;
   tooltip?: string | JSX.Element;
-  type?: "text" | "number" | "url";
+  type?: "text" | "url";
 
   isNumber?: boolean;
   isRegex?: boolean;

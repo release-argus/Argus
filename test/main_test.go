@@ -1,0 +1,270 @@
+// Copyright [2024] [Argus]
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//go:build unit
+
+package test
+
+import "testing"
+
+func TestBoolPtr(t *testing.T) {
+	// GIVEN a boolean value
+	tests := map[string]struct {
+		val bool
+	}{
+		"true":  {val: true},
+		"false": {val: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN BoolPtr is called
+			result := BoolPtr(tc.val)
+
+			// THEN the result should be a pointer to the boolean value
+			if *result != tc.val {
+				t.Errorf("expected %t but got %t",
+					tc.val, *result)
+			}
+		})
+	}
+}
+
+func TestIntPtr(t *testing.T) {
+	// GIVEN an integer value
+	tests := map[string]struct {
+		val int
+	}{
+		"positive": {val: 1},
+		"zero":     {val: 0},
+		"negative": {val: -1},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN IntPtr is called
+			result := IntPtr(tc.val)
+
+			// THEN the result should be a pointer to the integer value
+			if *result != tc.val {
+				t.Errorf("expected %d but got %d",
+					tc.val, *result)
+			}
+		})
+	}
+}
+
+func TestStringPtr(t *testing.T) {
+	// GIVEN a string value
+	tests := map[string]struct {
+		val string
+	}{
+		"empty":     {val: ""},
+		"non-empty": {val: "hello"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN StringPtr is called
+			result := StringPtr(tc.val)
+
+			// THEN the result should be a pointer to the string value
+			if *result != tc.val {
+				t.Errorf("expected %q but got %q",
+					tc.val, *result)
+			}
+		})
+	}
+}
+
+func TestUIntPtr(t *testing.T) {
+	// GIVEN an integer value
+	tests := map[string]struct {
+		val uint
+	}{
+		"positive": {val: 1},
+		"zero":     {val: 0},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN UIntPtr is called
+			result := UIntPtr(int(tc.val))
+
+			// THEN the result should be a pointer to the unsigned integer value
+			if *result != uint(tc.val) {
+				t.Errorf("expected %d but got %d",
+					tc.val, *result)
+			}
+		})
+	}
+}
+
+func TestStringifyPtr(t *testing.T) {
+	// GIVEN a pointer to a value
+	tests := map[string]struct {
+		ptr  interface{}
+		want string
+	}{
+		"nil":           {ptr: nil, want: "nil"},
+		"int, positive": {ptr: IntPtr(1), want: "1"},
+		"int, negative": {ptr: IntPtr(-1), want: "-1"},
+		"string":        {ptr: StringPtr("hello"), want: "hello"},
+		"uint":          {ptr: UIntPtr(1), want: "1"},
+		"bool":          {ptr: BoolPtr(true), want: "true"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN StringifyPtr is called
+			var result string
+			switch v := tc.ptr.(type) {
+			case *bool:
+				result = StringifyPtr(v)
+			case *int:
+				result = StringifyPtr(v)
+			case *string:
+				result = StringifyPtr(v)
+			case *uint:
+				result = StringifyPtr(v)
+			case nil:
+				var nilPtr *int
+				result = StringifyPtr(nilPtr)
+			default:
+				t.Fatalf("unexpected type %T",
+					tc.ptr)
+			}
+
+			// THEN the result should be a string representation of the value
+			if result != tc.want {
+				t.Errorf("expected %q but got %q",
+					tc.want, result)
+			}
+		})
+	}
+}
+
+func TestCopyMapPtr(t *testing.T) {
+	// GIVEN a map
+	tests := map[string]struct {
+		tgt  map[string]string
+		want map[string]string
+	}{
+		"nil": {
+			tgt:  nil,
+			want: nil,
+		},
+		"empty": {
+			tgt:  map[string]string{},
+			want: map[string]string{},
+		},
+		"non-empty": {
+			tgt: map[string]string{
+				"key": "value",
+			},
+			want: map[string]string{
+				"key": "value",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN CopyMapPtr is called
+			result := CopyMapPtr(tc.tgt)
+
+			// THEN the result should be a pointer to a copy of the map
+			if len(*result) != len(tc.want) {
+				t.Errorf("length differs, expected %d but got %d",
+					len(tc.want), len(*result))
+			}
+			for k, v := range tc.want {
+				if (*result)[k] != v {
+					t.Errorf("%q: expected %q but got %q",
+						k, v, (*result)[k])
+				}
+			}
+		})
+	}
+}
+
+func TestTrimJSON(t *testing.T) {
+	// GIVEN a JSON string
+	tests := map[string]struct {
+		str  string
+		want string
+	}{
+		"empty": {
+			str:  "",
+			want: "",
+		},
+		"single line": {
+			str:  `{"key": "value"}`,
+			want: `{"key":"value"}`,
+		},
+		"multi line": {
+			str: `
+{
+"key": "value"
+}`,
+			want: `{"key":"value"}`,
+		},
+		"with tabs": {
+			str: `{
+				"key": "value"
+			}`,
+			want: `{"key":"value"}`,
+		},
+		"with spaces": {
+			str: `{
+				"key": "value"
+			}`,
+			want: `{"key":"value"}`,
+		},
+		"mixed": {
+			str: `{
+				"key": "value",
+				"key2": "value2"
+			}`,
+			want: `{"key":"value","key2":"value2"}`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN TrimJSON is called
+			result := TrimJSON(tc.str)
+
+			// THEN the result should be the JSON string without newlines and tabs
+			if result != tc.want {
+				t.Errorf("expected %q but got %q",
+					tc.want, result)
+			}
+		})
+	}
+}

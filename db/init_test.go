@@ -112,14 +112,14 @@ func TestCheckFile(t *testing.T) {
 func TestAPI_Initialise(t *testing.T) {
 	// GIVEN a config with a database location
 	cfg := testConfig()
-	api := api{config: cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestInitialise.db"
+	testAPI := api{config: cfg}
+	*testAPI.config.Settings.Data.DatabaseFile = "TestInitialise.db"
 
 	// WHEN the db is initialised with it
-	api.initialise()
+	testAPI.initialise()
 
 	// THEN the status table was created in the db
-	rows, err := api.db.Query(`
+	rows, err := testAPI.db.Query(`
 		SELECT	id,
 				latest_version,
 				latest_version_timestamp,
@@ -142,26 +142,26 @@ func TestAPI_Initialise(t *testing.T) {
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
+	testAPI.db.Close()
+	os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
 }
 
 func TestDBQueryService(t *testing.T) {
 	// GIVEN a blank DB
 	cfg := testConfig()
-	api := api{config: cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestQueryService.db"
-	api.initialise()
+	testAPI := api{config: cfg}
+	*testAPI.config.Settings.Data.DatabaseFile = "TestQueryService.db"
+	testAPI.initialise()
 	// Get a Service from the Config
 	var serviceName string
-	for k := range api.config.Service {
+	for k := range testAPI.config.Service {
 		serviceName = k
 		break
 	}
-	svc := api.config.Service[serviceName]
+	svc := testAPI.config.Service[serviceName]
 
 	// WHEN the database contains data for a Service
-	api.updateRow(
+	testAPI.updateRow(
 		serviceName,
 		[]dbtype.Cell{
 			{Column: "id", Value: serviceName},
@@ -172,7 +172,7 @@ func TestDBQueryService(t *testing.T) {
 			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}})
 
 	// THEN that data can be queried
-	got := queryRow(t, api.db, serviceName)
+	got := queryRow(t, testAPI.db, serviceName)
 	if (*svc).Status.LatestVersion() != got.LatestVersion() {
 		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
 			(*svc).Status.LatestVersion(), got.LatestVersion())
@@ -193,16 +193,16 @@ func TestDBQueryService(t *testing.T) {
 		t.Errorf("ApprovedVersion %q was not pushed to the db. Got %q",
 			(*svc).Status.ApprovedVersion(), got.ApprovedVersion())
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
+	testAPI.db.Close()
+	os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
 }
 
 func TestAPI_RemoveUnknownServices(t *testing.T) {
 	// GIVEN a DB with loads of service status'
 	cfg := testConfig()
-	api := api{config: cfg}
-	*api.config.Settings.Data.DatabaseFile = "TestRemoveUnknownServices.db"
-	api.initialise()
+	testAPI := api{config: cfg}
+	*testAPI.config.Settings.Data.DatabaseFile = "TestRemoveUnknownServices.db"
+	testAPI.initialise()
 	sqlStmt := `
 	INSERT OR REPLACE INTO status
 		(
@@ -214,7 +214,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			approved_version
 		)
 	VALUES`
-	for id, svc := range api.config.Service {
+	for id, svc := range testAPI.config.Service {
 		sqlStmt += fmt.Sprintf(" (%q, %q, %q, %q, %q, %q),",
 			id,
 			svc.Status.LatestVersion(),
@@ -224,16 +224,16 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			svc.Status.ApprovedVersion(),
 		)
 	}
-	_, err := api.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
+	_, err := testAPI.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// WHEN the unknown Services are removed with removeUnknownServices
-	api.removeUnknownServices()
+	testAPI.removeUnknownServices()
 
 	// THEN the rows of Services not in .All are returned
-	rows, err := api.db.Query(`
+	rows, err := testAPI.db.Query(`
 	SELECT	id,
 			latest_version,
 			latest_version_timestamp,
@@ -257,18 +257,18 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			av  string
 		)
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
-		svc := api.config.Service[id]
-		if svc == nil || !util.Contains(api.config.Order, id) {
+		svc := testAPI.config.Service[id]
+		if svc == nil || !util.Contains(testAPI.config.Order, id) {
 			t.Errorf("%q should have been removed from the table",
 				id)
 		}
 	}
-	if count != len(api.config.Order) {
+	if count != len(testAPI.config.Order) {
 		t.Errorf("Only %d were left in the table. Expected %d",
-			count, len(api.config.Order))
+			count, len(testAPI.config.Order))
 	}
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
+	testAPI.db.Close()
+	os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
 }
 
 func TestAPI_Run(t *testing.T) {
@@ -294,9 +294,9 @@ func TestAPI_Run(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	api := api{config: otherCfg}
-	api.initialise()
-	got := queryRow(t, api.db, target)
+	testAPI := api{config: otherCfg}
+	testAPI.initialise()
+	got := queryRow(t, testAPI.db, target)
 	want := svcstatus.Status{}
 	want.Init(
 		0, 0, 0,
@@ -311,7 +311,7 @@ func TestAPI_Run(t *testing.T) {
 		t.Errorf("Expected %q to be updated to %q\ngot  %v\nwant %v",
 			cell.Column, cell.Value, got, want.String())
 	}
-	api.db.Close()
+	testAPI.db.Close()
 	os.Remove(*cfg.Settings.Data.DatabaseFile)
 	os.Remove(*otherCfg.Settings.Data.DatabaseFile)
 }
@@ -321,10 +321,10 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	cfg := testConfig()
 	*cfg.Settings.Data.DatabaseFile = "TestAPI_extractServiceStatus.db"
 	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
+	testAPI := api{config: cfg}
 	go func() {
-		api := api{config: cfg}
-		api.initialise()
-		api.handler()
+		testAPI.initialise()
+		testAPI.handler()
 	}()
 	wantStatus := make([]svcstatus.Status, len(cfg.Service))
 	// push a random Status for each Service to the DB
@@ -354,15 +354,13 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 		index++
 	}
 	time.Sleep(250 * time.Millisecond)
-	api := api{config: cfg}
-	api.initialise()
 
 	// WHEN extractServiceStatus is called
-	api.extractServiceStatus()
+	testAPI.extractServiceStatus()
 
 	// THEN the Status in the Config is updated
 	for i := range wantStatus {
-		row := queryRow(t, api.db, *wantStatus[i].ServiceID)
+		row := queryRow(t, testAPI.db, *wantStatus[i].ServiceID)
 		if row.LatestVersion() != wantStatus[i].LatestVersion() {
 			t.Errorf("Expected %q to be updated to %q\ngot %q, want %q",
 				"latest_version", row.LatestVersion(), row, wantStatus[i].String())

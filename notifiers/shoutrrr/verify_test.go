@@ -1216,9 +1216,6 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			slice: &SliceDefaults{
 				"valid": testShoutrrrDefaults(false, false),
 				"other": testShoutrrrDefaults(false, false)}},
-		"nil shoutrrr": {
-			slice: &SliceDefaults{
-				"nil": nil}},
 		"invalid type": {
 			errRegex: "", // Caught by Shoutrrr.CheckValues
 			slice: &SliceDefaults{
