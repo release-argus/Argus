@@ -453,9 +453,11 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 
 	// Get the Notify
 	var serviceNotifies shoutrrr.Slice
+	var latestVersion string
 	api.Config.OrderMutex.RLock()
 	if api.Config.Service[parsedPayload.ServiceName] != nil {
 		serviceNotifies = api.Config.Service[parsedPayload.ServiceName].Notify
+		latestVersion = api.Config.Service[parsedPayload.ServiceName].Status.LatestVersion()
 	}
 	testNotify, serviceURL, err := shoutrrr.FromPayload(
 		&parsedPayload,
@@ -469,6 +471,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		failRequest(&w, err.Error())
 		return
 	}
+	testNotify.ServiceStatus.SetLatestVersion(latestVersion, false)
 
 	// Test the notify
 	err = testNotify.TestSend(serviceURL)

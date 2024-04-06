@@ -3,6 +3,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { FC } from "react";
 import FormLabel from "./form-label";
+import { Position } from "types/config";
 import { formPadding } from "./util";
 import { useError } from "hooks/errors";
 
@@ -15,8 +16,8 @@ interface FormItemColourProps {
   label: string;
   tooltip?: string;
   defaultVal?: string;
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 }
 
 /**

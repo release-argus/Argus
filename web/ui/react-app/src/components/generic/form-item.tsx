@@ -2,6 +2,7 @@ import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, JSX } from "react";
 
 import FormLabel from "./form-label";
+import { Position } from "types/config";
 import { formPadding } from "./util";
 import { useError } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
@@ -25,8 +26,8 @@ interface FormItemProps {
   defaultVal?: string;
   placeholder?: string;
 
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 }
 
 /**

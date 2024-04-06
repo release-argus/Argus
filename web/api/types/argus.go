@@ -173,10 +173,10 @@ type RuntimeInfo struct {
 
 // Flags is the runtime flags.
 type Flags struct {
-	ConfigFile       *string `json:"config.file,omitempty" yaml:"config.file,omitempty"`
+	ConfigFile       string  `json:"config.file,omitempty" yaml:"config.file,omitempty"`
 	LogLevel         string  `json:"log.level,omitempty" yaml:"log.level,omitempty"`
 	LogTimestamps    *bool   `json:"log.timestamps,omitempty" yaml:"log.timestamps,omitempty"`
-	DataDatabaseFile *string `json:"data.database-file,omitempty" yaml:"data.database-file,omitempty"`
+	DataDatabaseFile string  `json:"data.database-file,omitempty" yaml:"data.database-file,omitempty"`
 	WebListenHost    string  `json:"web.listen-host,omitempty" yaml:"web.listen-host,omitempty"`
 	WebListenPort    string  `json:"web.listen-port,omitempty" yaml:"web.listen-port,omitempty"`
 	WebCertFile      *string `json:"web.cert-file" yaml:"web.cert-file"`

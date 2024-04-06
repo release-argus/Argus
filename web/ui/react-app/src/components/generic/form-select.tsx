@@ -4,6 +4,7 @@ import { FC, JSX } from "react";
 import { Controller } from "react-hook-form";
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
+import { Position } from "types/config";
 import { formPadding } from "./util";
 import { useError } from "hooks/errors";
 
@@ -22,8 +23,8 @@ interface FormSelectProps {
 
   isURL?: boolean;
 
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 }
 
 /**

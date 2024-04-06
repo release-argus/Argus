@@ -509,17 +509,26 @@ func (s *Shoutrrr) TestSend(serviceURL string) (err error) {
 
 	s.SetOption("max_tries", "1")
 
-	testServiceInfo := &util.ServiceInfo{
-		ID:            util.DefaultIfNil(s.ServiceStatus.ServiceID),
-		URL:           serviceURL,
-		WebURL:        util.DefaultIfNil(s.ServiceStatus.WebURL),
-		LatestVersion: s.ServiceStatus.LatestVersion()}
-	if testServiceInfo.LatestVersion == "" {
-		testServiceInfo.LatestVersion = "MAJOR.MINOR.PATCH"
+	latestVersion := s.ServiceStatus.LatestVersion()
+	if latestVersion == "" {
+		latestVersion = "MAJOR.MINOR.PATCH"
 	}
 
-	title := "TEST - " + s.Title(testServiceInfo)
-	message := "TEST - " + s.Message(testServiceInfo)
+	testServiceInfo := &util.ServiceInfo{
+		ID:  util.DefaultIfNil(s.ServiceStatus.ServiceID),
+		URL: serviceURL,
+		WebURL: util.TemplateString(
+			util.DefaultIfNil(s.ServiceStatus.WebURL),
+			util.ServiceInfo{LatestVersion: latestVersion}),
+		LatestVersion: latestVersion}
+
+	// Prefix 'TEST - ' if non-empty
+	title := s.Title(testServiceInfo)
+	title = util.ValueIfNotDefault(
+		title, "TEST - "+title)
+	message := s.Message(testServiceInfo)
+	message = "TEST" + util.ValueIfNotDefault(
+		message, " - "+message)
 	err = s.Send(
 		title,
 		message,

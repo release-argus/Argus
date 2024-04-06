@@ -66,14 +66,14 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, params),
-			*logFrom, true)
+			logFrom, true)
 	}
 	res, err := api.db.Exec(sqlStmt, params...)
 	// Query failed
 	if err != nil {
 		jLog.Error(
 			fmt.Sprintf("updateRow UPDATE: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
-			*logFrom, true)
+			logFrom, true)
 		return
 	}
 
@@ -105,12 +105,13 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 		if jLog.IsLevel("DEBUG") {
 			jLog.Debug(
 				fmt.Sprintf("%s, %v", sqlStmt, params),
-				*logFrom, true)
+				logFrom, true)
 		}
 		_, err = api.db.Exec(sqlStmt, params...)
 		jLog.Error(
-			fmt.Sprintf("updateRow INSERT: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
-			*logFrom,
+			fmt.Sprintf("updateRow INSERT: %q %v, %s",
+				sqlStmt, params, util.ErrorToString(err)),
+			logFrom,
 			err != nil)
 	}
 }
@@ -123,11 +124,12 @@ func (api *api) deleteRow(serviceID string) {
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, serviceID),
-			*logFrom, true)
+			logFrom, true)
 	}
 	_, err := api.db.Exec(sqlStmt, serviceID)
 	jLog.Error(
-		fmt.Sprintf("deleteRow: %q with %q, %s", sqlStmt, serviceID, util.ErrorToString(err)),
-		*logFrom,
+		fmt.Sprintf("deleteRow: %q with %q, %s",
+			sqlStmt, serviceID, util.ErrorToString(err)),
+		logFrom,
 		err != nil)
 }

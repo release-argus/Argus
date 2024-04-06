@@ -38,6 +38,8 @@ export const DictToList = <T,>(dict: Dict<T>, giveIndexTo?: string[]): T[] => {
   });
 };
 
+export type Position = "left" | "middle" | "right";
+
 export type StringStringMap = { [key: string]: string };
 export type StringFieldArray = StringStringMap[];
 

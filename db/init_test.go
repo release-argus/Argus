@@ -169,7 +169,8 @@ func TestDBQueryService(t *testing.T) {
 			{Column: "latest_version_timestamp", Value: (*svc).Status.LatestVersionTimestamp()},
 			{Column: "deployed_version", Value: (*svc).Status.DeployedVersion()},
 			{Column: "deployed_version_timestamp", Value: (*svc).Status.DeployedVersionTimestamp()},
-			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}})
+			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}},
+	)
 
 	// THEN that data can be queried
 	got := queryRow(t, testAPI.db, serviceName)
@@ -322,10 +323,8 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	*cfg.Settings.Data.DatabaseFile = "TestAPI_extractServiceStatus.db"
 	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
 	testAPI := api{config: cfg}
-	go func() {
-		testAPI.initialise()
-		testAPI.handler()
-	}()
+	testAPI.initialise()
+	go testAPI.handler()
 	wantStatus := make([]svcstatus.Status, len(cfg.Service))
 	// push a random Status for each Service to the DB
 	index := 0
@@ -401,8 +400,9 @@ func Test_UpdateColumnTypes(t *testing.T) {
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			db, err := sql.Open("sqlite", "Test_UpdateColumnTypes.db")
-			defer os.Remove("Test_UpdateColumnTypes.db")
+			databaseFile := "Test_UpdateColumnTypes.db"
+			db, err := sql.Open("sqlite", databaseFile)
+			defer os.Remove(databaseFile)
 			if err != nil {
 				t.Fatal(err)
 			}

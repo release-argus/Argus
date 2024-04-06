@@ -75,7 +75,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 			cfg := testConfig()
 			testAPI := api{config: cfg}
 			*testAPI.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
-			defer os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
+			defer os.Remove(*cfg.Settings.Data.DatabaseFile)
 			testAPI.initialise()
 
 			// WHEN updateRow is called targeting single/multiple cells
@@ -134,8 +134,11 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 			// Ensure the row exists if tc.exists
 			if tc.exists {
-				testAPI.updateRow(tc.serviceID, []dbtype.Cell{
-					{Column: "latest_version", Value: "9.9.9"}, {Column: "deployed_version", Value: "8.8.8"}})
+				testAPI.updateRow(
+					tc.serviceID,
+					[]dbtype.Cell{
+						{Column: "latest_version", Value: "9.9.9"}, {Column: "deployed_version", Value: "8.8.8"}},
+				)
 				time.Sleep(100 * time.Millisecond)
 			}
 			// Check the row existance before the test

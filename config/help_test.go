@@ -106,7 +106,7 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
 	config.Load(file, &flags, log)
-	t.Cleanup(func() { os.Remove(*config.Settings.DataDatabaseFile()) })
+	t.Cleanup(func() { os.Remove(config.Settings.DataDatabaseFile()) })
 
 	return
 }
@@ -143,6 +143,7 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 		service.ID = name
 	}
 	config.CheckValues()
+	t.Log("Loaded", file)
 
 	return
 }
