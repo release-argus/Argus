@@ -6,10 +6,11 @@ import {
 } from "types/service-edit";
 import { convertToQueryParams, fetchJSON, removeEmptyValues } from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { DeployedVersionLookupType } from "types/config";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useFormContext } from "react-hook-form";
+import { useErrors } from "hooks/errors";
 import { useQuery } from "@tanstack/react-query";
 import useValuesRefetch from "hooks/values-refetch";
 import { useWebSocket } from "contexts/websocket";
@@ -31,15 +32,16 @@ interface Props {
 const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const [lastFetched, setLastFetched] = useState(0);
   const { monitorData } = useWebSocket();
-  const { getFieldState, formState } = useFormContext();
+  const { trigger } = useFormContext();
   const dataTarget = useMemo(
     () => (vType === 0 ? "latest_version" : "deployed_version"),
     []
   );
+  const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
+  const dataTargetErrors = useErrors(dataTarget, true);
   const { data, refetchData } = useValuesRefetch(dataTarget);
   const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
     useValuesRefetch("options.semantic_versioning");
-  const { error: invalidURL } = getFieldState(dataTarget + ".url", formState);
 
   const fetchVersionJSON = () =>
     fetchJSON<ServiceRefreshType>({
@@ -57,7 +59,6 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   const {
     data: versionData,
     isFetching,
-    isStale,
     refetch: refetchVersion,
   } = useQuery({
     queryKey: [
@@ -65,7 +66,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
       dataTarget,
       { id: serviceName },
       {
-        params: JSON.stringify(removeEmptyValues(data)),
+        params: removeEmptyValues(data),
         semantic_versioning: semanticVersioning,
         original_data: removeEmptyValues(original ?? []),
       },
@@ -88,14 +89,20 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     const currentTime = Date.now();
     if (currentTime - lastFetched < 1000) return;
 
-    if (isStale && !invalidURL && !!data?.url) {
-      refetchSemanticVersioning();
-      refetchData();
-      // setTimeout to allow time for refetches ^
-      const timeout = setTimeout(() => refetchVersion());
-      setLastFetched(currentTime);
-      return () => clearTimeout(timeout);
-    }
+    // Ensure valid form
+    const result = await trigger(dataTarget);
+    if (!result) return;
+
+    refetchSemanticVersioning();
+    refetchData();
+    // setTimeout to allow time for refetches ^
+    const timeout = setTimeout(() => {
+      if (url) {
+        refetchVersion();
+        setLastFetched(currentTime);
+      }
+    });
+    return () => clearTimeout(timeout);
   };
 
   const LoadingSpinner = (
@@ -111,7 +118,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
           variant="secondary"
           style={{ marginLeft: "auto", padding: "0 1rem" }}
           onClick={refetch}
-          disabled={isFetching || invalidURL !== undefined || !data?.url}
+          disabled={isFetching || !url}
         >
           <FontAwesomeIcon icon={faSync} style={{ paddingRight: "0.25rem" }} />
           Refresh
@@ -135,6 +142,18 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
             }
           </Alert>
         </span>
+      )}
+      {dataTargetErrors && (
+        <Alert
+          variant="danger"
+          style={{ paddingLeft: "2rem", marginBottom: "unset" }}
+        >
+          {Object.entries(dataTargetErrors).map(([key, error]) => (
+            <li key={key}>
+              {key}: {error}
+            </li>
+          ))}
+        </Alert>
       )}
     </span>
   );

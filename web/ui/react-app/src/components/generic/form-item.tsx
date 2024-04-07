@@ -127,15 +127,16 @@ const FormItem: FC<FormItemProps> = ({
               }
 
               // Validate that it's a URL (with prefix)
-              if (isURL) {
+              if (isURL && testValue) {
                 try {
-                  validation = required
-                    ? new URL(testValue).protocol.startsWith("http")
-                    : true;
-                  if (!validation)
-                    return "Invalid URL - http(s):// prefix required";
+                  const parsedURL = new URL(testValue);
+                  if (!["http:", "https:"].includes(parsedURL.protocol))
+                    throw new Error("Invalid protocol");
                 } catch (error) {
-                  return "Invalid URL";
+                  if (/^https?:\/\//.test(value as string)) {
+                    return "Invalid URL";
+                  }
+                  return "Invalid URL - http(s):// prefix required";
                 }
               }
 

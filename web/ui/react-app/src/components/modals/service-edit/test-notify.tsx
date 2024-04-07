@@ -78,11 +78,13 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
       },
       {
         // ...getValues(path) - shallow copy as convertNotifyToAPI mutates the object
-        params: JSON.stringify(convertNotifyToAPI({ ...getValues(path) })),
+        params: convertNotifyToAPI({ ...getValues(path) }),
       },
     ],
     queryFn: ({ queryKey }) =>
-      fetchTestNotifyJSON((queryKey[2] as { params: string }).params),
+      fetchTestNotifyJSON(
+        (queryKey[2] as { params: unknown }).params as string
+      ),
     enabled: false,
     notifyOnChangeProps: "all",
     retry: false,
@@ -96,9 +98,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
 
     const result = await trigger(path);
     if (result) {
-      setTimeout(() => {
-        testRefetch();
-      });
+      testRefetch();
       setLastFetched(currentTime);
     }
   };
@@ -140,7 +140,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
       </span>
       {/* Render either the server error or form validation error */}
       <Result status={testStatus} err={testData?.message} />
-      {errors && Object.keys(errors).length > 0 && (
+      {errors && (
         <Alert
           variant="danger"
           style={{ paddingLeft: "2rem", marginBottom: "unset" }}

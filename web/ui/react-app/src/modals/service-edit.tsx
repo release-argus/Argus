@@ -347,7 +347,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                     ) : (
                       <ul>
                         {Object.entries(
-                          extractErrors(form.formState.errors)
+                          extractErrors(form.formState.errors) ?? []
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

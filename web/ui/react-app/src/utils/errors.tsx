@@ -1,6 +1,7 @@
 import { FieldError, FieldErrors, FieldValues } from "react-hook-form";
 
 import { StringStringMap } from "types/config";
+import { isEmptyObject } from "./is-empty";
 
 /**
  * getNestedError gets the error for a potentially nested key in a react-hook-form errors object
@@ -31,7 +32,7 @@ export const getNestedError = (
 export const extractErrors = (
   errors: FieldErrors<FieldValues>,
   path = ""
-): StringStringMap => {
+): StringStringMap | undefined => {
   const flatErrors: StringStringMap = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const traverse = (prefix: string, obj: any) => {
@@ -54,5 +55,5 @@ export const extractErrors = (
     }
   };
   traverse("", errors);
-  return flatErrors;
+  return isEmptyObject(flatErrors) ? undefined : flatErrors;
 };
