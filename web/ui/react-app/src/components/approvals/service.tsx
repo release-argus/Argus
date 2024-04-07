@@ -59,7 +59,6 @@ const Service: FC<Props> = ({ service, editable = false }) => {
     <Card key={service.id} bg="secondary" className={"service shadow"}>
       <Card.Title className="service-title" key={service.id + "-title"}>
         <a
-          className="same-color"
           href={service.url}
           target="_blank"
           rel="noreferrer noopener"

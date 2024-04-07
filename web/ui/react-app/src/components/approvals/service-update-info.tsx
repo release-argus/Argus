@@ -89,7 +89,7 @@ const UpdateInfo: FC<Props> = ({ service, visible }) => (
       </Container>
     </ListGroup.Item>
     <Card.Footer style={{ height: "1rem", paddingBottom: 0 }}>
-      <small className="text-muted same-color">
+      <small className="text-muted">
         {service?.status && service.status?.latest_version_timestamp ? (
           <>
             Found{" "}

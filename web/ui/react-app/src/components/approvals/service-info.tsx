@@ -80,7 +80,6 @@ export const ServiceInfo: FC<Props> = ({
       }
     >
       <FontAwesomeIcon
-        className="same-color"
         style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
         icon={faSatelliteDish}
       />
@@ -252,7 +251,7 @@ export const ServiceInfo: FC<Props> = ({
       >
         <small
           className={
-            "text-muted same-color" +
+            "text-muted" +
             (status.warning ? " service-warning rounded-bottom" : "")
           }
         >

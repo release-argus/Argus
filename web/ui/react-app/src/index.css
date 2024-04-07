@@ -165,6 +165,12 @@ code {
 .service-title {
   padding: 0.5rem 0.75rem 0px 0.75rem;
 }
+.service-title a {
+  color: var(--bs-heading-color);
+}
+.service-title a:hover {
+  color: var(--bs-secondary);
+}
 .service-image {
   padding: 0.5rem 0;
   height: 100%;
@@ -176,7 +182,7 @@ code {
 .service-warning {
   color: var(--bs-warning-text-emphasis) !important;
   background-color: var(--bs-warning-border-subtle) !important;
-  border-color: var(--bs-warning-border-subtle) !important;
+  border-color: var(--bs-warning-border-subtle);
 }
 
 .bg-secondary {
