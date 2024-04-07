@@ -133,6 +133,9 @@ code {
   border-width: 0.1rem;
   color: var(--dark-text) !important;
 }
+.btn-secondary-outlined:focus {
+  box-shadow: none;
+}
 
 .justify-right {
   justify-content: right !important;
@@ -141,9 +144,6 @@ code {
   justify-content: left !important;
 }
 
-.same-color {
-  color: var(--dark-text) !important;
-}
 .btn-unchecked {
   color: inherit;
   background: none !important;
@@ -327,6 +327,11 @@ code {
 .form-check-input:checked {
   background-color: var(--bs-secondary);
   border-color: var(--bs-secondary-border-subtle);
+  box-shadow: none;
+}
+.form-select:focus {
+  background-color: var(--bs-secondary-bg-subtle);
+  border-color: var(--bs-secondary-color);
   box-shadow: none;
 }
 

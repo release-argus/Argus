@@ -3,6 +3,7 @@ import { Dict, WebHookType } from "types/config";
 import { FC, useCallback, useMemo } from "react";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
+import { firstNonEmpty } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
@@ -23,8 +24,24 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
   const { fields, append, remove } = useFieldArray({
     name: "webhook",
   });
+  const convertedDefaults = useMemo(
+    () => ({
+      custom_headers: firstNonEmpty(
+        defaults?.custom_headers,
+        hard_defaults?.custom_headers
+      ).map(() => ({ key: "", item: "" })),
+    }),
+    [defaults, hard_defaults]
+  );
   const addItem = useCallback(() => {
-    append({ type: "github", name: "" }, { shouldFocus: false });
+    append(
+      {
+        type: "github",
+        name: "",
+        custom_headers: convertedDefaults.custom_headers,
+      },
+      { shouldFocus: false }
+    );
   }, []);
 
   const globalWebHookOptions = useMemo(

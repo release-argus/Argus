@@ -72,7 +72,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? []).length === 0) {
+    if (fieldValues.length === 0) {
       trimmedDefaults.forEach((dflt) => {
         append(dflt, { shouldFocus: false });
       });
@@ -83,7 +83,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // and give the defaults if not overridden
   useEffect(() => {
     // ensure we don't have another types actions
-    for (const item of fieldValues ?? []) {
+    for (const item of fieldValues) {
       if (isEmptyOrNull(item.action)) {
         setValue(name, []);
         break;

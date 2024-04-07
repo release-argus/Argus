@@ -399,28 +399,30 @@ export const convertNotifyURLFields = (
       custom_headers: convertHeadersFromString(
         urlFields?.custom_headers,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.custom_headers,
-          otherOptionsData?.defaults?.notify?.[type]?.urlFields?.custom_headers,
-          otherOptionsData?.hard_defaults?.notify?.[type]?.urlFields
+          otherOptionsData?.notify?.[name]?.url_fields?.custom_headers,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields
+            ?.custom_headers,
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.custom_headers
         )
       ),
       json_payload_vars: convertHeadersFromString(
         urlFields?.json_payload_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.json_payload_vars,
-          otherOptionsData?.defaults?.notify?.[type]?.urlFields
+          otherOptionsData?.notify?.[name]?.url_fields?.json_payload_vars,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields
             ?.json_payload_vars,
-          otherOptionsData?.hard_defaults?.notify?.[type]?.urlFields
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.json_payload_vars
         )
       ),
       query_vars: convertHeadersFromString(
-        // urlFields.query_vars,
+        urlFields?.query_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.query_vars,
-          otherOptionsData?.defaults?.notify?.[type]?.urlFields?.query_vars,
-          otherOptionsData?.hard_defaults?.notify?.[type]?.urlFields?.query_vars
+          otherOptionsData?.notify?.[name]?.url_fields?.query_vars,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields?.query_vars,
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
+            ?.query_vars
         )
       ),
     };
@@ -433,7 +435,7 @@ export const convertNotifyURLFields = (
  *
  * @param name - The react-hook-form path to the notify object
  * @param type - The type of notify
- * @param urlFields - The params object to convert
+ * @param url_fields - The params object to convert
  * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
  * @returns The converted Params for use in the UI
  */

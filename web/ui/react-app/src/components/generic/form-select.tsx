@@ -1,7 +1,7 @@
 import { Col, Form, FormGroup } from "react-bootstrap";
+import { Controller, useFormContext } from "react-hook-form";
 import { FC, JSX } from "react";
 
-import { Controller } from "react-hook-form";
 import FormLabel from "./form-label";
 import { OptionType } from "types/util";
 import { Position } from "types/config";
@@ -11,6 +11,7 @@ import { useError } from "hooks/errors";
 interface FormSelectProps {
   name: string;
   customValidation?: (value: string) => string | boolean;
+  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 
   key?: string;
   col_xs?: number;
@@ -33,6 +34,7 @@ interface FormSelectProps {
  * @param name - The name of the form item
  * @param required - Whether the form item is required
  * @param customValidation - Custom validation function for the form item
+ * @param onChange - The function to call when the form item changes
  * @param key - The key of the form item
  * @param col_xs - The number of columns the form item should take up on extra small screens
  * @param col_sm - The number of columns the form item should take up on small screens
@@ -47,6 +49,7 @@ interface FormSelectProps {
 const FormSelect: FC<FormSelectProps> = ({
   name,
   customValidation,
+  onChange,
 
   key = name,
   col_xs = 12,
@@ -58,6 +61,7 @@ const FormSelect: FC<FormSelectProps> = ({
   position = "left",
   positionXS = position,
 }) => {
+  const { setValue } = useFormContext();
   const error = useError(name, customValidation !== undefined);
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
@@ -75,7 +79,13 @@ const FormSelect: FC<FormSelectProps> = ({
         <Controller
           name={name}
           render={({ field }) => (
-            <Form.Select {...field} aria-label={label}>
+            <Form.Select
+              {...field}
+              aria-label={label}
+              onChange={
+                onChange ? onChange : (e) => setValue(name, e.target.value)
+              }
+            >
               {options.map((opt) => (
                 <option
                   className="form-select-option"

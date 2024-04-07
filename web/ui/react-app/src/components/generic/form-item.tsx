@@ -74,7 +74,7 @@ const FormItem: FC<FormItemProps> = ({
   position = "left",
   positionXS = position,
 }) => {
-  const { getValues, register } = useFormContext();
+  const { getValues, register, clearErrors } = useFormContext();
   const error = useError(
     name,
     required || isNumber || isRegex || isURL || registerParams["validate"]
@@ -158,6 +158,7 @@ const FormItem: FC<FormItemProps> = ({
                 return validation || "Must be unique";
               }
 
+              clearErrors(name);
               return validation;
             },
             ...registerParams,

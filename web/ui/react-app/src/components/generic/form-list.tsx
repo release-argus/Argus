@@ -46,9 +46,7 @@ const FormList: FC<Props> = ({
   // useDefaults when the fieldValues are undefined or the same as the defaults
   const useDefaults = useMemo(
     () =>
-      isEmptyArray(defaults)
-        ? false
-        : !diffObjects(fieldValues ?? [], defaults),
+      isEmptyArray(defaults) ? false : !diffObjects(fieldValues, defaults),
     [fieldValues, defaults]
   );
   // trigger validation on change of defaults being used/not
@@ -56,7 +54,7 @@ const FormList: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? [])?.length === 0)
+    if (fieldValues?.length === 0)
       defaults?.forEach(() => {
         addItem();
       });
@@ -70,7 +68,7 @@ const FormList: FC<Props> = ({
   // on load, ensure we don't have another types actions
   // and give the defaults if not overridden
   useEffect(() => {
-    for (const item of fieldValues ?? []) {
+    for (const item of fieldValues) {
       const keys = Object.keys(item);
       if (keys.length !== 1 || !keys.includes("arg")) {
         setValue(name, []);
