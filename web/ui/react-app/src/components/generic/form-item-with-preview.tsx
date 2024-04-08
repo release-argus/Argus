@@ -70,7 +70,7 @@ const FormItemWithPreview: FC<Props> = ({
             autoFocus={false}
             {...register(name, {
               validate: {
-                isURL: (value) => urlTest(value || defaultVal || ""),
+                isURL: (value) => urlTest(value || defaultVal || "", true),
               },
             })}
             isInvalid={!!error}

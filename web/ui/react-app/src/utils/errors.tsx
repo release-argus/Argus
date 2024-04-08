@@ -42,9 +42,9 @@ export const extractErrors = (
         const fullPath = `${prefix}${prefix ? `.${key}` : key}`;
         const atPath = fullPath.startsWith(path); // if the path is in the key
         if (atPath || path.includes(fullPath)) {
-          if (typeof value === "object" && !value.hasOwnProperty("type"))
+          if (typeof value === "object" && !value.hasOwnProperty("ref"))
             traverse(fullPath, value);
-          else if (atPath && value?.hasOwnProperty("type")) {
+          else if (atPath && value?.hasOwnProperty("ref")) {
             const trimmedPath = path
               ? fullPath.substring(path.length + 1)
               : fullPath;
