@@ -52,13 +52,13 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
   const [lastFetched, setLastFetched] = useState(0);
   const errors = useErrors(path, true);
 
-  const fetchTestNotifyJSON = (dataJSON: string) =>
+  const fetchTestNotifyJSON = (dataJSON: NotifyType) =>
     fetchJSON<{ message: string }>({
       url: "api/v1/notify/test",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...deepDiff(convertNotifyToAPI(JSON.parse(dataJSON)), original),
+        ...deepDiff(dataJSON, original),
         ...extras,
         name_previous: original?.name,
       }),
@@ -83,7 +83,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
     ],
     queryFn: ({ queryKey }) =>
       fetchTestNotifyJSON(
-        (queryKey[2] as { params: unknown }).params as string
+        (queryKey[2] as { params: unknown }).params as NotifyType
       ),
     enabled: false,
     notifyOnChangeProps: "all",

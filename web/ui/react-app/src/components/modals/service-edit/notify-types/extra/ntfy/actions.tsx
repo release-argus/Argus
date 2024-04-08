@@ -72,7 +72,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if (fieldValues.length === 0) {
+    if (isEmptyArray(fieldValues)) {
       trimmedDefaults.forEach((dflt) => {
         append(dflt, { shouldFocus: false });
       });

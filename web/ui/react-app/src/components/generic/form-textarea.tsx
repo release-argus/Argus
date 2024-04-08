@@ -4,6 +4,7 @@ import { FC, JSX } from "react";
 import FormLabel from "./form-label";
 import { Position } from "types/config";
 import { formPadding } from "./util";
+import { requiredTest } from "./form-validate";
 import { useError } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
 
@@ -56,7 +57,7 @@ const FormTextArea: FC<FormItemProps> = ({
   position = "left",
   positionXS = position,
 }) => {
-  const { register } = useFormContext();
+  const { register, setError, clearErrors } = useFormContext();
   const error = useError(name, required);
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -74,14 +75,15 @@ const FormTextArea: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value: string | undefined) => {
-              // Validate that it's non-empty (including default value)
-              if (required) {
-                const testValue = value || defaultVal || "";
-                const validation = /.+/.test(testValue);
-                return validation ? true : "Required";
-              }
-              return true;
+            validate: {
+              required: (value) =>
+                requiredTest(
+                  value || defaultVal || "",
+                  name,
+                  setError,
+                  clearErrors,
+                  required
+                ),
             },
           })}
           isInvalid={!!error}

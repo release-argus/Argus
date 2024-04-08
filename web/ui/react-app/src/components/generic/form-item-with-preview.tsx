@@ -3,7 +3,7 @@ import { FC, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
-import { isEmptyOrNull } from "utils";
+import { urlTest } from "./form-validate";
 import { useError } from "hooks/errors";
 
 interface Props {
@@ -69,23 +69,8 @@ const FormItemWithPreview: FC<Props> = ({
             style={{ marginRight: preview ? "1rem" : undefined }}
             autoFocus={false}
             {...register(name, {
-              validate: (value: string | undefined) => {
-                // Allow empty values
-                if (isEmptyOrNull(value)) return true;
-
-                // Validate that it's a URL (with prefix)
-                try {
-                  const parsedURL = new URL(value as string);
-                  if (!["http:", "https:"].includes(parsedURL.protocol))
-                    throw new Error("Invalid protocol");
-                } catch (error) {
-                  if (/^https?:\/\//.test(value as string)) {
-                    return "Invalid URL";
-                  }
-                  return "Invalid URL - http(s):// prefix required";
-                }
-
-                return true;
+              validate: {
+                isURL: (value) => urlTest(value || defaultVal || ""),
               },
             })}
             isInvalid={!!error}

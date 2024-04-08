@@ -1,5 +1,12 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, JSX } from "react";
+import {
+  numberTest,
+  regexTest,
+  requiredTest,
+  uniqueTest,
+  urlTest,
+} from "./form-validate";
 
 import FormLabel from "./form-label";
 import { Position } from "types/config";
@@ -74,7 +81,7 @@ const FormItem: FC<FormItemProps> = ({
   position = "left",
   positionXS = position,
 }) => {
-  const { getValues, register, clearErrors } = useFormContext();
+  const { getValues, register, setError, clearErrors } = useFormContext();
   const error = useError(
     name,
     required || isNumber || isRegex || isURL || registerParams["validate"]
@@ -100,66 +107,21 @@ const FormItem: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value: string | undefined) => {
-              let validation = true;
-              const testValue = value || defaultVal || "";
-
-              // Validate that it's non-empty (including default value)
-              if (required) {
-                validation = /.+/.test(testValue);
-                if (!validation)
-                  return required === true ? "Required" : required;
-              }
-
-              // Validate that it's a number
-              if (isNumber) {
-                validation = !isNaN(Number(testValue));
-                if (!validation) return "Must be a number";
-              }
-
-              // Validate that it's valid RegEx
-              if (isRegex) {
-                try {
-                  new RegExp(testValue);
-                } catch (error) {
-                  return "Invalid RegEx";
-                }
-              }
-
-              // Validate that it's a URL (with prefix)
-              if (isURL && testValue) {
-                try {
-                  const parsedURL = new URL(testValue);
-                  if (!["http:", "https:"].includes(parsedURL.protocol))
-                    throw new Error("Invalid protocol");
-                } catch (error) {
-                  if (/^https?:\/\//.test(value as string)) {
-                    return "Invalid URL";
-                  }
-                  return "Invalid URL - http(s):// prefix required";
-                }
-              }
-
-              // Should be unique if it's changed from the default
-              if (unique && testValue !== defaultVal) {
-                const parts = name.split(".");
-                const parent = parts.slice(0, parts.length - 2).join(".");
-                const values = getValues(parent);
-                const uniqueName = parts[parts.length - 1];
-                validation =
-                  value === ""
-                    ? false
-                    : values &&
-                      values
-                        .map(
-                          (item: { [x: string]: string }) => item[uniqueName]
-                        )
-                        .filter((item: string) => item === value).length === 1;
-                return validation || "Must be unique";
-              }
-
-              clearErrors(name);
-              return validation;
+            validate: {
+              required: (value) =>
+                requiredTest(
+                  value || defaultVal || "",
+                  name,
+                  setError,
+                  clearErrors,
+                  required
+                ),
+              isRegex: (value) => regexTest(value || defaultVal || "", isRegex),
+              isNumber: (value) =>
+                numberTest(value || defaultVal || "", isNumber),
+              isUnique: (value) =>
+                uniqueTest(value || defaultVal || "", name, getValues, unique),
+              isURL: (value) => urlTest(value || defaultVal || "", isURL),
             },
             ...registerParams,
           })}

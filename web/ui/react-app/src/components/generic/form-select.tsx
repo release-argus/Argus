@@ -22,8 +22,6 @@ interface FormSelectProps {
 
   options: OptionType[];
 
-  isURL?: boolean;
-
   position?: Position;
   positionXS?: Position;
 }
@@ -98,8 +96,9 @@ const FormSelect: FC<FormSelectProps> = ({
             </Form.Select>
           )}
           rules={{
-            validate: (value) => {
-              if (customValidation) return customValidation(value);
+            validate: {
+              customValidation: (value) =>
+                customValidation ? customValidation(value) : undefined,
             },
           }}
         />

@@ -64,7 +64,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if (fieldValues?.length === 0)
+    if (isEmptyArray(fieldValues))
       defaults?.forEach((dflt) => {
         append(
           { type: dflt.type, sub_type: dflt.sub_type, value: "" },
