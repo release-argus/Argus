@@ -1,3 +1,5 @@
+import { BaseLatestVersionLookupType } from "./config";
+
 export interface OrderAPIResponse {
   order: string[];
 }
@@ -14,7 +16,7 @@ export interface ServiceSummaryType {
   active?: boolean;
   id: string;
   loading?: boolean;
-  type?: string;
+  type?: BaseLatestVersionLookupType["type"];
   url?: string;
   icon?: string;
   icon_link_to?: string;

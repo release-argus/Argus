@@ -4,6 +4,7 @@ import { extractErrors, getNestedError } from "./errors";
 import { isEmptyArray, isEmptyObject } from "./is-empty";
 
 import cleanEmpty from "./clean-empty";
+import compareStringArrays from "./compare-string-arrays";
 import dateIsAfterNow from "./is-after-date";
 import { diffObjects } from "./diff-objects";
 import fetchJSON from "./fetch-json";
@@ -16,6 +17,7 @@ import removeEmptyValues from "./remove-empty-values";
 
 export {
   boolToStr,
+  compareStringArrays,
   convertToQueryParams,
   cleanEmpty,
   dateIsAfterNow,

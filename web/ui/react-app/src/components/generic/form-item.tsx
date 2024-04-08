@@ -84,9 +84,11 @@ const FormItem: FC<FormItemProps> = ({
   const { getValues, register, setError, clearErrors } = useFormContext();
   const error = useError(
     name,
-    required || isNumber || isRegex || isURL || registerParams["validate"]
-      ? true
-      : false
+    !!required ||
+      isNumber ||
+      isRegex ||
+      isURL ||
+      registerParams["validate"] !== undefined
   );
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });

@@ -19,12 +19,12 @@ interface NotificationCtx {
 }
 
 /**
- * The notification context, which provides notifications to the application.
+ * Provides notifications to the application and functions to add and remove them.
  *
  * @param notifications - The notifications to display
  * @param addNotification - Function to add a notification
  * @param removeNotification - Function to remove a notification
- * @returns The notification context
+ * @returns A context to view, add, and remove notifications
  */
 const NotificationContext = createContext<NotificationCtx>({
   notifications: [],
@@ -33,7 +33,7 @@ const NotificationContext = createContext<NotificationCtx>({
 });
 
 /**
- * @returns The notification provider, which provides notifications to the application.
+ * @returns A provider of notifications to the application.
  */
 const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);

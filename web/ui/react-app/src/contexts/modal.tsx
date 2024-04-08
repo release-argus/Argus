@@ -11,7 +11,7 @@ interface ModalCtx {
 }
 
 /**
- * The modal context, which provides modals to the application.
+ * Provides modals to the application.
  *
  * @param modalType - The type of modal to display
  * @param service - The service to display in the modal
@@ -27,10 +27,10 @@ interface Props {
 }
 
 /**
- * Returns the modal provider, which provides modals to the application.
+ * Provides modals to the application.
  *
  * @param props - The children to render
- * @returns The modal provider, which provides modals to the application.
+ * @returns A Provider of modals to the application.
  */
 const ModalProvider = (props: Props): ReactElement => {
   const { modal, handleModal } = useModal();

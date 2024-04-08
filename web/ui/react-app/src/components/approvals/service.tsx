@@ -102,7 +102,11 @@ const Service: FC<Props> = ({ service, editable = false }) => {
           }
         />
         <ServiceImage
-          service={service}
+          service_id={service.id}
+          service_type={service.type}
+          icon={service.icon}
+          icon_link_to={service.icon_link_to}
+          loading={service.loading}
           visible={
             !(updateStatus.available && showUpdateInfo && !updateStatus.skipped)
           }

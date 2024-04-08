@@ -1,17 +1,21 @@
-import { FC, useMemo } from "react";
 import {
   faCircleNotch,
   faWindowMaximize,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { Card } from "react-bootstrap";
+import { FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ServiceSummaryType } from "types/summary";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 
 interface Props {
-  service: ServiceSummaryType;
+  service_id: ServiceSummaryType["id"];
+  service_type: ServiceSummaryType["type"];
+  loading: ServiceSummaryType["loading"];
+  icon?: ServiceSummaryType["icon"];
+  icon_link_to?: ServiceSummaryType["icon_link_to"];
   visible: boolean;
 }
 
@@ -19,11 +23,22 @@ interface Props {
  * Returns the service's image, with a loading spinner if the image is not loaded yet
  * and a link to the service. If the service has no icon, the service type icon (github/url) is displayed.
  *
- * @param service - The service the image belongs to
+ * @param service_id - The name of the service
+ * @param service_type - The type of the service
+ * @param loading - Whether the service is loading
+ * @param icon - The URL of the service's icon
+ * @param icon_link_to - The URL to link to when the icon is clicked
  * @param visible - Whether the image should be visible
  * @returns A component that displays the image of the service
  */
-export const ServiceImage: FC<Props> = ({ service, visible }) => {
+export const ServiceImage: FC<Props> = ({
+  service_id,
+  service_type,
+  loading,
+  icon,
+  icon_link_to,
+  visible,
+}) => {
   const delayedRender = useDelayedRender(500);
 
   const imageStyles = {
@@ -31,20 +46,20 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
     height: "6rem",
   };
 
-  const icon = useMemo(() => {
+  const iconRender = () => {
     // URL icon
-    if (service?.icon)
+    if (icon)
       return (
         <Card.Img
           variant="top"
-          src={service.icon}
-          alt={`${service.id} Image`}
+          src={icon}
+          alt={`${service_id} Image`}
           className="service-image"
         />
       );
 
     // Loading spinner
-    if (service?.loading)
+    if (loading)
       return (
         <div
           className="service-image"
@@ -63,12 +78,12 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
     // Default icon
     return (
       <FontAwesomeIcon
-        icon={service.type === "github" ? faGithub : faWindowMaximize}
+        icon={service_type === "github" ? faGithub : faWindowMaximize}
         style={imageStyles}
         className="service-image"
       />
     );
-  }, [service.icon]);
+  };
 
   return (
     <div
@@ -76,12 +91,12 @@ export const ServiceImage: FC<Props> = ({ service, visible }) => {
       style={{ height: "7rem", display: visible ? "flex" : "none" }}
     >
       <a
-        href={service.icon_link_to || undefined}
+        href={icon_link_to || undefined}
         target="_blank"
         rel="noreferrer noopener"
         style={{ color: "inherit", display: "contents" }}
       >
-        {icon}
+        {iconRender()}
       </a>
     </div>
   );
