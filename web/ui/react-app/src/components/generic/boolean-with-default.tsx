@@ -56,7 +56,10 @@ const BooleanWithDefault: FC<Props> = ({
   };
   // on load, convert the value if it's a string
   useEffect(() => {
-    setValue(name, strToBool(getValues(name)));
+    const timeout = setTimeout(() => {
+      setValue(name, strToBool(getValues(name)));
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   return (

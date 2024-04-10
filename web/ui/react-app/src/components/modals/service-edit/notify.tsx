@@ -190,7 +190,7 @@ const Notify: FC<Props> = ({
             path={name}
             original={original}
             extras={{
-              service_name: serviceName,
+              service_name_previous: serviceName,
               service_url: serviceURL,
               web_url: webURL,
             }}

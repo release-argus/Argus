@@ -11,6 +11,7 @@ interface Props {
 
   label: string;
   tooltip?: string;
+  isURL?: boolean;
   defaultVal?: string;
   placeholder?: string;
 }
@@ -21,6 +22,7 @@ interface Props {
  * @param name - The name of the form item
  * @param label - The label of the form item
  * @param tooltip - The tooltip of the form item
+ * @param isURL - Whether to enable validation for a URL
  * @param defaultVal - The default value of the form item
  * @param placeholder - The placeholder of the form item
  * @returns A form item at name with a preview image, label and tooltip
@@ -30,6 +32,7 @@ const FormItemWithPreview: FC<Props> = ({
 
   label,
   tooltip,
+  isURL = true,
   defaultVal,
   placeholder,
 }) => {
@@ -38,9 +41,8 @@ const FormItemWithPreview: FC<Props> = ({
   const error = useError(name, true);
   const preview = useMemo(() => {
     const url = formValue || defaultVal || "";
-    try {
-      new URL(url);
-      // Render the image if it's a valid URL that resolved
+    // Render the image if it's a valid URL that resolved
+    if (url && urlTest(url, true) === true) {
       return (
         <div
           style={{ maxWidth: "100%", overflow: "hidden", marginLeft: "auto" }}
@@ -52,9 +54,9 @@ const FormItemWithPreview: FC<Props> = ({
           />
         </div>
       );
-    } catch (error) {
-      return false;
     }
+    // Else, null
+    return false;
   }, [formValue, defaultVal]);
 
   return (
@@ -70,7 +72,7 @@ const FormItemWithPreview: FC<Props> = ({
             autoFocus={false}
             {...register(name, {
               validate: {
-                isURL: (value) => urlTest(value || defaultVal || "", true),
+                isURL: (value) => urlTest(value || defaultVal || "", isURL),
               },
             })}
             isInvalid={!!error}

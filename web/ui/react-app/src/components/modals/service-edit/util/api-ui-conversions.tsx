@@ -53,7 +53,6 @@ export const convertAPIServiceDataEditToUI = (
       webhook: [],
       notify: [],
       dashboard: {
-        auto_approve: undefined,
         icon: "",
         icon_link_to: "",
         web_url: "",
@@ -171,7 +170,6 @@ export const convertAPIServiceDataEditToUI = (
         })
       : [],
     dashboard: {
-      auto_approve: undefined,
       icon: "",
       ...serviceData?.dashboard,
     },
@@ -446,9 +444,24 @@ export const convertNotifyParams = (
   otherOptionsData?: ServiceEditOtherData
 ) => {
   switch (type) {
+    case "bark":
+    case "join":
+    case "mattermost":
+      return {
+        icon: "", // controlled param
+        ...params,
+      };
+
+    case "discord":
+      return {
+        avatar: "", // controlled param
+        ...params,
+      };
+
     // NTFY
     case "ntfy":
       return {
+        icon: "", // controlled param
         ...params,
         actions: convertNtfyActionsFromString(
           params?.actions,

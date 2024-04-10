@@ -143,6 +143,7 @@ const MATTERMOST = ({
           name={`${name}.params.icon`}
           label="Icon"
           tooltip="URL of icon to use"
+          isURL={false}
           defaultVal={convertedDefaults.params.icon}
         />
       </>

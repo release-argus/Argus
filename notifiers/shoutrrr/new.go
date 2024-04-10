@@ -24,15 +24,16 @@ import (
 
 // TestPayload is the payload for testing a Notify at httpNotifyTest.
 type TestPayload struct {
-	ServiceName  string            `json:"service_name"`
-	Name         string            `json:"name"`
-	NamePrevious string            `json:"name_previous"`
-	Type         string            `json:"type,omitempty"`
-	Options      map[string]string `json:"options"`
-	URLFields    map[string]string `json:"url_fields"`
-	Params       map[string]string `json:"params"`
-	ServiceURL   string            `json:"service_url"`
-	WebURL       string            `json:"web_url"`
+	ServiceName         string            `json:"service_name"`
+	ServiceNamePrevious string            `json:"service_name_previous"`
+	Name                string            `json:"name"`
+	NamePrevious        string            `json:"name_previous"`
+	Type                string            `json:"type,omitempty"`
+	Options             map[string]string `json:"options"`
+	URLFields           map[string]string `json:"url_fields"`
+	Params              map[string]string `json:"params"`
+	ServiceURL          string            `json:"service_url"`
+	WebURL              string            `json:"web_url"`
 }
 
 // FromPayload will create a Shoutrrr from a payload.

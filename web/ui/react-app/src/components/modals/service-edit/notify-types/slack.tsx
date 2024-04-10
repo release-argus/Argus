@@ -124,6 +124,7 @@ const SLACK = ({
           name={`${name}.params.icon`}
           label="Icon"
           tooltip="Use emoji or URL as icon (based on presence of http(s):// prefix)"
+          isURL={false}
           defaultVal={convertedDefaults.params.icon}
         />
         <FormItem

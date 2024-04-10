@@ -952,6 +952,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, have main - type from original": {
 			payload: `{
+				"service_name_previous": "test",
 				"service_name": "test",
 				"name": "new_notify",
 				"name_previous": "test",
@@ -963,6 +964,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, no main - can remove vars": {
 			payload: `{
+				"service_name_previous": "test",
 				"service_name": "test",
 				"name": "new_notify",
 				"name_previous": "no_main",
@@ -975,6 +977,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, no main - unsent vars inherited": {
 			payload: `{
+				"service_name_previous": "test",
 				"service_name": "test",
 				"name": "new_notify",
 				"name_previous": "no_main",
@@ -986,7 +989,22 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, have main - fail send": {
 			payload: `{
+				"service_name_previous": "test",
 				"service_name": "test",
+				"name": "test",
+				"name_previous": "test",
+				"type": "` + validNotify.Type + `",
+				"url_fields": {
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "invalid"}}`,
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    "invalid .* token",
+		},
+		"same service, have main - new name, also fail send": {
+			payload: `{
+				"service_name_previous": "test",
+				"service_name": "new_name",
 				"name": "test",
 				"name_previous": "test",
 				"type": "` + validNotify.Type + `",

@@ -13,9 +13,11 @@ import {
  * @returns - An error message if the value is not a number
  */
 export const numberTest = (value: string, use?: boolean) => {
-  if (!value || !use) return;
+  if (!value || !use) return true;
 
   if (isNaN(Number(value))) return "Must be a number";
+
+  return true;
 };
 
 /**
@@ -26,13 +28,15 @@ export const numberTest = (value: string, use?: boolean) => {
  * @returns - An error message if the value is not a valid RegEx
  */
 export const regexTest = (value: string, use?: boolean) => {
-  if (!value || !use) return;
+  if (!value || !use) return true;
 
   try {
     new RegExp(value);
   } catch (error) {
     return "Invalid RegEx";
   }
+
+  return true;
 };
 
 /**
@@ -52,17 +56,19 @@ export const requiredTest = (
   clearErrors: UseFormClearErrors<FieldValues>,
   use?: boolean | string
 ) => {
-  if (!use) return;
+  if (!use) return true;
 
   if (/.+/.test(value)) {
     clearErrors(name);
-    return;
+    return true;
   }
+  const msg = use === true ? "Required" : use;
   setError(name, {
     type: "required",
-    message: use === true ? "Required" : use,
+    message: msg,
   });
-  return use === true ? "Required" : use;
+
+  return msg;
 };
 
 /**
@@ -80,18 +86,19 @@ export const uniqueTest = (
   getValues: UseFormGetValues<FieldValues>,
   use?: boolean
 ) => {
-  if (!value || !use) return;
+  if (!value || !use) return true;
 
   const parts = name.split(".");
   const parent = parts.slice(0, parts.length - 2).join(".");
   const values = getValues(parent);
   const uniqueName = parts[parts.length - 1];
-  const unique =
+  const unique: boolean =
     values &&
     values
       .map((item: { [x: string]: string }) => item[uniqueName])
       // <=1 in case of default value
       .filter((item: string) => item === value).length <= 1;
+
   return unique || "Must be unique";
 };
 
@@ -103,7 +110,7 @@ export const uniqueTest = (
  * @returns An error message if the value is not a valid URL
  */
 export const urlTest = (value: string, use?: boolean) => {
-  if (!value || !use) return;
+  if (!value || !use) return true;
 
   try {
     const parsedURL = new URL(value);
@@ -115,4 +122,6 @@ export const urlTest = (value: string, use?: boolean) => {
     }
     return "Invalid URL - http(s):// prefix required";
   }
+
+  return true;
 };

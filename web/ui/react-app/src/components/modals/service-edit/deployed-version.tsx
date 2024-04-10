@@ -9,14 +9,14 @@ import {
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
-import { DeployedVersionLookupType } from "types/config";
+import { DeployedVersionLookupEditType } from "types/service-edit";
 import VersionWithRefresh from "./version-with-refresh";
 
 interface Props {
   serviceName: string;
-  original?: DeployedVersionLookupType;
-  defaults?: DeployedVersionLookupType;
-  hard_defaults?: DeployedVersionLookupType;
+  original?: DeployedVersionLookupEditType;
+  defaults?: DeployedVersionLookupEditType;
+  hard_defaults?: DeployedVersionLookupEditType;
 }
 
 /**

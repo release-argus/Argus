@@ -1,14 +1,14 @@
 import { Alert, Button } from "react-bootstrap";
-import { FC, useMemo, useState } from "react";
 import {
+  DeployedVersionLookupEditType,
   LatestVersionLookupEditType,
   ServiceRefreshType,
 } from "types/service-edit";
+import { FC, useMemo, useState } from "react";
 import { convertToQueryParams, fetchJSON, removeEmptyValues } from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { DeployedVersionLookupType } from "types/config";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useErrors } from "hooks/errors";
 import { useQuery } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ import { useWebSocket } from "contexts/websocket";
 interface Props {
   vType: 0 | 1; // 0: Latest, 1: Deployed
   serviceName: string;
-  original?: LatestVersionLookupEditType | DeployedVersionLookupType;
+  original?: LatestVersionLookupEditType | DeployedVersionLookupEditType;
 }
 
 /**

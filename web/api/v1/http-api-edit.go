@@ -418,6 +418,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //
 // Body:
 //
+//	service_name_previous?: string (the service name before the current changes)
 //	service_name: string
 //	name_previous?: string (the name of the notify before the current changes)
 //	name?: string (required if name_previous not set)
@@ -454,10 +455,11 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Get the Notify
 	var serviceNotifies shoutrrr.Slice
 	var latestVersion string
-	api.Config.OrderMutex.RLock()
-	if api.Config.Service[parsedPayload.ServiceName] != nil {
-		serviceNotifies = api.Config.Service[parsedPayload.ServiceName].Notify
-		latestVersion = api.Config.Service[parsedPayload.ServiceName].Status.LatestVersion()
+	useExistingService := parsedPayload.ServiceNamePrevious != ""
+	if useExistingService {
+		api.Config.OrderMutex.RLock()
+		serviceNotifies = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify
+		latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
 	}
 	testNotify, serviceURL, err := shoutrrr.FromPayload(
 		&parsedPayload,
@@ -465,7 +467,9 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		api.Config.Notify,
 		api.Config.Defaults.Notify,
 		api.Config.HardDefaults.Notify)
-	api.Config.OrderMutex.RUnlock()
+	if useExistingService {
+		api.Config.OrderMutex.RUnlock()
+	}
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
