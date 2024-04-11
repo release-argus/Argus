@@ -32,7 +32,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
     // if there's only 1 arg left, remove the command
     if (removeMe) return removeMe();
     return undefined;
-  }, [fields.length]);
+  }, [fields.length, removeMe]);
 
   const placeholder = (index: number) => {
     if (index === 0) return `e.g. "/bin/bash"`;
