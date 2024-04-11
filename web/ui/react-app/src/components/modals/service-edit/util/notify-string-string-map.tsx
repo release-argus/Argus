@@ -47,8 +47,8 @@ export const convertValuesToString = (
         // Ntfy - `label` empty means defaults were used. Skip.
         // OpsGenie - `arg` empty means defaults were used. Skip.
         if (
-          (value as StringFieldArray).find(
-            (item) => (item.label || item.arg || "") == ""
+          (value as StringFieldArray).find((item) =>
+            isEmptyOrNull(item.label || item.arg)
           )
         ) {
           return result;

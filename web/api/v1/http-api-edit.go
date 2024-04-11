@@ -293,9 +293,14 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// service to modify (empty for create new)
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	reqType := "create"
+	if targetService != "" {
+		reqType = "edit"
+	}
 
 	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	api.Log.Verbose(targetService, logFrom, true)
+	api.Log.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
+		logFrom, true)
 
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")
@@ -314,10 +319,6 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	payload := http.MaxBytesReader(w, r.Body, 102400)
 
 	// Create the new/edited service
-	reqType := "create"
-	if targetService != "" {
-		reqType = "edit"
-	}
 	targetServicePtr := api.Config.Service[targetService]
 	newService, err := service.FromPayload(
 		targetServicePtr, // nil if creating new
@@ -352,7 +353,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		// Remove the service name from the error
 		err = errors.New(strings.Join(strings.Split(err.Error(), `\`)[1:], `\`))
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid values)\%s`, reqType, targetService, err.Error()))
+		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid values)\%s`,
+			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
 		return
 	}
 
@@ -361,7 +363,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`, reqType, targetService, err.Error()))
+		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`,
+			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
 		return
 	}
 
@@ -455,9 +458,9 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Get the Notify
 	var serviceNotifies shoutrrr.Slice
 	var latestVersion string
-	useExistingService := parsedPayload.ServiceNamePrevious != ""
-	if useExistingService {
+	if parsedPayload.ServiceNamePrevious != "" {
 		api.Config.OrderMutex.RLock()
+		defer api.Config.OrderMutex.RUnlock()
 		serviceNotifies = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify
 		latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
 	}
@@ -467,9 +470,6 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		api.Config.Notify,
 		api.Config.Defaults.Notify,
 		api.Config.HardDefaults.Notify)
-	if useExistingService {
-		api.Config.OrderMutex.RUnlock()
-	}
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error())

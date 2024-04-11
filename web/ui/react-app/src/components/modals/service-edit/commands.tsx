@@ -2,6 +2,7 @@ import { Accordion, Button, FormGroup, Row } from "react-bootstrap";
 import { FC, memo, useCallback } from "react";
 
 import Command from "./command";
+import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
@@ -40,7 +41,7 @@ const EditServiceCommands: FC<Props> = ({ name }) => {
           </Row>
           <Row>
             <Button
-              className={fields.length > 0 ? "" : "mt-2"}
+              className={isEmptyArray(fields) ? "mt-2" : ""}
               variant="secondary"
               onClick={addItem}
             >

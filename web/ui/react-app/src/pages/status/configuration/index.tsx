@@ -1,8 +1,13 @@
 import { ReactElement, useEffect, useState } from "react";
+import {
+  containsEndsWith,
+  containsStartsWith,
+  fetchJSON,
+  isEmptyObject,
+} from "utils";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import { fetchJSON } from "utils";
 import { stringify } from "yaml";
 import { useDelayedRender } from "hooks/delayed-render";
 import { useQuery } from "@tanstack/react-query";
@@ -80,12 +85,15 @@ const trimConfig = (
     if (typeof obj[key] === "object" && obj[key] !== null) {
       obj[key] = trimConfig(obj[key], `${path}.${key}`);
       if (
-        Object.keys(obj[key]).length === 0 &&
+        isEmptyObject(obj[key]) &&
         !(
-          (path.startsWith(".service") &&
-            (path.endsWith("notify") || path.endsWith("webhook"))) ||
-          (path.startsWith(".defaults.service") && path.endsWith("notify")) ||
-          path.endsWith("webhook")
+          // notify/webhook objects may be empty to reference mains
+          // .service.*.notify | .service.*.webhook
+          // .defaults.service.*.notify | .defaults.service.*.webhook
+          (
+            containsEndsWith(path, [".notify", ".webhook"]) &&
+            containsStartsWith(path, [".service", ".defaults.service"])
+          )
         )
       )
         delete obj[key];

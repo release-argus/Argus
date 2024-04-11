@@ -537,8 +537,10 @@ const convertStringMapToHeaderType = (
   omitValues?: boolean
 ): HeaderType[] => {
   if (!headers) return [];
+
   if (omitValues)
     return Object.keys(headers).map(() => ({ key: "", value: "" }));
+
   return Object.keys(headers).map((key) => ({
     key: key,
     value: headers[key],

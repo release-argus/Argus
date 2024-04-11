@@ -1,3 +1,4 @@
+import { isEmptyArray } from "./is-empty";
 import isEmptyOrNull from "./is-empty-or-null";
 
 /**
@@ -29,10 +30,10 @@ export function diffObjects<T>(
       a.length !== b.length ||
       // if only one has an id, ensure it's not a length difference of 1
       (a.hasOwnProperty("id") != b.hasOwnProperty("id") &&
-        Math.abs(a.length - b.length) != 1))
+        Math.abs(a.length - b.length) !== 1))
   )
     // Non-empty means it's different as the lengths are different
-    return a.length !== 0;
+    return !isEmptyArray(a);
 
   if (typeof b === "object") {
     const keys: Array<keyof T> = Object.keys(a as object) as Array<keyof T>;
@@ -60,17 +61,37 @@ export function diffObjects<T>(
   // different - a is defined at a key that is not allowed
   else return containsEndsWith(key || "-", allowDefined) ? a !== b : true;
 }
+
+/**
+ * Returns whether `list` contains a string that `substring` starts with.
+ *
+ * @param substring - The string to check if it starts with any of the items in the list
+ * @param list - The list of strings to check against
+ * @param undefinedListDefault - The default value to return if the list is undefined
+ * @default undefinedListDefault=false
+ * @returns Whether the substring starts with any of the items in the list
+ */
+export const containsStartsWith = (
+  substring: string,
+  list?: string[],
+  undefinedListDefault = false
+): boolean => {
+  return list
+    ? list.some((item) => substring.startsWith(item))
+    : undefinedListDefault;
+};
+
 /**
  * Returns whether `list` contains a string that `substring` ends with.
  *
  *
  * @param substring - The string to check if it ends with any of the items in the list
  * @param list - The list of strings to check against
- * @param undefinedListDefault - The default value to return if the list is undefined (default=false)
+ * @param undefinedListDefault - The default value to return if the list is undefined
  * @default undefinedListDefault=false
  * @returns Whether the substring ends with any of the items in the list
  */
-const containsEndsWith = (
+export const containsEndsWith = (
   substring: string,
   list?: string[],
   undefinedListDefault = false

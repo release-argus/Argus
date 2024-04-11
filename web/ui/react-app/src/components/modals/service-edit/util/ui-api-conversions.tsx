@@ -2,6 +2,7 @@ import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
 import { Dict, NotifyType, ServiceType, WebHookType } from "types/config";
 
 import { convertValuesToString } from "./notify-string-string-map";
+import { isEmptyArray } from "utils";
 import removeEmptyValues from "utils/remove-empty-values";
 import { urlCommandTrim } from "./url-command-trim";
 
@@ -72,8 +73,8 @@ export const convertUIServiceDataEditToAPI = (
     : {};
 
   // Command
-  if (data.command && data.command.length > 0)
-    payload.command = data.command.map((item) => item.args.map((a) => a.arg));
+  if (!isEmptyArray(data?.command))
+    payload.command = data.command?.map((item) => item.args.map((a) => a.arg));
 
   // WebHook
   if (data.webhook)

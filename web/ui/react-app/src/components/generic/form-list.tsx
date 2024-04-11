@@ -54,7 +54,7 @@ const FormList: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if (fieldValues?.length === 0)
+    if (isEmptyArray(fieldValues))
       defaults?.forEach(() => {
         addItem();
       });
@@ -105,7 +105,7 @@ const FormList: FC<Props> = ({
               variant="danger"
               style={{ float: "left" }}
               onClick={removeLast}
-              disabled={fields.length === 0}
+              disabled={isEmptyArray(fields)}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>

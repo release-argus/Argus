@@ -11,6 +11,7 @@ import { NotificationType } from "types/notification";
 import { ToastContainer } from "react-bootstrap";
 import { addMessageHandler } from "./websocket";
 import { handleNotifications } from "handlers/notifications";
+import { isEmptyArray } from "utils";
 
 interface NotificationCtx {
   notifications: NotificationType[];
@@ -44,10 +45,9 @@ const NotificationProvider = () => {
       ...prevState,
       {
         ...notification,
-        id:
-          prevState.length === 0
-            ? 0
-            : (prevState[prevState.length - 1].id as number) + 1,
+        id: isEmptyArray(prevState)
+          ? 0
+          : (prevState[prevState.length - 1].id as number) + 1,
       },
     ]);
   };

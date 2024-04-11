@@ -4,6 +4,7 @@ import { FC, memo, useCallback, useMemo } from "react";
 
 import Notify from "./notify";
 import { NotifyEditType } from "types/service-edit";
+import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
@@ -85,7 +86,7 @@ const EditServiceNotifys: FC<Props> = ({
             />
           ))}
           <Button
-            className={fields.length > 0 ? "" : "mt-2"}
+            className={isEmptyArray(fields) ? "mt-2" : ""}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}

@@ -1,9 +1,9 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
 import { Dict, WebHookType } from "types/config";
 import { FC, useCallback, useMemo } from "react";
+import { firstNonEmpty, isEmptyArray } from "utils";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
-import { firstNonEmpty } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
@@ -78,7 +78,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
             />
           ))}
           <Button
-            className={fields.length > 0 ? "" : "mt-2"}
+            className={isEmptyArray(fields) ? "mt-2" : ""}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}

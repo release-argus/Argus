@@ -52,9 +52,10 @@ code {
 
 .services {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
   grid-template-rows: 1fr;
   grid-gap: 1.25rem;
+  padding: 0;
 }
 
 .service {

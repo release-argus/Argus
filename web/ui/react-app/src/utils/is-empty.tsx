@@ -5,8 +5,8 @@
  * @returns Whether the array is empty, null, or undefined
  */
 export const isEmptyArray = <T extends unknown[] | unknown>(arg: T): boolean =>
-  !arg || (arg as unknown[]).length === 0;
+  ((arg as unknown[]) ?? []).length === 0;
 
-export const isEmptyObject = <T extends Record<string, unknown>>(
+export const isEmptyObject = <T extends Record<string, unknown> | undefined>(
   arg: T
-): boolean => Object.keys(arg).length === 0;
+): boolean => Object.keys(arg ?? {}).length === 0;

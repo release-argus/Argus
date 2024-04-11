@@ -10,7 +10,7 @@ import {
   OverlayTrigger,
   Tooltip,
 } from "react-bootstrap";
-import { dateIsAfterNow, fetchJSON } from "utils";
+import { dateIsAfterNow, fetchJSON, isEmptyObject } from "utils";
 import { useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -92,10 +92,7 @@ const ActionReleaseModal = () => {
     // Currently sending/running an action for this service
     if (isSendingThisService) return false;
     // has no actions - allow unspecific (SKIP)
-    if (
-      Object.keys(modalData.commands).length === 0 &&
-      Object.keys(modalData.webhooks).length === 0
-    )
+    if (isEmptyObject(modalData.commands) && isEmptyObject(modalData.webhooks))
       return true;
     // has an action that's runnable
     return (
@@ -355,7 +352,7 @@ const ActionReleaseModal = () => {
               </OverlayTrigger>
             </>
           )}
-          {data?.webhook && Object.keys(data.webhook).length > 0 && (
+          {!isEmptyObject(data?.webhook) && (
             <>
               <br />
               <strong>WebHook(s):</strong>
@@ -370,7 +367,7 @@ const ActionReleaseModal = () => {
               />
             </>
           )}
-          {data?.command && Object.keys(data.command).length > 0 && (
+          {!isEmptyObject(data?.command) && (
             <>
               <br />
               <strong>Command(s):</strong>
