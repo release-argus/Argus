@@ -109,7 +109,7 @@ export const uniqueTest = (
  * @param use - Whether to use this test
  * @returns An error message if the value is not a valid URL
  */
-export const urlTest = (value: string, use?: boolean) => {
+export const urlTest = (value?: string, use?: boolean) => {
   if (!value || !use) return true;
 
   try {

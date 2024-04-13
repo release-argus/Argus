@@ -1,5 +1,5 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
-import { FC, useMemo } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import FormLabel from "./form-label";
@@ -39,25 +39,26 @@ const FormItemWithPreview: FC<Props> = ({
   const { register } = useFormContext();
   const formValue: string | undefined = useWatch({ name: name });
   const error = useError(name, true);
-  const preview = useMemo(() => {
-    const url = formValue || defaultVal || "";
-    // Render the image if it's a valid URL that resolved
-    if (url && urlTest(url, true) === true) {
-      return (
-        <div
-          style={{ maxWidth: "100%", overflow: "hidden", marginLeft: "auto" }}
-        >
-          <img
-            src={url}
-            alt="Icon preview"
-            style={{ height: "2em", width: "auto" }}
-          />
-        </div>
-      );
+
+  // The preview image URL, or undefined if invalid
+  const [previewURL, setPreviewURL] = useState(
+    urlTest(formValue, true) ? formValue : undefined
+  );
+  // Set the preview image
+  const setPreview = useCallback((url?: string) => {
+    const previewSource = url || defaultVal;
+    if (previewSource && urlTest(previewSource, true) === true) {
+      setPreviewURL(previewSource);
+    } else {
+      setPreviewURL(undefined);
     }
-    // Else, null
-    return false;
-  }, [formValue, defaultVal]);
+  }, []);
+
+  // Wait for a period of no typing to set the preview
+  useEffect(() => {
+    const timer = setTimeout(() => setPreview(formValue), 750);
+    return () => clearTimeout(timer);
+  }, [formValue]);
 
   return (
     <Col xs={12} sm={12} className={"pt-1 pb-1 col-form"}>
@@ -68,16 +69,31 @@ const FormItemWithPreview: FC<Props> = ({
             type="text"
             value={formValue}
             placeholder={placeholder || defaultVal}
-            style={{ marginRight: preview ? "1rem" : undefined }}
+            style={{ marginRight: previewURL ? "1rem" : undefined }}
             autoFocus={false}
             {...register(name, {
               validate: {
-                isURL: (value) => urlTest(value || defaultVal || "", isURL),
+                isURL: (value) => urlTest(value || defaultVal, isURL),
               },
+              onBlur: () => setPreview(formValue),
             })}
             isInvalid={!!error}
-          />
-          {preview}
+          />{" "}
+          {previewURL && (
+            <div
+              style={{
+                maxWidth: "100%",
+                overflow: "hidden",
+                marginLeft: "auto",
+              }}
+            >
+              <img
+                src={previewURL}
+                alt="Icon preview"
+                style={{ height: "2em", width: "auto" }}
+              />
+            </div>
+          )}
         </div>
       </FormGroup>
       {error && (
