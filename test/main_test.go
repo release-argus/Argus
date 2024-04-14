@@ -268,3 +268,67 @@ func TestTrimJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestCombinations(t *testing.T) {
+	// GIVEN a slice of values
+	tests := map[string]struct {
+		input []int
+		want  [][]int
+	}{
+		"empty": {
+			input: []int{},
+			want:  [][]int{},
+		},
+		"single": {
+			input: []int{1},
+			want:  [][]int{{1}},
+		},
+		"two": {
+			input: []int{1, 2},
+			want: [][]int{
+				{1},
+				{1, 2},
+				{2},
+			},
+		},
+		"three": {
+			input: []int{1, 2, 3},
+			want: [][]int{
+				{1},
+				{1, 2},
+				{1, 2, 3},
+				{1, 3},
+				{2},
+				{2, 3},
+				{3},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN Combinations is called
+			result := Combinations(tc.input)
+
+			// THEN the result should be all possible combinations of the values
+			if len(result) != len(tc.want) {
+				t.Fatalf("length differs:\nwant: %d, %v\ngot:  %d, %v",
+					len(tc.want), tc.want, len(result), result)
+			}
+			for i, want := range tc.want {
+				if len(result[i]) != len(want) {
+					t.Fatalf("items differ in length:\nwant: %v\ngot:  %v",
+						tc.want, result)
+				}
+				for j, v := range want {
+					if result[i][j] != v {
+						t.Fatalf("items of items differ:\nwant: %v\ngot:  %v",
+							tc.want, result)
+					}
+				}
+			}
+		})
+	}
+}

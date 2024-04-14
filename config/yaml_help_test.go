@@ -288,6 +288,55 @@ defaults:
 	t.Cleanup(func() { os.Remove(path) })
 }
 
+func testYAML_Ordering_2(path string, t *testing.T) {
+	data := `
+service:
+  "123":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "foo bar":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "foo: bar":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "foo: \"bar\"":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "\"foo: bar\"":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "'foo: bar'":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "\"foo bar\"":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "'foo bar'":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "foo \"bar\"":
+    latest_version:
+      type: github
+      url: release-argus/argus
+  "foo: bar, baz":
+    latest_version:
+      type: github
+      url: release-argus/argus
+`
+
+	writeYAML(path, data, t)
+	t.Cleanup(func() { os.Remove(path) })
+}
+
 func testYAML_LoadDefaults(path string, t *testing.T) {
 	data := `
 settings:

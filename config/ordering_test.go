@@ -35,6 +35,19 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"}},
 		"no services": {file: testYAML_Ordering_1,
 			order: []string{}},
+		"obscure service names": {file: testYAML_Ordering_2,
+			order: []string{
+				`123`,
+				`foo bar`,
+				`foo: bar`,
+				`foo: "bar"`,
+				`"foo: bar"`,
+				`'foo: bar'`,
+				`"foo bar"`,
+				`'foo bar'`,
+				`foo "bar"`,
+				`foo: bar, baz`,
+			}},
 	}
 
 	var lock sync.Mutex

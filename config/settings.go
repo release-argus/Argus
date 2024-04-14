@@ -95,13 +95,14 @@ type DataSettings struct {
 
 // WebSettings for the binary.
 type WebSettings struct {
-	ListenHost  *string               `yaml:"listen_host,omitempty"`  // Web listen host
-	ListenPort  *string               `yaml:"listen_port,omitempty"`  // Web listen port
-	RoutePrefix *string               `yaml:"route_prefix,omitempty"` // Web endpoint prefix
-	CertFile    *string               `yaml:"cert_file,omitempty"`    // HTTPS certificate path
-	KeyFile     *string               `yaml:"pkey_file,omitempty"`    // HTTPS privkey path
-	BasicAuth   *WebSettingsBasicAuth `yaml:"basic_auth,omitempty"`   // Basic auth creds
-	Favicon     *FaviconSettings      `yaml:"favicon,omitempty"`      // Favicon settings
+	ListenHost     *string               `yaml:"listen_host,omitempty"`     // Web listen host
+	ListenPort     *string               `yaml:"listen_port,omitempty"`     // Web listen port
+	RoutePrefix    *string               `yaml:"route_prefix,omitempty"`    // Web endpoint prefix
+	CertFile       *string               `yaml:"cert_file,omitempty"`       // HTTPS certificate path
+	KeyFile        *string               `yaml:"pkey_file,omitempty"`       // HTTPS privkey path
+	BasicAuth      *WebSettingsBasicAuth `yaml:"basic_auth,omitempty"`      // Basic auth creds
+	DisabledRoutes []string              `yaml:"disabled_routes,omitempty"` // Disabled API routes
+	Favicon        *FaviconSettings      `yaml:"favicon,omitempty"`         // Favicon settings
 }
 
 // String returns a string representation of the WebSettings.

@@ -58,3 +58,24 @@ func TrimJSON(str string) string {
 	str = strings.ReplaceAll(str, `, "`, `,"`)
 	return str
 }
+
+func Combinations[T comparable](input []T) [][]T {
+	var result [][]T
+
+	var generate func(index int, current []T)
+	generate = func(index int, current []T) {
+		if index == len(input) {
+			return
+		}
+
+		for i := index; i < len(input); i++ {
+			newCombination := append([]T{}, current...)
+			newCombination = append(newCombination, input[i])
+			result = append(result, newCombination)
+			generate(i+1, newCombination)
+		}
+	}
+
+	generate(0, []T{})
+	return result
+}

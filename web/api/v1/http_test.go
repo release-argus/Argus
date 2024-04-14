@@ -18,9 +18,12 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
@@ -215,6 +218,269 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			if tc.urlSVG != "" && tc.urlSVG != resp.Request.URL.String() {
 				t.Errorf("/favicon.svg - Expected a redirect to %s, not %s",
 					tc.urlSVG, resp.Request.URL.String())
+			}
+		})
+	}
+}
+
+func TestHTTP_DisableRoutes(t *testing.T) {
+	// GIVEN an API and a bunch of routes
+	tests := map[string]struct {
+		method             string
+		path               string
+		replaceLastPathDir string
+		wantStatus         int
+		wantBody           string
+	}{
+		"-config": {
+			method:     http.MethodGet,
+			path:       "config",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"settings":{.*},
+				"defaults":{.*"notify":{.*},
+				"webhook":{.*},
+				"service":{.*
+				}`,
+		},
+		"-runtime": {
+			method:     http.MethodGet,
+			path:       "status/runtime",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"start_time":"[^"]+",
+				"cwd":"[^"]+",
+				"goroutines":\d+,
+				"GOMAXPROCS":\d+
+			}`,
+		},
+		"-version": {
+			method:     http.MethodGet,
+			path:       "version",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"version":"[^"]*",
+				"buildDate":"[^"]*",
+				"goVersion":"[^"]*"
+			}`,
+		},
+		"-flags": {
+			method:     http.MethodGet,
+			path:       "flags",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"log.level":"INFO",
+				"log.timestamps":false,
+				"data.database-file":"[^"]+",
+				"web.listen-host":"[\d.]+",
+				"web.listen-port":"\d+",
+				"web.cert-file":null,
+				"web.pkey-file":null
+			`,
+		},
+		"-order": {
+			method:     http.MethodGet,
+			path:       "service/order",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"order": null
+			}`,
+		},
+		"-service_summary": {
+			method:             http.MethodGet,
+			path:               "service/summary/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"-service_actions - GET": {
+			method:             http.MethodGet,
+			path:               "service/actions/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"service_actions": {
+			method:             http.MethodPost,
+			path:               "service/actions/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"-service_update - GET unspecific": {
+			method:     http.MethodGet,
+			path:       "service/update",
+			wantStatus: http.StatusOK,
+			wantBody: `{
+				"hard_defaults":{.*},
+				"defaults":{.*},
+				"notify":{.*},
+				"webhook":{.*}
+			}`,
+		},
+		"-service_update - GET": {
+			method:             http.MethodGet,
+			path:               "service/update/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"lv_refresh_new": {
+			method:     http.MethodGet,
+			path:       "latest_version/refresh",
+			wantStatus: http.StatusBadRequest,
+			wantBody: `{
+				"version":"","error":"values failed [^"]*".*
+			}`,
+		},
+		"dv_refresh_new": {
+			method:     http.MethodGet,
+			path:       "deployed_version/refresh",
+			wantStatus: http.StatusBadRequest,
+			wantBody: `{
+				"version":"","error":"values failed [^"]*".*
+			}`,
+		},
+		"lv_refresh": {
+			method:             http.MethodGet,
+			path:               "latest_version/refresh/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"dv_refresh": {
+			method:             http.MethodGet,
+			path:               "deployed_version/refresh/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusNotFound,
+			wantBody: `{
+				"message":"service \\"[^"]+\\" not found"
+			}`,
+		},
+		"notify_test": {
+			method:     http.MethodPost,
+			path:       "notify/test",
+			wantStatus: http.StatusBadRequest,
+			wantBody: `{
+				"message":"unexpected end of JSON input"
+			}`,
+		},
+		"service_update": {
+			method:             http.MethodPut,
+			path:               "service/update/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusBadRequest,
+			wantBody: `{
+				"message":"edit \\"[^"]+\\" failed[^"]*"
+			}`,
+		},
+		"service_create": {
+			method:     http.MethodPost,
+			path:       "service/new",
+			wantStatus: http.StatusBadRequest,
+			wantBody: `{
+				"message":"create \\"\\" failed[^"]*"
+			}`,
+		},
+		"service_delete": {
+			method:             http.MethodDelete,
+			path:               "service/delete/{service_name:.+}",
+			replaceLastPathDir: "test",
+			wantStatus:         http.StatusBadRequest,
+			wantBody: `{
+				"message":"delete \\"[^"]+\\" failed[^"]*"
+			}`,
+		},
+	}
+	disableCombinations := test.Combinations(util.SortedKeys(tests))
+
+	// Split tests into groups
+	groupSize := len(disableCombinations) / (runtime.NumCPU())
+	numGroups := len(disableCombinations) / groupSize
+	for i := 0; i < numGroups; i++ {
+		groupStart := i * groupSize
+		groupEnd := min((i+1)*groupSize, len(disableCombinations))
+		group := disableCombinations[groupStart:groupEnd]
+
+		t.Run(fmt.Sprintf("Group %d", i+1), func(t *testing.T) {
+			t.Parallel()
+			for j, disabledRoutes := range group {
+				// Insane number of tests, so have to skip some
+				if j%((len(tests)+1)*10) != 0 {
+					continue
+				}
+				t.Run(strings.Join(disabledRoutes, ";"), func(t *testing.T) {
+
+					cfg := testBareConfig()
+					cfg.Settings.Web.DisabledRoutes = disabledRoutes
+					api := NewAPI(cfg, util.NewJLog("WARN", false))
+					api.SetupRoutesAPI()
+					ts := httptest.NewServer(api.Router)
+					ts.Config.Handler = api.Router
+					defer ts.Close()
+					client := http.Client{}
+
+					for name, tc := range tests {
+						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {
+							tc.wantStatus = http.StatusNotFound
+							tc.wantBody = "Route disabled"
+						} else {
+							tc.wantBody = test.TrimJSON(tc.wantBody)
+						}
+
+						path := fmt.Sprintf("/api/v1/%s", tc.path)
+						if tc.replaceLastPathDir != "" {
+							parts := strings.Split(path, "/")
+							path = strings.Join(parts[:len(parts)-1], "/") + "/" + tc.replaceLastPathDir
+						}
+						url := ts.URL + path
+
+						// WHEN a HTTP request is made to this router
+						req, err := http.NewRequest(tc.method, url, nil)
+						if err != nil {
+							t.Fatal(err)
+						}
+						resp, err := client.Do(req)
+						if err != nil {
+							t.Fatal(err)
+						}
+
+						// Read the response body
+						body, err := io.ReadAll(resp.Body)
+						if err != nil {
+							t.Fatal(err)
+						}
+						resp.Body.Close()
+
+						fail := false
+						// THEN the status code is as expected
+						if resp.StatusCode != tc.wantStatus {
+							t.Errorf("%s - Expected a %d, not a %d",
+								path, tc.wantStatus, resp.StatusCode)
+							fail = true
+						}
+						// AND the body is as expected
+						if !util.RegexCheck(tc.wantBody, string(body)) {
+							t.Errorf("%s - Expected a body of\n%s\nnot\n%s",
+								path, tc.wantBody, string(body))
+							fail = true
+						}
+
+						if fail {
+							t.FailNow()
+						}
+					}
+				})
 			}
 		})
 	}

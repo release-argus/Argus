@@ -76,25 +76,80 @@ func (api *API) SetupRoutesAPI() {
 	api.Router.HandleFunc("/api/v1/service/summary/{service_name:.+}", api.httpServiceSummary).Methods("GET")
 	//   GET, service actions (webhooks/commands)
 	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceGetActions).Methods("GET")
-	//   POST, service actions
+	//   POST, service actions (disable=service_actions)
 	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceRunActions).Methods("POST")
 	//   GET, service-edit - get details
-	api.Router.HandleFunc("/api/v1/service/edit", api.httpOtherServiceDetails).Methods("GET")
-	api.Router.HandleFunc("/api/v1/service/edit/{service_name:.+}", api.httpServiceDetail).Methods("GET")
-	//   GET, service-edit - refresh unsaved service
+	api.Router.HandleFunc("/api/v1/service/update", api.httpOtherServiceDetails).Methods("GET")
+	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceDetail).Methods("GET")
+	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new)
 	api.Router.HandleFunc("/api/v1/latest_version/refresh", api.httpVersionRefreshUncreated).Methods("GET")
 	api.Router.HandleFunc("/api/v1/deployed_version/refresh", api.httpVersionRefreshUncreated).Methods("GET")
-	//   GET, service-edit - refresh
+	//   GET, service-edit - refresh service (disable=[ld]v_refresh)
 	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
 	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
-	//   POST, service-edit - test notify
+	//   POST, service-edit - test notify (disable=notify_test)
 	api.Router.HandleFunc("/api/v1/notify/test", api.httpNotifyTest).Methods("POST")
-	//   PUT, service-edit - update details
-	api.Router.HandleFunc("/api/v1/service/edit/{service_name:.+}", api.httpServiceEdit).Methods("PUT")
-	//   POST, service-edit - new service
+	//   PUT, service-edit - update details (disable=service_edit)
+	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceEdit).Methods("PUT")
+	//   POST, service-edit - new service (disable=service_create)
 	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("POST")
-	//   DELETE, service-edit
+	//   DELETE, service-edit - delete service (disable=service_delete)
 	api.Router.HandleFunc("/api/v1/service/delete/{service_name:.+}", api.httpServiceDelete).Methods("DELETE")
+
+	// Disable specified routes
+	api.DisableRoutesAPI()
+}
+
+// DisableRoutesAPI will disable HTTP API routes that are disabled in the config
+func (api *API) DisableRoutesAPI() {
+	routes := map[string]*struct {
+		name         string
+		method       string
+		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
+		disabled     bool
+	}{
+		"/api/v1/service/new": {name: "service_create", method: "POST"},
+		"/api/v1/service/update/{service_name:.+}": {name: "service_update", method: "PUT",
+			otherMethods: map[string]func(w http.ResponseWriter, r *http.Request){"GET": api.httpServiceDetail}},
+		"/api/v1/service/delete/{service_name:.+}":           {name: "service_delete", method: "DELETE"},
+		"/api/v1/notify/test":                                {name: "notify_test", method: "POST"},
+		"/api/v1/latest_version/refresh/{service_name:.+}":   {name: "lv_refresh", method: "GET"},
+		"/api/v1/deployed_version/refresh/{service_name:.+}": {name: "dv_refresh", method: "GET"},
+		"/api/v1/latest_version/refresh":                     {name: "lv_refresh_new", method: "GET"},
+		"/api/v1/deployed_version/refresh":                   {name: "dv_refresh_new", method: "GET"},
+		"/api/v1/service/actions/{service_name:.+}":          {name: "service_actions", method: "POST"},
+	}
+	for _, r := range routes {
+		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
+	}
+
+	_ = api.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		// An error will be returned if the route does not define a path.
+		routePath, _ := route.GetPathTemplate()
+
+		// Ignore routes not defined above and routes that are not disabled
+		r := routes[routePath]
+		if r == nil || !r.disabled {
+			return nil
+		}
+
+		handler := route.GetHandler()
+
+		// Set the new handler for the route
+		disabledMethod := r.method
+		route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			disabledMethod := disabledMethod
+			if r.Method == disabledMethod {
+				failRequest(&w, "Route disabled", http.StatusNotFound)
+				return
+			}
+
+			// Call the original handler for other methods
+			handler.(http.HandlerFunc)(w, r) // Cast the handler to http.HandlerFunc before calling it
+		})
+
+		return nil
+	})
 }
 
 // SetupRoutesNodeJS will setup the HTTP routes to the NodeJS files.

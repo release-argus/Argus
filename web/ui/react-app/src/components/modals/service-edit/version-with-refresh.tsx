@@ -5,7 +5,12 @@ import {
   ServiceRefreshType,
 } from "types/service-edit";
 import { FC, useMemo, useState } from "react";
-import { convertToQueryParams, fetchJSON, removeEmptyValues } from "utils";
+import {
+  beautifyGoErrors,
+  convertToQueryParams,
+  fetchJSON,
+  removeEmptyValues,
+} from "utils";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -95,7 +100,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
 
     refetchSemanticVersioning();
     refetchData();
-    // setTimeout to allow time for refetches ^
+    // setTimeout to allow time for refetch setState's ^
     const timeout = setTimeout(() => {
       if (url) {
         refetchVersion();
@@ -124,7 +129,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
           Refresh
         </Button>
       </span>
-      {versionData.error && (
+      {(versionData.error || versionData.message) && (
         <span
           className="mb-2"
           style={{ width: "100%", wordBreak: "break-all" }}
@@ -132,14 +137,9 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
           <Alert variant="danger">
             Failed to refresh:
             <br />
-            {
-              versionData.error
-                .replaceAll(/\\([ \t])/g, "\n$1") // \ + space/tab -> newline
-                .replaceAll(`\\n`, "\n") // \n -> newline
-                .replaceAll(`\\"`, `"`) // \" -> "
-                .replaceAll(`\\\\`, `\\`) // \\ -> \
-                .replaceAll(/\\$/g, "\n") // \ + end of string -> newline
-            }
+            {beautifyGoErrors(
+              (versionData.error || versionData.message) as string
+            )}
           </Alert>
         </span>
       )}
