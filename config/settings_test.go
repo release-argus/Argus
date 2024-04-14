@@ -197,17 +197,17 @@ func TestSettings_GetString(t *testing.T) {
 			want: "ERROR",
 		},
 		"data.database-file hard default": {
-			getFuncPtr: settings.DataDatabaseFile,
-			flag:       &DataDatabaseFile, want: "data/argus.db",
+			getFunc: settings.DataDatabaseFile,
+			flag:    &DataDatabaseFile, want: "data/argus.db",
 			nilConfig: true, configPtr: &settings.Data.DatabaseFile,
 		},
 		"data.database-file config": {
-			getFuncPtr: settings.DataDatabaseFile,
-			flag:       &DataDatabaseFile, want: "somewhere.db",
+			getFunc: settings.DataDatabaseFile,
+			flag:    &DataDatabaseFile, want: "somewhere.db",
 		},
 		"data.database-file flag": {
-			getFuncPtr: settings.DataDatabaseFile,
-			flag:       &DataDatabaseFile, flagVal: stringPtr("ERROR"),
+			getFunc: settings.DataDatabaseFile,
+			flag:    &DataDatabaseFile, flagVal: stringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"web.listen-host hard default": {

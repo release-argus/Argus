@@ -87,8 +87,10 @@ export const Approvals = (): ReactElement => {
         fluid
         className="services"
         style={{
-          maxWidth: filteredServices.length === 1 ? "500px" : "",
-          padding: 0,
+          maxWidth:
+            filteredServices.length < 5
+              ? `${filteredServices.length * 30}rem`
+              : "",
         }}
       >
         {monitorData.order.length === Object.keys(monitorData.service).length &&

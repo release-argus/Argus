@@ -5,14 +5,17 @@
  * @returns The object with all empty values removed
  */
 
+import { isEmptyArray, isEmptyObject } from "./is-empty";
+
 import isEmptyOrNull from "./is-empty-or-null";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeEmptyValues = (obj: { [x: string]: any }) => {
   for (const key in obj) {
-    // [] Empty array
+    // [] Array
     if (Array.isArray(obj[key])) {
-      if (obj[key].length === 0) delete obj[key];
+      // Empty array - remove
+      if (isEmptyArray(obj[key])) delete obj[key];
       // {} Object
     } else if (
       typeof obj[key] === "object" &&
@@ -20,12 +23,11 @@ const removeEmptyValues = (obj: { [x: string]: any }) => {
     ) {
       // Check object
       removeEmptyValues(obj[key]);
-      // Empty object
-      if (Object.keys(obj[key] ?? []).length === 0) {
+      // Empty object - remove
+      if (isEmptyObject(obj[key])) {
         delete obj[key];
-        continue;
       }
-      // "" Empty/undefined string
+      // "" Empty/undefined string - remove
     } else if (isEmptyOrNull(obj[key])) delete obj[key];
   }
   return obj;

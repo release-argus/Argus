@@ -110,19 +110,25 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
     refetchOnMount: "always",
   });
 
+  const hasFetched =
+    isFetchedOtherOptionsData &&
+    (isSuccessServiceData || !serviceID) &&
+    otherOptionsData !== undefined;
+
   const defaultData: ServiceEditType = useMemo(
     () =>
-      convertAPIServiceDataEditToUI(serviceID, serviceData, otherOptionsData),
+      hasFetched && !isRefetching
+        ? convertAPIServiceDataEditToUI(
+            serviceID,
+            serviceData,
+            otherOptionsData
+          )
+        : {},
     [serviceData, otherOptionsData, isRefetching]
   );
 
-  // Not fetchedZ yet
-  if (
-    loadingModal ||
-    !isFetchedOtherOptionsData ||
-    (!isSuccessServiceData && serviceID) ||
-    !otherOptionsData
-  ) {
+  // Not fetched yet
+  if (loadingModal || !hasFetched) {
     return (
       <Modal size="lg" show onHide={hideModal}>
         <ServiceEditModalHeader />
@@ -139,9 +145,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
           style={{ display: "flex", justifyContent: "space-between" }}
         >
           <ButtonGroup>
-            {serviceID && (
-              <DeleteModal onDelete={() => {}} disabled={!loadingModal} />
-            )}
+            {serviceID && <DeleteModal disabled={!loadingModal} />}
           </ButtonGroup>
           <span>
             <Button
@@ -343,7 +347,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                     ) : (
                       <ul>
                         {Object.entries(
-                          extractErrors(form.formState.errors)
+                          extractErrors(form.formState.errors) ?? []
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

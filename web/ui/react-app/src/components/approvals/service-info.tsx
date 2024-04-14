@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
 import { formatRelative } from "date-fns";
 import { isEmptyOrNull } from "utils";
+import { useDelayedRender } from "hooks/delayed-render";
 
 interface Props {
   service: ServiceSummaryType;
@@ -46,6 +47,7 @@ export const ServiceInfo: FC<Props> = ({
   setShowUpdateInfo,
 }) => {
   const { handleModal } = useContext(ModalContext);
+  const delayedRender = useDelayedRender(250);
 
   const showModal = useCallback(
     (type: ModalType, service: ServiceSummaryType) => {
@@ -56,10 +58,13 @@ export const ServiceInfo: FC<Props> = ({
 
   const status = useMemo(
     () => ({
-      // If version hasn't been found or a new version has been found (and not skipped)
-      warning:
+      // If the version hasn't been found
+      not_found:
         isEmptyOrNull(service?.status?.deployed_version) ||
-        (updateAvailable && !updateSkipped),
+        isEmptyOrNull(service?.status?.latest_version) ||
+        isEmptyOrNull(service?.status?.last_queried),
+      // If a new version has been found (and not skipped)
+      warning: updateAvailable && !updateSkipped,
       // If the latest version is the same as the approved version
       updateApproved:
         service?.status?.latest_version !== undefined &&
@@ -80,7 +85,6 @@ export const ServiceInfo: FC<Props> = ({
       }
     >
       <FontAwesomeIcon
-        className="same-color"
         style={{ paddingLeft: "0.5rem", paddingBottom: "0.1rem" }}
         icon={faSatelliteDish}
       />
@@ -139,14 +143,21 @@ export const ServiceInfo: FC<Props> = ({
       style={{
         padding: "0px",
       }}
-      className={status.warning ? "service-warning rounded-bottom" : "default"}
+      className={
+        status.not_found
+          ? delayedRender(() => "service-warning rounded-bottom", "default")
+          : status.warning
+          ? "service-warning rounded-bottom"
+          : "default"
+      }
     >
       <ListGroup className="list-group-flush">
         {updateAvailable && !updateSkipped ? (
           <>
             <ListGroup.Item
               key="update-available"
-              className={"service-item update-options service-warning"}
+              className={"service-item update-options"}
+              style={{ color: "inherit" }}
               variant="secondary"
             >
               {status.updateApproved && (service.webhook || service.command)
@@ -155,7 +166,7 @@ export const ServiceInfo: FC<Props> = ({
             </ListGroup.Item>
             <ListGroup.Item
               key="update-buttons"
-              className={"service-item update-options service-warning"}
+              className={"service-item update-options"}
               variant="secondary"
               style={{ paddingTop: "0.25rem" }}
             >
@@ -198,7 +209,13 @@ export const ServiceInfo: FC<Props> = ({
         ) : (
           <ListGroup.Item
             key="deployed_v"
-            variant={status.warning ? "warning" : "secondary"}
+            variant={
+              status.not_found
+                ? delayedRender(() => "warning", "secondary")
+                : status.warning
+                ? "warning"
+                : "secondary"
+            }
             className={
               "service-item" +
               (service.webhook || service.command ? "" : " justify-left")
@@ -243,17 +260,15 @@ export const ServiceInfo: FC<Props> = ({
           </ListGroup.Item>
         )}
       </ListGroup>
-      <Card.Footer
-        className={
-          status.warning || !service?.status?.last_queried
-            ? "service-warning rounded-bottom"
-            : ""
-        }
-      >
+      <Card.Footer>
         <small
           className={
-            "text-muted same-color" +
-            (status.warning ? " service-warning rounded-bottom" : "")
+            "text-muted" +
+            (status.not_found
+              ? delayedRender(() => " service-warning rounded-bottom", "")
+              : status.warning
+              ? " service-warning rounded-bottom"
+              : "")
           }
         >
           {service?.status?.last_queried ? (

@@ -1,7 +1,15 @@
 import { Col, FormControl, FormGroup } from "react-bootstrap";
 import { FC, JSX } from "react";
+import {
+  numberTest,
+  regexTest,
+  requiredTest,
+  uniqueTest,
+  urlTest,
+} from "./form-validate";
 
 import FormLabel from "./form-label";
+import { Position } from "types/config";
 import { formPadding } from "./util";
 import { useError } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
@@ -17,7 +25,7 @@ interface FormItemProps {
   label?: string;
   smallLabel?: boolean;
   tooltip?: string | JSX.Element;
-  type?: "text" | "number" | "url";
+  type?: "text" | "url";
 
   isNumber?: boolean;
   isRegex?: boolean;
@@ -25,8 +33,8 @@ interface FormItemProps {
   defaultVal?: string;
   placeholder?: string;
 
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 }
 
 /**
@@ -73,12 +81,14 @@ const FormItem: FC<FormItemProps> = ({
   position = "left",
   positionXS = position,
 }) => {
-  const { getValues, register } = useFormContext();
+  const { getValues, register, setError, clearErrors } = useFormContext();
   const error = useError(
     name,
-    required || isNumber || isRegex || isURL || registerParams["validate"]
-      ? true
-      : false
+    !!required ||
+      isNumber ||
+      isRegex ||
+      isURL ||
+      registerParams["validate"] !== undefined
   );
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -99,64 +109,21 @@ const FormItem: FC<FormItemProps> = ({
           placeholder={defaultVal || placeholder}
           autoFocus={false}
           {...register(name, {
-            validate: (value: string | undefined) => {
-              let validation = true;
-              const testValue = value || defaultVal || "";
-
-              // Validate that it's non-empty (including default value)
-              if (required) {
-                validation = /.+/.test(testValue);
-                if (!validation)
-                  return required === true ? "Required" : required;
-              }
-
-              // Validate that it's a number
-              if (isNumber) {
-                validation = !isNaN(Number(testValue));
-                if (!validation) return "Must be a number";
-              }
-
-              // Validate that it's valid RegEx
-              if (isRegex) {
-                try {
-                  new RegExp(testValue);
-                } catch (error) {
-                  return "Invalid RegEx";
-                }
-              }
-
-              // Validate that it's a URL (with prefix)
-              if (isURL) {
-                try {
-                  validation = required
-                    ? new URL(testValue).protocol.startsWith("http")
-                    : true;
-                  if (!validation)
-                    return "Invalid URL - http(s):// prefix required";
-                } catch (error) {
-                  return "Invalid URL";
-                }
-              }
-
-              // Should be unique if it's changed from the default
-              if (unique && testValue !== defaultVal) {
-                const parts = name.split(".");
-                const parent = parts.slice(0, parts.length - 2).join(".");
-                const values = getValues(parent);
-                const uniqueName = parts[parts.length - 1];
-                validation =
-                  value === ""
-                    ? false
-                    : values &&
-                      values
-                        .map(
-                          (item: { [x: string]: string }) => item[uniqueName]
-                        )
-                        .filter((item: string) => item === value).length === 1;
-                return validation || "Must be unique";
-              }
-
-              return validation;
+            validate: {
+              required: (value) =>
+                requiredTest(
+                  value || defaultVal || "",
+                  name,
+                  setError,
+                  clearErrors,
+                  required
+                ),
+              isRegex: (value) => regexTest(value || defaultVal || "", isRegex),
+              isNumber: (value) =>
+                numberTest(value || defaultVal || "", isNumber),
+              isUnique: (value) =>
+                uniqueTest(value || defaultVal || "", name, getValues, unique),
+              isURL: (value) => urlTest(value || defaultVal || "", isURL),
             },
             ...registerParams,
           })}

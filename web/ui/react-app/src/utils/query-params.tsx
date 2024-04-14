@@ -1,4 +1,5 @@
 import { ArgType } from "types/service-edit";
+import { isEmptyObject } from "./is-empty";
 import { urlCommandsTrim } from "components/modals/service-edit/util";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,7 +32,7 @@ export const deepDiff = (
     // diff arrays
     if (Array.isArray(oldObj[key]) || Array.isArray(newObj[key])) {
       // if array lengths differ, include all elements in diff
-      if ((oldObj[key] || []).length !== newObj[key].length) {
+      if ((oldObj[key] ?? []).length !== newObj[key].length) {
         diff[key] = newObj[key];
         // else, recurse on each element
       } else {
@@ -39,13 +40,9 @@ export const deepDiff = (
           (elem: DiffObject, i: string | number) =>
             deepDiff(newObj[key][i], elem)
         );
-        if (
-          subDiff.some(
-            (diffElem: DiffObject) => Object.keys(diffElem).length > 0
-          )
-        ) {
+        // Add to diff if any element has changed
+        if (subDiff.some((diffElem: DiffObject) => !isEmptyObject(diffElem)))
           diff[key] = newObj[key];
-        }
       }
       // diff objects
     } else if (
@@ -54,7 +51,8 @@ export const deepDiff = (
     ) {
       // recurse on nested objects
       const subDiff = deepDiff(newObj[key], oldObj[key]);
-      if (Object.keys(subDiff).length > 0) diff[key] = subDiff;
+      // add to diff if any nested object has changed
+      if (!isEmptyObject(subDiff)) diff[key] = subDiff;
       // diff scalars
     } else if (oldObj[key] !== newObj[key]) diff[key] = newObj[key];
   });
@@ -116,15 +114,14 @@ export const convertToQueryParams = ({
       else if (key === "require") {
         // Convert array of objects to array of strings
         modifiedObj = JSON.stringify(
-          changedParams[key]?.command &&
-            Object.keys(changedParams[key]?.command).length > 0
-            ? {
+          isEmptyObject(changedParams[key]?.command)
+            ? changedParams[key]
+            : {
                 ...changedParams[key],
                 command: Object.values<ArgType>(
                   changedParams.require.command
                 ).map((value) => value.arg),
               }
-            : changedParams[key]
         );
       }
       // Include new undefined's in the JSONification

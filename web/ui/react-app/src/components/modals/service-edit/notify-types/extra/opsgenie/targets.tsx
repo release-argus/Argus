@@ -14,7 +14,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import { NotifyOpsGenieTarget } from "types/config";
 import OpsGenieTarget from "./target";
-import { convertOpsGenieTargetFromString } from "components/modals/service-edit/util";
 import { diffObjects } from "utils/diff-objects";
 import { isEmptyArray } from "utils";
 
@@ -61,17 +60,16 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
         : !diffObjects(fieldValues, defaults, [".type", ".sub_type"]),
     [fieldValues, defaults]
   );
-  const trimmedDefaults = useMemo(
-    () => convertOpsGenieTargetFromString(undefined, JSON.stringify(defaults)),
-    [defaults]
-  );
   useEffect(() => {
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? [])?.length === 0)
-      trimmedDefaults?.forEach((dflt) => {
-        append(dflt, { shouldFocus: false });
+    if (isEmptyArray(fieldValues))
+      defaults?.forEach((dflt) => {
+        append(
+          { type: dflt.type, sub_type: dflt.sub_type, value: "" },
+          { shouldFocus: false }
+        );
       });
   }, [useDefaults]);
 
@@ -101,7 +99,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
               className="btn-unchecked"
               style={{ float: "left" }}
               onClick={removeLast}
-              disabled={fields.length === 0}
+              disabled={isEmptyArray(fields)}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>

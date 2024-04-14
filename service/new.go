@@ -21,6 +21,7 @@ import (
 	"io"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	shoutrrr_vars "github.com/release-argus/Argus/notifiers/shoutrrr/types"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
@@ -219,30 +220,9 @@ func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map
 		}
 
 		// url_fields
-		urlFieldsPossiblyCensored := []string{
-			"altid",
-			"apikey",
-			"botkey",
-			"password",
-			"token",
-			"tokena",
-			"tokenb",
-		}
-		for _, key := range urlFieldsPossiblyCensored {
-			if s.Notify[i].URLFields[key] == "<secret>" && oldNotify.URLFields[key] != "" {
-				s.Notify[i].URLFields[key] = oldNotify.URLFields[key]
-			}
-		}
-
+		util.CopyIfSecret(oldNotify.URLFields, s.Notify[i].URLFields, shoutrrr_vars.CensorableURLFields[:])
 		// params
-		paramsPossiblyCensored := []string{
-			"devices",
-		}
-		for _, key := range paramsPossiblyCensored {
-			if s.Notify[i].Params[key] == "<secret>" && oldNotify.Params[key] != "" {
-				s.Notify[i].Params[key] = oldNotify.Params[key]
-			}
-		}
+		util.CopyIfSecret(oldNotify.Params, s.Notify[i].Params, shoutrrr_vars.CensorableParams[:])
 	}
 }
 

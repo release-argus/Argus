@@ -23,7 +23,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -100,7 +99,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		&map[string]bool{},
 		jLog)
 	if t != nil {
-		t.Cleanup(func() { os.Remove(*cfg.Settings.DataDatabaseFile()) })
+		t.Cleanup(func() { os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}
 
 	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
@@ -172,9 +171,6 @@ func getFreePort() (int, error) {
 		return 0, err
 	}
 	ln.Close()
-	if err != nil {
-		return 0, err
-	}
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
@@ -286,6 +282,7 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 		&webhook.WebHookDefaults{},
 		&webhook.WebHookDefaults{},
 		&webhook.WebHookDefaults{})
+	wh.ID = id
 	if failing {
 		wh.Secret = "notArgus"
 	}
@@ -373,15 +370,12 @@ func generateCertFiles(certFile, keyFile string) error {
 	// Convert the certificate and private key to PEM format
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
-	if err != nil {
-		return err
-	}
 
 	// Write the certificate and private key to files
-	if err := ioutil.WriteFile(certFile, certPEM, 0644); err != nil {
+	if err := os.WriteFile(certFile, certPEM, 0644); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(keyFile, keyPEM, 0600); err != nil {
+	if err := os.WriteFile(keyFile, keyPEM, 0600); err != nil {
 		return err
 	}
 

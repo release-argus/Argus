@@ -76,6 +76,8 @@ const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
       />
       <EditServiceNotifys
+        serviceName={name}
+        originals={defaultData?.notify}
         mains={otherOptionsData?.notify}
         defaults={otherOptionsData?.defaults?.notify}
         hard_defaults={otherOptionsData?.hard_defaults?.notify}

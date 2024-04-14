@@ -4,15 +4,11 @@ import {
   Dict,
   DockerFilterType,
   HeaderType,
-  NotifyNtfyAction,
-  NotifyOpsGenieTarget,
   NotifyOptionsType,
   NotifyType,
   NotifyTypes,
-  NotifyURLFieldsType,
   ServiceDashboardOptionsType,
   ServiceOptionsType,
-  StringFieldArray,
   StringStringMap,
   URLCommandType,
   WebHookType,
@@ -94,14 +90,8 @@ export interface DeployedVersionLookupEditType {
   regex?: string;
 }
 
-export interface NotifyEditType {
-  name?: string;
+export interface NotifyEditType extends NotifyType {
   oldIndex?: string;
-
-  type?: NotifyTypes;
-  options?: NotifyOptionsType;
-  url_fields?: NotifyURLFieldsType;
-  params?: NotifyParamsType;
 }
 
 export interface HeaderEditType extends HeaderType {
@@ -110,18 +100,6 @@ export interface HeaderEditType extends HeaderType {
 
 export interface WebHookEditType extends WebHookType {
   oldIndex?: string; // Index of existing secret
-}
-
-export interface NotifyParamsType {
-  [key: string]:
-    | undefined
-    | string
-    | number
-    | boolean
-    | StringFieldArray
-    | NotifyNtfyAction[]
-    | NotifyOpsGenieTarget[]
-    | HeaderType[];
 }
 
 /////////////////////////////////

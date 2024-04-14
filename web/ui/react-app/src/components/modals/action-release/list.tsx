@@ -8,6 +8,7 @@ import { Container } from "react-bootstrap";
 import { FC } from "react";
 import { Item } from "components/modals/action-release/item";
 import { Loading } from "components/modals/action-release/loading";
+import { isEmptyObject } from "utils";
 
 interface Props {
   itemType: "COMMAND" | "WEBHOOK";
@@ -42,7 +43,7 @@ export const ModalList: FC<Props> = ({
   delayedRender,
 }) => {
   // LOADING
-  if (Object.keys(data ? data : {}).length === 0)
+  if (isEmptyObject(data))
     return (
       <Container fluid className="list">
         {[...Array.from(Array(data).keys())].map((id) => (

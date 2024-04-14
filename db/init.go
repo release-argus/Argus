@@ -25,10 +25,11 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-var (
-	jLog    *util.JLog
-	logFrom *util.LogFrom
-)
+// LogInit for this package.
+func LogInit(log *util.JLog, databaseFile string) {
+	jLog = log
+	logFrom = util.LogFrom{Primary: "db", Secondary: databaseFile}
+}
 
 func checkFile(path string) {
 	file := filepath.Base(path)
@@ -40,34 +41,30 @@ func checkFile(path string) {
 		// create the dir
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(dir, 0755)
-			jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+			jLog.Fatal(util.ErrorToString(err), logFrom, err != nil)
 		} else {
 			// other error
-			jLog.Fatal(util.ErrorToString(err), *logFrom, true)
+			jLog.Fatal(util.ErrorToString(err), logFrom, true)
 		}
 
 		// directory exists but is not a directory
 	} else if fileInfo == nil || !fileInfo.IsDir() {
-		jLog.Fatal(fmt.Sprintf("path %q (for %q) is not a directory", dir, file), *logFrom, true)
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is not a directory", dir, file), logFrom, true)
 	}
 
 	// Check that the file exists
 	fileInfo, err = os.Stat(path)
 	if err != nil {
 		// file doesn't exist
-		jLog.Fatal(util.ErrorToString(err), *logFrom, os.IsExist(err))
+		jLog.Fatal(util.ErrorToString(err), logFrom, os.IsExist(err))
 
 		// item exists but is a directory
 	} else if fileInfo != nil && fileInfo.IsDir() {
-		jLog.Fatal(fmt.Sprintf("path %q (for %q) is a directory, not a file", path, file), *logFrom, true)
+		jLog.Fatal(fmt.Sprintf("path %q (for %q) is a directory, not a file", path, file), logFrom, true)
 	}
 }
 
-func Run(cfg *config.Config, log *util.JLog) {
-	jLog = log
-	databaseFile := cfg.Settings.DataDatabaseFile()
-	logFrom = &util.LogFrom{Primary: "db", Secondary: *databaseFile}
-
+func Run(cfg *config.Config) {
 	api := api{config: cfg}
 	api.initialise()
 	defer api.db.Close()
@@ -81,9 +78,9 @@ func Run(cfg *config.Config, log *util.JLog) {
 
 func (api *api) initialise() {
 	databaseFile := api.config.Settings.DataDatabaseFile()
-	checkFile(*databaseFile)
-	db, err := sql.Open("sqlite", *databaseFile)
-	jLog.Fatal(err, *logFrom, err != nil)
+	checkFile(databaseFile)
+	db, err := sql.Open("sqlite", databaseFile)
+	jLog.Fatal(err, logFrom, err != nil)
 
 	// Create the table
 	sqlStmt := `
@@ -96,7 +93,7 @@ func (api *api) initialise() {
 			approved_version           TEXT     DEFAULT  ''
 		);`
 	_, err = db.Exec(sqlStmt)
-	jLog.Fatal(util.ErrorToString(err), *logFrom, err != nil)
+	jLog.Fatal(util.ErrorToString(err), logFrom, err != nil)
 
 	updateTable(db)
 
@@ -123,7 +120,7 @@ func (api *api) removeUnknownServices() {
 	_, err := api.db.Exec(sqlStmt, params...)
 	jLog.Fatal(
 		fmt.Sprintf("removeUnknownServices: %s", util.ErrorToString(err)),
-		*logFrom,
+		logFrom,
 		err != nil)
 }
 
@@ -139,7 +136,7 @@ func (api *api) extractServiceStatus() {
 		deployed_version_timestamp,
 		approved_version
 	FROM status;`)
-	jLog.Fatal(err, *logFrom, err != nil)
+	jLog.Fatal(err, logFrom, err != nil)
 	defer rows.Close()
 
 	api.config.OrderMutex.RLock()
@@ -156,7 +153,7 @@ func (api *api) extractServiceStatus() {
 		err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		jLog.Fatal(
 			fmt.Sprintf("extractServiceStatus row: %s", util.ErrorToString(err)),
-			*logFrom,
+			logFrom,
 			err != nil)
 		api.config.Service[id].Status.SetLatestVersion(lv, false)
 		api.config.Service[id].Status.SetLatestVersionTimestamp(lvt)
@@ -167,7 +164,7 @@ func (api *api) extractServiceStatus() {
 	err = rows.Err()
 	jLog.Fatal(
 		fmt.Sprintf("extractServiceStatus: %s", util.ErrorToString(err)),
-		*logFrom,
+		logFrom,
 		err != nil)
 }
 
@@ -176,12 +173,12 @@ func updateTable(db *sql.DB) {
 	// Get the type of the *_version columns
 	var columnType string
 	err := db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType)
-	jLog.Fatal(fmt.Sprintf("updateTable: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	jLog.Fatal(fmt.Sprintf("updateTable: %s", util.ErrorToString(err)), logFrom, err != nil)
 	// Update if the column type is not TEXT
 	if columnType != "TEXT" {
-		jLog.Verbose("Updating column types", *logFrom, true)
+		jLog.Verbose("Updating column types", logFrom, true)
 		updateColumnTypes(db)
-		jLog.Verbose("Finished updating column types", *logFrom, true)
+		jLog.Verbose("Finished updating column types", logFrom, true)
 	}
 }
 
@@ -198,17 +195,17 @@ func updateColumnTypes(db *sql.DB) {
 			approved_version           TEXT     DEFAULT  ''
 		);`
 	_, err := db.Exec(sqlStmt)
-	jLog.Fatal(fmt.Sprintf("updateColumnTypes - create: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - create: %s", util.ErrorToString(err)), logFrom, err != nil)
 
 	// Copy the data from the old table to the new table
 	_, err = db.Exec(`INSERT INTO status_backup SELECT * FROM status;`)
-	jLog.Fatal(fmt.Sprintf("updateColumnTypes - copy: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - copy: %s", util.ErrorToString(err)), logFrom, err != nil)
 
 	// Drop the table
 	_, err = db.Exec("DROP TABLE status;")
-	jLog.Fatal(fmt.Sprintf("updateColumnTypes - drop: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - drop: %s", util.ErrorToString(err)), logFrom, err != nil)
 
 	// Rename the new table to the old table
 	_, err = db.Exec("ALTER TABLE status_backup RENAME TO status;")
-	jLog.Fatal(fmt.Sprintf("updateColumnTypes - rename: %s", util.ErrorToString(err)), *logFrom, err != nil)
+	jLog.Fatal(fmt.Sprintf("updateColumnTypes - rename: %s", util.ErrorToString(err)), logFrom, err != nil)
 }

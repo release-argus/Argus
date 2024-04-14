@@ -77,7 +77,8 @@ func main() {
 		}
 	}
 
-	go db.Run(&config, &jLog)
+	db.LogInit(&jLog, config.Settings.DataDatabaseFile())
+	go db.Run(&config)
 
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(&config.Order, &config.OrderMutex)

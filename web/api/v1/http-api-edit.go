@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -291,9 +293,14 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// service to modify (empty for create new)
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	reqType := "create"
+	if targetService != "" {
+		reqType = "edit"
+	}
 
 	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	api.Log.Verbose(targetService, logFrom, true)
+	api.Log.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
+		logFrom, true)
 
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")
@@ -312,10 +319,6 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	payload := http.MaxBytesReader(w, r.Body, 102400)
 
 	// Create the new/edited service
-	reqType := "create"
-	if targetService != "" {
-		reqType = "edit"
-	}
 	targetServicePtr := api.Config.Service[targetService]
 	newService, err := service.FromPayload(
 		targetServicePtr, // nil if creating new
@@ -350,7 +353,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		// Remove the service name from the error
 		err = errors.New(strings.Join(strings.Split(err.Error(), `\`)[1:], `\`))
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid values)\%s`, reqType, targetService, err.Error()))
+		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid values)\%s`,
+			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
 		return
 	}
 
@@ -359,7 +363,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		api.Log.Error(err, logFrom, true)
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`, reqType, targetService, err.Error()))
+		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`,
+			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
 		return
 	}
 
@@ -408,4 +413,86 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	//nolint:errcheck
 	w.Write([]byte{})
+}
+
+// httpNotifyTest handles testing a Notify.
+//
+// # POST
+//
+// Body:
+//
+//	service_name_previous?: string (the service name before the current changes)
+//	service_name: string
+//	name_previous?: string (the name of the notify before the current changes)
+//	name?: string (required if name_previous not set)
+//	type?: string
+//	options?: map[string]string
+//	url_fields?: map[string]string
+//	params?: map[string]string
+//	service_url?: string
+//	web_url?: string
+func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
+	// Set headers
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Type", "application/json")
+
+	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	api.Log.Verbose("-", logFrom, true)
+
+	// Payload
+	payload := http.MaxBytesReader(w, r.Body, 102400)
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(payload); err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+	var parsedPayload shoutrrr.TestPayload
+	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Get the Notify
+	var serviceNotify *shoutrrr.Shoutrrr
+	var latestVersion string
+	if parsedPayload.ServiceNamePrevious != "" {
+		api.Config.OrderMutex.RLock()
+		defer api.Config.OrderMutex.RUnlock()
+		// Check that the service exists
+		if api.Config.Service[parsedPayload.ServiceNamePrevious] != nil {
+			// Check that the notify exists
+			if api.Config.Service[parsedPayload.ServiceNamePrevious].Notify != nil {
+				serviceNotify = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify[parsedPayload.NamePrevious]
+			}
+			latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
+		}
+	}
+	testNotify, serviceURL, err := shoutrrr.FromPayload(
+		&parsedPayload,
+		serviceNotify,
+		api.Config.Notify,
+		api.Config.Defaults.Notify,
+		api.Config.HardDefaults.Notify)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+	testNotify.ServiceStatus.SetLatestVersion(latestVersion, false)
+
+	// Test the notify
+	err = testNotify.TestSend(serviceURL)
+	if err != nil {
+		api.Log.Error(err, logFrom, true)
+		failRequest(&w, err.Error())
+		return
+	}
+
+	// Return 200
+	w.WriteHeader(http.StatusOK)
+	//nolint:errcheck
+	w.Write([]byte(`{}`))
 }

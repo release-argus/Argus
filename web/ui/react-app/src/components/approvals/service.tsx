@@ -1,12 +1,10 @@
 import { Button, Card } from "react-bootstrap";
 import { FC, memo, useCallback, useContext, useMemo, useState } from "react";
 import { ModalType, ServiceSummaryType } from "types/summary";
+import { ServiceImage, ServiceInfo, UpdateInfo } from "components/approvals";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ModalContext } from "contexts/modal";
-import { ServiceImage } from "./service-image";
-import { ServiceInfo } from "./service-info";
-import UpdateInfo from "./service-update-info";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
@@ -61,7 +59,6 @@ const Service: FC<Props> = ({ service, editable = false }) => {
     <Card key={service.id} bg="secondary" className={"service shadow"}>
       <Card.Title className="service-title" key={service.id + "-title"}>
         <a
-          className="same-color"
           href={service.url}
           target="_blank"
           rel="noreferrer noopener"
@@ -105,7 +102,11 @@ const Service: FC<Props> = ({ service, editable = false }) => {
           }
         />
         <ServiceImage
-          service={service}
+          service_id={service.id}
+          service_type={service.type}
+          icon={service.icon}
+          icon_link_to={service.icon_link_to}
+          loading={service.loading}
           visible={
             !(updateStatus.available && showUpdateInfo && !updateStatus.skipped)
           }

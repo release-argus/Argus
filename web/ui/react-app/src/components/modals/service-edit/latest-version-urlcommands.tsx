@@ -6,6 +6,7 @@ import { memo, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormLabel } from "components/generic/form";
 import FormURLCommand from "./latest-version-urlcommand";
+import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 /**
@@ -56,7 +57,7 @@ const FormURLCommands = () => {
               variant="danger"
               style={{ float: "left" }}
               onClick={removeLast}
-              disabled={fields.length === 0}
+              disabled={isEmptyArray(fields)}
             >
               <FontAwesomeIcon icon={faMinus} />
             </Button>
@@ -78,7 +79,7 @@ const FormURLCommands = () => {
           </Row>
         );
       })}
-      {fields.length !== 0 && <br />}
+      {!isEmptyArray(fields) && <br />}
     </>
   );
 };

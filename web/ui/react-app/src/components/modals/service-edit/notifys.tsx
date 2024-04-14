@@ -4,9 +4,12 @@ import { FC, memo, useCallback, useMemo } from "react";
 
 import Notify from "./notify";
 import { NotifyEditType } from "types/service-edit";
+import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
+  serviceName: string;
+
   originals?: NotifyEditType[];
   mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
@@ -16,13 +19,21 @@ interface Props {
 /**
  * Returns the form fields for `notify`
  *
+ * @param serviceName - The name of the service
  * @param originals - The original values in the form
  * @param mains - The main notify's
  * @param defaults - The default values for each `notify` types
  * @param hard_defaults - The hard default values for each `notify` types
  * @returns The form fields for `notify`
  */
-const EditServiceNotifys: FC<Props> = ({ mains, defaults, hard_defaults }) => {
+const EditServiceNotifys: FC<Props> = ({
+  serviceName,
+
+  originals,
+  mains,
+  defaults,
+  hard_defaults,
+}) => {
   const { fields, append, remove } = useFieldArray({
     name: "notify",
   });
@@ -66,6 +77,8 @@ const EditServiceNotifys: FC<Props> = ({ mains, defaults, hard_defaults }) => {
               key={id}
               name={`notify.${index}`}
               removeMe={() => remove(index)}
+              serviceName={serviceName}
+              originals={originals}
               globalOptions={globalNotifyOptions}
               mains={mains}
               defaults={defaults}
@@ -73,7 +86,7 @@ const EditServiceNotifys: FC<Props> = ({ mains, defaults, hard_defaults }) => {
             />
           ))}
           <Button
-            className={fields.length > 0 ? "" : "mt-2"}
+            className={isEmptyArray(fields) ? "mt-2" : ""}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}

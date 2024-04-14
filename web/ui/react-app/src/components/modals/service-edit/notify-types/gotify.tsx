@@ -115,7 +115,6 @@ const GOTIFY = ({
               <span className="bold-underline">path</span>
             </>
           }
-          isNumber
           defaultVal={convertedDefaults.url_fields.path}
         />
         <FormItem

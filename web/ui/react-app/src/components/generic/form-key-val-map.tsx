@@ -68,7 +68,7 @@ const FormKeyValMap: FC<Props> = ({
     trigger(name);
 
     // Give the defaults back if the field is empty
-    if ((fieldValues ?? []).length === 0)
+    if (isEmptyArray(fieldValues))
       defaults?.forEach(() => {
         addItem();
       });
@@ -101,7 +101,7 @@ const FormKeyValMap: FC<Props> = ({
               className="btn-unchecked mb-1"
               variant="danger"
               style={{ float: "left" }}
-              disabled={fields.length === 0}
+              disabled={isEmptyArray(fields)}
               onClick={removeLast}
             >
               <FontAwesomeIcon icon={faMinus} />

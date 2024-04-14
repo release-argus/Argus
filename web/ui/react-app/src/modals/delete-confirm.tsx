@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
-  onDelete: () => void;
+  onDelete?: () => void;
   disabled?: boolean;
 }
 
@@ -23,7 +23,7 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
   const handleConfirm = async () => {
     setDeleting(true);
     // Call the onConfirm function
-    onDelete();
+    onDelete && onDelete();
 
     // Close the modal
     setModalShow(false);

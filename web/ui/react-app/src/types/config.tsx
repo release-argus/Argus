@@ -38,6 +38,8 @@ export const DictToList = <T,>(dict: Dict<T>, giveIndexTo?: string[]): T[] => {
   });
 };
 
+export type Position = "left" | "middle" | "right";
+
 export type StringStringMap = { [key: string]: string };
 export type StringFieldArray = StringStringMap[];
 
@@ -155,6 +157,7 @@ export interface DefaultLatestVersionFiltersType {
   [key: string]: DefaultDockerFilterType | undefined;
   docker?: DefaultDockerFilterType;
 }
+
 export interface DefaultDockerFilterType {
   [key: string]: string | DefaultDockerFilterRegistryType | undefined;
   type?: DockerFilterRegistryType;
@@ -278,19 +281,8 @@ export interface NotifyType {
 
   type?: NotifyTypes;
   options?: NotifyOptionsType;
-  url_fields?: { [key: string]: undefined | string | number | boolean };
-  params?: {
-    [key: string]:
-      | undefined
-      | string
-      | string[]
-      | number
-      | boolean
-      | NotifyNtfyAction[]
-      | NotifyOpsGenieTarget[]
-      | NotifyOpsGenieAction[]
-      | StringStringMap;
-  };
+  url_fields?: NotifyURLFieldsType;
+  params?: NotifyParamsType;
 }
 
 export interface NotifyBarkType extends NotifyType {
@@ -622,6 +614,20 @@ export interface NotifyOptionsType {
 
 export interface NotifyURLFieldsType {
   [key: string]: undefined | string | number | boolean | HeaderType[];
+}
+
+export interface NotifyParamsType {
+  [key: string]:
+    | undefined
+    | string
+    | number
+    | boolean
+    | StringFieldArray
+    | StringStringMap
+    | NotifyNtfyAction[]
+    | NotifyOpsGenieAction[]
+    | NotifyOpsGenieTarget[]
+    | HeaderType[];
 }
 
 export interface WebHookType {

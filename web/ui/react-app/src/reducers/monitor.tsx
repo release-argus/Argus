@@ -69,6 +69,9 @@ export default function reducerMonitor(
           state.service[id].url =
             action.service_data?.url || state.service[id].url;
 
+          // status
+          state.service[id].status = state.service[id].status ?? {};
+
           // latest_version
           state.service[id].status!.latest_version =
             action.service_data?.status?.latest_version;
@@ -81,6 +84,9 @@ export default function reducerMonitor(
           break;
 
         case "UPDATED":
+          // status
+          state.service[id].status = state.service[id].status ?? {};
+
           // deployed_version
           state.service[id].status!.deployed_version =
             action.service_data?.status?.deployed_version;
@@ -100,7 +106,7 @@ export default function reducerMonitor(
           )
             return state;
 
-          state.service[id].status = state.service[id].status || {};
+          state.service[id].status = state.service[id].status ?? {};
 
           // latest_version
           state.service[id].status!.latest_version =
@@ -126,9 +132,12 @@ export default function reducerMonitor(
           break;
 
         case "ACTION":
+          if (state.service[id]?.status === undefined) return state;
+
           // approved_version
           state.service[id].status!.approved_version =
             action.service_data?.status?.approved_version;
+
           break;
 
         default:

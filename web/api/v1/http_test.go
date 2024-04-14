@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
@@ -95,7 +96,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
-			cfg.Settings.Web.RoutePrefix = stringPtr("")
+			cfg.Settings.Web.RoutePrefix = test.StringPtr("")
 			api := NewAPI(&cfg, util.NewJLog("WARN", false))
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
 				return

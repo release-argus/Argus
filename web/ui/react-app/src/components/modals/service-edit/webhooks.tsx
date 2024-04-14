@@ -1,6 +1,7 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
 import { Dict, WebHookType } from "types/config";
 import { FC, useCallback, useMemo } from "react";
+import { firstNonEmpty, isEmptyArray } from "utils";
 
 import EditServiceWebHook from "components/modals/service-edit/webhook";
 import { useFieldArray } from "react-hook-form";
@@ -23,8 +24,24 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
   const { fields, append, remove } = useFieldArray({
     name: "webhook",
   });
+  const convertedDefaults = useMemo(
+    () => ({
+      custom_headers: firstNonEmpty(
+        defaults?.custom_headers,
+        hard_defaults?.custom_headers
+      ).map(() => ({ key: "", item: "" })),
+    }),
+    [defaults, hard_defaults]
+  );
   const addItem = useCallback(() => {
-    append({ type: "github", name: "" }, { shouldFocus: false });
+    append(
+      {
+        type: "github",
+        name: "",
+        custom_headers: convertedDefaults.custom_headers,
+      },
+      { shouldFocus: false }
+    );
   }, []);
 
   const globalWebHookOptions = useMemo(
@@ -61,7 +78,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
             />
           ))}
           <Button
-            className={fields.length > 0 ? "" : "mt-2"}
+            className={isEmptyArray(fields) ? "mt-2" : ""}
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}

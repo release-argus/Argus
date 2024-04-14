@@ -146,7 +146,7 @@ func (s *Shoutrrr) CheckValues(prefix string) (errs error) {
 		}
 	}
 
-	s.checkValuesForType(prefix, &errs, &errsOptions, &errsURLFields, &errsParams)
+	s.checkValuesForType(prefix, &errs, &errsURLFields, &errsParams)
 
 	// Exclude matrix since it logs in, so may run into a rate-limit
 	if errsParams == nil && errsURLFields == nil && s.GetType() != "matrix" {
@@ -252,7 +252,6 @@ func (s *ShoutrrrBase) correctSelf() {
 func (s *Shoutrrr) checkValuesForType(
 	prefix string,
 	errs *error,
-	errsOptions *error,
 	errsURLFields *error,
 	errsParams *error,
 ) {
@@ -263,6 +262,7 @@ func (s *Shoutrrr) checkValuesForType(
 		if sTypeWithoutID == "" {
 			*errs = fmt.Errorf("%s%stype: <required> e.g. 'slack', see the docs for possible types - https://release-argus.io/docs/config/notify\\",
 				util.ErrorToString(*errs), prefix)
+			return
 		}
 	}
 	// Check that the Type doesn't differ in the Main
@@ -498,6 +498,46 @@ func (s *Shoutrrr) checkValuesForType(
 				util.ErrorToString(*errs), prefix, sType, strings.Join(supportedTypes, ","))
 		}
 	}
+}
+
+// TestSend will test the Shoutrrr by sending a test message.
+func (s *Shoutrrr) TestSend(serviceURL string) (err error) {
+	if s == nil {
+		err = fmt.Errorf("Shoutrrr is nil")
+		return
+	}
+
+	s.SetOption("delay", "0s")
+	s.SetOption("max_tries", "1")
+
+	latestVersion := s.ServiceStatus.LatestVersion()
+	if latestVersion == "" {
+		latestVersion = "MAJOR.MINOR.PATCH"
+	}
+
+	testServiceInfo := &util.ServiceInfo{
+		ID:  util.DefaultIfNil(s.ServiceStatus.ServiceID),
+		URL: serviceURL,
+		WebURL: util.TemplateString(
+			util.DefaultIfNil(s.ServiceStatus.WebURL),
+			util.ServiceInfo{LatestVersion: latestVersion}),
+		LatestVersion: latestVersion}
+
+	// Prefix 'TEST - ' if non-empty
+	title := s.Title(testServiceInfo)
+	title = util.ValueIfNotDefault(
+		title, "TEST - "+title)
+	message := s.Message(testServiceInfo)
+	message = "TEST" + util.ValueIfNotDefault(
+		message, " - "+message)
+	err = s.Send(
+		title,
+		message,
+		testServiceInfo,
+		false,
+		false)
+
+	return
 }
 
 // Print the SliceDefaults.

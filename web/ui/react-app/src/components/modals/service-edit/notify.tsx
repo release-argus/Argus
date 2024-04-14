@@ -1,18 +1,32 @@
 import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
-import { Dict, NotifyType, NotifyTypes, NotifyTypesConst } from "types/config";
+import {
+  Dict,
+  LatestVersionLookupType,
+  NotifyType,
+  NotifyTypes,
+  NotifyTypesConst,
+} from "types/config";
 import { FC, JSX, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { NotifyEditType, ServiceEditOtherData } from "types/service-edit";
+import {
+  convertNotifyParams,
+  convertNotifyURLFields,
+} from "components/modals/service-edit/util";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import RenderNotify from "./notify-types/render";
 import { TYPE_OPTIONS } from "./notify-types/types";
+import TestNotify from "components/modals/service-edit/test-notify";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   name: string;
   removeMe: () => void;
 
+  serviceName: string;
+  originals?: NotifyEditType[];
   globalOptions: JSX.Element;
   mains?: Dict<NotifyType>;
   defaults?: Dict<NotifyType>;
@@ -20,10 +34,12 @@ interface Props {
 }
 
 /**
- * returns the form fields for a notify
+ * Returns the form fields for a notify
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove this Notify
+ * @param serviceName - The name of the service
+ * @param originals - The original values for the Notify
  * @param globalOptions - The options for the global Notify's
  * @param mains - The main Notify's
  * @param defaults - The default values for all Notify types
@@ -34,6 +50,8 @@ const Notify: FC<Props> = ({
   name,
   removeMe,
 
+  serviceName,
+  originals,
   globalOptions,
   mains,
   defaults,
@@ -43,6 +61,11 @@ const Notify: FC<Props> = ({
 
   const itemName: string = useWatch({ name: `${name}.name` });
   const itemType: NotifyTypes = useWatch({ name: `${name}.type` });
+  const lvType: LatestVersionLookupType["type"] = useWatch({
+    name: "latest_version.type",
+  });
+  const lvURL: string | undefined = useWatch({ name: "latest_version.url" });
+  const webURL: string | undefined = useWatch({ name: "dashboard.web_url" });
   useEffect(() => {
     // Set Type to that of the global for the new name if it exists
     if (mains?.[itemName]?.type) setValue(`${name}.type`, mains[itemName].type);
@@ -59,6 +82,38 @@ const Notify: FC<Props> = ({
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
     [name, itemName, itemType]
   );
+
+  const original = useMemo(() => {
+    const original = originals?.find((o) => o.oldIndex === itemName);
+    return original || { options: {}, url_fields: {}, params: {} };
+  }, [originals]);
+  const serviceURL =
+    lvType === "github" && (lvURL?.match(/\//g) ?? []).length == 1
+      ? `https://github.com/${lvURL}`
+      : lvURL;
+
+  const onChangeNotifyType = (
+    newType: NotifyTypes,
+    original: NotifyEditType,
+    otherOptionsData: ServiceEditOtherData
+  ) => {
+    // Reset to original type
+    if (newType === original?.type) {
+      setValue(`${name}.url_fields`, original.url_fields);
+      setValue(`${name}.params`, original.params);
+      return;
+    }
+
+    // Set the default values for the selected type
+    setValue(
+      `${name}.url_fields`,
+      convertNotifyURLFields(name, newType, undefined, otherOptionsData)
+    );
+    setValue(
+      `${name}.params`,
+      convertNotifyParams(name, newType, undefined, otherOptionsData)
+    );
+  };
 
   return (
     <Accordion>
@@ -102,6 +157,16 @@ const Notify: FC<Props> = ({
               }
               return true;
             }}
+            onChange={(e) => {
+              const newType = e.target.value as NotifyTypes;
+              const otherOptionsData: ServiceEditOtherData = {
+                notify: mains,
+                defaults: { notify: defaults },
+                hard_defaults: { notify: hard_defaults },
+              };
+              onChangeNotifyType(newType, original, otherOptionsData);
+              setValue(`${name}.type`, newType);
+            }}
             col_xs={6}
             label="Type"
             options={TYPE_OPTIONS}
@@ -120,6 +185,15 @@ const Notify: FC<Props> = ({
             main={mains?.[itemName]}
             defaults={defaults?.[itemType]}
             hard_defaults={hard_defaults?.[itemType]}
+          />
+          <TestNotify
+            path={name}
+            original={original}
+            extras={{
+              service_name_previous: serviceName,
+              service_url: serviceURL,
+              web_url: webURL,
+            }}
           />
         </Row>
       </Accordion.Body>

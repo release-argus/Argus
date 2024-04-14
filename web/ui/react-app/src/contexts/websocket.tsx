@@ -14,7 +14,7 @@ import {
   useReducer,
   useState,
 } from "react";
-import { fetchJSON, getBasename } from "utils";
+import { compareStringArrays, fetchJSON, getBasename } from "utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { BooleanType } from "types/boolean";
@@ -35,7 +35,7 @@ interface WebSocketCtx {
 }
 
 /**
- * The WebSocket context, which provides the WebSocket connection and monitor data.
+ * Provides the WebSocket connection and monitor data.
  *
  * @param ws - The WebSocket connection
  * @param connected - Whether the WebSocket connection is established
@@ -57,7 +57,7 @@ interface Props {
 
 const ws = new ReconnectingWebSocket(`${WS_ADDRESS}${getBasename()}/ws`);
 /**
- * @returns The WebSocket provider, which provides the WebSocket connection and monitor data.
+ * @returns The WebSocket connection and monitor data.
  */
 export const WebSocketProvider = (props: Props) => {
   const queryClient = useQueryClient();
@@ -77,37 +77,54 @@ export const WebSocketProvider = (props: Props) => {
     [connected, monitorData]
   );
 
-  const { data: orderData } = useQuery({
+  const { data: orderData, isFetching: orderIsFetching } = useQuery({
     queryKey: ["service/order"],
     queryFn: () => fetchJSON<OrderAPIResponse>({ url: "api/v1/service/order" }),
     gcTime: 1000 * 60 * 30, // 30 mins
   });
   useEffect(() => {
-    if (orderData?.order !== undefined) {
+    // Not a disconnect, still fetching, or no ordering
+    if (
+      connected === false ||
+      orderIsFetching ||
+      orderData?.order === undefined
+    )
+      return;
+
+    // Only if the order has changed
+    if (!compareStringArrays(orderData.order, monitorData.order)) {
       setMonitorData({
         page: "APPROVALS",
         type: "SERVICE",
         sub_type: "ORDER",
         ...orderData,
       });
-
-      orderData.order.forEach((service) => {
-        fetchJSON<ServiceSummaryType | undefined>({
-          url: `api/v1/service/summary/${encodeURIComponent(service)}`,
-        }).then((data) => {
-          if (data)
-            setMonitorData({
-              page: "APPROVALS",
-              type: "SERVICE",
-              sub_type: "INIT",
-              service_data: data,
-            });
-        });
-      });
     }
-  }, [orderData]);
+
+    orderData.order.forEach((service) => {
+      // If the service is already in the cache, don't fetch it again
+      if (monitorData.service[service]?.status?.latest_version_timestamp)
+        return;
+      fetchJSON<ServiceSummaryType | undefined>({
+        url: `api/v1/service/summary/${encodeURIComponent(service)}`,
+      }).then((data) => {
+        if (data)
+          setMonitorData({
+            page: "APPROVALS",
+            type: "SERVICE",
+            sub_type: "INIT",
+            service_data: data,
+          });
+      });
+    });
+  }, [orderData, connected]);
 
   ws.onopen = () => {
+    // Invalidate the cache if it's not the first connect event
+    if (connected !== undefined)
+      queryClient.invalidateQueries({
+        queryKey: ["service/order"],
+      });
     setConnected(true);
   };
 

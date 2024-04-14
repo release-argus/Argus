@@ -1,7 +1,9 @@
 import {
   HeaderType,
+  NonNullable,
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
+  NotifyTypes,
   StringFieldArray,
   StringStringMap,
   WebHookType,
@@ -35,147 +37,141 @@ export const convertAPIServiceDataEditToUI = (
   serviceData?: ServiceEditAPIType,
   otherOptionsData?: ServiceEditOtherData
 ): ServiceEditType => {
-  if (serviceData && name)
-    // Edit service defaults
+  if (!serviceData || !name)
+    // New service defaults
     return {
-      ...serviceData,
-      name: name,
-      options: {
-        ...serviceData?.options,
-        active: serviceData?.options?.active !== false,
-      },
+      name: "",
+      options: { active: true },
       latest_version: {
-        ...serviceData?.latest_version,
-        url_commands:
-          serviceData?.latest_version?.url_commands &&
-          urlCommandsTrimArray(serviceData.latest_version.url_commands),
-        require: {
-          ...serviceData?.latest_version?.require,
-          command: serviceData?.latest_version?.require?.command?.map(
-            (arg) => ({
-              arg: arg as string,
-            })
-          ),
-          docker: {
-            ...serviceData?.latest_version?.require?.docker,
-            type: serviceData?.latest_version?.require?.docker?.type ?? "",
-          },
-        },
+        type: "github",
+        require: { docker: { type: "" } },
       },
       deployed_version: {
-        ...serviceData?.deployed_version,
-        basic_auth: {
-          username: serviceData?.deployed_version?.basic_auth?.username ?? "",
-          password: serviceData?.deployed_version?.basic_auth?.password ?? "",
-        },
-        headers:
-          serviceData?.deployed_version?.headers?.map((header, key) => ({
-            ...header,
-            oldIndex: key,
-          })) ?? [],
-        template_toggle: !isEmptyOrNull(
-          serviceData?.deployed_version?.regex_template
-        ),
+        headers: [],
       },
-      command: serviceData?.command?.map((args) => ({
-        args: args.map((arg) => ({ arg })),
-      })),
-      webhook: serviceData.webhook
-        ? Object.entries(serviceData.webhook).reduce(
-            (acc: WebHookEditType[], [_key, value]) => {
-              // Determine webhook name and type
-              const whName = value.name ?? "";
-              const whType = value.type ?? "";
-
-              // Construct custom headers
-              const customHeaders = !isEmptyArray(value.custom_headers)
-                ? value.custom_headers?.map((header, index) => ({
-                    ...header,
-                    oldIndex: index,
-                  }))
-                : firstNonEmpty(
-                    otherOptionsData?.webhook?.[whName]?.custom_headers,
-                    (
-                      otherOptionsData?.defaults?.webhook?.[whType] as
-                        | WebHookType
-                        | undefined
-                    )?.custom_headers,
-                    (
-                      otherOptionsData?.hard_defaults?.webhook?.[whType] as
-                        | WebHookType
-                        | undefined
-                    )?.custom_headers
-                  ).map(() => ({ key: "", value: "" }));
-
-              const transformedWebhook = {
-                ...value,
-                custom_headers: customHeaders,
-                oldIndex: whName,
-              };
-              return [...acc, transformedWebhook];
-            },
-            []
-          )
-        : [],
-      notify: serviceData.notify
-        ? Object.entries(serviceData.notify).reduce(
-            (acc: NotifyEditType[], [_key, value]) => {
-              // Determine notify name and type
-              const notifyName = value.name ?? "";
-              const notifyType = value.type ?? "";
-
-              const transformedNotify = {
-                ...value,
-                id: notifyName,
-                url_fields: convertNotifyURLFields(
-                  notifyName,
-                  notifyType,
-                  value.url_fields,
-                  otherOptionsData
-                ),
-                params: {
-                  avatar: "", // controlled param
-                  color: "", // ^
-                  icon: "", // ^
-                  ...convertNotifyParams(
-                    notifyName,
-                    notifyType,
-                    value.params,
-                    otherOptionsData
-                  ),
-                },
-              };
-              return [...acc, transformedNotify];
-            },
-            []
-          )
-        : [],
+      command: [],
+      webhook: [],
+      notify: [],
       dashboard: {
-        auto_approve: undefined,
         icon: "",
-        ...serviceData?.dashboard,
+        icon_link_to: "",
+        web_url: "",
       },
     };
 
-  // New service defaults
+  // Edit service defaults
   return {
-    name: "",
-    options: { active: true },
+    ...serviceData,
+    name: name,
+    options: {
+      ...serviceData?.options,
+      active: serviceData?.options?.active !== false,
+    },
     latest_version: {
-      type: "github",
-      require: { docker: { type: "" } },
+      ...serviceData?.latest_version,
+      url_commands:
+        serviceData?.latest_version?.url_commands &&
+        urlCommandsTrimArray(serviceData.latest_version.url_commands),
+      require: {
+        ...serviceData?.latest_version?.require,
+        command: serviceData?.latest_version?.require?.command?.map((arg) => ({
+          arg: arg as string,
+        })),
+        docker: {
+          ...serviceData?.latest_version?.require?.docker,
+          type: serviceData?.latest_version?.require?.docker?.type ?? "",
+        },
+      },
     },
     deployed_version: {
-      headers: [],
+      ...serviceData?.deployed_version,
+      basic_auth: {
+        username: serviceData?.deployed_version?.basic_auth?.username ?? "",
+        password: serviceData?.deployed_version?.basic_auth?.password ?? "",
+      },
+      headers:
+        serviceData?.deployed_version?.headers?.map((header, key) => ({
+          ...header,
+          oldIndex: key,
+        })) ?? [],
+      template_toggle: !isEmptyOrNull(
+        serviceData?.deployed_version?.regex_template
+      ),
     },
-    command: [],
-    webhook: [],
-    notify: [],
+    command: serviceData?.command?.map((args) => ({
+      args: args.map((arg) => ({ arg })),
+    })),
+    webhook: serviceData.webhook
+      ? serviceData.webhook.map((item) => {
+          // Determine webhook name and type
+          const whName = item.name as string;
+          const whType = (item.type ??
+            otherOptionsData?.webhook?.[whName]?.type ??
+            whName) as NonNullable<WebHookType["type"]>;
+
+          // Construct custom headers
+          const customHeaders = !isEmptyArray(item.custom_headers)
+            ? item.custom_headers?.map((header, index) => ({
+                ...header,
+                oldIndex: index,
+              }))
+            : firstNonEmpty(
+                otherOptionsData?.webhook?.[whName]?.custom_headers,
+                (
+                  otherOptionsData?.defaults?.webhook?.[whType] as
+                    | WebHookType
+                    | undefined
+                )?.custom_headers,
+                (
+                  otherOptionsData?.hard_defaults?.webhook?.[whType] as
+                    | WebHookType
+                    | undefined
+                )?.custom_headers
+              ).map(() => ({ key: "", item: "" }));
+
+          return {
+            ...item,
+            oldIndex: whName,
+            type: whType,
+            custom_headers: customHeaders,
+          } as WebHookEditType;
+        })
+      : [],
+    notify: serviceData.notify
+      ? serviceData.notify.map((item) => {
+          // Determine notify name and type
+          const notifyName = item.name as string;
+          const notifyType = (item.type ||
+            otherOptionsData?.notify?.[notifyName]?.type ||
+            notifyName) as NotifyTypes;
+
+          return {
+            ...item,
+            oldIndex: notifyName,
+            type: notifyType,
+            url_fields: convertNotifyURLFields(
+              notifyName,
+              notifyType,
+              item.url_fields,
+              otherOptionsData
+            ),
+            params: {
+              avatar: "", // controlled param
+              color: "", // ^
+              icon: "", // ^
+              ...convertNotifyParams(
+                notifyName,
+                notifyType,
+                item.params,
+                otherOptionsData
+              ),
+            },
+          } as NotifyEditType;
+        })
+      : [],
     dashboard: {
-      auto_approve: undefined,
       icon: "",
-      icon_link_to: "",
-      web_url: "",
+      ...serviceData?.dashboard,
     },
   };
 };
@@ -280,15 +276,10 @@ export const convertOpsGenieTargetFromString = (
   // convert from a JSON string
   try {
     return JSON.parse(s).map(
-      (
-        obj: { id: string; type: string; name: string; username: string },
-        i: number
-      ) => {
-        const id = usingStr ? { id: i } : {};
+      (obj: { id?: string; type: string; name: string; username: string }) => {
         // team/user - id
         if (obj.id) {
           return {
-            ...id,
             type: obj.type,
             sub_type: "id",
             value: usingStr ? obj.id : "",
@@ -296,7 +287,6 @@ export const convertOpsGenieTargetFromString = (
         } else {
           // team/user - username/name
           return {
-            ...id,
             type: obj.type,
             sub_type: obj.type === "user" ? "username" : "name",
             value: usingStr ? obj.name || obj.username : "",
@@ -396,43 +386,40 @@ export const convertNtfyActionsFromString = (
  */
 export const convertNotifyURLFields = (
   name: string,
-  type?: string,
+  type: string,
   urlFields?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
-  const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
-
   // Generic
-  if (notifyType === "generic")
+  if (type === "generic")
     return {
       ...urlFields,
       custom_headers: convertHeadersFromString(
         urlFields?.custom_headers,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.custom_headers,
-          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
+          otherOptionsData?.notify?.[name]?.url_fields?.custom_headers,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields
             ?.custom_headers,
-          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.custom_headers
         )
       ),
       json_payload_vars: convertHeadersFromString(
         urlFields?.json_payload_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.json_payload_vars,
-          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
+          otherOptionsData?.notify?.[name]?.url_fields?.json_payload_vars,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields
             ?.json_payload_vars,
-          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.json_payload_vars
         )
       ),
       query_vars: convertHeadersFromString(
-        // urlFields.query_vars,
+        urlFields?.query_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.urlFields?.query_vars,
-          otherOptionsData?.defaults?.notify?.[notifyType]?.urlFields
-            ?.query_vars,
-          otherOptionsData?.hard_defaults?.notify?.[notifyType]?.urlFields
+          otherOptionsData?.notify?.[name]?.url_fields?.query_vars,
+          otherOptionsData?.defaults?.notify?.[type]?.url_fields?.query_vars,
+          otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.query_vars
         )
       ),
@@ -446,30 +433,42 @@ export const convertNotifyURLFields = (
  *
  * @param name - The react-hook-form path to the notify object
  * @param type - The type of notify
- * @param urlFields - The params object to convert
+ * @param url_fields - The params object to convert
  * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
  * @returns The converted Params for use in the UI
  */
 export const convertNotifyParams = (
   name: string,
-  type?: string,
+  type: string,
   params?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
-  const notifyType = type || otherOptionsData?.notify?.[name]?.type || name;
+  switch (type) {
+    case "bark":
+    case "join":
+    case "mattermost":
+      return {
+        icon: "", // controlled param
+        ...params,
+      };
 
-  switch (notifyType) {
+    case "discord":
+      return {
+        avatar: "", // controlled param
+        ...params,
+      };
+
     // NTFY
     case "ntfy":
       return {
+        icon: "", // controlled param
         ...params,
         actions: convertNtfyActionsFromString(
           params?.actions,
           firstNonDefault(
             otherOptionsData?.notify?.[name]?.params?.actions,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.actions
+            otherOptionsData?.defaults?.notify?.[type]?.params?.actions,
+            otherOptionsData?.hard_defaults?.notify?.[type]?.params?.actions
           )
         ),
       };
@@ -482,37 +481,32 @@ export const convertNotifyParams = (
           params?.actions,
           firstNonDefault(
             otherOptionsData?.notify?.[name]?.params?.actions,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.actions,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.actions
+            otherOptionsData?.defaults?.notify?.[type]?.params?.actions,
+            otherOptionsData?.hard_defaults?.notify?.[type]?.params?.actions
           )
         ),
         details: convertHeadersFromString(
           params?.details,
           firstNonDefault(
             otherOptionsData?.notify?.[name]?.params?.details,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.details,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.details
+            otherOptionsData?.defaults?.notify?.[type]?.params?.details,
+            otherOptionsData?.hard_defaults?.notify?.[type]?.params?.details
           )
         ),
         responders: convertOpsGenieTargetFromString(
           params?.responders,
           firstNonDefault(
             otherOptionsData?.notify?.[name]?.params?.responders,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params
-              ?.responders,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.responders
+            otherOptionsData?.defaults?.notify?.[type]?.params?.responders,
+            otherOptionsData?.hard_defaults?.notify?.[type]?.params?.responders
           )
         ),
         visibleto: convertOpsGenieTargetFromString(
           params?.visibleto,
           firstNonDefault(
             otherOptionsData?.notify?.[name]?.params?.visibleto,
-            otherOptionsData?.defaults?.notify?.[notifyType]?.params?.visibleto,
-            otherOptionsData?.hard_defaults?.notify?.[notifyType]?.params
-              ?.visibleto
+            otherOptionsData?.defaults?.notify?.[type]?.params?.visibleto,
+            otherOptionsData?.hard_defaults?.notify?.[type]?.params?.visibleto
           )
         ),
       };
@@ -543,8 +537,10 @@ const convertStringMapToHeaderType = (
   omitValues?: boolean
 ): HeaderType[] => {
   if (!headers) return [];
+
   if (omitValues)
     return Object.keys(headers).map(() => ({ key: "", value: "" }));
+
   return Object.keys(headers).map((key) => ({
     key: key,
     value: headers[key],

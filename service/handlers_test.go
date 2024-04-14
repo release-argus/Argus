@@ -1011,7 +1011,7 @@ func TestService_HandleSkip(t *testing.T) {
 		svc := testServiceURL(name)
 
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			// t.Parallel() - cannot run in parallel as it uses the same channel
 
 			svc.Status.SetDeployedVersion(tc.startVersion, false)
 			svc.Status.SetApprovedVersion("", false)

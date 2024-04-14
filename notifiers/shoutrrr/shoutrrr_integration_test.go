@@ -101,7 +101,8 @@ func TestShoutrrr_Send(t *testing.T) {
 				"test",
 				msg,
 				&util.ServiceInfo{ID: "Testing"},
-				tc.useDelay)
+				tc.useDelay,
+				true)
 
 			// THEN any error should match the expected regex
 			if err == nil {

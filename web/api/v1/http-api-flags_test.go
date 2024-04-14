@@ -44,7 +44,7 @@ func TestHTTP_httpFlags(t *testing.T) {
 			"config.file":"` + file + `",
 			"log.level":"` + fmt.Sprintf(api.Config.Settings.LogLevel()) + `",
 			"log.timestamps":` + fmt.Sprint(*api.Config.Settings.LogTimestamps()) + `,
-			"data.database-file":"` + *api.Config.Settings.DataDatabaseFile() + `",
+			"data.database-file":"` + api.Config.Settings.DataDatabaseFile() + `",
 			"web.listen-host":"` + api.Config.Settings.WebListenHost() + `",
 			"web.listen-port":"[0-9]{1,5}",
 			"web.cert-file":null,

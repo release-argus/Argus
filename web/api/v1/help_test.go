@@ -17,8 +17,8 @@
 package v1
 
 import (
-	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -32,23 +32,10 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -111,15 +98,15 @@ func testService(id string) *service.Service {
 		Comment: "foo",
 		LatestVersion: *latestver.New(
 			nil,
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil, nil, nil, nil,
 			"url",
 			"https://valid.release-argus.io/plain",
 			&filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr(`stable version: "v?([0-9.]+)"`)}},
+				{Type: "regex", Regex: test.StringPtr(`stable version: "v?([0-9.]+)"`)}},
 			nil, nil, nil),
 		DeployedVersionLookup: deployedver.New(
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil, nil,
 			"foo.bar.version",
 			nil, "", nil,
@@ -127,7 +114,7 @@ func testService(id string) *service.Service {
 			"https://valid.release-argus.io/json",
 			nil, nil),
 		Options: *opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			nil, nil)}
 	serviceHardDefaults := service.Defaults{}
 	serviceHardDefaults.SetDefaults()
@@ -155,21 +142,22 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
 	wh := webhook.New(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&whDesiredStatusCode,
 		nil,
 		&whMaxTries,
 		nil,
-		stringPtr("11m"),
+		test.StringPtr("11m"),
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
 		&webhook.WebHookDefaults{},
 		&webhook.WebHookDefaults{},
 		&webhook.WebHookDefaults{})
+	wh.ID = id
 	if failing {
 		wh.Secret = "notArgus"
 	}
@@ -191,6 +179,14 @@ func testBareConfig() *config.Config {
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
-					RoutePrefix: stringPtr(""),
+					RoutePrefix: test.StringPtr(""),
 				}}}}
+}
+
+func trimJSON(str string) string {
+	str = strings.TrimSpace(str)
+	str = strings.ReplaceAll(str, "\n", "")
+	str = strings.ReplaceAll(str, "\t", "")
+	str = strings.ReplaceAll(str, ": ", ":")
+	return str
 }

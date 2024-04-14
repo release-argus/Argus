@@ -18,9 +18,15 @@ import (
 	"database/sql"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/util"
 )
 
 type api struct {
 	config *config.Config
 	db     *sql.DB
 }
+
+var (
+	jLog    *util.JLog
+	logFrom util.LogFrom
+)

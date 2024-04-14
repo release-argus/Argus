@@ -87,6 +87,8 @@ func (api *API) SetupRoutesAPI() {
 	//   GET, service-edit - refresh
 	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
 	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
+	//   POST, service-edit - test notify
+	api.Router.HandleFunc("/api/v1/notify/test", api.httpNotifyTest).Methods("POST")
 	//   PUT, service-edit - update details
 	api.Router.HandleFunc("/api/v1/service/edit/{service_name:.+}", api.httpServiceEdit).Methods("PUT")
 	//   POST, service-edit - new service

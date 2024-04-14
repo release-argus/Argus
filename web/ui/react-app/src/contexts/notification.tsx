@@ -11,6 +11,7 @@ import { NotificationType } from "types/notification";
 import { ToastContainer } from "react-bootstrap";
 import { addMessageHandler } from "./websocket";
 import { handleNotifications } from "handlers/notifications";
+import { isEmptyArray } from "utils";
 
 interface NotificationCtx {
   notifications: NotificationType[];
@@ -19,12 +20,12 @@ interface NotificationCtx {
 }
 
 /**
- * The notification context, which provides notifications to the application.
+ * Provides notifications to the application and functions to add and remove them.
  *
  * @param notifications - The notifications to display
  * @param addNotification - Function to add a notification
  * @param removeNotification - Function to remove a notification
- * @returns The notification context
+ * @returns A context to view, add, and remove notifications
  */
 const NotificationContext = createContext<NotificationCtx>({
   notifications: [],
@@ -33,7 +34,7 @@ const NotificationContext = createContext<NotificationCtx>({
 });
 
 /**
- * @returns The notification provider, which provides notifications to the application.
+ * @returns A provider of notifications to the application.
  */
 const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
@@ -44,10 +45,9 @@ const NotificationProvider = () => {
       ...prevState,
       {
         ...notification,
-        id:
-          prevState.length === 0
-            ? 0
-            : (prevState[prevState.length - 1].id as number) + 1,
+        id: isEmptyArray(prevState)
+          ? 0
+          : (prevState[prevState.length - 1].id as number) + 1,
       },
     ]);
   };

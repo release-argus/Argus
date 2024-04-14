@@ -33,13 +33,15 @@ var cfg *config.Config
 
 func TestMain(m *testing.M) {
 	log := util.NewJLog("DEBUG", false)
-	logFrom = &util.LogFrom{}
 	log.Testing = true
+	databaseFile := "TestRun.db"
+	LogInit(log, databaseFile)
 
 	cfg = testConfig()
-	*cfg.Settings.Data.DatabaseFile = "TestRun.db"
+	*cfg.Settings.Data.DatabaseFile = databaseFile
 	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
-	go Run(cfg, log)
+	go Run(cfg)
+	time.Sleep(250 * time.Millisecond) // Time for db to start
 
 	os.Exit(m.Run())
 }

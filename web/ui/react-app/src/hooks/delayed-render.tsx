@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 /**
  * Returns the component after a delay
@@ -13,5 +13,6 @@ export const useDelayedRender = (delay: number): any => {
     const timeout = setTimeout(() => setDelayed(false), delay);
     return () => clearTimeout(timeout);
   }, [delay]);
-  return (fn: any) => !delayed && fn();
+  return (fn: any, placeholder: ReactNode = null) =>
+    delayed ? placeholder : fn();
 };

@@ -87,7 +87,11 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				&LookupDefaults{}),
 		},
 		"require": {
-			require:  stringPtr(`{"docker":{"type": "ghcr", "image": "release-argus/Argus", "tag": "latest"}}`),
+			require: stringPtr(`{
+				"docker": {
+					"type": "ghcr",
+					"image": "release-argus/Argus",
+					"tag": "latest"}}`),
 			previous: testLookup(true, true),
 			want: New(
 				test.AccessToken,
@@ -109,12 +113,20 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				&LookupDefaults{}),
 		},
 		"require - no docker.type fail": {
-			require:  stringPtr(`{"docker":{"type": "", "image": "release-argus/Argus", "tag": "latest"}}`),
+			require: stringPtr(`{
+				"docker": {
+					"type": "",
+					"image": "release-argus/Argus",
+					"tag": "latest"}}`),
 			previous: testLookup(true, true),
 			errRegex: `^require:[^ ]+  docker:[^ ]+    type: <required>`,
 		},
 		"require - invalid": {
-			require:  stringPtr(`{"docker":{"type": "foo", "image": "release-argus/Argus", "tag": "latest"}}`),
+			require: stringPtr(`{
+				"docker": {
+					"type": "foo",
+					"image": "release-argus/Argus",
+					"tag": "latest"}}`),
 			previous: testLookup(true, true),
 			errRegex: `type: ".*" <invalid>`,
 		},
@@ -155,8 +167,10 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				&LookupDefaults{}),
 		},
 		"url commands": {
-			urlCommands: stringPtr(`[{"type": "regex", "regex": "v?([0-9.]})"}]`),
-			previous:    testLookup(true, true),
+			urlCommands: stringPtr(`[
+					{"type": "regex", "regex": "v?([0-9.]})"}
+				]`),
+			previous: testLookup(true, true),
 			want: New(
 				test.AccessToken,
 				test.AllowInvalidCerts,
@@ -173,10 +187,11 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				&LookupDefaults{}),
 		},
 		"url commands - invalid": {
-			urlCommands: stringPtr(`[{"type": "foo", "regex": "v?([0-9.]})"}]`),
-			previous:    testLookup(true, true),
-			want:        nil,
-			errRegex:    `type: .* <invalid>`,
+			urlCommands: stringPtr(`[
+					{"type": "foo", "regex": "v?([0-9.]})"}]`),
+			previous: testLookup(true, true),
+			want:     nil,
+			errRegex: `type: .* <invalid>`,
 		},
 		"use prerelease": {
 			usePreRelease: stringPtr("true"),
@@ -372,7 +387,8 @@ func TestLookup_Refresh(t *testing.T) {
 			want:     "",
 		},
 		"Change of a few vars": {
-			urlCommands:        stringPtr(`[{"type": "regex", "regex": "beta: \"v?([^\"]+)"}]`),
+			urlCommands: stringPtr(`[
+					{"type": "regex", "regex": "beta: \"v?([^\"]+)"}]`),
 			semanticVersioning: stringPtr("false"),
 			previous:           testLookup(true, true),
 			want:               testVersionURL + "-beta",

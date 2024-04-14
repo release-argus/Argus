@@ -29,7 +29,7 @@ func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 
 	// Create and send status page data
 	msg := api_type.Flags{
-		ConfigFile:       &api.Config.File,
+		ConfigFile:       api.Config.File,
 		LogLevel:         api.Config.Settings.LogLevel(),
 		LogTimestamps:    api.Config.Settings.LogTimestamps(),
 		DataDatabaseFile: api.Config.Settings.DataDatabaseFile(),

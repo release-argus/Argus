@@ -53,7 +53,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			lock.Lock()
 			config.Load(file, &flags, log)
 			lock.Unlock()
-			defer os.Remove(*config.Settings.DataDatabaseFile())
+			defer os.Remove(config.Settings.DataDatabaseFile())
 
 			// THEN it gets the ordering correctly
 			gotOrder := config.Order

@@ -4,6 +4,7 @@ import { faMinus, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FormItem } from "components/generic/form";
+import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
@@ -31,7 +32,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
     // if there's only 1 arg left, remove the command
     if (removeMe) return removeMe();
     return undefined;
-  }, [fields.length]);
+  }, [fields.length, removeMe]);
 
   const placeholder = (index: number) => {
     if (index === 0) return `e.g. "/bin/bash"`;
@@ -70,7 +71,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
           className="btn-unchecked mb-3"
           style={{ float: "right" }}
           onClick={removeLast}
-          disabled={fields.length === 0}
+          disabled={isEmptyArray(fields)}
         >
           <FontAwesomeIcon icon={faMinus} />
         </Button>

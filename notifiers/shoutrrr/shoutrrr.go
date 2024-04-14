@@ -21,6 +21,7 @@ import (
 	"time"
 
 	shoutrrr_lib "github.com/containrrr/shoutrrr"
+	"github.com/containrrr/shoutrrr/pkg/router"
 	shoutrrr_types "github.com/containrrr/shoutrrr/pkg/types"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
@@ -311,7 +312,7 @@ func (s *Slice) Send(
 	for key := range *s {
 		// Send each message up to s.MaxTries number of times until they don't err.
 		go func(shoutrrr *Shoutrrr) {
-			errChan <- shoutrrr.Send(title, message, serviceInfo, useDelay)
+			errChan <- shoutrrr.Send(title, message, serviceInfo, useDelay, true)
 		}((*s)[key])
 
 		// Space out Shoutrrr send starts.
@@ -328,14 +329,38 @@ func (s *Slice) Send(
 	return
 }
 
+// getSender returns the Shoutrrr sender, message, params, and url.
+func (s *Shoutrrr) getSender(
+	title string,
+	msg string,
+	serviceInfo *util.ServiceInfo,
+) (sender *router.ServiceRouter, message string, params *shoutrrr_types.Params, url string, err error) {
+	url = s.BuildURL()
+	sender, err = shoutrrr_lib.CreateSender(url)
+	if err != nil {
+		err = fmt.Errorf("failed to create Shoutrrr sender: %w", err)
+		return
+	}
+	params = s.BuildParams(serviceInfo)
+	if title != "" {
+		(*params)["title"] = title
+	}
+	message = msg
+	if message == "" {
+		message = s.Message(serviceInfo)
+	}
+	return
+}
+
+// Send the Shoutrrr message with the given title and message (if non-empty).
 func (s *Shoutrrr) Send(
 	title string,
-	message string,
+	msg string,
 	serviceInfo *util.ServiceInfo,
 	useDelay bool,
+	useMetrics bool,
 ) (errs error) {
 	logFrom := util.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := s.GetMaxTries()                                      // Number of times to send Shoutrrr (until 200 received).
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
@@ -344,81 +369,111 @@ func (s *Shoutrrr) Send(
 		time.Sleep(s.GetDelayDuration())
 	}
 
-	url := s.BuildURL()
-	sender, err := shoutrrr_lib.CreateSender(url)
-	if err != nil {
-		return fmt.Errorf("failed to create Shoutrrr sender: %w", err)
-	}
-	params := s.BuildParams(serviceInfo)
-	if title != "" {
-		(*params)["title"] = title
-	}
-	toSend := message
-	if message == "" {
-		toSend = s.Message(serviceInfo)
+	sender, message, params, url, errs := s.getSender(title, msg, serviceInfo)
+	if errs != nil {
+		return
 	}
 
+	// Try sending the message.
+	if jLog.IsLevel("VERBOSE") || jLog.IsLevel("DEBUG") {
+		msg := fmt.Sprintf("Sending %q to %q", message, url)
+		jLog.Verbose(msg, logFrom, !jLog.IsLevel("DEBUG"))
+		jLog.Debug(
+			fmt.Sprintf("%s with params=%q", msg, *params),
+			logFrom, true)
+	}
+	serviceName := serviceInfo.ID
+	if !useMetrics {
+		serviceName = ""
+	}
+	errs = s.send(
+		sender,
+		message,
+		params,
+		serviceName,
+		logFrom)
+	return
+}
+
+// parseSend logs and counts the errors from a Shoutrrr send, returning true if the send failed.
+//
+// If the serviceName is empty, no metrics are recorded.
+func (s *Shoutrrr) parseSend(
+	err []error,
+	combinedErrs map[string]int,
+	serviceName string,
+	logFrom util.LogFrom,
+) (failed bool) {
+	for i := range err {
+		if err[i] != nil {
+			failed = true
+			jLog.Error(err[i].Error(), logFrom, true)
+			combinedErrs[err[i].Error()]++
+		}
+	}
+	// No serviceName, no metrics.
+	if serviceName == "" {
+		return
+	}
+
+	// SUCCESS!
+	if !failed {
+		metric.IncreasePrometheusCounter(metric.NotifyMetric,
+			s.ID,
+			serviceName,
+			s.GetType(),
+			"SUCCESS")
+		s.Failed.Set(s.ID, &failed)
+		return
+	}
+
+	// FAIL
+	metric.IncreasePrometheusCounter(metric.NotifyMetric,
+		s.ID,
+		serviceName,
+		s.GetType(),
+		"FAIL")
+	return
+}
+
+func (s *Shoutrrr) send(
+	sender *router.ServiceRouter,
+	message string,
+	params *shoutrrr_types.Params,
+	serviceName string,
+	logFrom util.LogFrom,
+) (errs error) {
 	combinedErrs := make(map[string]int)
-	for {
+	triesLeft := s.GetMaxTries() // Number of times to send Shoutrrr (until 200 received).
+
+	for triesLeft > 0 {
 		// Check if we're deleting the Service.
 		if s.ServiceStatus.Deleting() {
 			return
 		}
+		err := sender.Send(message, params)
 
-		// Try sending the message.
-		if jLog.IsLevel("VERBOSE") || jLog.IsLevel("DEBUG") {
-			msg := fmt.Sprintf("Sending %q to %q", toSend, url)
-			jLog.Verbose(msg, logFrom, !jLog.IsLevel("DEBUG"))
-			jLog.Debug(
-				fmt.Sprintf("%s with params=%q", msg, *params),
-				logFrom, true)
-		}
-		err := sender.Send(toSend, params)
-
-		failed := false
-		for i := range err {
-			if err[i] != nil {
-				failed = true
-				jLog.Error(err[i].Error(), logFrom, true)
-				combinedErrs[err[i].Error()]++
-			}
-		}
-
-		// SUCCESS!
+		failed := s.parseSend(err, combinedErrs, serviceName, logFrom)
 		if !failed {
-			metric.IncreasePrometheusCounter(metric.NotifyMetric,
-				s.ID,
-				serviceInfo.ID,
-				s.GetType(),
-				"SUCCESS")
-			failed := false
-			s.Failed.Set(s.ID, &failed)
 			return
 		}
-
-		// FAIL
-		metric.IncreasePrometheusCounter(metric.NotifyMetric,
-			s.ID,
-			serviceInfo.ID,
-			s.GetType(),
-			"FAIL")
 		triesLeft--
 
-		// Give up after MaxTries.
-		if triesLeft == 0 {
-			msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
-				s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
-			jLog.Error(msg, logFrom, true)
-			failed := true
-			s.Failed.Set(s.ID, &failed)
-			for key := range combinedErrs {
-				errs = fmt.Errorf("%s%s x %d",
-					util.ErrorToString(errs), key, combinedErrs[key])
-			}
-			return
-		}
-
 		// Space out retries.
-		time.Sleep(5 * time.Second)
+		if triesLeft > 0 {
+			time.Sleep(5 * time.Second)
+		}
 	}
+
+	// Give up after MaxTries.
+	msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
+		s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
+	jLog.Error(msg, logFrom, true)
+	failed := true
+	s.Failed.Set(s.ID, &failed)
+	for key := range combinedErrs {
+		errs = fmt.Errorf("%s%s x %d",
+			util.ErrorToString(errs), key, combinedErrs[key])
+	}
+	return
 }

@@ -105,8 +105,8 @@ func (s *Shoutrrr) Message(context *util.ServiceInfo) string {
 }
 
 // Title of the Shoutrrr after the context is applied and template evaluated.
-func (s *Shoutrrr) Title(serviceInfo *util.ServiceInfo) string {
-	return util.TemplateString(s.GetParam("title"), *serviceInfo)
+func (s *Shoutrrr) Title(context *util.ServiceInfo) string {
+	return util.TemplateString(s.GetParam("title"), *context)
 }
 
 // GetType of this Shoutrrr.

@@ -3,6 +3,7 @@ import { FC, JSX } from "react";
 
 import { FormCheckType } from "react-bootstrap/esm/FormCheck";
 import FormLabel from "./form-label";
+import { Position } from "types/config";
 import { formPadding } from "./util";
 import { useFormContext } from "react-hook-form";
 
@@ -17,8 +18,8 @@ interface FormCheckProps {
   tooltip?: string | JSX.Element;
   type?: FormCheckType;
 
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 }
 
 /**

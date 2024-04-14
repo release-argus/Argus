@@ -1,8 +1,10 @@
+import { Position } from "types/config";
+
 type formPaddingProps = {
   col_xs: number;
   col_sm: number;
-  position?: "left" | "middle" | "right";
-  positionXS?: "left" | "middle" | "right";
+  position?: Position;
+  positionXS?: Position;
 };
 
 /**

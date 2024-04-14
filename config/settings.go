@@ -274,11 +274,11 @@ func (s *Settings) LogLevel() string {
 }
 
 // DataDatabaseFile.
-func (s *Settings) DataDatabaseFile() *string {
-	return util.FirstNonNilPtr(
+func (s *Settings) DataDatabaseFile() string {
+	return util.DefaultIfNil(util.FirstNonNilPtr(
 		s.FromFlags.Data.DatabaseFile,
 		s.Data.DatabaseFile,
-		s.HardDefaults.Data.DatabaseFile)
+		s.HardDefaults.Data.DatabaseFile))
 }
 
 // WebListenHost.

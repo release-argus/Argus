@@ -27,95 +27,6 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestSliceDefaults_Print(t *testing.T) {
-	// GIVEN a SliceDefaults
-	testValid := testShoutrrrDefaults(false, false)
-	testInvalid := testShoutrrrDefaults(true, true)
-	tests := map[string]struct {
-		slice *SliceDefaults
-		want  string
-	}{
-		"nil": {
-			slice: nil,
-			want:  "",
-		},
-		"empty": {
-			slice: &SliceDefaults{},
-			want:  "",
-		},
-		"single empty element slice": {
-			slice: &SliceDefaults{
-				"single": {}},
-			want: `
-notify:
-  single: {}`,
-		},
-		"single element slice": {
-			slice: &SliceDefaults{
-				"single": testValid},
-			want: `
-notify:
-  single:
-    type: gotify
-    options:
-      max_tries: "` + testValid.GetOption("max_tries") + `"
-    url_fields:
-      host: ` + testValid.GetURLField("host") + `
-      path: ` + testValid.GetURLField("path") + `
-      token: ` + testValid.GetURLField("token"),
-		},
-		"multiple element slice": {
-			slice: &SliceDefaults{
-				"first":  testValid,
-				"second": testInvalid},
-			want: `
-notify:
-  first:
-    type: gotify
-    options:
-      max_tries: "` + testValid.GetOption("max_tries") + `"
-    url_fields:
-      host: ` + testValid.GetURLField("host") + `
-      path: ` + testValid.GetURLField("path") + `
-      token: ` + testValid.GetURLField("token") + `
-  second:
-    type: gotify
-    options:
-      max_tries: "` + testInvalid.GetOption("max_tries") + `"
-    url_fields:
-      host: ` + testInvalid.GetURLField("host") + `
-      path: ` + testInvalid.GetURLField("path") + `
-      token: ` + testInvalid.GetURLField("token"),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			if tc.want != "" {
-				tc.want += "\n"
-			}
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			// WHEN Print is called
-			tc.slice.Print("")
-
-			// THEN it prints the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			strOut := string(out)
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if strOut != tc.want {
-				t.Errorf("Print should have given\n%q\nbut gave\n%q",
-					tc.want, strOut)
-			}
-		})
-	}
-}
-
 func TestShoutrrr_checkValuesForType(t *testing.T) {
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
@@ -125,7 +36,6 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 		params             map[string]string
 		main               *ShoutrrrDefaults
 		errsRegex          string
-		errsOptionsRegex   string
 		errsURLFieldsRegex string
 		errsParamsRegex    string
 	}{
@@ -820,11 +730,10 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 			// WHEN checkValuesForType is called
 			var (
 				errs          error
-				errsOptions   error
 				errsURLFields error
 				errsParams    error
 			)
-			shoutrrr.checkValuesForType("", &errs, &errsOptions, &errsURLFields, &errsParams)
+			shoutrrr.checkValuesForType("", &errs, &errsURLFields, &errsParams)
 
 			// THEN it err's when expected
 			// errs
@@ -837,17 +746,6 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 			if !match {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errsRegex, e)
-			}
-			// errsOptions
-			if tc.errsOptionsRegex == "" {
-				tc.errsOptionsRegex = "^$"
-			}
-			e = util.ErrorToString(errsOptions)
-			re = regexp.MustCompile(tc.errsOptionsRegex)
-			match = re.MatchString(e)
-			if !match {
-				t.Errorf("want match for %q\nnot: %q",
-					tc.errsOptionsRegex, e)
 			}
 			// errsURLFields
 			if tc.errsURLFieldsRegex == "" {
@@ -1204,7 +1102,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.Type = tc.sType
@@ -1311,7 +1209,8 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		errRegex string
 	}{
 		"nil slice": {
-			slice: nil, errRegex: "^$"},
+			slice:    nil,
+			errRegex: "^$"},
 		"valid slice": {
 			errRegex: "^$",
 			slice: &SliceDefaults{
@@ -1373,6 +1272,137 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			if !match {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, e)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_TestSend(t *testing.T) {
+	// GIVEN a Shoutrrr
+	tests := map[string]struct {
+		sType       *string
+		nilShoutrrr bool
+		wantErr     bool
+	}{
+		"nil shoutrrr": {
+			nilShoutrrr: true, wantErr: true},
+		"invalid type": {
+			sType: stringPtr("somethingUnknown"), wantErr: true},
+		"valid": {
+			wantErr: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			if tc.sType != nil {
+				shoutrrr.Type = *tc.sType
+			}
+			if tc.nilShoutrrr {
+				shoutrrr = nil
+			}
+
+			// WHEN TestSend is called
+			err := shoutrrr.TestSend("https://example.com")
+
+			// THEN it err's when expected
+			if tc.wantErr && err == nil {
+				t.Errorf("want err, not nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("want nil, not err: %v", err)
+			}
+		})
+	}
+
+}
+
+func TestSliceDefaults_Print(t *testing.T) {
+	// GIVEN a SliceDefaults
+	testValid := testShoutrrrDefaults(false, false)
+	testInvalid := testShoutrrrDefaults(true, true)
+	tests := map[string]struct {
+		slice *SliceDefaults
+		want  string
+	}{
+		"nil": {
+			slice: nil,
+			want:  "",
+		},
+		"empty": {
+			slice: &SliceDefaults{},
+			want:  "",
+		},
+		"single empty element slice": {
+			slice: &SliceDefaults{
+				"single": {}},
+			want: `
+notify:
+  single: {}`,
+		},
+		"single element slice": {
+			slice: &SliceDefaults{
+				"single": testValid},
+			want: `
+notify:
+  single:
+    type: gotify
+    options:
+      max_tries: "` + testValid.GetOption("max_tries") + `"
+    url_fields:
+      host: ` + testValid.GetURLField("host") + `
+      path: ` + testValid.GetURLField("path") + `
+      token: ` + testValid.GetURLField("token"),
+		},
+		"multiple element slice": {
+			slice: &SliceDefaults{
+				"first":  testValid,
+				"second": testInvalid},
+			want: `
+notify:
+  first:
+    type: gotify
+    options:
+      max_tries: "` + testValid.GetOption("max_tries") + `"
+    url_fields:
+      host: ` + testValid.GetURLField("host") + `
+      path: ` + testValid.GetURLField("path") + `
+      token: ` + testValid.GetURLField("token") + `
+  second:
+    type: gotify
+    options:
+      max_tries: "` + testInvalid.GetOption("max_tries") + `"
+    url_fields:
+      host: ` + testInvalid.GetURLField("host") + `
+      path: ` + testInvalid.GetURLField("path") + `
+      token: ` + testInvalid.GetURLField("token"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			if tc.want != "" {
+				tc.want += "\n"
+			}
+			stdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// WHEN Print is called
+			tc.slice.Print("")
+
+			// THEN it prints the expected output
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = stdout
+			strOut := string(out)
+			tc.want = strings.TrimPrefix(tc.want, "\n")
+			if strOut != tc.want {
+				t.Errorf("Print should have given\n%q\nbut gave\n%q",
+					tc.want, strOut)
 			}
 		})
 	}
