@@ -456,17 +456,23 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the Notify
-	var serviceNotifies shoutrrr.Slice
+	var serviceNotify *shoutrrr.Shoutrrr
 	var latestVersion string
 	if parsedPayload.ServiceNamePrevious != "" {
 		api.Config.OrderMutex.RLock()
 		defer api.Config.OrderMutex.RUnlock()
-		serviceNotifies = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify
-		latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
+		// Check that the service exists
+		if api.Config.Service[parsedPayload.ServiceNamePrevious] != nil {
+			// Check that the notify exists
+			if api.Config.Service[parsedPayload.ServiceNamePrevious].Notify != nil {
+				serviceNotify = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify[parsedPayload.NamePrevious]
+			}
+			latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
+		}
 	}
 	testNotify, serviceURL, err := shoutrrr.FromPayload(
 		&parsedPayload,
-		&serviceNotifies,
+		serviceNotify,
 		api.Config.Notify,
 		api.Config.Defaults.Notify,
 		api.Config.HardDefaults.Notify)

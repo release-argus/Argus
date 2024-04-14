@@ -1015,6 +1015,45 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 			wantMsg:    "invalid .* token",
 		},
+		"service_name_previous that doesn't exist": {
+			payload: `{
+				"service_name_previous": "does_not_exist",
+				"service_name": "test",
+				"name": "new_notify",
+				"name_previous": "test",
+				"url_fields": {
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "<secret>"}}`,
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `invalid type "new_notify"`,
+		},
+		"name_previous that doesn't exist": {
+			payload: `{
+				"service_name_previous": "test",
+				"service_name": "test",
+				"name": "new_notify",
+				"name_previous": "does_not_exist",
+				"url_fields": {
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "<secret>"}}`,
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `invalid type "new_notify"`,
+		},
+		"service_name_previous and name_previous that doesn't exist": {
+			payload: `{
+				"service_name_previous": "does_not_exist",
+				"service_name": "test",
+				"name": "new_notify",
+				"name_previous": "also_does_not_exist",
+				"url_fields": {
+					"host": "` + validNotify.URLFields["host"] + `",
+					"path": "` + validNotify.URLFields["path"] + `",
+					"token": "<secret>"}}`,
+			wantStatus: http.StatusBadRequest,
+			wantMsg:    `invalid type "new_notify"`,
+		},
 	}
 
 	for name, tc := range tests {

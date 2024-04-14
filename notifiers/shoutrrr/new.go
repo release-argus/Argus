@@ -40,7 +40,7 @@ type TestPayload struct {
 // Replacing any undefined values with that of the previous Notify.
 func FromPayload(
 	payload *TestPayload,
-	serviceNotifies *Slice,
+	serviceNotify *Shoutrrr,
 	mains SliceDefaults,
 	defaults SliceDefaults,
 	hardDefaults SliceDefaults,
@@ -55,10 +55,10 @@ func FromPayload(
 
 	// Original Notifier?
 	original := &Shoutrrr{}
-	if serviceNotifies != nil && (*serviceNotifies)[payload.NamePrevious] != nil {
-		original = (*serviceNotifies)[payload.NamePrevious]
+	if serviceNotify != nil {
+		original = serviceNotify
 		// Copy that previous Notify Type if not set
-		payload.Type = util.FirstNonDefault(payload.Type, (*serviceNotifies)[payload.NamePrevious].Type)
+		payload.Type = util.FirstNonDefault(payload.Type, serviceNotify.Type)
 	}
 
 	// Get the Type, Main, Defaults, and HardDefaults for this Notify

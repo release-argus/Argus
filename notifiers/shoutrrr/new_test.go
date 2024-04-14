@@ -74,14 +74,13 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		typeOther:          &ShoutrrrDefaults{}}
 	// GIVEN a Shoutrrr
 	tests := map[string]struct {
-		payload           TestPayload
-		noServiceNotifies bool
-		want              *Shoutrrr
-		wantMain          string
-		wantDefaults      string
-		wantHardDefaults  string
-		wantServiceURL    string
-		err               string
+		payload          TestPayload
+		want             *Shoutrrr
+		wantMain         string
+		wantDefaults     string
+		wantHardDefaults string
+		wantServiceURL   string
+		err              string
 	}{
 		"empty": {
 			payload: TestPayload{},
@@ -261,15 +260,15 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				}
 			}
 
-			var testServiceNotifies *Slice
-			if !tc.noServiceNotifies {
-				testServiceNotifies = serviceNotifies
+			var testServiceNotify *Shoutrrr
+			if tc.payload.NamePrevious != "" {
+				testServiceNotify = (*serviceNotifies)[tc.payload.NamePrevious]
 			}
 
 			// WHEN using the template
 			got, serviceURL, err := FromPayload(
 				&tc.payload,
-				testServiceNotifies,
+				testServiceNotify,
 				mains, defaults, hardDefaults)
 
 			// THEN the Shoutrrr is created as expected
