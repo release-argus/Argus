@@ -507,6 +507,7 @@ func (s *Shoutrrr) TestSend(serviceURL string) (err error) {
 		return
 	}
 
+	s.SetOption("delay", "0s")
 	s.SetOption("max_tries", "1")
 
 	latestVersion := s.ServiceStatus.LatestVersion()
