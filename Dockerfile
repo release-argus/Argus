@@ -15,7 +15,7 @@ COPY . /build/
 WORKDIR /build/
 
 ARG BUILD_VERSION="development"
-RUN make BUILD_VERSION=${BUILD_VERSION} go-build
+RUN make BUILD_VERSION=${BUILD_VERSION} build
 RUN chmod 755 /build/argus
 RUN chmod 755 /build/healthcheck
 
