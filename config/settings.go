@@ -124,6 +124,13 @@ func (s *WebSettings) CheckValues() {
 		}
 	}
 
+	// Route Prefix
+	if s.RoutePrefix != nil {
+		// Ensure the RoutePrefix starts with one '/' and doesn't end with any '/'.
+		*s.RoutePrefix = strings.TrimLeft(*s.RoutePrefix, "/")
+		*s.RoutePrefix = "/" + strings.TrimRight(*s.RoutePrefix, "/")
+	}
+
 	// Favicon
 	if s.Favicon != nil {
 		// Remove the Favicon override if both the SVG and PNG are empty.
@@ -187,6 +194,8 @@ func (s *Settings) NilUndefinedFlags(flagset *map[string]bool) {
 		if !(*flagset)[f.Flag] {
 			if strPtr, ok := f.Variable.(**string); ok {
 				*strPtr = nil
+			} else if boolPtr, ok := f.Variable.(**bool); ok {
+				*boolPtr = nil
 			}
 		}
 	}

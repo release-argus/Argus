@@ -102,22 +102,23 @@ func (api *API) SetupRoutesAPI() {
 
 // DisableRoutesAPI will disable HTTP API routes that are disabled in the config
 func (api *API) DisableRoutesAPI() {
+	// Trim suffix to ensure no trailing slash and prevent '//api/v1/...' routes
+	webRoutePrefix := strings.TrimSuffix(api.Config.Settings.WebRoutePrefix(), "/")
 	routes := map[string]*struct {
 		name         string
 		method       string
 		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
 		disabled     bool
 	}{
-		"/api/v1/service/new": {name: "service_create", method: "POST"},
-		"/api/v1/service/update/{service_name:.+}": {name: "service_update", method: "PUT",
-			otherMethods: map[string]func(w http.ResponseWriter, r *http.Request){"GET": api.httpServiceDetail}},
-		"/api/v1/service/delete/{service_name:.+}":           {name: "service_delete", method: "DELETE"},
-		"/api/v1/notify/test":                                {name: "notify_test", method: "POST"},
-		"/api/v1/latest_version/refresh/{service_name:.+}":   {name: "lv_refresh", method: "GET"},
-		"/api/v1/deployed_version/refresh/{service_name:.+}": {name: "dv_refresh", method: "GET"},
-		"/api/v1/latest_version/refresh":                     {name: "lv_refresh_new", method: "GET"},
-		"/api/v1/deployed_version/refresh":                   {name: "dv_refresh_new", method: "GET"},
-		"/api/v1/service/actions/{service_name:.+}":          {name: "service_actions", method: "POST"},
+		webRoutePrefix + "/api/v1/service/new":                                {name: "service_create", method: "POST"},
+		webRoutePrefix + "/api/v1/service/update/{service_name:.+}":           {name: "service_update", method: "PUT"},
+		webRoutePrefix + "/api/v1/service/delete/{service_name:.+}":           {name: "service_delete", method: "DELETE"},
+		webRoutePrefix + "/api/v1/notify/test":                                {name: "notify_test", method: "POST"},
+		webRoutePrefix + "/api/v1/latest_version/refresh/{service_name:.+}":   {name: "lv_refresh", method: "GET"},
+		webRoutePrefix + "/api/v1/deployed_version/refresh/{service_name:.+}": {name: "dv_refresh", method: "GET"},
+		webRoutePrefix + "/api/v1/latest_version/refresh":                     {name: "lv_refresh_new", method: "GET"},
+		webRoutePrefix + "/api/v1/deployed_version/refresh":                   {name: "dv_refresh_new", method: "GET"},
+		webRoutePrefix + "/api/v1/service/actions/{service_name:.+}":          {name: "service_actions", method: "POST"},
 	}
 	for _, r := range routes {
 		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)

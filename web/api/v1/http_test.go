@@ -164,7 +164,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			cfg := testBareConfig()
+			cfg := test.BareConfig()
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
 			api := NewAPI(cfg, util.NewJLog("WARN", false))
 			api.SetupRoutesFavicon()
@@ -421,8 +421,14 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 				}
 				t.Run(strings.Join(disabledRoutes, ";"), func(t *testing.T) {
 
-					cfg := testBareConfig()
+					cfg := test.BareConfig()
 					cfg.Settings.Web.DisabledRoutes = disabledRoutes
+					// Give every other test a route prefix
+					routePrefix := ""
+					if j%2 == 0 {
+						routePrefix = "/test"
+						cfg.Settings.Web.RoutePrefix = &routePrefix
+					}
 					api := NewAPI(cfg, util.NewJLog("WARN", false))
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
@@ -430,6 +436,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 					defer ts.Close()
 					client := http.Client{}
 
+					// Test each route for this set of disabled routes
 					for name, tc := range tests {
 						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {
 							tc.wantStatus = http.StatusNotFound
@@ -438,7 +445,8 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 							tc.wantBody = test.TrimJSON(tc.wantBody)
 						}
 
-						path := fmt.Sprintf("/api/v1/%s", tc.path)
+						path := fmt.Sprintf("%s/api/v1/%s",
+							routePrefix, tc.path)
 						if tc.replaceLastPathDir != "" {
 							parts := strings.Split(path, "/")
 							path = strings.Join(parts[:len(parts)-1], "/") + "/" + tc.replaceLastPathDir

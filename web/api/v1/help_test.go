@@ -174,19 +174,6 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 		PNG: png}
 }
 
-func testBareConfig() *config.Config {
-	cfg := &config.Config{
-		Settings: config.Settings{
-			SettingsBase: config.SettingsBase{
-				Web: config.WebSettings{
-					RoutePrefix: test.StringPtr(""),
-				}}}}
-	cfg.HardDefaults.SetDefaults()
-	cfg.Settings.SetDefaults()
-	cfg.Settings.FromFlags.Web.BasicAuth = nil
-	return cfg
-}
-
 func trimJSON(str string) string {
 	str = strings.TrimSpace(str)
 	str = strings.ReplaceAll(str, "\n", "")

@@ -63,6 +63,86 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 			wantUsernameHash: util.FmtHash(util.GetHash("user")),
 			wantPasswordHash: util.FmtHash(util.GetHash("pass")),
 		},
+		"Route prefix - empty": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/")}}},
+		},
+		"Route prefix - no leading /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("test")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+		},
+		"Route prefix - leading /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+		},
+		"Route prefix - multiple leading /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("///test")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+		},
+		"Route prefix - trailing /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test/")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+		},
+		"Route prefix - multiple trailing /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test///")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/test")}}},
+		},
+		"Route prefix - only a /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/")}}},
+		},
+		"Route prefix - only multiple /": {
+			had: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("///")}}},
+			want: Settings{
+				SettingsBase: SettingsBase{
+					Web: WebSettings{
+						RoutePrefix: stringPtr("/")}}},
+		},
 		"Favicon - empty": {
 			had: Settings{
 				SettingsBase: SettingsBase{
@@ -135,33 +215,48 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 	// GIVEN tests with flags set/unset
 	var settings Settings
 	tests := map[string]struct {
-		flagSet bool
-		setTo   *string
+		flagSet   bool
+		setStrTo  *string
+		setBoolTo *bool
 	}{
 		"flag set": {
-			flagSet: true, setTo: stringPtr("test")},
+			flagSet:   true,
+			setStrTo:  stringPtr("test"),
+			setBoolTo: boolPtr(true)},
 		"flag not set": {
-			flagSet: false, setTo: stringPtr("foo")},
+			flagSet:   false,
+			setStrTo:  stringPtr("foo"),
+			setBoolTo: boolPtr(false)},
 	}
+	flagStr := "log.level"
+	flagBool := "log.timestamps"
 	flagset := map[string]bool{
-		"log.level": false,
+		flagStr:  false,
+		flagBool: false,
 	}
-	flag := "log.level"
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN a flag is set/unset and NilUndefinedFlags is called
-			flagset[flag] = tc.flagSet
-			LogLevel = tc.setTo
+			// WHEN flags are set/unset and NilUndefinedFlags is called
+			flagset[flagStr] = tc.flagSet
+			flagset[flagBool] = tc.flagSet
+			LogLevel = tc.setStrTo
+			LogTimestamps = tc.setBoolTo
 			settings.NilUndefinedFlags(&flagset)
 
-			// THEN the flag is defined/undefined correctly
-			got := LogLevel
-			if (tc.flagSet && got == nil) ||
-				(!tc.flagSet && got != nil) {
+			// THEN the flags are defined/undefined correctly
+			gotStr := LogLevel
+			if (tc.flagSet && gotStr == nil) ||
+				(!tc.flagSet && gotStr != nil) {
 				t.Errorf("%s %s:\nwant: %s\ngot:  %v",
-					flag, name, *tc.setTo, util.EvalNilPtr(got, "<nil>"))
+					flagStr, name, *tc.setStrTo, util.EvalNilPtr(gotStr, "<nil>"))
+			}
+			gotBool := LogTimestamps
+			if (tc.flagSet && gotBool == nil) ||
+				(!tc.flagSet && gotBool != nil) {
+				t.Errorf("%s %s:\nwant: %v\ngot:  %v",
+					flagBool, name, *tc.setBoolTo, gotBool)
 			}
 		})
 	}
@@ -393,7 +488,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("prefix")}}},
+						RoutePrefix: stringPtr("/prefix")}}},
 		},
 		"web.basic_auth": {
 			env: map[string]string{
