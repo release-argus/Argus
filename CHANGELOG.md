@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.17.1](https://github.com/release-argus/Argus/compare/0.17.0...0.17.1) (2024-04-15)
+
+
+### Bug Fixes
+
+* **config,web:** disabled routes weren't taking into account `route_prefix` ([0c6ffb3](https://github.com/release-argus/Argus/commits/0c6ffb3d26a1d2f267f69cb012af43f32a13df93))
+
 ## [0.17.0](https://github.com/release-argus/Argus/compare/0.16.0...0.17.0) (2024-04-15)
 
 
