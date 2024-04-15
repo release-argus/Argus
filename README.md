@@ -1,5 +1,5 @@
 <h1 align="center" style="border-bottom: none">
-    <a href="//release-argus.io" target="_blank"><img alt="Argus" src="/web/ui/static/favicon.svg" height=128></a><br>Argus
+    <a href="//release-argus.io" target="_blank"><img alt="Argus" src="/web/ui/react-app/public/favicon.svg" height=128></a><br>Argus
 </h1>
 
 <div align="center">
