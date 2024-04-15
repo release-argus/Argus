@@ -24,8 +24,8 @@ interface FormItemColourProps {
  * Returns a form item for a hex colour with a colour picker
  *
  * @param name - The name of the field
- * @param col_xs - The number of columns to take up on extra small screens
- * @param col_sm - The number of columns to take up on small screens
+ * @param col_xs - The number of columns the item takes up on XS+ screens
+ * @param col_sm - The number of columns the item takes up on SM+ screens
  * @param label - The form label to display
  * @param tooltip - The tooltip to display
  * @param defaultVal - The default value of the field

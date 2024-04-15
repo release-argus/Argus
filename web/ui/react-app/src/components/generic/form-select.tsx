@@ -34,8 +34,8 @@ interface FormSelectProps {
  * @param customValidation - Custom validation function for the form item
  * @param onChange - The function to call when the form item changes
  * @param key - The key of the form item
- * @param col_xs - The number of columns the form item should take up on extra small screens
- * @param col_sm - The number of columns the form item should take up on small screens
+ * @param col_xs - The number of columns the item takes up on XS+ screens
+ * @param col_sm - The number of columns the item takes up on SM+ screens
  * @param label - The label of the form item
  * @param smallLabel - Whether the label should be small
  * @param tooltip - The tooltip of the form item

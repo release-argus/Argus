@@ -26,8 +26,8 @@ interface FormCheckProps {
  * Returns a form checkbox
  *
  * @param name - The name of the field
- * @param col_xs - The number of columns to take up on extra small screens
- * @param col_sm - The number of columns to take up on small screens
+ * @param col_xs - The number of columns the item takes up on XS+ screens
+ * @param col_sm - The number of columns the item takes up on SM+ screens
  * @param size - The size of the checkbox
  * @param label - The form label to display
  * @param smallLabel - Whether the label should be small

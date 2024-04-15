@@ -341,6 +341,9 @@ code {
   border-color: var(--bs-secondary-color);
   box-shadow: none;
 }
+.curved-right-only {
+  border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
+}
 
 .bold-underline {
   font-weight: bold;

@@ -10,8 +10,8 @@ type formPaddingProps = {
 /**
  * Returns the padding classes for a form item
  *
- * @param col_xs - The number of columns the item takes up on XS
- * @param col_sm - The number of columns the item takes up on SM+
+ * @param col_xs - The number of columns the item takes up on XS+ screens
+ * @param col_sm - The number of columns the item takes up on SM+ screens
  * @param position - The position of the item on SM+
  * @param positionXS - The position of the item on XS
  * @returns The padding classes for a form item
@@ -41,7 +41,7 @@ export const formPadding = ({
     }
   }
 
-  // If the padding is the same on XS and SM+, convert the SM+ padding to XS+
+  // If the padding is the same on XS+ and SM+, convert the SM+ padding to XS+
   if (position === positionXS && col_sm !== 12 && col_xs !== 12) {
     for (let i = 0; i < paddingClasses.length; i++) {
       paddingClasses[i] = paddingClasses[i].replace("-sm", "");
