@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.17.0](https://github.com/release-argus/Argus/compare/0.16.0...0.17.0) (2024-04-15)
+
+
+### Features
+
+* **config,web:** option to disable routes ([#384](https://github.com/release-argus/Argus/issues/384)) ([c2d1fdc](https://github.com/release-argus/Argus/commits/c2d1fdcaa7a8eda44f6b5d333ce5a3c83adda6d6))
+    * `settings.web.disabled_routes: []`
+* **web:** 'test notify' button on create/edit ([#379](https://github.com/release-argus/Argus/issues/379)) ([29a5fe0](https://github.com/release-argus/Argus/commits/29a5fe0e2dc97a6a8ff2bec9c6713f01b64cb1e1))
+* **web:** clickable links for latest/deployed version url ([#385](https://github.com/release-argus/Argus/issues/385)) ([18ae353](https://github.com/release-argus/Argus/commits/18ae3533cdf67dc201907b4ad6cbdf99c1c6a0d3))
+
 ## [0.16.0](https://github.com/release-argus/Argus/compare/0.15.2...0.16.0) (2024-02-24)
 
 New mascot! Thanks [@rexapex](https://github.com/rexapex)
