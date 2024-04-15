@@ -10,6 +10,7 @@ import { BooleanWithDefault } from "components/generic";
 import EditServiceLatestVersionRequire from "./latest-version-require";
 import FormURLCommands from "./latest-version-urlcommands";
 import { LatestVersionLookupEditType } from "types/service-edit";
+import VersionWithLink from "./version-with-link";
 import VersionWithRefresh from "./version-with-refresh";
 import { firstNonDefault } from "utils";
 import { useWatch } from "react-hook-form";
@@ -44,9 +45,10 @@ const EditServiceLatestVersion: FC<Props> = ({
     { label: "URL", value: "url" },
   ];
 
-  const latestVersionType: LatestVersionLookupType["type"] = useWatch({
-    name: `latest_version.type`,
-  });
+  const latestVersionType: NonNullable<LatestVersionLookupType["type"]> =
+    useWatch({
+      name: `latest_version.type`,
+    });
 
   const convertedDefaults = useMemo(
     () => ({
@@ -73,12 +75,12 @@ const EditServiceLatestVersion: FC<Props> = ({
             label="Type"
             options={latestVersionTypeOptions}
           />
-          <FormItem
+          <VersionWithLink
             name="latest_version.url"
             required
             col_sm={8}
             col_xs={8}
-            label={latestVersionType === "github" ? "Repo" : "URL"}
+            type={latestVersionType}
             position="right"
           />
           {latestVersionType === "github" ? (
