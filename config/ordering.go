@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 // GetOrder of the Services from `c.File`.
@@ -50,7 +51,11 @@ func (c *Config) GetOrder(data []byte) {
 		}
 		if afterService && strings.HasPrefix(line, indentation) && !strings.HasPrefix(line, indentation+" ") {
 			// Check that it's a service and not a setting for a service.
-			order = append(order, strings.TrimSpace(strings.TrimRight(line, ":")))
+			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
+			var serviceName string
+			// Unmarshal YAML to handle any special characters
+			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarhsal err caught earlier
+			order = append(order, serviceName)
 		}
 	}
 

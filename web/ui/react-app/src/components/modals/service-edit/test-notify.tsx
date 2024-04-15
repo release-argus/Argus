@@ -1,5 +1,6 @@
 import { Alert, Button } from "react-bootstrap";
 import { FC, useMemo, useState } from "react";
+import { beautifyGoErrors, fetchJSON } from "utils";
 import {
   faCheckCircle,
   faCircleXmark,
@@ -11,7 +12,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NotifyType } from "types/config";
 import { convertNotifyToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { deepDiff } from "utils/query-params";
-import { fetchJSON } from "utils";
 import { useErrors } from "hooks/errors";
 import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
@@ -25,12 +25,7 @@ const Result: FC<{ status: "pending" | "success" | "error"; err?: string }> = ({
     <span className="mb-2" style={{ width: "100%", wordBreak: "break-all" }}>
       <Alert variant={err || status === "error" ? "danger" : "success"}>
         {err || status === "error"
-          ? (err ?? "error") // Styling for verify errs
-              .replaceAll(/\\([ \t])/g, "\n$1") // \ + space/tab -> newline
-              .replaceAll(`\\n`, "\n") // \n -> newline
-              .replaceAll(`\\"`, `"`) // \" -> "
-              .replaceAll(`\\\\`, `\\`) // \\ -> \
-              .replaceAll(/\\$/g, "\n") // \ + end of string -> newline
+          ? beautifyGoErrors(err ?? "error")
           : "Success!"}
       </Alert>
     </span>

@@ -50,6 +50,8 @@ export interface ServiceRefreshType {
   version?: string;
   error?: string;
   timestamp: string;
+
+  message?: string; // Route disabled message
 }
 
 export interface LatestVersionLookupEditType {

@@ -375,7 +375,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			if tc.serviceName != nil {
 				serviceName = *tc.serviceName
 			}
-			target := "/api/v1/service/edit/"
+			target := "/api/v1/service/update/"
 			target += url.QueryEscape(serviceName)
 
 			// WHEN that HTTP request is sent
@@ -444,7 +444,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 				}
 			}()
 			api.Config.Service[svc.ID] = svc
-			target := "/api/v1/service/edit/"
+			target := "/api/v1/service/update/"
 			target += url.QueryEscape(svc.ID)
 
 			// WHEN that HTTP request is sent
@@ -633,7 +633,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				vars := map[string]string{
 					"service_name": url.PathEscape(*tc.serviceName),
 				}
-				target = "/api/v1/service/edit/" + url.PathEscape(*tc.serviceName)
+				target = "/api/v1/service/update/" + url.PathEscape(*tc.serviceName)
 				req = httptest.NewRequest(http.MethodPut, target, payload)
 				req = mux.SetURLVars(req, vars)
 			}
@@ -736,7 +736,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		{
 			name:           "unknown service",
 			service:        "foo",
-			wantBody:       `{"message":"Delete .* failed, service not found"`,
+			wantBody:       `{"message":"delete .* failed, service not found"`,
 			wantStatusCode: http.StatusBadRequest,
 		},
 		{
@@ -748,7 +748,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		{
 			name:           "delete service again",
 			service:        svc.ID,
-			wantBody:       `{"message":"Delete .* failed, service not found"`,
+			wantBody:       `{"message":"delete .* failed, service not found"`,
 			wantStatusCode: http.StatusBadRequest,
 		},
 	}

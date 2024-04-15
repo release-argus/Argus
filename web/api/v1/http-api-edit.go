@@ -400,7 +400,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 
 	// If service doesn't exist, return 404.
 	if api.Config.Service[targetService] == nil {
-		failRequest(&w, fmt.Sprintf("Delete %q failed, service not found", targetService))
+		failRequest(&w, fmt.Sprintf("delete %q failed, service not found", targetService))
 		return
 	}
 

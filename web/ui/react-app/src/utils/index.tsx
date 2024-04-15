@@ -8,6 +8,7 @@ import { convertToQueryParams, stringifyQueryParam } from "./query-params";
 import { extractErrors, getNestedError } from "./errors";
 import { isEmptyArray, isEmptyObject } from "./is-empty";
 
+import beautifyGoErrors from "./beautify-go-errors";
 import cleanEmpty from "./clean-empty";
 import compareStringArrays from "./compare-string-arrays";
 import dateIsAfterNow from "./is-after-date";
@@ -20,6 +21,7 @@ import isEmptyOrNull from "./is-empty-or-null";
 import removeEmptyValues from "./remove-empty-values";
 
 export {
+  beautifyGoErrors,
   boolToStr,
   compareStringArrays,
   containsEndsWith,

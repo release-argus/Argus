@@ -94,7 +94,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
     useQuery({
       queryKey: ["service/edit", "detail"],
       queryFn: () =>
-        fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/edit" }),
+        fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/update" }),
     });
   const {
     data: serviceData,
@@ -104,7 +104,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
     queryKey: ["service/edit", { id: serviceID }],
     queryFn: () =>
       fetchJSON<ServiceEditAPIType>({
-        url: `api/v1/service/edit/${serviceID}`,
+        url: `api/v1/service/update/${serviceID}`,
       }),
     enabled: !!serviceID,
     refetchOnMount: "always",
@@ -239,7 +239,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
     const payload = getPayload(data);
 
     await fetch(
-      serviceID ? `api/v1/service/edit/${serviceID}` : "api/v1/service/new",
+      serviceID ? `api/v1/service/update/${serviceID}` : "api/v1/service/new",
       {
         method: serviceID ? "PUT" : "POST",
         body: JSON.stringify(payload),
