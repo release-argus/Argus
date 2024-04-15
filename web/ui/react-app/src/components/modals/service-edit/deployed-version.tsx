@@ -10,6 +10,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
 import { DeployedVersionLookupEditType } from "types/service-edit";
+import VersionWithLink from "./version-with-link";
 import VersionWithRefresh from "./version-with-refresh";
 
 interface Props {
@@ -60,13 +61,11 @@ const EditServiceDeployedVersion: FC<Props> = ({
     <Accordion>
       <Accordion.Header>Deployed Version:</Accordion.Header>
       <Accordion.Body>
-        <FormItem
-          key="url"
+        <VersionWithLink
           name="deployed_version.url"
+          type="url"
           col_sm={12}
-          label="URL"
           tooltip="URL to query for the version that's running"
-          isURL
         />
         <BooleanWithDefault
           name="deployed_version.allow_invalid_certs"

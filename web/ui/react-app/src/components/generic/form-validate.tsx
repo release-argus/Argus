@@ -40,6 +40,23 @@ export const regexTest = (value: string, use?: boolean) => {
 };
 
 /**
+ * Returns an error message if the value is not a valid Git repository
+ *
+ * @param value - The value to test
+ * @param use - Whether to use this test
+ * @returns - An error message if the value is not a valid Git repository
+ */
+export const repoTest = (value: string, use?: boolean) => {
+  if (!value || !use) return true;
+
+  if (/^[\w.-]+\/[\w.-]+$/g.test(value)) {
+    return true;
+  }
+
+  return "Must be in the format OWNER/REPO";
+};
+
+/**
  * Returns an error message if the value is required
  *
  * @param value - The value to test

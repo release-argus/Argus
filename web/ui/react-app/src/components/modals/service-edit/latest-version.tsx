@@ -77,10 +77,18 @@ const EditServiceLatestVersion: FC<Props> = ({
           />
           <VersionWithLink
             name="latest_version.url"
+            type={latestVersionType}
             required
             col_sm={8}
             col_xs={8}
-            type={latestVersionType}
+            tooltip={
+              latestVersionType === "github" ? (
+                <>
+                  {"https://github.com/"}
+                  <span className="bold-underline">OWNER/REPO</span>
+                </>
+              ) : undefined
+            }
             position="right"
           />
           {latestVersionType === "github" ? (

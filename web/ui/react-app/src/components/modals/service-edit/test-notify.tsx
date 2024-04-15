@@ -92,9 +92,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
     const currentTime = Date.now();
     if (currentTime - lastFetched < 2000) return;
 
-    // double trugger to ensure all fields are validated
-    await trigger(path);
-    const result = await trigger(path);
+    const result = await trigger(path, { shouldFocus: true });
     if (result) {
       testRefetch();
       setLastFetched(currentTime);

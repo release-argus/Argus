@@ -32,11 +32,11 @@ export const deepDiff = (
     // diff arrays
     if (Array.isArray(oldObj[key]) || Array.isArray(newObj[key])) {
       // if array lengths differ, include all elements in diff
-      if ((oldObj[key] ?? []).length !== newObj[key].length) {
+      if ((oldObj[key] ?? []).length !== (newObj[key] ?? []).length) {
         diff[key] = newObj[key];
         // else, recurse on each element
       } else {
-        const subDiff = (oldObj[key] || []).map(
+        const subDiff = (oldObj[key] ?? []).map(
           (elem: DiffObject, i: string | number) =>
             deepDiff(newObj[key][i], elem)
         );

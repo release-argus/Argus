@@ -95,7 +95,7 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
     if (currentTime - lastFetched < 1000) return;
 
     // Ensure valid form
-    const result = await trigger(dataTarget);
+    const result = await trigger(dataTarget, { shouldFocus: true });
     if (!result) return;
 
     refetchSemanticVersioning();
