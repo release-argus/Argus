@@ -80,9 +80,7 @@ const FormSelect: FC<FormSelectProps> = ({
             <Form.Select
               {...field}
               aria-label={label}
-              onChange={
-                onChange ? onChange : (e) => setValue(name, e.target.value)
-              }
+              onChange={onChange || ((e) => setValue(name, e.target.value))}
             >
               {options.map((opt) => (
                 <option

@@ -201,10 +201,10 @@ export const convertStringToFieldArray = (
 
   let list: string[];
   try {
-    list = JSON.parse(s as string);
-    list = Array.isArray(list) ? list : [s as string];
+    list = JSON.parse(s);
+    list = Array.isArray(list) ? list : [s];
   } catch (error) {
-    list = [s as string];
+    list = [s];
   }
 
   // map the []string to {arg: string} for the form
@@ -233,7 +233,7 @@ export const convertHeadersFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {
@@ -271,7 +271,7 @@ export const convertOpsGenieTargetFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {
@@ -320,7 +320,7 @@ export const convertNtfyActionsFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {

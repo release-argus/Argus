@@ -31,12 +31,12 @@ export const handleNotifications = (props: Props) => {
         case "NEW":
           props.addNotification({
             type: "info",
-            title: props.event.service_data?.id || "Unknown",
+            title: props.event.service_data?.id ?? "Unknown",
             body: `New version: ${
-              props.event.service_data?.status?.latest_version || "Unknown"
+              props.event.service_data?.status?.latest_version ?? "Unknown"
             }`,
             small:
-              props.event.service_data?.status?.latest_version_timestamp ||
+              props.event.service_data?.status?.latest_version_timestamp ??
               new Date().toString(),
             delay: 0,
           });
@@ -44,12 +44,12 @@ export const handleNotifications = (props: Props) => {
         case "UPDATED":
           props.addNotification({
             type: "success",
-            title: props.event.service_data?.id || "Unknown",
+            title: props.event.service_data?.id ?? "Unknown",
             body: `Updated to version '${
-              props.event.service_data?.status?.deployed_version || "Unknown"
+              props.event.service_data?.status?.deployed_version ?? "Unknown"
             }'`,
             small:
-              props.event.service_data?.status?.deployed_version_timestamp ||
+              props.event.service_data?.status?.deployed_version_timestamp ??
               new Date().toString(),
             delay: 30000,
           });
@@ -57,9 +57,9 @@ export const handleNotifications = (props: Props) => {
         case "INIT":
           props.addNotification({
             type: "info",
-            title: props.event.service_data?.id || "Unknown",
+            title: props.event.service_data?.id ?? "Unknown",
             body: `Latest version: ${
-              props.event.service_data?.status?.latest_version || "Unknown"
+              props.event.service_data?.status?.latest_version ?? "Unknown"
             }`,
             small:
               props.event.service_data?.status?.latest_version_timestamp ?? "",
@@ -76,7 +76,7 @@ export const handleNotifications = (props: Props) => {
             )
               props.addNotification({
                 type: "info",
-                title: props.event.service_data?.id || "Unknown",
+                title: props.event.service_data?.id ?? "Unknown",
                 body: `Skipped version: ${props.event.service_data.status.approved_version.slice(
                   "SKIP_".length
                 )}`,
@@ -97,14 +97,14 @@ export const handleNotifications = (props: Props) => {
         props.event.command_data[key].failed === false
           ? props.addNotification({
               type: "success",
-              title: props.event.service_data?.id || "Unknown",
+              title: props.event.service_data?.id ?? "Unknown",
               body: `'${key}' Command ran successfully`,
               small: new Date().toString(),
               delay: 30000,
             })
           : props.addNotification({
               type: "danger",
-              title: props.event.service_data?.id || "Unknown",
+              title: props.event.service_data?.id ?? "Unknown",
               body: `'${key}' Command failed`,
               small: new Date().toString(),
               delay: 30000,
@@ -118,14 +118,14 @@ export const handleNotifications = (props: Props) => {
         props.event.webhook_data[key].failed === false
           ? props.addNotification({
               type: "success",
-              title: props.event.service_data?.id || "Unknown",
+              title: props.event.service_data?.id ?? "Unknown",
               body: `'${key}' WebHook sent successfully`,
               small: new Date().toString(),
               delay: 30000,
             })
           : props.addNotification({
               type: "danger",
-              title: props.event.service_data?.id || "Unknown",
+              title: props.event.service_data?.id ?? "Unknown",
               body: `'${key}' WebHook failed to send`,
               small: new Date().toString(),
               delay: 30000,

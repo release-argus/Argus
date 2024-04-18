@@ -17,7 +17,7 @@ export const getNestedError = (
 ): FieldError | undefined =>
   key
     .split(".")
-    .reduce((acc, key) => (acc && acc[key] ? acc[key] : undefined), errors);
+    .reduce((acc, key) => (acc?.[key] ? acc[key] : undefined), errors);
 
 /**
  * Extracts and flattens errors from a react-hook-form errors object
@@ -39,7 +39,7 @@ export const extractErrors = (
     for (const key in obj) {
       const value = obj[key];
       if (value !== null) {
-        const fullPath = `${prefix}${prefix ? `.${key}` : key}`;
+        const fullPath = prefix ? `${prefix}.${key}` : key;
         const atPath = fullPath.startsWith(path); // if the path is in the key
         if (atPath || path.includes(fullPath)) {
           if (typeof value === "object" && !value.hasOwnProperty("ref"))

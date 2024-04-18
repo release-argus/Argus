@@ -1,6 +1,7 @@
 import {
   ActionAPIType,
   CommandSummaryListType,
+  ModalType,
   WebHookSummaryListType,
 } from "types/summary";
 import {
@@ -101,14 +102,13 @@ const ActionReleaseModal = () => {
           ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             !dateIsAfterNow(modalData.commands[command_id].next_runnable!)
           : true
-      ) ||
+      ) !== undefined ||
       Object.keys(modalData.webhooks).find((webhook_id) =>
         modalData.webhooks[webhook_id].next_runnable
           ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             !dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable!)
           : true
-      ) ||
-      false
+      ) !== undefined
     );
   }, [isSendingThisService, modalData]);
 
@@ -254,6 +254,36 @@ const ActionReleaseModal = () => {
     }
   }, [modal.actionType, modal.service.id]);
 
+  const title = (actionType: NonNullable<ModalType>, hasWebHook: boolean) => {
+    const action = hasWebHook ? "WebHook" : "Command";
+
+    const titleMap: Record<string, string> = {
+      RESEND: `Resend the ${action}(s)?`,
+      SEND: `Send the ${action}(s) to upgrade?`,
+      SKIP: `Skip this release? (don't send any ${action}s)`,
+      SKIP_NO_WH: "Skip this release?",
+    };
+
+    return titleMap[actionType] || "";
+  };
+
+  const confirmButtonText = (
+    actionType: ModalType,
+    canSendUnspecific: boolean
+  ) => {
+    if (actionType === "SKIP" || actionType === "SKIP_NO_WH")
+      return "Skip release";
+
+    const buttonTextMap: Record<string, string> = {
+      RESEND: "Resend all",
+      SEND: "Confirm",
+      RETRY: "Retry all failed",
+    };
+
+    if (canSendUnspecific) return buttonTextMap[actionType] || "";
+    return "Done";
+  };
+
   return (
     <Modal
       show={!["", "EDIT"].includes(modal.actionType)}
@@ -262,21 +292,7 @@ const ActionReleaseModal = () => {
       <Modal.Header closeButton>
         <Modal.Title>
           <strong>
-            {modal.actionType === "RESEND"
-              ? `Resend the ${
-                  modal.service.webhook ? "WebHook" : "Command"
-                }(s)?`
-              : modal.actionType === "SEND"
-              ? `Send the  ${
-                  modal.service.webhook ? "WebHook" : "Command"
-                }(s) to upgrade?`
-              : modal.actionType === "SKIP"
-              ? `Skip this release? (don't send any  ${
-                  modal.service.webhook ? "WebHook" : "Command"
-                }s)`
-              : modal.actionType === "SKIP_NO_WH"
-              ? "Skip this release?"
-              : ""}
+            {title(modal.actionType, (modal.service?.webhook ?? 0) > 0)}
           </strong>
         </Modal.Title>
       </Modal.Header>
@@ -288,9 +304,7 @@ const ActionReleaseModal = () => {
         >
           <strong>{modal.service.id}</strong>
           {modal.actionType === "RESEND"
-            ? modal.service?.status?.latest_version
-              ? ` - ${modal.service?.status?.latest_version}`
-              : " - Unknown"
+            ? ` - ${modal.service?.status?.latest_version ?? "Unknown"}`
             : ""}
         </Container>
         <>
@@ -420,17 +434,7 @@ const ActionReleaseModal = () => {
           }}
           disabled={modal.actionType !== "SKIP" && isSendingThisService}
         >
-          {modal.actionType === "SKIP" || modal.actionType === "SKIP_NO_WH"
-            ? "Skip release"
-            : !canSendUnspecific
-            ? "Done"
-            : modal.actionType === "RESEND"
-            ? "Resend all"
-            : modal.actionType === "SEND"
-            ? "Confirm"
-            : modal.actionType === "RETRY"
-            ? "Retry all failed"
-            : ""}
+          {confirmButtonText(modal.actionType, canSendUnspecific)}
         </Button>
       </Modal.Footer>
     </Modal>

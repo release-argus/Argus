@@ -8,14 +8,13 @@ import {
   convertNtfyActionsFromString,
   normaliseForSelect,
 } from "components/modals/service-edit/util";
+import { firstNonDefault, strToBool } from "utils";
 import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyNtfyType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NtfyActions } from "components/modals/service-edit/notify-types/extra";
-import { firstNonDefault } from "utils";
-import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
 export const NtfySchemeOptions = [

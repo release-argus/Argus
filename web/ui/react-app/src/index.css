@@ -7,7 +7,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
   padding: 0px;
-  /* background-color: var(--bs-main-bg); */
 }
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",

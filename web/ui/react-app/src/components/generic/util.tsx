@@ -54,8 +54,10 @@ export const formPadding = ({
     if (positionXS === "right") {
       paddingClasses.push("ps-1");
 
-      // Remove padding for SM+ if it's full width
-      if (col_sm === 12) {
+      // Remove padding for SM+
+      // if it's full width
+      // or we're on the left for SM+
+      if (col_sm === 12 || position === "left") {
         paddingClasses.push("ps-sm-0");
       }
     }
@@ -84,12 +86,10 @@ export const formPadding = ({
     else if (positionXS === "left") {
       paddingClasses.push("pe-1");
 
-      // Remove padding for SM+ if it's full width
-      if (col_sm === 12) {
-        paddingClasses.push("pe-sm-0");
-      }
-      // If we're on the right, remove the pe on SM+
-      else if (position === "right") {
+      // Remove padding for SM+
+      // if it's full width
+      // or we're on the right for SM+
+      if (col_sm === 12 || position === "right") {
         paddingClasses.push("pe-sm-0");
       }
     }

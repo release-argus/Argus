@@ -85,7 +85,7 @@ const Notify: FC<Props> = ({
 
   const original = useMemo(() => {
     const original = originals?.find((o) => o.oldIndex === itemName);
-    return original || { options: {}, url_fields: {}, params: {} };
+    return original ?? { options: {}, url_fields: {}, params: {} };
   }, [originals]);
   const serviceURL =
     lvType === "github" && (lvURL?.match(/\//g) ?? []).length == 1

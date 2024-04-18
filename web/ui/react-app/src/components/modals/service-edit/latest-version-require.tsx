@@ -37,7 +37,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
   const { setValue } = useFormContext();
 
   const defaultDockerRegistry: DefaultDockerFilterType["type"] =
-    defaults?.docker?.type || hard_defaults?.docker?.type;
+    defaults?.docker?.type ?? hard_defaults?.docker?.type;
   const dockerRegistryOptions = useMemo(() => {
     if (defaultDockerRegistry === undefined) return DockerRegistryOptions;
 
@@ -62,8 +62,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
     name: "latest_version.require.docker.type",
   });
   const selectedDockerRegistry: DockerFilterRegistryType | undefined =
-    dockerRegistry || defaultDockerRegistry;
-  const showUsernameField = (dockerRegistry || defaultDockerRegistry) === "hub";
+    dockerRegistry ?? defaultDockerRegistry;
+  const showUsernameField = (dockerRegistry ?? defaultDockerRegistry) === "hub";
 
   const convertedDefaults = useMemo(
     () =>
