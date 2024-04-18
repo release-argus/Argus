@@ -1,5 +1,10 @@
 import { ArgType, NotifyEditType, ServiceEditType } from "types/service-edit";
-import { Dict, NotifyType, ServiceType, WebHookType } from "types/config";
+import {
+  Dict,
+  NotifyTypesValues,
+  ServiceType,
+  WebHookType,
+} from "types/config";
 
 import { convertValuesToString } from "./notify-string-string-map";
 import { isEmptyArray } from "utils";
@@ -106,7 +111,7 @@ export const convertUIServiceDataEditToAPI = (
     payload.notify = data.notify.reduce((acc, notify) => {
       acc[notify.name as string] = convertNotifyToAPI(notify);
       return acc;
-    }, {} as Dict<NotifyType>);
+    }, {} as Dict<NotifyTypesValues>);
 
   // Dashboard
   payload.dashboard = {
@@ -126,11 +131,11 @@ export const convertUIServiceDataEditToAPI = (
  * @returns The notify object with string values and any empty values removed
  */
 export const convertNotifyToAPI = (notify: NotifyEditType) => {
-  notify = removeEmptyValues(notify);
+  notify = removeEmptyValues(notify) as NotifyEditType;
   if (notify?.url_fields)
     notify.url_fields = convertValuesToString(notify.url_fields, notify.type);
   if (notify?.params)
     notify.params = convertValuesToString(notify.params, notify.type);
 
-  return notify as NotifyType;
+  return notify as NotifyTypesValues;
 };

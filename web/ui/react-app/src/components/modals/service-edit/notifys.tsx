@@ -1,5 +1,5 @@
 import { Accordion, Button, Stack } from "react-bootstrap";
-import { Dict, NotifyType } from "types/config";
+import { Dict, NotifyTypes, NotifyTypesValues } from "types/config";
 import { FC, memo, useCallback, useMemo } from "react";
 
 import Notify from "./notify";
@@ -11,9 +11,9 @@ interface Props {
   serviceName: string;
 
   originals?: NotifyEditType[];
-  mains?: Dict<NotifyType>;
-  defaults?: Dict<NotifyType>;
-  hard_defaults?: Dict<NotifyType>;
+  mains?: Dict<NotifyTypesValues>;
+  defaults?: NotifyTypes;
+  hard_defaults?: NotifyTypes;
 }
 
 /**

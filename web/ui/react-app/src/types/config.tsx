@@ -51,7 +51,7 @@ export interface ConfigState {
 export interface ConfigType {
   settings?: SettingsType;
   defaults?: DefaultsType;
-  notify?: Dict<NotifyType>;
+  notify?: Dict<NotifyTypesValues>;
   webhook?: Dict<WebHookType>;
   service?: Dict<ServiceType>;
   order?: string[];
@@ -68,7 +68,7 @@ export interface LogSettingsType {
 
 export interface DefaultsType {
   service?: DefaultServiceType;
-  notify?: Dict<NotifyType>;
+  notify?: NotifyTypes;
   webhook?: WebHookType;
 }
 export interface WebSettingsType {
@@ -101,7 +101,7 @@ export interface ServiceType {
   deployed_version?: DeployedVersionLookupType;
   command?: string[][];
   webhook?: Dict<WebHookType>;
-  notify?: Dict<NotifyType>;
+  notify?: Dict<NotifyTypesValues>;
   dashboard?: ServiceDashboardOptionsType;
 }
 
@@ -213,27 +213,30 @@ export interface URLCommandType {
   old?: string; // replace
   new?: string; // replace
 }
-export type NotifyTypes =
-  | "bark"
-  | "discord"
-  | "smtp" // email
-  | "googlechat"
-  | "gotify"
-  | "ifttt"
-  | "join"
-  | "mattermost"
-  | "matrix"
-  | "ntfy"
-  | "opsgenie"
-  | "pushbullet"
-  | "pushover"
-  | "rocketchat"
-  | "slack"
-  | "teams"
-  | "telegram"
-  | "zulip"
-  | "generic";
-export const NotifyTypesConst: NotifyTypes[] = [
+export interface NotifyTypes {
+  bark: NotifyBarkType;
+  discord: NotifyDiscordType;
+  smtp: NotifySMTPType;
+  googlechat: NotifyGoogleChatType;
+  gotify: NotifyGotifyType;
+  ifttt: NotifyIFTTTType;
+  join: NotifyJoinType;
+  mattermost: NotifyMatterMostType;
+  matrix: NotifyMatrixType;
+  ntfy: NotifyNtfyType;
+  opsgenie: NotifyOpsGenieType;
+  pushbullet: NotifyPushbulletType;
+  pushover: NotifyPushoverType;
+  rocketchat: NotifyRocketChatType;
+  slack: NotifySlackType;
+  teams: NotifyTeamsType;
+  telegram: NotifyTelegramType;
+  zulip: NotifyZulipType;
+  generic: NotifyGenericType;
+}
+export type NotifyTypesKeys = keyof NotifyTypes;
+export type NotifyTypesValues = NotifyTypes[keyof NotifyTypes];
+export const NotifyTypesConst: NotifyTypesKeys[] = [
   "bark",
   "discord",
   "smtp", // email
@@ -254,38 +257,18 @@ export const NotifyTypesConst: NotifyTypes[] = [
   "zulip",
   "generic",
 ];
-export interface NotifyDefaults {
-  barl: NotifyBarkType;
-  discord: NotifyDiscordType;
-  smtp: NotifySMTPType;
-  googlechat: NotifyGoogleChatType;
-  gotify: NotifyGotifyType;
-  ifttt: NotifyIFTTTType;
-  join: NotifyJoinType;
-  mattermost: NotifyMatterMostType;
-  matrix: NotifyMatrixType;
-  ntfy: NotifyNtfyType;
-  opsgenie: NotifyOpsGenieType;
-  pushbullet: NotifyPushbulletType;
-  pushover: NotifyPushoverType;
-  rocketchat: NotifyRocketChatType;
-  slack: NotifySlackType;
-  teams: NotifyTeamsType;
-  telegram: NotifyTelegramType;
-  zulip: NotifyZulipType;
-}
-export interface NotifyType {
+
+export interface NotifyBaseType {
   [key: string]: any;
-  id?: number;
   name?: string;
 
-  type?: NotifyTypes;
+  type?: NotifyTypesKeys;
   options?: NotifyOptionsType;
-  url_fields?: NotifyURLFieldsType;
-  params?: NotifyParamsType;
+  url_fields?: {};
+  params?: {};
 }
 
-export interface NotifyBarkType extends NotifyType {
+export interface NotifyBarkType extends NotifyBaseType {
   type: "bark";
   url_fields: {
     devicekey?: string;
@@ -305,7 +288,7 @@ export interface NotifyBarkType extends NotifyType {
   };
 }
 
-export interface NotifyDiscordType extends NotifyType {
+export interface NotifyDiscordType extends NotifyBaseType {
   type: "discord";
   url_fields: {
     token?: string;
@@ -318,7 +301,7 @@ export interface NotifyDiscordType extends NotifyType {
     splitlines?: string;
   };
 }
-export interface NotifySMTPType extends NotifyType {
+export interface NotifySMTPType extends NotifyBaseType {
   type: "smtp";
   url_fields: {
     host?: string;
@@ -338,13 +321,13 @@ export interface NotifySMTPType extends NotifyType {
     usestarttls?: boolean | string;
   };
 }
-export interface NotifyGoogleChatType extends NotifyType {
+export interface NotifyGoogleChatType extends NotifyBaseType {
   type: "googlechat";
   url_fields: {
     raw?: string;
   };
 }
-export interface NotifyGotifyType extends NotifyType {
+export interface NotifyGotifyType extends NotifyBaseType {
   type: "gotify";
   url_fields: {
     host?: string;
@@ -358,7 +341,7 @@ export interface NotifyGotifyType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyIFTTTType extends NotifyType {
+export interface NotifyIFTTTType extends NotifyBaseType {
   type: "ifttt";
   url_fields: {
     usemessageasvalue: string | number | undefined;
@@ -374,7 +357,7 @@ export interface NotifyIFTTTType extends NotifyType {
     value3?: string;
   };
 }
-export interface NotifyJoinType extends NotifyType {
+export interface NotifyJoinType extends NotifyBaseType {
   type: "join";
   url_fields: {
     apikey?: string;
@@ -385,7 +368,7 @@ export interface NotifyJoinType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyMatterMostType extends NotifyType {
+export interface NotifyMatterMostType extends NotifyBaseType {
   type: "mattermost";
   url_fields: {
     host?: string;
@@ -400,7 +383,7 @@ export interface NotifyMatterMostType extends NotifyType {
     icon?: string;
   };
 }
-export interface NotifyMatrixType extends NotifyType {
+export interface NotifyMatrixType extends NotifyBaseType {
   type: "matrix";
   url_fields: {
     host?: string;
@@ -414,7 +397,7 @@ export interface NotifyMatrixType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyNtfyType extends NotifyType {
+export interface NotifyNtfyType extends NotifyBaseType {
   type: "ntfy";
   url_fields: {
     host?: string;
@@ -457,7 +440,7 @@ export interface NotifyNtfyAction {
   extras?: HeaderType[] | StringStringMap;
 }
 
-export interface NotifyOpsGenieType extends NotifyType {
+export interface NotifyOpsGenieType extends NotifyBaseType {
   type: "opsgenie";
   url_fields: {
     apikey?: string;
@@ -489,7 +472,7 @@ export interface NotifyOpsGenieTarget {
   sub_type: string;
   value: string;
 }
-export interface NotifyPushbulletType extends NotifyType {
+export interface NotifyPushbulletType extends NotifyBaseType {
   type: "pushbullet";
   url_fields: {
     targets?: string;
@@ -499,7 +482,7 @@ export interface NotifyPushbulletType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyPushoverType extends NotifyType {
+export interface NotifyPushoverType extends NotifyBaseType {
   type: "pushover";
   url_fields: {
     token?: string;
@@ -511,7 +494,7 @@ export interface NotifyPushoverType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyRocketChatType extends NotifyType {
+export interface NotifyRocketChatType extends NotifyBaseType {
   type: "rocketchat";
   url_fields: {
     channel?: string;
@@ -523,7 +506,7 @@ export interface NotifyRocketChatType extends NotifyType {
     username?: string;
   };
 }
-export interface NotifySlackType extends NotifyType {
+export interface NotifySlackType extends NotifyBaseType {
   type: "slack";
   url_fields: {
     channel?: string;
@@ -536,7 +519,7 @@ export interface NotifySlackType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyTeamsType extends NotifyType {
+export interface NotifyTeamsType extends NotifyBaseType {
   type: "teams";
   url_fields: {
     altid?: string;
@@ -550,7 +533,7 @@ export interface NotifyTeamsType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyTelegramType extends NotifyType {
+export interface NotifyTelegramType extends NotifyBaseType {
   type: "telegram";
   url_fields: {
     token?: string;
@@ -563,7 +546,7 @@ export interface NotifyTelegramType extends NotifyType {
     title?: string;
   };
 }
-export interface NotifyZulipType extends NotifyType {
+export interface NotifyZulipType extends NotifyBaseType {
   type: "zulip";
   url_fields: {
     botmail?: string;
@@ -585,7 +568,7 @@ export type NotifyGenericRequestMethods =
   | "DELETE"
   | "TRACE"
   | "CONNECT";
-export interface NotifyGenericType extends NotifyType {
+export interface NotifyGenericType extends NotifyBaseType {
   type: "generic";
   url_fields: {
     host?: string;
@@ -610,24 +593,6 @@ export interface NotifyOptionsType {
   message?: string;
   delay?: string;
   max_tries?: number;
-}
-
-export interface NotifyURLFieldsType {
-  [key: string]: undefined | string | number | boolean | HeaderType[];
-}
-
-export interface NotifyParamsType {
-  [key: string]:
-    | undefined
-    | string
-    | number
-    | boolean
-    | StringFieldArray
-    | StringStringMap
-    | NotifyNtfyAction[]
-    | NotifyOpsGenieAction[]
-    | NotifyOpsGenieTarget[]
-    | HeaderType[];
 }
 
 export interface WebHookType {

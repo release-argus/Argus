@@ -18,21 +18,21 @@ import {
   TELEGRAM,
   ZULIP,
 } from "components/modals/service-edit/notify-types";
-import { Dict, NotifyType, NotifyTypes } from "types/config";
 import { FC, memo } from "react";
+import { NotifyTypesKeys, NotifyTypesValues } from "types/config";
 
 import GENERIC from "./generic";
 
 interface RenderTypeProps {
   name: string;
-  type: NotifyTypes;
-  main?: NotifyType;
-  defaults?: Dict<NotifyType>;
-  hard_defaults?: NotifyType;
+  type: NotifyTypesKeys;
+  main?: NotifyTypesValues;
+  defaults?: NotifyTypesValues;
+  hard_defaults?: NotifyTypesValues;
 }
 
 const RENDER_TYPE_COMPONENTS: {
-  [key in NotifyTypes]: FC<{
+  [key in NotifyTypesKeys]: FC<{
     name: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     main: any;

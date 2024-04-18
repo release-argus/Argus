@@ -5,8 +5,8 @@ import {
   DockerFilterType,
   HeaderType,
   NotifyOptionsType,
-  NotifyType,
   NotifyTypes,
+  NotifyTypesValues,
   ServiceDashboardOptionsType,
   ServiceOptionsType,
   StringStringMap,
@@ -20,7 +20,7 @@ export interface ServiceEditModalData {
 
 export interface ServiceEditOtherData {
   webhook?: Dict<WebHookType>;
-  notify?: Dict<NotifyType>;
+  notify?: Dict<NotifyTypesValues>;
   defaults?: DefaultsType;
   hard_defaults?: DefaultsType;
 }
@@ -92,9 +92,9 @@ export interface DeployedVersionLookupEditType {
   regex?: string;
 }
 
-export interface NotifyEditType extends NotifyType {
+export type NotifyEditType = NotifyTypesValues & {
   oldIndex?: string;
-}
+};
 
 export interface HeaderEditType extends HeaderType {
   oldIndex?: number; // Index of existing secret

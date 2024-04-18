@@ -2,9 +2,10 @@ import { Accordion, Button, Col, Form, FormGroup, Row } from "react-bootstrap";
 import {
   Dict,
   LatestVersionLookupType,
-  NotifyType,
   NotifyTypes,
   NotifyTypesConst,
+  NotifyTypesKeys,
+  NotifyTypesValues,
 } from "types/config";
 import { FC, JSX, memo, useEffect, useMemo } from "react";
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
@@ -28,9 +29,9 @@ interface Props {
   serviceName: string;
   originals?: NotifyEditType[];
   globalOptions: JSX.Element;
-  mains?: Dict<NotifyType>;
-  defaults?: Dict<NotifyType>;
-  hard_defaults?: Dict<NotifyType>;
+  mains?: Dict<NotifyTypesValues>;
+  defaults?: NotifyTypes;
+  hard_defaults?: NotifyTypes;
 }
 
 /**
@@ -60,7 +61,7 @@ const Notify: FC<Props> = ({
   const { setValue, trigger } = useFormContext();
 
   const itemName: string = useWatch({ name: `${name}.name` });
-  const itemType: NotifyTypes = useWatch({ name: `${name}.type` });
+  const itemType: NotifyTypesKeys = useWatch({ name: `${name}.type` });
   const lvType: LatestVersionLookupType["type"] = useWatch({
     name: "latest_version.type",
   });
@@ -83,9 +84,11 @@ const Notify: FC<Props> = ({
     [name, itemName, itemType]
   );
 
-  const original = useMemo(() => {
+  const original: NotifyEditType = useMemo(() => {
     const original = originals?.find((o) => o.oldIndex === itemName);
-    return original ?? { options: {}, url_fields: {}, params: {} };
+    return (
+      original ?? { type: "discord", options: {}, url_fields: {}, params: {} }
+    );
   }, [originals]);
   const serviceURL =
     lvType === "github" && (lvURL?.match(/\//g) ?? []).length == 1
@@ -93,7 +96,7 @@ const Notify: FC<Props> = ({
       : lvURL;
 
   const onChangeNotifyType = (
-    newType: NotifyTypes,
+    newType: NotifyTypesKeys,
     original: NotifyEditType,
     otherOptionsData: ServiceEditOtherData
   ) => {
@@ -158,7 +161,7 @@ const Notify: FC<Props> = ({
               return true;
             }}
             onChange={(e) => {
-              const newType = e.target.value as NotifyTypes;
+              const newType = e.target.value as NotifyTypesKeys;
               const otherOptionsData: ServiceEditOtherData = {
                 notify: mains,
                 defaults: { notify: defaults },

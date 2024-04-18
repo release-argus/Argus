@@ -15,9 +15,7 @@ export const getNestedError = (
   errors: any,
   key: string
 ): FieldError | undefined =>
-  key
-    .split(".")
-    .reduce((acc, key) => (acc?.[key] ? acc[key] : undefined), errors);
+  key.split(".").reduce((acc, key) => acc?.[key], errors);
 
 /**
  * Extracts and flattens errors from a react-hook-form errors object

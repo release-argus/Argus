@@ -147,7 +147,7 @@ export const WebSocketProvider = (props: Props) => {
         }
 
         if (
-          ["COMMAND", "WEBHOOK"].includes(msg.type) &&
+          (msg.type === "COMMAND" || msg.type === "WEBHOOK") &&
           msg.sub_type === "EVENT"
         ) {
           const queryKey = ["actions", { service: msg.service_data?.id }];

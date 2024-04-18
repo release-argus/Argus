@@ -236,7 +236,6 @@ const ActionReleaseModal = () => {
         type: "ACTION",
         sub_type: "REFRESH",
         service_data: { id: modal.service.id },
-
         webhook_data: data?.webhook,
         command_data: data?.command,
       }),
