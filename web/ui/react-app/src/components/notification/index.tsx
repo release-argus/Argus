@@ -1,6 +1,7 @@
 import { Button, Toast } from "react-bootstrap";
 import { FC, useEffect } from "react";
 import {
+  IconDefinition,
   faCheckCircle,
   faExclamationCircle,
   faExclamationTriangle,
@@ -37,14 +38,22 @@ const Notification: FC<NotificationType> = ({
 
   useEffect(() => {
     if (delay !== 0) {
-      const timer = setTimeout(
-        () => removeNotification(id),
-        delay ? delay : 10000
-      );
+      const timer = setTimeout(() => removeNotification(id), delay ?? 10000);
 
       return () => clearTimeout(timer);
     }
   }, [delay, id, removeNotification]);
+
+  const faIcon = () => {
+    const iconMap: Record<string, IconDefinition> = {
+      info: faInfoCircle,
+      success: faCheckCircle,
+      warning: faExclamationTriangle,
+      danger: faExclamationCircle,
+    };
+
+    return iconMap[type] || faQuestionCircle;
+  };
 
   return (
     <Toast
@@ -60,23 +69,13 @@ const Notification: FC<NotificationType> = ({
         closeButton={false}
       >
         <FontAwesomeIcon
-          icon={
-            type === "info"
-              ? faInfoCircle
-              : type === "success"
-              ? faCheckCircle
-              : type === "warning"
-              ? faExclamationTriangle
-              : type === "danger"
-              ? faExclamationCircle
-              : faQuestionCircle
-          }
+          icon={faIcon()}
           style={{ paddingRight: "0.5em", height: "1.25em" }}
         />
         <strong className="me-auto">{title}</strong>
 
         <small style={{ paddingLeft: "1rem", fontSize: "0.7em" }}>
-          <>{formatRelative(new Date(small), new Date())}</>
+          {formatRelative(new Date(small), new Date())}
         </small>
         <Button
           key="details"

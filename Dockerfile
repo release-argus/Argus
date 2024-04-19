@@ -4,7 +4,7 @@
 ARG DEBIAN_VERSION="bookworm"
 ARG GO_VERSION="1.22"
 ARG NODE_VERSION="20"
-FROM golang:${GO_VERSION}-${DEBIAN_VERSION} as go_builder
+FROM golang:${GO_VERSION}-${DEBIAN_VERSION} AS go_builder
 FROM node:${NODE_VERSION}-${DEBIAN_VERSION} AS base
 
 COPY --from=go_builder /usr/local/go/ /usr/local/go/

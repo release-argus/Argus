@@ -4,13 +4,13 @@
  * @param args - The arguments to check for the first non-zero length
  * @returns The first non-zero length argument
  */
-const firstNonEmpty = <T extends unknown[] | unknown>(
+const firstNonEmpty = <T extends unknown[] | undefined>(
   ...args: T[]
 ): NonNullable<T> => {
   for (const arg of args) {
-    if (arg && (arg as unknown[]).length) return arg;
+    if (arg && arg.length) return arg;
   }
-  return [] as NonNullable<T>;
+  return [] as unknown as NonNullable<T>;
 };
 
 export default firstNonEmpty;

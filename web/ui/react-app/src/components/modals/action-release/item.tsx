@@ -93,6 +93,15 @@ export const Item: FC<Props> = ({
       sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
   }, []);
 
+  const faIcon = () => {
+    // Sending and hasn't failed
+    if (sending && failed === undefined) return faCircleNotch;
+    // Send first time
+    if (modalType === "SEND" && failed === undefined) return faPaperPlane;
+    // Resend
+    return faRedo;
+  };
+
   return (
     <Card bg="secondary" className={"no-margin service"}>
       <Card.Title className="modal-item-title" key={title + "-title"}>
@@ -186,13 +195,7 @@ export const Item: FC<Props> = ({
               disabled={!sendable}
             >
               <FontAwesomeIcon
-                icon={
-                  sending && failed === undefined
-                    ? faCircleNotch
-                    : modalType === "SEND" && failed === undefined
-                    ? faPaperPlane
-                    : faRedo
-                }
+                icon={faIcon()}
                 className={sending ? "fa-spin" : ""}
               />
             </Button>

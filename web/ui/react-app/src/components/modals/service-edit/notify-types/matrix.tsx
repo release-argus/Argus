@@ -1,10 +1,9 @@
 import { FormItem, FormLabel } from "components/generic/form";
+import { firstNonDefault, strToBool } from "utils";
 
 import { BooleanWithDefault } from "components/generic";
 import { NotifyMatrixType } from "types/config";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
-import { firstNonDefault } from "utils";
-import { strToBool } from "utils";
 import { useMemo } from "react";
 
 /**

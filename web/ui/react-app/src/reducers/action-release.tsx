@@ -16,9 +16,7 @@ export default function reducerActionModal(
   let newState: ActionModalData = JSON.parse(JSON.stringify(state));
 
   switch (action.type) {
-    // SUMMARY
     // EVENT
-    // SENDING
     // INIT
     case "COMMAND":
     case "WEBHOOK":
@@ -70,18 +68,22 @@ export default function reducerActionModal(
                 };
             }
           break;
-        case "INIT":
-          break;
         default:
           console.error(action);
           throw new Error();
       }
       break;
 
+    // REFRESH
     // RESET
     // SENDING
     case "ACTION":
       switch (action.sub_type) {
+        case "REFRESH":
+          newState.service_id = action.service_data?.id ?? newState.service_id;
+          newState.commands = action.command_data ?? {};
+          newState.webhooks = action.webhook_data ?? {};
+          break;
         case "RESET":
           newState.commands = {};
           newState.webhooks = {};
@@ -106,11 +108,6 @@ export default function reducerActionModal(
               // set as sending
               newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
             }
-          break;
-        case "REFRESH":
-          newState.service_id = action.service_data?.id || newState.service_id;
-          newState.commands = action.command_data ? action.command_data : {};
-          newState.webhooks = action.webhook_data ? action.webhook_data : {};
           break;
         default:
           console.error(action);

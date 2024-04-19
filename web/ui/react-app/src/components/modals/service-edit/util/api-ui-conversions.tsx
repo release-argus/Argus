@@ -4,6 +4,7 @@ import {
   NotifyNtfyAction,
   NotifyOpsGenieTarget,
   NotifyTypes,
+  NotifyTypesKeys,
   StringFieldArray,
   StringStringMap,
   WebHookType,
@@ -143,7 +144,7 @@ export const convertAPIServiceDataEditToUI = (
           const notifyName = item.name as string;
           const notifyType = (item.type ||
             otherOptionsData?.notify?.[notifyName]?.type ||
-            notifyName) as NotifyTypes;
+            notifyName) as NotifyTypesKeys;
 
           return {
             ...item,
@@ -201,10 +202,10 @@ export const convertStringToFieldArray = (
 
   let list: string[];
   try {
-    list = JSON.parse(s as string);
-    list = Array.isArray(list) ? list : [s as string];
+    list = JSON.parse(s);
+    list = Array.isArray(list) ? list : [s];
   } catch (error) {
-    list = [s as string];
+    list = [s];
   }
 
   // map the []string to {arg: string} for the form
@@ -233,7 +234,7 @@ export const convertHeadersFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {
@@ -271,7 +272,7 @@ export const convertOpsGenieTargetFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {
@@ -320,7 +321,7 @@ export const convertNtfyActionsFromString = (
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
-  const usingStr = str ? true : false;
+  const usingStr = !!str;
 
   // convert from a JSON string
   try {
@@ -386,18 +387,21 @@ export const convertNtfyActionsFromString = (
  */
 export const convertNotifyURLFields = (
   name: string,
-  type: string,
+  type: NotifyTypesKeys,
   urlFields?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
   // Generic
-  if (type === "generic")
+  if (type === "generic") {
+    const main = otherOptionsData?.notify?.[name] as
+      | NotifyTypes[typeof type]
+      | undefined;
     return {
       ...urlFields,
       custom_headers: convertHeadersFromString(
         urlFields?.custom_headers,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.url_fields?.custom_headers,
+          main?.url_fields?.custom_headers,
           otherOptionsData?.defaults?.notify?.[type]?.url_fields
             ?.custom_headers,
           otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
@@ -407,7 +411,7 @@ export const convertNotifyURLFields = (
       json_payload_vars: convertHeadersFromString(
         urlFields?.json_payload_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.url_fields?.json_payload_vars,
+          main?.url_fields?.json_payload_vars,
           otherOptionsData?.defaults?.notify?.[type]?.url_fields
             ?.json_payload_vars,
           otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
@@ -417,13 +421,14 @@ export const convertNotifyURLFields = (
       query_vars: convertHeadersFromString(
         urlFields?.query_vars,
         firstNonDefault(
-          otherOptionsData?.notify?.[name]?.url_fields?.query_vars,
+          main?.url_fields?.query_vars,
           otherOptionsData?.defaults?.notify?.[type]?.url_fields?.query_vars,
           otherOptionsData?.hard_defaults?.notify?.[type]?.url_fields
             ?.query_vars
         )
       ),
     };
+  }
 
   return urlFields;
 };
@@ -439,7 +444,7 @@ export const convertNotifyURLFields = (
  */
 export const convertNotifyParams = (
   name: string,
-  type: string,
+  type: NotifyTypesKeys,
   params?: StringStringMap,
   otherOptionsData?: ServiceEditOtherData
 ) => {
@@ -459,28 +464,34 @@ export const convertNotifyParams = (
       };
 
     // NTFY
-    case "ntfy":
+    case "ntfy": {
+      const main = otherOptionsData?.notify?.[name] as
+        | NotifyTypes[typeof type]
+        | undefined;
       return {
         icon: "", // controlled param
         ...params,
         actions: convertNtfyActionsFromString(
           params?.actions,
           firstNonDefault(
-            otherOptionsData?.notify?.[name]?.params?.actions,
+            main?.params?.actions,
             otherOptionsData?.defaults?.notify?.[type]?.params?.actions,
             otherOptionsData?.hard_defaults?.notify?.[type]?.params?.actions
           )
         ),
       };
-
+    }
     // OpsGenie
-    case "opsgenie":
+    case "opsgenie": {
+      const main = otherOptionsData?.notify?.[name] as
+        | NotifyTypes[typeof type]
+        | undefined;
       return {
         ...params,
         actions: convertStringToFieldArray(
           params?.actions,
           firstNonDefault(
-            otherOptionsData?.notify?.[name]?.params?.actions,
+            main?.params?.actions,
             otherOptionsData?.defaults?.notify?.[type]?.params?.actions,
             otherOptionsData?.hard_defaults?.notify?.[type]?.params?.actions
           )
@@ -488,7 +499,7 @@ export const convertNotifyParams = (
         details: convertHeadersFromString(
           params?.details,
           firstNonDefault(
-            otherOptionsData?.notify?.[name]?.params?.details,
+            main?.params?.details,
             otherOptionsData?.defaults?.notify?.[type]?.params?.details,
             otherOptionsData?.hard_defaults?.notify?.[type]?.params?.details
           )
@@ -496,7 +507,7 @@ export const convertNotifyParams = (
         responders: convertOpsGenieTargetFromString(
           params?.responders,
           firstNonDefault(
-            otherOptionsData?.notify?.[name]?.params?.responders,
+            main?.params?.responders,
             otherOptionsData?.defaults?.notify?.[type]?.params?.responders,
             otherOptionsData?.hard_defaults?.notify?.[type]?.params?.responders
           )
@@ -504,25 +515,25 @@ export const convertNotifyParams = (
         visibleto: convertOpsGenieTargetFromString(
           params?.visibleto,
           firstNonDefault(
-            otherOptionsData?.notify?.[name]?.params?.visibleto,
+            main?.params?.visibleto,
             otherOptionsData?.defaults?.notify?.[type]?.params?.visibleto,
             otherOptionsData?.hard_defaults?.notify?.[type]?.params?.visibleto
           )
         ),
       };
-
+    }
     // Slack
-    case "slack":
+    case "slack": {
       return {
         ...params,
         // Remove hashtag from hex
         color: (params?.color ?? "").replace("%23", "#").replace("#", ""),
       };
-
-    // Other
-    default:
-      return params;
+    }
   }
+
+  // Other
+  return params;
 };
 
 /**

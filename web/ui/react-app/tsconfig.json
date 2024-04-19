@@ -22,7 +22,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "strict": true
+    "strict": true,
+    "strictNullChecks" : true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

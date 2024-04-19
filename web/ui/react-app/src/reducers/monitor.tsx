@@ -18,17 +18,17 @@ export default function reducerMonitor(
   switch (action.type) {
     // INIT
     // ORDER
-    case "SERVICE":
+    case "SERVICE": {
       switch (action.sub_type) {
-        case "INIT":
+        case "INIT": {
           state = JSON.parse(JSON.stringify(state));
           if (action.service_data) {
             action.service_data.loading = false;
             state.service[action.service_data.id] = action.service_data;
           }
           break;
-
-        case "ORDER":
+        }
+        case "ORDER": {
           if (action.order === undefined) break;
           const newState: MonitorSummaryType = {
             order: action.order,
@@ -41,33 +41,35 @@ export default function reducerMonitor(
           }
           state = newState;
           break;
-
-        default:
+        }
+        default: {
           console.error(action);
           throw new Error();
+        }
       }
       return state;
+    }
 
     // QUERY
     // NEW
     // UPDATED
     // INIT
-    case "VERSION":
+    case "VERSION": {
       const id = action.service_data?.id as string;
       if (state.service[id] === undefined) return state;
       switch (action.sub_type) {
-        case "QUERY":
+        case "QUERY": {
           if (state.service[id]?.status === undefined) return state;
 
           // last_queried
           state.service[id].status!.last_queried =
             action.service_data?.status?.last_queried;
           break;
-
-        case "NEW":
+        }
+        case "NEW": {
           // url
           state.service[id].url =
-            action.service_data?.url || state.service[id].url;
+            action.service_data?.url ?? state.service[id].url;
 
           // status
           state.service[id].status = state.service[id].status ?? {};
@@ -82,8 +84,8 @@ export default function reducerMonitor(
           state.service[id].status!.last_queried =
             action.service_data?.status?.latest_version_timestamp;
           break;
-
-        case "UPDATED":
+        }
+        case "UPDATED": {
           // status
           state.service[id].status = state.service[id].status ?? {};
 
@@ -97,8 +99,8 @@ export default function reducerMonitor(
           state.service[id].status!.deployed_version_timestamp =
             action.service_data?.status?.deployed_version_timestamp;
           break;
-
-        case "INIT":
+        }
+        case "INIT": {
           // Check we have the service
           if (
             state.service[id] === undefined ||
@@ -117,21 +119,21 @@ export default function reducerMonitor(
           state.service[id].status!.last_queried =
             action.service_data?.status?.latest_version_timestamp;
 
-          // deployed_version
+          // deployed_version - if it doesn't exist, set it
           state.service[id].status!.deployed_version =
-            state.service[id].status!.deployed_version ||
+            state.service[id].status!.deployed_version ??
             action.service_data?.status?.latest_version;
           state.service[id].status!.deployed_version_timestamp =
-            state.service[id].status!.deployed_version_timestamp ||
+            state.service[id].status!.deployed_version_timestamp ??
             action.service_data?.status?.latest_version_timestamp;
 
           // url
           state.service[id].url =
-            action.service_data?.url || state.service[id].url;
+            action.service_data?.url ?? state.service[id].url;
 
           break;
-
-        case "ACTION":
+        }
+        case "ACTION": {
           if (state.service[id]?.status === undefined) return state;
 
           // approved_version
@@ -139,17 +141,19 @@ export default function reducerMonitor(
             action.service_data?.status?.approved_version;
 
           break;
-
-        default:
+        }
+        default: {
           return state;
+        }
       }
 
       // Gotta update the state more for the reload
       state = JSON.parse(JSON.stringify(state));
 
       return state;
+    }
 
-    case "EDIT":
+    case "EDIT": {
       let service = action.service_data;
       if (service === undefined) {
         console.error("No service data");
@@ -166,13 +170,13 @@ export default function reducerMonitor(
         }
 
         // Update the vars of this service
-        service.id = action.service_data?.id || service.id;
+        service.id = action.service_data?.id ?? service.id;
         service.active = action.service_data?.active ?? service.active;
-        service.type = action.service_data?.type || service.type;
-        service.url = action.service_data?.url || service.url;
-        service.icon = action.service_data?.icon || service.icon;
+        service.type = action.service_data?.type ?? service.type;
+        service.url = action.service_data?.url ?? service.url;
+        service.icon = action.service_data?.icon ?? service.icon;
         service.icon_link_to =
-          action.service_data?.icon_link_to || service.icon_link_to;
+          action.service_data?.icon_link_to ?? service.icon_link_to;
         service.has_deployed_version =
           action.service_data?.has_deployed_version ??
           service.has_deployed_version;
@@ -180,22 +184,22 @@ export default function reducerMonitor(
         service.webhook = action.service_data?.webhook ?? service.webhook;
         // status
         service.status!.approved_version =
-          action.service_data?.status?.approved_version ||
+          action.service_data?.status?.approved_version ??
           service.status!.approved_version;
         service.status!.deployed_version =
-          action.service_data?.status?.deployed_version ||
+          action.service_data?.status?.deployed_version ??
           service.status!.deployed_version;
         service.status!.deployed_version_timestamp =
-          action.service_data?.status?.deployed_version_timestamp ||
+          action.service_data?.status?.deployed_version_timestamp ??
           service.status!.deployed_version_timestamp;
         service.status!.latest_version =
-          action.service_data?.status?.latest_version ||
+          action.service_data?.status?.latest_version ??
           service.status!.latest_version;
         service.status!.latest_version_timestamp =
-          action.service_data?.status?.latest_version_timestamp ||
+          action.service_data?.status?.latest_version_timestamp ??
           service.status!.latest_version_timestamp;
         service.status!.last_queried =
-          action.service_data?.status?.last_queried ||
+          action.service_data?.status?.last_queried ??
           service.status!.last_queried;
         // create and the service already exists
       } else if (state.service[service.id] !== undefined) {
@@ -218,8 +222,9 @@ export default function reducerMonitor(
       state = JSON.parse(JSON.stringify(state));
 
       return state;
+    }
 
-    case "DELETE":
+    case "DELETE": {
       if (action.sub_type == undefined) {
         console.error("No sub_type for DELETE");
         return state;
@@ -253,9 +258,10 @@ export default function reducerMonitor(
       state = JSON.parse(JSON.stringify(state));
 
       return state;
-
-    default:
+    }
+    default: {
       console.error(action);
       throw new Error();
+    }
   }
 }

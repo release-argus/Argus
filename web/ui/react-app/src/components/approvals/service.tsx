@@ -21,10 +21,10 @@ interface Props {
  * @returns A component that displays the service
  */
 const Service: FC<Props> = ({ service, editable = false }) => {
-  const [showUpdateInfo, setShowUpdateInfoMain] = useState(false);
+  const [showUpdateInfo, setShowUpdateInfo] = useState(false);
 
-  const setShowUpdateInfo = useCallback(() => {
-    setShowUpdateInfoMain((prevState) => !prevState);
+  const toggleShowUpdateInfo = useCallback(() => {
+    setShowUpdateInfo((prevState) => !prevState);
   }, []);
   const { handleModal } = useContext(ModalContext);
 
@@ -113,7 +113,7 @@ const Service: FC<Props> = ({ service, editable = false }) => {
         />
         <ServiceInfo
           service={service}
-          setShowUpdateInfo={setShowUpdateInfo}
+          toggleShowUpdateInfo={toggleShowUpdateInfo}
           updateAvailable={updateStatus.available}
           updateSkipped={updateStatus.skipped}
         />

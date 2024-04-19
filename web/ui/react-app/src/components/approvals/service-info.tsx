@@ -27,7 +27,7 @@ interface Props {
   service: ServiceSummaryType;
   updateAvailable: boolean;
   updateSkipped: boolean;
-  setShowUpdateInfo: () => void;
+  toggleShowUpdateInfo: () => void;
 }
 
 /**
@@ -44,7 +44,7 @@ export const ServiceInfo: FC<Props> = ({
   service,
   updateAvailable,
   updateSkipped,
-  setShowUpdateInfo,
+  toggleShowUpdateInfo,
 }) => {
   const { handleModal } = useContext(ModalContext);
   const delayedRender = useDelayedRender(250);
@@ -110,6 +110,8 @@ export const ServiceInfo: FC<Props> = ({
       </OverlayTrigger>
     ) : null;
 
+  const actionType = service.webhook ? "WebHooks" : "Commands";
+
   const actionReleaseButton =
     (service.webhook || service.command) &&
     (!updateAvailable || updateSkipped) ? (
@@ -121,7 +123,7 @@ export const ServiceInfo: FC<Props> = ({
           <Tooltip id={`tooltip-resend`}>
             {updateSkipped
               ? "Approve this release"
-              : `Resend the ${service.webhook ? "WebHooks" : "Commands"}`}
+              : `Resend the ${actionType}`}
           </Tooltip>
         }
       >
@@ -161,7 +163,7 @@ export const ServiceInfo: FC<Props> = ({
               variant="secondary"
             >
               {status.updateApproved && (service.webhook || service.command)
-                ? `${service.webhook ? "WebHooks" : "Commands"} already sent:`
+                ? `${actionType} already sent:`
                 : "Update available:"}
             </ListGroup.Item>
             <ListGroup.Item
@@ -174,7 +176,7 @@ export const ServiceInfo: FC<Props> = ({
                 key="details"
                 className="btn-flex btn-update-action"
                 variant="primary"
-                onClick={() => setShowUpdateInfo()}
+                onClick={toggleShowUpdateInfo}
               >
                 <FontAwesomeIcon icon={faInfo} />
               </Button>
@@ -222,11 +224,9 @@ export const ServiceInfo: FC<Props> = ({
             }
           >
             <div style={{ margin: 0 }}>
-              <>
-                Current version:
-                {deployedVersionIcon}
-                {skippedVersionIcon}
-              </>
+              Current version:
+              {deployedVersionIcon}
+              {skippedVersionIcon}
               <br />
               <div style={{ display: "flex", margin: 0 }}>
                 <OverlayTrigger

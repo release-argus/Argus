@@ -6,7 +6,12 @@ import {
   Modal,
   Row,
 } from "react-bootstrap";
-import { CommandType, HeaderType, NotifyType, WebHookType } from "types/config";
+import {
+  CommandType,
+  HeaderType,
+  NotifyTypesValues,
+  WebHookType,
+} from "types/config";
 import {
   FC,
   useCallback,
@@ -43,7 +48,7 @@ export interface EditForm {
   dvAllowInvalidCerts?: boolean;
   commands?: CommandType[];
   webhooks?: WebHookType[];
-  notify?: NotifyType[];
+  notify?: NotifyTypesValues[];
   dashboardAutoApprove?: boolean;
 }
 

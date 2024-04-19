@@ -27,24 +27,28 @@ const FormLabel: FC<FormLabelProps> = ({
   heading,
   required,
   small,
-}: FormLabelProps) => (
-  <Form.Label
-    style={
-      heading
-        ? {
-            fontSize: "1.25rem",
-            textDecorationLine: "underline",
-            paddingTop: "1.5rem",
-          }
-        : small
-        ? { fontSize: "0.8rem" }
-        : {}
-    }
-  >
-    {text}
-    {required && <span className="text-danger">*</span>}
-    {tooltip && <HelpTooltip text={tooltip} />}
-  </Form.Label>
-);
+}: FormLabelProps) => {
+  const style = () => {
+    if (heading)
+      return {
+        fontSize: "1.25rem",
+        textDecorationLine: "underline",
+        paddingTop: "1.5rem",
+      };
+    if (small)
+      return {
+        fontSize: "0.8rem",
+      };
+    return undefined;
+  };
+
+  return (
+    <Form.Label style={style()}>
+      {text}
+      {required && <span className="text-danger">*</span>}
+      {tooltip && <HelpTooltip text={tooltip} />}
+    </Form.Label>
+  );
+};
 
 export default FormLabel;

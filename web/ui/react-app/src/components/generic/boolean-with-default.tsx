@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Col } from "react-bootstrap";
+import { Button, ButtonGroup, Col, FormLabel } from "react-bootstrap";
 import { Controller, useFormContext } from "react-hook-form";
 import { FC, memo, useEffect } from "react";
 import {
@@ -69,7 +69,7 @@ const BooleanWithDefault: FC<Props> = ({
       style={{ display: "flex", alignItems: "center" }}
     >
       <>
-        {label && <a style={{ float: "left" }}>{label}</a>}
+        {label && <FormLabel style={{ float: "left" }}>{label}</FormLabel>}
         {tooltip && <HelpTooltip text={tooltip} />}
       </>
 

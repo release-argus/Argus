@@ -39,12 +39,12 @@ func getEmptyListETag() string {
 }
 
 // FindEmptyListETag finds the ETag for an empty list query on the GitHub API.
-func FindEmptyListETag(access_token string) {
+func FindEmptyListETag(accessToken string) {
 	githubData := NewGitHubData("", nil)
 
 	allowInvalidCerts := false
 	lookup := New(
-		&access_token,
+		&accessToken,
 		&allowInvalidCerts,
 		githubData,
 		nil, nil, nil,

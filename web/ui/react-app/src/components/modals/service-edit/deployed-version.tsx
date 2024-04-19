@@ -98,7 +98,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             label="JSON"
             tooltip={
               <>
-                If the URL gives JSON, take the var at this location. e.g.
+                If the URL gives JSON, take the var at this location. e.g.{" "}
                 <span className="bold-underline">data.version</span>
               </>
             }
@@ -111,7 +111,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             label="RegEx"
             tooltip={
               <>
-                RegEx to extract the version from the URL, e.g.
+                RegEx to extract the version from the URL, e.g.{" "}
                 <span className="bold-underline">v([0-9.]+)</span>
               </>
             }

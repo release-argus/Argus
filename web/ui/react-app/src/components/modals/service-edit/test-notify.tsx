@@ -9,7 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NotifyType } from "types/config";
+import { NotifyTypesValues } from "types/config";
 import { convertNotifyToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { deepDiff } from "utils/query-params";
 import { useErrors } from "hooks/errors";
@@ -34,7 +34,7 @@ const Result: FC<{ status: "pending" | "success" | "error"; err?: string }> = ({
 
 interface Props {
   path: string;
-  original?: NotifyType;
+  original?: NotifyTypesValues;
   extras?: {
     service_name_previous?: string;
     service_url?: string;
@@ -47,12 +47,13 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
   const [lastFetched, setLastFetched] = useState(0);
   const errors = useErrors(path, true);
 
-  const fetchTestNotifyJSON = (dataJSON: NotifyType) =>
+  const fetchTestNotifyJSON = (dataJSON: NotifyTypesValues) =>
     fetchJSON<{ message: string }>({
       url: "api/v1/notify/test",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        type: getValues(`${path}.type`),
         ...deepDiff(dataJSON, original),
         ...extras,
         service_name: getValues("name"),
@@ -79,7 +80,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
     ],
     queryFn: ({ queryKey }) =>
       fetchTestNotifyJSON(
-        (queryKey[2] as { params: unknown }).params as NotifyType
+        (queryKey[2] as { params: unknown }).params as NotifyTypesValues
       ),
     enabled: false,
     notifyOnChangeProps: "all",

@@ -1,12 +1,11 @@
 import { FormItem, FormLabel, FormSelect } from "components/generic/form";
+import { firstNonDefault, strToBool } from "utils";
 import { useEffect, useMemo } from "react";
 
 import { BooleanWithDefault } from "components/generic";
 import NotifyOptions from "components/modals/service-edit/notify-types/shared";
 import { NotifyTelegramType } from "types/config";
-import { firstNonDefault } from "utils";
 import { normaliseForSelect } from "components/modals/service-edit/util";
-import { strToBool } from "utils";
 import { useFormContext } from "react-hook-form";
 
 export const TelegramParseModeOptions = [
