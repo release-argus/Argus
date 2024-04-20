@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"net/http"
 	"os"
 	"sync"
 	"testing"
@@ -68,26 +67,27 @@ func stringifyPointer[T comparable](ptr *T) string {
 
 func TestMain(m *testing.M) {
 	// initialize jLog
-	jLog = util.NewJLog("DEBUG", false)
+	jLog := util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 
 	// GIVEN a valid config with a Service
 	file := "TestMain.yml"
-	mainCfg = testConfig(file, nil)
+	mainCfg = testConfig(file, jLog, nil)
 	os.Remove(file)
 	defer os.Remove(*mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
+	mainCfg.Settings.Web.ListenHost = stringPtr("localhost")
 
 	// WHEN the Router is fetched for this Config
 	router = newWebUI(mainCfg)
-	go http.ListenAndServe("localhost:"+*port, router)
+	go Run(mainCfg, jLog)
 
 	// THEN Web UI is accessible for the tests
 	code := m.Run()
 	os.Exit(code)
 }
 
-func testConfig(path string, t *testing.T) (cfg *config.Config) {
+func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config) {
 	testYAML_Argus(path, t)
 	cfg = &config.Config{}
 

@@ -79,7 +79,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 		if s.Dashboard.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
 				s.Status.LatestVersion())
-			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
+			jLog.Info(msg, &util.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s)
 			go func() {
@@ -97,7 +97,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				}
 			}()
 		} else {
-			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
+			jLog.Info("Waiting for approval on the Web UI", &util.LogFrom{Primary: s.ID}, true)
 
 			s.Status.AnnounceQueryNewVersion()
 		}
@@ -185,7 +185,7 @@ func (s *Service) HandleCommand(command string) {
 	// Find the command
 	index := s.CommandController.Find(command)
 	if index == nil {
-		jLog.Warn(command+" not found", util.LogFrom{Primary: "Command", Secondary: s.ID}, true)
+		jLog.Warn(command+" not found", &util.LogFrom{Primary: "Command", Secondary: s.ID}, true)
 		return
 	}
 

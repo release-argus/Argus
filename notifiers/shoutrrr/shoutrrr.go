@@ -360,7 +360,7 @@ func (s *Shoutrrr) Send(
 	useDelay bool,
 	useMetrics bool,
 ) (errs error) {
-	logFrom := util.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
+	logFrom := &util.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
@@ -402,7 +402,7 @@ func (s *Shoutrrr) parseSend(
 	err []error,
 	combinedErrs map[string]int,
 	serviceName string,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) (failed bool) {
 	for i := range err {
 		if err[i] != nil {
@@ -441,7 +441,7 @@ func (s *Shoutrrr) send(
 	message string,
 	params *shoutrrr_types.Params,
 	serviceName string,
-	logFrom util.LogFrom,
+	logFrom *util.LogFrom,
 ) (errs error) {
 	combinedErrs := make(map[string]int)
 	triesLeft := s.GetMaxTries() // Number of times to send Shoutrrr (until 200 received).

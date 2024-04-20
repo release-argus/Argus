@@ -17,14 +17,10 @@
 package db
 
 import (
-	"fmt"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
 	dbtype "github.com/release-argus/Argus/db/types"
-	_ "modernc.org/sqlite"
 )
 
 func TestAPI_UpdateRow(t *testing.T) {
@@ -72,18 +68,16 @@ func TestAPI_UpdateRow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := testConfig()
-			testAPI := api{config: cfg}
-			*testAPI.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
-			defer os.Remove(*cfg.Settings.Data.DatabaseFile)
-			testAPI.initialise()
+			tAPI := testAPI(name, "TestAPI_UpdateRow")
+			defer dbCleanup(tAPI)
+			tAPI.initialise()
 
 			// WHEN updateRow is called targeting single/multiple cells
-			testAPI.updateRow(tc.target, tc.cells)
+			tAPI.updateRow(tc.target, tc.cells)
 			time.Sleep(100 * time.Millisecond)
 
 			// THEN those cell(s) are changed in the DB
-			row := queryRow(t, testAPI.db, tc.target)
+			row := queryRow(t, tAPI.db, tc.target)
 			for _, cell := range tc.cells {
 				var got string
 				switch cell.Column {
@@ -103,7 +97,6 @@ func TestAPI_UpdateRow(t *testing.T) {
 						cell.Column, cell.Value, got)
 				}
 			}
-			testAPI.db.Close()
 			time.Sleep(100 * time.Millisecond)
 		})
 	}
@@ -127,14 +120,13 @@ func TestAPI_DeleteRow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := testConfig()
-			testAPI := api{config: cfg}
-			*testAPI.config.Settings.Data.DatabaseFile = fmt.Sprintf("%s.db", strings.ReplaceAll(name, " ", "_"))
-			testAPI.initialise()
+			tAPI := testAPI(name, "TestAPI_DeleteRow")
+			defer dbCleanup(tAPI)
+			tAPI.initialise()
 
 			// Ensure the row exists if tc.exists
 			if tc.exists {
-				testAPI.updateRow(
+				tAPI.updateRow(
 					tc.serviceID,
 					[]dbtype.Cell{
 						{Column: "latest_version", Value: "9.9.9"}, {Column: "deployed_version", Value: "8.8.8"}},
@@ -142,22 +134,20 @@ func TestAPI_DeleteRow(t *testing.T) {
 				time.Sleep(100 * time.Millisecond)
 			}
 			// Check the row existance before the test
-			row := queryRow(t, testAPI.db, tc.serviceID)
+			row := queryRow(t, tAPI.db, tc.serviceID)
 			if tc.exists && (row.LatestVersion() == "" || row.DeployedVersion() == "") {
 				t.Errorf("expecting row to exist. got %#v", row)
 			}
 
 			// WHEN deleteRow is called targeting a row
-			testAPI.deleteRow(tc.serviceID)
+			tAPI.deleteRow(tc.serviceID)
 			time.Sleep(100 * time.Millisecond)
 
 			// THEN the row is deleted from the DB
-			row = queryRow(t, testAPI.db, tc.serviceID)
+			row = queryRow(t, tAPI.db, tc.serviceID)
 			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
 				t.Errorf("expecting row to be deleted. got %#v", row)
 			}
-			testAPI.db.Close()
-			os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
 			time.Sleep(100 * time.Millisecond)
 		})
 	}
@@ -165,14 +155,10 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 func TestAPI_Handler(t *testing.T) {
 	// GIVEN a DB with a few service status'
-	cfg := testConfig()
-	testAPI := api{config: cfg}
-	*testAPI.config.Settings.Data.DatabaseFile = "TestHandler.db"
-	defer os.Remove(*testAPI.config.Settings.Data.DatabaseFile)
-	defer os.Remove(*testAPI.config.Settings.Data.DatabaseFile + "-journal")
-	testAPI.initialise()
-	go testAPI.handler()
-	defer testAPI.db.Close()
+	tAPI := testAPI("TestAPI_Handler", "db")
+	defer dbCleanup(tAPI)
+	tAPI.initialise()
+	go tAPI.handler()
 
 	// WHEN a message is sent to the DatabaseChannel targeting latest_version
 	target := "keep0"
@@ -180,7 +166,7 @@ func TestAPI_Handler(t *testing.T) {
 		Column: "latest_version", Value: "9.9.9"}
 	cell2 := dbtype.Cell{
 		Column: cell1.Column, Value: cell1.Value + "-dev"}
-	want := queryRow(t, testAPI.db, target)
+	want := queryRow(t, tAPI.db, target)
 	want.SetLatestVersion(cell1.Value, false)
 	msg1 := dbtype.Message{
 		ServiceID: target,
@@ -190,11 +176,11 @@ func TestAPI_Handler(t *testing.T) {
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell2},
 	}
-	*testAPI.config.DatabaseChannel <- msg1
+	*tAPI.config.DatabaseChannel <- msg1
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the cell was changed in the DB
-	got := queryRow(t, testAPI.db, target)
+	got := queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != want.LatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell1.Column, cell1.Value, got, want)
@@ -203,14 +189,14 @@ func TestAPI_Handler(t *testing.T) {
 	// ------------------------------
 
 	// WHEN a message is sent to the DatabaseChannel deleting a row
-	*testAPI.config.DatabaseChannel <- dbtype.Message{
+	*tAPI.config.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
 		Delete:    true,
 	}
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the row is deleted from the DB
-	got = queryRow(t, testAPI.db, target)
+	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != "" || got.DeployedVersion() != "" {
 		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
 	}
@@ -218,13 +204,13 @@ func TestAPI_Handler(t *testing.T) {
 	// ------------------------------
 
 	// WHEN multiple messages are targeting the same row in quick succession
-	*testAPI.config.DatabaseChannel <- msg1
+	*tAPI.config.DatabaseChannel <- msg1
 	wantLatestVersion := msg2.Cells[0].Value
-	*testAPI.config.DatabaseChannel <- msg2
+	*tAPI.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN the last message is the one that is applied
-	got = queryRow(t, testAPI.db, target)
+	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != wantLatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
 			cell2.Column, cell2.Value, got, want)

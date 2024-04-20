@@ -68,7 +68,7 @@ func main() {
 			}
 		}
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		jLog.Info(msg, util.LogFrom{}, true)
+		jLog.Info(msg, &util.LogFrom{}, true)
 
 		for _, key := range config.Order {
 			if config.Service[key].Options.GetActive() {
@@ -77,8 +77,7 @@ func main() {
 		}
 	}
 
-	db.LogInit(&jLog, config.Settings.DataDatabaseFile())
-	go db.Run(&config)
+	go db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(&config.Order, &config.OrderMutex)

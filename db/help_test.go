@@ -18,7 +18,9 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,18 +34,21 @@ import (
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	log := util.NewJLog("DEBUG", false)
-	log.Testing = true
 	databaseFile := "TestRun.db"
-	LogInit(log, databaseFile)
+
+	// Log
+	jLog := util.NewJLog("DEBUG", false)
+	jLog.Testing = true
+	LogInit(jLog, databaseFile)
 
 	cfg = testConfig()
 	*cfg.Settings.Data.DatabaseFile = databaseFile
-	defer os.Remove(*cfg.Settings.Data.DatabaseFile)
-	go Run(cfg)
+	go Run(cfg, nil)
 	time.Sleep(250 * time.Millisecond) // Time for db to start
 
-	os.Exit(m.Run())
+	exitCode := m.Run()
+	os.Remove(*cfg.Settings.Data.DatabaseFile)
+	os.Exit(exitCode)
 }
 
 func stringPtr(val string) *string {
@@ -82,6 +87,7 @@ func testConfig() (cfg *config.Config) {
 		DatabaseChannel: &databaseChannel,
 		SaveChannel:     &saveChannel,
 	}
+
 	// Services
 	for svcName := range cfg.Service {
 		svc := service.Service{
@@ -103,6 +109,20 @@ func testConfig() (cfg *config.Config) {
 	}
 
 	return
+}
+
+func testAPI(primary string, secondary string) *api {
+	testAPI := api{config: testConfig()}
+
+	databaseFile := strings.ReplaceAll(fmt.Sprintf("%s-%s.db", primary, secondary), " ", "_")
+	testAPI.config.Settings.Data.DatabaseFile = &databaseFile
+
+	return &testAPI
+}
+func dbCleanup(api *api) {
+	api.db.Close()
+	os.Remove(*api.config.Settings.Data.DatabaseFile)
+	os.Remove(*api.config.Settings.Data.DatabaseFile + "-journal")
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {

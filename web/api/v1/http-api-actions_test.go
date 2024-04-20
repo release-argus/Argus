@@ -284,7 +284,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 		"invalid payload": {
 			serviceID:   "__name__",
 			payload:     test.StringPtr("target: foo"), // not JSON
-			stdoutRegex: `invalid payload`,
+			stdoutRegex: `Invalid payload - invalid character`,
 		},
 		"ARGUS_SKIP known service_id": {
 			serviceID:       "__name__",

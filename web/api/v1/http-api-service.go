@@ -29,19 +29,19 @@ type ServiceOrderAPI struct {
 }
 
 func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	err := json.NewEncoder(w).Encode(ServiceOrderAPI{Order: api.Config.Order})
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := &util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
-	api.Log.Verbose(targetService, logFrom, true)
+	jLog.Verbose(targetService, logFrom, true)
 
 	// Check Service still exists in this ordering
 	api.Config.OrderMutex.RLock()
@@ -49,7 +49,7 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	service := api.Config.Service[targetService]
 	if service == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -58,5 +58,5 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	summary := service.Summary()
 
 	err := json.NewEncoder(w).Encode(summary)
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }

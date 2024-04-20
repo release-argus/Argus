@@ -30,6 +30,18 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
+var (
+	jLog *util.JLog
+)
+
+// LogInit for this package.
+func LogInit(log *util.JLog) {
+	// Only set the log if it hasn't been set (avoid RACE condition)
+	if jLog == nil {
+		jLog = log
+	}
+}
+
 // getParam from a URL query string
 func getParam(queryParams *url.Values, param string) *string {
 	if queryParams.Has(param) {

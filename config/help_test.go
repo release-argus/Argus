@@ -121,11 +121,11 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
 	jLog.Fatal(fmt.Sprintf("Error reading %q\n%s", file, err),
-		util.LogFrom{}, err != nil)
+		&util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, config)
 	jLog.Fatal(fmt.Sprintf("Unmarshal of %q failed\n%s", file, err),
-		util.LogFrom{}, err != nil)
+		&util.LogFrom{}, err != nil)
 
 	saveChannel := make(chan bool, 32)
 	config.SaveChannel = &saveChannel
@@ -138,7 +138,7 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.GetOrder(data)
 	mutex.Lock()
 	defer mutex.Unlock()
-	config.Init()
+	config.Init(true)
 	for name, service := range config.Service {
 		service.ID = name
 	}

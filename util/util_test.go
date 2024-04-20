@@ -542,12 +542,12 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			diffAddress: true,
 		},
 		"1 non-default var (env var partial)": {
-			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_ONE": "bar"},
+			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_TWO": "bar"},
 			slice: []string{
 				"",
 				"",
 				"",
-				"foo${TESTFIRSTNONDEFAULTWITHENV_ONE}"},
+				"foo${TESTFIRSTNONDEFAULTWITHENV_TWO}"},
 			wantIndex:   3,
 			wantText:    "foobar",
 			diffAddress: true,
@@ -562,13 +562,13 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 		},
 		"2 non-default vars (empty env vars ignored)": {
 			env: map[string]string{
-				"TESTFIRSTNONDEFAULTWITHENV_TWO":   "",
-				"TESTFIRSTNONDEFAULTWITHENV_THREE": "bar"},
+				"TESTFIRSTNONDEFAULTWITHENV_THREE": "",
+				"TESTFIRSTNONDEFAULTWITHENV_FOUR":  "bar"},
 			slice: []string{
-				"${TESTFIRSTNONDEFAULTWITHENV_TWO}",
+				"${TESTFIRSTNONDEFAULTWITHENV_THREE}",
 				"${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
 				"",
-				"${TESTFIRSTNONDEFAULTWITHENV_THREE}"},
+				"${TESTFIRSTNONDEFAULTWITHENV_FOUR}"},
 			wantIndex:   3,
 			wantText:    "${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
 			diffAddress: true,

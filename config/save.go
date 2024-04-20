@@ -65,7 +65,7 @@ func (c *Config) Save() {
 	// Write the config to file (unordered slices, but with an order list)
 	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	errMsg := fmt.Sprintf("error opening/creating file: %v", err)
-	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, &util.LogFrom{}, err != nil)
 	defer file.Close()
 
 	// Create the yaml encoder and set indentation
@@ -77,19 +77,19 @@ func (c *Config) Save() {
 	jLog.Fatal(
 		fmt.Sprintf("error encoding %s:\n%v\n",
 			c.File, err),
-		util.LogFrom{},
+		&util.LogFrom{},
 		err != nil)
 	err = file.Close()
 	jLog.Fatal(
 		fmt.Sprintf("error opening %s:\n%v\n",
 			c.File, err),
-		util.LogFrom{},
+		&util.LogFrom{},
 		err != nil)
 
 	// Read the file to find what needs to be re-arranged
 	data, err := os.ReadFile(c.File)
 	msg := fmt.Sprintf("Error reading %q\n%s", c.File, err)
-	jLog.Fatal(msg, util.LogFrom{}, err != nil)
+	jLog.Fatal(msg, &util.LogFrom{}, err != nil)
 	lines := strings.Split(string(util.NormaliseNewlines(data)), "\n")
 
 	// Fix the ordering of the read data
@@ -257,7 +257,7 @@ func (c *Config) Save() {
 	// Open the file.
 	file, err = os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	errMsg = fmt.Sprintf("error opening/creating file: %v", err)
-	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, &util.LogFrom{}, err != nil)
 
 	// Buffered writes to the file.
 	writer := bufio.NewWriter(file)
@@ -269,10 +269,10 @@ func (c *Config) Save() {
 	// Flush the writes.
 	err = writer.Flush()
 	errMsg = fmt.Sprintf("error writing file: %v", err)
-	jLog.Fatal(errMsg, util.LogFrom{}, err != nil)
+	jLog.Fatal(errMsg, &util.LogFrom{}, err != nil)
 	jLog.Info(
 		fmt.Sprintf("Saved service updates to %s", c.File),
-		util.LogFrom{}, true)
+		&util.LogFrom{}, true)
 }
 
 // removeAllServiceDefaults removes the written default values from all Services

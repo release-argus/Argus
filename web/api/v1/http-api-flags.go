@@ -24,8 +24,8 @@ import (
 
 // httpFlags returns the values of vars that can be set with flags.
 func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	// Create and send status page data
 	msg := api_type.Flags{
@@ -40,5 +40,5 @@ func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 		WebRoutePrefix:   api.Config.Settings.WebRoutePrefix()}
 
 	err := json.NewEncoder(w).Encode(msg)
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }

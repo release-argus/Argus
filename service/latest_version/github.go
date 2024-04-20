@@ -52,7 +52,7 @@ func (l *Lookup) filterGitHubReleases(
 		if tag == "" {
 			tag = releases[i].Name
 		}
-		if tagName, err = l.URLCommands.Run(tag, *logFrom); err != nil {
+		if tagName, err = l.URLCommands.Run(tag, logFrom); err != nil {
 			continue
 		}
 
@@ -114,25 +114,25 @@ func (l *Lookup) checkGitHubReleasesBody(body *[]byte, logFrom *util.LogFrom) (r
 	if len(string(*body)) < 500 {
 		if strings.Contains(string(*body), "rate limit") {
 			err = errors.New("rate limit reached for GitHub")
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			return
 		}
 		if !strings.Contains(string(*body), `"tag_name"`) {
 			err = errors.New("github access token is invalid")
-			jLog.Error(err, *logFrom, strings.Contains(string(*body), "Bad credentials"))
+			jLog.Error(err, logFrom, strings.Contains(string(*body), "Bad credentials"))
 
 			err = fmt.Errorf("tag_name not found at %s\n%s",
 				l.URL, string(*body))
-			jLog.Error(err, *logFrom, true)
+			jLog.Error(err, logFrom, true)
 			return
 		}
 	}
 
 	if err = json.Unmarshal(*body, &releases); err != nil {
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w",
 			err)
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 	}
 	return
 }

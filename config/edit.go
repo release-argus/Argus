@@ -31,7 +31,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	// Check the service doesn't already exist if the name is changing
 	if oldServiceID != newService.ID && c.Service[newService.ID] != nil {
 		err = fmt.Errorf("service %q already exists", newService.ID)
-		jLog.Error(err, logFrom, true)
+		jLog.Error(err, &logFrom, true)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 		c.Service[oldServiceID].Status.DeployedVersion() != newService.Status.DeployedVersion()
 	// New service
 	if oldServiceID == "" {
-		jLog.Info("Adding service", logFrom, true)
+		jLog.Info("Adding service", &logFrom, true)
 		c.Order = append(c.Order, newService.ID)
 		// Create the service map if it doesn't exist
 		//nolint:typecheck
@@ -58,7 +58,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) (e
 	} else {
 		// Keeping the same ID
 		if oldServiceID == newService.ID {
-			jLog.Info("Replacing service", logFrom, true)
+			jLog.Info("Replacing service", &logFrom, true)
 			// Delete the old service
 			c.Service[oldServiceID].PrepDelete(false)
 
@@ -105,7 +105,7 @@ func (c *Config) RenameService(oldService string, newService *service.Service) {
 
 	jLog.Info(
 		fmt.Sprintf("%q", newService.ID),
-		util.LogFrom{Primary: "RenameService", Secondary: oldService},
+		&util.LogFrom{Primary: "RenameService", Secondary: oldService},
 		true)
 	// Replace the service in the order/config
 	c.Order = util.ReplaceElement(c.Order, oldService, newService.ID)
@@ -132,7 +132,7 @@ func (c *Config) DeleteService(serviceID string) {
 
 	jLog.Info(
 		"Deleting service",
-		util.LogFrom{Primary: "DeleteService", Secondary: serviceID},
+		&util.LogFrom{Primary: "DeleteService", Secondary: serviceID},
 		true)
 	// Remove the service from the Order
 	c.Order = util.RemoveElement(c.Order, serviceID)

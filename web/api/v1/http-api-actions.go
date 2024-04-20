@@ -30,18 +30,18 @@ import (
 //
 // Required params:
 //
-// service_name - Service ID to get.
+// service_name - Service ID to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
-	api.Log.Verbose(targetService, logFrom, true)
+	jLog.Verbose(targetService, &logFrom, true)
 
 	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[targetService]
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, &logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -70,7 +70,7 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 		WebHook: webhookSummary}
 
 	err := json.NewEncoder(w).Encode(msg)
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, &logFrom, err != nil)
 }
 
 type RunActionsPayload struct {
@@ -81,11 +81,18 @@ type RunActionsPayload struct {
 //
 // Required params:
 //
-// service_name - Service ID to get.
+// service_name - Service ID to target.
+//
+// target - The action to take. Can be one of:
+//   - "ARGUS_ALL" - Approve all actions.
+//   - "ARGUS_FAILED" - Approve all failed actions.
+//   - "ARGUS_SKIP" - Skip this release.
+//   - "webhook_<webhook_id>" - Approve a specific WebHook.
+//   - "command_<command_id>" - Approve a specific Command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
+	logFrom := &util.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
-	api.Log.Verbose(targetService, logFrom, true)
+	jLog.Verbose(targetService, logFrom, true)
 
 	// Check the service exists.
 	api.Config.OrderMutex.RLock()
@@ -93,7 +100,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -103,19 +110,19 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	var payload RunActionsPayload
 	err := json.NewDecoder(payloadBytes).Decode(&payload)
 	if err != nil {
-		api.Log.Error(fmt.Sprintf("Invalid payload - %v", err), logFrom, true)
+		jLog.Error(fmt.Sprintf("Invalid payload - %v", err), logFrom, true)
 		failRequest(&w, "invalid payload", http.StatusBadRequest)
 		return
 	}
 	if payload.Target == nil {
 		errMsg := "invalid payload, target service not provided"
-		api.Log.Error(errMsg, logFrom, true)
+		jLog.Error(errMsg, logFrom, true)
 		failRequest(&w, errMsg, http.StatusBadRequest)
 		return
 	}
 	if !svc.Options.GetActive() {
 		errMsg := "service is inactive, actions can't be run for it"
-		api.Log.Error(errMsg, logFrom, true)
+		jLog.Error(errMsg, logFrom, true)
 		failRequest(&w, errMsg, http.StatusBadRequest)
 		return
 	}
@@ -124,13 +131,13 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	if *payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%q release skip - %q",
 			targetService, svc.Status.LatestVersion())
-		api.Log.Info(msg, logFrom, true)
+		jLog.Info(msg, logFrom, true)
 		svc.HandleSkip()
 		return
 	}
 
 	if svc.WebHook == nil && svc.Command == nil {
-		api.Log.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", targetService), logFrom, true)
+		jLog.Error(fmt.Sprintf("%q does not have any commands/webhooks to approve", targetService), logFrom, true)
 		return
 	}
 
@@ -145,7 +152,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 				"ARGUS_FAILED", "ALL UNSENT/FAILED"),
 			"ARGUS_SKIP", "SKIP"),
 	)
-	api.Log.Info(msg, logFrom, true)
+	jLog.Info(msg, logFrom, true)
 	switch *payload.Target {
 	case "ARGUS_ALL", "ARGUS_FAILED":
 		go svc.HandleFailedActions()

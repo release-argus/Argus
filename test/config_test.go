@@ -69,7 +69,7 @@ func TestBareConfig(t *testing.T) {
 	}
 
 	// WHEN the config is initialized
-	cfg := BareConfig()
+	cfg := BareConfig(true)
 	strFlags = map[string]struct {
 		flag *string
 		cfg  *string

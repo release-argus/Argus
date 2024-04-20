@@ -62,8 +62,9 @@ func (w *WebHook) Send(
 	serviceInfo *util.ServiceInfo,
 	useDelay bool,
 ) (errs error) {
-	logFrom := util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID} // For logging
-	triesLeft := w.GetMaxTries()                                      // Number of times to send WebHook (until DesiredStatusCode received).
+	logFrom := &util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
+	// Number of times to send WebHook (until DesiredStatusCode received).
+	triesLeft := w.GetMaxTries()
 
 	if useDelay && w.GetDelay() != "0s" {
 		// Delay sending the WebHook message by the defined interval.
@@ -82,7 +83,7 @@ func (w *WebHook) Send(
 		}
 
 		// Try sending the WebHook.
-		err := w.try(&logFrom)
+		err := w.try(logFrom)
 
 		// SUCCESS!
 		if err == nil {
@@ -134,7 +135,7 @@ func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
 	req := w.BuildRequest()
 	if req == nil {
 		err = fmt.Errorf("failed to get *http.request for webhook")
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
@@ -164,7 +165,7 @@ func (w *WebHook) try(logFrom *util.LogFrom) (err error) {
 	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay && (resp.StatusCode == desiredStatusCode || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
 		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
-		jLog.Info(msg, *logFrom, true)
+		jLog.Info(msg, logFrom, true)
 		return
 	}
 

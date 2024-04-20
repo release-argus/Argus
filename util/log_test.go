@@ -172,7 +172,7 @@ func TestFormatMessageSource(t *testing.T) {
 			t.Parallel()
 
 			// WHEN FormatMessageSource is called with this LogFrom
-			got := FormatMessageSource(tc.logFrom)
+			got := FormatMessageSource(&tc.logFrom)
 
 			// THEN an empty string is returned
 			if got != tc.want {
@@ -315,7 +315,7 @@ func TestJLog_Error(t *testing.T) {
 			log.SetOutput(&logOut)
 
 			// WHEN Error is called with true
-			jLog.Error(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Error(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
@@ -393,7 +393,7 @@ func TestJLog_Warn(t *testing.T) {
 			log.SetOutput(&logOut)
 
 			// WHEN Warn is called with true
-			jLog.Warn(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Warn(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
@@ -471,7 +471,7 @@ func TestJLog_Info(t *testing.T) {
 			log.SetOutput(&logOut)
 
 			// WHEN Info is called with true
-			jLog.Info(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Info(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
@@ -559,7 +559,7 @@ func TestJLog_Verbose(t *testing.T) {
 			}
 
 			// WHEN Verbose is called with true
-			jLog.Verbose(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Verbose(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
@@ -659,7 +659,7 @@ func TestJLog_Debug(t *testing.T) {
 			}
 
 			// WHEN Debug is called with true
-			jLog.Debug(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Debug(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()
@@ -773,7 +773,7 @@ func TestJLog_Fatal(t *testing.T) {
 			}
 
 			// WHEN Fatal is called with true
-			jLog.Fatal(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Fatal(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			w.Close()

@@ -37,10 +37,10 @@ func NotifyTest(
 		return
 	}
 	shoutrrr.LogInit(log)
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := &util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test
-	notify := findShoutrrr(*flag, cfg, log, &logFrom)
+	notify := findShoutrrr(*flag, cfg, log, logFrom)
 
 	// Default webURL if not set
 	if notify.ServiceStatus.WebURL == nil {
@@ -112,7 +112,7 @@ func findShoutrrr(
 			// Check if all values are set
 			if err := notify.CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n", name, strings.ReplaceAll(err.Error(), "\\", "\n"))
-				log.Fatal(msg, *logFrom, true)
+				log.Fatal(msg, logFrom, true)
 			}
 
 			// Not found
@@ -120,7 +120,7 @@ func findShoutrrr(
 			all := getAllShoutrrrNames(cfg)
 			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
 				name, strings.Join(all, "\n  - "))
-			log.Fatal(msg, *logFrom, true)
+			log.Fatal(msg, logFrom, true)
 		}
 	}
 	serviceID := "TESTING"

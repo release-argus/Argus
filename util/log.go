@@ -69,7 +69,7 @@ func (l *JLog) SetLevel(level string) {
 	value := levelMap[level]
 
 	msg := fmt.Sprintf("%q is not a valid log.level. It should be one of ERROR, WARN, INFO, VERBOSE or DEBUG.", level)
-	l.Fatal(msg, LogFrom{}, value == 0 && level != "ERROR")
+	l.Fatal(msg, &LogFrom{}, value == 0 && level != "ERROR")
 
 	l.Level = uint(value)
 }
@@ -88,7 +88,7 @@ func (l *JLog) SetTimestamps(enable bool) {
 // from.Primary defined = `from.Primary `
 //
 // from.Secondary defined = `from.Secondary `
-func FormatMessageSource(from LogFrom) (msg string) {
+func FormatMessageSource(from *LogFrom) (msg string) {
 	// from.Primary defined
 	if from.Primary != "" {
 		// from.Primary and from.Secondary are defined
@@ -128,7 +128,7 @@ func (l *JLog) IsLevel(level string) bool {
 // Error log the msg.
 //
 // (if otherCondition is true)
-func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Error(msg interface{}, from *LogFrom, otherCondition bool) {
 	if otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 		// ERROR: msg from.Primary (from.Secondary)
@@ -143,7 +143,7 @@ func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
 // Warn log msg if l.Level is > 0 (WARNING, INFO, VERBOSE or DEBUG).
 //
 // (if otherCondition is true)
-func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Warn(msg interface{}, from *LogFrom, otherCondition bool) {
 	if l.Level > 0 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 		// WARNING: msg from.Primary (from.Secondary)
@@ -158,7 +158,7 @@ func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
 // Info log msg if l.Level is > 1 (INFO, VERBOSE or DEBUG).
 //
 // (if otherCondition is true)
-func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Info(msg interface{}, from *LogFrom, otherCondition bool) {
 	if l.Level > 1 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 		// INFO: msg from.Primary (from.Secondary)
@@ -173,7 +173,7 @@ func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 // Verbose log msg if l.Level is > 2 (VERBOSE or DEBUG).
 //
 // (if otherCondition is true)
-func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Verbose(msg interface{}, from *LogFrom, otherCondition bool) {
 	if l.Level > 2 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 
@@ -194,7 +194,7 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 // Debug log msg if l.Level is 4 (DEBUG).
 //
 // (if otherCondition is true)
-func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Debug(msg interface{}, from *LogFrom, otherCondition bool) {
 	if l.Level == 4 && otherCondition {
 		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
 
@@ -213,7 +213,7 @@ func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 }
 
 // Fatal is equivalent to Error() followed by a call to os.Exit(1).
-func (l *JLog) Fatal(msg interface{}, from LogFrom, otherCondition bool) {
+func (l *JLog) Fatal(msg interface{}, from *LogFrom, otherCondition bool) {
 	if otherCondition {
 		l.Error(msg, from, true)
 		if !l.Testing {

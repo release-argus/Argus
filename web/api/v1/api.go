@@ -27,7 +27,6 @@ import (
 // API is the API to use for the webserver.
 type API struct {
 	Config      *config.Config
-	Log         *util.JLog
 	BaseRouter  *mux.Router
 	Router      *mux.Router
 	RoutePrefix string
@@ -35,19 +34,23 @@ type API struct {
 
 // NewAPI will create a new API with the provided config.
 func NewAPI(cfg *config.Config, log *util.JLog) *API {
+	LogInit(log)
+
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := cfg.Settings.WebRoutePrefix()
 
 	api := &API{
 		Config:      cfg,
-		Log:         log,
 		BaseRouter:  baseRouter,
 		RoutePrefix: routePrefix,
 	}
+
+	// For cases where routePrefix is "/", remove it to prevent "//"
+	routePrefix = strings.TrimSuffix(routePrefix, "/")
 	// On baseRouter as Router may have basicAuth
-	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", strings.TrimSuffix(routePrefix, "/"))).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", routePrefix)).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logFrom := util.LogFrom{Primary: "apiHealthcheck", Secondary: getIP(r)}
-		api.Log.Verbose("-", logFrom, true)
+		jLog.Verbose("-", &logFrom, true)
 		w.Header().Set("Connection", "close")
 		fmt.Fprintf(w, "Alive")
 	})

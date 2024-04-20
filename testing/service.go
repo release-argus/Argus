@@ -33,7 +33,7 @@ func ServiceTest(
 	if *flag == "" {
 		return
 	}
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := &util.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	log.Info(
 		"",
@@ -54,7 +54,7 @@ func ServiceTest(
 	}
 
 	if service != nil {
-		_, err := service.LatestVersion.Query(false, &logFrom)
+		_, err := service.LatestVersion.Query(false, logFrom)
 		if err != nil {
 			helpMsg := ""
 			if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
@@ -75,7 +75,7 @@ func ServiceTest(
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(false, &logFrom)
+		version, err := service.DeployedVersionLookup.Query(false, logFrom)
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",

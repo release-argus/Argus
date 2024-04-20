@@ -37,7 +37,7 @@ var router *mux.Router
 
 func TestMainWithRoutePrefix(t *testing.T) {
 	// GIVEN a valid config with a Service
-	cfg := testConfig("TestMainWithRoutePrefix.yml", t)
+	cfg := testConfig("TestMainWithRoutePrefix.yml", nil, t)
 	*cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
@@ -125,7 +125,7 @@ func TestAccessibleHTTPS(t *testing.T) {
 			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
 				util.GoVersion)},
 	}
-	cfg := testConfig("TestAccessibleHTTPS.yml", t)
+	cfg := testConfig("TestAccessibleHTTPS.yml", nil, t)
 	cfg.Settings.Web.CertFile = stringPtr("TestAccessibleHTTPS_cert.pem")
 	cfg.Settings.Web.KeyFile = stringPtr("TestAccessibleHTTPS_key.pem")
 	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile)
@@ -133,7 +133,7 @@ func TestAccessibleHTTPS(t *testing.T) {
 	defer os.Remove(*cfg.Settings.Web.KeyFile)
 
 	router = newWebUI(cfg)
-	go Run(cfg, util.NewJLog("WARN", false))
+	go Run(cfg, nil)
 	time.Sleep(250 * time.Millisecond)
 	address := fmt.Sprintf("https://localhost:%s", *cfg.Settings.Web.ListenPort)
 

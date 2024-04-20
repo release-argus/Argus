@@ -58,9 +58,6 @@ var upgrader = websocket.Upgrader{
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	// The API.
-	api *API
-
 	// The WebSocket hub.
 	hub *Hub
 
@@ -126,9 +123,9 @@ func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		err := c.conn.Close()
-		c.api.Log.Verbose(
+		jLog.Verbose(
 			fmt.Sprintf("Closing the websocket connection failed (readPump)\n%s", util.ErrorToString(err)),
-			util.LogFrom{},
+			&util.LogFrom{},
 			err != nil,
 		)
 	}()
@@ -157,10 +154,10 @@ func (c *Client) readPump() {
 			break
 		}
 
-		if c.api.Log.IsLevel("DEBUG") {
-			c.api.Log.Debug(
+		if jLog.IsLevel("DEBUG") {
+			jLog.Debug(
 				fmt.Sprintf("READ %s", message),
-				util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+				&util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
 		}
 
 		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
@@ -168,9 +165,9 @@ func (c *Client) readPump() {
 		var validation serverMessage
 		err = json.Unmarshal(message, &validation)
 		if err != nil {
-			c.api.Log.Warn(
+			jLog.Warn(
 				fmt.Sprintf("Invalid message (missing/invalid version key)\n%s", message),
-				util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true,
 			)
 			continue
@@ -190,9 +187,9 @@ func (c *Client) writePump() {
 	defer func() {
 		ticker.Stop()
 		err := c.conn.Close()
-		c.api.Log.Verbose(
+		jLog.Verbose(
 			fmt.Sprintf("Closing the connection\n%s", util.ErrorToString(err)),
-			util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+			&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 			true,
 		)
 	}()
@@ -206,9 +203,9 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				err := c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				c.api.Log.Verbose(
+				jLog.Verbose(
 					fmt.Sprintf("Closing the connection (writePump)\n%s", util.ErrorToString(err)),
-					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true,
 				)
 				return
@@ -217,9 +214,9 @@ func (c *Client) writePump() {
 			var msg api_type.WebSocketMessage
 			err := json.Unmarshal(message, &msg)
 			if err != nil {
-				c.api.Log.Error(
+				jLog.Error(
 					fmt.Sprintf("Message failed to unmarshal %s", util.ErrorToString(err)),
-					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true,
 				)
 				continue
@@ -233,15 +230,15 @@ func (c *Client) writePump() {
 				switch msg.Type {
 				case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
 					err := c.conn.WriteJSON(msg)
-					c.api.Log.Error(
+					jLog.Error(
 						fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s", msg.Type, util.ErrorToString(err)),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						err != nil,
 					)
 				default:
-					c.api.Log.Error(
+					jLog.Error(
 						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true,
 					)
 					continue
@@ -252,9 +249,9 @@ func (c *Client) writePump() {
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				err := c.conn.WriteJSON(<-c.send)
-				c.api.Log.Error(
+				jLog.Error(
 					fmt.Sprintf("WriteJSON for the queued chat messages\n%s\n", util.ErrorToString(err)),
-					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					&util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					err != nil,
 				)
 			}
@@ -280,7 +277,6 @@ func ServeWs(api *API, hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	conn.RemoteAddr()
 	client := &Client{
-		api:  api,
 		hub:  hub,
 		ip:   getIP(r),
 		conn: conn,

@@ -90,9 +90,7 @@ func TestTheMain(t *testing.T) {
 			os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
 
 			// WHEN Main is called
-			go func() {
-				main()
-			}()
+			go main()
 			time.Sleep(3 * time.Second)
 
 			// THEN the program will have printed everything expected

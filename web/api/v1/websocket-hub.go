@@ -56,11 +56,14 @@ type AnnounceMSG struct {
 }
 
 // Run will start the WebSocket Hub.
-func (h *Hub) Run(jLog *util.JLog) {
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = true
+			// Avoid unnecessary writes to the map
+			if _, ok := h.clients[client]; !ok {
+				h.clients[client] = true
+			}
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
@@ -72,14 +75,14 @@ func (h *Hub) Run(jLog *util.JLog) {
 				if jLog.IsLevel("DEBUG") {
 					jLog.Debug(
 						fmt.Sprintf("Broadcast %s", string(message)),
-						util.LogFrom{Primary: "WebSocket"},
+						&util.LogFrom{Primary: "WebSocket"},
 						len(h.clients) > 0)
 				}
 				var msg AnnounceMSG
 				if err := json.Unmarshal(message, &msg); err != nil {
 					jLog.Warn(
 						"Invalid JSON broadcast to the WebSocket",
-						util.LogFrom{Primary: "WebSocket"},
+						&util.LogFrom{Primary: "WebSocket"},
 						true,
 					)
 					n = len(h.Broadcast)

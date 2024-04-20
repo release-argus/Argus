@@ -54,7 +54,7 @@ func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 		// Verify that the version has changed. (GitHub may have just omitted the tag for some reason)
 		if checkNumber == 0 {
 			msg := fmt.Sprintf("Possibly found a new version (From %q to %q). Checking again", latestVersion, version)
-			jLog.Verbose(msg, *logFrom, latestVersion != "")
+			jLog.Verbose(msg, logFrom, latestVersion != "")
 			time.Sleep(time.Second)
 			return l.query(logFrom, 1)
 		}
@@ -65,7 +65,7 @@ func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 			if err != nil {
 				err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
 					version)
-				jLog.Error(err, *logFrom, true)
+				jLog.Error(err, logFrom, true)
 				return false, err
 			}
 
@@ -82,7 +82,7 @@ func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 					if newVersion.LessThan(oldVersion) {
 						err := fmt.Errorf("queried version %q is less than the deployed version %q",
 							version, l.Status.LatestVersion())
-						jLog.Warn(err, *logFrom, true)
+						jLog.Warn(err, logFrom, true)
 						return false, err
 					}
 				}
@@ -99,7 +99,7 @@ func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 				l.Status.SetDeployedVersion(version, true)
 			}
 			msg := fmt.Sprintf("Latest Release - %q", version)
-			jLog.Info(msg, *logFrom, true)
+			jLog.Info(msg, logFrom, true)
 
 			l.Status.AnnounceFirstVersion()
 
@@ -110,12 +110,12 @@ func (l *Lookup) query(logFrom *util.LogFrom, checkNumber int) (bool, error) {
 		// New version found.
 		l.Status.SetLatestVersion(version, true)
 		msg := fmt.Sprintf("New Release - %q", version)
-		jLog.Info(msg, *logFrom, true)
+		jLog.Info(msg, logFrom, true)
 		return true, nil
 	}
 
 	msg := fmt.Sprintf("Staying on %q as that's the latest version in the second check", version)
-	jLog.Verbose(msg, *logFrom, checkNumber == 1)
+	jLog.Verbose(msg, logFrom, checkNumber == 1)
 	// Announce `LastQueried`
 	l.Status.AnnounceQuery()
 	// No version change.
@@ -188,7 +188,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
 			l.URL, err)
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
@@ -213,17 +213,17 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			return
 		}
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
-	jLog.Error(err, *logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 	if l.Type == "github" && err == nil {
 		// 200 - Resource has changed
 		if resp.StatusCode == http.StatusOK {
@@ -236,13 +236,13 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 				// Flip the fallback flag
 				l.GitHubData.SetTagFallback()
 				if l.GitHubData.TagFallback() {
-					jLog.Verbose(fmt.Sprintf("/releases gave %v, trying /tags", string(rawBody)), *logFrom, true)
+					jLog.Verbose(fmt.Sprintf("/releases gave %v, trying /tags", string(rawBody)), logFrom, true)
 					rawBody, err = l.httpRequest(logFrom)
 				}
 				// Has tags/releases
 			} else {
 				msg := fmt.Sprintf("Potentially found new releases (new ETag %s)", newETag)
-				jLog.Verbose(msg, *logFrom, true)
+				jLog.Verbose(msg, logFrom, true)
 			}
 
 			// 304 - Resource has not changed
@@ -252,7 +252,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 				// Flip the fallback flag
 				l.GitHubData.SetTagFallback()
 				if l.GitHubData.TagFallback() {
-					jLog.Verbose("no tags found on /releases, trying /tags", *logFrom, true)
+					jLog.Verbose("no tags found on /releases, trying /tags", logFrom, true)
 					rawBody, err = l.httpRequest(logFrom)
 				}
 			}
@@ -281,14 +281,14 @@ func (l *Lookup) GetVersions(
 		filteredReleases = l.filterGitHubReleases(logFrom)
 		if len(filteredReleases) == 0 {
 			err = fmt.Errorf("no releases were found matching the url_commands")
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			return
 		}
 
 		// url service
 	} else {
 		var version string
-		version, err = l.URLCommands.Run(body, *logFrom)
+		version, err = l.URLCommands.Run(body, logFrom)
 		if err != nil {
 			//nolint:wrapcheck
 			return
@@ -309,7 +309,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 		}
 	} else if l.Type == "github" {
 		// ReCheck this ETag's filteredReleases incase filters/releases changed
-		jLog.Verbose("Using cached releases (ETag unchanged)", *logFrom, true)
+		jLog.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
 		filteredReleases = l.filterGitHubReleases(logFrom)
 	}
 
@@ -354,20 +354,20 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 			if strings.HasSuffix(err.Error(), "\n") {
 				err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
 			}
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			continue
 			// else if the tag does exist (and we did search for one)
 		} else if l.Require.Docker != nil {
 			jLog.Info(
 				fmt.Sprintf(`found %s container "%s:%s"`,
 					l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
-				*logFrom, true)
+				logFrom, true)
 		}
 		break
 	}
 	if version == "" {
 		err = fmt.Errorf("no releases were found matching the url_commands and/or require")
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 	}
 	return
 }
