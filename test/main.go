@@ -19,23 +19,33 @@ package test
 import (
 	"fmt"
 	"strings"
-
-	"github.com/release-argus/Argus/util"
+	"sync"
 )
 
+var StdoutMutex sync.Mutex // Only one test should write to stdout at a time
+
+// BoolPtr returns a pointer to the given boolean value
 func BoolPtr(val bool) *bool {
 	return &val
 }
+
+// IntPtr returns a pointer to the given integer value
 func IntPtr(val int) *int {
 	return &val
 }
+
+// StringPtr returns a pointer to the given string value
 func StringPtr(val string) *string {
 	return &val
 }
+
+// UIntPtr returns a pointer to the given unsigned integer value
 func UIntPtr(val int) *uint {
 	converted := uint(val)
 	return &converted
 }
+
+// StringifyPtr returns a string representation of the given pointer
 func StringifyPtr[T comparable](ptr *T) string {
 	str := "nil"
 	if ptr != nil {
@@ -44,11 +54,7 @@ func StringifyPtr[T comparable](ptr *T) string {
 	return str
 }
 
-func CopyMapPtr(tgt map[string]string) *map[string]string {
-	ptr := util.CopyMap(tgt)
-	return &ptr
-}
-
+// TrimJSON removes unnecessary whitespace from a JSON string
 func TrimJSON(str string) string {
 	str = strings.TrimSpace(str)
 	str = strings.ReplaceAll(str, "\n", "")
@@ -59,6 +65,7 @@ func TrimJSON(str string) string {
 	return str
 }
 
+// Combinations generates all possible combinations of the given input
 func Combinations[T comparable](input []T) [][]T {
 	var result [][]T
 

@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -76,6 +77,9 @@ func TestTheMain(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			file := fmt.Sprintf("%s.yml", name)
 			os.Remove(tc.db)

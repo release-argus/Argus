@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -120,6 +121,9 @@ func TestConfig_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -199,6 +203,9 @@ func TestConfig_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

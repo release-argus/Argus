@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -1383,6 +1384,9 @@ notify:
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			if tc.want != "" {
 				tc.want += "\n"

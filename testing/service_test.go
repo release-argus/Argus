@@ -33,6 +33,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -159,6 +160,9 @@ func TestServiceTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

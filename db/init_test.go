@@ -29,6 +29,7 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	_ "modernc.org/sqlite"
 )
@@ -385,6 +386,10 @@ func Test_UpdateColumnTypes(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
+
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

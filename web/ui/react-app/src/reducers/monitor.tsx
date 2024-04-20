@@ -55,7 +55,7 @@ export default function reducerMonitor(
     // UPDATED
     // INIT
     case "VERSION": {
-      const id = action.service_data?.id as string;
+      const id = action.service_data.id;
       if (state.service[id] === undefined) return state;
       switch (action.sub_type) {
         case "QUERY": {

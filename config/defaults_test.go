@@ -29,6 +29,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -1072,6 +1073,9 @@ func TestDefaults_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

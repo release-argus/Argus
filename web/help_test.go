@@ -26,7 +26,6 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -44,7 +43,6 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-var stdoutMutex sync.Mutex
 var mainCfg *config.Config
 var port *string
 

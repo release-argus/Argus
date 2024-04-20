@@ -29,6 +29,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
@@ -41,7 +42,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 	*cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
-	go Run(cfg, util.NewJLog("WARN", false))
+	go Run(cfg, nil)
 	time.Sleep(500 * time.Millisecond)
 
 	// THEN Web UI is accessible
@@ -238,10 +239,11 @@ func TestWebSocket(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			ws := connectToWebSocket(t)
-			stdoutMutex.Lock()
-			defer stdoutMutex.Unlock()
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w

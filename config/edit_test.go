@@ -66,7 +66,7 @@ func TestConfig_RenameService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t)
 			newSVC := testServiceURL(tc.newName)
 
 			// WHEN the service is renamed
@@ -141,7 +141,7 @@ func TestConfig_DeleteService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_DeleteService_%s.yml", name)
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t)
 
 			// WHEN the service is deleted
 			cfg.DeleteService(tc.name)
@@ -234,7 +234,7 @@ func TestConfig_AddService(t *testing.T) {
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
 			testYAML_Edit(file, t)
 			logMutex.Lock()
-			cfg := testLoadBasic(file, t) // Global vars could otherwise DATA RACE
+			cfg := testLoadBasic(file, t)
 			if tc.nilMap {
 				cfg.Service = nil
 				cfg.Order = []string{}

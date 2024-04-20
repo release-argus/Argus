@@ -165,52 +165,6 @@ func TestStringifyPtr(t *testing.T) {
 	}
 }
 
-func TestCopyMapPtr(t *testing.T) {
-	// GIVEN a map
-	tests := map[string]struct {
-		tgt  map[string]string
-		want map[string]string
-	}{
-		"nil": {
-			tgt:  nil,
-			want: nil,
-		},
-		"empty": {
-			tgt:  map[string]string{},
-			want: map[string]string{},
-		},
-		"non-empty": {
-			tgt: map[string]string{
-				"key": "value",
-			},
-			want: map[string]string{
-				"key": "value",
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN CopyMapPtr is called
-			result := CopyMapPtr(tc.tgt)
-
-			// THEN the result should be a pointer to a copy of the map
-			if len(*result) != len(tc.want) {
-				t.Errorf("length differs, expected %d but got %d",
-					len(tc.want), len(*result))
-			}
-			for k, v := range tc.want {
-				if (*result)[k] != v {
-					t.Errorf("%q: expected %q but got %q",
-						k, v, (*result)[k])
-				}
-			}
-		})
-	}
-}
-
 func TestTrimJSON(t *testing.T) {
 	// GIVEN a JSON string
 	tests := map[string]struct {

@@ -33,6 +33,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	shoutrrr_test "github.com/release-argus/Argus/notifiers/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
@@ -821,16 +822,17 @@ func TestHTTP_NotifyTest(t *testing.T) {
 	file := "TestHTTP_NotifyTest.yml"
 	api := testAPI(file)
 	defer os.RemoveAll(file)
-	validNotify := test.Shoutrrr(false, false)
+	validNotify := shoutrrr_test.Shoutrrr(false, false)
 	api.Config.Notify = shoutrrr.SliceDefaults{}
+	options := util.CopyMap(validNotify.Options)
+	params := util.CopyMap(validNotify.Params)
+	urlFields := util.CopyMap(validNotify.URLFields)
 	api.Config.Notify["test"] = shoutrrr.NewDefaults(
 		"gotify",
-		test.CopyMapPtr(validNotify.Options),
-		test.CopyMapPtr(validNotify.Params),
-		test.CopyMapPtr(validNotify.URLFields))
+		&options, &params, &urlFields)
 	api.Config.Service["test"].Notify = map[string]*shoutrrr.Shoutrrr{
-		"test":    test.Shoutrrr(false, false),
-		"no_main": test.Shoutrrr(false, false)}
+		"test":    shoutrrr_test.Shoutrrr(false, false),
+		"no_main": shoutrrr_test.Shoutrrr(false, false)}
 	tests := map[string]struct {
 		queryParams map[string]string
 		payload     string

@@ -26,53 +26,51 @@ export default function reducerActionModal(
       )
         return state;
 
-      switch (action.sub_type) {
-        case "EVENT":
-          if (action.webhook_data)
-            for (const webhook_id in action.webhook_data) {
-              // Remove them from the sending list
-              newState.sentWH.splice(
-                newState.sentWH.indexOf(
-                  `${action.service_data.id} ${webhook_id}`
-                ),
-                1
-              );
+      if (action.sub_type == "EVENT") {
+        if (action.webhook_data)
+          for (const webhook_id in action.webhook_data) {
+            // Remove them from the sending list
+            newState.sentWH.splice(
+              newState.sentWH.indexOf(
+                `${action.service_data.id} ${webhook_id}`
+              ),
+              1
+            );
 
-              // Record the success/fail (if it's the current modal service)
-              if (
-                action.service_data.id === state.service_id &&
-                newState.webhooks[webhook_id] !== undefined
-              )
-                newState.webhooks[webhook_id] = {
-                  failed: action.webhook_data[webhook_id].failed,
-                  next_runnable: action.webhook_data[webhook_id].next_runnable,
-                };
-            }
+            // Record the success/fail (if it's the current modal service)
+            if (
+              action.service_data.id === state.service_id &&
+              newState.webhooks[webhook_id] !== undefined
+            )
+              newState.webhooks[webhook_id] = {
+                failed: action.webhook_data[webhook_id].failed,
+                next_runnable: action.webhook_data[webhook_id].next_runnable,
+              };
+          }
 
-          if (action.command_data)
-            for (const command in action.command_data) {
-              // Remove them from the sending list
-              newState.sentC.splice(
-                newState.sentC.indexOf(`${action.service_data.id} ${command}`),
-                1
-              );
+        if (action.command_data)
+          for (const command in action.command_data) {
+            // Remove them from the sending list
+            newState.sentC.splice(
+              newState.sentC.indexOf(`${action.service_data.id} ${command}`),
+              1
+            );
 
-              // Record the success/fail (if it's the current modal service)
-              if (
-                action.service_data.id === state.service_id &&
-                newState.commands[command] !== undefined
-              )
-                newState.commands[command] = {
-                  failed: action.command_data[command].failed,
-                  next_runnable: action.command_data[command].next_runnable,
-                };
-            }
-          break;
-        default:
-          console.error(action);
-          throw new Error();
+            // Record the success/fail (if it's the current modal service)
+            if (
+              action.service_data.id === state.service_id &&
+              newState.commands[command] !== undefined
+            )
+              newState.commands[command] = {
+                failed: action.command_data[command].failed,
+                next_runnable: action.command_data[command].next_runnable,
+              };
+          }
+        break;
+      } else {
+        console.error(action);
+        throw new Error();
       }
-      break;
 
     // REFRESH
     // RESET

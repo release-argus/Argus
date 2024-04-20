@@ -107,6 +107,9 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			if tc.statusCode == 0 {
 				tc.statusCode = http.StatusOK
@@ -428,6 +431,9 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
 			svc := testService(tc.serviceID)

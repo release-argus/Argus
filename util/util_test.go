@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestContains(t *testing.T) {
@@ -630,6 +632,8 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			msg := "var is not default from PrintlnIfNotDefault"
 			stdout := os.Stdout
@@ -673,6 +677,9 @@ func TestPrintlnIfNotNil(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			msg := "var is not default from PrintlnIfNotNil"
 			stdout := os.Stdout
@@ -716,6 +723,9 @@ func TestPrintlnIfNil(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			msg := "var is not default from PrintlnIfNil"
 			stdout := os.Stdout

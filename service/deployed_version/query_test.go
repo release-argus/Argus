@@ -27,6 +27,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
@@ -435,7 +436,9 @@ func TestLookup_Track(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - cannot run in parallel because of stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
@@ -530,6 +533,8 @@ func TestLookup_Track(t *testing.T) {
 				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
 					tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
 			}
+
+			// Set Deleting to stop the Track
 			tc.lookup.Status.SetDeleting()
 		})
 	}

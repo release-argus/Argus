@@ -111,7 +111,7 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	return
 }
 
-var mutex sync.Mutex
+var configInitMutex sync.Mutex
 
 func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config = &Config{}
@@ -136,9 +136,7 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
-	mutex.Lock()
-	defer mutex.Unlock()
-	config.Init(true)
+	config.Init(false) // Log already set in TestMain
 	for name, service := range config.Service {
 		service.ID = name
 	}

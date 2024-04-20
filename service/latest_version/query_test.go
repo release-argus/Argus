@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -214,6 +215,9 @@ func TestLookup_Query(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			try := 0
 			temporaryFailureInNameResolution := true
@@ -291,6 +295,10 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
+	// t.Parallel() - Cannot run in parallel since we're using stdout
+	test.StdoutMutex.Lock()
+	defer test.StdoutMutex.Unlock()
+
 	// Lock so that default empty list ETag isn't changed by other tests
 	emptyListETagTestMutex.Lock()
 	defer emptyListETagTestMutex.Unlock()
@@ -378,6 +386,9 @@ no releases were found matching the url_commands and/or require`},
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			lookup := testLookup(false, false)
 			lookup.GitHubData.SetETag("foo")

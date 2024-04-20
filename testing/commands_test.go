@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestCommandTest(t *testing.T) {
@@ -102,6 +103,9 @@ func TestCommandTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()

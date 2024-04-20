@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestNewJLog(t *testing.T) {
@@ -306,6 +308,9 @@ func TestJLog_Error(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
@@ -384,6 +389,9 @@ func TestJLog_Warn(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
@@ -462,6 +470,9 @@ func TestJLog_Info(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
@@ -545,6 +556,9 @@ func TestJLog_Verbose(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			msg := "argus"
 
@@ -647,6 +661,9 @@ func TestJLog_Debug(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout
@@ -741,6 +758,9 @@ func TestJLog_Fatal(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
 			stdout := os.Stdout

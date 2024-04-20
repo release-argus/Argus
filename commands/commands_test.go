@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -92,6 +93,9 @@ func TestCommand_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -157,6 +161,9 @@ func TestController_ExecIndex(t *testing.T) {
 	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			stdout := os.Stdout
 			r, w, _ := os.Pipe()
@@ -224,6 +231,9 @@ func TestController_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			test.StdoutMutex.Lock()
+			defer test.StdoutMutex.Unlock()
 
 			announce := make(chan []byte, 8)
 			controller := testController(&announce)

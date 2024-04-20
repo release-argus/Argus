@@ -16,8 +16,12 @@
 
 package test
 
-import "github.com/release-argus/Argus/config"
+import (
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/test"
+)
 
+// NilFlags sets all flags to nil in the given config
 func NilFlags(cfg *config.Config) {
 	flags := []string{
 		"log.level",
@@ -38,12 +42,13 @@ func NilFlags(cfg *config.Config) {
 	cfg.Settings.NilUndefinedFlags(&flagMap)
 }
 
+// BareConfig returns a minimal config with no flags set
 func BareConfig(nilFlags bool) (cfg *config.Config) {
 	cfg = &config.Config{
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
-					RoutePrefix: StringPtr(""),
+					RoutePrefix: test.StringPtr(""),
 				}}}}
 
 	// NilFlags can be a RACE condition, so use it conditionally

@@ -91,6 +91,9 @@ func TestSlice_Track(t *testing.T) {
 					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
 						i, (*slice)[i].Status.String())
 				}
+
+				// Set Deleting to stop the Track
+				(*slice)[i].Status.SetDeleting()
 			}
 		})
 	}
@@ -395,6 +398,8 @@ func TestService_Track(t *testing.T) {
 			if len(didFinish) == 0 && !shouldFinish {
 				t.Fatal("expected Track to finish when not active, or is deleting")
 			}
+
+			// Set Deleting to stop the Track
 			svc.Status.SetDeleting()
 		})
 	}
