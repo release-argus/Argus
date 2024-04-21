@@ -170,6 +170,10 @@ func TestServiceTest(t *testing.T) {
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
+					// Reset stdout
+					w.Close()
+					os.Stdout = stdout
+					// Check the panic message
 					r := recover()
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)

@@ -175,7 +175,7 @@ func (l *Lookup) queryMetrics(err error) {
 	}
 }
 
-func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {
+func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBodyPtr *[]byte, err error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
 	if l.GetAllowInvalidCerts() {
@@ -222,7 +222,9 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 
 	// Read the response body.
 	defer resp.Body.Close()
+	var rawBody []byte
 	rawBody, err = io.ReadAll(resp.Body)
+	rawBodyPtr = &rawBody
 	jLog.Error(err, logFrom, err != nil)
 	if l.Type == "github" && err == nil {
 		// 200 - Resource has changed
@@ -237,7 +239,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 				l.GitHubData.SetTagFallback()
 				if l.GitHubData.TagFallback() {
 					jLog.Verbose(fmt.Sprintf("/releases gave %v, trying /tags", string(rawBody)), logFrom, true)
-					rawBody, err = l.httpRequest(logFrom)
+					rawBodyPtr, err = l.httpRequest(logFrom)
 				}
 				// Has tags/releases
 			} else {
@@ -253,7 +255,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 				l.GitHubData.SetTagFallback()
 				if l.GitHubData.TagFallback() {
 					jLog.Verbose("no tags found on /releases, trying /tags", logFrom, true)
-					rawBody, err = l.httpRequest(logFrom)
+					rawBodyPtr, err = l.httpRequest(logFrom)
 				}
 			}
 		}
@@ -264,14 +266,14 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 // GetVersions will filter out releases from rawBody that are preReleases (if not wanted) and will sort releases if
 // semantic versioning is wanted
 func (l *Lookup) GetVersions(
-	rawBody []byte,
+	rawBody *[]byte,
 	logFrom *util.LogFrom,
 ) (filteredReleases []github_types.Release, err error) {
 	var releases []github_types.Release
-	body := string(rawBody)
+	body := string(*rawBody)
 	// GitHub service.
 	if l.Type == "github" {
-		releases, err = l.checkGitHubReleasesBody(&rawBody, logFrom)
+		releases, err = l.checkGitHubReleasesBody(rawBody, logFrom)
 		if err != nil {
 			return
 		}
@@ -299,10 +301,10 @@ func (l *Lookup) GetVersions(
 }
 
 // GetVersion will return the latest version from rawBody matching the URLCommands and Regex requirements
-func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version string, err error) {
+func (l *Lookup) GetVersion(rawBody *[]byte, logFrom *util.LogFrom) (version string, err error) {
 	var filteredReleases []github_types.Release
 	// rawBody length = 0 if GitHub ETag is unchanged
-	if len(rawBody) != 0 {
+	if len(*rawBody) != 0 {
 		filteredReleases, err = l.GetVersions(rawBody, logFrom)
 		if err != nil {
 			return
@@ -337,7 +339,7 @@ func (l *Lookup) GetVersion(rawBody []byte, logFrom *util.LogFrom) (version stri
 			body = filteredReleases[i].Assets
 			// Web service
 		} else {
-			body = string(rawBody)
+			body = string(*rawBody)
 		}
 		// If the Content doesn't match the provided RegEx
 		if err = l.Require.RegexCheckContent(version, body, logFrom); err != nil {
