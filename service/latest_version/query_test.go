@@ -17,7 +17,6 @@
 package latestver
 
 import (
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -94,7 +93,7 @@ func TestLookup_Query(t *testing.T) {
 		requireRegexVersion   string
 		requireCommand        []string
 		requireDockerCheck    *filter.DockerCheck
-		outputRegex           string
+		stdoutRegex           string
 		errRegex              string
 	}{
 		"invalid url": {
@@ -195,7 +194,7 @@ func TestLookup_Query(t *testing.T) {
 			githubService: true,
 			url:           "go-vikunja/api",
 			regex:         stringPtr("v([0-9.]+)"),
-			outputRegex:   `no tags found on /releases, trying /tags`,
+			stdoutRegex:   `no tags found on /releases, trying /tags`,
 		},
 		"github lookup with no access token": {
 			githubService: true,
@@ -216,15 +215,11 @@ func TestLookup_Query(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
 
 			try := 0
 			temporaryFailureInNameResolution := true
 			for temporaryFailureInNameResolution != false {
-				stdout := os.Stdout
-				r, w, _ := os.Pipe()
-				os.Stdout = w
+				releaseStdout := test.CaptureStdout()
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(!tc.githubService, tc.allowInvalidCerts)
@@ -255,9 +250,7 @@ func TestLookup_Query(t *testing.T) {
 				_, err := lookup.Query(true, &util.LogFrom{})
 
 				// THEN any err is expected
-				w.Close()
-				out, _ := io.ReadAll(r)
-				os.Stdout = stdout
+				stdout := releaseStdout()
 				e := util.ErrorToString(err)
 				if tc.errRegex == "" {
 					tc.errRegex = "^$"
@@ -275,13 +268,12 @@ func TestLookup_Query(t *testing.T) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
-				// AND the output contains the expected strings
-				output := string(out)
-				re = regexp.MustCompile(tc.outputRegex)
-				match = re.MatchString(output)
+				// AND the stdout contains the expected strings
+				re = regexp.MustCompile(tc.stdoutRegex)
+				match = re.MatchString(stdout)
 				if !match {
 					t.Fatalf("match for %q not found in:\n%q",
-						tc.outputRegex, output)
+						tc.stdoutRegex, stdout)
 				}
 				// AND the LatestVersion is as expected
 				if tc.wantLatestVersion != nil &&
@@ -296,8 +288,6 @@ func TestLookup_Query(t *testing.T) {
 
 func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
 	// t.Parallel() - Cannot run in parallel since we're using stdout
-	test.StdoutMutex.Lock()
-	defer test.StdoutMutex.Unlock()
 
 	// Lock so that default empty list ETag isn't changed by other tests
 	emptyListETagTestMutex.Lock()
@@ -308,9 +298,7 @@ func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
 	try := 0
 	temporaryFailureInNameResolution := true
 	for temporaryFailureInNameResolution != false {
-		stdout := os.Stdout
-		r, w, _ := os.Pipe()
-		os.Stdout = w
+		releaseStdout := test.CaptureStdout()
 		try++
 		setEmptyListETag(invalidETag)
 		temporaryFailureInNameResolution = false
@@ -322,9 +310,7 @@ func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
 		_, err := lookup.Query(true, &util.LogFrom{})
 
 		// THEN any err is expected
-		w.Close()
-		out, _ := io.ReadAll(r)
-		os.Stdout = stdout
+		stdout := releaseStdout()
 		e := util.ErrorToString(err)
 		errRegex := "^$"
 		re := regexp.MustCompile(errRegex)
@@ -340,14 +326,13 @@ func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
 			t.Fatalf("want match for %q\nnot: %q",
 				errRegex, e)
 		}
-		// AND the output contains the expected strings
-		output := string(out)
+		// AND the stdout contains the expected strings
 		wantOutputRegex := `/releases gave \[\], trying /tags`
 		re = regexp.MustCompile(wantOutputRegex)
-		match = re.MatchString(output)
+		match = re.MatchString(stdout)
 		if !match {
 			t.Fatalf("match for %q not found in:\n%q",
-				wantOutputRegex, output)
+				wantOutputRegex, stdout)
 		}
 	}
 }
@@ -387,8 +372,7 @@ no releases were found matching the url_commands and/or require`},
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			lookup := testLookup(false, false)
 			lookup.GitHubData.SetETag("foo")
@@ -396,9 +380,6 @@ no releases were found matching the url_commands and/or require`},
 			lookup.Require.RegexVersion = tc.initialRequireRegexVersion
 			lookup.URLCommands = tc.urlCommands
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			attempt := 0
 			// WHEN Query is called on it attempts number of times
 			var errors string = ""
@@ -417,10 +398,7 @@ no releases were found matching the url_commands and/or require`},
 			}
 
 			// THEN any err is expected
-			w.Close()
-			o, _ := io.ReadAll(r)
-			out := string(o)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			tc.errRegex = strings.ReplaceAll(tc.errRegex, "\n", "--")
 			re := regexp.MustCompile(tc.errRegex)
 			match := re.MatchString(errors)
@@ -428,15 +406,15 @@ no releases were found matching the url_commands and/or require`},
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, errors)
 			}
-			gotETagChanged := strings.Count(out, "new ETag")
+			gotETagChanged := strings.Count(stdout, "new ETag")
 			if gotETagChanged != tc.eTagChanged {
 				t.Errorf("new ETag - got=%d, want=%d\n%s",
-					gotETagChanged, tc.eTagChanged, out)
+					gotETagChanged, tc.eTagChanged, stdout)
 			}
-			gotETagUnchangedUseCache := strings.Count(out, "Using cached releases")
+			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
 			if gotETagUnchangedUseCache != tc.eTagUnchangedUseCache {
 				t.Errorf("ETag unchanged use cache - got=%d, want=%d\n%s",
-					gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, out)
+					gotETagUnchangedUseCache, tc.eTagUnchangedUseCache, stdout)
 			}
 		})
 	}

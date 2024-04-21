@@ -17,7 +17,6 @@
 package deployedver
 
 import (
-	"io"
 	"os"
 	"regexp"
 	"testing"
@@ -437,19 +436,12 @@ func TestLookup_Track(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
 				defer os.Unsetenv(k)
 			}
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			defer func() {
-				os.Stdout = stdout
-			}()
 			if tc.lookup != nil {
 				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
@@ -498,6 +490,7 @@ func TestLookup_Track(t *testing.T) {
 					t.Fatalf("expected Track to finish in %s, but it didn't",
 						tc.wait)
 				}
+				releaseStdout()
 				return
 			}
 			haveQueried := false
@@ -510,10 +503,8 @@ func TestLookup_Track(t *testing.T) {
 				time.Sleep(time.Second)
 			}
 			time.Sleep(5 * time.Second)
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			t.Log(string(out))
+			stdout := releaseStdout()
+			t.Log(stdout)
 			if tc.wantDeployedVersion != tc.lookup.Status.DeployedVersion() {
 				t.Errorf("expected DeployedVersion to be %q after query, not %q",
 					tc.wantDeployedVersion, tc.lookup.Status.DeployedVersion())

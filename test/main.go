@@ -18,11 +18,26 @@ package test
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"sync"
 )
 
 var StdoutMutex sync.Mutex // Only one test should write to stdout at a time
+func CaptureStdout() func() string {
+	stdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	StdoutMutex.Lock()
+	return func() string {
+		w.Close()
+		out, _ := io.ReadAll(r)
+		os.Stdout = stdout
+		StdoutMutex.Unlock()
+		return string(out)
+	}
+}
 
 // BoolPtr returns a pointer to the given boolean value
 func BoolPtr(val bool) *bool {

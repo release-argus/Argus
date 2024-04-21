@@ -20,7 +20,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -632,32 +631,25 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNotDefault"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNotDefault is called
 			PrintlnIfNotDefault(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}
@@ -678,32 +670,25 @@ func TestPrintlnIfNotNil(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNotNil"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNotNil is called
 			PrintlnIfNotNil(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}
@@ -724,32 +709,25 @@ func TestPrintlnIfNil(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNil"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNil is called
 			PrintlnIfNil(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}

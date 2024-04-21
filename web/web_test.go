@@ -19,7 +19,6 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -240,13 +239,9 @@ func TestWebSocket(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			ws := connectToWebSocket(t)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN we send a message
 			if err := ws.WriteMessage(websocket.TextMessage, []byte(tc.msg)); err != nil {
@@ -258,15 +253,12 @@ func TestWebSocket(t *testing.T) {
 			// THEN we receive the expected response
 			ws.Close()
 			time.Sleep(250 * time.Millisecond)
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
+			stdout := releaseStdout()
 			re := regexp.MustCompile(tc.stdoutRegex)
-			match := re.MatchString(output)
+			match := re.MatchString(stdout)
 			if !match {
 				t.Errorf("match on %q not found in\n\n%s",
-					tc.stdoutRegex, output)
+					tc.stdoutRegex, stdout)
 			}
 		})
 	}

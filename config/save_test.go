@@ -35,7 +35,7 @@ func TestConfig_SaveHandler(t *testing.T) {
 	// GIVEN a message is sent to the SaveHandler
 	config := testConfig()
 	// Disable fatal panics.
-	defer func() { _ = recover() }()
+	defer func() { recover() }()
 	go func() {
 		*config.SaveChannel <- true
 	}()

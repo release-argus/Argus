@@ -17,8 +17,6 @@
 package service
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -86,29 +84,22 @@ func TestSlice_Print(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
 			tc.want = strings.ReplaceAll(tc.want, "\t", "")
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN Print is called
 			tc.slice.Print("", tc.ordering)
 
-			// THEN it prints the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			strOut := string(out)
+			// THEN it prints the expected stdout
+			stdout := releaseStdout()
 			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if strOut != tc.want {
+			if stdout != tc.want {
 				t.Errorf("Print should have given\n%q\nbut gave\n%q",
-					tc.want, strOut)
+					tc.want, stdout)
 			}
 		})
 	}

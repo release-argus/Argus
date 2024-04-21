@@ -19,7 +19,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"regexp"
@@ -88,6 +87,7 @@ func TestCheckFile(t *testing.T) {
 			if tc.panicRegex != "" {
 				defer func() {
 					r := recover()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -387,12 +387,7 @@ func Test_UpdateColumnTypes(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			releaseStdout := test.CaptureStdout()
 
 			databaseFile := "Test_UpdateColumnTypes.db"
 			db, err := sql.Open("sqlite", databaseFile)
@@ -457,19 +452,16 @@ func Test_UpdateColumnTypes(t *testing.T) {
 					latest_version, latest_version_timestamp, deployed_version, deployed_version_timestamp, approved_version,
 					got.LatestVersion(), got.LatestVersionTimestamp(), got.DeployedVersion(), got.DeployedVersionTimestamp(), got.ApprovedVersion())
 			}
-			// AND the conversion was output to stdout
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
+			// AND the conversion was printed to stdout
+			stdout := releaseStdout()
 			want := "Finished updating column types"
-			contains := strings.Contains(output, want)
+			contains := strings.Contains(stdout, want)
 			if tc.columnType == "TEXT" && contains {
 				t.Errorf("Table started as %q, so should not have been updated. Got %q",
-					tc.columnType, output)
+					tc.columnType, stdout)
 			} else if tc.columnType == "STRING" && !contains {
 				t.Errorf("Table started as %q, so should have been updated. Got %q",
-					tc.columnType, output)
+					tc.columnType, stdout)
 			}
 		})
 	}

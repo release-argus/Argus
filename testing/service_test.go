@@ -18,7 +18,6 @@ package testing
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"testing"
@@ -42,12 +41,12 @@ func TestServiceTest(t *testing.T) {
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
-		outputRegex *string
+		stdoutRegex *string
 		panicRegex  *string
 	}{
 		"flag is empty": {
 			flag:        "",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -71,7 +70,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"github service": {
 			flag:        "argus",
-			outputRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					LatestVersion: *latestver.New(
@@ -91,7 +90,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"url service type but github owner/repo url": {
 			flag:        "argus",
-			outputRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
+			stdoutRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -111,7 +110,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"url service": {
 			flag:        "argus",
-			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -131,7 +130,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"service with deployed version lookup": {
 			flag:        "argus",
-			outputRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -161,20 +160,15 @@ func TestServiceTest(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
-					// Reset stdout
-					w.Close()
-					os.Stdout = stdout
-					// Check the panic message
 					r := recover()
+					releaseStdout()
+
+					// Check the panic message
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -212,17 +206,14 @@ func TestServiceTest(t *testing.T) {
 			}
 			ServiceTest(&tc.flag, &cfg, jLog)
 
-			// THEN we get the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			if tc.outputRegex != nil {
-				re := regexp.MustCompile(*tc.outputRegex)
-				match := re.MatchString(output)
+			// THEN we get the expected stdout
+			stdout := releaseStdout()
+			if tc.stdoutRegex != nil {
+				re := regexp.MustCompile(*tc.stdoutRegex)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Errorf("want match on %q\ngot:\n%s",
-						*tc.outputRegex, output)
+						*tc.stdoutRegex, stdout)
 				}
 			}
 		})

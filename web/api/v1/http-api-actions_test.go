@@ -108,8 +108,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			if tc.statusCode == 0 {
 				tc.statusCode = http.StatusOK
@@ -154,9 +153,6 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			cfg.Order = append(cfg.Order, name)
 			cfg.OrderMutex.Unlock()
 			defer cfg.DeleteService(name)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			target := "/api/v1/service/actions/"
 			target += url.QueryEscape(tc.serviceID)
 
@@ -171,18 +167,15 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			defer res.Body.Close()
 
 			// THEN we get the expected response
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
+			stdout := releaseStdout()
 			// stdout finishes
 			if tc.stdoutRegex != "" {
 				tc.stdoutRegex = strings.ReplaceAll(tc.stdoutRegex, "__name__", name)
 				re := regexp.MustCompile(tc.stdoutRegex)
-				match := re.MatchString(output)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, output)
+						tc.stdoutRegex, stdout)
 				}
 			}
 			message, _ := io.ReadAll(res.Body)
@@ -432,8 +425,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
 			svc := testService(tc.serviceID)
@@ -489,10 +481,6 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			api.Config.Order = append(api.Config.Order, name)
 			api.Config.OrderMutex.Unlock()
 			defer api.Config.DeleteService(name)
-			// Stdout setup
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN the HTTP request is sent to run the action(s)
 			target := tc.target
@@ -570,11 +558,8 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			for expecting != 0 {
 				message := <-*api.Config.HardDefaults.Service.Status.AnnounceChannel
 				if message == nil {
-					w.Close()
-					out, _ := io.ReadAll(r)
-					os.Stdout = stdout
-					output := string(out)
-					t.Log(time.Now(), output)
+					stdout := releaseStdout()
+					t.Log(time.Now(), stdout)
 					t.Errorf("expecting %d more messages but got %v",
 						expecting, message)
 					return
@@ -592,21 +577,18 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				t.Fatalf("wasn't expecting another message but got one\n%#v\n%s",
 					extraMessages, string(raw))
 			}
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
+			stdout := releaseStdout()
 			// stdout finishes
 			if tc.stdoutRegex != "" {
 				re := regexp.MustCompile(tc.stdoutRegex)
-				match := re.MatchString(output)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, output)
+						tc.stdoutRegex, stdout)
 				}
 				return
 			}
-			t.Log(output)
+			t.Log(stdout)
 			// Check version was skipped
 			if util.DefaultIfNil(tc.target) == "ARGUS_SKIP" {
 				if tc.wantSkipMessage &&

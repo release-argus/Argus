@@ -514,19 +514,22 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				if r != nil {
-					if tc.errRegex == "" {
-						t.Fatalf("unexpected panic: %v", r)
+				// Ignore nil panics
+				if r == nil {
+					return
+				}
+
+				if tc.errRegex == "" {
+					t.Fatalf("unexpected panic: %v", r)
+				}
+				switch r.(type) {
+				case string:
+					if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
+						t.Errorf("want error matching:\n%v\ngot:\n%v",
+							tc.errRegex, t)
 					}
-					switch r.(type) {
-					case string:
-						if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
-							t.Errorf("want error matching:\n%v\ngot:\n%v",
-								tc.errRegex, t)
-						}
-					default:
-						t.Fatalf("unexpected panic: %v", r)
-					}
+				default:
+					t.Fatalf("unexpected panic: %v", r)
 				}
 			}()
 
@@ -643,9 +646,13 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				if r != nil &&
-					!(strings.Contains(r.(string), "no such file or directory") ||
-						strings.Contains(r.(string), "cannot find the file specified")) {
+				// Ignore nil panics
+				if r == nil {
+					return
+				}
+
+				if !(strings.Contains(r.(string), "no such file or directory") ||
+					strings.Contains(r.(string), "cannot find the file specified")) {
 					t.Errorf("expected an error about the file not existing, not %s",
 						r.(string))
 				}

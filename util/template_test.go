@@ -49,6 +49,7 @@ func TestTemplate_String(t *testing.T) {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)

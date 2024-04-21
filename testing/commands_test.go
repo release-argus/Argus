@@ -18,8 +18,6 @@ package testing
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"regexp"
 	"testing"
 
@@ -35,12 +33,12 @@ func TestCommandTest(t *testing.T) {
 	tests := map[string]struct {
 		flag        string
 		slice       service.Slice
-		outputRegex *string
+		stdoutRegex *string
 		panicRegex  *string
 	}{
 		"flag is empty": {
 			flag:        "",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -54,7 +52,7 @@ func TestCommandTest(t *testing.T) {
 		"unknown service in flag": {
 			flag:        "something",
 			panicRegex:  stringPtr(" could not be found "),
-			outputRegex: stringPtr("should have panic'd before reaching this"),
+			stdoutRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -67,7 +65,7 @@ func TestCommandTest(t *testing.T) {
 		},
 		"known service in flag successful command": {
 			flag:        "argus",
-			outputRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
+			stdoutRegex: stringPtr(`Executing 'echo command did run'\s+.*command did run\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -80,7 +78,7 @@ func TestCommandTest(t *testing.T) {
 		},
 		"known service in flag failing command": {
 			flag:        "argus",
-			outputRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
+			stdoutRegex: stringPtr(`.*Executing 'ls /root'\s+.*exit status [1-9]\s+`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -94,7 +92,7 @@ func TestCommandTest(t *testing.T) {
 		"service with no commands": {
 			flag:        "argus",
 			panicRegex:  stringPtr(" does not have any `command` defined"),
-			outputRegex: stringPtr("should have panic'd before reaching this"),
+			stdoutRegex: stringPtr("should have panic'd before reaching this"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus"}},
@@ -104,16 +102,14 @@ func TestCommandTest(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
-			test.StdoutMutex.Lock()
-			defer test.StdoutMutex.Unlock()
+			releaseStdout := test.CaptureStdout()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
+					releaseStdout()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -145,17 +141,14 @@ func TestCommandTest(t *testing.T) {
 			}
 			CommandTest(&tc.flag, &cfg, jLog)
 
-			// THEN we get the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			if tc.outputRegex != nil {
-				re := regexp.MustCompile(*tc.outputRegex)
-				match := re.MatchString(output)
+			// THEN we get the expected stdout
+			stdout := releaseStdout()
+			if tc.stdoutRegex != nil {
+				re := regexp.MustCompile(*tc.stdoutRegex)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Errorf("want match for %q\ngot: %q",
-						*tc.outputRegex, output)
+						*tc.stdoutRegex, stdout)
 				}
 			}
 		})
