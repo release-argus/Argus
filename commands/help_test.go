@@ -17,48 +17,15 @@
 package command
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
-
-func testController(announce *chan []byte) (control *Controller) {
-	control = &Controller{}
-	svcStatus := svcstatus.New(
-		announce, nil, nil,
-		"", "", "", "", "", "")
-	svcStatus.ServiceID = stringPtr("service_id")
-	control.Init(
-		svcStatus,
-		&Slice{{}, {}},
-		nil,
-		stringPtr("14m"),
-	)
-
-	return
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -70,6 +37,22 @@ func TestMain(m *testing.M) {
 
 	// exit
 	os.Exit(exitCode)
+}
+
+func testController(announce *chan []byte) (control *Controller) {
+	control = &Controller{}
+	svcStatus := svcstatus.New(
+		announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = test.StringPtr("service_id")
+	control.Init(
+		svcStatus,
+		&Slice{{}, {}},
+		nil,
+		test.StringPtr("14m"),
+	)
+
+	return
 }
 
 func testShoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
@@ -96,7 +79,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 
 	shoutrrr.ID = "test"
 	shoutrrr.ServiceStatus = &svcstatus.Status{
-		ServiceID: stringPtr("service"),
+		ServiceID: test.StringPtr("service"),
 	}
 	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr

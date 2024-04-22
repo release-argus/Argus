@@ -28,6 +28,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -49,10 +50,6 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 	os.Remove(*cfg.Settings.Data.DatabaseFile)
 	os.Exit(exitCode)
-}
-
-func stringPtr(val string) *string {
-	return &val
 }
 
 func testConfig() (cfg *config.Config) {
@@ -97,7 +94,7 @@ func testConfig() (cfg *config.Config) {
 		svc.Status.Init(
 			len(svc.Notify), len(svc.Command), len(svc.WebHook),
 			&svc.ID,
-			stringPtr("https://example.com"))
+			test.StringPtr("https://example.com"))
 		svc.Status.SetApprovedVersion("1.0.0", false)
 		svc.Status.SetDeployedVersion("2.0.0", false)
 		svc.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
@@ -119,6 +116,7 @@ func testAPI(primary string, secondary string) *api {
 
 	return &testAPI
 }
+
 func dbCleanup(api *api) {
 	api.db.Close()
 	os.Remove(*api.config.Settings.Data.DatabaseFile)
@@ -169,7 +167,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
 	status.Init(
 		0, 0, 0,
 		&id,
-		stringPtr("https://example.com"))
+		test.StringPtr("https://example.com"))
 	status.SetLatestVersion(lv, false)
 	status.SetLatestVersionTimestamp(lvt)
 	status.SetDeployedVersion(dv, false)

@@ -18,7 +18,6 @@ package v1
 
 import (
 	"os"
-	"strings"
 	"sync"
 	"testing"
 
@@ -186,12 +185,4 @@ func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 	return &config.FaviconSettings{
 		SVG: svg,
 		PNG: png}
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

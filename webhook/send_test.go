@@ -40,7 +40,7 @@ func TestWebHook_Try(t *testing.T) {
 		desiredStatusCode int
 	}{
 		"invalid url": {
-			url:      stringPtr("invalid://	test"),
+			url:      test.StringPtr("invalid://	test"),
 			errRegex: "failed to get .?http.request"},
 		"fail due to invalid secret": {
 			wouldFail: true,

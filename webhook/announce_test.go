@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -39,11 +40,11 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 		},
 		"failed (failed=true) does delay by 15s": {
 			timeDifference: 15 * time.Second,
-			failed:         boolPtr(true),
+			failed:         test.BoolPtr(true),
 		},
 		"success (failed=false) does delay by 2*Interval": {
 			timeDifference: 24 * time.Minute,
-			failed:         boolPtr(false),
+			failed:         test.BoolPtr(false),
 		},
 	}
 
@@ -77,8 +78,8 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 			}
 
 			// if they failed status matches
-			got := stringifyPointer(parsed.WebHookData[webhook.ID].Failed)
-			want := stringifyPointer(webhook.Failed.Get(webhook.ID))
+			got := test.StringifyPtr(parsed.WebHookData[webhook.ID].Failed)
+			want := test.StringifyPtr(webhook.Failed.Get(webhook.ID))
 			if got != want {
 				t.Errorf("want failed=%s\ngot  failed=%s",
 					want, got)

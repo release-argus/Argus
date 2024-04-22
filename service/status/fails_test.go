@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestFailsBase_Init(t *testing.T) {
@@ -75,19 +77,19 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			size:       0,
 			setAtArray: map[int]*bool{},
 			setAtMap: map[string]*bool{
-				"test": boolPtr(true)},
+				"test": test.BoolPtr(true)},
 		},
 		"can add to non-empty map or edit array": {
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(false),
-				2: boolPtr(true),
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(false),
+				2: test.BoolPtr(true),
 			},
 			setAtMap: map[string]*bool{
-				"bish": boolPtr(true),
-				"bash": boolPtr(false),
-				"bosh": boolPtr(true)},
+				"bish": test.BoolPtr(true),
+				"bash": test.BoolPtr(false),
+				"bosh": test.BoolPtr(true)},
 		},
 	}
 
@@ -170,16 +172,16 @@ func TestFailsBase_AllPassed(t *testing.T) {
 		},
 		"all true (failed)": {
 			fails: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(true),
-				2: boolPtr(true)},
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(true),
+				2: test.BoolPtr(true)},
 			want: false,
 		},
 		"all false (passed)": {
 			fails: map[int]*bool{
-				0: boolPtr(false),
-				1: boolPtr(false),
-				2: boolPtr(false)},
+				0: test.BoolPtr(false),
+				1: test.BoolPtr(false),
+				2: test.BoolPtr(false)},
 			want: true,
 		},
 		"all nil (not run)": {
@@ -191,8 +193,8 @@ func TestFailsBase_AllPassed(t *testing.T) {
 		},
 		"mixed": {
 			fails: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(false),
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(false),
 				2: nil},
 			want: false,
 		},
@@ -246,15 +248,15 @@ func TestFailsBase_Reset(t *testing.T) {
 		},
 		"all true (failed)": {
 			fails: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(true),
-				2: boolPtr(true)},
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(true),
+				2: test.BoolPtr(true)},
 		},
 		"all false (passed)": {
 			fails: map[int]*bool{
-				0: boolPtr(false),
-				1: boolPtr(false),
-				2: boolPtr(false)},
+				0: test.BoolPtr(false),
+				1: test.BoolPtr(false),
+				2: test.BoolPtr(false)},
 		},
 		"all nil (not run)": {
 			fails: map[int]*bool{
@@ -264,8 +266,8 @@ func TestFailsBase_Reset(t *testing.T) {
 		},
 		"mixed": {
 			fails: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(false),
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(false),
 				2: nil},
 		},
 	}
@@ -325,28 +327,28 @@ func TestFailsBase_Length(t *testing.T) {
 			size:       0,
 			setAtArray: map[int]*bool{},
 			setAtMap: map[string]*bool{
-				"test": boolPtr(true)},
+				"test": test.BoolPtr(true)},
 		},
 		"can add to non-empty map or edit array": {
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(false),
-				2: boolPtr(true),
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(false),
+				2: test.BoolPtr(true),
 			},
 			setAtMap: map[string]*bool{
-				"bish": boolPtr(true),
-				"bash": boolPtr(false),
-				"bosh": boolPtr(true)},
+				"bish": test.BoolPtr(true),
+				"bash": test.BoolPtr(false),
+				"bosh": test.BoolPtr(true)},
 		},
 		"length gives number of elements in map, not make size": {
 			size: 3,
 			setAtArray: map[int]*bool{
-				0: boolPtr(true),
-				1: boolPtr(false)},
+				0: test.BoolPtr(true),
+				1: test.BoolPtr(false)},
 			setAtMap: map[string]*bool{
-				"bish": boolPtr(true),
-				"bash": boolPtr(false)},
+				"bish": test.BoolPtr(true),
+				"bash": test.BoolPtr(false)},
 		},
 	}
 
@@ -406,13 +408,13 @@ func TestFails_String(t *testing.T) {
 		},
 		"no fails": {
 			commandFails: []*bool{
-				nil, boolPtr(false)},
+				nil, test.BoolPtr(false)},
 			shoutrrrFails: map[string]*bool{
-				"bar": boolPtr(false),
+				"bar": test.BoolPtr(false),
 				"foo": nil},
 			webhookFails: map[string]*bool{
 				"bar": nil,
-				"foo": boolPtr(false)},
+				"foo": test.BoolPtr(false)},
 			want: `
 shoutrrr: {bar: false, foo: nil},
  command: [0: nil, 1: false],
@@ -420,41 +422,41 @@ shoutrrr: {bar: false, foo: nil},
 		},
 		"only shoutrrr": {
 			shoutrrrFails: map[string]*bool{
-				"bash": boolPtr(false),
+				"bash": test.BoolPtr(false),
 				"bish": nil,
-				"bosh": boolPtr(true)},
+				"bosh": test.BoolPtr(true)},
 			want: `
 shoutrrr: {bash: false, bish: nil, bosh: true}`,
 		},
 		"only command": {
 			commandFails: []*bool{
 				nil,
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 			want: `
 command: [0: nil, 1: false, 2: true]`,
 		},
 		"only webhook": {
 			webhookFails: map[string]*bool{
-				"bash": boolPtr(true),
-				"bish": boolPtr(false),
+				"bash": test.BoolPtr(true),
+				"bish": test.BoolPtr(false),
 				"bosh": nil},
 			want: `
 webhook: {bash: true, bish: false, bosh: nil}`,
 		},
 		"all": {
 			shoutrrrFails: map[string]*bool{
-				"bash": boolPtr(false),
-				"bish": boolPtr(true),
+				"bash": test.BoolPtr(false),
+				"bish": test.BoolPtr(true),
 				"bosh": nil},
 			commandFails: []*bool{
 				nil,
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 			webhookFails: map[string]*bool{
-				"bash": boolPtr(false),
+				"bash": test.BoolPtr(false),
 				"bish": nil,
-				"bosh": boolPtr(true)},
+				"bosh": test.BoolPtr(true)},
 			want: `
 shoutrrr: {bash: false, bish: true, bosh: nil},
  command: [0: nil, 1: false, 2: true],
@@ -462,17 +464,17 @@ shoutrrr: {bash: false, bish: true, bosh: nil},
 		},
 		"maps are alphabetical": {
 			shoutrrrFails: map[string]*bool{
-				"bish": boolPtr(true),
-				"bash": boolPtr(true),
-				"bosh": boolPtr(true)},
+				"bish": test.BoolPtr(true),
+				"bash": test.BoolPtr(true),
+				"bosh": test.BoolPtr(true)},
 			commandFails: []*bool{
 				nil,
-				boolPtr(true),
-				boolPtr(false)},
+				test.BoolPtr(true),
+				test.BoolPtr(false)},
 			webhookFails: map[string]*bool{
-				"zip":  boolPtr(true),
-				"zap":  boolPtr(true),
-				"zoop": boolPtr(true)},
+				"zip":  test.BoolPtr(true),
+				"zap":  test.BoolPtr(true),
+				"zoop": test.BoolPtr(true)},
 			want: `
 shoutrrr: {bash: true, bish: true, bosh: true},
  command: [0: nil, 1: true, 2: false],

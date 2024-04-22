@@ -17,36 +17,16 @@
 package webhook
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func uintPtr(val int) *uint {
-	converted := uint(val)
-	return &converted
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
@@ -64,16 +44,16 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
 	webhook := New(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
 		nil,
 		&whMaxTries,
 		nil,
-		stringPtr("12m"),
+		test.StringPtr("12m"),
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
 		&WebHookDefaults{},
@@ -83,7 +63,7 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	webhook.ServiceStatus = &svcstatus.Status{}
 	webhook.ServiceStatus.Init(
 		0, 0, 1,
-		stringPtr("testServiceID"),
+		test.StringPtr("testServiceID"),
 		nil)
 	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
 	serviceName := "testServiceID"
@@ -116,13 +96,13 @@ func testWebHookDefaults(failing bool, selfSignedCert bool, customHeaders bool) 
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
 	webhook := NewDefaults(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
 		&whMaxTries,
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style")
 	if failing {
@@ -164,8 +144,8 @@ func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	notifier.ServiceStatus = &svcstatus.Status{}
 	notifier.ServiceStatus.Init(
 		0, 1, 0,
-		stringPtr("testServiceID"),
-		stringPtr("https://example.com"))
+		test.StringPtr("testServiceID"),
+		test.StringPtr("https://example.com"))
 	notifier.Failed = &notifier.ServiceStatus.Fails.Shoutrrr
 	if failing {
 		notifier.URLFields["token"] = "invalid"

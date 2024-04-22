@@ -24,6 +24,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	metric "github.com/release-argus/Argus/web/metrics"
@@ -60,7 +61,7 @@ func TestSlice_Track(t *testing.T) {
 					(*slice)[j] = testServiceURL(name)
 				}
 				if len(tc.active) != 0 {
-					(*slice)[j].Options.Active = boolPtr(tc.active[i])
+					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
 				}
 				(*slice)[j].Status.SetLatestVersion("", false)
 				(*slice)[j].Status.SetDeployedVersion("", false)
@@ -132,7 +133,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"first query updates LatestVersion and DeployedVersion with active true": {
-			livenessMetric: 1, active: boolPtr(true),
+			livenessMetric: 1, active: test.BoolPtr(true),
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			wantAnnounces:       1, // announce: 1 for latest query
@@ -245,7 +246,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMesages: 0, // db: 0 for nothing changing
 		},
 		"inactive service doesn't track": {
-			livenessMetric: 0, active: boolPtr(false),
+			livenessMetric: 0, active: test.BoolPtr(false),
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
 			wantAnnounces: 0, wantDatabaseMesages: 0,

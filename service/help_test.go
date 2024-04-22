@@ -17,9 +17,7 @@
 package service
 
 import (
-	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -28,26 +26,10 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -71,7 +53,7 @@ func testServiceGitHub(id string) *Service {
 	svc := &Service{
 		ID: id,
 		LatestVersion: *latestver.New(
-			stringPtr(os.Getenv("GITHUB_TOKEN")),
+			test.StringPtr(os.Getenv("GITHUB_TOKEN")),
 			nil, nil, nil,
 			&filter.Require{
 				RegexContent: "content",
@@ -80,14 +62,14 @@ func testServiceGitHub(id string) *Service {
 			"github",
 			"release-argus/Argus",
 			nil,
-			boolPtr(false),
+			test.BoolPtr(false),
 			&latestver.LookupDefaults{},
 			&latestver.LookupDefaults{}),
 		Dashboard: *NewDashboardOptions(
-			boolPtr(false), "test", "https://example.com", "https://release-argus.io",
+			test.BoolPtr(false), "test", "https://example.com", "https://release-argus.io",
 			nil, nil),
 		Options: *opt.New(
-			boolPtr(true), "5s", boolPtr(true),
+			test.BoolPtr(true), "5s", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		Defaults:     &Defaults{},
 		HardDefaults: &Defaults{},
@@ -123,13 +105,13 @@ func testServiceURL(id string) *Service {
 		LatestVersion:         *testLatestVersionLookupURL(false),
 		DeployedVersionLookup: testDeployedVersionLookup(false),
 		Dashboard: *NewDashboardOptions(
-			boolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
+			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
 			&DashboardOptionsDefaults{}, &DashboardOptionsDefaults{}),
 		Status: *svcstatus.New(
 			&announceChannel, &databaseChannel, &saveChannel,
 			"", "", "", "", "", ""),
 		Options: *opt.New(
-			boolPtr(true), "5s", boolPtr(true),
+			test.BoolPtr(true), "5s", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		Defaults: &Defaults{},
 		HardDefaults: &Defaults{
@@ -163,11 +145,11 @@ func testServiceURL(id string) *Service {
 
 func testLatestVersionLookupURL(fail bool) *latestver.Lookup {
 	lv := latestver.New(
-		stringPtr(os.Getenv("GITHUB_TOKEN")),
-		boolPtr(!fail),
+		test.StringPtr(os.Getenv("GITHUB_TOKEN")),
+		test.BoolPtr(!fail),
 		nil,
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		&filter.Require{
 			RegexContent: "{{ version }}-beta",
@@ -177,21 +159,21 @@ func testLatestVersionLookupURL(fail bool) *latestver.Lookup {
 		"url",
 		"https://invalid.release-argus.io/plain",
 		&filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-		boolPtr(false),
+			{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
+		test.BoolPtr(false),
 		&latestver.LookupDefaults{},
 		&latestver.LookupDefaults{})
-	lv.Status.ServiceID = stringPtr("foo")
+	lv.Status.ServiceID = test.StringPtr("foo")
 	return lv
 }
 
 func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 	dvl = deployedver.New(
-		boolPtr(!fail),
+		test.BoolPtr(!fail),
 		nil, nil,
 		"version",
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		"", nil,
 		&svcstatus.Status{},
@@ -213,16 +195,16 @@ func testWebHook(failing bool) *webhook.WebHook {
 	desiredStatusCode := 0
 	whMaxTries := uint(1)
 	wh := webhook.New(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&desiredStatusCode,
 		nil,
 		&whMaxTries,
 		nil,
-		stringPtr("12m"),
+		test.StringPtr("12m"),
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
 		nil, nil, nil)
@@ -230,12 +212,4 @@ func testWebHook(failing bool) *webhook.WebHook {
 		wh.Secret = "notArgus"
 	}
 	return wh
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

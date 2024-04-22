@@ -16,15 +16,10 @@
 
 package opt
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
+import "github.com/release-argus/Argus/test"
 
 func testOptions() *Options {
 	return New(
-		boolPtr(true), "10m", boolPtr(true),
+		test.BoolPtr(true), "10m", test.BoolPtr(true),
 		&OptionsDefaults{}, &OptionsDefaults{})
 }

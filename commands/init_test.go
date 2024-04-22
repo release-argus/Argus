@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -30,12 +31,12 @@ func TestController_SetNextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{}
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&svcstatus.Status{ServiceID: test.StringPtr("service_id")},
 		&Slice{
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"},
 			{"date", "+%m-%d-%Y"}, {"true"}, {"false"}},
 		nil,
-		stringPtr("11m"))
+		test.StringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
 	controller.Failed.Set(4, false)
@@ -113,13 +114,13 @@ func TestController_IsRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{}
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&svcstatus.Status{ServiceID: test.StringPtr("service_id")},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
 		nil,
-		stringPtr("11m"))
+		test.StringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
 	nextRunnables := []time.Time{
@@ -164,13 +165,13 @@ func TestController_NextRunnable(t *testing.T) {
 	// GIVEN a Controller with various Command's
 	controller := Controller{}
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("service_id")},
+		&svcstatus.Status{ServiceID: test.StringPtr("service_id")},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
 		nil,
-		stringPtr("11m"))
+		test.StringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
 	nextRunnables := []time.Time{
@@ -293,13 +294,13 @@ func TestController_Metrics(t *testing.T) {
 	// GIVEN a Controller with multiple Command's
 	controller := Controller{}
 	controller.Init(
-		&svcstatus.Status{ServiceID: stringPtr("TestController_Metrics")},
+		&svcstatus.Status{ServiceID: test.StringPtr("TestController_Metrics")},
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"true"},
 			{"false"}},
 		nil,
-		stringPtr("11m"))
+		test.StringPtr("11m"))
 	controller.Failed.Set(1, false)
 	controller.Failed.Set(2, true)
 	nextRunnables := []time.Time{
@@ -383,7 +384,7 @@ func TestCommand_Init(t *testing.T) {
 				{"date", "+%m-%d-%Y"}},
 		},
 		"non-nil parentInterval": {
-			parentInterval: stringPtr("11m"),
+			parentInterval: test.StringPtr("11m"),
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}}},
 	}
@@ -398,7 +399,7 @@ func TestCommand_Init(t *testing.T) {
 				controller = &Controller{}
 			}
 			serviceStatus := svcstatus.Status{}
-			serviceStatus.ServiceID = stringPtr("TestInit")
+			serviceStatus.ServiceID = test.StringPtr("TestInit")
 			controller.Init(
 				&serviceStatus,
 				tc.command,

@@ -558,7 +558,7 @@ func TestHTTP_Config(t *testing.T) {
 			if tc.order != nil {
 				api.Config.Order = *tc.order
 			}
-			tc.wantBody = trimJSON(tc.wantBody) + "\n"
+			tc.wantBody = test.TrimJSON(tc.wantBody) + "\n"
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/config", nil)

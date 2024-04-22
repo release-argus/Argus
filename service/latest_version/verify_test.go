@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -95,24 +96,24 @@ func TestLookup_CheckValues(t *testing.T) {
 			errRegex: []string{
 				`^latest_version:$`,
 				`^  type: <required>`},
-			lType: stringPtr(""),
+			lType: test.StringPtr(""),
 		},
 		"invalid type": {
 			errRegex: []string{
 				`^latest_version:$`,
 				`^  type: "[^"]+" <invalid>`},
-			lType: stringPtr("foo"),
+			lType: test.StringPtr("foo"),
 		},
 		"no url": {
 			errRegex: []string{
 				`^latest_version:$`,
 				`^  url: <required>`},
-			url: stringPtr(""),
+			url: test.StringPtr(""),
 		},
 		"corrects github url": {
 			errRegex: []string{},
-			url:      stringPtr("https://github.com/release-argus/Argus"),
-			wantURL:  stringPtr("release-argus/Argus"),
+			url:      test.StringPtr("https://github.com/release-argus/Argus"),
+			wantURL:  test.StringPtr("release-argus/Argus"),
 		},
 		"invalid require": {
 			errRegex: []string{
@@ -138,7 +139,7 @@ func TestLookup_CheckValues(t *testing.T) {
 				`^  url_commands:$`,
 				`^    item_0:$`,
 				`^      type: "[^"]+" <invalid>`},
-			url:         stringPtr(""),
+			url:         test.StringPtr(""),
 			require:     &filter.Require{RegexContent: "[0-"},
 			urlCommands: &filter.URLCommandSlice{{Type: "foo"}},
 		},

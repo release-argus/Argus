@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -541,36 +542,36 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "this",
-			root:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
 			wantString:  "this",
-			main:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			main:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
 			wantString:  "this",
-			dfault:      stringPtr("this"),
-			hardDefault: stringPtr("not_this"),
+			dfault:      test.StringPtr("this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
 			wantString:  "this",
-			hardDefault: stringPtr("this"),
+			hardDefault: test.StringPtr("this"),
 		},
 		"jinja templating": {
 			wantString:  "this",
-			root:        stringPtr("{% if 'a' == 'a' %}this{% endif %}"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("{% if 'a' == 'a' %}this{% endif %}"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"jinja vars": {
 			wantString:  fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion),
-			root:        stringPtr("foo{{ service_id }}-{{ version }}"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("foo{{ service_id }}-{{ version }}"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 	}
 

@@ -71,7 +71,7 @@ func TestEvalNilPtr(t *testing.T) {
 			ptr: nil, nilStr: "bar",
 			want: "bar"},
 		"non-nil *string": {
-			ptr: stringPtr("foo"), nilStr: "bar",
+			ptr: test.StringPtr("foo"), nilStr: "bar",
 			want: "foo"},
 	}
 
@@ -102,7 +102,7 @@ func TestPtrOrValueToPtr(t *testing.T) {
 			a: nil, b: "bar",
 			want: "bar"},
 		"non-nil `a` pointer": {
-			a: stringPtr("foo"), b: "bar",
+			a: test.StringPtr("foo"), b: "bar",
 			want: "foo"},
 	}
 
@@ -133,8 +133,8 @@ func TestValueIfNotNil(t *testing.T) {
 			check: nil, value: "foo",
 			want: nil},
 		"non-nil `check` pointer": {
-			check: stringPtr("foo"), value: "bar",
-			want: stringPtr("bar")},
+			check: test.StringPtr("foo"), value: "bar",
+			want: test.StringPtr("bar")},
 	}
 
 	for name, tc := range tests {
@@ -206,7 +206,7 @@ func TestDefaultIfNil(t *testing.T) {
 			check: nil,
 			want:  ""},
 		"non-nil `check` pointer": {
-			check: stringPtr("foo"),
+			check: test.StringPtr("foo"),
 			want:  "foo"},
 	}
 
@@ -250,15 +250,15 @@ func TestFirstNonNilPtr(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("bar")},
+				test.StringPtr("bar")},
 			wantIndex: 3,
 		},
 		"2 non-nil pointers": {
 			pointers: []*string{
-				stringPtr("foo"),
+				test.StringPtr("foo"),
 				nil,
 				nil,
-				stringPtr("bar")},
+				test.StringPtr("bar")},
 			wantIndex: 0,
 		},
 	}
@@ -313,7 +313,7 @@ func TestFirstNonNilPtrWithEnv(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("bar")},
+				test.StringPtr("bar")},
 			wantIndex: 3,
 		},
 		"1 non-nil pointer (env var)": {
@@ -322,7 +322,7 @@ func TestFirstNonNilPtrWithEnv(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("${TESTFIRSTNONNILPTRWITHENV_ONE}")},
+				test.StringPtr("${TESTFIRSTNONNILPTRWITHENV_ONE}")},
 			wantIndex:   3,
 			diffAddress: true,
 			wantText:    "bar",
@@ -333,7 +333,7 @@ func TestFirstNonNilPtrWithEnv(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("foo${TESTFIRSTNONNILPTRWITHENV_TWO}")},
+				test.StringPtr("foo${TESTFIRSTNONNILPTRWITHENV_TWO}")},
 			wantIndex:   3,
 			diffAddress: true,
 			wantText:    "foobar",
@@ -344,7 +344,7 @@ func TestFirstNonNilPtrWithEnv(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("${TESTFIRSTNONNILPTRWITHENV_THREE}")},
+				test.StringPtr("${TESTFIRSTNONNILPTRWITHENV_THREE}")},
 			wantIndex:   3,
 			diffAddress: true,
 			wantText:    "",
@@ -354,17 +354,17 @@ func TestFirstNonNilPtrWithEnv(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				stringPtr("${TESTFIRSTNONNILPTRWITHENV_UNSET}")},
+				test.StringPtr("${TESTFIRSTNONNILPTRWITHENV_UNSET}")},
 			wantIndex:   3,
 			diffAddress: false,
 			wantText:    "${TESTFIRSTNONNILPTRWITHENV_UNSET}",
 		},
 		"2 non-nil pointers": {
 			pointers: []*string{
-				stringPtr("foo"),
+				test.StringPtr("foo"),
 				nil,
 				nil,
-				stringPtr("bar")},
+				test.StringPtr("bar")},
 			wantIndex: 0,
 		},
 	}
@@ -664,7 +664,7 @@ func TestPrintlnIfNotNil(t *testing.T) {
 		"nil pointer": {
 			element: nil, didPrint: false},
 		"non-nil pointer": {
-			element: stringPtr("foo"), didPrint: true},
+			element: test.StringPtr("foo"), didPrint: true},
 	}
 
 	for name, tc := range tests {
@@ -703,7 +703,7 @@ func TestPrintlnIfNil(t *testing.T) {
 		"nil pointer": {
 			element: nil, didPrint: true},
 		"non-nil pointer": {
-			element: stringPtr("foo"), didPrint: false},
+			element: test.StringPtr("foo"), didPrint: false},
 	}
 
 	for name, tc := range tests {
@@ -743,7 +743,7 @@ func TestDefaultOrValue(t *testing.T) {
 		"nil pointer": {
 			element: nil, want: ""},
 		"non-nil pointer": {
-			element: stringPtr("foo"), value: "bar", want: "bar"},
+			element: test.StringPtr("foo"), value: "bar", want: "bar"},
 	}
 
 	for name, tc := range tests {
@@ -773,19 +773,19 @@ func TestPtrValueOrValue(t *testing.T) {
 			ptr:   (*string)(nil),
 			value: "argus", want: "argus"},
 		"non-nil string pointer": {
-			ptr:   stringPtr("foo"),
+			ptr:   test.StringPtr("foo"),
 			value: "bar", want: "foo"},
 		"nil bool pointer": {
 			ptr:   (*bool)(nil),
 			value: false, want: false},
 		"non-nil bool pointer": {
-			ptr:   boolPtr(true),
+			ptr:   test.BoolPtr(true),
 			value: false, want: true},
 		"nil int pointer": {
 			ptr:   (*int)(nil),
 			value: 1, want: 1},
 		"non-nil int pointer": {
-			ptr:   intPtr(3),
+			ptr:   test.IntPtr(3),
 			value: 2, want: 3},
 	}
 
@@ -1103,7 +1103,7 @@ func TestInitMap(t *testing.T) {
 		input map[string]string
 	}{
 		"nil map": {
-			input: nilMap(),
+			input: nil,
 		},
 		"empty map": {
 			input: map[string]string{},
@@ -1216,8 +1216,8 @@ func TestMergeMaps(t *testing.T) {
 			want:      map[string]string{},
 		},
 		"nil maps": {
-			base:      nilMap(),
-			overrides: nilMap(),
+			base:      nil,
+			overrides: nil,
 			want:      map[string]string{},
 		},
 		"empty base map": {
@@ -1230,7 +1230,7 @@ func TestMergeMaps(t *testing.T) {
 				"foo":  "bar"},
 		},
 		"nil base map": {
-			base: nilMap(),
+			base: nil,
 			overrides: map[string]string{
 				"test": "123",
 				"foo":  "bar"},
@@ -1251,7 +1251,7 @@ func TestMergeMaps(t *testing.T) {
 			base: map[string]string{
 				"test": "123",
 				"foo":  "bar"},
-			overrides: nilMap(),
+			overrides: nil,
 			want: map[string]string{
 				"test": "123",
 				"foo":  "bar"},
@@ -1498,9 +1498,9 @@ func TestStringToBoolPtr(t *testing.T) {
 		want  *bool
 	}{
 		"'true' gives true": {
-			input: "true", want: boolPtr(true)},
+			input: "true", want: test.BoolPtr(true)},
 		"'false' gives false": {
-			input: "false", want: boolPtr(false)},
+			input: "false", want: test.BoolPtr(false)},
 		"'' gives nil": {
 			input: "", want: nil},
 	}
@@ -1541,11 +1541,11 @@ func TestEnvReplaceFunc(t *testing.T) {
 			want: strBase,
 		},
 		"empty env var": {
-			envVar: stringPtr(""),
+			envVar: test.StringPtr(""),
 			want:   "",
 		},
 		"non-empty env var": {
-			envVar: stringPtr("bar"),
+			envVar: test.StringPtr("bar"),
 			want:   "bar",
 		},
 	}
@@ -1925,7 +1925,7 @@ func TestStringToPointer(t *testing.T) {
 			want:  nil},
 		"non-empty string": {
 			input: "test",
-			want:  stringPtr("test")},
+			want:  test.StringPtr("test")},
 	}
 
 	for name, tc := range tests {

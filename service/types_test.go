@@ -26,6 +26,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -47,7 +48,7 @@ func TestService_String(t *testing.T) {
 			svc: &Service{
 				Comment: "svc for blah",
 				Options: opt.Options{
-					Active: boolPtr(false)},
+					Active: test.BoolPtr(false)},
 				LatestVersion: latestver.Lookup{
 					URL: "release-argus/Argus"},
 				DeployedVersionLookup: &deployedver.Lookup{
@@ -68,14 +69,14 @@ func TestService_String(t *testing.T) {
 						"https://example.com",
 						nil, nil, nil)},
 				Dashboard: *NewDashboardOptions(
-					boolPtr(true), "", "", "",
+					test.BoolPtr(true), "", "", "",
 					nil, nil),
 				Defaults: &Defaults{
 					Options: *opt.NewDefaults(
-						"", boolPtr(false))},
+						"", test.BoolPtr(false))},
 				HardDefaults: &Defaults{
 					Options: *opt.NewDefaults(
-						"", boolPtr(false))}},
+						"", test.BoolPtr(false))}},
 			want: `
 comment: svc for blah
 options:
@@ -147,12 +148,12 @@ func TestService_Summary(t *testing.T) {
 		"empty": {
 			svc: &Service{},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only id": {
@@ -160,26 +161,26 @@ func TestService_Summary(t *testing.T) {
 				ID: "foo"},
 			want: &apitype.ServiceSummary{
 				ID:                       "foo",
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only options.active": {
 			svc: &Service{
 				Options: opt.Options{
-					Active: boolPtr(false)}},
+					Active: test.BoolPtr(false)}},
 			want: &apitype.ServiceSummary{
-				Active:                   boolPtr(false),
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Active:                   test.BoolPtr(false),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only latest_version.type": {
@@ -187,12 +188,12 @@ func TestService_Summary(t *testing.T) {
 				LatestVersion: latestver.Lookup{
 					Type: "github"}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr("github"),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr("github"),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's a url": {
@@ -200,12 +201,12 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr("https://example.com/icon.png"),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr("https://example.com/icon.png"),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's not a url": {
@@ -213,12 +214,12 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					Icon: "smile"}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, from notify": {
@@ -236,12 +237,12 @@ func TestService_Summary(t *testing.T) {
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr("https://example.com/notify.png"),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr("https://example.com/notify.png"),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, dashboard overrides notify": {
@@ -261,12 +262,12 @@ func TestService_Summary(t *testing.T) {
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr("https://example.com/icon.png"),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr("https://example.com/icon.png"),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon_link_to": {
@@ -274,36 +275,36 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					IconLinkTo: "https://example.com"}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr("https://example.com"),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr("https://example.com"),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"only deployed_version": {
 			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(true),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(true),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"no commands": {
 			svc: &Service{
 				Command: command.Slice{}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"3 commands": {
@@ -313,24 +314,24 @@ func TestService_Summary(t *testing.T) {
 					{"true"},
 					{"false"}}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(3),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(3),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"0 webhooks": {
 			svc: &Service{
 				WebHook: webhook.Slice{}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status:                   &apitype.Status{}},
 		},
 		"3 webhooks": {
@@ -349,12 +350,12 @@ func TestService_Summary(t *testing.T) {
 						"gitlab",
 						"", nil, nil, nil)}},
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(3),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(3),
 				Status:                   &apitype.Status{}},
 		},
 		"only status": {
@@ -367,12 +368,12 @@ func TestService_Summary(t *testing.T) {
 			latestVersionTimestamp:   "3-",
 			lastQueried:              "4",
 			want: &apitype.ServiceSummary{
-				Type:                     stringPtr(""),
-				Icon:                     stringPtr(""),
-				IconLinkTo:               stringPtr(""),
-				HasDeployedVersionLookup: boolPtr(false),
-				Command:                  intPtr(0),
-				WebHook:                  intPtr(0),
+				Type:                     test.StringPtr(""),
+				Icon:                     test.StringPtr(""),
+				IconLinkTo:               test.StringPtr(""),
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Command:                  test.IntPtr(0),
+				WebHook:                  test.IntPtr(0),
 				Status: &apitype.Status{
 					ApprovedVersion:          "1",
 					DeployedVersion:          "2",

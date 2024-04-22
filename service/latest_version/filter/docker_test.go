@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -157,7 +158,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				"", time.Now().UTC().Add(time.Minute),
 				nil),
 			hadQueryToken: base64.StdEncoding.EncodeToString([]byte("foo")),
-			wantQueryToken: stringPtr(
+			wantQueryToken: test.StringPtr(
 				base64.StdEncoding.EncodeToString([]byte("foo"))),
 		},
 		"Gets token if past validUntil": {
@@ -483,7 +484,7 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 					"tokenHub", "",
 					"tokenQuay",
 					nil)),
-			defaultTokenGHCR: stringPtr(""),
+			defaultTokenGHCR: test.StringPtr(""),
 			setForToken:      "tokenGHCR",
 			changeDefaults:   false,
 		},
@@ -705,8 +706,8 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 					"defaultTokenForHub", "",
 					"defaultTokenForQuay",
 					nil)),
-			ghcrToken:        stringPtr(""),
-			ghcrDefaultToken: stringPtr(""),
+			ghcrToken:        test.StringPtr(""),
+			ghcrDefaultToken: test.StringPtr(""),
 			setForType:       "ghcr",
 			setForToken:      "",
 			changeDefaults:   false,

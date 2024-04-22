@@ -24,6 +24,7 @@ import (
 
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -43,45 +44,45 @@ func TestBasicAuthFromString(t *testing.T) {
 			want:      &exampleBasicAuth,
 		},
 		"empty string uses previous": {
-			basicAuth: stringPtr(""),
+			basicAuth: test.StringPtr(""),
 			previous:  &exampleBasicAuth,
 			want:      &exampleBasicAuth,
 		},
 		"user and pass set": {
-			basicAuth: stringPtr(`{"username": "foo", "password": "bar"}`),
+			basicAuth: test.StringPtr(`{"username": "foo", "password": "bar"}`),
 			previous:  &exampleBasicAuth,
 			want: &BasicAuth{
 				Username: "foo",
 				Password: "bar"},
 		},
 		"only user set, get pass from previous": {
-			basicAuth: stringPtr(`{"username": "foo"}`),
+			basicAuth: test.StringPtr(`{"username": "foo"}`),
 			previous:  &exampleBasicAuth,
 			want: &BasicAuth{
 				Username: "foo",
 				Password: exampleBasicAuth.Password},
 		},
 		"only pass set, get user from previous": {
-			basicAuth: stringPtr(`{"password": "bar"}`),
+			basicAuth: test.StringPtr(`{"password": "bar"}`),
 			previous:  &exampleBasicAuth,
 			want: &BasicAuth{
 				Username: exampleBasicAuth.Username,
 				Password: "bar"},
 		},
 		"only user set, no previous": {
-			basicAuth: stringPtr(`{"username": "foo"}`),
+			basicAuth: test.StringPtr(`{"username": "foo"}`),
 			previous:  nil,
 			want: &BasicAuth{
 				Username: "foo"},
 		},
 		"only pass set, no previous": {
-			basicAuth: stringPtr(`{"password": "bar"}`),
+			basicAuth: test.StringPtr(`{"password": "bar"}`),
 			previous:  nil,
 			want: &BasicAuth{
 				Password: "bar"},
 		},
 		"invalid json": {
-			basicAuth: stringPtr(`{"username": false`),
+			basicAuth: test.StringPtr(`{"username": false`),
 			previous:  &exampleBasicAuth,
 			want:      &exampleBasicAuth,
 		},
@@ -111,20 +112,20 @@ func TestHeadersFromString(t *testing.T) {
 		want    *[]Header
 	}{
 		"invalid json": {
-			headers: stringPtr(`{"key": false, "value": "bash"}`),
+			headers: test.StringPtr(`{"key": false, "value": "bash"}`),
 			want:    &previousHeaders},
 		"nil string": {
 			headers: nil,
 			want:    &previousHeaders},
 		"empty string": {
-			headers: stringPtr(""),
+			headers: test.StringPtr(""),
 			want:    &previousHeaders},
 		"single header": {
-			headers: stringPtr(`[{"key": "bish", "value": "bash"}]`),
+			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}]`),
 			want: &[]Header{
 				{Key: "bish", Value: "bash"}}},
 		"multiple headers": {
-			headers: stringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
+			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
 			want: &[]Header{
 				{Key: "bish", Value: "bash"},
 				{Key: "bosh", Value: "bosh"}}},
@@ -146,7 +147,7 @@ func TestHeadersFromString(t *testing.T) {
 }
 
 func TestLookup_ApplyOverrides(t *testing.T) {
-	test := testLookup()
+	testL := testLookup()
 	// GIVEN various json strings to parse as parts of a Lookup
 	tests := map[string]struct {
 		allowInvalidCerts  *string
@@ -167,134 +168,134 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			want:     testLookup(),
 		},
 		"allow invalid certs": {
-			allowInvalidCerts: stringPtr("false"),
+			allowInvalidCerts: test.StringPtr("false"),
 			previous:          testLookup(),
 			want: New(
-				boolPtr(false), // AllowInvalidCerts
+				test.BoolPtr(false), // AllowInvalidCerts
 				nil, nil,
-				test.JSON,
-				test.Options,
+				testL.JSON,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"basic auth": {
-			basicAuth: stringPtr(`{"username": "foo", "password": "bar"}`),
+			basicAuth: test.StringPtr(`{"username": "foo", "password": "bar"}`),
 			previous:  testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				&BasicAuth{ // BasicAuth
 					Username: "foo",
 					Password: "bar"},
 				nil,
-				test.JSON,
-				test.Options,
+				testL.JSON,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"headers": {
-			headers: stringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
+			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
 
 			previous: testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil,
 				&[]Header{ // Headers
 					{Key: "bish", Value: "bash"},
 					{Key: "bosh", Value: "bosh"}},
 				"version",
-				test.Options,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"json": {
-			json: stringPtr("bish"),
+			json: test.StringPtr("bish"),
 
 			previous: testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
 				"bish", // JSON
-				test.Options,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"regex": {
-			regex: stringPtr("bish"),
+			regex: test.StringPtr("bish"),
 
 			previous: testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
 				"version",
-				test.Options,
+				testL.Options,
 				"bish", nil, // RegEx
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"regex template": {
-			regexTemplate: stringPtr("$1.$4"),
+			regexTemplate: test.StringPtr("$1.$4"),
 
 			previous:      testLookup(),
 			previousRegex: "([0-9]+)",
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
 				"version",
-				test.Options,
+				testL.Options,
 				"([0-9]+)",
-				stringPtr("$1.$4"), // RegEx Template
+				test.StringPtr("$1.$4"), // RegEx Template
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"semantic versioning": {
-			semanticVersioning: stringPtr("false"),
+			semanticVersioning: test.StringPtr("false"),
 
 			previous: testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
-				test.JSON,
+				testL.JSON,
 				opt.New(
-					boolPtr(false), "", nil,
+					test.BoolPtr(false), "", nil,
 					nil, nil),
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
+				testL.URL,
 				nil, nil),
 		},
 		"url": {
-			url: stringPtr("https://valid.release-argus.io/json"),
+			url: test.StringPtr("https://valid.release-argus.io/json"),
 
 			previous: testLookup(),
 			want: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
-				test.JSON,
-				test.Options,
+				testL.JSON,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
 				"https://valid.release-argus.io/json", // URL
 				nil, nil),
 		},
 		"override with invalid (empty) url": {
-			url: stringPtr(""),
+			url: test.StringPtr(""),
 
 			previous: testLookup(),
 			want:     nil,
 			errRegex: "url: <required>",
 		},
 		"override with invalid regex": {
-			regex: stringPtr("v([0-9))"),
+			regex: test.StringPtr("v([0-9))"),
 
 			previous: testLookup(),
 			want:     nil,
@@ -346,8 +347,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 }
 
 func TestLookup_Refresh(t *testing.T) {
-	test := testLookup()
-	testVersion, _ := test.Query(true, &util.LogFrom{Primary: "TestRefresh"})
+	testL := testLookup()
+	testVersion, _ := testL.Query(true, &util.LogFrom{Primary: "TestRefresh"})
 	if testVersion == "" {
 		t.Fatalf("test version is empty")
 	}
@@ -370,38 +371,38 @@ func TestLookup_Refresh(t *testing.T) {
 		announce                 bool
 	}{
 		"Change of URL": {
-			url:    stringPtr("https://valid.release-argus.io/json"),
+			url:    test.StringPtr("https://valid.release-argus.io/json"),
 			lookup: testLookup(),
 			want:   testVersion,
 		},
 		"Removal of URL": {
-			url:      stringPtr(""),
+			url:      test.StringPtr(""),
 			lookup:   testLookup(),
 			errRegex: "url: <required>",
 			want:     "",
 		},
 		"Change of a few vars": {
-			json:               stringPtr("otherVersion"),
-			semanticVersioning: stringPtr("false"),
+			json:               test.StringPtr("otherVersion"),
+			semanticVersioning: test.StringPtr("false"),
 			lookup:             testLookup(),
 			want:               testVersion + "-beta",
 		},
 		"Change of vars that fail Query": {
-			allowInvalidCerts: stringPtr("false"),
+			allowInvalidCerts: test.StringPtr("false"),
 			lookup:            testLookup(),
 			errRegex:          `x509 \(certificate invalid\)`,
 		},
 		"Refresh new version": {
 			lookup: New(
-				test.AllowInvalidCerts,
+				testL.AllowInvalidCerts,
 				nil, nil,
-				test.JSON,
-				test.Options,
+				testL.JSON,
+				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
-				test.URL,
-				test.Defaults,
-				test.HardDefaults),
+				testL.URL,
+				testL.Defaults,
+				testL.HardDefaults),
 			deployedVersion:          "0.0.0",
 			deployedVersionTimestamp: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
 			want:                     testVersion,
@@ -416,7 +417,7 @@ func TestLookup_Refresh(t *testing.T) {
 			// Copy the starting status
 			previousStatus := svcstatus.Status{}
 			if tc.lookup != nil {
-				tc.lookup.Status = &svcstatus.Status{ServiceID: stringPtr("serviceID")}
+				tc.lookup.Status = &svcstatus.Status{ServiceID: test.StringPtr("serviceID")}
 				previousStatus.SetApprovedVersion(tc.lookup.Status.ApprovedVersion(), false)
 				previousStatus.SetDeployedVersion(tc.lookup.Status.DeployedVersion(), false)
 				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.DeployedVersionTimestamp())

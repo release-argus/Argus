@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestLookup_GetAccessToken(t *testing.T) {
@@ -34,35 +35,35 @@ func TestLookup_GetAccessToken(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "this",
-			root:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this")},
+			root:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this")},
 		"default overrides hardDefault": {
 			wantString:  "this",
-			dfault:      stringPtr("this"),
-			hardDefault: stringPtr("not_this")},
+			dfault:      test.StringPtr("this"),
+			hardDefault: test.StringPtr("not_this")},
 		"hardDefault is last resort": {
 			wantString:  "this",
-			hardDefault: stringPtr("this")},
+			hardDefault: test.StringPtr("this")},
 		"env var is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_ONE": "this"},
-			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_ONE}"),
+			root:       test.StringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_ONE}"),
 		},
 		"env var partial is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_TWO": "th"},
-			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_TWO}is"),
+			root:       test.StringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_TWO}is"),
 		},
 		"empty env var is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTLOOKUP_LV_GETACCESSTOKEN_THREE": ""},
-			root:       stringPtr("th${TESTLOOKUP_LV_GETACCESSTOKEN_THREE}is"),
+			root:       test.StringPtr("th${TESTLOOKUP_LV_GETACCESSTOKEN_THREE}is"),
 		},
 		"undefined env var is used": {
 			wantString: "${TESTLOOKUP_LV_GETACCESSTOKEN_UNSET}",
-			root:       stringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_UNSET}"),
-			dfault:     stringPtr("this"),
+			root:       test.StringPtr("${TESTLOOKUP_LV_GETACCESSTOKEN_UNSET}"),
+			dfault:     test.StringPtr("this"),
 		},
 	}
 
@@ -104,16 +105,16 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantBool:    true,
-			root:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false)},
+			root:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false)},
 		"default overrides hardDefault": {
 			wantBool:    true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false)},
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false)},
 		"hardDefault is last resort": {
 			wantBool:    true,
-			hardDefault: boolPtr(true)},
+			hardDefault: test.BoolPtr(true)},
 	}
 
 	for name, tc := range tests {
@@ -216,7 +217,7 @@ func TestLookup_ServiceURL(t *testing.T) {
 			status.Init(
 				0, 0, 0,
 				&name,
-				stringPtr("http://example.com"))
+				test.StringPtr("http://example.com"))
 			status.SetLatestVersion(tc.latestVersion, false)
 			status.WebURL = &tc.webURL
 			lookup := Lookup{Type: tc.serviceType, URL: tc.url, Status: &status}
@@ -243,16 +244,16 @@ func TestLookup_GetUsePreRelease(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantBool:    true,
-			root:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false)},
+			root:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false)},
 		"default overrides hardDefault": {
 			wantBool:    true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false)},
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false)},
 		"hardDefault is last resort": {
 			wantBool:    true,
-			hardDefault: boolPtr(true)},
+			hardDefault: test.BoolPtr(true)},
 	}
 
 	for name, tc := range tests {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -127,16 +128,16 @@ func TestStatus_GetWebURL(t *testing.T) {
 		want   string
 	}{
 		"nil string": {
-			webURL: stringPtr(""),
+			webURL: test.StringPtr(""),
 			want:   ""},
 		"empty string": {
-			webURL: stringPtr(""),
+			webURL: test.StringPtr(""),
 			want:   ""},
 		"string without templating": {
-			webURL: stringPtr("https://something.com/somewhere"),
+			webURL: test.StringPtr("https://something.com/somewhere"),
 			want:   "https://something.com/somewhere"},
 		"string with templating": {
-			webURL: stringPtr("https://something.com/somewhere/{{ version }}"),
+			webURL: test.StringPtr("https://something.com/somewhere/{{ version }}"),
 			want:   "https://something.com/somewhere/" + latestVersion},
 	}
 
@@ -212,8 +213,8 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 				"", "", "", "", "", "")
 			status.Init(
 				0, 0, 0,
-				stringPtr("TestStatus_SetApprovedVersion_"+name),
-				stringPtr("https://example.com"))
+				test.StringPtr("TestStatus_SetApprovedVersion_"+name),
+				test.StringPtr("https://example.com"))
 			status.SetLatestVersion(latestVersion, false)
 			status.SetDeployedVersion(deployedVersion, false)
 
@@ -305,7 +306,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				status.Init(
 					0, 0, 0,
 					&name,
-					stringPtr("http://example.com"))
+					test.StringPtr("http://example.com"))
 				status.SetApprovedVersion(approvedVersion, haveDB)
 				status.SetDeployedVersion(deployedVersion, haveDB)
 				status.SetLatestVersion(latestVersion, haveDB)
@@ -388,7 +389,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 				status.Init(
 					0, 0, 0,
 					&name,
-					stringPtr("http://example.com"))
+					test.StringPtr("http://example.com"))
 				status.SetApprovedVersion(approvedVersion, haveDB)
 				status.SetDeployedVersion(deployedVersion, haveDB)
 				status.SetLatestVersion(latestVersion, haveDB)
@@ -674,31 +675,31 @@ func TestFails_ResetFails(t *testing.T) {
 		"only notifies": {
 			shoutrrrFails: &map[string]*bool{
 				"0": nil,
-				"1": boolPtr(false),
-				"3": boolPtr(true)},
+				"1": test.BoolPtr(false),
+				"3": test.BoolPtr(true)},
 		},
 		"only commands": {
 			commandFails: &[]*bool{
 				nil,
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 		},
 		"only webhooks": {
 			webhookFails: &map[string]*bool{
 				"0": nil,
-				"1": boolPtr(false),
-				"3": boolPtr(true)},
+				"1": test.BoolPtr(false),
+				"3": test.BoolPtr(true)},
 		},
 		"all filled": {
 			shoutrrrFails: &map[string]*bool{
 				"0": nil,
-				"1": boolPtr(false),
-				"3": boolPtr(true)},
-			commandFails: &[]*bool{nil, boolPtr(false), boolPtr(true)},
+				"1": test.BoolPtr(false),
+				"3": test.BoolPtr(true)},
+			commandFails: &[]*bool{nil, test.BoolPtr(false), test.BoolPtr(true)},
 			webhookFails: &map[string]*bool{
 				"0": nil,
-				"1": boolPtr(false),
-				"3": boolPtr(true)},
+				"1": test.BoolPtr(false),
+				"3": test.BoolPtr(true)},
 		},
 	}
 
@@ -773,15 +774,15 @@ func TestStatus_String(t *testing.T) {
 		"only fails": {
 			commandFails: []*bool{
 				nil,
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 			shoutrrrFails: map[string]*bool{
-				"bash": boolPtr(false),
+				"bash": test.BoolPtr(false),
 				"bish": nil,
-				"bosh": boolPtr(true)},
+				"bosh": test.BoolPtr(true)},
 			webhookFails: map[string]*bool{
 				"bar": nil,
-				"foo": boolPtr(false)},
+				"foo": test.BoolPtr(false)},
 			status: &Status{},
 			want: `
 fails: {
@@ -796,21 +797,21 @@ shoutrrr: {bash: false, bish: nil, bosh: true},
 			status:             &Status{},
 			shoutrrrFails: map[string]*bool{
 				"bish": nil,
-				"bash": boolPtr(false),
-				"bosh": boolPtr(true)},
+				"bash": test.BoolPtr(false),
+				"bosh": test.BoolPtr(true)},
 			commandFails: []*bool{
 				nil,
-				boolPtr(false),
-				boolPtr(true)},
+				test.BoolPtr(false),
+				test.BoolPtr(true)},
 			webhookFails: map[string]*bool{
-				"foo": boolPtr(false),
+				"foo": test.BoolPtr(false),
 				"bar": nil},
 			approvedVersion:          "1.2.4",
 			deployedVersion:          "1.2.3",
 			deployedVersionTimestamp: "2022-01-01T01:01:02Z",
 			latestVersion:            "1.2.4",
 			latestVersionTimestamp:   "2022-01-01T01:01:01Z",
-			lastQueried:              stringPtr("2022-01-01T01:01:01Z"),
+			lastQueried:              test.StringPtr("2022-01-01T01:01:01Z"),
 			want: `
 approved_version: 1.2.4,
  deployed_version: 1.2.3,
@@ -906,7 +907,7 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 			status.Init(
 				0, 0, 0,
 				&name,
-				stringPtr("http://example.com"))
+				test.StringPtr("http://example.com"))
 			status.SetLatestVersion(tc.latestVersion, false)
 			status.SetDeployedVersion(tc.deployedVersion, false)
 
@@ -949,7 +950,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 			status.Init(
 				0, 0, 0,
 				&name,
-				stringPtr("http://example.com"))
+				test.StringPtr("http://example.com"))
 			status.SetLatestVersion("0.0.2", false)
 			status.SetDeployedVersion("0.0.2", false)
 			if tc.nilServiceID {

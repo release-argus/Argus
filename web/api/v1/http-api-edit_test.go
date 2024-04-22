@@ -436,7 +436,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.wantBody = trimJSON(tc.wantBody)
+			tc.wantBody = test.TrimJSON(tc.wantBody)
 			svc := testService(name)
 			defer func() {
 				os.RemoveAll(file)

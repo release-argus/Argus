@@ -40,19 +40,13 @@ func CaptureStdout() func() string {
 }
 
 // BoolPtr returns a pointer to the given boolean value
-func BoolPtr(val bool) *bool {
-	return &val
-}
+func BoolPtr(val bool) *bool { return &val }
 
 // IntPtr returns a pointer to the given integer value
-func IntPtr(val int) *int {
-	return &val
-}
+func IntPtr(val int) *int { return &val }
 
 // StringPtr returns a pointer to the given string value
-func StringPtr(val string) *string {
-	return &val
-}
+func StringPtr(val string) *string { return &val }
 
 // UIntPtr returns a pointer to the given unsigned integer value
 func UIntPtr(val int) *uint {

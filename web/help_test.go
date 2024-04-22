@@ -39,29 +39,13 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var mainCfg *config.Config
 var port *string
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -74,7 +58,7 @@ func TestMain(m *testing.M) {
 	os.Remove(file)
 	defer os.Remove(*mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
-	mainCfg.Settings.Web.ListenHost = stringPtr("localhost")
+	mainCfg.Settings.Web.ListenHost = test.StringPtr("localhost")
 
 	// WHEN the Router is fetched for this Config
 	router = newWebUI(mainCfg)
@@ -90,7 +74,7 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	cfg = &config.Config{}
 
 	// Settings.Log
-	cfg.Settings.Log.Level = stringPtr("DEBUG")
+	cfg.Settings.Log.Level = test.StringPtr("DEBUG")
 
 	cfg.Load(
 		path,
@@ -183,8 +167,8 @@ func testService(id string) (svc *service.Service) {
 	svc = &service.Service{
 		ID: id,
 		LatestVersion: *latestver.New(
-			stringPtr(""),
-			boolPtr(false),
+			test.StringPtr(""),
+			test.BoolPtr(false),
 			nil, nil,
 			&filter.Require{
 				RegexContent: "content",
@@ -198,17 +182,17 @@ func testService(id string) (svc *service.Service) {
 			"url",
 			"https://release-argus.io",
 			&filter.URLCommandSlice{testURLCommandRegex()},
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil, nil),
 		DeployedVersionLookup: testDeployedVersion(),
 		Options: *opt.New(
 			nil,
 			"10m",
-			boolPtr(true),
+			test.BoolPtr(true),
 			&opt.OptionsDefaults{},
 			&opt.OptionsDefaults{}),
 		Dashboard: *service.NewDashboardOptions(
-			boolPtr(false), "test", "", "https://release-argus.io",
+			test.BoolPtr(false), "test", "", "https://release-argus.io",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},
@@ -265,16 +249,16 @@ func testWebHook(failing bool, id string) *webhook.WebHook {
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
 	wh := webhook.New(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&whDesiredStatusCode,
 		nil,
 		&whMaxTries,
 		nil,
-		stringPtr("11m"),
+		test.StringPtr("11m"),
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
 		&webhook.WebHookDefaults{},
@@ -291,13 +275,13 @@ func testWebHookDefaults(failing bool) *webhook.WebHookDefaults {
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
 	wh := webhook.NewDefaults(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&whDesiredStatusCode,
 		&whMaxTries,
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style")
 	if failing {
@@ -340,6 +324,7 @@ func testURLCommandRegex() filter.URLCommand {
 		Index: index,
 	}
 }
+
 func generateCertFiles(certFile, keyFile string) error {
 	// Generate the certificate and private key
 	// Generate a private key

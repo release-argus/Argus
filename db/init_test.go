@@ -296,7 +296,7 @@ func TestAPI_Run(t *testing.T) {
 	want.Init(
 		0, 0, 0,
 		&target,
-		stringPtr("https://example.com"))
+		test.StringPtr("https://example.com"))
 	want.SetLatestVersion("9.9.9", false)
 	want.SetLatestVersionTimestamp("2022-01-01T01:01:01Z")
 	want.SetApprovedVersion("0.0.1", false)

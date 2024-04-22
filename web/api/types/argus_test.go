@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -341,9 +342,9 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		"secret": {
 			webhook: &WebHook{
-				Secret: stringPtr("shazam")},
+				Secret: test.StringPtr("shazam")},
 			want: &WebHook{
-				Secret: stringPtr("<secret>")},
+				Secret: test.StringPtr("<secret>")},
 		},
 		"custom_headers": {
 			webhook: &WebHook{
@@ -357,12 +358,12 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		"all": {
 			webhook: &WebHook{
-				Secret: stringPtr("shazam"),
+				Secret: test.StringPtr("shazam"),
 				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
-				Secret: stringPtr("<secret>"),
+				Secret: test.StringPtr("<secret>"),
 				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "<secret>"},
 					{Key: "X-Bing", Value: "<secret>"}}},
@@ -413,27 +414,27 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 		},
 		"webhooks ordered": {
 			webhook: &WebHookSlice{
-				"alpha": &WebHook{URL: stringPtr("https://example.com")},
-				"bravo": &WebHook{URL: stringPtr("https://example.com/other")}},
+				"alpha": &WebHook{URL: test.StringPtr("https://example.com")},
+				"bravo": &WebHook{URL: test.StringPtr("https://example.com/other")}},
 			want: &[]*WebHook{
-				{ID: "alpha", URL: stringPtr("https://example.com")},
-				{ID: "bravo", URL: stringPtr("https://example.com/other")}},
+				{ID: "alpha", URL: test.StringPtr("https://example.com")},
+				{ID: "bravo", URL: test.StringPtr("https://example.com/other")}},
 		},
 		"webhooks ordered and censored": {
 			webhook: &WebHookSlice{
 				"alpha": &WebHook{
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("foo")},
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("foo")},
 				"bravo": &WebHook{
-					URL:    stringPtr("https://example.com/other"),
-					Secret: stringPtr("bar")}},
+					URL:    test.StringPtr("https://example.com/other"),
+					Secret: test.StringPtr("bar")}},
 			want: &[]*WebHook{
 				{ID: "alpha",
-					URL:    stringPtr("https://example.com"),
-					Secret: stringPtr("<secret>")},
+					URL:    test.StringPtr("https://example.com"),
+					Secret: test.StringPtr("<secret>")},
 				{ID: "bravo",
-					URL:    stringPtr("https://example.com/other"),
-					Secret: stringPtr("<secret>")}},
+					URL:    test.StringPtr("https://example.com/other"),
+					Secret: test.StringPtr("<secret>")}},
 		},
 	}
 
@@ -476,9 +477,9 @@ func TestServiceSummary_String(t *testing.T) {
 		"some": {
 			summary: &ServiceSummary{
 				ID:      "foo",
-				Type:    stringPtr("github"),
-				Command: intPtr(1),
-				WebHook: intPtr(2)},
+				Type:    test.StringPtr("github"),
+				Command: test.IntPtr(1),
+				WebHook: test.IntPtr(2)},
 			want: `
 				{
 					"id": "foo",
@@ -490,15 +491,15 @@ func TestServiceSummary_String(t *testing.T) {
 		"full": {
 			summary: &ServiceSummary{
 				ID:                       "bar",
-				Active:                   boolPtr(true),
-				Comment:                  stringPtr("test"),
-				Type:                     stringPtr("gitlab"),
+				Active:                   test.BoolPtr(true),
+				Comment:                  test.StringPtr("test"),
+				Type:                     test.StringPtr("gitlab"),
 				WebURL:                   "http://example.com",
-				Icon:                     stringPtr("https://example.com/icon.png"),
-				IconLinkTo:               stringPtr("https://release-argus.io"),
-				HasDeployedVersionLookup: boolPtr(true),
-				Command:                  intPtr(2),
-				WebHook:                  intPtr(1),
+				Icon:                     test.StringPtr("https://example.com/icon.png"),
+				IconLinkTo:               test.StringPtr("https://release-argus.io"),
+				HasDeployedVersionLookup: test.BoolPtr(true),
+				Command:                  test.IntPtr(2),
+				WebHook:                  test.IntPtr(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3"}},
 			want: `
@@ -524,7 +525,7 @@ func TestServiceSummary_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the Summary is stringified with String
 			got := tc.summary.String()
@@ -569,78 +570,78 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"same active": {
 			old: &ServiceSummary{
-				Active: boolPtr(false)},
+				Active: test.BoolPtr(false)},
 			new: &ServiceSummary{
-				Active: boolPtr(false)},
+				Active: test.BoolPtr(false)},
 			want: &ServiceSummary{},
 		},
 		"different active": {
 			old: &ServiceSummary{
-				Active: boolPtr(true)},
+				Active: test.BoolPtr(true)},
 			new: &ServiceSummary{
-				Active: boolPtr(false)},
+				Active: test.BoolPtr(false)},
 			want: &ServiceSummary{
-				Active: boolPtr(false)},
+				Active: test.BoolPtr(false)},
 		},
 		"same type": {
 			old: &ServiceSummary{
-				Type: stringPtr("github")},
+				Type: test.StringPtr("github")},
 			new: &ServiceSummary{
-				Type: stringPtr("github")},
+				Type: test.StringPtr("github")},
 			want: &ServiceSummary{},
 		},
 		"different type": {
 			old: &ServiceSummary{
-				Type: stringPtr("github")},
+				Type: test.StringPtr("github")},
 			new: &ServiceSummary{
-				Type: stringPtr("gitlab")},
+				Type: test.StringPtr("gitlab")},
 			want: &ServiceSummary{
-				Type: stringPtr("gitlab")},
+				Type: test.StringPtr("gitlab")},
 		},
 		"same icon": {
 			old: &ServiceSummary{
-				Icon: stringPtr("https://example.com/icon.png")},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: stringPtr("https://example.com/icon.png")},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			want: &ServiceSummary{},
 		},
 		"different icon": {
 			old: &ServiceSummary{
-				Icon: stringPtr("https://example.com/icon.png")},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: stringPtr("https://example.com/icon2.png")},
+				Icon: test.StringPtr("https://example.com/icon2.png")},
 			want: &ServiceSummary{
-				Icon: stringPtr("https://example.com/icon2.png")},
+				Icon: test.StringPtr("https://example.com/icon2.png")},
 		},
 		"same icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io")},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io")},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			want: &ServiceSummary{},
 		},
 		"different icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io")},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io/other")},
+				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
 			want: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io/other")},
+				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
 		},
 		"same has_deployed_version_lookup": {
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: boolPtr(true)},
+				HasDeployedVersionLookup: test.BoolPtr(true)},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: boolPtr(true)},
+				HasDeployedVersionLookup: test.BoolPtr(true)},
 			want: &ServiceSummary{},
 		},
 		"different has_deployed_version_lookup": {
 			old: &ServiceSummary{
-				HasDeployedVersionLookup: boolPtr(true)},
+				HasDeployedVersionLookup: test.BoolPtr(true)},
 			new: &ServiceSummary{
-				HasDeployedVersionLookup: boolPtr(false)},
+				HasDeployedVersionLookup: test.BoolPtr(false)},
 			want: &ServiceSummary{
-				HasDeployedVersionLookup: boolPtr(false)},
+				HasDeployedVersionLookup: test.BoolPtr(false)},
 		},
 		"same approved_version": {
 			old: &ServiceSummary{
@@ -732,17 +733,17 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"mmultiple differences": {
 			old: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io"),
+				IconLinkTo: test.StringPtr("https://release-argus.io"),
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
 					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
 			new: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io/other"),
+				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
 			want: &ServiceSummary{
-				IconLinkTo: stringPtr("https://release-argus.io/other"),
+				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
@@ -815,7 +816,7 @@ func TestStatus_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the Status is stringified with String
 			got := tc.status.String()
@@ -847,16 +848,16 @@ func TestWebHook_String(t *testing.T) {
 			webhook: &WebHook{
 				ServiceID:         "something",
 				ID:                "foobar",
-				Type:              stringPtr("url"),
-				URL:               stringPtr("https://release-argus.io"),
-				AllowInvalidCerts: boolPtr(true),
-				Secret:            stringPtr("secret"),
+				Type:              test.StringPtr("url"),
+				URL:               test.StringPtr("https://release-argus.io"),
+				AllowInvalidCerts: test.BoolPtr(true),
+				Secret:            test.StringPtr("secret"),
 				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "bosh"}},
-				DesiredStatusCode: intPtr(200),
+				DesiredStatusCode: test.IntPtr(200),
 				Delay:             "1h",
-				MaxTries:          uintPtr(7),
-				SilentFails:       boolPtr(false),
+				MaxTries:          test.UIntPtr(7),
+				SilentFails:       test.BoolPtr(false),
 			},
 			want: `
 				{
@@ -882,7 +883,7 @@ func TestWebHook_String(t *testing.T) {
 			got := tc.webhook.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got: %q, want: %q",
 					got, tc.want)
@@ -909,16 +910,16 @@ func TestWebHookSlice_String(t *testing.T) {
 			slice: &WebHookSlice{
 				"0": {ServiceID: "something",
 					ID:                "foobar",
-					Type:              stringPtr("url"),
-					URL:               stringPtr("https://release-argus.io"),
-					AllowInvalidCerts: boolPtr(true),
-					Secret:            stringPtr("secret"),
+					Type:              test.StringPtr("url"),
+					URL:               test.StringPtr("https://release-argus.io"),
+					AllowInvalidCerts: test.BoolPtr(true),
+					Secret:            test.StringPtr("secret"),
 					CustomHeaders: &[]Header{
 						{Key: "X-Header", Value: "bosh"}},
-					DesiredStatusCode: intPtr(200),
+					DesiredStatusCode: test.IntPtr(200),
 					Delay:             "1h",
-					MaxTries:          uintPtr(7),
-					SilentFails:       boolPtr(false)},
+					MaxTries:          test.UIntPtr(7),
+					SilentFails:       test.BoolPtr(false)},
 			},
 			want: `
 				{
@@ -938,9 +939,9 @@ func TestWebHookSlice_String(t *testing.T) {
 		},
 		"multiple webhooks": {
 			slice: &WebHookSlice{
-				"0": {URL: stringPtr("bish")},
-				"1": {Secret: stringPtr("bash")},
-				"2": {Type: stringPtr("github")}},
+				"0": {URL: test.StringPtr("bish")},
+				"1": {Secret: test.StringPtr("bash")},
+				"2": {Type: test.StringPtr("github")}},
 			want: `
 				{
 					"0": {"url": "bish"},
@@ -958,7 +959,7 @@ func TestWebHookSlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got: %q\nwant: %q",
 					got, tc.want)
@@ -1048,7 +1049,7 @@ func TestNotifySlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1074,7 +1075,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 		"all fields": {
 			dvl: &DeployedVersionLookup{
 				URL:               "https://release-argus.io",
-				AllowInvalidCerts: boolPtr(false),
+				AllowInvalidCerts: test.BoolPtr(false),
 				BasicAuth: &BasicAuth{
 					Username: "user",
 					Password: "pass"},
@@ -1109,7 +1110,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 			got := tc.dvl.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1134,9 +1135,9 @@ func TestURLCommandSlice_String(t *testing.T) {
 		},
 		"one of each type": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("bam")},
-				{Type: "replace", Old: stringPtr("want-rid"), New: stringPtr("replacement")},
-				{Type: "split", Text: stringPtr("split on me"), Index: 5},
+				{Type: "regex", Regex: test.StringPtr("bam")},
+				{Type: "replace", Old: test.StringPtr("want-rid"), New: test.StringPtr("replacement")},
+				{Type: "split", Text: test.StringPtr("split on me"), Index: 5},
 			},
 			want: `
 				[
@@ -1155,7 +1156,7 @@ func TestURLCommandSlice_String(t *testing.T) {
 			got := tc.slice.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1188,7 +1189,7 @@ func TestDefaults_String(t *testing.T) {
 						URLFields: map[string]string{
 							"url": "https://gotify.example.com"}}},
 				WebHook: WebHook{
-					Secret: stringPtr("bar")}},
+					Secret: test.StringPtr("bar")}},
 			want: `
 				{
 					"service": {
@@ -1212,7 +1213,7 @@ func TestDefaults_String(t *testing.T) {
 			got := tc.dflts.String()
 
 			// THEN the result is as expected
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf("got:\n%q\nwant:\n%q",
 					got, tc.want)
@@ -1271,12 +1272,12 @@ func TestLatestVersion_String(t *testing.T) {
 				Type:              "github",
 				URL:               "release-argus/argus",
 				AccessToken:       "<secret>",
-				AllowInvalidCerts: boolPtr(true),
-				UsePreRelease:     boolPtr(false),
+				AllowInvalidCerts: test.BoolPtr(true),
+				UsePreRelease:     test.BoolPtr(false),
 				URLCommands: &URLCommandSlice{
-					{Type: "replace", Old: stringPtr("this"), New: stringPtr("withThis")},
-					{Type: "split", Text: stringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: stringPtr("([0-9.]+)")}},
+					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
+					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
+					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}},
 				Require: &LatestVersionRequire{
 					RegexContent: ".*"}},
 			want: `
@@ -1301,7 +1302,7 @@ func TestLatestVersion_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the LatestVersion is stringified with String
 			got := tc.input.String()
@@ -1358,7 +1359,7 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the LatestVersionRequireDefaults are stringified with String
 			got := tc.lvrd.String()
@@ -1414,7 +1415,7 @@ func TestLatestVersionRequire_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the LatestVersionRequire is stringified with String
 			got := tc.input.String()

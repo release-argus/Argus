@@ -18,14 +18,8 @@ package svcstatus
 
 import (
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/test"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
 
 func testStatus() (status *Status) {
 	var (
@@ -37,12 +31,12 @@ func testStatus() (status *Status) {
 		&announceChannel, &databaseChannel, &saveChannel,
 		"", "", "", "", "", "")
 	status = svcStatus
-	status.ServiceID = stringPtr("test")
-	status.WebURL = stringPtr("")
+	status.ServiceID = test.StringPtr("test")
+	status.WebURL = test.StringPtr("")
 	status.Init(
 		0, 0, 0,
-		stringPtr("test-service"),
-		stringPtr("http://example.com"))
+		test.StringPtr("test-service"),
+		test.StringPtr("http://example.com"))
 	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", false)
 	status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")

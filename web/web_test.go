@@ -126,8 +126,8 @@ func TestAccessibleHTTPS(t *testing.T) {
 				util.GoVersion)},
 	}
 	cfg := testConfig("TestAccessibleHTTPS.yml", nil, t)
-	cfg.Settings.Web.CertFile = stringPtr("TestAccessibleHTTPS_cert.pem")
-	cfg.Settings.Web.KeyFile = stringPtr("TestAccessibleHTTPS_key.pem")
+	cfg.Settings.Web.CertFile = test.StringPtr("TestAccessibleHTTPS_cert.pem")
+	cfg.Settings.Web.KeyFile = test.StringPtr("TestAccessibleHTTPS_key.pem")
 	generateCertFiles(*cfg.Settings.Web.CertFile, *cfg.Settings.Web.KeyFile)
 	defer os.Remove(*cfg.Settings.Web.CertFile)
 	defer os.Remove(*cfg.Settings.Web.KeyFile)

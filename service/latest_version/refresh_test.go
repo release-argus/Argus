@@ -27,11 +27,12 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestLookup_ApplyOverrides(t *testing.T) {
-	test := testLookup(true, true)
+	testL := testLookup(true, true)
 	// GIVEN various json strings to parse as parts of a Lookup
 	tests := map[string]struct {
 		accessToken         *string
@@ -53,51 +54,51 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			want:     testLookup(true, true),
 		},
 		"access token": {
-			accessToken: stringPtr("foo"),
+			accessToken: test.StringPtr("foo"),
 			previous:    testLookup(true, true),
 			want: New(
-				stringPtr("foo"),
-				test.AllowInvalidCerts,
+				test.StringPtr("foo"),
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
-				test.Type,
-				test.URL,
-				&test.URLCommands,
-				test.UsePreRelease,
+				testL.Type,
+				testL.URL,
+				&testL.URLCommands,
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"allow invalid certs": {
-			allowInvalidCerts: stringPtr("false"),
+			allowInvalidCerts: test.StringPtr("false"),
 			previous:          testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				boolPtr(false),
+				testL.AccessToken,
+				test.BoolPtr(false),
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
-				test.Type,
-				test.URL,
-				&test.URLCommands,
-				test.UsePreRelease,
+				testL.Type,
+				testL.URL,
+				&testL.URLCommands,
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"require": {
-			require: stringPtr(`{
+			require: test.StringPtr(`{
 				"docker": {
 					"type": "ghcr",
 					"image": "release-argus/Argus",
 					"tag": "latest"}}`),
 			previous: testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
+				testL.Options,
 				&filter.Require{
 					Docker: filter.NewDockerCheck(
 						"ghcr",
@@ -105,15 +106,15 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 						"latest",
 						"", "", "", time.Now(), nil)},
 				nil,
-				test.Type,
-				test.URL,
-				&test.URLCommands,
-				test.UsePreRelease,
+				testL.Type,
+				testL.URL,
+				&testL.URLCommands,
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"require - no docker.type fail": {
-			require: stringPtr(`{
+			require: test.StringPtr(`{
 				"docker": {
 					"type": "",
 					"image": "release-argus/Argus",
@@ -122,7 +123,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `^require:[^ ]+  docker:[^ ]+    type: <required>`,
 		},
 		"require - invalid": {
-			require: stringPtr(`{
+			require: test.StringPtr(`{
 				"docker": {
 					"type": "foo",
 					"image": "release-argus/Argus",
@@ -131,109 +132,109 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			errRegex: `type: ".*" <invalid>`,
 		},
 		"semantic versioning": {
-			semanticVersioning: stringPtr("false"),
+			semanticVersioning: test.StringPtr("false"),
 			previous:           testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
 				opt.New(
-					nil, "", boolPtr(false),
+					nil, "", test.BoolPtr(false),
 					nil, nil),
-				test.Require,
+				testL.Require,
 				nil,
-				test.Type,
-				test.URL,
-				&test.URLCommands,
-				test.UsePreRelease,
+				testL.Type,
+				testL.URL,
+				&testL.URLCommands,
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"url": {
-			url:      stringPtr("https://valid.release-argus.io/json"),
+			url:      test.StringPtr("https://valid.release-argus.io/json"),
 			previous: testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
-				test.Type,
+				testL.Type,
 				"https://valid.release-argus.io/json",
-				&test.URLCommands,
-				test.UsePreRelease,
+				&testL.URLCommands,
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"url commands": {
-			urlCommands: stringPtr(`[
+			urlCommands: test.StringPtr(`[
 					{"type": "regex", "regex": "v?([0-9.]})"}
 				]`),
 			previous: testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
-				test.Type,
-				test.URL,
+				testL.Type,
+				testL.URL,
 				&filter.URLCommandSlice{
-					{Type: "regex", Regex: stringPtr("v?([0-9.]})")}},
-				test.UsePreRelease,
+					{Type: "regex", Regex: test.StringPtr("v?([0-9.]})")}},
+				testL.UsePreRelease,
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"url commands - invalid": {
-			urlCommands: stringPtr(`[
+			urlCommands: test.StringPtr(`[
 					{"type": "foo", "regex": "v?([0-9.]})"}]`),
 			previous: testLookup(true, true),
 			want:     nil,
 			errRegex: `type: .* <invalid>`,
 		},
 		"use prerelease": {
-			usePreRelease: stringPtr("true"),
+			usePreRelease: test.StringPtr("true"),
 			previous:      testLookup(true, true),
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
-				test.Type,
-				test.URL,
-				&test.URLCommands,
-				boolPtr(true),
+				testL.Type,
+				testL.URL,
+				&testL.URLCommands,
+				test.BoolPtr(true),
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"type github defaulted if not set": {
-			url: stringPtr("release-argus/Argus"),
+			url: test.StringPtr("release-argus/Argus"),
 			previous: &Lookup{
 				Options: &opt.Options{},
 				Status: &svcstatus.Status{
-					ServiceID: stringPtr("test")}},
+					ServiceID: test.StringPtr("test")}},
 			want: &Lookup{
 				Type:       "github",
 				URL:        "release-argus/Argus",
 				GitHubData: NewGitHubData("", nil)},
 		},
 		"type github carries over Releases and ETag": {
-			url: stringPtr("release-argus/other"),
+			url: test.StringPtr("release-argus/other"),
 			previous: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
 				"github",
 				"release-argus/Argus",
 				nil,
-				boolPtr(false),
+				test.BoolPtr(false),
 				&LookupDefaults{},
 				&LookupDefaults{}),
 			carryOverGitHubData: true,
@@ -242,33 +243,33 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				releases: []github_types.Release{
 					{TagName: "v1.0.0"}}},
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
 				"github",
 				"release-argus/other",
 				nil,
-				boolPtr(false),
+				test.BoolPtr(false),
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"GitHubData removed if type changed from github": {
-			url:     stringPtr("https://valid.release-argus.io/json"),
-			typeStr: stringPtr("url"),
+			url:     test.StringPtr("https://valid.release-argus.io/json"),
+			typeStr: test.StringPtr("url"),
 			previous: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
 				"github",
 				"release-argus/Argus",
 				nil,
-				boolPtr(false),
+				test.BoolPtr(false),
 				&LookupDefaults{},
 				&LookupDefaults{}),
 			carryOverGitHubData: false,
@@ -277,21 +278,21 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				releases: []github_types.Release{
 					{TagName: "v1.0.0"}}},
 			want: New(
-				test.AccessToken,
-				test.AllowInvalidCerts,
+				testL.AccessToken,
+				testL.AllowInvalidCerts,
 				nil,
-				test.Options,
-				test.Require,
+				testL.Options,
+				testL.Require,
 				nil,
 				"url",
 				"https://valid.release-argus.io/json",
 				nil,
-				boolPtr(false),
+				test.BoolPtr(false),
 				&LookupDefaults{},
 				&LookupDefaults{}),
 		},
 		"override with invalid (empty) url": {
-			url:      stringPtr(""),
+			url:      test.StringPtr(""),
 			previous: testLookup(true, true),
 			want:     nil,
 			errRegex: "url: <required>",
@@ -355,7 +356,7 @@ func TestLookup_Refresh(t *testing.T) {
 	testURL.Query(true, &util.LogFrom{})
 	testVersionURL := testURL.Status.LatestVersion()
 	testGitHub := testLookup(false, false)
-	testGitHub.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
+	testGitHub.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
 	testGitHub.Query(true, &util.LogFrom{})
 	testVersionGitHub := testGitHub.Status.LatestVersion()
 
@@ -376,25 +377,25 @@ func TestLookup_Refresh(t *testing.T) {
 		announce           bool
 	}{
 		"Change of URL": {
-			url:      stringPtr("https://valid.release-argus.io/plain"),
+			url:      test.StringPtr("https://valid.release-argus.io/plain"),
 			previous: testLookup(true, true),
 			want:     testVersionURL,
 		},
 		"Removal of URL": {
-			url:      stringPtr(""),
+			url:      test.StringPtr(""),
 			previous: testLookup(true, true),
 			errRegex: "url: <required>",
 			want:     "",
 		},
 		"Change of a few vars": {
-			urlCommands: stringPtr(`[
+			urlCommands: test.StringPtr(`[
 					{"type": "regex", "regex": "beta: \"v?([^\"]+)"}]`),
-			semanticVersioning: stringPtr("false"),
+			semanticVersioning: test.StringPtr("false"),
 			previous:           testLookup(true, true),
 			want:               testVersionURL + "-beta",
 		},
 		"Change of vars that fail Query": {
-			allowInvalidCerts: stringPtr("false"),
+			allowInvalidCerts: test.StringPtr("false"),
 			previous:          testLookup(true, true),
 			errRegex:          `x509 \(certificate invalid\)`,
 		},
@@ -439,7 +440,7 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.previous.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
+			tc.previous.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
 			// Copy the starting status
 			tc.previous.Status.Init(
 				0, 0, 0,

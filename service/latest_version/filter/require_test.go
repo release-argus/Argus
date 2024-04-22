@@ -24,6 +24,7 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -47,8 +48,8 @@ func TestRequire_Init(t *testing.T) {
 			status := svcstatus.Status{}
 			status.Init(
 				0, 0, 0,
-				stringPtr("test"),
-				stringPtr("http://example.com"))
+				test.StringPtr("test"),
+				test.StringPtr("http://example.com"))
 			status.SetDeployedVersion("1.2.3", false)
 			defaults := RequireDefaults{
 				Docker: *NewDockerCheckDefaults(
@@ -275,7 +276,7 @@ func TestRequire_FromStr(t *testing.T) {
 		pointerToDefault bool
 	}{
 		"nil": {
-			jsonStr:  stringPtr(""),
+			jsonStr:  test.StringPtr(""),
 			errRegex: "EOF$",
 			want:     nil,
 		},
@@ -285,49 +286,49 @@ func TestRequire_FromStr(t *testing.T) {
 			pointerToDefault: true,
 		},
 		"empty": {
-			jsonStr: stringPtr("{}"),
+			jsonStr: test.StringPtr("{}"),
 			want:    nil,
 		},
 		"empty with default": {
-			jsonStr:          stringPtr("{}"),
+			jsonStr:          test.StringPtr("{}"),
 			pointerToDefault: true,
 		},
 		"invalid JSON": {
-			jsonStr:  stringPtr("{"),
+			jsonStr:  test.StringPtr("{"),
 			errRegex: `unexpected EOF$`,
 		},
 		"invalid JSON with default": {
-			jsonStr:          stringPtr("{"),
+			jsonStr:          test.StringPtr("{"),
 			dflt:             &dflt,
 			pointerToDefault: true,
 			errRegex:         `unexpected EOF$`,
 		},
 		"invalid data type": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_content": 1}`),
 			errRegex: `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"invalid data type with default": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_content": 1}`),
 			dflt:             &dflt,
 			pointerToDefault: true,
 			errRegex:         `json: cannot unmarshal number into Go struct field Require.regex_content of type string$`,
 		},
 		"RegexContent defined": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_content": "foo"}`),
 			want: &Require{
 				RegexContent: "foo"},
 		},
 		"RegexVersion defined": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_version": "foo"}`),
 			want: &Require{
 				RegexVersion: "foo"},
 		},
 		"RegexContent from str, RegexVersion from default": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_content": "foo"}`),
 			dflt: &Require{
 				RegexVersion: "bar"},
@@ -336,7 +337,7 @@ func TestRequire_FromStr(t *testing.T) {
 				RegexVersion: "bar"},
 		},
 		"RegexContent from default, RegexVersion from str": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_version": "bar"}`),
 			dflt: &Require{
 				RegexContent: "foo"},
@@ -345,14 +346,14 @@ func TestRequire_FromStr(t *testing.T) {
 				RegexVersion: "bar"},
 		},
 		"Command defined": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"command":[
 					"foo",
 					"bar"]}`),
 			want: &Require{Command: []string{"foo", "bar"}},
 		},
 		"No Command JSON uses default": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_version": "foo"}`),
 			dflt: &Require{
 				RegexVersion: "bar",
@@ -362,7 +363,7 @@ func TestRequire_FromStr(t *testing.T) {
 				Command:      []string{"foo", "bar"}},
 		},
 		"Empty command overrides default": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"regex_version": "foo",
 				"command": []}`),
 			dflt: &Require{
@@ -373,14 +374,14 @@ func TestRequire_FromStr(t *testing.T) {
 				Command:      []string{}},
 		},
 		"Only Docker.Type sent": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"type": "ghcr"}}`),
 			want:     &Require{},
 			errRegex: "^$",
 		},
 		"Docker defined, none prior": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"type": "ghcr",
 					"image": "release-argus/argus",
@@ -397,7 +398,7 @@ func TestRequire_FromStr(t *testing.T) {
 					"", time.Time{}, nil)},
 		},
 		"Docker changing Type": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"type": "ghcr"}}`),
 			dflt: &Require{
@@ -418,7 +419,7 @@ func TestRequire_FromStr(t *testing.T) {
 					"", time.Time{}, nil)},
 		},
 		"Docker changing Image": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"image": "release-argus/argus"}}`),
 			dflt: &Require{
@@ -441,7 +442,7 @@ func TestRequire_FromStr(t *testing.T) {
 					nil)},
 		},
 		"Docker changing Tag": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"tag": "1.2.3"}}`),
 			dflt: &Require{
@@ -464,7 +465,7 @@ func TestRequire_FromStr(t *testing.T) {
 					nil)},
 		},
 		"Docker changing Username": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"username": "sir"}}`),
 			dflt: &Require{
@@ -486,7 +487,7 @@ func TestRequire_FromStr(t *testing.T) {
 					"", time.Time{}, nil)},
 		},
 		"Docker changing Token": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 				"docker": {
 					"token": "letmein"}}`),
 			dflt: &Require{
@@ -507,7 +508,7 @@ func TestRequire_FromStr(t *testing.T) {
 					"", time.Time{}, nil)},
 		},
 		"Docker changing multiple (GHCR Argus)": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 		"docker": {
 			"type": "ghcr",
 			"image": "release-argus/argus",
@@ -532,7 +533,7 @@ func TestRequire_FromStr(t *testing.T) {
 					"", time.Time{}, nil)},
 		},
 		"only RegexContent changed keeps default Docker": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 		"regex_content": "foo"}`),
 			dflt: &Require{Docker: NewDockerCheck(
 				"ghcr",
@@ -552,7 +553,7 @@ func TestRequire_FromStr(t *testing.T) {
 					nil)},
 		},
 		"Invalid Docker (no tag)": {
-			jsonStr: stringPtr(`{
+			jsonStr: test.StringPtr(`{
 		"docker": {
 			"type": "ghcr",
 			"image": "release-argus/argus"}}`),

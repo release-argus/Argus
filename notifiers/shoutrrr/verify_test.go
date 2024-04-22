@@ -40,64 +40,64 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 	}{
 		"no type": {
 			errsRegex: "type: <required>",
-			sType:     stringPtr(""),
+			sType:     test.StringPtr(""),
 		},
 		"invalid type": {
 			errsRegex: "type: .* <invalid>",
-			sType:     stringPtr("argus"),
+			sType:     test.StringPtr("argus"),
 		},
 		"invalid type - type in main differs": {
 			errsRegex:          `type: "gotify" != "discord" <invalid>`,
 			errsURLFieldsRegex: `host: <required>.*token: <required>`,
-			sType:              stringPtr("gotify"),
+			sType:              test.StringPtr("gotify"),
 			main:               NewDefaults("discord", nil, nil, nil),
 		},
 		"bark - invalid": {
-			sType:              stringPtr("bark"),
+			sType:              test.StringPtr("bark"),
 			errsURLFieldsRegex: `^  devicekey: <required>[^:]+host: <required>[^:]+$`,
 		},
 		"bark - no devicekey": {
-			sType:              stringPtr("bark"),
+			sType:              test.StringPtr("bark"),
 			errsURLFieldsRegex: `^  devicekey: <required>[^:]+$`,
 			urlFields: map[string]string{
 				"host": "https://example.com"},
 		},
 		"bark - no host": {
-			sType:              stringPtr("bark"),
+			sType:              test.StringPtr("bark"),
 			errsURLFieldsRegex: `^  host: <required>[^:]+$`,
 			urlFields: map[string]string{
 				"devicekey": "foo"},
 		},
 		"bark - valid": {
-			sType: stringPtr("bark"),
+			sType: test.StringPtr("bark"),
 			urlFields: map[string]string{
 				"devicekey": "foo",
 				"host":      "https://example.com"},
 		},
 		"discord - invalid": {
-			sType:              stringPtr("discord"),
+			sType:              test.StringPtr("discord"),
 			errsURLFieldsRegex: "token: <required>.*webhookid: <required>",
 		},
 		"discord - no token": {
-			sType:              stringPtr("discord"),
+			sType:              test.StringPtr("discord"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"webhookid": "bash"},
 		},
 		"discord - no webhookid": {
-			sType:              stringPtr("discord"),
+			sType:              test.StringPtr("discord"),
 			errsURLFieldsRegex: "webhookid: <required>",
 			urlFields: map[string]string{
 				"token": "bish"},
 		},
 		"discord - valid": {
-			sType: stringPtr("discord"),
+			sType: test.StringPtr("discord"),
 			urlFields: map[string]string{
 				"token":     "bish",
 				"webhookid": "webhookid"},
 		},
 		"discord - valid with main": {
-			sType: stringPtr("discord"),
+			sType: test.StringPtr("discord"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -105,19 +105,19 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"webhookid": "bash"}),
 		},
 		"smtp - invalid": {
-			sType:              stringPtr("smtp"),
+			sType:              test.StringPtr("smtp"),
 			errsURLFieldsRegex: "host: <required>.*",
 			errsParamsRegex:    "fromaddress: <required>.*toaddresses: <required>",
 		},
 		"smtp - no host": {
-			sType:              stringPtr("smtp"),
+			sType:              test.StringPtr("smtp"),
 			errsURLFieldsRegex: "host: <required>",
 			params: map[string]string{
 				"fromaddress": "bash",
 				"toaddresses": "bosh"},
 		},
 		"smtp - no fromaddress": {
-			sType:           stringPtr("smtp"),
+			sType:           test.StringPtr("smtp"),
 			errsParamsRegex: "fromaddress: <required>",
 			urlFields: map[string]string{
 				"host": "bish"},
@@ -125,7 +125,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"toaddresses": "bosh"},
 		},
 		"smtp - no toaddresses": {
-			sType:           stringPtr("smtp"),
+			sType:           test.StringPtr("smtp"),
 			errsParamsRegex: "toaddresses: <required>",
 			urlFields: map[string]string{
 				"host": "bish"},
@@ -133,7 +133,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"fromaddress": "bash"},
 		},
 		"smtp - valid": {
-			sType: stringPtr("smtp"),
+			sType: test.StringPtr("smtp"),
 			urlFields: map[string]string{
 				"host": "bish"},
 			params: map[string]string{
@@ -141,7 +141,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"toaddresses": "bosh"},
 		},
 		"smtp - valid with main": {
-			sType: stringPtr("smtp"),
+			sType: test.StringPtr("smtp"),
 			main: NewDefaults(
 				"", nil,
 				&map[string]string{
@@ -151,29 +151,29 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"host": "bish"}),
 		},
 		"gotify - invalid": {
-			sType:              stringPtr("gotify"),
+			sType:              test.StringPtr("gotify"),
 			errsURLFieldsRegex: "host: <required>.*token: <required>",
 		},
 		"gotify - no host": {
-			sType:              stringPtr("gotify"),
+			sType:              test.StringPtr("gotify"),
 			errsURLFieldsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"token": "bash"},
 		},
 		"gotify - no token": {
-			sType:              stringPtr("gotify"),
+			sType:              test.StringPtr("gotify"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"host": "bish"},
 		},
 		"gotify - valid": {
-			sType: stringPtr("gotify"),
+			sType: test.StringPtr("gotify"),
 			urlFields: map[string]string{
 				"host":  "bish",
 				"token": "bash"},
 		},
 		"gotify - valid with main": {
-			sType: stringPtr("gotify"),
+			sType: test.StringPtr("gotify"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -181,47 +181,47 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"token": "bash"}),
 		},
 		"googlechat - invalid": {
-			sType:              stringPtr("googlechat"),
+			sType:              test.StringPtr("googlechat"),
 			errsURLFieldsRegex: "raw: <required>",
 		},
 		"googlechat - valid": {
-			sType: stringPtr("googlechat"),
+			sType: test.StringPtr("googlechat"),
 			urlFields: map[string]string{
 				"raw": "bish"},
 		},
 		"googlechat - valid with main": {
-			sType: stringPtr("googlechat"),
+			sType: test.StringPtr("googlechat"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
 					"raw": "bish"}),
 		},
 		"ifttt - invalid": {
-			sType:              stringPtr("ifttt"),
+			sType:              test.StringPtr("ifttt"),
 			errsURLFieldsRegex: "webhookid: <required>", errsParamsRegex: "events: <required>",
 		},
 		"ifttt - no webhookid": {
-			sType:              stringPtr("ifttt"),
+			sType:              test.StringPtr("ifttt"),
 			errsURLFieldsRegex: "webhookid: <required>",
 			urlFields:          map[string]string{},
 			params: map[string]string{
 				"events": "bash"},
 		},
 		"ifttt - no events": {
-			sType:           stringPtr("ifttt"),
+			sType:           test.StringPtr("ifttt"),
 			errsParamsRegex: "events: <required>",
 			urlFields: map[string]string{
 				"webhookid": "bish"},
 		},
 		"ifttt - valid": {
-			sType: stringPtr("ifttt"),
+			sType: test.StringPtr("ifttt"),
 			urlFields: map[string]string{
 				"webhookid": "bish"},
 			params: map[string]string{
 				"events": "events"},
 		},
 		"ifttt - valid with main": {
-			sType: stringPtr("ifttt"),
+			sType: test.StringPtr("ifttt"),
 			main: NewDefaults(
 				"", nil,
 				&map[string]string{
@@ -230,31 +230,31 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"webhookid": "webhookid"}),
 		},
 		"join - invalid": {
-			sType:              stringPtr("join"),
+			sType:              test.StringPtr("join"),
 			errsURLFieldsRegex: "apikey: <required>", errsParamsRegex: "devices: <required>",
 		},
 		"join - no apikey": {
-			sType:              stringPtr("join"),
+			sType:              test.StringPtr("join"),
 			errsURLFieldsRegex: "apikey: <required>",
 			urlFields:          map[string]string{},
 			params: map[string]string{
 				"devices": "bash"},
 		},
 		"join - no devices": {
-			sType:           stringPtr("join"),
+			sType:           test.StringPtr("join"),
 			errsParamsRegex: "devices: <required>",
 			urlFields: map[string]string{
 				"apikey": "bish"},
 		},
 		"join - valid": {
-			sType: stringPtr("join"),
+			sType: test.StringPtr("join"),
 			urlFields: map[string]string{
 				"apikey": "bish"},
 			params: map[string]string{
 				"devices": "devices"},
 		},
 		"join - valid with main": {
-			sType: stringPtr("join"),
+			sType: test.StringPtr("join"),
 			main: NewDefaults(
 				"", nil,
 				&map[string]string{
@@ -263,29 +263,29 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"apikey": "apikey"}),
 		},
 		"mattermost - invalid": {
-			sType:              stringPtr("mattermost"),
+			sType:              test.StringPtr("mattermost"),
 			errsURLFieldsRegex: "host: <required>.*token: <required>",
 		},
 		"mattermost - no host": {
-			sType:              stringPtr("mattermost"),
+			sType:              test.StringPtr("mattermost"),
 			errsURLFieldsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"token": "bash"},
 		},
 		"mattermost - no token": {
-			sType:              stringPtr("mattermost"),
+			sType:              test.StringPtr("mattermost"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"host": "bish"},
 		},
 		"mattermost - valid": {
-			sType: stringPtr("mattermost"),
+			sType: test.StringPtr("mattermost"),
 			urlFields: map[string]string{
 				"host":  "bish",
 				"token": "bash"},
 		},
 		"mattermost - valid with main": {
-			sType: stringPtr("mattermost"),
+			sType: test.StringPtr("mattermost"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -293,29 +293,29 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"token": "bash"}),
 		},
 		"matrix - invalid": {
-			sType:              stringPtr("matrix"),
+			sType:              test.StringPtr("matrix"),
 			errsURLFieldsRegex: "host: <required>.*password: <required>",
 		},
 		"matrix - no host": {
-			sType:              stringPtr("matrix"),
+			sType:              test.StringPtr("matrix"),
 			errsURLFieldsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"password": "bash"},
 		},
 		"matrix - no password": {
-			sType:              stringPtr("matrix"),
+			sType:              test.StringPtr("matrix"),
 			errsURLFieldsRegex: "password: <required>",
 			urlFields: map[string]string{
 				"host": "bish"},
 		},
 		"matrix - valid": {
-			sType: stringPtr("matrix"),
+			sType: test.StringPtr("matrix"),
 			urlFields: map[string]string{
 				"host":     "bish",
 				"password": "password"},
 		},
 		"matrix - valid with main": {
-			sType: stringPtr("matrix"),
+			sType: test.StringPtr("matrix"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -323,54 +323,54 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"password": "bash"}),
 		},
 		"ntfy - invalid": {
-			sType:              stringPtr("ntfy"),
+			sType:              test.StringPtr("ntfy"),
 			errsURLFieldsRegex: "topic: <required>",
 		},
 		"ntfy - valid": {
-			sType: stringPtr("ntfy"),
+			sType: test.StringPtr("ntfy"),
 			urlFields: map[string]string{
 				"topic": "foo"},
 		},
 		"opsgenie - invalid": {
-			sType:              stringPtr("opsgenie"),
+			sType:              test.StringPtr("opsgenie"),
 			errsURLFieldsRegex: "apikey: <required>",
 		},
 		"opsgenie - valid": {
-			sType: stringPtr("opsgenie"),
+			sType: test.StringPtr("opsgenie"),
 			urlFields: map[string]string{
 				"apikey": "apikey"},
 		},
 		"opsgenie - valid with main": {
-			sType: stringPtr("opsgenie"),
+			sType: test.StringPtr("opsgenie"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
 					"apikey": "apikey"}),
 		},
 		"pushbullet - invalid": {
-			sType:              stringPtr("pushbullet"),
+			sType:              test.StringPtr("pushbullet"),
 			errsURLFieldsRegex: "token: <required>.*targets: <required>",
 		},
 		"pushbullet - no token": {
-			sType:              stringPtr("pushbullet"),
+			sType:              test.StringPtr("pushbullet"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"targets": "bash"},
 		},
 		"pushbullet - no targets": {
-			sType:              stringPtr("pushbullet"),
+			sType:              test.StringPtr("pushbullet"),
 			errsURLFieldsRegex: "targets: <required>",
 			urlFields: map[string]string{
 				"token": "bish"},
 		},
 		"pushbullet - valid": {
-			sType: stringPtr("pushbullet"),
+			sType: test.StringPtr("pushbullet"),
 			urlFields: map[string]string{
 				"token":   "bish",
 				"targets": "targets"},
 		},
 		"pushbullet - valid with main": {
-			sType: stringPtr("pushbullet"),
+			sType: test.StringPtr("pushbullet"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -378,29 +378,29 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"targets": "bash"}),
 		},
 		"pushover - invalid": {
-			sType:              stringPtr("pushover"),
+			sType:              test.StringPtr("pushover"),
 			errsURLFieldsRegex: "token: <required>.*user: <required>",
 		},
 		"pushover - no token": {
-			sType:              stringPtr("pushover"),
+			sType:              test.StringPtr("pushover"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"user": "bash"},
 		},
 		"pushover - no user": {
-			sType:              stringPtr("pushover"),
+			sType:              test.StringPtr("pushover"),
 			errsURLFieldsRegex: "user: <required>",
 			urlFields: map[string]string{
 				"token": "bish"},
 		},
 		"pushover - valid": {
-			sType: stringPtr("pushover"),
+			sType: test.StringPtr("pushover"),
 			urlFields: map[string]string{
 				"token": "bish",
 				"user":  "user"},
 		},
 		"pushover - valid with main": {
-			sType: stringPtr("pushover"),
+			sType: test.StringPtr("pushover"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -408,11 +408,11 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"user":  "bash"}),
 		},
 		"rocketchat - invalid": {
-			sType:              stringPtr("rocketchat"),
+			sType:              test.StringPtr("rocketchat"),
 			errsURLFieldsRegex: "host: <required>.*tokena: <required>.*tokenb: <required>.*channel: <required>",
 		},
 		"rocketchat - no host": {
-			sType:              stringPtr("rocketchat"),
+			sType:              test.StringPtr("rocketchat"),
 			errsURLFieldsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"tokena":  "bash",
@@ -420,7 +420,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"channel": "bing"},
 		},
 		"rocketchat - no tokena": {
-			sType:              stringPtr("rocketchat"),
+			sType:              test.StringPtr("rocketchat"),
 			errsURLFieldsRegex: "tokena: <required>",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -428,7 +428,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"channel": "bing"},
 		},
 		"rocketchat - no tokenb": {
-			sType:              stringPtr("rocketchat"),
+			sType:              test.StringPtr("rocketchat"),
 			errsURLFieldsRegex: "tokenb: <required>",
 			urlFields: map[string]string{
 				"host":    "bish",
@@ -436,7 +436,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"channel": "bing"},
 		},
 		"rocketchat - no channel": {
-			sType:              stringPtr("rocketchat"),
+			sType:              test.StringPtr("rocketchat"),
 			errsURLFieldsRegex: "channel: <required>",
 			urlFields: map[string]string{
 				"host":   "bish",
@@ -444,7 +444,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"tokenb": "bosh"},
 		},
 		"rocketchat - valid": {
-			sType: stringPtr("rocketchat"),
+			sType: test.StringPtr("rocketchat"),
 			urlFields: map[string]string{
 				"host":    "bish",
 				"tokena":  "bash",
@@ -452,7 +452,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"channel": "bing"},
 		},
 		"rocketchat - valid with main": {
-			sType: stringPtr("rocketchat"),
+			sType: test.StringPtr("rocketchat"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -462,29 +462,29 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"channel": "bing"}),
 		},
 		"slack - invalid": {
-			sType:              stringPtr("slack"),
+			sType:              test.StringPtr("slack"),
 			errsURLFieldsRegex: "token: <required>.*channel: <required>",
 		},
 		"slack - no token": {
-			sType:              stringPtr("slack"),
+			sType:              test.StringPtr("slack"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields: map[string]string{
 				"channel": "bash"},
 		},
 		"slack - no channel": {
-			sType:              stringPtr("slack"),
+			sType:              test.StringPtr("slack"),
 			errsURLFieldsRegex: "channel: <required>",
 			urlFields: map[string]string{
 				"token": "bish"},
 		},
 		"slack - valid": {
-			sType: stringPtr("slack"),
+			sType: test.StringPtr("slack"),
 			urlFields: map[string]string{
 				"token":   "bish",
 				"channel": "channel"},
 		},
 		"slack - valid with main": {
-			sType: stringPtr("slack"),
+			sType: test.StringPtr("slack"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -492,11 +492,11 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"channel": "bash"}),
 		},
 		"teams - invalid": {
-			sType:              stringPtr("teams"),
+			sType:              test.StringPtr("teams"),
 			errsURLFieldsRegex: "group: <required>.*tenant: <required>.*altid: <required>.*groupowner: <required>", errsParamsRegex: "host: <required>",
 		},
 		"teams - no group": {
-			sType:              stringPtr("teams"),
+			sType:              test.StringPtr("teams"),
 			errsURLFieldsRegex: "group: <required>",
 			urlFields: map[string]string{
 				"tenant":     "bash",
@@ -506,7 +506,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"host": "https://release-argus.io"},
 		},
 		"teams - no tenant": {
-			sType:              stringPtr("teams"),
+			sType:              test.StringPtr("teams"),
 			errsURLFieldsRegex: "tenant: <required>",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -516,7 +516,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"host": "https://release-argus.io"},
 		},
 		"teams - no altid": {
-			sType:              stringPtr("teams"),
+			sType:              test.StringPtr("teams"),
 			errsURLFieldsRegex: "altid: <required>",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -526,7 +526,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"host": "https://release-argus.io"},
 		},
 		"teams - no groupowner": {
-			sType:              stringPtr("teams"),
+			sType:              test.StringPtr("teams"),
 			errsURLFieldsRegex: "groupowner: <required>",
 			urlFields: map[string]string{
 				"group":  "bish",
@@ -536,7 +536,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"host": "https://release-argus.io"},
 		},
 		"teams - no host": {
-			sType:           stringPtr("teams"),
+			sType:           test.StringPtr("teams"),
 			errsParamsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"group":      "bish",
@@ -545,7 +545,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"groupowner": "bing"},
 		},
 		"teams - valid": {
-			sType: stringPtr("teams"),
+			sType: test.StringPtr("teams"),
 			urlFields: map[string]string{
 				"group":      "bish",
 				"tenant":     "bash",
@@ -555,7 +555,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"host": "https://release-argus.io"},
 		},
 		"teams - valid with main": {
-			sType: stringPtr("teams"),
+			sType: test.StringPtr("teams"),
 			main: NewDefaults(
 				"", nil,
 				&map[string]string{
@@ -567,32 +567,32 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"groupowner": "bing"}),
 		},
 		"telegram - invalid": {
-			sType:              stringPtr("telegram"),
+			sType:              test.StringPtr("telegram"),
 			errsURLFieldsRegex: "token: <required>",
 			errsParamsRegex:    "chats: <required>",
 		},
 		"telegram - no token": {
-			sType:              stringPtr("telegram"),
+			sType:              test.StringPtr("telegram"),
 			errsURLFieldsRegex: "token: <required>",
 			urlFields:          map[string]string{},
 			params: map[string]string{
 				"chats": "bash"},
 		},
 		"telegram - no chats": {
-			sType:           stringPtr("telegram"),
+			sType:           test.StringPtr("telegram"),
 			errsParamsRegex: "chats: <required>",
 			urlFields: map[string]string{
 				"token": "bish"},
 		},
 		"telegram - valid": {
-			sType: stringPtr("telegram"),
+			sType: test.StringPtr("telegram"),
 			urlFields: map[string]string{
 				"token": "bish"},
 			params: map[string]string{
 				"chats": "chats"},
 		},
 		"telegram - valid with main": {
-			sType: stringPtr("telegram"),
+			sType: test.StringPtr("telegram"),
 			main: NewDefaults(
 				"", nil,
 				&map[string]string{
@@ -601,39 +601,39 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"token": "bish"}),
 		},
 		"zulip - invalid": {
-			sType:              stringPtr("zulip"),
+			sType:              test.StringPtr("zulip"),
 			errsURLFieldsRegex: "host: <required>.*botmail: <required>.*botkey: <required>",
 		},
 		"zulip - no host": {
-			sType:              stringPtr("zulip"),
+			sType:              test.StringPtr("zulip"),
 			errsURLFieldsRegex: "host: <required>",
 			urlFields: map[string]string{
 				"botmail": "bash",
 				"botkey":  "bosh"},
 		},
 		"zulip - no botmail": {
-			sType:              stringPtr("zulip"),
+			sType:              test.StringPtr("zulip"),
 			errsURLFieldsRegex: "botmail: <required>",
 			urlFields: map[string]string{
 				"host":   "bish",
 				"botkey": "bash"},
 		},
 		"zulip - no botkey": {
-			sType:              stringPtr("zulip"),
+			sType:              test.StringPtr("zulip"),
 			errsURLFieldsRegex: "botkey: <required>",
 			urlFields: map[string]string{
 				"host":    "bish",
 				"botmail": "bash"},
 		},
 		"zulip - valid": {
-			sType: stringPtr("zulip"),
+			sType: test.StringPtr("zulip"),
 			urlFields: map[string]string{
 				"host":    "bish",
 				"botmail": "bash",
 				"botkey":  "bosh"},
 		},
 		"zulip - valid with main": {
-			sType: stringPtr("zulip"),
+			sType: test.StringPtr("zulip"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -642,23 +642,23 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 					"botkey":  "bosh"}),
 		},
 		"generic - invalid": {
-			sType:              stringPtr("generic"),
+			sType:              test.StringPtr("generic"),
 			errsURLFieldsRegex: "host: <required>",
 		},
 		"generic - valid": {
-			sType: stringPtr("generic"),
+			sType: test.StringPtr("generic"),
 			urlFields: map[string]string{
 				"host": "example.com"},
 		},
 		"generic - valid with main": {
-			sType: stringPtr("generic"),
+			sType: test.StringPtr("generic"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
 					"host": "example.com"}),
 		},
 		"generic - valid with custom_headers/json_payload_vars/query_vars": {
-			sType: stringPtr("generic"),
+			sType: test.StringPtr("generic"),
 			urlFields: map[string]string{
 				"host":              "example.com",
 				"custom_headers":    `{"foo":"bar"}`,
@@ -666,37 +666,37 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"query_vars":        `{"me":"work"}`},
 		},
 		"generic - invalid custom_headers": {
-			sType:              stringPtr("generic"),
+			sType:              test.StringPtr("generic"),
 			errsURLFieldsRegex: `custom_headers: "[^ ]+ <invalid>`,
 			urlFields: map[string]string{
 				"host":           "example.com",
 				"custom_headers": `"foo":"bar"}`},
 		},
 		"generic - invalid json_payload_vars": {
-			sType:              stringPtr("generic"),
+			sType:              test.StringPtr("generic"),
 			errsURLFieldsRegex: `json_payload_vars: "[^ ]+ <invalid>`,
 			urlFields: map[string]string{
 				"host":              "example.com",
 				"json_payload_vars": `{foo":"bar`},
 		},
 		"generic - invalid query_vars": {
-			sType:              stringPtr("generic"),
+			sType:              test.StringPtr("generic"),
 			errsURLFieldsRegex: `query_vars: "[^ ]+ <invalid>`,
 			urlFields: map[string]string{
 				"host":       "example.com",
 				"query_vars": `{foo:bar}`},
 		},
 		"shoutrrr - invalid": {
-			sType:              stringPtr("shoutrrr"),
+			sType:              test.StringPtr("shoutrrr"),
 			errsURLFieldsRegex: "raw: <required>",
 		},
 		"shoutrrr - valid": {
-			sType: stringPtr("shoutrrr"),
+			sType: test.StringPtr("shoutrrr"),
 			urlFields: map[string]string{
 				"raw": "bish"},
 		},
 		"shoutrrr - valid with main": {
-			sType: stringPtr("shoutrrr"),
+			sType: test.StringPtr("shoutrrr"),
 			main: NewDefaults(
 				"", nil, nil,
 				&map[string]string{
@@ -720,7 +720,7 @@ func TestShoutrrr_checkValuesForType(t *testing.T) {
 				"", "", "", "", "", "")
 			svcStatus.Init(
 				1, 0, 0,
-				stringPtr("serviceID"), nil)
+				test.StringPtr("serviceID"), nil)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1286,7 +1286,7 @@ func TestShoutrrr_TestSend(t *testing.T) {
 		"nil shoutrrr": {
 			nilShoutrrr: true, wantErr: true},
 		"invalid type": {
-			sType: stringPtr("somethingUnknown"), wantErr: true},
+			sType: test.StringPtr("somethingUnknown"), wantErr: true},
 		"valid": {
 			wantErr: false},
 	}
