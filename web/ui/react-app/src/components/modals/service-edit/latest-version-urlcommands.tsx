@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { Button, ButtonGroup, Col, Row } from "react-bootstrap";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { memo, useCallback } from "react";
