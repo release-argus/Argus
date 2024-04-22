@@ -36,6 +36,7 @@ import (
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestHTTP_httpServiceGetActions(t *testing.T) {
@@ -86,21 +87,21 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 		"known service_id, 0 command, 1 webhooks": {
 			serviceID: "__name__",
 			webhooks: webhook.Slice{
-				"fail0": testWebHook(true, "fail0")},
+				"fail0": test_webhook.WebHook(true, false, false)},
 		},
 		"known service_id, 0 command, 2 webhooks": {
 			serviceID: "__name__",
 			webhooks: webhook.Slice{
-				"fail0": testWebHook(true, "fail0"),
-				"pass0": testWebHook(false, "pass0")},
+				"fail0": test_webhook.WebHook(true, false, false),
+				"pass0": test_webhook.WebHook(false, false, false)},
 		},
 		"known service_id, 2 command, 2 webhooks": {
 			serviceID: "__name__",
 			commands: command.Slice{
 				testCommand(true), testCommand(false)},
 			webhooks: webhook.Slice{
-				"fail0": testWebHook(true, "fail0"),
-				"pass0": testWebHook(false, "pass0")},
+				"fail0": test_webhook.WebHook(true, false, false),
+				"pass0": test_webhook.WebHook(false, false, false)},
 		},
 	}
 	cfg := api.Config
@@ -323,14 +324,14 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.Slice{
-				"known-service-and-webhook": testWebHook(true, "known-service-and-webhook")},
+				"known-service-and-webhook": test_webhook.WebHook(true, false, false)},
 		},
 		"ARGUS_ALL, known service_id with multiple webhooks": {
 			serviceID: "__name__",
 			target:    test.StringPtr("ARGUS_ALL"),
 			webhooks: webhook.Slice{
-				"known-service-and-multiple-webhook-0": testWebHook(true, "known-service-and-multiple-webhook-0"),
-				"known-service-and-multiple-webhook-1": testWebHook(true, "known-service-and-multiple-webhook-1")},
+				"known-service-and-multiple-webhook-0": test_webhook.WebHook(true, false, false),
+				"known-service-and-multiple-webhook-1": test_webhook.WebHook(true, false, false)},
 		},
 		"ARGUS_ALL, known service_id with multiple commands": {
 			serviceID: "__name__",
@@ -344,7 +345,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			commands: command.Slice{
 				{"ls", "-b"}},
 			webhooks: webhook.Slice{
-				"known-service-dvl-webhook-0": testWebHook(false, "known-service-dvl-webhook-0")},
+				"known-service-dvl-webhook-0": test_webhook.WebHook(false, false, false)},
 			upgradesApprovedVersion: true,
 			latestVersion:           "0.9.0",
 		},
@@ -354,8 +355,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			commands: command.Slice{
 				{"ls", "-c"}},
 			webhooks: webhook.Slice{
-				"known-service-upgrade-deployed-version-webhook-0": testWebHook(false,
-					"known-service-upgrade-deployed-version-webhook-0")},
+				"known-service-upgrade-deployed-version-webhook-0": test_webhook.WebHook(false, false, false)},
 			removeDVL:               true,
 			upgradesDeployedVersion: true,
 			latestVersion:           "0.9.0",
@@ -366,7 +366,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			commands: command.Slice{
 				{"ls", "-d"}},
 			webhooks: webhook.Slice{
-				"known-service-fail-webhook-0": testWebHook(true, "known-service-fail-webhook-0")},
+				"known-service-fail-webhook-0": test_webhook.WebHook(true, false, false)},
 			latestVersionIsApproved: true,
 		},
 		"ARGUS_ALL, known service_id with failing command and passing webhook doesn't upgrade any versions": {
@@ -375,7 +375,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			commands: command.Slice{
 				{"fail"}},
 			webhooks: webhook.Slice{
-				"known-service-pass-webhook-0": testWebHook(false, "known-service-pass-webhook-0")},
+				"known-service-pass-webhook-0": test_webhook.WebHook(false, false, false)},
 			latestVersionIsApproved: true,
 		},
 		"webhook_NAME, known service_id with 1 webhook left to pass does upgrade deployed_version": {
@@ -386,8 +386,8 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			commandFails: []*bool{
 				test.BoolPtr(false)},
 			webhooks: webhook.Slice{
-				"will_pass":  testWebHook(false, "will_pass"),
-				"would_fail": testWebHook(true, "would_fail")},
+				"will_pass":  test_webhook.WebHook(false, false, false),
+				"would_fail": test_webhook.WebHook(true, false, false)},
 			webhookFails: map[string]*bool{
 				"will_pass":  test.BoolPtr(true),
 				"would_fail": test.BoolPtr(false)},
@@ -405,7 +405,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				test.BoolPtr(false),
 				test.BoolPtr(true)},
 			webhooks: webhook.Slice{
-				"would_fail": testWebHook(true, "would_fail")},
+				"would_fail": test_webhook.WebHook(true, false, false)},
 			webhookFails: map[string]*bool{
 				"would_fail": test.BoolPtr(false)},
 			removeDVL:               true,

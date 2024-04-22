@@ -29,6 +29,7 @@ import (
 	api_type "github.com/release-argus/Argus/web/api/types"
 	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestSlice_Track(t *testing.T) {
@@ -148,7 +149,7 @@ func TestService_Track(t *testing.T) {
 		},
 		"query finds a newer version and updates LatestVersion and not DeployedVersion": {
 			urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook:            testWebHook(false),
+			webhook:            test_webhook.WebHook(false, false, false),
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.1",
 			wantAnnounces:       1, // announce: 1 for latest query
@@ -156,7 +157,7 @@ func TestService_Track(t *testing.T) {
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
 			urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook:            testWebHook(false),
+			webhook:            test_webhook.WebHook(false, false, false),
 			autoApprove:        true,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",

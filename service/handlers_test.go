@@ -25,6 +25,7 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestService_UpdateLatestApproved(t *testing.T) {
@@ -255,21 +256,21 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			wantAnnounces:         1,
 			deployedBecomesLatest: false,
 			webhooks: webhook.Slice{
-				"fail": testWebHook(true)},
+				"fail": test_webhook.WebHook(true, false, false)},
 		},
 		"auto_approve and webhook that fails only announces the fail and doesn't update deployed_version": {
 			autoApprove:           true,
 			wantAnnounces:         1,
 			deployedBecomesLatest: false,
 			webhooks: webhook.Slice{
-				"fail": testWebHook(true)},
+				"fail": test_webhook.WebHook(true, false, false)},
 		},
 		"auto_approve and webhook that passes announces the pass and version change and updates deployed_version": {
 			autoApprove:           true,
 			wantAnnounces:         2,
 			deployedBecomesLatest: true,
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 		},
 		"auto_approve and command that fails only announces the fail and doesn't update deployed_version": {
 			autoApprove:           true,
@@ -418,7 +419,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"false"}, {"false"}},
 			webhooks: webhook.Slice{
-				"will_fail": testWebHook(true)},
+				"will_fail": test_webhook.WebHook(true, false, false)},
 			startFailsComand: []*bool{
 				nil, nil},
 			wantFailsCommand: []*bool{
@@ -434,7 +435,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"true"}, {"false"}, {"true"}, {"false"}},
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 			startFailsComand: []*bool{
 				test.BoolPtr(true), test.BoolPtr(false), test.BoolPtr(true), test.BoolPtr(true)},
 			wantFailsCommand: []*bool{
@@ -450,7 +451,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"true"}, {"false"}, {"true"}, {"false"}},
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 			startFailsComand: []*bool{
 				test.BoolPtr(true), test.BoolPtr(false), test.BoolPtr(true), test.BoolPtr(true)},
 			wantFailsCommand: []*bool{
@@ -471,7 +472,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"true"}, {"false"}},
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 			startFailsComand: []*bool{test.BoolPtr(true), test.BoolPtr(false)},
 			wantFailsCommand: []*bool{
 				nil, nil},
@@ -485,9 +486,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 			deployedLatest: false,
 			commands:       command.Slice{{"false"}},
 			webhooks: webhook.Slice{
-				"will_fail":  testWebHook(true),
-				"will_pass":  testWebHook(false),
-				"would_fail": testWebHook(true)},
+				"will_fail":  test_webhook.WebHook(true, false, false),
+				"will_pass":  test_webhook.WebHook(false, false, false),
+				"would_fail": test_webhook.WebHook(true, false, false)},
 			startFailsComand: []*bool{
 				test.BoolPtr(false)},
 			wantFailsCommand: []*bool{
@@ -507,9 +508,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"false"}},
 			webhooks: webhook.Slice{
-				"is_runnable":  testWebHook(false),
-				"not_runnable": testWebHook(true),
-				"would_fail":   testWebHook(true)},
+				"is_runnable":  test_webhook.WebHook(false, false, false),
+				"not_runnable": test_webhook.WebHook(true, false, false),
+				"would_fail":   test_webhook.WebHook(true, false, false)},
 			startFailsComand: []*bool{
 				test.BoolPtr(false)},
 			wantFailsCommand: []*bool{
@@ -532,9 +533,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 			commands: command.Slice{
 				{"false"}},
 			webhooks: webhook.Slice{
-				"will_pass0": testWebHook(false),
-				"will_pass1": testWebHook(false),
-				"would_fail": testWebHook(true)},
+				"will_pass0": test_webhook.WebHook(false, false, false),
+				"will_pass1": test_webhook.WebHook(false, false, false),
+				"would_fail": test_webhook.WebHook(true, false, false)},
 			startFailsComand: []*bool{
 				test.BoolPtr(false)},
 			wantFailsCommand: []*bool{
@@ -844,7 +845,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		},
 		"WebHook that failed passes": {
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 			webhook:               "pass",
 			wantAnnounces:         1,
 			deployedLatest:        true,
@@ -856,7 +857,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		},
 		"WebHook that passed fails": {
 			webhooks: webhook.Slice{
-				"fail": testWebHook(true)},
+				"fail": test_webhook.WebHook(true, false, false)},
 			webhook:               "fail",
 			wantAnnounces:         1,
 			deployedLatest:        true,
@@ -868,7 +869,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		},
 		"WebHook that's not runnable doesn't run": {
 			webhooks: webhook.Slice{
-				"pass": testWebHook(true)},
+				"pass": test_webhook.WebHook(true, false, false)},
 			webhook:               "pass",
 			wantAnnounces:         0,
 			deployedLatest:        true,
@@ -881,7 +882,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		},
 		"WebHook that's runnable does run": {
 			webhooks: webhook.Slice{
-				"pass": testWebHook(false)},
+				"pass": test_webhook.WebHook(false, false, false)},
 			webhook:               "pass",
 			wantAnnounces:         1,
 			deployedLatest:        true,

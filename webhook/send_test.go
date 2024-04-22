@@ -24,6 +24,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
@@ -156,14 +157,14 @@ func TestWebHook_Send(t *testing.T) {
 			wouldFail:   true,
 			stdoutRegex: `WebHook gave 500.*invalid gotify token`,
 			notifiers: shoutrrr.Slice{
-				"fail": testNotifier(true, false)},
+				"fail": test_shoutrrr.Shoutrrr(true, false)},
 		},
 		"doesn't try notifiers on fail if silentFails": {
 			wouldFail:   true,
 			silentFails: true,
 			stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`,
 			notifiers: shoutrrr.Slice{
-				"fail": testNotifier(true, false)},
+				"fail": test_shoutrrr.Shoutrrr(true, false)},
 		},
 		"doesn't send if deleting": {
 			deleting:    true,
@@ -342,11 +343,11 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 		"successful notifier": {
 			errRegex: "^$",
 			shoutrrrNotifiers: &shoutrrr.Slice{
-				"pass": testNotifier(false, false)}},
+				"pass": test_shoutrrr.Shoutrrr(false, false)}},
 		"failing notifier": {
 			errRegex: "invalid gotify token",
 			shoutrrrNotifiers: &shoutrrr.Slice{
-				"fail": testNotifier(true, false)}},
+				"fail": test_shoutrrr.Shoutrrr(true, false)}},
 	}
 
 	for name, tc := range tests {

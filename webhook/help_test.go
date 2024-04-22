@@ -120,35 +120,3 @@ func testWebHookDefaults(failing bool, selfSignedCert bool, customHeaders bool) 
 	}
 	return webhook
 }
-
-func testNotifier(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
-	url := "valid.release-argus.io"
-	if selfSignedCert {
-		url = strings.Replace(url, "valid", "invalid", 1)
-	}
-	notifier := shoutrrr.New(
-		nil,
-		"test",
-		&map[string]string{
-			"max_tries": "1"},
-		&map[string]string{},
-		"gotify",
-		&map[string]string{
-			"host": url,
-			"path": "/gotify",
-			// trunk-ignore(gitleaks/generic-api-key)
-			"token": "AGE-LlHU89Q56uQ"},
-		&shoutrrr.ShoutrrrDefaults{},
-		&shoutrrr.ShoutrrrDefaults{},
-		&shoutrrr.ShoutrrrDefaults{})
-	notifier.ServiceStatus = &svcstatus.Status{}
-	notifier.ServiceStatus.Init(
-		0, 1, 0,
-		test.StringPtr("testServiceID"),
-		test.StringPtr("https://example.com"))
-	notifier.Failed = &notifier.ServiceStatus.Fails.Shoutrrr
-	if failing {
-		notifier.URLFields["token"] = "invalid"
-	}
-	return notifier
-}

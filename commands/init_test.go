@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metrics"
@@ -377,7 +378,7 @@ func TestCommand_Init(t *testing.T) {
 			command: &Slice{
 				{"date", "+%m-%d-%Y"}},
 			shoutrrrNotifiers: &shoutrrr.Slice{
-				"test": testShoutrrr(false, false)},
+				"test": test_shoutrrr.Shoutrrr(false, false)},
 		},
 		"nil parentInterval": {
 			command: &Slice{

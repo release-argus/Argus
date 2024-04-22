@@ -25,6 +25,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestService_ServiceInfo(t *testing.T) {
@@ -168,7 +169,7 @@ func TestService_Init(t *testing.T) {
 				Command: command.Slice{
 					{"ls"}},
 				WebHook: webhook.Slice{
-					"test": testWebHook(false)}},
+					"test": test_webhook.WebHook(false, false, false)}},
 		},
 		"service with notifys from defaults": {
 			svc: &Service{
@@ -225,7 +226,7 @@ func TestService_Init(t *testing.T) {
 				LatestVersion: latestver.Lookup{
 					Type: "github", URL: "release-argus/Argus"},
 				WebHook: webhook.Slice{
-					"test": testWebHook(false)}},
+					"test": test_webhook.WebHook(false, false, false)}},
 			defaults: &Defaults{
 				WebHook: map[string]struct{}{
 					"bar": {}}},

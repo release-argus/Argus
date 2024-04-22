@@ -49,7 +49,7 @@ func testShoutrrrDefaults(failing bool, selfSignedCert bool) *ShoutrrrDefaults {
 		&map[string]string{"max_tries": "1"},
 		&map[string]string{},
 		// trunk-ignore(gitleaks/generic-api-key)
-		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		&map[string]string{"host": url, "path": "/gotify", "token": test.ShoutrrrGotifyToken()},
 	)
 	if failing {
 		shoutrrr.URLFields["token"] = "invalid"
@@ -67,8 +67,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 		&map[string]string{"max_tries": "1"},
 		&map[string]string{},
 		"gotify",
-		// trunk-ignore(gitleaks/generic-api-key)
-		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		&map[string]string{"host": url, "path": "/gotify", "token": test.ShoutrrrGotifyToken()},
 		NewDefaults(
 			"", nil, nil, nil),
 		NewDefaults(

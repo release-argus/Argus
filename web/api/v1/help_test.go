@@ -151,32 +151,6 @@ func testCommand(failing bool) command.Command {
 	return command.Command{"ls", "-lah"}
 }
 
-func testWebHook(failing bool, id string) *webhook.WebHook {
-	whDesiredStatusCode := 0
-	whMaxTries := uint(1)
-	wh := webhook.New(
-		test.BoolPtr(false),
-		nil,
-		"0s",
-		&whDesiredStatusCode,
-		nil,
-		&whMaxTries,
-		nil,
-		test.StringPtr("11m"),
-		"argus",
-		test.BoolPtr(false),
-		"github",
-		"https://valid.release-argus.io/hooks/github-style",
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{})
-	wh.ID = id
-	if failing {
-		wh.Secret = "notArgus"
-	}
-	return wh
-}
-
 func testFaviconSettings(png string, svg string) *config.FaviconSettings {
 	if svg == "" && png == "" {
 		return nil

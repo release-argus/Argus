@@ -28,7 +28,6 @@ import (
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"github.com/release-argus/Argus/webhook"
 )
 
 func TestMain(m *testing.M) {
@@ -189,27 +188,4 @@ func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 		"", "", "", "", "", "")
 
 	return
-}
-
-func testWebHook(failing bool) *webhook.WebHook {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
-	wh := webhook.New(
-		test.BoolPtr(false),
-		nil,
-		"0s",
-		&desiredStatusCode,
-		nil,
-		&whMaxTries,
-		nil,
-		test.StringPtr("12m"),
-		"argus",
-		test.BoolPtr(false),
-		"github",
-		"https://valid.release-argus.io/hooks/github-style",
-		nil, nil, nil)
-	if failing {
-		wh.Secret = "notArgus"
-	}
-	return wh
 }

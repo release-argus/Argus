@@ -17,23 +17,12 @@
 package test
 
 import (
-	"os"
 	"strings"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 )
-
-// testShoutrrrrGotifyToken returns the token for the Gotify test
-func testShoutrrrrGotifyToken() (token string) {
-	token = os.Getenv("ARGUS_TEST_GOTIFY_TOKEN")
-	if token == "" {
-		// trunk-ignore(gitleaks/generic-api-key)
-		token = "AGE-LlHU89Q56uQ"
-	}
-	return
-}
 
 // ShoutrrrDefaults returns a ShoutrrrDefaults instance for testing
 func ShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefaults {
@@ -48,7 +37,7 @@ func ShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefau
 		&map[string]string{
 			"host":  url,
 			"path":  "/gotify",
-			"token": testShoutrrrrGotifyToken()},
+			"token": test.ShoutrrrGotifyToken()},
 	)
 	if failing {
 		shoutrrr.URLFields["token"] = "invalid"
@@ -70,7 +59,7 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 		&map[string]string{
 			"host":  url,
 			"path":  "/gotify",
-			"token": testShoutrrrrGotifyToken()},
+			"token": test.ShoutrrrGotifyToken()},
 		shoutrrr.NewDefaults(
 			"", nil, nil, nil),
 		shoutrrr.NewDefaults(

@@ -33,6 +33,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
@@ -67,6 +68,15 @@ func TestMain(m *testing.M) {
 	// THEN Web UI is accessible for the tests
 	code := m.Run()
 	os.Exit(code)
+}
+
+func getFreePort() (int, error) {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
 func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config) {
@@ -112,17 +122,7 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	emptyNotify := shoutrrr.ShoutrrrDefaults{}
 	emptyNotify.InitMaps()
 	notify := shoutrrr.Slice{
-		"test": shoutrrr.New(
-			nil,
-			"test",
-			&map[string]string{
-				"message": "{{ service_id }} release"},
-			&map[string]string{},
-			"",
-			&map[string]string{},
-			&emptyNotify,
-			&emptyNotify,
-			&emptyNotify)}
+		"test": test_shoutrrr.Shoutrrr(false, false)}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
 	svc.Comment = "test service's comment"
@@ -145,15 +145,6 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	cfg.Order = []string{svc.ID}
 
 	return
-}
-
-func getFreePort() (int, error) {
-	ln, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-	ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
 func testService(id string) (svc *service.Service) {
@@ -236,39 +227,6 @@ func testService(id string) (svc *service.Service) {
 		&svc.Options.Interval)
 
 	return
-}
-
-func testCommand(failing bool) command.Command {
-	if failing {
-		return command.Command{"ls", "-lah", "/root"}
-	}
-	return command.Command{"ls", "-lah"}
-}
-
-func testWebHook(failing bool, id string) *webhook.WebHook {
-	whDesiredStatusCode := 0
-	whMaxTries := uint(1)
-	wh := webhook.New(
-		test.BoolPtr(false),
-		nil,
-		"0s",
-		&whDesiredStatusCode,
-		nil,
-		&whMaxTries,
-		nil,
-		test.StringPtr("11m"),
-		"argus",
-		test.BoolPtr(false),
-		"github",
-		"https://valid.release-argus.io/hooks/github-style",
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{})
-	wh.ID = id
-	if failing {
-		wh.Secret = "notArgus"
-	}
-	return wh
 }
 
 func testWebHookDefaults(failing bool) *webhook.WebHookDefaults {

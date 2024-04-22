@@ -863,7 +863,7 @@ func TestWebHook_String(t *testing.T) {
 				{
 					"name": "foobar",
 					"type": "url",
-					"url": "https: //release-argus.io",
+					"url": "https://release-argus.io",
 					"allow_invalid_certs": true,
 					"secret": "secret",
 					"custom_headers": [{"key": "X-Header","value": "bosh"}],
@@ -885,7 +885,7 @@ func TestWebHook_String(t *testing.T) {
 			// THEN the result is as expected
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf("got: %q, want: %q",
+				t.Errorf("mismatch\ngot:  %q\nwant: %q",
 					got, tc.want)
 			}
 		})
