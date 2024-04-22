@@ -1,1 +1,1 @@
-tsc -p web/ui/react-app
+web/ui/node_modules/.bin/tsc -p web/ui/react-app

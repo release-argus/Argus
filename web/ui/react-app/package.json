@@ -11,24 +11,14 @@
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@tanstack/react-query": "^5.29.2",
-    "@types/bootstrap": "^5.2.10",
-    "@types/jest": "^29.5.12",
-    "@types/react": "^18.2.78",
-    "@types/react-dom": "^18.2.25",
-    "@vitejs/plugin-react": "^4.2.1",
     "bootstrap": "^5.3.3",
     "date-fns": "^3.6.0",
-    "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.2",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.51.3",
     "react-router-dom": "^6.22.3",
     "reconnecting-websocket": "^4.4.0",
-    "styled-components": "^6.1.8",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.8",
-    "vite-tsconfig-paths": "^4.3.2",
     "yaml": "^2.4.1"
   },
   "scripts": {
@@ -57,7 +47,13 @@
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.29.2",
+    "@types/bootstrap": "^5.2.10",
     "@types/node": "^20.12.7",
-    "@types/styled-components": "^5.1.34"
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10",
+    "vite-tsconfig-paths": "^4.3.2"
   }
 }
