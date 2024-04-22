@@ -19,12 +19,12 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestNewJLog(t *testing.T) {
@@ -95,6 +95,7 @@ func TestSetLevel(t *testing.T) {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -172,7 +173,7 @@ func TestFormatMessageSource(t *testing.T) {
 			t.Parallel()
 
 			// WHEN FormatMessageSource is called with this LogFrom
-			got := FormatMessageSource(tc.logFrom)
+			got := FormatMessageSource(&tc.logFrom)
 
 			// THEN an empty string is returned
 			if got != tc.want {
@@ -306,25 +307,21 @@ func TestJLog_Error(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
 			// WHEN Error is called with true
-			jLog.Error(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Error(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			var regex string
 			if tc.timestamps {
-				got = logOut.String()
+				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
 			} else if !tc.otherCondition {
 				regex = "^$"
@@ -332,10 +329,10 @@ func TestJLog_Error(t *testing.T) {
 				regex = fmt.Sprintf("^ERROR: %s\n$", msg)
 			}
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("ERROR printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 		})
 	}
@@ -384,36 +381,32 @@ func TestJLog_Warn(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
 			// WHEN Warn is called with true
-			jLog.Warn(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Warn(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			var regex string
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				got = logOut.String()
+				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} WARNING: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
 			}
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("WARNING printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 		})
 	}
@@ -462,36 +455,32 @@ func TestJLog_Info(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 
 			// WHEN Info is called with true
-			jLog.Info(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Info(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			var regex string
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				got = logOut.String()
+				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} INFO: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^INFO: %s\n$", msg)
 			}
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("INFO printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 		})
 	}
@@ -545,13 +534,12 @@ func TestJLog_Verbose(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			msg := "argus"
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 			if tc.customMsg != nil {
@@ -559,13 +547,10 @@ func TestJLog_Verbose(t *testing.T) {
 			}
 
 			// WHEN Verbose is called with true
-			jLog.Verbose(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Verbose(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			var regex string
 			if tc.customMsg != nil && len(*tc.customMsg) > tc.expectedLength {
 				msg = (*tc.customMsg)[:tc.expectedLength] + "..."
@@ -573,25 +558,25 @@ func TestJLog_Verbose(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				got = logOut.String()
+				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} VERBOSE: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
 			}
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("VERBOSE printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 			if tc.customMsg != nil {
 				tc.expectedLength += len("VERBOSE: ")
-				if strings.HasSuffix(got, "...\n") {
+				if strings.HasSuffix(stdout, "...\n") {
 					tc.expectedLength += len("...\n")
 				}
-				if len(got) != tc.expectedLength {
+				if len(stdout) != tc.expectedLength {
 					t.Errorf("VERBOSE message length not limited to %d\nGot %d\n%q",
-						tc.expectedLength, len(got), got)
+						tc.expectedLength, len(stdout), stdout)
 				}
 			}
 		})
@@ -647,11 +632,10 @@ func TestJLog_Debug(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 			if tc.customMsg != nil {
@@ -659,13 +643,10 @@ func TestJLog_Debug(t *testing.T) {
 			}
 
 			// WHEN Debug is called with true
-			jLog.Debug(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Debug(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			var regex string
 			if tc.customMsg != nil && len(*tc.customMsg) > tc.expectedLength {
 				msg = (*tc.customMsg)[:tc.expectedLength] + "..."
@@ -673,25 +654,25 @@ func TestJLog_Debug(t *testing.T) {
 			if !tc.shouldPrint {
 				regex = "^$"
 			} else if tc.timestamps {
-				got = logOut.String()
+				stdout = logOut.String()
 				regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} DEBUG: %s\n$", msg)
 			} else {
 				regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
 			}
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("DEBUG printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 			if tc.customMsg != nil {
 				tc.expectedLength += len("DEBUG: ")
-				if strings.HasSuffix(got, "...\n") {
+				if strings.HasSuffix(stdout, "...\n") {
 					tc.expectedLength += len("...\n")
 				}
-				if len(got) != tc.expectedLength {
+				if len(stdout) != tc.expectedLength {
 					t.Errorf("DEBUG message length not limited to %d\nGot %d\n%q",
-						tc.expectedLength, len(got), got)
+						tc.expectedLength, len(stdout), stdout)
 				}
 			}
 		})
@@ -741,51 +722,43 @@ func TestJLog_Fatal(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			jLog := NewJLog(tc.level, tc.timestamps)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			defer func() {
-				os.Stdout = stdout
-			}()
 			var logOut bytes.Buffer
 			log.SetOutput(&logOut)
 			if tc.shouldPrint {
 				jLog.Testing = true
 				defer func() {
-					_ = recover()
+					recover()
+					stdout := releaseStdout()
+
 					regex := fmt.Sprintf("^ERROR: %s\n$", msg)
-					w.Close()
-					out, _ := io.ReadAll(r)
-					got := string(out)
 					if tc.timestamps {
-						got = logOut.String()
+						stdout = logOut.String()
 						regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
 					}
 					reg := regexp.MustCompile(regex)
-					match := reg.MatchString(got)
+					match := reg.MatchString(stdout)
 					if !match {
 						t.Errorf("ERROR wasn't printed/didn't match %q\nGot %q",
-							regex, got)
+							regex, stdout)
 					}
 				}()
 			}
 
 			// WHEN Fatal is called with true
-			jLog.Fatal(fmt.Errorf(msg), LogFrom{}, tc.otherCondition)
+			jLog.Fatal(fmt.Errorf(msg), &LogFrom{}, tc.otherCondition)
 
 			// THEN msg was logged if shouldPrint, with/without timestamps
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			regex := "^$"
 			reg := regexp.MustCompile(regex)
-			match := reg.MatchString(got)
+			match := reg.MatchString(stdout)
 			if !match {
 				t.Errorf("ERROR printed didn't match %q\nGot %q",
-					regex, got)
+					regex, stdout)
 			}
 		})
 	}

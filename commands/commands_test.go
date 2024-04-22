@@ -18,13 +18,12 @@ package command
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"reflect"
 	"regexp"
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -79,41 +78,36 @@ func TestCommand_Exec(t *testing.T) {
 	tests := map[string]struct {
 		cmd         Command
 		err         error
-		outputRegex string
+		stdoutRegex string
 	}{
 		"command that will pass": {
 			cmd:         Command{"date", "+%m-%d-%Y"},
-			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 		"command that will fail": {
 			cmd:         Command{"false"},
 			err:         fmt.Errorf("exit status 1"),
-			outputRegex: `exit status 1\s+$`},
+			stdoutRegex: `exit status 1\s+$`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			// WHEN Exec is called on it
 			err := tc.cmd.Exec(&util.LogFrom{})
 
-			// THEN the output is expected
+			// THEN the stdout is expected
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
 					tc.err, err)
 			}
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			re := regexp.MustCompile(tc.outputRegex)
-			match := re.MatchString(output)
+			stdout := releaseStdout()
+			re := regexp.MustCompile(tc.stdoutRegex)
+			match := re.MatchString(stdout)
 			if !match {
 				t.Errorf("want match for %q\nnot: %q",
-					tc.outputRegex, output)
+					tc.stdoutRegex, stdout)
 			}
 		})
 	}
@@ -138,49 +132,44 @@ func TestController_ExecIndex(t *testing.T) {
 	tests := map[string]struct {
 		index       int
 		err         error
-		outputRegex string
+		stdoutRegex string
 		noAnnounce  bool
 	}{
 		"command index out of range": {
 			index:       2,
-			outputRegex: `^$`,
+			stdoutRegex: `^$`,
 			noAnnounce:  true},
 		"command index that will pass": {
 			index:       0,
-			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
+			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 		"command index that will fail": {
 			index:       1,
 			err:         fmt.Errorf("exit status 1"),
-			outputRegex: `exit status 1\s+$`},
+			stdoutRegex: `exit status 1\s+$`},
 	}
 
 	runNumber := 0
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			// WHEN the Command @index is exectured
 			err := controller.ExecIndex(&util.LogFrom{}, tc.index)
 
-			// THEN the output is expected
+			// THEN the stdout is expected
 			// err
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %s\ngot:  %s",
 					tc.err, err)
 			}
-			// output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			re := regexp.MustCompile(tc.outputRegex)
-			match := re.MatchString(output)
+			// stdout
+			stdout := releaseStdout()
+			re := regexp.MustCompile(tc.stdoutRegex)
+			match := re.MatchString(stdout)
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
-					tc.outputRegex, output)
+					tc.stdoutRegex, stdout)
 			}
 			// announced
 			if !tc.noAnnounce {
@@ -200,23 +189,23 @@ func TestController_Exec(t *testing.T) {
 		nilController bool
 		commands      *Slice
 		err           error
-		outputRegex   string
+		stdoutRegex   string
 		noAnnounce    bool
 	}{
 		"nil Controller": {
 			nilController: true,
-			outputRegex:   `^$`,
+			stdoutRegex:   `^$`,
 			noAnnounce:    true},
 		"nil Command": {
-			outputRegex: `^$`,
+			stdoutRegex: `^$`,
 			noAnnounce:  true},
 		"single Command": {
-			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
+			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
 			commands: &Slice{
 				{"date", "+%m-%d-%Y"}}},
 		"multiple Command's": {
 			err:         fmt.Errorf("\nexit status 1"),
-			outputRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
+			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+.*'false'\s.*exit status 1\s+$`,
 			commands: &Slice{
 				{"date", "+%m-%d-%Y"},
 				{"false"}}},
@@ -224,12 +213,11 @@ func TestController_Exec(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			announce := make(chan []byte, 8)
 			controller := testController(&announce)
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN the Command @index is exectured
 			controller.Command = tc.commands
@@ -238,22 +226,19 @@ func TestController_Exec(t *testing.T) {
 			}
 			err := controller.Exec(&util.LogFrom{})
 
-			// THEN the output is expected
+			// THEN the stdout is expected
 			// err
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
 				t.Fatalf("err's differ\nwant: %q\ngot:  %q",
 					util.ErrorToString(tc.err), util.ErrorToString(err))
 			}
-			// output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			re := regexp.MustCompile(tc.outputRegex)
-			match := re.MatchString(output)
+			// stdout
+			stdout := releaseStdout()
+			re := regexp.MustCompile(tc.stdoutRegex)
+			match := re.MatchString(stdout)
 			if !match {
 				t.Fatalf("want match for %q\nnot: %q",
-					tc.outputRegex, output)
+					tc.stdoutRegex, stdout)
 			}
 			// announced
 			runNumber := 0

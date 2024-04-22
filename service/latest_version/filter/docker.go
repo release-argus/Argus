@@ -400,7 +400,7 @@ func (d *DockerCheckDefaults) getToken(dType string) (token string) {
 // getValidToken looks for an existing queryToken on this registry type that's currently valid.
 //
 // empty string if no valid queryToken is found.
-func (d *DockerCheck) getValidToken(dType string) (queryToken string) {
+func (d *DockerCheck) getValidToken() (queryToken string) {
 	if d == nil {
 		return
 	}
@@ -468,7 +468,7 @@ func (d *DockerCheckDefaults) getQueryToken(dType string) (queryToken string, va
 // getQueryToken for API queries.
 func (d *DockerCheck) getQueryToken() (queryToken string, err error) {
 	dType := d.GetType()
-	queryToken = d.getValidToken(dType)
+	queryToken = d.getValidToken()
 	if queryToken != "" {
 		return
 	}
@@ -506,7 +506,7 @@ func (d *DockerCheck) getQueryToken() (queryToken string, err error) {
 	}
 
 	// Get the refreshed token
-	queryToken = d.getValidToken(dType)
+	queryToken = d.getValidToken()
 	return
 }
 

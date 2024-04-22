@@ -13,16 +13,16 @@ export interface GorillaWebSocketMessage {
   data: WebSocketResponse;
   defaultPrevented: boolean;
   eventPhase: number;
-  explicitOriginalTarget: wsMessageDetail;
+  explicitOriginalTarget: WebSocketMessageDetail;
   isTrusted: boolean;
   lastEventId: string;
   origin: string;
-  originalTarget: wsMessageDetail;
+  originalTarget: WebSocketMessageDetail;
   ports: number[];
   returnValue: boolean;
   source: null;
-  srcElement: wsMessageDetail;
-  target: wsMessageDetail;
+  srcElement: WebSocketMessageDetail;
+  target: WebSocketMessageDetail;
   timeStamp: number;
   type: string;
 }
@@ -70,7 +70,7 @@ export type WebSocketResponse =
       service_data: ServiceSummaryType;
     };
 
-export interface wsMessageDetail {
+export interface WebSocketMessageDetail {
   binaryType: string;
   bufferedAmount: number;
   extensions: string;

@@ -49,7 +49,7 @@ func (c *Config) CheckValues() {
 
 	if errs != nil {
 		fmt.Println(strings.ReplaceAll(errs.Error(), "\\", "\n"))
-		jLog.Fatal("Config could not be parsed successfully.", util.LogFrom{}, true)
+		jLog.Fatal("Config could not be parsed successfully.", &util.LogFrom{}, true)
 	}
 }
 

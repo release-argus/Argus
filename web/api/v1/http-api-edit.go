@@ -46,8 +46,8 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 	if deployedVersionRefresh {
 		logFromPrimary = "httpVersionRefreshUncreated_Deployed"
 	}
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	// Set headers
 	w.Header().Set("Connection", "close")
@@ -114,7 +114,7 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 		Error:   util.ErrorToString(err),
 		Date:    time.Now().UTC(),
 	})
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 // httpVersionRefresh refreshes the latest/deployed version of the target service.
@@ -133,8 +133,8 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	if deployedVersionRefresh {
 		logFromPrimary = "httpVersionRefresh_Deployed"
 	}
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	api.Log.Verbose(targetService, logFrom, true)
+	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	jLog.Verbose(targetService, logFrom, true)
 
 	// Set headers
 	w.Header().Set("Connection", "close")
@@ -147,7 +147,7 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -206,7 +206,7 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 		Error:   util.ErrorToString(err),
 		Date:    time.Now().UTC(),
 	})
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 // httpServiceDetail handles sending details about a Service
@@ -218,8 +218,8 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	// service to get details from (empty for create new)
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
-	logFrom := util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
-	api.Log.Verbose(targetService, logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
+	jLog.Verbose(targetService, logFrom, true)
 
 	// Set Headers
 	w.Header().Set("Connection", "close")
@@ -234,7 +234,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -253,7 +253,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := json.NewEncoder(w).Encode(serviceJSON)
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 // httpOtherServiceDetails handles sending details about the global notify/webhook's, defaults and hard defaults.
@@ -261,8 +261,8 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 // # GET
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
 	logFromPrimary := "httpOtherServiceDetails"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	// Set headers
 	w.Header().Set("Connection", "close")
@@ -275,7 +275,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 		Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
 		WebHook:      convertAndCensorWebHookSliceDefaults(&api.Config.WebHook),
 	})
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 // httpServiceEdit handles creating/editing a Service.
@@ -298,8 +298,8 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		reqType = "edit"
 	}
 
-	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	api.Log.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
+	logFrom := &util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
+	jLog.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
 		logFrom, true)
 
 	w.Header().Set("Connection", "close")
@@ -331,9 +331,9 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		&api.Config.WebHook,
 		&api.Config.Defaults.WebHook,
 		&api.Config.HardDefaults.WebHook,
-		&logFrom)
+		logFrom)
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid json)\%s`,
 			reqType, targetService, err.Error()))
 		return
@@ -349,7 +349,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	// Check the values
 	err = newService.CheckValues("")
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		// Remove the service name from the error
 		err = errors.New(strings.Join(strings.Split(err.Error(), `\`)[1:], `\`))
 
@@ -361,7 +361,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	// Ensure LatestVersion and DeployedVersion (if set) can fetch
 	err = newService.CheckFetches()
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 
 		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`,
 			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
@@ -395,8 +395,8 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
 	logFromPrimary := "httpServiceDelete"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	api.Log.Verbose(targetService, logFrom, true)
+	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	jLog.Verbose(targetService, logFrom, true)
 
 	// If service doesn't exist, return 404.
 	if api.Config.Service[targetService] == nil {
@@ -436,21 +436,21 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "close")
 	w.Header().Set("Content-Type", "application/json")
 
-	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	// Payload
 	payload := http.MaxBytesReader(w, r.Body, 102400)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
 		return
 	}
 	var parsedPayload shoutrrr.TestPayload
 	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
 		return
 	}
@@ -477,7 +477,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		api.Config.Defaults.Notify,
 		api.Config.HardDefaults.Notify)
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
 		return
 	}
@@ -486,7 +486,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Test the notify
 	err = testNotify.TestSend(serviceURL)
 	if err != nil {
-		api.Log.Error(err, logFrom, true)
+		jLog.Error(err, logFrom, true)
 		failRequest(&w, err.Error())
 		return
 	}

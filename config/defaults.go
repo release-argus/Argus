@@ -71,7 +71,7 @@ func (d *Defaults) MapEnvToStruct() {
 		jLog.Fatal(
 			"One or more 'ARGUS_' environment variables are incorrect:\n"+
 				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
-			util.LogFrom{}, true)
+			&util.LogFrom{}, true)
 	}
 }
 

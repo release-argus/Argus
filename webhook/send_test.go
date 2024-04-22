@@ -17,8 +17,6 @@
 package webhook
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -26,6 +24,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
@@ -174,15 +173,14 @@ func TestWebHook_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
 
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
 				try++
 				contextDeadlineExceeded = false
-				stdout := os.Stdout
-				r, w, _ := os.Pipe()
-				os.Stdout = w
+				releaseStdout := test.CaptureStdout()
 				webhook := testWebHook(tc.wouldFail, false, tc.customHeaders)
 				if tc.deleting {
 					webhook.ServiceStatus.SetDeleting()
@@ -215,15 +213,12 @@ func TestWebHook_Send(t *testing.T) {
 
 				// THEN the logs are expected
 				completedAt := time.Now()
-				w.Close()
-				out, _ := io.ReadAll(r)
-				os.Stdout = stdout
-				output := string(out)
+				stdout := releaseStdout()
 				re := regexp.MustCompile(tc.stdoutRegex)
-				output = strings.ReplaceAll(output, "\n", "-n")
-				match := re.MatchString(output)
+				stdout = strings.ReplaceAll(stdout, "\n", "-n")
+				match := re.MatchString(stdout)
 				if !match {
-					if strings.Contains(output, "context deadline exceeded") {
+					if strings.Contains(stdout, "context deadline exceeded") {
 						contextDeadlineExceeded = true
 						if try != 3 {
 							time.Sleep(time.Second)
@@ -231,7 +226,7 @@ func TestWebHook_Send(t *testing.T) {
 						}
 					}
 					t.Errorf("match on %q not found in\n%q",
-						tc.stdoutRegex, output)
+						tc.stdoutRegex, stdout)
 				}
 				// AND the delay is expected
 				if tc.delay != "" {
@@ -282,6 +277,7 @@ func TestSlice_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
 
 			try := 0
 			contextDeadlineExceeded := true
@@ -290,9 +286,7 @@ func TestSlice_Send(t *testing.T) {
 				contextDeadlineExceeded = false
 				tc.repeat++ // repeat to check delay usage as map order is random
 				for tc.repeat != 0 {
-					stdout := os.Stdout
-					r, w, _ := os.Pipe()
-					os.Stdout = w
+					releaseStdout := test.CaptureStdout()
 					if tc.slice != nil {
 						for id := range *tc.slice {
 							(*tc.slice)[id].ID = id
@@ -306,15 +300,12 @@ func TestSlice_Send(t *testing.T) {
 					tc.slice.Send(&util.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected
-					w.Close()
-					out, _ := io.ReadAll(r)
-					os.Stdout = stdout
-					output := string(out)
-					output = strings.ReplaceAll(output, "\n", "-n")
+					stdout := releaseStdout()
+					stdout = strings.ReplaceAll(stdout, "\n", "-n")
 					re := regexp.MustCompile(tc.stdoutRegex)
-					match := re.MatchString(output)
+					match := re.MatchString(stdout)
 					if !match {
-						if strings.Contains(output, "context deadline exceeded") {
+						if strings.Contains(stdout, "context deadline exceeded") {
 							contextDeadlineExceeded = true
 							if try != 3 {
 								time.Sleep(time.Second)
@@ -323,15 +314,15 @@ func TestSlice_Send(t *testing.T) {
 						}
 						if tc.stdoutRegexAlt != "" {
 							re = regexp.MustCompile(tc.stdoutRegexAlt)
-							match = re.MatchString(output)
+							match = re.MatchString(stdout)
 							if !match {
 								t.Errorf("match on %q not found in\n%q",
-									tc.stdoutRegexAlt, output)
+									tc.stdoutRegexAlt, stdout)
 							}
 							return
 						}
 						t.Errorf("match on %q not found in\n%q",
-							tc.stdoutRegex, output)
+							tc.stdoutRegex, stdout)
 					}
 					tc.repeat--
 				}

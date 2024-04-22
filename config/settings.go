@@ -77,7 +77,7 @@ func (s *SettingsBase) MapEnvToStruct() {
 		jLog.Fatal(
 			"One or more 'ARGUS_' environment variables are incorrect:\n"+
 				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
-			util.LogFrom{}, true)
+			&util.LogFrom{}, true)
 	}
 	s.CheckValues() // Set hash values and remove empty structs.
 }
@@ -278,7 +278,6 @@ func (s *Settings) LogTimestamps() *bool {
 func (s *Settings) LogLevel() string {
 	return strings.ToUpper(*util.FirstNonNilPtr(
 		s.FromFlags.Log.Level,
-		s.FromFlags.Log.Level,
 		s.Log.Level,
 		s.HardDefaults.Log.Level))
 }
@@ -327,7 +326,7 @@ func (s *Settings) WebCertFile() *string {
 	if _, err := os.Stat(*certFile); err != nil {
 		if !filepath.IsAbs(*certFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
+			jLog.Error(execErr, &util.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*certFile+":",
@@ -335,7 +334,7 @@ func (s *Settings) WebCertFile() *string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.cert_file "+err.Error(), util.LogFrom{}, true)
+		jLog.Fatal("settings.web.cert_file "+err.Error(), &util.LogFrom{}, true)
 	}
 	return certFile
 }
@@ -352,7 +351,7 @@ func (s *Settings) WebKeyFile() *string {
 	if _, err := os.Stat(*keyFile); err != nil {
 		if !filepath.IsAbs(*keyFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
+			jLog.Error(execErr, &util.LogFrom{}, execErr != nil)
 			err = fmt.Errorf(strings.Replace(
 				err.Error(),
 				" "+*keyFile+":",
@@ -360,7 +359,7 @@ func (s *Settings) WebKeyFile() *string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.key_file "+err.Error(), util.LogFrom{}, true)
+		jLog.Fatal("settings.web.key_file "+err.Error(), &util.LogFrom{}, true)
 	}
 	return keyFile
 }

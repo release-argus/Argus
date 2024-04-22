@@ -27,8 +27,11 @@ import (
 
 // LogInit for this package.
 func LogInit(log *util.JLog, databaseFile string) {
-	jLog = log
-	logFrom = util.LogFrom{Primary: "db", Secondary: databaseFile}
+	// Only set the log if it hasn't been set (avoid RACE condition)
+	if jLog == nil {
+		jLog = log
+		logFrom = &util.LogFrom{Primary: "db", Secondary: databaseFile}
+	}
 }
 
 func checkFile(path string) {
@@ -64,8 +67,11 @@ func checkFile(path string) {
 	}
 }
 
-func Run(cfg *config.Config) {
+func Run(cfg *config.Config, log *util.JLog) {
 	api := api{config: cfg}
+	if log != nil {
+		LogInit(log, cfg.Settings.DataDatabaseFile())
+	}
 	api.initialise()
 	defer api.db.Close()
 	if len(api.config.Order) > 0 {

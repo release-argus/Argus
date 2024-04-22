@@ -28,5 +28,5 @@ type api struct {
 
 var (
 	jLog    *util.JLog
-	logFrom util.LogFrom
+	logFrom *util.LogFrom
 )

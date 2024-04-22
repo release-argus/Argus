@@ -86,7 +86,7 @@ func (l *Lookup) applyOverrides(
 		l.Defaults,
 		l.HardDefaults)
 	if err := lookup.CheckValues(""); err != nil {
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
 	}
 	lookup.Status.Init(
@@ -109,7 +109,7 @@ func (l *Lookup) Refresh(
 	url *string,
 ) (version string, announceUpdate bool, err error) {
 	serviceID := *l.Status.ServiceID
-	logFrom := util.LogFrom{Primary: "deployed_version/refresh", Secondary: serviceID}
+	logFrom := &util.LogFrom{Primary: "deployed_version/refresh", Secondary: serviceID}
 
 	var lookup *Lookup
 	lookup, err = l.applyOverrides(
@@ -122,7 +122,7 @@ func (l *Lookup) Refresh(
 		semanticVersioning,
 		url,
 		&serviceID,
-		&logFrom)
+		logFrom)
 	if err != nil {
 		return
 	}
@@ -143,7 +143,7 @@ func (l *Lookup) Refresh(
 		regexTemplate != nil
 
 	// Query the lookup.
-	version, err = lookup.Query(!overrides, &logFrom)
+	version, err = lookup.Query(!overrides, logFrom)
 	if err != nil {
 		return
 	}
@@ -171,7 +171,7 @@ func basicAuthFromString(jsonStr *string, previous *BasicAuth, logFrom *util.Log
 	// Ignore the JSON if it failed to unmarshal
 	if err != nil {
 		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			*logFrom, true)
+			logFrom, true)
 		return previous
 	}
 	keys := util.GetKeysFromJSON(*jsonStr)
@@ -203,7 +203,7 @@ func headersFromString(jsonStr *string, previous *[]Header, logFrom *util.LogFro
 	// Ignore the JSON if it failed to unmarshal
 	if err != nil {
 		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			*logFrom, true)
+			logFrom, true)
 		return previous
 	}
 

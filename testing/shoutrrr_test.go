@@ -18,14 +18,13 @@ package testing
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"regexp"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -118,7 +117,7 @@ func TestFindShoutrrr(t *testing.T) {
 	tests := map[string]struct {
 		flag        string
 		cfg         *config.Config
-		outputRegex *string
+		stdoutRegex *string
 		panicRegex  *string
 		foundInRoot *bool
 	}{
@@ -171,7 +170,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Root": {
 			flag:        "bosh",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Slice{
 					"argus": {
@@ -188,7 +187,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Service": {
 			flag:        "baz",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Slice{
 					"argus": {
@@ -205,7 +204,7 @@ func TestFindShoutrrr(t *testing.T) {
 		},
 		"matching search of notifier in Root and a Service": {
 			flag:        "bar",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			cfg: &config.Config{
 				Service: service.Slice{
 					"argus": {
@@ -382,14 +381,15 @@ func TestFindShoutrrr(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			if tc.panicRegex != nil {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
+					releaseStdout()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -410,17 +410,14 @@ func TestFindShoutrrr(t *testing.T) {
 			// WHEN findShoutrrr is called with the test Config
 			got := findShoutrrr(tc.flag, tc.cfg, jLog, &util.LogFrom{})
 
-			// THEN we get the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			if tc.outputRegex != nil {
-				re := regexp.MustCompile(*tc.outputRegex)
-				match := re.MatchString(output)
+			// THEN we get the expected stdout
+			stdout := releaseStdout()
+			if tc.stdoutRegex != nil {
+				re := regexp.MustCompile(*tc.stdoutRegex)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Fatalf("want match for %q\nnot: %q",
-						*tc.outputRegex, output)
+						*tc.stdoutRegex, stdout)
 				}
 			}
 			// if the notifier should have been found in the root or in a service
@@ -461,11 +458,11 @@ func TestNotifyTest(t *testing.T) {
 		flag        string
 		slice       service.Slice
 		rootSlice   shoutrrr.SliceDefaults
-		outputRegex *string
+		stdoutRegex *string
 		panicRegex  *string
 	}{
 		"empty flag": {flag: "",
-			outputRegex: stringPtr("^$"),
+			stdoutRegex: stringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
 					Notify: shoutrrr.Slice{
@@ -543,10 +540,9 @@ func TestNotifyTest(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			serviceHardDefaults := service.Defaults{}
 			serviceHardDefaults.SetDefaults()
 			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
@@ -561,6 +557,8 @@ func TestNotifyTest(t *testing.T) {
 				// Switch Fatal to panic and disable this panic.
 				defer func() {
 					r := recover()
+					releaseStdout()
+
 					rStr := fmt.Sprint(r)
 					re := regexp.MustCompile(*tc.panicRegex)
 					match := re.MatchString(rStr)
@@ -577,17 +575,14 @@ func TestNotifyTest(t *testing.T) {
 				Notify:  tc.rootSlice}
 			NotifyTest(&tc.flag, &cfg, jLog)
 
-			// THEN we get the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			if tc.outputRegex != nil {
-				re := regexp.MustCompile(*tc.outputRegex)
-				match := re.MatchString(output)
+			// THEN we get the expected stdout
+			stdout := releaseStdout()
+			if tc.stdoutRegex != nil {
+				re := regexp.MustCompile(*tc.stdoutRegex)
+				match := re.MatchString(stdout)
 				if !match {
 					t.Errorf("want match for %q\nnot: %q",
-						*tc.outputRegex, output)
+						*tc.stdoutRegex, stdout)
 				}
 			}
 		})

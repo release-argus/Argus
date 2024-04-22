@@ -39,7 +39,7 @@ func (r *Require) RegexCheckVersion(
 		err := fmt.Errorf("regex not matched on version %q",
 			version)
 		r.Status.RegexMissVersion()
-		jLog.Info(err, *logFrom, r.Status.RegexMissesVersion() == 1)
+		jLog.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (r *Require) RegexCheckContent(
 			jLog.Debug(
 				fmt.Sprintf("%q RegexContent on %q, match=%t",
 					r.RegexContent, searchArea[i], regexMatch),
-				*logFrom, true)
+				logFrom, true)
 		}
 		if !regexMatch {
 			// if we're on the last asset
@@ -94,7 +94,7 @@ func (r *Require) RegexCheckContent(
 					"regex %q not matched on content for version %q",
 					regexStr, version)
 				r.Status.RegexMissContent()
-				jLog.Info(err, *logFrom, r.Status.RegexMissesContent() == 1)
+				jLog.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
 				return err
 			}
 			// continue searching the other assets

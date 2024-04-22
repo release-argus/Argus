@@ -194,8 +194,8 @@ func (api *API) SetupRoutesFavicon() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	// Set headers
 	w.Header().Set("Connection", "close")
@@ -206,7 +206,7 @@ func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 		BuildDate: util.BuildDate,
 		GoVersion: util.GoVersion,
 	})
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }
 
 // failRequest with a JSON response containing a message and status code.

@@ -17,13 +17,12 @@
 package shoutrrr
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -1383,26 +1382,22 @@ notify:
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN Print is called
 			tc.slice.Print("")
 
-			// THEN it prints the expected output
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			strOut := string(out)
+			// THEN it prints the expected stdout
+			stdout := releaseStdout()
 			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if strOut != tc.want {
+			if stdout != tc.want {
 				t.Errorf("Print should have given\n%q\nbut gave\n%q",
-					tc.want, strOut)
+					tc.want, stdout)
 			}
 		})
 	}

@@ -16,8 +16,12 @@
 
 package test
 
-import "github.com/release-argus/Argus/config"
+import (
+	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/test"
+)
 
+// NilFlags sets all flags to nil in the given config
 func NilFlags(cfg *config.Config) {
 	flags := []string{
 		"log.level",
@@ -38,15 +42,32 @@ func NilFlags(cfg *config.Config) {
 	cfg.Settings.NilUndefinedFlags(&flagMap)
 }
 
-func BareConfig() (cfg *config.Config) {
+// BareConfig returns a minimal config with no flags set
+func BareConfig(nilFlags bool) (cfg *config.Config) {
 	cfg = &config.Config{
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Web: config.WebSettings{
-					RoutePrefix: StringPtr(""),
+					RoutePrefix: test.StringPtr(""),
 				}}}}
-	NilFlags(cfg)
+
+	// NilFlags can be a RACE condition, so use it conditionally
+	if nilFlags {
+		NilFlags(cfg)
+	} else {
+		cfg.Settings.FromFlags.Log.Level = nil
+		cfg.Settings.FromFlags.Log.Timestamps = nil
+		cfg.Settings.FromFlags.Data.DatabaseFile = nil
+		cfg.Settings.FromFlags.Web.ListenHost = nil
+		cfg.Settings.FromFlags.Web.ListenPort = nil
+		cfg.Settings.FromFlags.Web.CertFile = nil
+		cfg.Settings.FromFlags.Web.KeyFile = nil
+		cfg.Settings.FromFlags.Web.RoutePrefix = nil
+		cfg.Settings.FromFlags.Web.BasicAuth = nil
+	}
+
 	cfg.HardDefaults.SetDefaults()
 	cfg.Settings.SetDefaults()
+
 	return
 }

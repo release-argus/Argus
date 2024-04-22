@@ -22,8 +22,10 @@ import (
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 )
 
+// testShoutrrrrGotifyToken returns the token for the Gotify test
 func testShoutrrrrGotifyToken() (token string) {
 	token = os.Getenv("ARGUS_TEST_GOTIFY_TOKEN")
 	if token == "" {
@@ -33,6 +35,7 @@ func testShoutrrrrGotifyToken() (token string) {
 	return
 }
 
+// ShoutrrrDefaults returns a ShoutrrrDefaults instance for testing
 func ShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefaults {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
@@ -53,6 +56,7 @@ func ShoutrrrDefaults(failing bool, selfSignedCert bool) *shoutrrr.ShoutrrrDefau
 	return shoutrrr
 }
 
+// Shoutrrr returns a shoutrrr instance for testing
 func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	url := "valid.release-argus.io"
 	if selfSignedCert {
@@ -79,7 +83,7 @@ func Shoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
 
 	shoutrrr.ID = "test"
 	shoutrrr.ServiceStatus = &svcstatus.Status{
-		ServiceID: StringPtr("service"),
+		ServiceID: test.StringPtr("service"),
 	}
 	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr

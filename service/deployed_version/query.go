@@ -63,7 +63,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	if l.JSON != "" {
 		version, err = util.GetValueByKey(rawBody, l.JSON, l.GetURL())
 		if err != nil {
-			jLog.Error(err, *logFrom, true)
+			jLog.Error(err, logFrom, true)
 			//nolint:wrapcheck
 			return "", err
 		}
@@ -80,7 +80,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 		if len(texts) == 0 {
 			err := fmt.Errorf("regex %q didn't find a match on %q",
 				l.Regex, version)
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			return "", err
 		}
 
@@ -97,7 +97,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 				"style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning "+
 				"(globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
 				version)
-			jLog.Error(err, *logFrom, true)
+			jLog.Error(err, logFrom, true)
 			return "", err
 		}
 	}
@@ -175,7 +175,7 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 	// Announce version change to WebSocket clients.
 	jLog.Info(
 		fmt.Sprintf("Updated to %q", version),
-		util.LogFrom{Primary: *l.Status.ServiceID},
+		&util.LogFrom{Primary: *l.Status.ServiceID},
 		true)
 	l.Status.AnnounceUpdate()
 }
@@ -191,7 +191,7 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 
 	req, err := http.NewRequest(http.MethodGet, l.GetURL(), nil)
 	if err != nil {
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
@@ -212,23 +212,23 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
-			jLog.Warn(err, *logFrom, true)
+			jLog.Warn(err, logFrom, true)
 			return
 		}
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 
 	// Ignore non-2XX responses.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 		return
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	rawBody, err = io.ReadAll(resp.Body)
-	jLog.Error(err, *logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 	return
 }

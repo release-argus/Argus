@@ -19,6 +19,7 @@ package v1
 import (
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -37,11 +38,23 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
+var (
+	loadMutex sync.Mutex
+	loadCount int
+)
+
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog := util.NewJLog("DEBUG", false)
 	jLog.Testing = true
-	service.LogInit(jLog)
+	flags := make(map[string]bool)
+	path := "TestMain.yml"
+	testYAML_Argus(path)
+	var config config.Config
+	config.Load(path, &flags, jLog)
+	os.Remove(path)
+	jLog.SetLevel("DEBUG")
+	LogInit(jLog)
 
 	// run other tests
 	exitCode := m.Run()
@@ -52,9 +65,7 @@ func TestMain(m *testing.M) {
 
 func testClient() Client {
 	hub := NewHub()
-	api := API{}
 	return Client{
-		api:  &api,
 		hub:  hub,
 		ip:   "1.1.1.1",
 		conn: &websocket.Conn{},
@@ -62,13 +73,11 @@ func testClient() Client {
 	}
 }
 
-func testLoad(file string) *config.Config {
+func testLoad(file string, jLog *util.JLog) *config.Config {
 	var config config.Config
 
 	flags := make(map[string]bool)
-	jLog := util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	config.Load(file, &flags, jLog)
+	config.Load(file, &flags, nil)
 	announceChannel := make(chan []byte, 8)
 	config.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
 
@@ -77,17 +86,22 @@ func testLoad(file string) *config.Config {
 
 func testAPI(name string) API {
 	testYAML_Argus(name)
-	cfg := testLoad(name)
+
+	// Only give the log once (to avoid potential RACE condition)
+	var loadLog *util.JLog
+	loadMutex.Lock()
+	if loadCount == 0 {
+		loadLog = jLog
+		loadCount++
+	}
+	loadMutex.Unlock()
+
+	cfg := testLoad(name, loadLog)
 	accessToken := os.Getenv("GITHUB_TOKEN")
 	if accessToken != "" {
 		cfg.HardDefaults.Service.LatestVersion.AccessToken = &accessToken
 	}
-	jLog := util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	return API{
-		Config: cfg,
-		Log:    jLog,
-	}
+	return API{Config: cfg}
 }
 
 func testService(id string) *service.Service {

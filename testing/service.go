@@ -33,16 +33,17 @@ func ServiceTest(
 	if *flag == "" {
 		return
 	}
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 
+	// Log what we are testing
+	logFrom := &util.LogFrom{Primary: "Testing", Secondary: *flag}
 	log.Info(
 		"",
 		logFrom,
 		true,
 	)
-	service := cfg.Service[*flag]
 
-	if service == nil {
+	// Check if service exists
+	if !util.Contains(cfg.Order, *flag) {
 		log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
@@ -53,29 +54,31 @@ func ServiceTest(
 		)
 	}
 
-	if service != nil {
-		_, err := service.LatestVersion.Query(false, &logFrom)
-		if err != nil {
-			helpMsg := ""
-			if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
-				helpMsg = "This URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type.\n"
-			}
-			log.Error(
-				fmt.Sprintf(
-					"No version matching the conditions specified could be found for %q at %q\n%s",
-					*flag,
-					service.LatestVersion.ServiceURL(true),
-					helpMsg,
-				),
-				logFrom,
-				true,
-			)
+	// Service we are testing
+	service := cfg.Service[*flag]
+
+	// LatestVersion
+	_, err := service.LatestVersion.Query(false, logFrom)
+	if err != nil {
+		helpMsg := ""
+		if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
+			helpMsg = "This URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type.\n"
 		}
+		log.Error(
+			fmt.Sprintf(
+				"No version matching the conditions specified could be found for %q at %q\n%s",
+				*flag,
+				service.LatestVersion.ServiceURL(true),
+				helpMsg,
+			),
+			logFrom,
+			true,
+		)
 	}
 
 	// DeployedVersionLookup
 	if service.DeployedVersionLookup != nil {
-		version, err := service.DeployedVersionLookup.Query(false, &logFrom)
+		version, err := service.DeployedVersionLookup.Query(false, logFrom)
 		log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",
@@ -85,6 +88,7 @@ func ServiceTest(
 			err == nil,
 		)
 	}
+
 	if !log.Testing {
 		os.Exit(0)
 	}

@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
-
-	"github.com/release-argus/Argus/util"
 )
 
 func TestNewHub(t *testing.T) {
@@ -46,38 +44,41 @@ func TestNewHub(t *testing.T) {
 }
 
 func TestHub_RunWithRegister(t *testing.T) {
-	// GIVEN a WebSocket Hub and API
+	// GIVEN a WebSocket Hub and two clients
 	hub := NewHub()
-	api := API{}
-	go hub.Run(util.NewJLog("WARN", false))
-	time.Sleep(time.Second)
-
-	// WHEN a new client connects
+	go hub.Run()
 	client := testClient()
-	client.api = &api
-	client.hub = hub
+	otherClient := testClient()
+
+	// WHEN a new client connects (two for synchronisation)
 	hub.register <- &client
-	time.Sleep(time.Second)
+	hub.register <- &otherClient
+	hub.register <- &otherClient
 
 	// THEN that client is registered to the Hub
-	// DATA RACE, but just for testing
+	// DATA RACE - Unsure why as register is a second before this read
 	if !hub.clients[&client] {
-		t.Error("Client wasn't registerd to the Hub")
+		t.Error("Client wasn't registered to the Hub")
 	}
 }
 
 func TestHub_RunWithUnregister(t *testing.T) {
 	// GIVEN a Client is connected to the WebSocket Hub
 	client := testClient()
+	otherClient := testClient()
 	hub := client.hub
-	go hub.Run(util.NewJLog("WARN", false))
-	time.Sleep(time.Second)
+	go hub.Run()
 	hub.register <- &client
-	time.Sleep(time.Second)
+	hub.register <- &otherClient
+	hub.register <- &otherClient
+	if !hub.clients[&client] {
+		t.Error("Client wasn't registered to the Hub")
+	}
 
-	// WHEN that client disconnects
+	// WHEN that client disconnects (two for synchronisation)
 	hub.unregister <- &client
-	hub.unregister <- &client
+	hub.unregister <- &otherClient
+	hub.unregister <- &otherClient
 
 	// THEN that client is unregistered to the Hub
 	if hub.clients[&client] {
@@ -91,7 +92,7 @@ func TestHub_RunWithBroadcast(t *testing.T) {
 	// and a valid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(util.NewJLog("DEBUG", false))
+	go hub.Run()
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(2 * time.Second)
@@ -120,7 +121,7 @@ func TestHub_RunWithInvalidBroadcast(t *testing.T) {
 	// and an invalid message wants to be sent
 	client := testClient()
 	hub := client.hub
-	go hub.Run(util.NewJLog("WARN", false))
+	go hub.Run()
 	time.Sleep(time.Second)
 	hub.register <- &client
 	time.Sleep(time.Second)

@@ -20,11 +20,12 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestContains(t *testing.T) {
@@ -542,12 +543,12 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			diffAddress: true,
 		},
 		"1 non-default var (env var partial)": {
-			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_ONE": "bar"},
+			env: map[string]string{"TESTFIRSTNONDEFAULTWITHENV_TWO": "bar"},
 			slice: []string{
 				"",
 				"",
 				"",
-				"foo${TESTFIRSTNONDEFAULTWITHENV_ONE}"},
+				"foo${TESTFIRSTNONDEFAULTWITHENV_TWO}"},
 			wantIndex:   3,
 			wantText:    "foobar",
 			diffAddress: true,
@@ -562,13 +563,13 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 		},
 		"2 non-default vars (empty env vars ignored)": {
 			env: map[string]string{
-				"TESTFIRSTNONDEFAULTWITHENV_TWO":   "",
-				"TESTFIRSTNONDEFAULTWITHENV_THREE": "bar"},
+				"TESTFIRSTNONDEFAULTWITHENV_THREE": "",
+				"TESTFIRSTNONDEFAULTWITHENV_FOUR":  "bar"},
 			slice: []string{
-				"${TESTFIRSTNONDEFAULTWITHENV_TWO}",
+				"${TESTFIRSTNONDEFAULTWITHENV_THREE}",
 				"${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
 				"",
-				"${TESTFIRSTNONDEFAULTWITHENV_THREE}"},
+				"${TESTFIRSTNONDEFAULTWITHENV_FOUR}"},
 			wantIndex:   3,
 			wantText:    "${TESTFIRSTNONDEFAULTWITHENV_UNSET}",
 			diffAddress: true,
@@ -630,30 +631,25 @@ func TestPrintlnIfNotDefault(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNotDefault"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNotDefault is called
 			PrintlnIfNotDefault(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}
@@ -673,30 +669,26 @@ func TestPrintlnIfNotNil(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNotNil"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNotNil is called
 			PrintlnIfNotNil(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}
@@ -716,30 +708,26 @@ func TestPrintlnIfNil(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			msg := "var is not default from PrintlnIfNil"
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 
 			// WHEN PrintlnIfNil is called
 			PrintlnIfNil(tc.element, msg)
 
 			// THEN the var is printed when it should be
-			w.Close()
-			out, _ := io.ReadAll(r)
-			got := string(out)
-			os.Stdout = stdout
+			stdout := releaseStdout()
 			if !tc.didPrint {
-				if got != "" {
+				if stdout != "" {
 					t.Fatalf("printed %q",
-						got)
+						stdout)
 				}
 				return
 			}
-			if got != msg+"\n" {
+			if stdout != msg+"\n" {
 				t.Errorf("unexpected print %q",
-					got)
+					stdout)
 			}
 		})
 	}

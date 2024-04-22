@@ -36,7 +36,7 @@ func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
 		jLog.Verbose(
 			fmt.Sprintf("Tracking %s at %s every %s",
 				(*s)[key].ID, (*s)[key].LatestVersion.ServiceURL(true), (*s)[key].Options.GetInterval()),
-			util.LogFrom{Primary: (*s)[key].ID},
+			&util.LogFrom{Primary: (*s)[key].ID},
 			true)
 
 		// Track this Service in a infinite loop goroutine.

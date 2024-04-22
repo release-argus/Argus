@@ -18,12 +18,12 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -76,6 +76,8 @@ func TestTheMain(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			file := fmt.Sprintf("%s.yml", name)
 			os.Remove(tc.db)
@@ -83,28 +85,20 @@ func TestTheMain(t *testing.T) {
 			defer os.Remove(tc.db)
 			resetFlags()
 			configFile = &file
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			accessToken := os.Getenv("GITHUB_TOKEN")
 			os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
 
 			// WHEN Main is called
-			go func() {
-				main()
-			}()
+			go main()
 			time.Sleep(3 * time.Second)
 
 			// THEN the program will have printed everything expected
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
+			stdout := releaseStdout()
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {
-					if !strings.Contains(output, text) {
-						t.Errorf("%q couldn't be found in the output:\n%s",
-							text, output)
+					if !strings.Contains(stdout, text) {
+						t.Errorf("%q couldn't be found in stdout:\n%s",
+							text, stdout)
 					}
 				}
 			}

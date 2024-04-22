@@ -122,7 +122,7 @@ func (l *Lookup) applyOverrides(
 	}
 
 	if err := lookup.CheckValues(""); err != nil {
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return nil, fmt.Errorf("values failed validity check:\n%w", err)
 	}
 
@@ -147,7 +147,7 @@ func (l *Lookup) Refresh(
 	usePreRelease *string,
 ) (version string, announceUpdate bool, err error) {
 	serviceID := *l.Status.ServiceID
-	logFrom := util.LogFrom{Primary: "latest_version/refresh", Secondary: serviceID}
+	logFrom := &util.LogFrom{Primary: "latest_version/refresh", Secondary: serviceID}
 
 	var lookup *Lookup
 	lookup, err = l.applyOverrides(
@@ -160,7 +160,7 @@ func (l *Lookup) Refresh(
 		urlCommands,
 		usePreRelease,
 		&serviceID,
-		&logFrom)
+		logFrom)
 	if err != nil {
 		return
 	}
@@ -180,7 +180,7 @@ func (l *Lookup) Refresh(
 		usePreRelease != nil
 
 	// Query the lookup.
-	_, err = lookup.Query(!overrides, &logFrom)
+	_, err = lookup.Query(!overrides, logFrom)
 	if err != nil {
 		return
 	}

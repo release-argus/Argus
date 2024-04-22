@@ -29,7 +29,7 @@ var jLog *util.JLog
 
 // NewRouter that serves the Prometheus metrics,
 // WebSocket and NodeJS frontend at the RoutePrefix.
-func NewRouter(cfg *config.Config, jLog *util.JLog, hub *api_v1.Hub) *mux.Router {
+func NewRouter(cfg *config.Config, hub *api_v1.Hub) *mux.Router {
 	// Go
 	api := api_v1.NewAPI(cfg, jLog)
 
@@ -54,8 +54,8 @@ func NewRouter(cfg *config.Config, jLog *util.JLog, hub *api_v1.Hub) *mux.Router
 // newWebUI will set up everything web-related for Argus.
 func newWebUI(cfg *config.Config) *mux.Router {
 	hub := api_v1.NewHub()
-	go hub.Run(jLog)
-	router := NewRouter(cfg, jLog, hub)
+	go hub.Run()
+	router := NewRouter(cfg, hub)
 
 	// Hand out the broadcast channel
 	cfg.HardDefaults.Service.Status.AnnounceChannel = &hub.Broadcast
@@ -67,21 +67,25 @@ func newWebUI(cfg *config.Config) *mux.Router {
 }
 
 func Run(cfg *config.Config, log *util.JLog) {
-	jLog = log
+	// Only set if unset (avoid RACE condition in tests)
+	if log != nil && jLog == nil {
+		jLog = log
+	}
+
 	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), util.LogFrom{}, true)
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), &util.LogFrom{}, true)
 
 	if cfg.Settings.WebCertFile() != nil && cfg.Settings.WebKeyFile() != nil {
 		jLog.Fatal(
 			http.ListenAndServeTLS(
 				listenAddress, *cfg.Settings.WebCertFile(), *cfg.Settings.WebKeyFile(), router),
-			util.LogFrom{}, true)
+			&util.LogFrom{}, true)
 	} else {
 		jLog.Fatal(
 			http.ListenAndServe(
 				listenAddress, router),
-			util.LogFrom{}, true)
+			&util.LogFrom{}, true)
 	}
 }

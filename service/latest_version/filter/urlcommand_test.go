@@ -303,7 +303,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 			if tc.text != "" {
 				text = tc.text
 			}
-			text, err := tc.slice.Run(text, util.LogFrom{})
+			text, err := tc.slice.Run(text, &util.LogFrom{})
 
 			// THEN the expected text was returned
 			if tc.want != text {

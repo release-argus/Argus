@@ -982,7 +982,7 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 			}
 
 			// WHEN getValidToken is called on it
-			got := tc.dockerCheck.getValidToken(tc.dockerCheck.GetType())
+			got := tc.dockerCheck.getValidToken()
 
 			// THEN the token is what we expect
 			if tc.want != got {

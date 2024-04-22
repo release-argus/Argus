@@ -158,7 +158,7 @@ func RequireFromStr(jsonStr *string, previous *Require, logFrom *util.LogFrom) (
 		jLog.Error(
 			fmt.Sprintf("Failed converting JSON - %q\n%s",
 				*jsonStr, util.ErrorToString(err)),
-			*logFrom, true)
+			logFrom, true)
 		return nil, fmt.Errorf("require - %w", err)
 	}
 

@@ -36,7 +36,7 @@ func LogInit(log *util.JLog) {
 }
 
 // Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s)
-func (c *Config) Init() {
+func (c *Config) Init(setLog bool) {
 	c.OrderMutex.RLock()
 	defer c.OrderMutex.RUnlock()
 
@@ -49,14 +49,14 @@ func (c *Config) Init() {
 
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
-	jLog.SetTimestamps(*c.Settings.LogTimestamps())
-	jLog.SetLevel(c.Settings.LogLevel())
+	if setLog {
+		jLog.SetTimestamps(*c.Settings.LogTimestamps())
+		jLog.SetLevel(c.Settings.LogLevel())
+	}
 
-	i := 0
-	for _, name := range c.Order {
-		i++
-		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i, len(c.Service), name),
-			util.LogFrom{}, true)
+	for i, name := range c.Order {
+		jLog.Debug(fmt.Sprintf("%d/%d %s Init", i+1, len(c.Service), name),
+			&util.LogFrom{}, true)
 		c.Service[name].Init(
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
@@ -68,17 +68,19 @@ func (c *Config) Init() {
 func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.File = file
 	// Give the log to the other packages
-	LogInit(log)
+	if log != nil {
+		LogInit(log)
+	}
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user
 	data, err := os.ReadFile(file)
 	jLog.Fatal(fmt.Sprintf("Error reading %q\n%s", file, err),
-		util.LogFrom{}, err != nil)
+		&util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, c)
 	jLog.Fatal(fmt.Sprintf("Unmarshal of %q failed\n%s", file, err),
-		util.LogFrom{}, err != nil)
+		&util.LogFrom{}, err != nil)
 
 	c.GetOrder(data)
 
@@ -100,6 +102,6 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	// SaveHandler that listens for calls to save config changes.
 	go c.SaveHandler()
 
-	c.Init()
+	c.Init(log != nil)
 	c.CheckValues()
 }

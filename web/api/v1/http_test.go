@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
+	config_test "github.com/release-argus/Argus/config/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
@@ -35,7 +36,6 @@ import (
 func TestHTTP_Version(t *testing.T) {
 	// GIVEN an API and the Version,BuildDate and GoVersion vars defined
 	api := API{}
-	api.Log = util.NewJLog("WARN", false)
 	util.Version = "1.2.3"
 	util.BuildDate = "2022-01-01T01:01:01Z"
 
@@ -164,7 +164,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			cfg := test.BareConfig()
+			cfg := config_test.BareConfig(true)
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
 			api := NewAPI(cfg, util.NewJLog("WARN", false))
 			api.SetupRoutesFavicon()
@@ -402,6 +402,8 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 	}
+	log := util.NewJLog("WARN", false)
+	log.Testing = true
 	disableCombinations := test.Combinations(util.SortedKeys(tests))
 
 	// Split tests into groups
@@ -421,7 +423,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 				}
 				t.Run(strings.Join(disabledRoutes, ";"), func(t *testing.T) {
 
-					cfg := test.BareConfig()
+					cfg := config_test.BareConfig(false)
 					cfg.Settings.Web.DisabledRoutes = disabledRoutes
 					// Give every other test a route prefix
 					routePrefix := ""
@@ -429,7 +431,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						routePrefix = "/test"
 						cfg.Settings.Web.RoutePrefix = &routePrefix
 					}
-					api := NewAPI(cfg, util.NewJLog("WARN", false))
+					api := NewAPI(cfg, log)
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					ts.Config.Handler = api.Router

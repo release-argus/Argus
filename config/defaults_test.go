@@ -17,7 +17,6 @@
 package config
 
 import (
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -919,19 +919,22 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				if r != nil {
-					if tc.errRegex == "" {
-						t.Fatalf("unexpected panic: %v", r)
+				// Ignore nil panics.
+				if r == nil {
+					return
+				}
+
+				if tc.errRegex == "" {
+					t.Fatalf("unexpected panic: %v", r)
+				}
+				switch r.(type) {
+				case string:
+					if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
+						t.Errorf("want error matching:\n%v\ngot:\n%v",
+							tc.errRegex, r.(string))
 					}
-					switch r.(type) {
-					case string:
-						if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
-							t.Errorf("want error matching:\n%v\ngot:\n%v",
-								tc.errRegex, r.(string))
-						}
-					default:
-						t.Fatalf("unexpected panic: %v", r)
-					}
+				default:
+					t.Fatalf("unexpected panic: %v", r)
 				}
 			}()
 
@@ -1072,22 +1075,18 @@ func TestDefaults_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			// WHEN Print is called
 			tc.input.Print("")
 
 			// THEN the expected number of lines are printed
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
+			stdout := releaseStdout()
+			got := strings.Count(stdout, "\n")
 			if got != tc.lines {
 				t.Errorf("Print should have given %d lines, but gave %d\n%s",
-					tc.lines, got, out)
+					tc.lines, got, stdout)
 			}
 		})
 	}

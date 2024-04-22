@@ -77,15 +77,15 @@ func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 }
 
 // Run all of the URLCommand(s) in this URLCommandSlice.
-func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) (string, error) {
+func (s *URLCommandSlice) Run(text string, logFrom *util.LogFrom) (string, error) {
 	if s == nil {
 		return text, nil
 	}
 
-	logFrom.Secondary = "url_commands"
+	urlCommandLogFrom := &util.LogFrom{Primary: logFrom.Primary, Secondary: "url_commands"}
 	var err error
 	for commandIndex := range *s {
-		text, err = (*s)[commandIndex].run(text, &logFrom)
+		text, err = (*s)[commandIndex].run(text, urlCommandLogFrom)
 		if err != nil {
 			return text, err
 		}
@@ -101,7 +101,7 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
 			fmt.Sprintf("Looking through:\n%q", text),
-			*logFrom, true)
+			logFrom, true)
 	}
 
 	var msg string
@@ -125,7 +125,7 @@ func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
 
 	msg = fmt.Sprintf("%s\nResolved to %s", msg, text)
 	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(msg, *logFrom, true)
+		jLog.Debug(msg, logFrom, true)
 	}
 	return text, err
 }
@@ -149,7 +149,7 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 			err = fmt.Errorf("%w on %q",
 				err, text)
 		}
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -157,7 +157,7 @@ func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
 			c.Type, *c.Regex, len(texts), text, (index + 1))
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -173,7 +173,7 @@ func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
 	if len(texts) == 1 {
 		err := fmt.Errorf("%s didn't find any %q to split on",
 			c.Type, *c.Text)
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -187,7 +187,7 @@ func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
 			c.Type, *c.Text, len(texts), text, (index + 1))
-		jLog.Warn(err, *logFrom, true)
+		jLog.Warn(err, logFrom, true)
 
 		return text, err
 	}
@@ -275,7 +275,7 @@ func URLCommandsFromStr(jsonStr *string, defaults *URLCommandSlice, logFrom *uti
 	// Ignore the JSON if it failed to unmarshal
 	if err != nil {
 		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			*logFrom, err != nil)
+			logFrom, err != nil)
 		return defaults, fmt.Errorf("failed converting JSON - %w", err)
 	}
 

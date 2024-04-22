@@ -17,8 +17,6 @@
 package config
 
 import (
-	"io"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -27,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/options"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -120,10 +119,9 @@ func TestConfig_CheckValues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
 			if tc.config != nil {
 				for name, svc := range tc.config.Service {
 					svc.ID = name
@@ -132,27 +130,24 @@ func TestConfig_CheckValues(t *testing.T) {
 			// Switch Fatal to panic and disable this panic.
 			if !tc.noPanic {
 				defer func() {
-					_ = recover()
+					recover()
+					stdout := releaseStdout()
 
-					w.Close()
-					out, _ := io.ReadAll(r)
-					os.Stdout = stdout
-					output := string(out)
-					lines := strings.Split(output, "\n")
+					lines := strings.Split(stdout, "\n")
 					if len(tc.errRegex) == 0 {
 						t.Fatalf("want 0 errors, not %d:\n%v",
 							len(lines), lines)
 					}
 					if len(tc.errRegex) > len(lines) {
-						t.Fatalf("want %d errors:\n['%s']\ngot %d errors:\n%v\noutput: %q",
-							len(tc.errRegex), strings.Join(tc.errRegex, `'  '`), len(lines), lines, output)
+						t.Fatalf("want %d errors:\n['%s']\ngot %d errors:\n%v\nstdout: %q",
+							len(tc.errRegex), strings.Join(tc.errRegex, `'  '`), len(lines), lines, stdout)
 					}
 					for i := range tc.errRegex {
 						re := regexp.MustCompile(tc.errRegex[i])
 						match := re.MatchString(lines[i])
 						if !match {
 							t.Errorf("want match for: %q\ngot:  %q",
-								tc.errRegex[i], output)
+								tc.errRegex[i], stdout)
 							return
 						}
 					}
@@ -163,11 +158,8 @@ func TestConfig_CheckValues(t *testing.T) {
 			tc.config.CheckValues()
 
 			// THEN this call will/wont crash the program
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			output := string(out)
-			lines := strings.Split(output, `\n`)
+			stdout := releaseStdout()
+			lines := strings.Split(stdout, `\n`)
 			if len(tc.errRegex) > len(lines) {
 				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
 					len(tc.errRegex), tc.errRegex, len(lines), lines)
@@ -178,7 +170,7 @@ func TestConfig_CheckValues(t *testing.T) {
 				match := re.MatchString(lines[i])
 				if !match {
 					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], output)
+						tc.errRegex[i], stdout)
 					return
 				}
 			}
@@ -199,22 +191,18 @@ func TestConfig_Print(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-
-			stdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			// WHEN Print is called with these flags
 			config.Print(&tc.flag)
 
 			// THEN config is printed onlt when the flag is true
-			w.Close()
-			out, _ := io.ReadAll(r)
-			os.Stdout = stdout
-			got := strings.Count(string(out), "\n")
+			stdout := releaseStdout()
+			got := strings.Count(stdout, "\n")
 			if got != tc.lines {
 				t.Errorf("Print with %s wants %d lines but got %d\n%s",
-					name, tc.lines, got, string(out))
+					name, tc.lines, got, stdout)
 			}
 		})
 	}

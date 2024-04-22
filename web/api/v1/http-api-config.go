@@ -24,8 +24,8 @@ import (
 
 // wsConfig handles getting the config that's in use and sending it as YAML.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
-	api.Log.Verbose("-", logFrom, true)
+	logFrom := &util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
+	jLog.Verbose("-", logFrom, true)
 
 	cfg := &api_type.Config{}
 
@@ -108,5 +108,5 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 	api.Config.OrderMutex.RUnlock()
 
 	err := json.NewEncoder(w).Encode(cfg)
-	api.Log.Error(err, logFrom, err != nil)
+	jLog.Error(err, logFrom, err != nil)
 }

@@ -85,8 +85,8 @@ func FromPayload(
 	dec1 := json.NewDecoder(bytes.NewReader(buf.Bytes()))
 	err = dec1.Decode(newService)
 	if err != nil {
-		jLog.Error(err, *logFrom, true)
-		jLog.Verbose(fmt.Sprintf("Payload: %s", buf.String()), *logFrom, true)
+		jLog.Error(err, logFrom, true)
+		jLog.Verbose(fmt.Sprintf("Payload: %s", buf.String()), logFrom, true)
 		return
 	}
 
@@ -95,7 +95,7 @@ func FromPayload(
 	var secretRefs oldSecretRefs
 	err = dec2.Decode(&secretRefs)
 	if err != nil {
-		jLog.Error(err, *logFrom, true)
+		jLog.Error(err, logFrom, true)
 		return
 	}
 

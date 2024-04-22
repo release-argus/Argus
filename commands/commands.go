@@ -94,11 +94,11 @@ func (c *Controller) ExecIndex(logFrom *util.LogFrom, index int) (err error) {
 
 // Exec this Command and return any errors encountered.
 func (c *Command) Exec(logFrom *util.LogFrom) error {
-	jLog.Info(fmt.Sprintf("Executing '%s'", c), *logFrom, true)
+	jLog.Info(fmt.Sprintf("Executing '%s'", c), logFrom, true)
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
-	jLog.Error(util.ErrorToString(err), *logFrom, err != nil)
-	jLog.Info(string(out), *logFrom, err == nil && string(out) != "")
+	jLog.Error(util.ErrorToString(err), logFrom, err != nil)
+	jLog.Info(string(out), logFrom, err == nil && string(out) != "")
 
 	//nolint:wrapcheck
 	return err
