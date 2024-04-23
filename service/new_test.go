@@ -3139,7 +3139,7 @@ func TestFromPayload(t *testing.T) {
 
 func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service
-	testLV := testLatestVersionLookupURL(false)
+	testLV := testLatestVersion("url", false)
 	testLV.Query(false, &util.LogFrom{})
 	testDVL := testDeployedVersionLookup(false)
 	v, _ := testDVL.Query(false, &util.LogFrom{})
@@ -3154,7 +3154,7 @@ func TestService_CheckFetches(t *testing.T) {
 	}{
 		"Already have LatestVersion, nil DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: nil},
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.Status.LatestVersion(),
@@ -3164,7 +3164,7 @@ func TestService_CheckFetches(t *testing.T) {
 		},
 		"Already have LatestVersion and DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.Status.LatestVersion(),
@@ -3174,20 +3174,20 @@ func TestService_CheckFetches(t *testing.T) {
 		},
 		"latest_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(true),
+				LatestVersion:         *testLatestVersion("url", true),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			errRegex: `latest_version - x509 \(certificate invalid\)`,
 		},
 		"deployed_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(true)},
 			wantLatestVersion: "1.2.2",
 			errRegex:          `deployed_version - x509 \(certificate invalid\)`,
 		},
 		"both queried": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			wantLatestVersion:   "1.2.2",
 			wantDeployedVersion: "1.2.3",
@@ -3199,7 +3199,7 @@ func TestService_CheckFetches(t *testing.T) {
 					test.BoolPtr(false), // active
 					"", nil,
 					nil, nil),
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			errRegex: "^$",
 		},

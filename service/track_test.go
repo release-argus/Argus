@@ -57,9 +57,9 @@ func TestSlice_Track(t *testing.T) {
 			for _, j := range tc.slice {
 				switch j {
 				case "github":
-					(*slice)[j] = testServiceGitHub(name)
+					(*slice)[j] = testService(name, "github")
 				case "url":
-					(*slice)[j] = testServiceURL(name)
+					(*slice)[j] = testService(name, "url")
 				}
 				if len(tc.active) != 0 {
 					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
@@ -264,7 +264,7 @@ func TestService_Track(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testServiceURL(name)
+			svc := testService(name, "url")
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}

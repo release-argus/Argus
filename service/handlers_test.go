@@ -46,7 +46,7 @@ func TestService_UpdateLatestApproved(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -190,7 +190,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testServiceURL(name)
+			svc := testService(name, "url")
 			svc.Command = tc.commands
 			svc.WebHook = tc.webhooks
 			svc.Status.Init(
@@ -289,7 +289,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 		svc.Command = tc.commands
 		svc.WebHook = tc.webhooks
 		svc.Status.Init(
@@ -552,7 +552,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -735,7 +735,7 @@ func TestService_HandleCommand(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -896,7 +896,7 @@ func TestService_HandleWebHook(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 		svc.Status.Init(
 			len(svc.Notify), len(tc.webhooks), 0,
 			&svc.ID,
@@ -1010,7 +1010,7 @@ func TestService_HandleSkip(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 
 		t.Run(name, func(t *testing.T) {
 			// t.Parallel() - cannot run in parallel as it uses the same channel
@@ -1144,7 +1144,7 @@ func TestService_ShouldRetryAll(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceURL(name)
+		svc := testService(name, "url")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

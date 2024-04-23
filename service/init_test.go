@@ -30,7 +30,7 @@ import (
 
 func TestService_ServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	svc := testServiceURL("TestServiceInfo")
+	svc := testService("TestServiceInfo", "url")
 	id := "test_id"
 	svc.ID = id
 	url := "https://test_url.com"
@@ -124,7 +124,7 @@ func TestService_IconURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceGitHub(name)
+		svc := testService(name, "github")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
