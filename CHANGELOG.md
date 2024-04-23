@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.17.3](https://github.com/release-argus/Argus/compare/0.17.0...0.17.3) (2024-04-23)
+
+
+### Features
+
+* **docker:** add curl ([#394](https://github.com/release-argus/Argus/issues/394)) ([1bc9041](https://github.com/release-argus/Argus/commits/1bc9041e4c7634468d39549b7e857a17e185de70))
+
+
+### Bug Fixes
+
+* **config,web:** disabled routes weren't taking into account `route_prefix` ([79213ca](https://github.com/release-argus/Argus/commits/79213ca322473a5c49cd058d0effc4044e71331c))
+* **web:** show link for `deployed_version.url` ([bcbd835](https://github.com/release-argus/Argus/commits/bcbd835d0bd94e9323cff728337bca307192964d))
+
 ### [0.17.2](https://github.com/release-argus/Argus/compare/0.17.0...0.17.2) (2024-04-15)
 
 
