@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -62,7 +63,7 @@ func TestLookup_CheckValues(t *testing.T) {
 		"regexTemplate with no regex": {
 			url:           "https://example.com",
 			errRegex:      `^$`,
-			regexTemplate: stringPtr("$1.$2.$3"),
+			regexTemplate: test.StringPtr("$1.$2.$3"),
 			defaults:      &LookupDefaults{},
 		},
 		"all errs": {

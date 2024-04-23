@@ -33,35 +33,20 @@ import (
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var mainCfg *config.Config
 var port *string
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -74,7 +59,7 @@ func TestMain(m *testing.M) {
 	os.Remove(file)
 	defer os.Remove(*mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
-	mainCfg.Settings.Web.ListenHost = stringPtr("localhost")
+	mainCfg.Settings.Web.ListenHost = test.StringPtr("localhost")
 
 	// WHEN the Router is fetched for this Config
 	router = newWebUI(mainCfg)
@@ -85,12 +70,21 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func getFreePort() (int, error) {
+	ln, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port, nil
+}
+
 func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config) {
 	testYAML_Argus(path, t)
 	cfg = &config.Config{}
 
 	// Settings.Log
-	cfg.Settings.Log.Level = stringPtr("DEBUG")
+	cfg.Settings.Log.Level = test.StringPtr("DEBUG")
 
 	cfg.Load(
 		path,
@@ -128,17 +122,7 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	emptyNotify := shoutrrr.ShoutrrrDefaults{}
 	emptyNotify.InitMaps()
 	notify := shoutrrr.Slice{
-		"test": shoutrrr.New(
-			nil,
-			"test",
-			&map[string]string{
-				"message": "{{ service_id }} release"},
-			&map[string]string{},
-			"",
-			&map[string]string{},
-			&emptyNotify,
-			&emptyNotify,
-			&emptyNotify)}
+		"test": test_shoutrrr.Shoutrrr(false, false)}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
 	svc.Comment = "test service's comment"
@@ -163,15 +147,6 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	return
 }
 
-func getFreePort() (int, error) {
-	ln, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-	ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port, nil
-}
-
 func testService(id string) (svc *service.Service) {
 	var (
 		sAnnounceChannel chan []byte         = make(chan []byte, 2)
@@ -183,8 +158,8 @@ func testService(id string) (svc *service.Service) {
 	svc = &service.Service{
 		ID: id,
 		LatestVersion: *latestver.New(
-			stringPtr(""),
-			boolPtr(false),
+			test.StringPtr(""),
+			test.BoolPtr(false),
 			nil, nil,
 			&filter.Require{
 				RegexContent: "content",
@@ -198,17 +173,17 @@ func testService(id string) (svc *service.Service) {
 			"url",
 			"https://release-argus.io",
 			&filter.URLCommandSlice{testURLCommandRegex()},
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil, nil),
 		DeployedVersionLookup: testDeployedVersion(),
 		Options: *opt.New(
 			nil,
 			"10m",
-			boolPtr(true),
+			test.BoolPtr(true),
 			&opt.OptionsDefaults{},
 			&opt.OptionsDefaults{}),
 		Dashboard: *service.NewDashboardOptions(
-			boolPtr(false), "test", "", "https://release-argus.io",
+			test.BoolPtr(false), "test", "", "https://release-argus.io",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},
@@ -254,50 +229,17 @@ func testService(id string) (svc *service.Service) {
 	return
 }
 
-func testCommand(failing bool) command.Command {
-	if failing {
-		return command.Command{"ls", "-lah", "/root"}
-	}
-	return command.Command{"ls", "-lah"}
-}
-
-func testWebHook(failing bool, id string) *webhook.WebHook {
-	whDesiredStatusCode := 0
-	whMaxTries := uint(1)
-	wh := webhook.New(
-		boolPtr(false),
-		nil,
-		"0s",
-		&whDesiredStatusCode,
-		nil,
-		&whMaxTries,
-		nil,
-		stringPtr("11m"),
-		"argus",
-		boolPtr(false),
-		"github",
-		"https://valid.release-argus.io/hooks/github-style",
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{})
-	wh.ID = id
-	if failing {
-		wh.Secret = "notArgus"
-	}
-	return wh
-}
-
 func testWebHookDefaults(failing bool) *webhook.WebHookDefaults {
 	whDesiredStatusCode := 0
 	whMaxTries := uint(1)
 	wh := webhook.NewDefaults(
-		boolPtr(false),
+		test.BoolPtr(false),
 		nil,
 		"0s",
 		&whDesiredStatusCode,
 		&whMaxTries,
 		"argus",
-		boolPtr(false),
+		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style")
 	if failing {
@@ -340,6 +282,7 @@ func testURLCommandRegex() filter.URLCommand {
 		Index: index,
 	}
 }
+
 func generateCertFiles(certFile, keyFile string) error {
 	// Generate the certificate and private key
 	// Generate a private key

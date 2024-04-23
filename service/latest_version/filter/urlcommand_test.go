@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
@@ -113,34 +114,34 @@ func TestURLCommandsFromStr(t *testing.T) {
 		want     *URLCommandSlice
 	}{
 		"regex - invalid": {
-			jsonStr:  stringPtr(`[{"type":"regex","regex":"-([0-9.+)-"}]`),
+			jsonStr:  test.StringPtr(`[{"type":"regex","regex":"-([0-9.+)-"}]`),
 			want:     &defaults,
 			errRegex: `regex:.*\(Invalid RegEx\)`,
 		},
 		"regex": {
-			jsonStr: stringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"}]`),
+			jsonStr: test.StringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"}]`),
 			want: &URLCommandSlice{
 				testURLCommandRegex()},
 		},
 		"replace": {
-			jsonStr: stringPtr(`[{"type":"replace","old":"foo","new":"bar"}]`),
+			jsonStr: test.StringPtr(`[{"type":"replace","old":"foo","new":"bar"}]`),
 			want: &URLCommandSlice{
 				testURLCommandReplace()},
 		},
 		"split": {
-			jsonStr: stringPtr(`[{"type":"split","text":"this","index":1}]`),
+			jsonStr: test.StringPtr(`[{"type":"split","text":"this","index":1}]`),
 			want: &URLCommandSlice{
 				testURLCommandSplit()},
 		},
 		"all types": {
-			jsonStr: stringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"},{"type":"replace","old":"foo","new":"bar"},{"type":"split","text":"this","index":1}]`),
+			jsonStr: test.StringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"},{"type":"replace","old":"foo","new":"bar"},{"type":"split","text":"this","index":1}]`),
 			want: &URLCommandSlice{
 				testURLCommandRegex(),
 				testURLCommandReplace(),
 				testURLCommandSplit()},
 		},
 		"multiple of the each type": {
-			jsonStr: stringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"},{"type":"regex","regex":"-([0-9.]+)-"},{"type":"replace","old":"foo","new":"bar"},{"type":"replace","old":"foo","new":"bar"},{"type":"split","text":"this","index":1},{"type":"split","text":"this","index":1}]`),
+			jsonStr: test.StringPtr(`[{"type":"regex","regex":"-([0-9.]+)-"},{"type":"regex","regex":"-([0-9.]+)-"},{"type":"replace","old":"foo","new":"bar"},{"type":"replace","old":"foo","new":"bar"},{"type":"split","text":"this","index":1},{"type":"split","text":"this","index":1}]`),
 			want: &URLCommandSlice{
 				testURLCommandRegex(),
 				testURLCommandRegex(),
@@ -150,11 +151,11 @@ func TestURLCommandsFromStr(t *testing.T) {
 				testURLCommandSplit()},
 		},
 		"empty": {
-			jsonStr: stringPtr(`[]`),
+			jsonStr: test.StringPtr(`[]`),
 			want:    &URLCommandSlice{},
 		},
 		"object rather than list": {
-			jsonStr:  stringPtr(`{"type":"regex"}`),
+			jsonStr:  test.StringPtr(`{"type":"regex"}`),
 			errRegex: "cannot unmarshal object",
 			want:     &defaults,
 		},
@@ -219,76 +220,76 @@ func TestURLCommandSlice_Run(t *testing.T) {
 		},
 		"regex": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 1}},
+				{Type: "regex", Regex: test.StringPtr("([a-z]+)[0-9]+"), Index: 1}},
 			errRegex: "^$",
 			want:     "def",
 		},
 		"regex with negative index": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: -1}},
+				{Type: "regex", Regex: test.StringPtr("([a-z]+)[0-9]+"), Index: -1}},
 			errRegex: "^$",
 			want:     "def",
 		},
 		"regex doesn't match (gives text that didn't match)": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
+				{Type: "regex", Regex: test.StringPtr("([h-z]+)[0-9]+"), Index: 1}},
 			errRegex: `regex .* didn't return any matches on "` + testText + `"`,
 			want:     testText,
 		},
 		"regex doesn't match (doesn't give text that didn't match as too long)": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([h-z]+)[0-9]+"), Index: 1}},
+				{Type: "regex", Regex: test.StringPtr("([h-z]+)[0-9]+"), Index: 1}},
 			errRegex: "regex .* didn't return any matches$",
 			text:     strings.Repeat("a123", 5),
 			want:     "a123a123a123a123a123",
 		},
 		"regex index out of bounds": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 2}},
+				{Type: "regex", Regex: test.StringPtr("([a-z]+)[0-9]+"), Index: 2}},
 			errRegex: `regex .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     testText,
 		},
 		"regex with template": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([a-z]+)([0-9]+)"), Index: 1, Template: stringPtr("$1_$2")}},
+				{Type: "regex", Regex: test.StringPtr("([a-z]+)([0-9]+)"), Index: 1, Template: test.StringPtr("$1_$2")}},
 			errRegex: "^$",
 			want:     "def_456",
 		},
 		"replace": {
 			slice: &URLCommandSlice{
-				{Type: "replace", Old: stringPtr("-"), New: stringPtr(" ")}},
+				{Type: "replace", Old: test.StringPtr("-"), New: test.StringPtr(" ")}},
 			errRegex: "^$",
 			want:     "abc123 def456",
 		},
 		"split": {
 			slice: &URLCommandSlice{
-				{Type: "split", Text: stringPtr("-"), Index: -1}},
+				{Type: "split", Text: test.StringPtr("-"), Index: -1}},
 			errRegex: "^$",
 			want:     "def456",
 		},
 		"split with negative index": {
 			slice: &URLCommandSlice{
-				{Type: "split", Text: stringPtr("-"), Index: 0}},
+				{Type: "split", Text: test.StringPtr("-"), Index: 0}},
 			errRegex: "^$",
 			want:     "abc123",
 		},
 		"split on unknown text": {
 			slice: &URLCommandSlice{
-				{Type: "split", Text: stringPtr("7"), Index: 0}},
+				{Type: "split", Text: test.StringPtr("7"), Index: 0}},
 			errRegex: "split didn't find any .* to split on",
 			want:     testText,
 		},
 		"split index out of bounds": {
 			slice: &URLCommandSlice{
-				{Type: "split", Text: stringPtr("-"), Index: 2}},
+				{Type: "split", Text: test.StringPtr("-"), Index: 2}},
 			errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
 			want:     testText,
 		},
 		"all types": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("([a-z]+)[0-9]+"), Index: 1},
-				{Type: "replace", Old: stringPtr("e"), New: stringPtr("a")},
-				{Type: "split", Text: stringPtr("a"), Index: 1}},
+				{Type: "regex", Regex: test.StringPtr("([a-z]+)[0-9]+"), Index: 1},
+				{Type: "replace", Old: test.StringPtr("e"), New: test.StringPtr("a")},
+				{Type: "split", Text: test.StringPtr("a"), Index: 1}},
 			errRegex: "^$",
 			want:     "f",
 		},
@@ -398,7 +399,7 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 		},
 		"invalid regex": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-")}},
+				{Type: "regex", Regex: test.StringPtr("[0-")}},
 			errRegex: []string{`^    regex: .* <invalid>`},
 		},
 		"valid regex with template": {
@@ -407,9 +408,9 @@ func TestURLCommandSlice_CheckValues(t *testing.T) {
 		},
 		"valid regex with empty template": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-"), Template: stringPtr("")}},
+				{Type: "regex", Regex: test.StringPtr("[0-"), Template: test.StringPtr("")}},
 			wantSlice: &URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("[0-")}},
+				{Type: "regex", Regex: test.StringPtr("[0-")}},
 			errRegex: []string{`^$`},
 		},
 		"valid replace": {
@@ -525,8 +526,8 @@ old: was
 new: now`,
 			slice: URLCommandSlice{
 				{Type: "regex",
-					Regex: stringPtr("foo"), Index: 1,
-					Text: stringPtr("hi"), Old: stringPtr("was"), New: stringPtr("now")}},
+					Regex: test.StringPtr("foo"), Index: 1,
+					Text: test.StringPtr("hi"), Old: test.StringPtr("was"), New: test.StringPtr("now")}},
 			errRegex: "^$",
 		},
 		"list of URLCommands": {
@@ -542,9 +543,9 @@ new: now`,
 			errRegex: "^$",
 			slice: URLCommandSlice{
 				{Type: "regex",
-					Regex: stringPtr(`\"([0-9.+])\"`), Index: 1},
-				{Type: "replace", Old: stringPtr("foo"), New: stringPtr("bar")},
-				{Type: "split", Text: stringPtr("abc"), Index: 2}},
+					Regex: test.StringPtr(`\"([0-9.+])\"`), Index: 1},
+				{Type: "replace", Old: test.StringPtr("foo"), New: test.StringPtr("bar")},
+				{Type: "split", Text: test.StringPtr("abc"), Index: 2}},
 		},
 	}
 

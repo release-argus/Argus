@@ -18,22 +18,15 @@ package latestver
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
 
 // Unsure why Go tests give a different result than the compiled binary
 var initialEmptyListETag string
@@ -61,14 +54,14 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		&announceChannel, &databaseChannel, &saveChannel,
 		"", "", "", "", "", "")
 	lookup := New(
-		stringPtr(os.Getenv("GITHUB_TOKEN")),
-		boolPtr(allowInvalidCerts),
+		test.StringPtr(os.Getenv("GITHUB_TOKEN")),
+		test.BoolPtr(allowInvalidCerts),
 		nil,
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{},
 			opt.NewDefaults(
-				"0s", boolPtr(true))),
+				"0s", test.BoolPtr(true))),
 		&filter.Require{}, nil,
 		"github",
 		"release-argus/Argus",
@@ -81,29 +74,21 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		lookup.Type = "url"
 		lookup.URL = "https://invalid.release-argus.io/plain"
 		lookup.URLCommands = filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}}
+			{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}}
 	} else {
 		lookup.GitHubData = NewGitHubData("", nil)
 		lookup.URLCommands = filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("([0-9.]+)")}}
-		lookup.AccessToken = stringPtr(os.Getenv("GITHUB_TOKEN"))
-		lookup.UsePreRelease = boolPtr(false)
+			{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}}
+		lookup.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
+		lookup.UsePreRelease = test.BoolPtr(false)
 	}
 	lookup.Status.Init(
 		0, 0, 0,
-		stringPtr("serviceID"),
-		stringPtr("http://example.com"),
+		test.StringPtr("serviceID"),
+		test.StringPtr("http://example.com"),
 	)
 	lookup.Require.Status = lookup.Status
 	lookup.Defaults = &LookupDefaults{}
 	lookup.HardDefaults = &LookupDefaults{}
 	return lookup
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

@@ -17,48 +17,13 @@
 package command
 
 import (
-	"fmt"
 	"os"
-	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
-
-func testController(announce *chan []byte) (control *Controller) {
-	control = &Controller{}
-	svcStatus := svcstatus.New(
-		announce, nil, nil,
-		"", "", "", "", "", "")
-	svcStatus.ServiceID = stringPtr("service_id")
-	control.Init(
-		svcStatus,
-		&Slice{{}, {}},
-		nil,
-		stringPtr("14m"),
-	)
-
-	return
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -72,37 +37,18 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testShoutrrr(failing bool, selfSignedCert bool) *shoutrrr.Shoutrrr {
-	url := "valid.release-argus.io"
-	if selfSignedCert {
-		url = strings.Replace(url, "valid", "invalid", 1)
-	}
-	shoutrrr := shoutrrr.New(
-		nil, "",
-		&map[string]string{"max_tries": "1"},
-		&map[string]string{},
-		"gotify",
-		// trunk-ignore(gitleaks/generic-api-key)
-		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
-		shoutrrr.NewDefaults(
-			"", nil, nil, nil),
-		shoutrrr.NewDefaults(
-			"", nil, nil, nil),
-		shoutrrr.NewDefaults(
-			"", nil, nil, nil))
-	shoutrrr.Main.InitMaps()
-	shoutrrr.Defaults.InitMaps()
-	shoutrrr.HardDefaults.InitMaps()
+func testController(announce *chan []byte) (control *Controller) {
+	control = &Controller{}
+	svcStatus := svcstatus.New(
+		announce, nil, nil,
+		"", "", "", "", "", "")
+	svcStatus.ServiceID = test.StringPtr("service_id")
+	control.Init(
+		svcStatus,
+		&Slice{{}, {}},
+		nil,
+		test.StringPtr("14m"),
+	)
 
-	shoutrrr.ID = "test"
-	shoutrrr.ServiceStatus = &svcstatus.Status{
-		ServiceID: stringPtr("service"),
-	}
-	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
-	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
-
-	if failing {
-		shoutrrr.URLFields["token"] = "invalid"
-	}
-	return shoutrrr
+	return
 }

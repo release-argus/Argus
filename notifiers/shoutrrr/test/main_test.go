@@ -12,46 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
 package test
 
 import (
-	"os"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
-
-func TestShoutrrrrGotifyToken(t *testing.T) {
-	// GIVEN the environment variable ARGUS_TEST_GOTIFY_TOKEN
-	tests := map[string]struct {
-		env string
-	}{
-		"empty": {env: ""},
-		"set":   {env: "test"},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - not parallel because we are manipulating the environment
-
-			want := "AGE-LlHU89Q56uQ"
-			if tc.env != "" {
-				os.Setenv("ARGUS_TEST_GOTIFY_TOKEN", tc.env)
-				defer os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN")
-				want = tc.env
-			}
-
-			// WHEN testShoutrrrrGotifyToken is called
-			token := testShoutrrrrGotifyToken()
-
-			// THEN the token should be as expected
-			if token != want {
-				t.Errorf("expected %q but got %q",
-					want, token)
-			}
-		})
-	}
-}
 
 func TestShoutrrrDefaults(t *testing.T) {
 	// GIVEN the failing and self-signed certificate flags
@@ -69,7 +38,7 @@ func TestShoutrrrDefaults(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			wantToken := "AGE-LlHU89Q56uQ"
+			wantToken := test.ShoutrrrGotifyToken()
 			if tc.failing {
 				wantToken = "invalid"
 			}
@@ -111,7 +80,7 @@ func TestShoutrrr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			wantToken := "AGE-LlHU89Q56uQ"
+			wantToken := test.ShoutrrrGotifyToken()
 			if tc.failing {
 				wantToken = "invalid"
 			}

@@ -83,7 +83,7 @@ func TestSetLevel(t *testing.T) {
 		"lower-case verbose": {level: "verbose"},
 		"mixed-case vERbOse": {level: "vERbOse"},
 		"invalid level PINEAPPLE": {level: "PINEAPPLE",
-			panicRegex: stringPtr(`not a valid log\.level`)}}
+			panicRegex: test.StringPtr(`not a valid log\.level`)}}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -529,7 +529,7 @@ func TestJLog_Verbose(t *testing.T) {
 			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 		"limits VERBOSE message length": {
 			level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true,
-			customMsg: stringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
+			customMsg: test.StringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
 	}
 
 	for name, tc := range tests {
@@ -627,7 +627,7 @@ func TestJLog_Debug(t *testing.T) {
 			level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
 		"limits DEBUG message length": {
 			level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true,
-			customMsg: stringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
+			customMsg: test.StringPtr(strings.Repeat("a", 9999)), expectedLength: 1000},
 	}
 
 	for name, tc := range tests {

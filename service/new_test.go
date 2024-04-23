@@ -32,6 +32,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -48,35 +49,35 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 		"empty AccessToken": {
 			latestVersion: &latestver.Lookup{},
 			otherLV: latestver.New(
-				stringPtr("foo"),
+				test.StringPtr("foo"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			expected: &latestver.Lookup{},
 		},
 		"new AccessToken kept": {
 			latestVersion: latestver.New(
-				stringPtr("foo"),
+				test.StringPtr("foo"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			otherLV: latestver.New(
-				stringPtr("bar"),
+				test.StringPtr("bar"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			expected: latestver.New(
-				stringPtr("foo"),
+				test.StringPtr("foo"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 		},
 		"give old AccessToken": {
 			latestVersion: latestver.New(
-				stringPtr("<secret>"),
+				test.StringPtr("<secret>"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			otherLV: latestver.New(
-				stringPtr("bar"),
+				test.StringPtr("bar"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			expected: latestver.New(
-				stringPtr("bar"),
+				test.StringPtr("bar"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 		},
 		"referncing default AccessToken": {
 			latestVersion: latestver.New(
-				stringPtr("<secret>"),
+				test.StringPtr("<secret>"),
 				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 			otherLV: latestver.New(
 				nil,
@@ -352,8 +353,8 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bash", Value: "<secret>"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)},
-					{OldIndex: intPtr(1)}}},
+					{OldIndex: test.IntPtr(0)},
+					{OldIndex: test.IntPtr(1)}}},
 		},
 		"Headers with <secret> but nil index refs": {
 			deployedVersion: &deployedver.Lookup{
@@ -385,7 +386,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "foo", Value: "shazam"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}}},
+					{OldIndex: test.IntPtr(0)}}},
 		},
 		"only new/changed Headers": {
 			deployedVersion: &deployedver.Lookup{
@@ -401,7 +402,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
+					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with expected refs": {
 			deployedVersion: &deployedver.Lookup{
@@ -417,7 +418,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
+					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"only new/changed Headers with no refs": {
 			deployedVersion: &deployedver.Lookup{
@@ -466,7 +467,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bosh", Value: "<secret>"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
+					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"referencing old Header value": {
 			deployedVersion: &deployedver.Lookup{
@@ -482,7 +483,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}, {OldIndex: nil}}},
+					{OldIndex: test.IntPtr(0)}, {OldIndex: nil}}},
 		},
 		"referencing old Header value that doesn't exist": {
 			deployedVersion: &deployedver.Lookup{
@@ -498,7 +499,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(1)}, {OldIndex: nil}}},
+					{OldIndex: test.IntPtr(1)}, {OldIndex: nil}}},
 		},
 		"referencing some old Header values but not others": {
 			deployedVersion: &deployedver.Lookup{
@@ -515,7 +516,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "bish", Value: "bong"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: nil}, {OldIndex: intPtr(1)}}},
+					{OldIndex: nil}, {OldIndex: test.IntPtr(1)}}},
 		},
 		"swap header values": {
 			deployedVersion: &deployedver.Lookup{
@@ -532,7 +533,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					{Key: "foo", Value: "bong"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
-					{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
+					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
 		},
 	}
 
@@ -678,7 +679,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"apikey": "<secret>"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"bish": {OldIndex: stringPtr("bash")}},
+			secretRefs: &map[string]oldStringIndex{"bish": {OldIndex: test.StringPtr("bash")}},
 		},
 		"secretRef referencing nil index": {
 			notify: shoutrrr.Slice{
@@ -740,7 +741,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"apikey": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("baz")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("baz")}},
 		},
 		"secretRefs - url_fields.altid": {
 			notify: shoutrrr.Slice{
@@ -771,7 +772,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"apikey": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.apikey": {
 			notify: shoutrrr.Slice{
@@ -802,7 +803,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"apikey": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.apikey swap vars": {
 			notify: shoutrrr.Slice{
@@ -839,8 +840,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil, nil, nil)},
 			secretRefs: &map[string]oldStringIndex{
-				"bar": {OldIndex: stringPtr("foo")},
-				"foo": {OldIndex: stringPtr("bar")}},
+				"bar": {OldIndex: test.StringPtr("foo")},
+				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - url_fields.apikey swap vars ignores notify order": {
 			notify: shoutrrr.Slice{
@@ -877,8 +878,8 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"apikey": "something"},
 					nil, nil, nil)},
 			secretRefs: &map[string]oldStringIndex{
-				"bar": {OldIndex: stringPtr("foo")},
-				"foo": {OldIndex: stringPtr("bar")}},
+				"bar": {OldIndex: test.StringPtr("foo")},
+				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - url_fields.botkey": {
 			notify: shoutrrr.Slice{
@@ -909,7 +910,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"botkey": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.password": {
 			notify: shoutrrr.Slice{
@@ -940,7 +941,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"password": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.token": {
 			notify: shoutrrr.Slice{
@@ -971,7 +972,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"token": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.tokena": {
 			notify: shoutrrr.Slice{
@@ -1002,7 +1003,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"tokena": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.tokenb": {
 			notify: shoutrrr.Slice{
@@ -1033,7 +1034,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"tokenb": "yikes"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.host ignored as <secret>": {
 			notify: shoutrrr.Slice{
@@ -1064,7 +1065,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"host": "https://example.com"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - params.devices": {
 			notify: shoutrrr.Slice{
@@ -1095,7 +1096,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"devices": "yikes"},
 					"", nil, nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - params.avatar ignored as <secret>": {
 			notify: shoutrrr.Slice{
@@ -1126,7 +1127,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					&map[string]string{
 						"avatar": "https://example.com"},
 					"", nil, nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - ALL": {
 			notify: shoutrrr.Slice{
@@ -1174,7 +1175,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"tokena":   "bosh",
 						"tokenb":   "bash"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}},
+			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 	}
 
@@ -1208,7 +1209,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 
 func TestService_GiveSecretsWebHook(t *testing.T) {
 	// GIVEN a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice
-	test := map[string]struct {
+	tests := map[string]struct {
 		webhook      webhook.Slice
 		otherWebhook *webhook.Slice
 		expected     webhook.Slice
@@ -1291,7 +1292,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"<secret>",
 					nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
-				"bish": {OldIndex: stringPtr("bash")}},
+				"bish": {OldIndex: test.StringPtr("bash")}},
 		},
 		"secretRef referencing nil index": {
 			webhook: webhook.Slice{
@@ -1346,7 +1347,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: stringPtr("bash")},
+				"foo": {OldIndex: test.StringPtr("bash")},
 				"bar": {OldIndex: nil}},
 		},
 		"secretRefs - secret": {
@@ -1374,7 +1375,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: stringPtr("foo")},
+				"foo": {OldIndex: test.StringPtr("foo")},
 				"bar": {OldIndex: nil}},
 		},
 		"secretRefs - secret swap vars": {
@@ -1406,8 +1407,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"shazam",
 					nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
-				"bar": {OldIndex: stringPtr("foo")},
-				"foo": {OldIndex: stringPtr("bar")}},
+				"bar": {OldIndex: test.StringPtr("foo")},
+				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - secret swap vars ignores order sent": {
 			webhook: webhook.Slice{
@@ -1438,8 +1439,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"shazam",
 					nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
-				"bar": {OldIndex: stringPtr("foo")},
-				"foo": {OldIndex: stringPtr("bar")}},
+				"bar": {OldIndex: test.StringPtr("foo")},
+				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"custom headers - no secretRefs": {
 			webhook: webhook.Slice{
@@ -1515,8 +1516,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 			},
 			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: stringPtr("foo")},
-				"bar": {OldIndex: stringPtr("bar")},
+				"foo": {OldIndex: test.StringPtr("foo")},
+				"bar": {OldIndex: test.StringPtr("bar")},
 			},
 		},
 		"custom headers - header secretRefs but old secrets unwanted": {
@@ -1558,13 +1559,13 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			},
 			secretRefs: &map[string]whSecretRef{
 				"foo": {
-					OldIndex: stringPtr("foo"),
+					OldIndex: test.StringPtr("foo"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)}}},
+						{OldIndex: test.IntPtr(0)}}},
 				"bar": {
-					OldIndex: stringPtr("bar"),
+					OldIndex: test.StringPtr("bar"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)}}},
+						{OldIndex: test.IntPtr(0)}}},
 			},
 		},
 		"custom headers - header secretRefs, some indices out of range": {
@@ -1610,13 +1611,13 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
 				"foo": {
-					OldIndex: stringPtr("foo"),
+					OldIndex: test.StringPtr("foo"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(5)}, {OldIndex: intPtr(1)}}},
+						{OldIndex: test.IntPtr(5)}, {OldIndex: test.IntPtr(1)}}},
 				"bar": {
-					OldIndex: stringPtr("bar"),
+					OldIndex: test.StringPtr("bar"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)}, {OldIndex: intPtr(2)}}},
+						{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(2)}}},
 			},
 		},
 		"custom headers - header secretRefs use all secrets": {
@@ -1661,15 +1662,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
 				"foo": {
-					OldIndex: stringPtr("foo"),
+					OldIndex: test.StringPtr("foo"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)},
-						{OldIndex: intPtr(1)}}},
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}},
 				"bar": {
-					OldIndex: stringPtr("bar"),
+					OldIndex: test.StringPtr("bar"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)},
-						{OldIndex: intPtr(1)}}}},
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}}},
 		},
 		"custom headers - header secretRefs, swap names of webhook": {
 			webhook: webhook.Slice{
@@ -1713,19 +1714,19 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 			secretRefs: &map[string]whSecretRef{
 				"bar": {
-					OldIndex: stringPtr("foo"),
+					OldIndex: test.StringPtr("foo"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)},
-						{OldIndex: intPtr(1)}}},
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}},
 				"foo": {
-					OldIndex: stringPtr("bar"),
+					OldIndex: test.StringPtr("bar"),
 					CustomHeaders: []oldIntIndex{
-						{OldIndex: intPtr(0)},
-						{OldIndex: intPtr(1)}}}},
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}}},
 		},
 	}
 
-	for name, tc := range test {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -1747,13 +1748,13 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				otherServiceStatus := svcstatus.Status{}
 				otherServiceStatus.Init(
 					len(*tc.otherWebhook), 0, 0,
-					stringPtr("otherService"),
+					test.StringPtr("otherService"),
 					nil)
 				tc.otherWebhook.Init(
 					&otherServiceStatus,
 					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 					nil,
-					stringPtr("10m"))
+					test.StringPtr("10m"))
 			}
 
 			// WHEN we call giveSecretsWebHook
@@ -1792,7 +1793,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		"no secrets": {
 			svc: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("something"),
+					test.StringPtr("something"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -1825,7 +1826,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -1858,7 +1859,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 			expected: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("something"),
+					test.StringPtr("something"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -1900,7 +1901,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		"no oldService (CREATE)": {
 			svc: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("<secret>"),
+					test.StringPtr("<secret>"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -1935,7 +1936,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			oldService: nil,
 			expected: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("<secret>"),
+					test.StringPtr("<secret>"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -1972,7 +1973,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		"no secretRefs": {
 			svc: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("<secret>"),
+					test.StringPtr("<secret>"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2006,7 +2007,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2039,11 +2040,11 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, nil)},
 			},
 			oldWebHookFails: map[string]*bool{
-				"foo": boolPtr(false),
-				"bar": boolPtr(true)},
+				"foo": test.BoolPtr(false),
+				"bar": test.BoolPtr(true)},
 			expected: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2080,7 +2081,7 @@ func TestService_GiveSecrets(t *testing.T) {
 		"matching secretRefs": {
 			svc: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2118,7 +2119,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2156,7 +2157,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			},
 			expected: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("somethingelse"),
+					test.StringPtr("somethingelse"),
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: &deployedver.Lookup{
 					BasicAuth: &deployedver.BasicAuth{
@@ -2193,9 +2194,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						nil, nil, nil)},
 			},
 			secretRefs: oldSecretRefs{
-				DeployedVersionLookup: dvSecretRef{Headers: []oldIntIndex{{OldIndex: intPtr(0)}, {OldIndex: intPtr(1)}}},
-				Notify:                map[string]oldStringIndex{"foo": {OldIndex: stringPtr("foo")}, "bar": {OldIndex: stringPtr("bar")}},
-				WebHook:               map[string]whSecretRef{"foo": {OldIndex: stringPtr("foo")}, "bar": {OldIndex: stringPtr("bar")}},
+				DeployedVersionLookup: dvSecretRef{Headers: []oldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
+				Notify:                map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}, "bar": {OldIndex: test.StringPtr("bar")}},
+				WebHook:               map[string]whSecretRef{"foo": {OldIndex: test.StringPtr("foo")}, "bar": {OldIndex: test.StringPtr("bar")}},
 			},
 		},
 		"unchanged LatestVersion.URL retains Status.LatestVersion": {
@@ -2302,11 +2303,11 @@ func TestService_GiveSecrets(t *testing.T) {
 						"http://example.com",
 						nil, nil, nil)}},
 			oldWebHookFails: map[string]*bool{
-				"test": boolPtr(true)},
+				"test": test.BoolPtr(true)},
 			expectedWebHookFails: map[string]*bool{
-				"test": boolPtr(true)},
+				"test": test.BoolPtr(true)},
 			secretRefs: oldSecretRefs{
-				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
+				WebHook: map[string]whSecretRef{"test": {OldIndex: test.StringPtr("test")}}},
 		},
 		"changed WebHook loses Failed": {
 			svc: &Service{
@@ -2328,9 +2329,9 @@ func TestService_GiveSecrets(t *testing.T) {
 						"http://example.com/other",
 						nil, nil, nil)}},
 			oldWebHookFails: map[string]*bool{
-				"test": boolPtr(true)},
+				"test": test.BoolPtr(true)},
 			secretRefs: oldSecretRefs{
-				WebHook: map[string]whSecretRef{"test": {OldIndex: stringPtr("test")}}},
+				WebHook: map[string]whSecretRef{"test": {OldIndex: test.StringPtr("test")}}},
 		},
 		"unchanged Command retains Failed": {
 			svc: &Service{
@@ -2345,9 +2346,9 @@ func TestService_GiveSecrets(t *testing.T) {
 					{"ls", "-la"}},
 				CommandController: &command.Controller{}},
 			oldCommandFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			expectedCommandFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			secretRefs: oldSecretRefs{},
 		},
 		"changed Command loses Failed": {
@@ -2362,7 +2363,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				Command: command.Slice{
 					{"ls", "-lah"}}},
 			oldCommandFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			secretRefs: oldSecretRefs{},
 		},
 	}
@@ -2548,7 +2549,7 @@ func TestFromPayload(t *testing.T) {
 			want: &Service{
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				Options: opt.Options{
-					Active:   boolPtr(false),
+					Active:   test.BoolPtr(false),
 					Defaults: &opt.OptionsDefaults{}},
 				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
 		},
@@ -2602,7 +2603,7 @@ func TestFromPayload(t *testing.T) {
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2610,7 +2611,7 @@ func TestFromPayload(t *testing.T) {
 					nil, "", "", nil, nil, nil, nil)},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2636,7 +2637,7 @@ func TestFromPayload(t *testing.T) {
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2650,7 +2651,7 @@ func TestFromPayload(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2717,7 +2718,7 @@ func TestFromPayload(t *testing.T) {
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2772,7 +2773,7 @@ func TestFromPayload(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2907,7 +2908,7 @@ func TestFromPayload(t *testing.T) {
 				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
 				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -2982,7 +2983,7 @@ func TestFromPayload(t *testing.T) {
 			},
 			oldService: &Service{
 				LatestVersion: *latestver.New(
-					stringPtr("aToken"),
+					test.StringPtr("aToken"),
 					nil, nil, nil,
 					&filter.Require{
 						Docker: filter.NewDockerCheck(
@@ -3076,7 +3077,7 @@ func TestFromPayload(t *testing.T) {
 			t.Parallel()
 
 			// Convert the string payload to a ReadCloser
-			tc.payload = trimJSON(tc.payload)
+			tc.payload = test.TrimJSON(tc.payload)
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := io.NopCloser(reader)
 			if tc.serviceHardDefaults == nil {
@@ -3138,7 +3139,7 @@ func TestFromPayload(t *testing.T) {
 
 func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service
-	testLV := testLatestVersionLookupURL(false)
+	testLV := testLatestVersion("url", false)
 	testLV.Query(false, &util.LogFrom{})
 	testDVL := testDeployedVersionLookup(false)
 	v, _ := testDVL.Query(false, &util.LogFrom{})
@@ -3153,7 +3154,7 @@ func TestService_CheckFetches(t *testing.T) {
 	}{
 		"Already have LatestVersion, nil DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: nil},
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.Status.LatestVersion(),
@@ -3163,7 +3164,7 @@ func TestService_CheckFetches(t *testing.T) {
 		},
 		"Already have LatestVersion and DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.Status.LatestVersion(),
@@ -3173,20 +3174,20 @@ func TestService_CheckFetches(t *testing.T) {
 		},
 		"latest_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(true),
+				LatestVersion:         *testLatestVersion("url", true),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			errRegex: `latest_version - x509 \(certificate invalid\)`,
 		},
 		"deployed_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(true)},
 			wantLatestVersion: "1.2.2",
 			errRegex:          `deployed_version - x509 \(certificate invalid\)`,
 		},
 		"both queried": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			wantLatestVersion:   "1.2.2",
 			wantDeployedVersion: "1.2.3",
@@ -3195,10 +3196,10 @@ func TestService_CheckFetches(t *testing.T) {
 		"inactive queries neither": {
 			svc: &Service{
 				Options: *opt.New(
-					boolPtr(false), // active
+					test.BoolPtr(false), // active
 					"", nil,
 					nil, nil),
-				LatestVersion:         *testLatestVersionLookupURL(false),
+				LatestVersion:         *testLatestVersion("url", false),
 				DeployedVersionLookup: testDeployedVersionLookup(false)},
 			errRegex: "^$",
 		},
@@ -3214,7 +3215,7 @@ func TestService_CheckFetches(t *testing.T) {
 						"", nil)},
 				&Defaults{
 					Options: *opt.NewDefaults(
-						"0h", boolPtr(true))},
+						"0h", test.BoolPtr(true))},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
 			)

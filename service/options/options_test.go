@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -35,10 +36,10 @@ func TestOptions_GetActive(t *testing.T) {
 			active: nil,
 			want:   true},
 		"true": {
-			active: boolPtr(true),
+			active: test.BoolPtr(true),
 			want:   true},
 		"false": {
-			active: boolPtr(false),
+			active: test.BoolPtr(false),
 			want:   false},
 	}
 
@@ -120,18 +121,18 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantBool:    true,
-			root:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false),
+			root:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false),
 		},
 		"default overrides hardDefault": {
 			wantBool:    true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false),
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false),
 		},
 		"hardDefault is last resort": {
 			wantBool:    true,
-			hardDefault: boolPtr(true),
+			hardDefault: test.BoolPtr(true),
 		},
 	}
 
@@ -225,20 +226,20 @@ func TestOptions_CheckValues(t *testing.T) {
 		"valid options": {
 			errRegex: `^$`,
 			options: New(
-				boolPtr(false), "10s", boolPtr(false),
+				test.BoolPtr(false), "10s", test.BoolPtr(false),
 				nil, nil),
 		},
 		"invalid interval": {
 			errRegex: `interval: .* <invalid>`,
 			options: New(
-				boolPtr(false), "10x", boolPtr(false),
+				test.BoolPtr(false), "10x", test.BoolPtr(false),
 				nil, nil),
 		},
 		"seconds get appended to pure decimal interval": {
 			errRegex:     `^$`,
 			wantInterval: "10s",
 			options: New(
-				boolPtr(false), "10", boolPtr(false),
+				test.BoolPtr(false), "10", test.BoolPtr(false),
 				nil, nil),
 		},
 	}
@@ -277,7 +278,7 @@ func TestOptions_String(t *testing.T) {
 		},
 		"all options defined": {
 			options: New(
-				boolPtr(true), "10s", boolPtr(true),
+				test.BoolPtr(true), "10s", test.BoolPtr(true),
 				nil, nil),
 			want: `
 interval: 10s
@@ -288,15 +289,15 @@ active: true
 		"empty with defaults": {
 			options: &Options{
 				Defaults: NewDefaults(
-					"10s", boolPtr(true))},
+					"10s", test.BoolPtr(true))},
 			want: "{}\n",
 		},
 		"all with defaults": {
 			options: New(
-				boolPtr(true), "10s", boolPtr(true),
+				test.BoolPtr(true), "10s", test.BoolPtr(true),
 				nil,
 				NewDefaults(
-					"1h", boolPtr(false))),
+					"1h", test.BoolPtr(false))),
 			want: `
 interval: 10s
 semantic_versioning: true
@@ -306,15 +307,15 @@ active: true
 		"empty with hardDefaults": {
 			options: &Options{
 				HardDefaults: NewDefaults(
-					"10s", boolPtr(true))},
+					"10s", test.BoolPtr(true))},
 			want: "{}\n",
 		},
 		"all with hardDefaults": {
 			options: New(
-				boolPtr(true), "10s", boolPtr(true),
+				test.BoolPtr(true), "10s", test.BoolPtr(true),
 				nil,
 				NewDefaults(
-					"1h", boolPtr(false))),
+					"1h", test.BoolPtr(false))),
 			want: `
 interval: 10s
 semantic_versioning: true
@@ -325,16 +326,16 @@ active: true
 			options: New(
 				nil, "", nil,
 				NewDefaults(
-					"10s", boolPtr(true)),
-				NewDefaults("1h", boolPtr(false))),
+					"10s", test.BoolPtr(true)),
+				NewDefaults("1h", test.BoolPtr(false))),
 			want: "{}\n",
 		},
 		"all with defaults and hardDefaults": {
 			options: New(
-				boolPtr(true), "10s", boolPtr(true),
+				test.BoolPtr(true), "10s", test.BoolPtr(true),
 				NewDefaults(
-					"20s", boolPtr(true)),
-				NewDefaults("30s", boolPtr(false))),
+					"20s", test.BoolPtr(true)),
+				NewDefaults("30s", test.BoolPtr(false))),
 			want: `
 interval: 10s
 semantic_versioning: true

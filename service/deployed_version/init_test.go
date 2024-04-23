@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -80,7 +81,7 @@ func TestLookup_Init(t *testing.T) {
 	lookup := testLookup()
 	defaults := &LookupDefaults{}
 	hardDefaults := &LookupDefaults{}
-	status := svcstatus.Status{ServiceID: stringPtr("TestInit")}
+	status := svcstatus.Status{ServiceID: test.StringPtr("TestInit")}
 	var options opt.Options
 
 	// WHEN Init is called on it

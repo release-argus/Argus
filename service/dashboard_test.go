@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -34,16 +35,16 @@ func TestDashboardOptions_GetAutoApprove(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        true,
-			root:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false)},
+			root:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false)},
 		"default overrides hardDefault": {
 			want:        true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false)},
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false)},
 		"hardDefault is last resort": {
 			want:        true,
-			hardDefault: boolPtr(true)},
+			hardDefault: test.BoolPtr(true)},
 	}
 
 	for name, tc := range tests {

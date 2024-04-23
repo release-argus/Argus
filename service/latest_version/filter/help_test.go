@@ -25,10 +25,6 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func stringPtr(val string) *string {
-	return &val
-}
-
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
@@ -55,9 +51,9 @@ func testURLCommandRegexTemplate() URLCommand {
 	index := 0
 	template := "_$1_"
 	return URLCommand{
-		Type:  "regex",
-		Regex: &regex,
-		Index: index,
+		Type:     "regex",
+		Regex:    &regex,
+		Index:    index,
 		Template: &template}
 }
 

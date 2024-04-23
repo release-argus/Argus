@@ -51,12 +51,12 @@ func TestDefaults_String(t *testing.T) {
 			defaults: &Defaults{
 				Service: service.Defaults{
 					Options: *opt.NewDefaults(
-						"1m",            // interval
-						boolPtr(false)), // semantic_versioning
+						"1m",                 // interval
+						test.BoolPtr(false)), // semantic_versioning
 					LatestVersion: *latestver.NewDefaults(
-						stringPtr("foo"), // access_token
-						boolPtr(true),    // allow_invalid_certs
-						boolPtr(false),   // use_prerelease
+						test.StringPtr("foo"), // access_token
+						test.BoolPtr(true),    // allow_invalid_certs
+						test.BoolPtr(false),   // use_prerelease
 						filter.NewRequireDefaults(
 							filter.NewDockerCheckDefaults(
 								"ghcr", // type
@@ -71,9 +71,9 @@ func TestDefaults_String(t *testing.T) {
 									nil))),
 					),
 					DeployedVersionLookup: *deployedver.NewDefaults(
-						boolPtr(false)), // allow_invalid_certs
+						test.BoolPtr(false)), // allow_invalid_certs
 					Dashboard: service.NewDashboardOptionsDefaults(
-						boolPtr(true))}, // auto_approve
+						test.BoolPtr(true))}, // auto_approve
 				Notify: shoutrrr.SliceDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
@@ -84,14 +84,14 @@ func TestDefaults_String(t *testing.T) {
 						&map[string]string{ // url_params
 							"host": "example.com"})},
 				WebHook: *webhook.NewDefaults(
-					boolPtr(true), // allow_invalid_certs
+					test.BoolPtr(true), // allow_invalid_certs
 					&webhook.Headers{ // custom_headers
 						{Key: "X-Header", Value: "foo"}},
 					"0s",                    // delay
-					intPtr(203),             // desired_status_code
-					uintPtr(2),              // max_tries
+					test.IntPtr(203),        // desired_status_code
+					test.UIntPtr(2),         // max_tries
 					"secret!!!",             // secret
-					boolPtr(false),          // silent_fails
+					test.BoolPtr(false),     // silent_fails
 					"github",                // type
 					"https://example.comm"), // url
 			},
@@ -226,7 +226,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					Options: *opt.NewDefaults("99m", boolPtr(true))}},
+					Options: *opt.NewDefaults("99m", test.BoolPtr(true))}},
 		},
 		"service.options - invalid time.duration - interval": {
 			env: map[string]string{
@@ -248,9 +248,9 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			want: &Defaults{
 				Service: service.Defaults{
 					LatestVersion: *latestver.NewDefaults(
-						stringPtr("ghp_something"),
-						boolPtr(true),
-						boolPtr(true),
+						test.StringPtr("ghp_something"),
+						test.BoolPtr(true),
+						test.BoolPtr(true),
 						nil)}},
 		},
 		"service.latest_version.require": {
@@ -301,7 +301,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			want: &Defaults{
 				Service: service.Defaults{
 					DeployedVersionLookup: *deployedver.NewDefaults(
-						boolPtr(true))}},
+						test.BoolPtr(true))}},
 		},
 		"service.deployed_version - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
@@ -314,7 +314,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			want: &Defaults{
 				Service: service.Defaults{
 					Dashboard: service.NewDashboardOptionsDefaults(
-						boolPtr(true))}},
+						test.BoolPtr(true))}},
 		},
 		"service.dashboard - invalid bool - auto_approve": {
 			env: map[string]string{
@@ -841,13 +841,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_WEBHOOK_URL":                 "webhook.example.com"},
 			want: &Defaults{
 				WebHook: *webhook.NewDefaults(
-					boolPtr(false),
+					test.BoolPtr(false),
 					nil,
 					"99s",
-					intPtr(201),
-					uintPtr(88),
+					test.IntPtr(201),
+					test.UIntPtr(88),
 					"",
-					boolPtr(true),
+					test.BoolPtr(true),
 					"github",
 					"webhook.example.com")},
 		},

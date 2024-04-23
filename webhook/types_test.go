@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
@@ -134,15 +135,15 @@ func TestWebHookDefaults_String(t *testing.T) {
 		},
 		"filled": {
 			webhook: NewDefaults(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&Headers{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"1h1m1s",
-				intPtr(200),
-				uintPtr(4),
+				test.IntPtr(200),
+				test.UIntPtr(4),
 				"foobar",
-				boolPtr(true),
+				test.BoolPtr(true),
 				"github",
 				"https://example.com"),
 			want: `
@@ -215,33 +216,33 @@ func TestWebHook_String(t *testing.T) {
 		},
 		"filled": {
 			webhook: New(
-				boolPtr(false), // allow_invalid_certs
+				test.BoolPtr(false), // allow_invalid_certs
 				&Headers{ // custom_headers
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
-				"1h1m1s",    // delay
-				intPtr(200), // desired_status_code
-				nil,         // failed
-				uintPtr(4),  // max_tries
+				"1h1m1s",         // delay
+				test.IntPtr(200), // desired_status_code
+				nil,              // failed
+				test.UIntPtr(4),  // max_tries
 				&Notifiers{ // notifiers
 					Shoutrrr: &shoutrrr.Slice{
 						"foo": shoutrrr.New(
 							nil, "", nil, nil,
 							"discord",
 							nil, nil, nil, nil)}},
-				stringPtr("3h2m1s"),   // parent_interval
-				"foobar",              // secret
-				boolPtr(true),         // silent_fails
-				"github",              // type
-				"https://example.com", // url
+				test.StringPtr("3h2m1s"), // parent_interval
+				"foobar",                 // secret
+				test.BoolPtr(true),       // silent_fails
+				"github",                 // type
+				"https://example.com",    // url
 				NewDefaults( // main
-					boolPtr(false),
+					test.BoolPtr(false),
 					nil, "", nil, nil, "", nil, "", ""),
 				NewDefaults( // defaults
-					boolPtr(true),
+					test.BoolPtr(true),
 					nil, "", nil, nil, "", nil, "", ""),
 				NewDefaults( // hard_defaults
-					boolPtr(true),
+					test.BoolPtr(true),
 					nil, "", nil, nil, "", nil, "", "")),
 			want: `
 type: github

@@ -26,12 +26,6 @@ import (
 
 var jLog *util.JLog
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)

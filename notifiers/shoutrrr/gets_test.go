@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -37,45 +38,45 @@ func TestShoutrrr_GetOption(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "this",
-			root:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
 			wantString:  "this",
-			main:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			main:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
 			wantString:  "this",
-			dfault:      stringPtr("this"),
-			hardDefault: stringPtr("not_this"),
+			dfault:      test.StringPtr("this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
 			wantString:  "this",
-			hardDefault: stringPtr("this"),
+			hardDefault: test.StringPtr("this"),
 		},
 		"env var is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_ONE": "this"},
-			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_ONE}"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETOPTION_ONE}"),
 		},
 		"env var partial is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_TWO": "is"},
-			root:       stringPtr("th${TESTSHOUTRRR_GETOPTION_TWO}"),
+			root:       test.StringPtr("th${TESTSHOUTRRR_GETOPTION_TWO}"),
 		},
 		"empty env var is ignored": {
 			wantString: "that",
 			env:        map[string]string{"TESTSHOUTRRR_GETOPTION_THREE": ""},
-			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_THREE}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETOPTION_THREE}"),
+			dfault:     test.StringPtr("that"),
 		},
 		"undefined env var is used": {
 			wantString: "${TESTSHOUTRRR_GETOPTION_UNSET}",
-			root:       stringPtr("${TESTSHOUTRRR_GETOPTION_UNSET}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETOPTION_UNSET}"),
+			dfault:     test.StringPtr("that"),
 		},
 	}
 
@@ -137,45 +138,45 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "this",
-			root:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
 			wantString:  "this",
-			main:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			main:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
 			wantString:  "this",
-			dfault:      stringPtr("this"),
-			hardDefault: stringPtr("not_this"),
+			dfault:      test.StringPtr("this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
 			wantString:  "this",
-			hardDefault: stringPtr("this"),
+			hardDefault: test.StringPtr("this"),
 		},
 		"env var is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_ONE": "this"},
-			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_ONE}"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETURLFIELD_ONE}"),
 		},
 		"env var partial is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_TWO": "is"},
-			root:       stringPtr("th${TESTSHOUTRRR_GETURLFIELD_TWO}"),
+			root:       test.StringPtr("th${TESTSHOUTRRR_GETURLFIELD_TWO}"),
 		},
 		"empty env var is ignored": {
 			wantString: "that",
 			env:        map[string]string{"TESTSHOUTRRR_GETURLFIELD_THREE": ""},
-			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_THREE}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETURLFIELD_THREE}"),
+			dfault:     test.StringPtr("that"),
 		},
 		"undefined env var is used": {
 			wantString: "${TESTSHOUTRRR_GETURLFIELD_UNSET}",
-			root:       stringPtr("${TESTSHOUTRRR_GETURLFIELD_UNSET}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETURLFIELD_UNSET}"),
+			dfault:     test.StringPtr("that"),
 		},
 	}
 
@@ -237,45 +238,45 @@ func TestShoutrrr_GetParam(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "this",
-			root:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			root:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"main overrides default and hardDefault": {
 			wantString:  "this",
-			main:        stringPtr("this"),
-			dfault:      stringPtr("not_this"),
-			hardDefault: stringPtr("not_this"),
+			main:        test.StringPtr("this"),
+			dfault:      test.StringPtr("not_this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"default overrides hardDefault": {
 			wantString:  "this",
-			dfault:      stringPtr("this"),
-			hardDefault: stringPtr("not_this"),
+			dfault:      test.StringPtr("this"),
+			hardDefault: test.StringPtr("not_this"),
 		},
 		"hardDefault is last resort": {
 			wantString:  "this",
-			hardDefault: stringPtr("this"),
+			hardDefault: test.StringPtr("this"),
 		},
 		"env var is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_ONE": "this"},
-			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_ONE}"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETPARAM_ONE}"),
 		},
 		"env var partial is used": {
 			wantString: "this",
 			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_TWO": "is"},
-			root:       stringPtr("th${TESTSHOUTRRR_GETPARAM_TWO}"),
+			root:       test.StringPtr("th${TESTSHOUTRRR_GETPARAM_TWO}"),
 		},
 		"empty env var is ignored": {
 			wantString: "that",
 			env:        map[string]string{"TESTSHOUTRRR_GETPARAM_THREE": ""},
-			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_THREE}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETPARAM_THREE}"),
+			dfault:     test.StringPtr("that"),
 		},
 		"undefined env var is used": {
 			wantString: "${TESTSHOUTRRR_GETPARAM_UNSET}",
-			root:       stringPtr("${TESTSHOUTRRR_GETPARAM_UNSET}"),
-			dfault:     stringPtr("that"),
+			root:       test.StringPtr("${TESTSHOUTRRR_GETPARAM_UNSET}"),
+			dfault:     test.StringPtr("that"),
 		},
 	}
 
@@ -336,25 +337,25 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantString:  "1s",
-			root:        stringPtr("1s"),
-			main:        stringPtr("2s"),
-			dfault:      stringPtr("2s"),
-			hardDefault: stringPtr("2s"),
+			root:        test.StringPtr("1s"),
+			main:        test.StringPtr("2s"),
+			dfault:      test.StringPtr("2s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"main overrides default and hardDefault": {
 			wantString:  "1s",
-			main:        stringPtr("1s"),
-			dfault:      stringPtr("2s"),
-			hardDefault: stringPtr("2s"),
+			main:        test.StringPtr("1s"),
+			dfault:      test.StringPtr("2s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"default overrides hardDefault": {
 			wantString:  "1s",
-			dfault:      stringPtr("1s"),
-			hardDefault: stringPtr("2s"),
+			dfault:      test.StringPtr("1s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"hardDefault is last resort": {
 			wantString:  "1s",
-			hardDefault: stringPtr("1s"),
+			hardDefault: test.StringPtr("1s"),
 		},
 		"no delay anywhere defaults to 0s": {wantString: "0s",
 			root:        nil,
@@ -404,25 +405,25 @@ func TestShoutrrr_GetDelayDuration(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        1 * time.Second,
-			root:        stringPtr("1s"),
-			main:        stringPtr("2s"),
-			dfault:      stringPtr("2s"),
-			hardDefault: stringPtr("2s"),
+			root:        test.StringPtr("1s"),
+			main:        test.StringPtr("2s"),
+			dfault:      test.StringPtr("2s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"main overrides default and hardDefault": {
 			want:        1 * time.Second,
-			main:        stringPtr("1s"),
-			dfault:      stringPtr("2s"),
-			hardDefault: stringPtr("2s"),
+			main:        test.StringPtr("1s"),
+			dfault:      test.StringPtr("2s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"default overrides hardDefault": {
 			want:        1 * time.Second,
-			dfault:      stringPtr("1s"),
-			hardDefault: stringPtr("2s"),
+			dfault:      test.StringPtr("1s"),
+			hardDefault: test.StringPtr("2s"),
 		},
 		"hardDefault is last resort": {
 			want:        1 * time.Second,
-			hardDefault: stringPtr("1s"),
+			hardDefault: test.StringPtr("1s"),
 		},
 	}
 
@@ -468,25 +469,25 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:                1,
-			maxTriesRoot:        stringPtr("1"),
-			maxTriesMain:        stringPtr("2"),
-			maxTriesDefault:     stringPtr("2"),
-			maxTriesHardDefault: stringPtr("2"),
+			maxTriesRoot:        test.StringPtr("1"),
+			maxTriesMain:        test.StringPtr("2"),
+			maxTriesDefault:     test.StringPtr("2"),
+			maxTriesHardDefault: test.StringPtr("2"),
 		},
 		"main overrides default and hardDefault": {
 			want:                1,
-			maxTriesMain:        stringPtr("1"),
-			maxTriesDefault:     stringPtr("2"),
-			maxTriesHardDefault: stringPtr("2"),
+			maxTriesMain:        test.StringPtr("1"),
+			maxTriesDefault:     test.StringPtr("2"),
+			maxTriesHardDefault: test.StringPtr("2"),
 		},
 		"default overrides hardDefault": {
 			want:                1,
-			maxTriesDefault:     stringPtr("1"),
-			maxTriesHardDefault: stringPtr("2"),
+			maxTriesDefault:     test.StringPtr("1"),
+			maxTriesHardDefault: test.StringPtr("2"),
 		},
 		"hardDefault is last resort": {
 			want:                1,
-			maxTriesHardDefault: stringPtr("1"),
+			maxTriesHardDefault: test.StringPtr("1"),
 		},
 	}
 
@@ -538,38 +539,38 @@ func TestShoutrrr_Message(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        "New version!",
-			root:        stringPtr("New version!"),
-			main:        stringPtr("something"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("New version!"),
+			main:        test.StringPtr("something"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"main overrides default and hardDefault": {
 			want:        "New version!",
-			main:        stringPtr("New version!"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			main:        test.StringPtr("New version!"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"default overrides hardDefault": {
 			want:        "New version!",
-			dfault:      stringPtr("New version!"),
-			hardDefault: stringPtr("something"),
+			dfault:      test.StringPtr("New version!"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"hardDefault is last resort": {
 			want:        "New version!",
-			hardDefault: stringPtr("New version!"),
+			hardDefault: test.StringPtr("New version!"),
 		},
 		"jinja templating": {
 			want:        "New version!",
-			root:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"jinja vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			root:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 	}
 
@@ -621,38 +622,38 @@ func TestShoutrrr_Title(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        "New version!",
-			root:        stringPtr("New version!"),
-			main:        stringPtr("something"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("New version!"),
+			main:        test.StringPtr("something"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"main overrides default and hardDefault": {
 			want:        "New version!",
-			main:        stringPtr("New version!"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			main:        test.StringPtr("New version!"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"default overrides hardDefault": {
 			want:        "New version!",
-			dfault:      stringPtr("New version!"),
-			hardDefault: stringPtr("something"),
+			dfault:      test.StringPtr("New version!"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"hardDefault is last resort": {
 			want:        "New version!",
-			hardDefault: stringPtr("New version!"),
+			hardDefault: test.StringPtr("New version!"),
 		},
 		"jinja templating": {
 			want:        "New version!",
-			root:        stringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 		"jinja vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
-			root:        stringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			dfault:      stringPtr("something"),
-			hardDefault: stringPtr("something"),
+			root:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
+			dfault:      test.StringPtr("something"),
+			hardDefault: test.StringPtr("something"),
 		},
 	}
 

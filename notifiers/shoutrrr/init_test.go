@@ -21,6 +21,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metrics"
 )
 
@@ -50,7 +51,7 @@ func TestSlice_Metrics(t *testing.T) {
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
-					s.ServiceStatus = &svcstatus.Status{ServiceID: stringPtr(name + "-service")}
+					s.ServiceStatus = &svcstatus.Status{ServiceID: test.StringPtr(name + "-service")}
 					s.Main = &ShoutrrrDefaults{}
 					s.Type = "gotify"
 				}
@@ -502,7 +503,7 @@ func TestSlice_Init(t *testing.T) {
 			if tc.slice != nil {
 				for i := range *tc.slice {
 					if (*tc.slice)[i] != nil {
-						(*tc.slice)[i].ServiceStatus.ServiceID = stringPtr(name)
+						(*tc.slice)[i].ServiceStatus.ServiceID = test.StringPtr(name)
 						(*tc.slice)[i].Options = tc.had
 					}
 				}

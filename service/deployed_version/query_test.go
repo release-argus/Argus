@@ -146,7 +146,7 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:             "^$",
 			url:                  "https://release-argus.io",
 			regex:                `([0-9]+)\s<[^>]+>(The) (Argus) (Developers)`,
-			regexTemplate:        stringPtr("$2 $1 $4, $3"),
+			regexTemplate:        test.StringPtr("$2 $1 $4, $3"),
 			wantVersion:          "The [0-9]+ Developers, Argus",
 		},
 		"failing regex": {
@@ -443,7 +443,7 @@ func TestLookup_Track(t *testing.T) {
 				defer os.Unsetenv(k)
 			}
 			if tc.lookup != nil {
-				tc.lookup.AllowInvalidCerts = boolPtr(tc.allowInvalidCerts)
+				tc.lookup.AllowInvalidCerts = test.BoolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
 				tc.lookup.Defaults = &LookupDefaults{}
 				tc.lookup.HardDefaults = &LookupDefaults{}
@@ -456,7 +456,7 @@ func TestLookup_Track(t *testing.T) {
 					&announceChannel, &dbChannel, nil,
 					"", "", "", "", "", "")
 				tc.lookup.Status = svcStatus
-				tc.lookup.Status.ServiceID = stringPtr(name)
+				tc.lookup.Status.ServiceID = test.StringPtr(name)
 				tc.lookup.Status.WebURL = &tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()

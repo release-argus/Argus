@@ -19,6 +19,8 @@ package deployedver
 import (
 	"os"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestLookup_GetAllowInvalidCerts(t *testing.T) {
@@ -31,16 +33,16 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	}{
 		"root overrides all": {
 			wantBool:    true,
-			root:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false)},
+			root:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false)},
 		"default overrides hardDefault": {
 			wantBool:    true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false)},
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false)},
 		"hardDefault is last resort": {
 			wantBool:    true,
-			hardDefault: boolPtr(true)},
+			hardDefault: test.BoolPtr(true)},
 	}
 
 	for name, tc := range tests {

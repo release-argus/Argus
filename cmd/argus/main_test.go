@@ -27,22 +27,12 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringListPtr(val []string) *[]string {
-	return &val
-}
-
 func resetFlags() {
-	configFile = stringPtr("")
-	configCheckFlag = boolPtr(false)
-	testCommandsFlag = stringPtr("")
-	testNotifyFlag = stringPtr("")
-	testServiceFlag = stringPtr("")
+	configFile = test.StringPtr("")
+	configCheckFlag = test.BoolPtr(false)
+	testCommandsFlag = test.StringPtr("")
+	testNotifyFlag = test.StringPtr("")
+	testServiceFlag = test.StringPtr("")
 }
 
 func TestTheMain(t *testing.T) {
@@ -57,21 +47,21 @@ func TestTheMain(t *testing.T) {
 		"config with no services": {
 			file: testYAML_NoServices,
 			db:   "test-no_services.db",
-			outputContains: stringListPtr([]string{
+			outputContains: &[]string{
 				"Found 0 services to monitor",
-				"Listening on "})},
+				"Listening on "}},
 		"config with services": {
 			file: testYAML_Argus,
 			db:   "test-argus.db",
-			outputContains: stringListPtr([]string{
+			outputContains: &[]string{
 				"services to monitor:",
 				"release-argus/Argus, Latest Release - ",
-				"Listening on "})},
+				"Listening on "}},
 		"config with services and some !active": {
 			file: testYAML_Argus_SomeInactive,
 			db:   "test-argus-some-inactive.db",
-			outputContains: stringListPtr([]string{
-				"Found 1 services to monitor:"})},
+			outputContains: &[]string{
+				"Found 1 services to monitor:"}},
 	}
 
 	for name, tc := range tests {

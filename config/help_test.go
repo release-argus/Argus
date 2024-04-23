@@ -29,22 +29,16 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
 )
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func uintPtr(val int) *uint {
-	converted := uint(val)
-	return &converted
+func TestMain(m *testing.M) {
+	log := util.NewJLog("DEBUG", true)
+	log.Testing = true
+	LogInit(log)
+	os.Exit(m.Run())
 }
 
 func testConfig() Config {
@@ -111,8 +105,6 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	return
 }
 
-var configInitMutex sync.Mutex
-
 func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config = &Config{}
 
@@ -156,7 +148,7 @@ func testServiceURL(id string) *service.Service {
 		ID: id,
 		LatestVersion: *latestver.New(
 			nil,
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil,
 			&opt.Options{},
 			&filter.Require{
@@ -166,24 +158,24 @@ func testServiceURL(id string) *service.Service {
 			"url",
 			"https://valid.release-argus.io/plain",
 			&filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-			boolPtr(false),
+				{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
+			test.BoolPtr(false),
 			&latestver.LookupDefaults{}, &latestver.LookupDefaults{}),
 		DeployedVersionLookup: deployedver.New(
-			boolPtr(false),
+			test.BoolPtr(false),
 			nil, nil,
 			"version",
 			nil, "", nil, nil,
 			"https://valid.release-argus.io/json",
 			&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{}),
 		Dashboard: *service.NewDashboardOptions(
-			boolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs",
+			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
 		Status: *svcstatus.New(
 			&announceChannel, &databaseChannel, &saveChannel,
 			"", "", "", "", "", ""),
 		Options: *opt.New(
-			boolPtr(true), "5s", boolPtr(true),
+			test.BoolPtr(true), "5s", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		Defaults:     &service.Defaults{},
 		HardDefaults: &service.Defaults{}}
@@ -209,11 +201,4 @@ func testServiceURL(id string) *service.Service {
 	svc.Status.SetDeployedVersion("0.0.0", false)
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 	return svc
-}
-
-func TestMain(m *testing.M) {
-	log := util.NewJLog("DEBUG", true)
-	log.Testing = true
-	LogInit(log)
-	os.Exit(m.Run())
 }

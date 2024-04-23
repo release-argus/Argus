@@ -22,6 +22,7 @@ import (
 	"time"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	api_type "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -43,12 +44,12 @@ func TestController_AnnounceCommand(t *testing.T) {
 		"failed does delay by 15s": {
 			index:          0,
 			timeDifference: 15 * time.Second,
-			failed:         boolPtr(true),
+			failed:         test.BoolPtr(true),
 		},
 		"success does delay by 2*Interval": {
 			index:          1,
 			timeDifference: 22 * time.Minute,
-			failed:         boolPtr(false),
+			failed:         test.BoolPtr(false),
 		},
 	}
 
@@ -57,18 +58,18 @@ func TestController_AnnounceCommand(t *testing.T) {
 			t.Parallel()
 
 			controller := Controller{
-				ParentInterval: stringPtr("11m"),
+				ParentInterval: test.StringPtr("11m"),
 				ServiceStatus: &svcstatus.Status{
-					ServiceID: stringPtr("some_service_id")}}
+					ServiceID: test.StringPtr("some_service_id")}}
 			controller.Init(
 				&svcstatus.Status{
-					ServiceID: stringPtr("some_service_id")},
+					ServiceID: test.StringPtr("some_service_id")},
 				&Slice{
 					{"ls", "-lah", "/root"},
 					{"ls", "-lah"},
 					{"ls", "-lah", "a"}},
 				nil,
-				stringPtr("11m"))
+				test.StringPtr("11m"))
 			if !tc.nilChannel {
 				announceChannel := make(chan []byte, 4)
 				controller.ServiceStatus.AnnounceChannel = &announceChannel
@@ -95,8 +96,8 @@ func TestController_AnnounceCommand(t *testing.T) {
 			}
 
 			// if they failed status matches
-			got := stringifyPointer(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
-			want := stringifyPointer(controller.Failed.Get(tc.index))
+			got := test.StringifyPtr(parsed.CommandData[(*controller.Command)[tc.index].String()].Failed)
+			want := test.StringifyPtr(controller.Failed.Get(tc.index))
 			if got != want {
 				t.Errorf("want failed=%s\ngot  failed=%s",
 					want, got)
@@ -124,13 +125,13 @@ func TestController_Find(t *testing.T) {
 	}{
 		"command at first index": {
 			command: "ls -lah",
-			want:    intPtr(0)},
+			want:    test.IntPtr(0)},
 		"command at second index": {
 			command: "ls -lah a",
-			want:    intPtr(1)},
+			want:    test.IntPtr(1)},
 		"command with svcstatus": {
 			command: "bash upgrade.sh 1.2.3",
-			want:    intPtr(3)},
+			want:    test.IntPtr(3)},
 		"unknown command": {
 			command: "ls -lah /root",
 			want:    nil},
@@ -151,7 +152,7 @@ func TestController_Find(t *testing.T) {
 					Command{"bash", "upgrade.sh", "{{ version }}"},
 				},
 				ServiceStatus: &svcstatus.Status{
-					ServiceID: stringPtr("some_service_id")},
+					ServiceID: test.StringPtr("some_service_id")},
 			}
 			controller.ServiceStatus.Init(
 				0, len(*controller.Command), 0,
@@ -167,8 +168,8 @@ func TestController_Find(t *testing.T) {
 			index := controller.Find(tc.command)
 
 			// THEN the index is returned if it exists
-			got := stringifyPointer(index)
-			want := stringifyPointer(tc.want)
+			got := test.StringifyPtr(index)
+			want := test.StringifyPtr(tc.want)
 			if got != want {
 				t.Errorf("want: %s\ngot:  %s",
 					want, got)

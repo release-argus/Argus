@@ -46,7 +46,7 @@ func TestServiceTest(t *testing.T) {
 	}{
 		"flag is empty": {
 			flag:        "",
-			stdoutRegex: stringPtr("^$"),
+			stdoutRegex: test.StringPtr("^$"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -58,7 +58,7 @@ func TestServiceTest(t *testing.T) {
 		},
 		"unknown service": {
 			flag:       "test",
-			panicRegex: stringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
+			panicRegex: test.StringPtr(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
@@ -70,12 +70,12 @@ func TestServiceTest(t *testing.T) {
 		},
 		"github service": {
 			flag:        "argus",
-			stdoutRegex: stringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: test.StringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					LatestVersion: *latestver.New(
-						stringPtr(os.Getenv("GITHUB_TOKEN")),
-						boolPtr(false),
+						test.StringPtr(os.Getenv("GITHUB_TOKEN")),
+						test.BoolPtr(false),
 						nil,
 						opt.New(
 							nil, "0s", nil,
@@ -84,19 +84,19 @@ func TestServiceTest(t *testing.T) {
 						"github",
 						"release-argus/Argus",
 						&filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr("[0-9.]+$")}},
+							{Type: "regex", Regex: test.StringPtr("[0-9.]+$")}},
 						nil, nil, nil)},
 			},
 		},
 		"url service type but github owner/repo url": {
 			flag:        "argus",
-			stdoutRegex: stringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
+			stdoutRegex: test.StringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					LatestVersion: *latestver.New(
 						nil,
-						boolPtr(false),
+						test.BoolPtr(false),
 						nil,
 						opt.New(
 							nil, "0s", nil,
@@ -105,18 +105,18 @@ func TestServiceTest(t *testing.T) {
 						"url",
 						"release-argus/Argus",
 						&filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr("[0-9.]+$")}},
+							{Type: "regex", Regex: test.StringPtr("[0-9.]+$")}},
 						nil, nil, nil)}},
 		},
 		"url service": {
 			flag:        "argus",
-			stdoutRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					LatestVersion: *latestver.New(
 						nil,
-						boolPtr(false),
+						test.BoolPtr(false),
 						nil,
 						opt.New(
 							nil, "0s", nil,
@@ -125,26 +125,26 @@ func TestServiceTest(t *testing.T) {
 						"url",
 						"https://github.com/release-argus/Argus/releases",
 						&filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
+							{Type: "regex", Regex: test.StringPtr(`tag/([0-9.]+)"`)}},
 						nil, nil, nil)}},
 		},
 		"service with deployed version lookup": {
 			flag:        "argus",
-			stdoutRegex: stringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: test.StringPtr(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
 					LatestVersion: *latestver.New(
 						nil,
-						boolPtr(false),
+						test.BoolPtr(false),
 						nil, nil, nil, nil,
 						"url",
 						"https://github.com/release-argus/Argus/releases",
 						&filter.URLCommandSlice{
-							{Type: "regex", Regex: stringPtr(`tag/([0-9.]+)"`)}},
+							{Type: "regex", Regex: test.StringPtr(`tag/([0-9.]+)"`)}},
 						nil, nil, nil),
 					DeployedVersionLookup: deployedver.New(
-						boolPtr(true),
+						test.BoolPtr(true),
 						nil, nil,
 						"version",
 						nil, "", nil,
@@ -152,7 +152,7 @@ func TestServiceTest(t *testing.T) {
 						"https://release-argus.io/demo/api/v1/version",
 						nil, nil),
 					Options: *opt.New(
-						nil, "0s", boolPtr(true),
+						nil, "0s", test.BoolPtr(true),
 						nil, nil)}},
 		},
 	}

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestTemplate_String(t *testing.T) {
@@ -38,7 +40,7 @@ func TestTemplate_String(t *testing.T) {
 			want: "-something-example.com-other.com-NEW"},
 		"invalid jinja template panic": {
 			tmpl:       "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			panicRegex: stringPtr("Tag name must be an identifier")},
+			panicRegex: test.StringPtr("Tag name must be an identifier")},
 	}
 
 	for name, tc := range tests {

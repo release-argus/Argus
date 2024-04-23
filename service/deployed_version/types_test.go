@@ -22,6 +22,7 @@ import (
 
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestLookup_String(t *testing.T) {
@@ -39,7 +40,7 @@ func TestLookup_String(t *testing.T) {
 		},
 		"filled": {
 			lookup: New(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
 				&[]Header{
@@ -47,15 +48,15 @@ func TestLookup_String(t *testing.T) {
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
 				opt.New(
-					boolPtr(true), "9m", boolPtr(false),
+					test.BoolPtr(true), "9m", test.BoolPtr(false),
 					nil, nil),
-				"v([0-9.]+)", stringPtr("$1"),
+				"v([0-9.]+)", test.StringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
-					boolPtr(false)),
+					test.BoolPtr(false)),
 				NewDefaults(
-					boolPtr(false))),
+					test.BoolPtr(false))),
 			want: `
 url: https://example.com
 allow_invalid_certs: false
@@ -125,20 +126,20 @@ func TestLookup_IsEqual(t *testing.T) {
 		"defaults ignored": {
 			a: &Lookup{
 				Defaults: NewDefaults(
-					boolPtr(false))},
+					test.BoolPtr(false))},
 			b:    &Lookup{},
 			want: true,
 		},
 		"hard_defaults ignored": {
 			a: &Lookup{
 				HardDefaults: NewDefaults(
-					boolPtr(false))},
+					test.BoolPtr(false))},
 			b:    &Lookup{},
 			want: true,
 		},
 		"equal": {
 			a: New(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
 				&[]Header{
@@ -148,15 +149,15 @@ func TestLookup_IsEqual(t *testing.T) {
 				opt.New(
 					nil, "", nil,
 					nil, nil),
-				"v([0-9.]+)", stringPtr("$1"),
+				"v([0-9.]+)", test.StringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
-					boolPtr(false)),
+					test.BoolPtr(false)),
 				NewDefaults(
-					boolPtr(false))),
+					test.BoolPtr(false))),
 			b: New(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
 				&[]Header{
@@ -164,20 +165,20 @@ func TestLookup_IsEqual(t *testing.T) {
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
-				"v([0-9.]+)", stringPtr("$1"),
+				"v([0-9.]+)", test.StringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
-					boolPtr(false)),
+					test.BoolPtr(false)),
 				NewDefaults(
-					boolPtr(false))),
+					test.BoolPtr(false))),
 			want: true,
 		},
 		"not equal": {
 			a: New(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
 				&[]Header{
@@ -185,17 +186,17 @@ func TestLookup_IsEqual(t *testing.T) {
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
-				"v([0-9.]+)", stringPtr("$1"),
+				"v([0-9.]+)", test.StringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com",
 				NewDefaults(
-					boolPtr(false)),
+					test.BoolPtr(false)),
 				NewDefaults(
-					boolPtr(false))),
+					test.BoolPtr(false))),
 			b: New(
-				boolPtr(false),
+				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
 				&[]Header{
@@ -203,15 +204,15 @@ func TestLookup_IsEqual(t *testing.T) {
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
-				"v([0-9.]+)", stringPtr("$1"),
+				"v([0-9.]+)", test.StringPtr("$1"),
 				&svcstatus.Status{},
 				"https://example.com/other",
 				NewDefaults(
-					boolPtr(false)),
+					test.BoolPtr(false)),
 				NewDefaults(
-					boolPtr(false))),
+					test.BoolPtr(false))),
 			want: false,
 		},
 		"not equal with nil": {

@@ -22,6 +22,7 @@ import (
 
 	command "github.com/release-argus/Argus/commands"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -52,7 +53,7 @@ func TestRequire_ExecCommand(t *testing.T) {
 			require.Status.Init(
 				0, 1, 0,
 				&name,
-				stringPtr("http://example.com"))
+				test.StringPtr("http://example.com"))
 
 			// WHEN ApplyTemplate is called on the Command
 			err := require.ExecCommand(&util.LogFrom{})

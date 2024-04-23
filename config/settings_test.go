@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -67,81 +68,81 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("")}}},
+						RoutePrefix: test.StringPtr("")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/")}}},
+						RoutePrefix: test.StringPtr("/")}}},
 		},
 		"Route prefix - no leading /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("test")}}},
+						RoutePrefix: test.StringPtr("test")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 		},
 		"Route prefix - leading /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 		},
 		"Route prefix - multiple leading /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("///test")}}},
+						RoutePrefix: test.StringPtr("///test")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 		},
 		"Route prefix - trailing /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test/")}}},
+						RoutePrefix: test.StringPtr("/test/")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 		},
 		"Route prefix - multiple trailing /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test///")}}},
+						RoutePrefix: test.StringPtr("/test///")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/test")}}},
+						RoutePrefix: test.StringPtr("/test")}}},
 		},
 		"Route prefix - only a /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/")}}},
+						RoutePrefix: test.StringPtr("/")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/")}}},
+						RoutePrefix: test.StringPtr("/")}}},
 		},
 		"Route prefix - only multiple /": {
 			had: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("///")}}},
+						RoutePrefix: test.StringPtr("///")}}},
 			want: Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/")}}},
+						RoutePrefix: test.StringPtr("/")}}},
 		},
 		"Favicon - empty": {
 			had: Settings{
@@ -221,12 +222,12 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 	}{
 		"flag set": {
 			flagSet:   true,
-			setStrTo:  stringPtr("test"),
-			setBoolTo: boolPtr(true)},
+			setStrTo:  test.StringPtr("test"),
+			setBoolTo: test.BoolPtr(true)},
 		"flag not set": {
 			flagSet:   false,
-			setStrTo:  stringPtr("foo"),
-			setBoolTo: boolPtr(false)},
+			setStrTo:  test.StringPtr("foo"),
+			setBoolTo: test.BoolPtr(false)},
 	}
 	flagStr := "log.level"
 	flagBool := "log.timestamps"
@@ -288,7 +289,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"log.level flag": {
 			getFunc: settings.LogLevel,
-			flag:    &LogLevel, flagVal: stringPtr("ERROR"),
+			flag:    &LogLevel, flagVal: test.StringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"data.database-file hard default": {
@@ -302,7 +303,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"data.database-file flag": {
 			getFunc: settings.DataDatabaseFile,
-			flag:    &DataDatabaseFile, flagVal: stringPtr("ERROR"),
+			flag:    &DataDatabaseFile, flagVal: test.StringPtr("ERROR"),
 			want: "ERROR",
 		},
 		"web.listen-host hard default": {
@@ -316,7 +317,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"web.listen-host flag": {
 			getFunc: settings.WebListenHost,
-			flag:    &WebListenHost, flagVal: stringPtr("127.0.0.1"),
+			flag:    &WebListenHost, flagVal: test.StringPtr("127.0.0.1"),
 			want: "127.0.0.1",
 		},
 		"web.listen-port hard default": {
@@ -330,7 +331,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"web.listen-port flag": {
 			getFunc: settings.WebListenPort,
-			flag:    &WebListenPort, flagVal: stringPtr("54321"),
+			flag:    &WebListenPort, flagVal: test.StringPtr("54321"),
 			want: "54321",
 		},
 		"web.cert-file hard default": {
@@ -344,7 +345,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"web.cert-file flag": {
 			getFuncPtr: settings.WebCertFile,
-			flag:       &WebCertFile, flagVal: stringPtr("settings_test.go"),
+			flag:       &WebCertFile, flagVal: test.StringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.pkey-file hard default": {
@@ -358,7 +359,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"web.pkey-file flag": {
 			getFuncPtr: settings.WebKeyFile,
-			flag:       &WebPKeyFile, flagVal: stringPtr("settings_test.go"),
+			flag:       &WebPKeyFile, flagVal: test.StringPtr("settings_test.go"),
 			want: "settings_test.go",
 		},
 		"web.route-prefix hard default": {
@@ -372,7 +373,7 @@ func TestSettings_GetString(t *testing.T) {
 		},
 		"web.route-prefix flag": {
 			getFunc: settings.WebRoutePrefix,
-			flag:    &WebRoutePrefix, flagVal: stringPtr("/flag"),
+			flag:    &WebRoutePrefix, flagVal: test.StringPtr("/flag"),
 			want: "/flag",
 		},
 		"set from env": {
@@ -381,7 +382,7 @@ func TestSettings_GetString(t *testing.T) {
 			wantSettings: &Settings{
 				HardDefaults: SettingsBase{
 					Log: LogSettings{
-						Level: stringPtr("ERROR")}}},
+						Level: test.StringPtr("ERROR")}}},
 		},
 	}
 
@@ -435,7 +436,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
-						Level: stringPtr("ERROR")}}},
+						Level: test.StringPtr("ERROR")}}},
 		},
 		"log.timestamps": {
 			env: map[string]string{
@@ -443,7 +444,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Log: LogSettings{
-						Timestamps: boolPtr(true)}}},
+						Timestamps: test.BoolPtr(true)}}},
 		},
 		"log.timestamps - invalid, not a bool": {
 			env: map[string]string{
@@ -456,7 +457,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						ListenHost: stringPtr("test")}}},
+						ListenHost: test.StringPtr("test")}}},
 		},
 		"web.listen-port": {
 			env: map[string]string{
@@ -464,7 +465,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						ListenPort: stringPtr("123")}}},
+						ListenPort: test.StringPtr("123")}}},
 		},
 		"web.cert-file": {
 			env: map[string]string{
@@ -472,7 +473,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						CertFile: stringPtr("cert.test")}}},
+						CertFile: test.StringPtr("cert.test")}}},
 		},
 		"web.pkey-file": {
 			env: map[string]string{
@@ -480,7 +481,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						KeyFile: stringPtr("pkey.test")}}},
+						KeyFile: test.StringPtr("pkey.test")}}},
 		},
 		"web.route-prefix": {
 			env: map[string]string{
@@ -488,7 +489,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			want: &Settings{
 				SettingsBase: SettingsBase{
 					Web: WebSettings{
-						RoutePrefix: stringPtr("/prefix")}}},
+						RoutePrefix: test.StringPtr("/prefix")}}},
 		},
 		"web.basic_auth": {
 			env: map[string]string{
@@ -572,7 +573,7 @@ func TestSettings_GetBool(t *testing.T) {
 			want:       "true"},
 		"log.timestamps flag": {
 			getFuncPtr: settings.LogTimestamps,
-			flag:       &LogTimestamps, flagVal: boolPtr(true),
+			flag:       &LogTimestamps, flagVal: test.BoolPtr(true),
 			want: "true"},
 	}
 

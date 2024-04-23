@@ -25,11 +25,12 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestService_ServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	svc := testServiceURL("TestServiceInfo")
+	svc := testService("TestServiceInfo", "url")
 	id := "test_id"
 	svc.ID = id
 	url := "https://test_url.com"
@@ -123,7 +124,7 @@ func TestService_IconURL(t *testing.T) {
 	}
 
 	for name, tc := range tests {
-		svc := testServiceGitHub(name)
+		svc := testService(name, "github")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -168,7 +169,7 @@ func TestService_Init(t *testing.T) {
 				Command: command.Slice{
 					{"ls"}},
 				WebHook: webhook.Slice{
-					"test": testWebHook(false)}},
+					"test": test_webhook.WebHook(false, false, false)}},
 		},
 		"service with notifys from defaults": {
 			svc: &Service{
@@ -225,7 +226,7 @@ func TestService_Init(t *testing.T) {
 				LatestVersion: latestver.Lookup{
 					Type: "github", URL: "release-argus/Argus"},
 				WebHook: webhook.Slice{
-					"test": testWebHook(false)}},
+					"test": test_webhook.WebHook(false, false, false)}},
 			defaults: &Defaults{
 				WebHook: map[string]struct{}{
 					"bar": {}}},

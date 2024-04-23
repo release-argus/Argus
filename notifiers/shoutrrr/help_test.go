@@ -17,35 +17,15 @@
 package shoutrrr
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func uintPtr(val int) *uint {
-	converted := uint(val)
-	return &converted
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
@@ -69,7 +49,7 @@ func testShoutrrrDefaults(failing bool, selfSignedCert bool) *ShoutrrrDefaults {
 		&map[string]string{"max_tries": "1"},
 		&map[string]string{},
 		// trunk-ignore(gitleaks/generic-api-key)
-		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		&map[string]string{"host": url, "path": "/gotify", "token": test.ShoutrrrGotifyToken()},
 	)
 	if failing {
 		shoutrrr.URLFields["token"] = "invalid"
@@ -87,8 +67,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 		&map[string]string{"max_tries": "1"},
 		&map[string]string{},
 		"gotify",
-		// trunk-ignore(gitleaks/generic-api-key)
-		&map[string]string{"host": url, "path": "/gotify", "token": "AGE-LlHU89Q56uQ"},
+		&map[string]string{"host": url, "path": "/gotify", "token": test.ShoutrrrGotifyToken()},
 		NewDefaults(
 			"", nil, nil, nil),
 		NewDefaults(
@@ -101,7 +80,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 
 	shoutrrr.ID = "test"
 	shoutrrr.ServiceStatus = &svcstatus.Status{
-		ServiceID: stringPtr("service"),
+		ServiceID: test.StringPtr("service"),
 	}
 	shoutrrr.ServiceStatus.Fails.Shoutrrr.Init(1)
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
@@ -110,12 +89,4 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 		shoutrrr.URLFields["token"] = "invalid"
 	}
 	return shoutrrr
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

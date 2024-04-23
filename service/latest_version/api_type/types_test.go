@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestRelease_String(t *testing.T) {
@@ -70,7 +71,7 @@ func TestRelease_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 			if tc.release_semantic_version != "" {
 				tc.release.SemanticVersion, _ = semver.NewVersion(tc.release_semantic_version)
 			}
@@ -114,7 +115,7 @@ func TestAsset_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the Asset is stringified with String
 			got := tc.asset.String()

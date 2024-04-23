@@ -22,15 +22,10 @@ import (
 
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func stringPtr(val string) *string {
-	return &val
-}
-func boolPtr(val bool) *bool {
-	return &val
-}
 func TestMain(m *testing.M) {
 	// initialize jLog
 	jLog = util.NewJLog("DEBUG", false)
@@ -45,17 +40,17 @@ func TestMain(m *testing.M) {
 
 func testLookup() (lookup *Lookup) {
 	lookup = New(
-		boolPtr(true),
+		test.BoolPtr(true),
 		nil,
 		nil,
 		"version",
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{},
-			opt.NewDefaults("", boolPtr(true))),
+			opt.NewDefaults("", test.BoolPtr(true))),
 		"", nil,
 		&svcstatus.Status{
-			ServiceID: stringPtr("test")},
+			ServiceID: test.StringPtr("test")},
 		"https://invalid.release-argus.io/json",
 		&LookupDefaults{},
 		&LookupDefaults{})

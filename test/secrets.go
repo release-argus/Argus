@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,18 @@
 
 //go:build unit || integration
 
-package opt
+package test
 
-import "github.com/release-argus/Argus/test"
+import (
+	"os"
+)
 
-func testOptions() *Options {
-	return New(
-		test.BoolPtr(true), "10m", test.BoolPtr(true),
-		&OptionsDefaults{}, &OptionsDefaults{})
+// ShoutrrrGotifyToken returns the token for the Gotify test
+func ShoutrrrGotifyToken() (token string) {
+	token = os.Getenv("ARGUS_TEST_GOTIFY_TOKEN")
+	if token == "" {
+		// trunk-ignore(gitleaks/generic-api-key)
+		token = "AGE-LlHU89Q56uQ"
+	}
+	return
 }

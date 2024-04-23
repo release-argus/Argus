@@ -16,11 +16,6 @@
 
 package util
 
-func boolPtr(val bool) *bool       { return &val }
-func intPtr(val int) *int          { return &val }
-func stringPtr(val string) *string { return &val }
-func nilMap() map[string]string    { return nil }
-
 func testServiceInfo() ServiceInfo {
 	return ServiceInfo{
 		ID:            "something",

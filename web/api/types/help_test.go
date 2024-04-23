@@ -16,21 +16,6 @@
 
 package apitype
 
-import "strings"
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func uintPtr(val uint) *uint {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-
 func testNotify() Notify {
 	return Notify{
 		URLFields: map[string]string{
@@ -52,12 +37,4 @@ func testNotify() Notify {
 			"host":    "dddd",
 		},
 	}
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

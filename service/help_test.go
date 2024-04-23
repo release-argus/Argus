@@ -17,9 +17,7 @@
 package service
 
 import (
-	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -28,26 +26,9 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"github.com/release-argus/Argus/webhook"
 )
-
-func boolPtr(val bool) *bool {
-	return &val
-}
-func intPtr(val int) *int {
-	return &val
-}
-func stringPtr(val string) *string {
-	return &val
-}
-func stringifyPointer[T comparable](ptr *T) string {
-	str := "nil"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
-	}
-	return str
-}
 
 func TestMain(m *testing.M) {
 	// initialize jLog
@@ -62,57 +43,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testServiceGitHub(id string) *Service {
-	var (
-		announceChannel chan []byte         = make(chan []byte, 2)
-		saveChannel     chan bool           = make(chan bool, 5)
-		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-	)
-	svc := &Service{
-		ID: id,
-		LatestVersion: *latestver.New(
-			stringPtr(os.Getenv("GITHUB_TOKEN")),
-			nil, nil, nil,
-			&filter.Require{
-				RegexContent: "content",
-				RegexVersion: "version"},
-			nil,
-			"github",
-			"release-argus/Argus",
-			nil,
-			boolPtr(false),
-			&latestver.LookupDefaults{},
-			&latestver.LookupDefaults{}),
-		Dashboard: *NewDashboardOptions(
-			boolPtr(false), "test", "https://example.com", "https://release-argus.io",
-			nil, nil),
-		Options: *opt.New(
-			boolPtr(true), "5s", boolPtr(true),
-			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
-		Defaults:     &Defaults{},
-		HardDefaults: &Defaults{},
-	}
-	// Status
-	svc.Status = *svcstatus.New(
-		&announceChannel, &databaseChannel, &saveChannel,
-		"", "", "", "", "", "")
-	svc.Status.ServiceID = &svc.ID
-	svc.Status.SetApprovedVersion("1.1.1", false)
-	svc.Status.SetLatestVersion("2.2.2", false)
-	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
-	svc.Status.SetDeployedVersion("0.0.0", false)
-	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
-
-	svc.Init(
-		&Defaults{}, &Defaults{},
-		nil, nil, nil,
-		nil, nil, nil)
-	svc.Status.ServiceID = &svc.ID
-	svc.Status.WebURL = &svc.Dashboard.WebURL
-	return svc
-}
-
-func testServiceURL(id string) *Service {
+func testService(id string, sType string) *Service {
 	var (
 		announceChannel = make(chan []byte, 5)
 		saveChannel     = make(chan bool, 5)
@@ -120,16 +51,16 @@ func testServiceURL(id string) *Service {
 	)
 	svc := &Service{
 		ID:                    id,
-		LatestVersion:         *testLatestVersionLookupURL(false),
+		LatestVersion:         *testLatestVersion(sType, false),
 		DeployedVersionLookup: testDeployedVersionLookup(false),
 		Dashboard: *NewDashboardOptions(
-			boolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
+			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
 			&DashboardOptionsDefaults{}, &DashboardOptionsDefaults{}),
 		Status: *svcstatus.New(
 			&announceChannel, &databaseChannel, &saveChannel,
 			"", "", "", "", "", ""),
 		Options: *opt.New(
-			boolPtr(true), "5s", boolPtr(true),
+			test.BoolPtr(true), "5s", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		Defaults: &Defaults{},
 		HardDefaults: &Defaults{
@@ -150,10 +81,6 @@ func testServiceURL(id string) *Service {
 	svc.Status.SetDeployedVersion("0.0.0", false)
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 
-	svc.LatestVersion.Init(
-		&latestver.LookupDefaults{}, &latestver.LookupDefaults{},
-		&svc.Status,
-		&svc.Options)
 	svc.DeployedVersionLookup.Init(
 		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
 		&svc.Status,
@@ -161,13 +88,33 @@ func testServiceURL(id string) *Service {
 	return svc
 }
 
-func testLatestVersionLookupURL(fail bool) *latestver.Lookup {
-	lv := latestver.New(
-		stringPtr(os.Getenv("GITHUB_TOKEN")),
-		boolPtr(!fail),
+func testLatestVersionGitHub(fail bool) (lv *latestver.Lookup) {
+	lv = latestver.New(
+		test.StringPtr(os.Getenv("GITHUB_TOKEN")),
+		nil, nil, nil,
+		&filter.Require{
+			RegexContent: "content",
+			RegexVersion: "version"},
+		nil,
+		"github",
+		"release-argus/Argus",
+		nil,
+		test.BoolPtr(false),
+		&latestver.LookupDefaults{},
+		&latestver.LookupDefaults{})
+
+	if fail {
+		lv.AccessToken = test.StringPtr("invalid")
+	}
+	return
+}
+func testLatestVersionURL(fail bool) (lv *latestver.Lookup) {
+	lv = latestver.New(
+		nil,
+		test.BoolPtr(!fail),
 		nil,
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		&filter.Require{
 			RegexContent: "{{ version }}-beta",
@@ -177,21 +124,31 @@ func testLatestVersionLookupURL(fail bool) *latestver.Lookup {
 		"url",
 		"https://invalid.release-argus.io/plain",
 		&filter.URLCommandSlice{
-			{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-		boolPtr(false),
+			{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
+		test.BoolPtr(false),
 		&latestver.LookupDefaults{},
 		&latestver.LookupDefaults{})
-	lv.Status.ServiceID = stringPtr("foo")
+
+	return
+}
+
+func testLatestVersion(lvType string, fail bool) (lv *latestver.Lookup) {
+	if lvType == "url" {
+		lv = testLatestVersionURL(fail)
+	} else {
+		lv = testLatestVersionGitHub(fail)
+	}
+	lv.Status.ServiceID = test.StringPtr("TEST_LV")
 	return lv
 }
 
 func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 	dvl = deployedver.New(
-		boolPtr(!fail),
+		test.BoolPtr(!fail),
 		nil, nil,
 		"version",
 		opt.New(
-			nil, "", boolPtr(true),
+			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		"", nil,
 		&svcstatus.Status{},
@@ -207,35 +164,4 @@ func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 		"", "", "", "", "", "")
 
 	return
-}
-
-func testWebHook(failing bool) *webhook.WebHook {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
-	wh := webhook.New(
-		boolPtr(false),
-		nil,
-		"0s",
-		&desiredStatusCode,
-		nil,
-		&whMaxTries,
-		nil,
-		stringPtr("12m"),
-		"argus",
-		boolPtr(false),
-		"github",
-		"https://valid.release-argus.io/hooks/github-style",
-		nil, nil, nil)
-	if failing {
-		wh.Secret = "notArgus"
-	}
-	return wh
-}
-
-func trimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, ": ", ":")
-	return str
 }

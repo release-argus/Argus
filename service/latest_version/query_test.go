@@ -102,17 +102,17 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"query that gets a non-semantic version": {
 			url:      "https://valid.release-argus.io/plain",
-			regex:    stringPtr(`"v[0-9.]+`),
+			regex:    test.StringPtr(`"v[0-9.]+`),
 			errRegex: "failed converting .* to a semantic version",
 		},
 		"query on self-signed https works when allowed": {
 			url:               "https://invalid.release-argus.io/plain",
-			regex:             stringPtr("v[0-9.]+"),
+			regex:             test.StringPtr("v[0-9.]+"),
 			allowInvalidCerts: true,
 		},
 		"query on self-signed https fails when not allowed": {
 			url:               "https://invalid.release-argus.io/plain",
-			regex:             stringPtr("v[0-9.]+"),
+			regex:             test.StringPtr("v[0-9.]+"),
 			allowInvalidCerts: false,
 			errRegex:          "x509",
 		},
@@ -158,33 +158,33 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:            "regex not matched on version",
 		},
 		"urlCommand regex mismatch": {
-			regex:    stringPtr("^[0-9]+$"),
+			regex:    test.StringPtr("^[0-9]+$"),
 			errRegex: "regex .* didn't return any matches",
 		},
 		"valid semantic version query": {
-			regex: stringPtr("v([0-9.]+)"),
+			regex: test.StringPtr("v([0-9.]+)"),
 		},
 		"older version found": {
-			regex:           stringPtr("([0-9.]+)"),
+			regex:           test.StringPtr("([0-9.]+)"),
 			latestVersion:   "0.0.0",
 			deployedVersion: "9.9.9",
 			errRegex:        "queried version .* is less than the deployed version",
 		},
 		"newer version found": {
-			regex:           stringPtr("([0-9.]+)"),
+			regex:           test.StringPtr("([0-9.]+)"),
 			deployedVersion: "0.0.0",
 		},
 		"same version found": {
-			regex:           stringPtr("([0-9.]+)"),
+			regex:           test.StringPtr("([0-9.]+)"),
 			deployedVersion: "1.2.1",
 		},
 		"no deployed version lookup": {
-			regex:             stringPtr("([0-9.]+)-beta"),
-			wantLatestVersion: stringPtr("1.2.2"),
+			regex:             test.StringPtr("([0-9.]+)-beta"),
+			wantLatestVersion: test.StringPtr("1.2.2"),
 		},
 		"non-semantic version lookup": {
-			regex:                 stringPtr("v[0-9.]+"),
-			wantLatestVersion:     stringPtr("v1.2.2"),
+			regex:                 test.StringPtr("v[0-9.]+"),
+			wantLatestVersion:     test.StringPtr("v1.2.2"),
 			nonSemanticVersioning: true,
 		},
 		"github lookup": {
@@ -193,7 +193,7 @@ func TestLookup_Query(t *testing.T) {
 		"github lookup on repo that uses tags, not releases": {
 			githubService: true,
 			url:           "go-vikunja/api",
-			regex:         stringPtr("v([0-9.]+)"),
+			regex:         test.StringPtr("v([0-9.]+)"),
 			stdoutRegex:   `no tags found on /releases, trying /tags`,
 		},
 		"github lookup with no access token": {
@@ -202,12 +202,12 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"github lookup with failing urlCommand match": {
 			githubService: true,
-			regex:         stringPtr("x([0-9.]+)"),
+			regex:         test.StringPtr("x([0-9.]+)"),
 			errRegex:      "no releases were found matching the url_commands",
 		},
 		"url_command makes all versions non-semmantic": {
 			githubService: true,
-			regex:         stringPtr(`([0-9.]+\.)`),
+			regex:         test.StringPtr(`([0-9.]+\.)`),
 			errRegex:      "no releases were found matching the url_commands",
 		},
 	}
@@ -304,7 +304,7 @@ func TestLookup_Query__EmptyListETagChanged(t *testing.T) {
 		temporaryFailureInNameResolution = false
 		lookup := testLookup(false, false)
 		lookup.URL = "go-vikunja/api"
-		lookup.URLCommands[0].Regex = stringPtr("v([0-9.]+)")
+		lookup.URLCommands[0].Regex = test.StringPtr("v([0-9.]+)")
 
 		// WHEN Query is called on it
 		_, err := lookup.Query(true, &util.LogFrom{})
@@ -364,7 +364,7 @@ func TestLookup_QueryGitHubETag(t *testing.T) {
 			eTagChanged:           1,
 			eTagUnchangedUseCache: 1,
 			urlCommands: filter.URLCommandSlice{
-				{Type: "regex", Regex: stringPtr(`^FOO$`)}},
+				{Type: "regex", Regex: test.StringPtr(`^FOO$`)}},
 			errRegex: `no releases were found matching the url_commands
 no releases were found matching the url_commands and/or require`},
 	}

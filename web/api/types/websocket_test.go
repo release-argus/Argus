@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestWebSocketMessage_String(t *testing.T) {
@@ -38,22 +40,22 @@ func TestWebSocketMessage_String(t *testing.T) {
 		},
 		"filled": {
 			websocketMessage: WebSocketMessage{
-				Version: intPtr(1),
+				Version: test.IntPtr(1),
 				Page:    "foo",
 				Type:    "bar",
 				SubType: "baz",
-				Target:  stringPtr("bish"),
+				Target:  test.StringPtr("bish"),
 				Order: &[]string{
 					"zing", "zap", "wallop"},
 				ServiceData: &ServiceSummary{
 					ID: "summary id"},
 				CommandData: map[string]*CommandSummary{
 					"alpha": {
-						Failed:       boolPtr(true),
+						Failed:       test.BoolPtr(true),
 						NextRunnable: time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)}},
 				WebHookData: map[string]*WebHookSummary{
 					"omega": {
-						Failed:       boolPtr(true),
+						Failed:       test.BoolPtr(true),
 						NextRunnable: time.Date(2020, 2, 2, 0, 0, 0, 0, time.UTC)}}},
 			want: `
 				{
@@ -86,7 +88,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the GitHubData is stringified with String
 			got := tc.websocketMessage.String()

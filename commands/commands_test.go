@@ -120,14 +120,14 @@ func TestController_ExecIndex(t *testing.T) {
 	svcStatus := svcstatus.New(
 		&announce, nil, nil,
 		"", "", "", "", "", "")
-	svcStatus.ServiceID = stringPtr("service_id")
+	svcStatus.ServiceID = test.StringPtr("service_id")
 	controller.Init(
 		svcStatus,
 		&Slice{
 			{"date", "+%m-%d-%Y"},
 			{"false"}},
 		nil,
-		stringPtr("13m"),
+		test.StringPtr("13m"),
 	)
 	tests := map[string]struct {
 		index       int

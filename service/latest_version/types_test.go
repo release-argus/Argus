@@ -26,6 +26,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/options"
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 )
 
 var emptyListETagTestMutex = sync.Mutex{}
@@ -292,8 +293,8 @@ func TestLookup_String(t *testing.T) {
 		},
 		"filled": {
 			lookup: New(
-				stringPtr("token"),
-				boolPtr(true),
+				test.StringPtr("token"),
+				test.BoolPtr(true),
 				nil,
 				opt.New(
 					nil, "1h2m3s", nil,
@@ -305,12 +306,12 @@ func TestLookup_String(t *testing.T) {
 				"github",
 				"https://test.com",
 				&filter.URLCommandSlice{
-					{Type: "regex", Regex: stringPtr("v([0-9.]+)")}},
-				boolPtr(true),
+					{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
+				test.BoolPtr(true),
 				NewDefaults(
-					stringPtr("foo"), nil, nil, nil),
+					test.StringPtr("foo"), nil, nil, nil),
 				NewDefaults(
-					nil, boolPtr(true), nil, nil)),
+					nil, test.BoolPtr(true), nil, nil)),
 			want: `
 type: github
 url: https://test.com
@@ -326,10 +327,10 @@ require:
 		},
 		"quotes otherwise invalid yaml strings": {
 			lookup: New(
-				stringPtr(">123"),
+				test.StringPtr(">123"),
 				nil, nil, nil, nil, nil, "", "",
 				&filter.URLCommandSlice{
-					{Type: "regex", Regex: stringPtr("{2}([0-9.]+)")}},
+					{Type: "regex", Regex: test.StringPtr("{2}([0-9.]+)")}},
 				nil, nil, nil),
 			want: `
 access_token: '>123'
@@ -390,7 +391,7 @@ func TestGitHubData_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = trimJSON(tc.want)
+			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the GitHubData is stringified with String
 			got := tc.githubData.String()
@@ -418,24 +419,24 @@ func TestLookup_IsEqual(t *testing.T) {
 		"defaults ignored": {
 			a: &Lookup{
 				Defaults: NewDefaults(
-					nil, boolPtr(false), nil, nil)},
+					nil, test.BoolPtr(false), nil, nil)},
 			b:    &Lookup{},
 			want: true,
 		},
 		"hard_defaults ignored": {
 			a: &Lookup{
 				HardDefaults: NewDefaults(
-					nil, boolPtr(false), nil, nil)},
+					nil, test.BoolPtr(false), nil, nil)},
 			b:    &Lookup{},
 			want: true,
 		},
 		"equal": {
 			a: New(
-				stringPtr("token"),
-				boolPtr(false),
+				test.StringPtr("token"),
+				test.BoolPtr(false),
 				nil,
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
 				&filter.Require{
 					RegexContent: "foo.tar.gz"},
@@ -444,15 +445,15 @@ func TestLookup_IsEqual(t *testing.T) {
 				"https://example.com",
 				nil, nil,
 				NewDefaults(
-					stringPtr("foo"), nil, nil, nil),
+					test.StringPtr("foo"), nil, nil, nil),
 				NewDefaults(
-					nil, boolPtr(true), nil, nil)),
+					nil, test.BoolPtr(true), nil, nil)),
 			b: New(
-				stringPtr("token"),
-				boolPtr(false),
+				test.StringPtr("token"),
+				test.BoolPtr(false),
 				nil,
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
 				&filter.Require{
 					RegexContent: "foo.tar.gz"},
@@ -461,18 +462,18 @@ func TestLookup_IsEqual(t *testing.T) {
 				"https://example.com",
 				nil, nil,
 				NewDefaults(
-					stringPtr("foo"), nil, nil, nil),
+					test.StringPtr("foo"), nil, nil, nil),
 				NewDefaults(
-					nil, boolPtr(true), nil, nil)),
+					nil, test.BoolPtr(true), nil, nil)),
 			want: true,
 		},
 		"not equal": {
 			a: New(
-				stringPtr("token"),
-				boolPtr(false),
+				test.StringPtr("token"),
+				test.BoolPtr(false),
 				nil,
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
 				&filter.Require{
 					RegexContent: "foo.tar.gz"},
@@ -480,17 +481,17 @@ func TestLookup_IsEqual(t *testing.T) {
 				"github",
 				"https://example.com",
 				nil,
-				boolPtr(true),
+				test.BoolPtr(true),
 				NewDefaults(
-					stringPtr("foo"), nil, nil, nil),
+					test.StringPtr("foo"), nil, nil, nil),
 				NewDefaults(
-					nil, boolPtr(true), nil, nil)),
+					nil, test.BoolPtr(true), nil, nil)),
 			b: New(
-				stringPtr("token"),
-				boolPtr(false),
+				test.StringPtr("token"),
+				test.BoolPtr(false),
 				nil,
 				opt.New(
-					nil, "", boolPtr(true),
+					nil, "", test.BoolPtr(true),
 					nil, nil),
 				&filter.Require{
 					RegexContent: "foo.tar.gz"},
@@ -498,11 +499,11 @@ func TestLookup_IsEqual(t *testing.T) {
 				"github",
 				"https://example.com/other",
 				nil,
-				boolPtr(true),
+				test.BoolPtr(true),
 				NewDefaults(
-					stringPtr("foo"), nil, nil, nil),
+					test.StringPtr("foo"), nil, nil, nil),
 				NewDefaults(
-					nil, boolPtr(true), nil, nil)),
+					nil, test.BoolPtr(true), nil, nil)),
 			want: false,
 		},
 		"not equal with nil": {
@@ -523,7 +524,7 @@ func TestLookup_IsEqual(t *testing.T) {
 				tc.a.Status.Init(
 					0, 0, 0,
 					&name,
-					stringPtr("http://example.com"))
+					test.StringPtr("http://example.com"))
 				tc.a.Status.SetLatestVersion("foo", false)
 			}
 

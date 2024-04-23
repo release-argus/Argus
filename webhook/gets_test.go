@@ -22,6 +22,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/release-argus/Argus/test"
 )
 
 func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
@@ -35,25 +37,25 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        true,
-			root:        boolPtr(true),
-			main:        boolPtr(false),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false),
+			root:        test.BoolPtr(true),
+			main:        test.BoolPtr(false),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false),
 		},
 		"main overrides default+hardDefault": {
 			want:        true,
-			main:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false),
+			main:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false),
 		},
 		"default overrides hardDefault": {
 			want:        true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false),
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false),
 		},
 		"hardDefault is last resort": {
 			want:        true,
-			hardDefault: boolPtr(true),
+			hardDefault: test.BoolPtr(true),
 		},
 	}
 
@@ -200,25 +202,25 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        1,
-			root:        intPtr(1),
-			main:        intPtr(2),
-			dfault:      intPtr(2),
-			hardDefault: intPtr(2),
+			root:        test.IntPtr(1),
+			main:        test.IntPtr(2),
+			dfault:      test.IntPtr(2),
+			hardDefault: test.IntPtr(2),
 		},
 		"main overrides default+hardDefault": {
 			want:        1,
-			main:        intPtr(1),
-			dfault:      intPtr(2),
-			hardDefault: intPtr(2),
+			main:        test.IntPtr(1),
+			dfault:      test.IntPtr(2),
+			hardDefault: test.IntPtr(2),
 		},
 		"default overrides hardDefault": {
 			want:        1,
-			dfault:      intPtr(1),
-			hardDefault: intPtr(2),
+			dfault:      test.IntPtr(1),
+			hardDefault: test.IntPtr(2),
 		},
 		"hardDefault is last resort": {
 			want:        1,
-			hardDefault: intPtr(1),
+			hardDefault: test.IntPtr(1),
 		},
 	}
 
@@ -255,25 +257,25 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        uint(1),
-			root:        uintPtr(1),
-			main:        uintPtr(2),
-			dfault:      uintPtr(2),
-			hardDefault: uintPtr(2),
+			root:        test.UIntPtr(1),
+			main:        test.UIntPtr(2),
+			dfault:      test.UIntPtr(2),
+			hardDefault: test.UIntPtr(2),
 		},
 		"main overrides default+hardDefault": {
 			want:        uint(1),
-			main:        uintPtr(1),
-			dfault:      uintPtr(2),
-			hardDefault: uintPtr(2),
+			main:        test.UIntPtr(1),
+			dfault:      test.UIntPtr(2),
+			hardDefault: test.UIntPtr(2),
 		},
 		"default overrides hardDefault": {
 			want:        uint(1),
-			dfault:      uintPtr(1),
-			hardDefault: uintPtr(2),
+			dfault:      test.UIntPtr(1),
+			hardDefault: test.UIntPtr(2),
 		},
 		"hardDefault is last resort": {
 			want:        uint(1),
-			hardDefault: uintPtr(1),
+			hardDefault: test.UIntPtr(1),
 		},
 	}
 
@@ -552,25 +554,25 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 	}{
 		"root overrides all": {
 			want:        true,
-			root:        boolPtr(true),
-			main:        boolPtr(false),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false),
+			root:        test.BoolPtr(true),
+			main:        test.BoolPtr(false),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false),
 		},
 		"main overrides default+hardDefault": {
 			want:        true,
-			main:        boolPtr(true),
-			dfault:      boolPtr(false),
-			hardDefault: boolPtr(false),
+			main:        test.BoolPtr(true),
+			dfault:      test.BoolPtr(false),
+			hardDefault: test.BoolPtr(false),
 		},
 		"default overrides hardDefault": {
 			want:        true,
-			dfault:      boolPtr(true),
-			hardDefault: boolPtr(false),
+			dfault:      test.BoolPtr(true),
+			hardDefault: test.BoolPtr(false),
 		},
 		"hardDefault is last resort": {
 			want:        true,
-			hardDefault: boolPtr(true),
+			hardDefault: test.BoolPtr(true),
 		},
 	}
 
@@ -758,11 +760,11 @@ func TestWebHook_SetExecuting(t *testing.T) {
 		},
 		"failed (failed=true) does delay by 15s": {
 			timeDifference: 15 * time.Second,
-			failed:         boolPtr(true),
+			failed:         test.BoolPtr(true),
 		},
 		"success (failed=false) does delay by 2*Interval": {
 			timeDifference: 24 * time.Minute,
-			failed:         boolPtr(false),
+			failed:         test.BoolPtr(false),
 		},
 	}
 

@@ -24,10 +24,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	api_type "github.com/release-argus/Argus/web/api/types"
 	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
+	test_webhook "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestSlice_Track(t *testing.T) {
@@ -55,12 +57,12 @@ func TestSlice_Track(t *testing.T) {
 			for _, j := range tc.slice {
 				switch j {
 				case "github":
-					(*slice)[j] = testServiceGitHub(name)
+					(*slice)[j] = testService(name, "github")
 				case "url":
-					(*slice)[j] = testServiceURL(name)
+					(*slice)[j] = testService(name, "url")
 				}
 				if len(tc.active) != 0 {
-					(*slice)[j].Options.Active = boolPtr(tc.active[i])
+					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
 				}
 				(*slice)[j].Status.SetLatestVersion("", false)
 				(*slice)[j].Status.SetDeployedVersion("", false)
@@ -132,7 +134,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"first query updates LatestVersion and DeployedVersion with active true": {
-			livenessMetric: 1, active: boolPtr(true),
+			livenessMetric: 1, active: test.BoolPtr(true),
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			wantAnnounces:       1, // announce: 1 for latest query
@@ -147,7 +149,7 @@ func TestService_Track(t *testing.T) {
 		},
 		"query finds a newer version and updates LatestVersion and not DeployedVersion": {
 			urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook:            testWebHook(false),
+			webhook:            test_webhook.WebHook(false, false, false),
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.1",
 			wantAnnounces:       1, // announce: 1 for latest query
@@ -155,7 +157,7 @@ func TestService_Track(t *testing.T) {
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
 			urlRegex: "v([0-9.]+)", livenessMetric: 1,
-			webhook:            testWebHook(false),
+			webhook:            test_webhook.WebHook(false, false, false),
 			autoApprove:        true,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
@@ -245,7 +247,7 @@ func TestService_Track(t *testing.T) {
 			wantDatabaseMesages: 0, // db: 0 for nothing changing
 		},
 		"inactive service doesn't track": {
-			livenessMetric: 0, active: boolPtr(false),
+			livenessMetric: 0, active: test.BoolPtr(false),
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
 			wantAnnounces: 0, wantDatabaseMesages: 0,
@@ -262,7 +264,7 @@ func TestService_Track(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testServiceURL(name)
+			svc := testService(name, "url")
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}

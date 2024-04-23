@@ -21,6 +21,7 @@ import (
 	"time"
 
 	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 )
 
 func TestController_CopyFailsFrom(t *testing.T) {
@@ -52,8 +53,8 @@ func TestController_CopyFailsFrom(t *testing.T) {
 			from: &Controller{},
 			to:   &Controller{},
 			fromFails: []*bool{
-				boolPtr(true),
-				boolPtr(false),
+				test.BoolPtr(true),
+				test.BoolPtr(false),
 				nil},
 			toFails: nil,
 		},
@@ -65,7 +66,7 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				Command: &Slice{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			toFails: []*bool{
 				nil},
 			fromNextRunnable: []time.Time{
@@ -79,9 +80,9 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				Command: &Slice{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			toFails: []*bool{
-				boolPtr(true)},
+				test.BoolPtr(true)},
 			fromNextRunnable: []time.Time{
 				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
 			toNextRunnable: []time.Time{
@@ -96,10 +97,10 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				Command: &Slice{
 					{"ls", "-lah"}}},
 			fromFails: []*bool{
-				boolPtr(true),
-				boolPtr(false)},
+				test.BoolPtr(true),
+				test.BoolPtr(false)},
 			toFails: []*bool{
-				boolPtr(false)},
+				test.BoolPtr(false)},
 			fromNextRunnable: []time.Time{
 				time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC),
 				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -151,11 +152,11 @@ func TestController_CopyFailsFrom(t *testing.T) {
 			}
 			// AND the matching fails are copied to the Controller
 			for i := range tc.toFails {
-				if stringifyPointer(tc.toFails[i]) != stringifyPointer(tc.to.Failed.Get(i)) {
+				if test.StringifyPtr(tc.toFails[i]) != test.StringifyPtr(tc.to.Failed.Get(i)) {
 					t.Errorf("Fail %d: expected %q, got %q",
 						i,
-						stringifyPointer(tc.toFails[i]),
-						stringifyPointer(tc.to.Failed.Get(i)))
+						test.StringifyPtr(tc.toFails[i]),
+						test.StringifyPtr(tc.to.Failed.Get(i)))
 				}
 			}
 			// AND the next_runnables are copied to the Controller
