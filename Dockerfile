@@ -30,7 +30,8 @@ RUN \
   apk add --no-cache \
     ca-certificates \
     musl-dev \
-    su-exec && \
+    su-exec \
+    curl && \
   rm -rf \
     /tmp/* \
     /var/cache/*
