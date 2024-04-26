@@ -27,7 +27,8 @@ if [ "$(id -u)" -eq 0 ]; then
     /app \
     /app/data \
     /app/data/argus.db \
-    /app/config.yml
+    /app/config.yml || \
+      echo "WARNING: Changing the ownership of the config/database failed, so some features may not work"
 
   echo "Starting..."
   su-exec argus /usr/bin/argus "$@"
