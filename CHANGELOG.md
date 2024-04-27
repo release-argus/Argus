@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.17.4](https://github.com/release-argus/Argus/compare/0.17.3...0.17.4) (2024-04-27)
+
+
+### Bug Fixes
+
+* **docker:** don't fail startup if chown fails ([80f2e61](https://github.com/release-argus/Argus/commits/80f2e61fa1526943884da76a9d28e742b8a3351e)), closes [#106](https://github.com/release-argus/Argus/issues/106)
+
 ### [0.17.3](https://github.com/release-argus/Argus/compare/0.17.0...0.17.3) (2024-04-23)
 
 
