@@ -90,18 +90,20 @@ func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup()
 	tests := map[string]struct {
 		env                  map[string]string
+		method               string
 		url                  string
 		allowInvalidCerts    bool
 		noSemanticVersioning bool
 		basicAuth            *BasicAuth
 		headers              []Header
+		body                 *string
 		json                 string
 		regex                string
 		regexTemplate        *string
 		errRegex             string
 		wantVersion          string
 	}{
-		"JSON lookup that doesn't resolve": {
+		"JSON lookup value that doesn't exist": {
 			errRegex: `failed to find value for \"[^"]+\" in `,
 			url:      "https://api.github.com/repos/release-argus/argus/releases/latest",
 			json:     "something",
@@ -110,6 +112,20 @@ func TestLookup_Query(t *testing.T) {
 			errRegex: "failed to unmarshal",
 			url:      "https://release-argus.io",
 			json:     "something",
+		},
+		"POST - success": {
+			wantVersion: "[0-9.]+",
+			errRegex:    `^$`,
+			method:      "POST",
+			url:         "https://valid.release-argus.io/plain_post",
+			body:        test.StringPtr(`{"argus":"test"}`),
+			regex:       `ver([0-9.]+)`,
+		},
+		"POST - fail, invalid body": {
+			errRegex: `non-2XX response code`,
+			method:   "POST",
+			url:      "https://valid.release-argus.io/plain_post",
+			body:     test.StringPtr(`{"argus":"fail"}`),
 		},
 		"passing regex": {
 			noSemanticVersioning: true,
@@ -203,6 +219,7 @@ func TestLookup_Query(t *testing.T) {
 			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
 			dvl.BasicAuth = tc.basicAuth
 			dvl.Headers = tc.headers
+			dvl.Body = tc.body
 			dvl.JSON = tc.json
 			dvl.Regex = tc.regex
 			dvl.RegexTemplate = tc.regexTemplate
@@ -232,6 +249,10 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_Track(t *testing.T) {
+	plainStableVersion := "1.2.1"
+	plainNonSemanticVersionAsSemantic := "1.2.2"
+	plainNonSemanticVersion := "ver" + plainNonSemanticVersionAsSemantic
+	jsonBarVersion := "1.2.2"
 	// GIVEN a Lookup()
 	tests := map[string]struct {
 		env                  map[string]string
@@ -247,7 +268,7 @@ func TestLookup_Track(t *testing.T) {
 		startLatestVersion   string
 		wantLatestVersion    string
 		wantAnnounces        int
-		wantDatabaseMesages  int
+		wantDatabaseMessages int
 		deleting             bool
 	}{
 		"nil Lookup exits immediately": {
@@ -256,23 +277,23 @@ func TestLookup_Track(t *testing.T) {
 			expectFinish: true,
 		},
 		"get semantic version with regex": {
-			startLatestVersion:  "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
-				Regex: `non-semantic: "v([^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get semantic version from json": {
-			startLatestVersion:  "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  jsonBarVersion,
+			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  "https://valid.release-argus.io/json",
 				JSON: "bar"},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1, wantAnnounces: 1,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1, wantAnnounces: 1,
 		},
 		"get semantic version from multi-level json": {
 			startLatestVersion:  "3.2.1",
@@ -280,144 +301,134 @@ func TestLookup_Track(t *testing.T) {
 			lookup: &Lookup{
 				URL:  "https://valid.release-argus.io/json",
 				JSON: "foo.bar.version"},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"reject non-semantic versions": {
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
 				Regex: `non-semantic: ("[^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 0,
-			wantAnnounces:       0,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 0,
+			wantAnnounces:        0,
 		},
 		"allow non-semantic version": {
-			startLatestVersion:  "v1.2.2",
-			wantDeployedVersion: "v1.2.2",
+			startLatestVersion:  plainNonSemanticVersion,
+			wantDeployedVersion: plainNonSemanticVersion,
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
 				Regex: `non-semantic: "([^"]+)`},
-			semanticVersioning:  false,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
-		},
-		"allow non-semantic version (leading v's)": {
-			startLatestVersion:  "v1.2.2",
-			wantDeployedVersion: "v1.2.2",
-			lookup: &Lookup{
-				URL:   "https://valid.release-argus.io/plain",
-				Regex: `non-semantic: "([^"]+)`},
-			semanticVersioning:  false,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+			semanticVersioning:   false,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get version behind basic auth": {
-			startLatestVersion:  "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "test",
 				Password: "123"},
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/basic-auth",
-				Regex: `non-semantic: "v([^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"env vars in basic auth": {
 			env: map[string]string{
 				"TESTLOOKUP_DV_TRACK_ONE": "tes",
 				"TESTLOOKUP_DV_TRACK_TWO": "23"},
-			startLatestVersion:  "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
 				Username: "${TESTLOOKUP_DV_TRACK_ONE}t",
 				Password: "1${TESTLOOKUP_DV_TRACK_TWO}"},
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/basic-auth",
-				Regex: `non-semantic: "v([^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get version behind an invalid cert": {
-			startLatestVersion:  "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  plainNonSemanticVersionAsSemantic,
+			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   "https://invalid.release-argus.io/plain",
-				Regex: `non-semantic: "v([^"]+)`},
-			allowInvalidCerts:   true,
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			allowInvalidCerts:    true,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"fail due to an unallowed invalid cert": {
 			startLatestVersion:  "",
 			wantDeployedVersion: "",
 			lookup: &Lookup{
 				URL:   "https://invalid.release-argus.io/plain",
-				Regex: `non-semantic: "v([^"]+)`},
-			allowInvalidCerts:   false,
-			semanticVersioning:  true,
-			wantDatabaseMesages: 0,
-			wantAnnounces:       0,
+				Regex: `non-semantic: "ver([^"]+)`},
+			allowInvalidCerts:    false,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 0,
+			wantAnnounces:        0,
 		},
-		"update from an older version": {
-			startLatestVersion:   "1.2.2",
-			startDeployedVersion: "1.2.1",
-			wantDeployedVersion:  "1.2.2",
+		"update to a newer version": {
+			startLatestVersion:   plainNonSemanticVersionAsSemantic,
+			startDeployedVersion: plainStableVersion,
+			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
-				Regex: `non-semantic: "v([^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
-		"update from a newer version": {
-			startLatestVersion:   "1.2.2",
+		"update to an older version": {
+			startLatestVersion:   plainNonSemanticVersionAsSemantic,
 			startDeployedVersion: "1.2.3",
-			wantDeployedVersion:  "1.2.2",
+			wantDeployedVersion:  plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/plain",
-				Regex: `non-semantic: "v([^"]+)`},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+				Regex: `non-semantic: "ver([^"]+)`},
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get a newer deployed version than latest version updates both": {
-			startLatestVersion:  "1.2.1",
-			wantLatestVersion:   "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			startLatestVersion:  plainStableVersion,
+			wantLatestVersion:   plainNonSemanticVersionAsSemantic,
+			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			lookup: &Lookup{
 				URL:  "https://valid.release-argus.io/json",
 				JSON: "bar"},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 2,
-			wantAnnounces:       2,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 2,
+			wantAnnounces:        2,
 		},
 		"get an older deployed version than latest version only updates deployed": {
 			startLatestVersion:  "1.2.3",
 			wantLatestVersion:   "1.2.3",
-			wantDeployedVersion: "1.2.2",
+			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  "https://valid.release-argus.io/json",
 				JSON: "bar"},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 1,
-			wantAnnounces:       1,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 1,
+			wantAnnounces:        1,
 		},
 		"get a deployed version with no latest version updates both": {
 			startLatestVersion:  "",
-			wantLatestVersion:   "1.2.2",
-			wantDeployedVersion: "1.2.2",
+			wantLatestVersion:   jsonBarVersion,
+			wantDeployedVersion: jsonBarVersion,
 			lookup: &Lookup{
 				URL:  "https://valid.release-argus.io/json",
 				JSON: "bar"},
-			semanticVersioning:  true,
-			wantDatabaseMesages: 2,
-			wantAnnounces:       2,
+			semanticVersioning:   true,
+			wantDatabaseMessages: 2,
+			wantAnnounces:        2,
 		},
 		"deleting service stops track": {
 			deleting: true,
@@ -429,7 +440,7 @@ func TestLookup_Track(t *testing.T) {
 			wantLatestVersion:    "",
 			wantDeployedVersion:  "",
 			wantAnnounces:        0,
-			wantDatabaseMesages:  0,
+			wantDatabaseMessages: 0,
 		},
 	}
 
@@ -520,9 +531,9 @@ func TestLookup_Track(t *testing.T) {
 				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
 					tc.wantAnnounces, len(*tc.lookup.Status.AnnounceChannel))
 			}
-			if tc.wantDatabaseMesages != len(*tc.lookup.Status.DatabaseChannel) {
+			if tc.wantDatabaseMessages != len(*tc.lookup.Status.DatabaseChannel) {
 				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
-					tc.wantDatabaseMesages, len(*tc.lookup.Status.DatabaseChannel))
+					tc.wantDatabaseMessages, len(*tc.lookup.Status.DatabaseChannel))
 			}
 
 			// Set Deleting to stop the Track

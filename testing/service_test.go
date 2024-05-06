@@ -145,8 +145,9 @@ func TestServiceTest(t *testing.T) {
 						nil, nil, nil),
 					DeployedVersionLookup: deployedver.New(
 						test.BoolPtr(true),
-						nil, nil,
+						nil, nil, nil,
 						"version",
+						"GET",
 						nil, "", nil,
 						&svcstatus.Status{},
 						"https://release-argus.io/demo/api/v1/version",

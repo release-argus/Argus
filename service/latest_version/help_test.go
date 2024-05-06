@@ -74,7 +74,7 @@ func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
 		lookup.Type = "url"
 		lookup.URL = "https://invalid.release-argus.io/plain"
 		lookup.URLCommands = filter.URLCommandSlice{
-			{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}}
+			{Type: "regex", Regex: test.StringPtr("ver([0-9.]+)")}}
 	} else {
 		lookup.GitHubData = NewGitHubData("", nil)
 		lookup.URLCommands = filter.URLCommandSlice{

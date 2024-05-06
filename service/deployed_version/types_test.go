@@ -43,10 +43,12 @@ func TestLookup_String(t *testing.T) {
 				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
+				test.StringPtr("body_here"),
 				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
+				"GET",
 				opt.New(
 					test.BoolPtr(true), "9m", test.BoolPtr(false),
 					nil, nil),
@@ -58,6 +60,7 @@ func TestLookup_String(t *testing.T) {
 				NewDefaults(
 					test.BoolPtr(false))),
 			want: `
+method: GET
 url: https://example.com
 allow_invalid_certs: false
 basic_auth:
@@ -68,6 +71,7 @@ headers:
     value: val
   - key: X-Another
     value: val2
+body: body_here
 json: value.version
 regex: v([0-9.]+)
 regex_template: $1`,
@@ -77,7 +81,7 @@ regex_template: $1`,
 				nil,
 				&BasicAuth{
 					Username: ">123", Password: "{pass}"},
-				nil, "", nil, "", nil, &svcstatus.Status{}, "", nil, nil),
+				nil, nil, "", "", nil, "", nil, &svcstatus.Status{}, "", nil, nil),
 			want: `
 basic_auth:
   username: '>123'
@@ -142,10 +146,12 @@ func TestLookup_IsEqual(t *testing.T) {
 				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
+				test.StringPtr("body_here"),
 				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
+				"GET",
 				opt.New(
 					nil, "", nil,
 					nil, nil),
@@ -160,10 +166,12 @@ func TestLookup_IsEqual(t *testing.T) {
 				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
+				test.StringPtr("body_here"),
 				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
+				"GET",
 				opt.New(
 					nil, "", test.BoolPtr(true),
 					nil, nil),
@@ -181,10 +189,12 @@ func TestLookup_IsEqual(t *testing.T) {
 				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
+				test.StringPtr("body_here"),
 				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
+				"GET",
 				opt.New(
 					nil, "", test.BoolPtr(true),
 					nil, nil),
@@ -199,10 +209,12 @@ func TestLookup_IsEqual(t *testing.T) {
 				test.BoolPtr(false),
 				&BasicAuth{
 					Username: "user", Password: "pass"},
+				test.StringPtr("body_here"),
 				&[]Header{
 					{Key: "X-Header", Value: "val"},
 					{Key: "X-Another", Value: "val2"}},
 				"value.version",
+				"GET",
 				opt.New(
 					nil, "", test.BoolPtr(true),
 					nil, nil),

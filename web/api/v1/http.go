@@ -56,6 +56,12 @@ func (api *API) basicAuth() mux.MiddlewareFunc {
 	}
 }
 
+// setCommonHeaders sets common headers for JSON API responses.
+func setCommonHeaders(w http.ResponseWriter) {
+	w.Header().Set("Connection", "close")
+	w.Header().Set("Content-Type", "application/json")
+}
+
 // SetupRoutesAPI will setup the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
 	// /config
@@ -194,12 +200,10 @@ func (api *API) SetupRoutesFavicon() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	logFrom := &util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
-
-	// Set headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 
 	err := json.NewEncoder(w).Encode(api_type.VersionAPI{
 		Version:   util.Version,

@@ -26,6 +26,7 @@ interface Props {
   required?: boolean;
   col_sm?: number;
   col_xs?: number;
+  col_md?: number;
   tooltip?: string | JSX.Element;
   position?: Position;
 }
@@ -48,6 +49,7 @@ const VersionWithLink: FC<Props> = ({
   required,
   col_xs = 12,
   col_sm = 6,
+  col_md = col_sm,
   tooltip,
   position,
 }) => {
@@ -65,12 +67,17 @@ const VersionWithLink: FC<Props> = ({
   const padding = formPadding({ col_xs, col_sm, position });
 
   return (
-    <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
+    <Col
+      xs={col_xs}
+      sm={col_sm}
+      md={col_md}
+      className={`${padding} pt-1 pb-1 col-form`}
+    >
       <FormGroup>
         <FormLabel
           text={type === "github" ? "Repository" : "URL"}
           tooltip={tooltip}
-          required={required !== false}
+          required={required}
         />
         <InputGroup className="me-3">
           <FormControl

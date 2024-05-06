@@ -64,9 +64,14 @@ export const convertUIServiceDataEditToAPI = (
   // Deployed version - omit if no url is set
   payload.deployed_version = data.deployed_version?.url
     ? {
+        method: data.deployed_version?.method,
         url: data.deployed_version?.url,
         allow_invalid_certs: data.deployed_version?.allow_invalid_certs,
         headers: data.deployed_version?.headers,
+        body:
+          data.deployed_version.method === "POST"
+            ? data.deployed_version?.body
+            : undefined,
         json: data.deployed_version?.json,
         regex: data.deployed_version?.regex,
         regex_template: data.deployed_version?.regex_template,

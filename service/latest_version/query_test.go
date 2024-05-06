@@ -102,17 +102,17 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"query that gets a non-semantic version": {
 			url:      "https://valid.release-argus.io/plain",
-			regex:    test.StringPtr(`"v[0-9.]+`),
+			regex:    test.StringPtr(`ver[0-9.]+`),
 			errRegex: "failed converting .* to a semantic version",
 		},
 		"query on self-signed https works when allowed": {
 			url:               "https://invalid.release-argus.io/plain",
-			regex:             test.StringPtr("v[0-9.]+"),
+			regex:             test.StringPtr("ver([0-9.]+)"),
 			allowInvalidCerts: true,
 		},
 		"query on self-signed https fails when not allowed": {
 			url:               "https://invalid.release-argus.io/plain",
-			regex:             test.StringPtr("v[0-9.]+"),
+			regex:             test.StringPtr("ver([0-9.]+)"),
 			allowInvalidCerts: false,
 			errRegex:          "x509",
 		},
@@ -125,7 +125,7 @@ func TestLookup_Query(t *testing.T) {
 			errRegex:            "regex .* not matched on content for version",
 		},
 		"regex content match": {
-			requireRegexContent: "v{{ version }}",
+			requireRegexContent: "ver{{ version }}",
 		},
 		"command fail": {
 			requireCommand: []string{"false"},
@@ -154,7 +154,7 @@ func TestLookup_Query(t *testing.T) {
 				"", time.Now(), nil),
 		},
 		"regex version mismatch": {
-			requireRegexVersion: "v([0-9.]+)",
+			requireRegexVersion: "ver([0-9.]+)",
 			errRegex:            "regex not matched on version",
 		},
 		"urlCommand regex mismatch": {
@@ -162,7 +162,7 @@ func TestLookup_Query(t *testing.T) {
 			errRegex: "regex .* didn't return any matches",
 		},
 		"valid semantic version query": {
-			regex: test.StringPtr("v([0-9.]+)"),
+			regex: test.StringPtr("ver([0-9.]+)"),
 		},
 		"older version found": {
 			regex:           test.StringPtr("([0-9.]+)"),
@@ -183,8 +183,8 @@ func TestLookup_Query(t *testing.T) {
 			wantLatestVersion: test.StringPtr("1.2.2"),
 		},
 		"non-semantic version lookup": {
-			regex:                 test.StringPtr("v[0-9.]+"),
-			wantLatestVersion:     test.StringPtr("v1.2.2"),
+			regex:                 test.StringPtr("ver[0-9.]+"),
+			wantLatestVersion:     test.StringPtr("ver1.2.2"),
 			nonSemanticVersioning: true,
 		},
 		"github lookup": {

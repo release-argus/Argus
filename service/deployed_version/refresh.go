@@ -27,8 +27,10 @@ import (
 func (l *Lookup) applyOverrides(
 	allowInvalidCerts *string,
 	basicAuth *string,
+	body *string,
 	headers *string,
 	json *string,
+	method *string,
 	regex *string,
 	regexTemplate *string,
 	semanticVersioning *string,
@@ -47,6 +49,8 @@ func (l *Lookup) applyOverrides(
 		basicAuth,
 		l.BasicAuth,
 		logFrom)
+	// body
+	useBody := util.FirstNonNilPtr(body, l.Body)
 	// headers
 	useHeaders := headersFromString(
 		headers,
@@ -54,6 +58,8 @@ func (l *Lookup) applyOverrides(
 		logFrom)
 	// json
 	useJSON := util.PtrValueOrValue(json, l.JSON)
+	// method
+	useMethod := util.PtrValueOrValue(method, l.Method)
 	// regex
 	useRegex := util.PtrValueOrValue(regex, l.Regex)
 	useRegexTemplate := util.PtrValueOrValue(regexTemplate, util.DefaultIfNil(l.RegexTemplate))
@@ -76,8 +82,10 @@ func (l *Lookup) applyOverrides(
 	lookup := New(
 		useAllowInvalidCerts,
 		useBasicAuth,
+		useBody,
 		useHeaders,
 		useJSON,
+		useMethod,
 		options,
 		useRegex,
 		&useRegexTemplate,
@@ -101,8 +109,10 @@ func (l *Lookup) applyOverrides(
 func (l *Lookup) Refresh(
 	allowInvalidCerts *string,
 	basicAuth *string,
+	body *string,
 	headers *string,
 	json *string,
+	method *string,
 	regex *string,
 	regexTemplate *string,
 	semanticVersioning *string,
@@ -115,8 +125,10 @@ func (l *Lookup) Refresh(
 	lookup, err = l.applyOverrides(
 		allowInvalidCerts,
 		basicAuth,
+		body,
 		headers,
 		json,
+		method,
 		regex,
 		regexTemplate,
 		semanticVersioning,

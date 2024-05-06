@@ -43,7 +43,9 @@ func testLookup() (lookup *Lookup) {
 		test.BoolPtr(true),
 		nil,
 		nil,
+		nil,
 		"version",
+		"GET",
 		opt.New(
 			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{},

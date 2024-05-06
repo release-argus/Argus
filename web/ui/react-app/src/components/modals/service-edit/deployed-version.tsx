@@ -5,6 +5,8 @@ import {
   FormItem,
   FormKeyValMap,
   FormLabel,
+  FormSelect,
+  FormTextArea,
 } from "components/generic/form";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -12,6 +14,11 @@ import { BooleanWithDefault } from "components/generic";
 import { DeployedVersionLookupEditType } from "types/service-edit";
 import VersionWithLink from "./version-with-link";
 import VersionWithRefresh from "./version-with-refresh";
+
+const DeployedVersionMethodOptions = [
+  { label: "GET", value: "GET" },
+  { label: "POST", value: "POST" },
+];
 
 interface Props {
   serviceName: string;
@@ -48,6 +55,9 @@ const EditServiceDeployedVersion: FC<Props> = ({
       setValue("deployed_version.template_toggle", false);
     }
   }, [templateToggle]);
+  const selectedMethod = useWatch({
+    name: "deployed_version.method",
+  });
 
   const convertedDefaults = useMemo(
     () => ({
@@ -61,12 +71,25 @@ const EditServiceDeployedVersion: FC<Props> = ({
     <Accordion>
       <Accordion.Header>Deployed Version:</Accordion.Header>
       <Accordion.Body>
-        <VersionWithLink
-          name="deployed_version.url"
-          type="url"
-          col_sm={12}
-          tooltip="URL to query for the version that's running"
-        />
+        <FormGroup className="pt-1 mb-2">
+          <Row>
+            <FormSelect
+              name="deployed_version.method"
+              col_sm={4}
+              col_md={3}
+              label="Type"
+              options={DeployedVersionMethodOptions}
+            />
+            <VersionWithLink
+              name="deployed_version.url"
+              type="url"
+              col_sm={8}
+              col_md={9}
+              tooltip="URL to query for the version that's running"
+              position="right"
+            />
+          </Row>
+        </FormGroup>
         <BooleanWithDefault
           name="deployed_version.allow_invalid_certs"
           label="Allow Invalid Certs"
@@ -91,6 +114,15 @@ const EditServiceDeployedVersion: FC<Props> = ({
           </Row>
         </FormGroup>
         <FormKeyValMap name="deployed_version.headers" />
+        {selectedMethod === "POST" && (
+          <FormTextArea
+            name="deployed_version.body"
+            col_sm={12}
+            rows={3}
+            label="Body"
+            tooltip="Body to send with this request"
+          />
+        )}
         <Row>
           <FormItem
             name="deployed_version.json"
@@ -122,7 +154,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
             name={`deployed_version.template_toggle`}
             size="lg"
             label="T"
-            tooltip="Use the RegEx to create a template ($1,$2,etc to reference capture groups)"
+            tooltip="Use the RegEx to create a template"
             smallLabel
             col_sm={1}
             col_xs={2}
@@ -133,7 +165,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
               name="deployed_version.regex_template"
               col_sm={12}
               label="RegEx Template"
-              tooltip="Use the RegEx to create a template ($1,$2,etc to reference capture groups)"
+              tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
             />
           )}
         </Row>

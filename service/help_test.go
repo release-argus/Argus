@@ -81,6 +81,10 @@ func testService(id string, sType string) *Service {
 	svc.Status.SetDeployedVersion("0.0.0", false)
 	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
 
+	svc.LatestVersion.Init(
+		svc.LatestVersion.Defaults, svc.LatestVersion.HardDefaults,
+		&svc.Status,
+		&svc.Options)
 	svc.DeployedVersionLookup.Init(
 		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
 		&svc.Status,
@@ -124,7 +128,7 @@ func testLatestVersionURL(fail bool) (lv *latestver.Lookup) {
 		"url",
 		"https://invalid.release-argus.io/plain",
 		&filter.URLCommandSlice{
-			{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
+			{Type: "regex", Regex: test.StringPtr("ver([0-9.]+)")}},
 		test.BoolPtr(false),
 		&latestver.LookupDefaults{},
 		&latestver.LookupDefaults{})
@@ -145,8 +149,9 @@ func testLatestVersion(lvType string, fail bool) (lv *latestver.Lookup) {
 func testDeployedVersionLookup(fail bool) (dvl *deployedver.Lookup) {
 	dvl = deployedver.New(
 		test.BoolPtr(!fail),
-		nil, nil,
+		nil, nil, nil,
 		"version",
+		"GET",
 		opt.New(
 			nil, "", test.BoolPtr(true),
 			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),

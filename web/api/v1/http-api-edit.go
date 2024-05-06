@@ -41,6 +41,8 @@ import (
 //
 // params: service params to use
 func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	logFromPrimary := "httpVersionRefreshUncreated_Latest"
 	deployedVersionRefresh := strings.Contains(r.URL.String(), "/deployed_version/refresh?")
 	if deployedVersionRefresh {
@@ -49,9 +51,6 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	// Set headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 	queryParams := r.URL.Query()
 
 	status := svcstatus.Status{}
@@ -66,7 +65,8 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 	)
 	if deployedVersionRefresh {
 		deployedVersionLookup := deployedver.New(
-			nil, nil, nil, "",
+			nil, nil, nil, nil, "",
+			"GET",
 			opt.New(
 				nil, "", nil,
 				&api.Config.Defaults.Service.Options,
@@ -78,8 +78,10 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 		version, _, err = deployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "basic_auth"),
+			getParam(&queryParams, "body"),
 			getParam(&queryParams, "headers"),
 			getParam(&queryParams, "json"),
+			getParam(&queryParams, "method"),
 			getParam(&queryParams, "regex"),
 			getParam(&queryParams, "regex_template"),
 			getParam(&queryParams, "semantic_versioning"),
@@ -125,6 +127,8 @@ func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Reque
 //
 // ...params?: service params to override
 func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	// service to refresh
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
@@ -135,10 +139,6 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
-
-	// Set headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 
 	queryParams := r.URL.Query()
 
@@ -172,8 +172,10 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 		version, announce, err = api.Config.Service[targetService].DeployedVersionLookup.Refresh(
 			getParam(&queryParams, "allow_invalid_certs"),
 			getParam(&queryParams, "basic_auth"),
+			getParam(&queryParams, "body"),
 			getParam(&queryParams, "headers"),
 			getParam(&queryParams, "json"),
+			getParam(&queryParams, "method"),
 			getParam(&queryParams, "regex"),
 			getParam(&queryParams, "regex_template"),
 			getParam(&queryParams, "semantic_versioning"),
@@ -215,15 +217,13 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 //
 // service_name: service to get details for
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	// service to get details from (empty for create new)
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
 	logFrom := &util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
-
-	// Set Headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 
 	// Find the Service
 	api.Config.OrderMutex.RLock()
@@ -260,13 +260,11 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 //
 // # GET
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	logFromPrimary := "httpOtherServiceDetails"
 	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
-
-	// Set headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 
 	// Convert to JSON type that swaps slices for lists
 	err := json.NewEncoder(w).Encode(api_type.Config{
@@ -288,6 +286,8 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //
 // ...payload: Service they'd like to create/edit with
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 
@@ -301,9 +301,6 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	logFrom := &util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	jLog.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
 		logFrom, true)
-
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
 
 	var oldServiceSummary *api_type.ServiceSummary
 	// EDIT the existing service
@@ -432,9 +429,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //	service_url?: string
 //	web_url?: string
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
-	// Set headers
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
+	setCommonHeaders(w)
 
 	logFrom := &util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
