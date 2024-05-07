@@ -3307,6 +3307,10 @@ func TestRemoveDefaults(t *testing.T) {
 					"foo": shoutrrr.New(
 						nil, "foo", nil, nil,
 						"gotify",
+						nil, nil, nil, nil),
+					"gotify": shoutrrr.New(
+						nil, "bar", nil, nil,
+						"gotify",
 						nil, nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
@@ -3319,7 +3323,8 @@ func TestRemoveDefaults(t *testing.T) {
 			wasUsingWebHookDefaults: true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
-					"foo": {}},
+					"foo":    {},
+					"gotify": {}},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: map[string]struct{}{
 					"bar": {}}},

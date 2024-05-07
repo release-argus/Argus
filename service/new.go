@@ -387,9 +387,10 @@ func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
 		if len(defaultNotifys) != len(usingNotifys) {
 			notifyDefaults = false
 		} else {
-			// Check that the keys are the same
+			// Check that the Notify's haven't changed (still match the defaults)
 			for i, notify := range usingNotifys {
-				if defaultNotifys[i] != notify || newService.Notify[notify].String("") != oldService.Notify[notify].String("") {
+				// Name has changed or now has values that override the defaults
+				if defaultNotifys[i] != notify || newService.Notify[notify].String("") != fmt.Sprintf("type: %s\n", newService.Notify[notify].Type) {
 					notifyDefaults = false
 					break
 				}
@@ -406,7 +407,7 @@ func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
 		if len(newService.Command) != len(d.Command) {
 			commandDefaults = false
 		} else {
-			// Check that the commands are the defaults
+			// Check that the Commands haven't changed (still match the defaults)
 			for i, command := range d.Command {
 				if newService.Command[i].FormattedString() != command.FormattedString() {
 					commandDefaults = false
@@ -428,9 +429,10 @@ func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
 		if len(defaultWebHooks) != len(usingWebHooks) {
 			webhookDefaults = false
 		} else {
-			// Check that the keys are the same
+			// Check that the WebHooks haven't changed (still match the defaults)
 			for i, webhook := range usingWebHooks {
-				if defaultWebHooks[i] != webhook || newService.WebHook[webhook].String() != oldService.WebHook[webhook].String() {
+				// Name has changed or now has values that override the defaults
+				if defaultWebHooks[i] != webhook || newService.WebHook[webhook].String() != fmt.Sprintf("type: %s\n", newService.WebHook[webhook].Type) {
 					webhookDefaults = false
 					break
 				}
