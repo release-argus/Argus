@@ -30,7 +30,7 @@ import { urlCommandsTrimArray } from "./url-command-trim";
  *
  * @param name - The name of the service
  * @param serviceData - The service data from the API
- * @param otherOptionsData - The other options data, containingglobals/defaults/hardDefaults
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
  * @returns The converted service data for use in the UI
  */
 export const convertAPIServiceDataEditToUI = (
@@ -85,6 +85,7 @@ export const convertAPIServiceDataEditToUI = (
       },
     },
     deployed_version: {
+      method: "GET",
       ...serviceData?.deployed_version,
       basic_auth: {
         username: serviceData?.deployed_version?.basic_auth?.username ?? "",

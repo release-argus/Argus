@@ -478,15 +478,17 @@ type RequireDockerCheck struct {
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
-	URL               string                 `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query
+	Method            string                 `json:"method,omitempty" yaml:"method,omitempty"`                           // HTTP method.
+	URL               string                 `json:"url,omitempty" yaml:"url,omitempty"`                                 // URL to query.
 	AllowInvalidCerts *bool                  `json:"allow_invalid_certs,omitempty" yaml:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
-	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`                   // Basic Auth for the HTTP(S) request
-	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Headers for the HTTP(S) request
-	JSON              string                 `json:"json,omitempty" yaml:"json,omitempty"`                               // JSON key to use e.g. version_current
-	Regex             string                 `json:"regex,omitempty" yaml:"regex,omitempty"`                             // Regex to get the DeployedVersion
-	RegexTemplate     *string                `json:"regex_template,omitempty" yaml:"regex_template,omitempty"`           // Template to use for the Regex
-	HardDefaults      *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Hardcoded default values
-	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Default values
+	BasicAuth         *BasicAuth             `json:"basic_auth,omitempty" yaml:"basic_auth,omitempty"`                   // Basic Auth credentials.
+	Headers           []Header               `json:"headers,omitempty" yaml:"headers,omitempty"`                         // Request Headers.
+	Body              *string                `json:"body,omitempty" yaml:"body,omitempty"`                               // Request Body.
+	JSON              string                 `json:"json,omitempty" yaml:"json,omitempty"`                               // JSON key to use e.g. version_current.
+	Regex             string                 `json:"regex,omitempty" yaml:"regex,omitempty"`                             // Regex for the version.
+	RegexTemplate     *string                `json:"regex_template,omitempty" yaml:"regex_template,omitempty"`           // Template to apply to the RegEx match.
+	HardDefaults      *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Hardcoded default values.
+	Defaults          *DeployedVersionLookup `json:"-" yaml:"-"`                                                         // Default values.
 }
 
 // String returns a JSON string representation of the DeployedVersionLookup.

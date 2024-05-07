@@ -18,6 +18,7 @@ package deployedver
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
@@ -27,7 +28,9 @@ import (
 func TestLookup_CheckValues(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
+		method        string
 		url           string
+		body          *string
 		json          string
 		regex         string
 		regexTemplate *string
@@ -41,26 +44,65 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"valid service": {
 			errRegex: `^$`,
+			method:   "GET",
 			url:      "https://example.com",
 			regex:    "[0-9.]+",
 			defaults: &LookupDefaults{},
 		},
-		"no url": {
+		"method - empty string": {
+			errRegex: `^$`,
+			method:   "",
+			url:      "https://example.com",
+		},
+		"method - invalid": {
+			errRegex: `method: "[^"]+" <invalid>`,
+			method:   "FOO",
+			url:      "https://example.com",
+		},
+		"method - valid": {
+			errRegex: `^$`,
+			method:   "GET",
+			url:      "https://example.com",
+		},
+		"method - case insensitive": {
+			errRegex: `^$`,
+			method:   "gEt",
+			url:      "https://example.com",
+		},
+		"url - empty string": {
 			errRegex: `url: <required>`,
+			method:   "GET",
 			url:      "",
 			defaults: &LookupDefaults{},
 		},
-		"invalid json - string in square brackets": {
+		"body - removed for GET": {
+			errRegex: `^$`,
+			method:   "GET",
+			url:      "https://example.com",
+			body:     test.StringPtr("foo"),
+			defaults: &LookupDefaults{},
+		},
+		"body - not removed for POST": {
+			errRegex: `^$`,
+			method:   "POST",
+			url:      "https://example.com",
+			body:     test.StringPtr("foo"),
+			defaults: &LookupDefaults{},
+		},
+		"json - invalid, string in square brackets": {
 			errRegex: `json: .* <invalid>`,
+			method:   "GET",
 			json:     "foo[bar]",
 			defaults: &LookupDefaults{},
 		},
-		"invalid regex": {
+		"regex - invalid": {
 			errRegex: `regex: .* <invalid>`,
+			method:   "GET",
 			regex:    "[0-",
 			defaults: &LookupDefaults{},
 		},
-		"regexTemplate with no regex": {
+		"regexTemplate - with no regex": {
+			method:        "GET",
 			url:           "https://example.com",
 			errRegex:      `^$`,
 			regexTemplate: test.StringPtr("$1.$2.$3"),
@@ -68,12 +110,14 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"all errs": {
 			errRegex: `url: <required>`,
+			method:   "GET",
 			url:      "",
 			regex:    "[0-",
 			defaults: &LookupDefaults{},
 		},
-		"no url doesnt fail for Lookup Defaults": {
+		"no url doesn't fail for Lookup Defaults": {
 			errRegex: `^$`,
+			method:   "GET",
 			url:      "",
 			defaults: nil,
 		},
@@ -85,7 +129,9 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			lookup := &Lookup{}
 			lookup = testLookup()
+			lookup.Method = tc.method
 			lookup.URL = tc.url
+			lookup.Body = tc.body
 			lookup.JSON = tc.json
 			lookup.Regex = tc.regex
 			lookup.RegexTemplate = tc.regexTemplate
@@ -93,8 +139,11 @@ func TestLookup_CheckValues(t *testing.T) {
 			if tc.defaults != nil {
 				lookup.Defaults = tc.defaults
 			}
+			var hadBody *string
 			if tc.nilService {
 				lookup = nil
+			} else {
+				hadBody = lookup.Body
 			}
 
 			// WHEN CheckValues is called
@@ -108,10 +157,29 @@ func TestLookup_CheckValues(t *testing.T) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
-
+			if lookup == nil {
+				return
+			}
 			// AND RegexTemplate is nil when Regex is empty
-			if lookup != nil && lookup.RegexTemplate != nil && lookup.Regex == "" {
+			if lookup.RegexTemplate != nil && lookup.Regex == "" {
 				t.Fatalf("RegexTemplate should be nil when Regex is empty")
+			}
+			// AND Body is nil when Method is GET
+			if lookup.Method == "GET" && lookup.Body != nil {
+				t.Fatalf("Body should be nil when Method is GET")
+			}
+			// AND Body is kept when Method is POST
+			if lookup.Method == "POST" && hadBody != nil && lookup.Body == nil {
+				t.Fatalf("Body should be kept when Method is POST")
+			}
+			// AND Method is uppercased
+			wantMethod := strings.ToUpper(tc.method)
+			if wantMethod == "" {
+				wantMethod = "GET"
+			}
+			if lookup.Method != wantMethod {
+				t.Fatalf("Method should be uppercased:\nwant: %q\ngot:  %q",
+					wantMethod, lookup.Method)
 			}
 		})
 	}

@@ -806,7 +806,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
 				DeployedVersionLookup: deployedver.New(
 					test.BoolPtr(true),
-					nil, nil, "", nil, "", nil, nil, "", nil, nil),
+					nil, nil, nil, "", "", nil, "", nil, nil, "", nil, nil),
 				Notify: shoutrrr.Slice{
 					"gotify": shoutrrr.New(
 						nil,

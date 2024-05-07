@@ -16,6 +16,7 @@ interface FormSelectProps {
   key?: string;
   col_xs?: number;
   col_sm?: number;
+  col_md?: number;
   label?: string;
   smallLabel?: boolean;
   tooltip?: string | JSX.Element;
@@ -52,6 +53,7 @@ const FormSelect: FC<FormSelectProps> = ({
   key = name,
   col_xs = 12,
   col_sm = 6,
+  col_md = col_sm,
   label,
   smallLabel,
   tooltip,
@@ -67,6 +69,7 @@ const FormSelect: FC<FormSelectProps> = ({
     <Col
       xs={col_xs}
       sm={col_sm}
+      md={col_md}
       className={`${padding} pt-1 pb-1 col-form`}
       key={key}
     >

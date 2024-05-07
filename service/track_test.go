@@ -102,11 +102,15 @@ func TestSlice_Track(t *testing.T) {
 }
 
 func TestService_Track(t *testing.T) {
+	testSVC := testService("TestService_Track", "url")
+	testSVC.LatestVersion.Query(false, &util.LogFrom{})
+	testLatestVersion := testSVC.Status.LatestVersion()
 	// GIVEN a Service
 	tests := map[string]struct {
 		active               *bool
 		url                  string
 		urlRegex             string
+		urlRegexTemplate     string
 		signedCerts          bool
 		wantQueryIn          string
 		keepDeployedLookup   bool
@@ -123,140 +127,142 @@ func TestService_Track(t *testing.T) {
 		wantLatestVersion    string
 		wantDeployedVersion  string
 		wantAnnounces        int
-		wantDatabaseMesages  int
+		wantDatabaseMessages int
 		deleting             bool
 	}{
 		"first query updates LatestVersion and DeployedVersion": {
 			livenessMetric:     1,
 			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
-		"first query updates LatestVersion and DeployedVersion with active true": {
+		"first query updates LatestVersion and DeployedVersion - unchanged by active=true": {
 			livenessMetric: 1, active: test.BoolPtr(true),
 			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
-		"query finds a newer version and updates LatestVersion and DeployedVersion as no commands/webhooks": {
-			urlRegex: "v([0-9.]+)", livenessMetric: 1,
+		"query finds a newer version and updates LatestVersion and DeployedVersion - no commands/webhooks": {
+			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for latest, 1 for deployed
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
 		},
-		"query finds a newer version and updates LatestVersion and not DeployedVersion": {
-			urlRegex: "v([0-9.]+)", livenessMetric: 1,
+		"query finds a newer version and updates LatestVersion and not DeployedVersion - has webhook": {
+			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
 			webhook:            test_webhook.WebHook(false, false, false),
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.1",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 1, // db: 1 for latest
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: "1.2.1",
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 1, // db: 1 for latest
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
-			urlRegex: "v([0-9.]+)", livenessMetric: 1,
+			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
 			webhook:            test_webhook.WebHook(false, false, false),
 			autoApprove:        true,
 			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces:       2, // announce: 1 for latest query, 1 for deployed
-			wantDatabaseMesages: 2, // db: 1 for latest, 1 for deployed
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed
+			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
 		},
 		"query doesn't update versions if it finds one that's older semantically": {
+			// would get 1.2.1, but stay on 1.2.2
 			urlRegex: `"([0-9.]+)"`, livenessMetric: 4, nilRequire: true,
-			startLatestVersion: "1.2.2", startDeployedVersion: "1.2.2",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			startLatestVersion: testLatestVersion, startDeployedVersion: testLatestVersion,
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"track on invalid cert allowed": {
 			urlRegex: `"([0-9.]+)"`, livenessMetric: 1, nilRequire: true,
 			url: "https://invalid.release-argus.io/plain", signedCerts: false,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"track on signed cert allowed": {
 			urlRegex: `"([0-9.]+)"`, livenessMetric: 1, nilRequire: true,
 			url: "https://valid.release-argus.io/plain", signedCerts: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"url regex fail": {
-			urlRegex: "v[0-9.]foo", livenessMetric: 2,
+			urlRegex: "ver[0-9.]foo", livenessMetric: 2,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"handle leading v's": {
-			urlRegex: "v[0-9.]+", livenessMetric: 1, nilRequire: true,
+			urlRegex: "ver([0-9.]+)", urlRegexTemplate: "v$1",
+			livenessMetric: 1, nilRequire: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"non-semantic version fail": {
-			urlRegex: `"v[0-9.]+`, livenessMetric: 3, nilRequire: true,
+			urlRegex: `"ver[0-9.]+`, livenessMetric: 3, nilRequire: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"progressive version fail (got older version)": {
-			urlRegex: "v([0-9.]+)", livenessMetric: 4,
+			urlRegex: "ver([0-9.]+)", livenessMetric: 4,
 			startLatestVersion: "1.2.3", startDeployedVersion: "1.2.3",
 			wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.3",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"other fail (invalid cert)": {
 			urlRegex: `"([0-9.]+)"`, livenessMetric: 0, nilRequire: true,
 			url: "https://invalid.release-argus.io/plain", signedCerts: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"track gets DeployedVersion": {
 			keepDeployedLookup: true, deployedVersionJSON: "bar", livenessMetric: 1,
-			startLatestVersion: "1.2.2", startDeployedVersion: "1.2.0",
-			wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
-			wantAnnounces:       2, // announce: 1 for latest query, 1 for deployed change
-			wantDatabaseMesages: 1, // db: 1 for deployed change
+			startLatestVersion: testLatestVersion, startDeployedVersion: "1.2.0",
+			wantLatestVersion: testLatestVersion, wantDeployedVersion: "1.2.2",
+			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed change
+			wantDatabaseMessages: 1, // db: 1 for deployed change
 		},
 		"track gets DeployedVersion that's newer updates LatestVersion too": {
 			keepDeployedLookup: true, deployedVersionJSON: "foo.bar.version",
 			ignoreLivenessMetric: true, // ignore as deployed lookup may be done before
-			startLatestVersion:   "1.2.2", startDeployedVersion: "0.0.0",
+			startLatestVersion:   testLatestVersion, startDeployedVersion: "0.0.0",
 			wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1",
 			wantAnnounces: 3, // announce: 1 for latest query (as it'll give <latestVersion, but be called before we have deployedVersion),
 			// 1 for latest change,
 			// 1 for deployed change
-			wantDatabaseMesages: 2, // db: 1 for latest change, 1 for deployed change
+			wantDatabaseMessages: 2, // db: 1 for latest change, 1 for deployed change
 		},
 		"track that last did a Query less than interval ago waits until interval": {
-			wantQueryIn:         "5s",
-			keepDeployedLookup:  false,
-			deployedVersionJSON: "bar",
-			livenessMetric:      1,
-			takesAtLeast:        5 * time.Second,
-			startLatestVersion:  "1.2.2",
-			wantLatestVersion:   "1.2.2",
-			wantAnnounces:       1, // announce: 1 for latest query
-			wantDatabaseMesages: 0, // db: 0 for nothing changing
+			wantQueryIn:          "5s",
+			keepDeployedLookup:   false,
+			deployedVersionJSON:  "bar",
+			livenessMetric:       1,
+			takesAtLeast:         5 * time.Second,
+			startLatestVersion:   testLatestVersion,
+			wantLatestVersion:    testLatestVersion,
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 0, // db: 0 for nothing changing
 		},
 		"inactive service doesn't track": {
 			livenessMetric: 0, active: test.BoolPtr(false),
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"deleting service stops track": {
 			livenessMetric: 0, deleting: true,
 			startLatestVersion: "", startDeployedVersion: "",
 			wantLatestVersion: "", wantDeployedVersion: "",
-			wantAnnounces: 0, wantDatabaseMesages: 0,
+			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 	}
 
@@ -281,6 +287,9 @@ func TestService_Track(t *testing.T) {
 			}
 			if tc.urlRegex != "" {
 				svc.LatestVersion.URLCommands[0].Regex = &tc.urlRegex
+				if tc.urlRegexTemplate != "" {
+					svc.LatestVersion.URLCommands[0].Template = &tc.urlRegexTemplate
+				}
 			}
 			if tc.url != "" {
 				svc.LatestVersion.URL = tc.url
@@ -379,9 +388,9 @@ func TestService_Track(t *testing.T) {
 			}
 			// DatabaseChannel
 			gotDatabaseMessages := len(*svc.Status.DatabaseChannel)
-			if tc.wantDatabaseMesages != gotDatabaseMessages {
+			if tc.wantDatabaseMessages != gotDatabaseMessages {
 				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
-					tc.wantDatabaseMesages, gotDatabaseMessages)
+					tc.wantDatabaseMessages, gotDatabaseMessages)
 				for gotDatabaseMessages > 0 {
 					var msg api_type.WebSocketMessage
 					msgBytes := <-*svc.Status.AnnounceChannel

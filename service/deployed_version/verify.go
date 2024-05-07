@@ -17,6 +17,7 @@ package deployedver
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/release-argus/Argus/util"
 )
@@ -25,6 +26,19 @@ import (
 func (l *Lookup) CheckValues(prefix string) (errs error) {
 	if l == nil {
 		return
+	}
+
+	// Method
+	l.Method = strings.ToUpper(l.Method)
+	if l.Method == "" {
+		l.Method = "GET"
+	} else if !util.Contains(supportedTypes, l.Method) {
+		errs = fmt.Errorf("%s%s  method: %q <invalid> (only [%s] are allowed)\\",
+			util.ErrorToString(errs), prefix, l.Method, strings.Join(supportedTypes, ", "))
+	}
+	// Body unused in GET, so ensure it's nil.
+	if l.Method == "GET" {
+		l.Body = nil
 	}
 
 	// URL

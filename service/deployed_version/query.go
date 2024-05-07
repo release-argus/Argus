@@ -189,23 +189,23 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	req, err := http.NewRequest(http.MethodGet, l.GetURL(), nil)
+	// Create the request.
+	req, err := http.NewRequest(l.Method, l.GetURL(), l.GetBody())
 	if err != nil {
 		jLog.Error(err, logFrom, true)
 		return
 	}
-
 	// Set headers
 	req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
 		req.Header.Set(util.EvalEnvVars(header.Key), util.EvalEnvVars(header.Value))
 	}
-
 	// Basic auth
 	if l.BasicAuth != nil {
 		req.SetBasicAuth(util.EvalEnvVars(l.BasicAuth.Username), util.EvalEnvVars(l.BasicAuth.Password))
 	}
 
+	// Send the request.
 	client := &http.Client{Transport: customTransport}
 	resp, err := client.Do(req)
 	if err != nil {

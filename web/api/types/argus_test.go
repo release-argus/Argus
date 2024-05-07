@@ -1074,6 +1074,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 		},
 		"all fields": {
 			dvl: &DeployedVersionLookup{
+				Method:            "POST",
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(false),
 				BasicAuth: &BasicAuth{
@@ -1082,12 +1083,14 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 				Headers: []Header{
 					{Key: "X-Header", Value: "bosh"},
 					{Key: "X-Other", Value: "bash"}},
+				Body:         test.StringPtr("what"),
 				JSON:         "boo",
 				Regex:        "bam",
 				HardDefaults: &DeployedVersionLookup{},
 				Defaults:     &DeployedVersionLookup{}},
 			want: `
 				{
+					"method": "POST",
 					"url": "https://release-argus.io",
 					"allow_invalid_certs": false,
 					"basic_auth": {
@@ -1096,6 +1099,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 					"headers": [
 						{"key": "X-Header","value": "bosh"},
 						{"key": "X-Other","value": "bash"}],
+					"body": "what",
 					"json": "boo",
 					"regex": "bam"
 				}`,

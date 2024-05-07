@@ -84,10 +84,12 @@ export interface DeployedVersionLookupEditType {
     | undefined
     | BasicAuthType
     | HeaderEditType[];
+  method?: "GET" | "POST";
   url?: string;
   allow_invalid_certs?: boolean;
   basic_auth?: BasicAuthType;
   headers?: HeaderEditType[];
+  body?: string;
   json?: string;
   regex?: string;
 }

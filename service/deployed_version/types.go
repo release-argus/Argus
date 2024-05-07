@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	jLog *util.JLog
+	jLog           *util.JLog
+	supportedTypes = []string{"GET", "POST"}
 )
 
 // LookupBase is the base struct for the Lookup struct.
@@ -45,13 +46,15 @@ func NewDefaults(
 
 // Lookup the deployed version of the service.
 type Lookup struct {
-	URL           string `yaml:"url,omitempty" json:"url,omitempty"` // URL to query.
+	Method        string `yaml:"method,omitempty" json:"method,omitempty"` // REQUIRED: HTTP method.
+	URL           string `yaml:"url,omitempty" json:"url,omitempty"`       // REQUIRED: URL to query.
 	LookupBase    `yaml:",inline" json:",inline"`
-	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // Basic Auth for the HTTP(S) request.
-	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // Headers for the HTTP(S) request.
-	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // JSON key to use e.g. version_current.
-	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // RegEx to get the DeployedVersion
-	RegexTemplate *string    `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // RegEx template to apply to the RegEx match.
+	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
+	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // OPTIONAL: Request Headers.
+	Body          *string    `yaml:"body,omitempty" json:"body,omitempty"`                     // OPTIONAL: Request Body.
+	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
+	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
+	RegexTemplate *string    `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
 
 	Options *opt.Options      `yaml:"-" json:"-"` // Options for the lookups
 	Status  *svcstatus.Status `yaml:"-" json:"-"` // Service Status
@@ -64,8 +67,10 @@ type Lookup struct {
 func New(
 	allowInvalidCerts *bool,
 	basicAuth *BasicAuth,
+	body *string,
 	headers *[]Header,
 	json string,
+	method string,
 	options *opt.Options,
 	regex string,
 	regexTemplate *string,
@@ -78,7 +83,9 @@ func New(
 		LookupBase: LookupBase{
 			AllowInvalidCerts: allowInvalidCerts},
 		BasicAuth:     basicAuth,
+		Body:          body,
 		JSON:          json,
+		Method:        method,
 		Options:       options,
 		Regex:         regex,
 		RegexTemplate: regexTemplate,

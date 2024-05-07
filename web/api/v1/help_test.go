@@ -120,8 +120,9 @@ func testService(id string) *service.Service {
 			nil, nil, nil),
 		DeployedVersionLookup: deployedver.New(
 			test.BoolPtr(false),
-			nil, nil,
+			nil, nil, nil,
 			"foo.bar.version",
+			"GET",
 			nil, "", nil,
 			&svcstatus.Status{},
 			"https://valid.release-argus.io/json",

@@ -11,9 +11,6 @@ export const normaliseForSelect = (
 ): { value: string; label: string } | undefined => {
   if (value === undefined) return undefined;
 
-  const option = options.find(
-    (option) => option.value.toLowerCase() === value.toLowerCase()
-  );
-
-  return option;
+  const wantedValue = value.toLowerCase();
+  return options.find((option) => option.value.toLowerCase() === wantedValue);
 };

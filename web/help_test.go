@@ -261,9 +261,11 @@ func testDeployedVersion() *deployedver.Lookup {
 		&deployedver.BasicAuth{
 			Username: "fizz",
 			Password: "buzz"},
+		nil,
 		&[]deployedver.Header{
 			{Key: "foo", Value: "bar"}},
 		json,
+		"GET",
 		nil,
 		regex,
 		&regexTemplate,

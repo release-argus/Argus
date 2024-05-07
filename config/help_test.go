@@ -163,8 +163,9 @@ func testServiceURL(id string) *service.Service {
 			&latestver.LookupDefaults{}, &latestver.LookupDefaults{}),
 		DeployedVersionLookup: deployedver.New(
 			test.BoolPtr(false),
-			nil, nil,
+			nil, nil, nil,
 			"version",
+			"GET",
 			nil, "", nil, nil,
 			"https://valid.release-argus.io/json",
 			&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{}),

@@ -94,10 +94,12 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				&deployedver.BasicAuth{
 					Username: "jim",
 					Password: "whoops"},
+				test.StringPtr("body_here"),
 				&[]deployedver.Header{
 					{Key: "X-Test-0", Value: "foo"},
 					{Key: "X-Test-1", Value: "bar"}},
 				"version",
+				"POST",
 				opt.New(
 					test.BoolPtr(true), "10m", test.BoolPtr(true),
 					&opt.OptionsDefaults{},
@@ -112,6 +114,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				ServiceID: test.StringPtr("service-id"),
 				WebURL:    test.StringPtr("https://release-argus.io")},
 			want: &api_type.DeployedVersionLookup{
+				Method:            "POST",
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
 				BasicAuth: &api_type.BasicAuth{
@@ -120,6 +123,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				Headers: []api_type.Header{
 					{Key: "X-Test-0", Value: "<secret>"},
 					{Key: "X-Test-1", Value: "<secret>"}},
+				Body:          test.StringPtr("body_here"),
 				JSON:          "version",
 				Regex:         `([0-9]+\.[0-9]+\.[0-9]+)`,
 				RegexTemplate: test.StringPtr("$1.$2.$3")},

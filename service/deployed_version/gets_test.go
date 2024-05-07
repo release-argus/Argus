@@ -17,7 +17,10 @@
 package deployedver
 
 import (
+	"io"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
@@ -107,6 +110,41 @@ func TestLookup_GetURL(t *testing.T) {
 			// THEN the function returns the correct result
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
+					tc.want, got)
+			}
+		})
+	}
+}
+
+func TestLookup_GetBody(t *testing.T) {
+	// GIVEN a Lookup
+	tests := map[string]struct {
+		body *string
+		want io.Reader
+	}{
+		"nil body": {
+			body: nil,
+			want: nil,
+		},
+		"non-nil body": {
+			body: test.StringPtr("test body"),
+			want: strings.NewReader("test body"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup()
+			lookup.Body = tc.body
+
+			// WHEN GetBody is called
+			got := lookup.GetBody()
+
+			// THEN the function returns the correct result
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("want: %v\ngot:  %v",
 					tc.want, got)
 			}
 		})

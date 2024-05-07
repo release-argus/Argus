@@ -15,6 +15,9 @@
 package deployedver
 
 import (
+	"io"
+	"strings"
+
 	"github.com/release-argus/Argus/util"
 )
 
@@ -29,4 +32,12 @@ func (l *Lookup) GetAllowInvalidCerts() bool {
 // GetURL will return the URL of the Lookup.
 func (l *Lookup) GetURL() string {
 	return util.EvalEnvVars(l.URL)
+}
+
+// GetBody will return the Body of the Lookup.
+func (l *Lookup) GetBody() io.Reader {
+	if l.Body == nil {
+		return nil
+	}
+	return strings.NewReader(*l.Body)
 }

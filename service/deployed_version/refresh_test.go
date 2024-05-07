@@ -152,8 +152,10 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 	tests := map[string]struct {
 		allowInvalidCerts  *string
 		basicAuth          *string
+		body               *string
 		headers            *string
 		json               *string
+		method             *string
 		regex              *string
 		regexTemplate      *string
 		semanticVersioning *string
@@ -172,8 +174,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous:          testLookup(),
 			want: New(
 				test.BoolPtr(false), // AllowInvalidCerts
-				nil, nil,
+				nil, nil, nil,
 				testL.JSON,
+				testL.Method,
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -188,8 +191,44 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				&BasicAuth{ // BasicAuth
 					Username: "foo",
 					Password: "bar"},
+				nil, nil,
+				testL.JSON,
+				testL.Method,
+				testL.Options,
+				"", nil,
+				&svcstatus.Status{},
+				testL.URL,
+				nil, nil),
+		},
+		"body - ignored on GET": {
+			body: test.StringPtr("bish"),
+
+			previous: testLookup(),
+			want: New(
+				testL.AllowInvalidCerts,
+				nil,
+				nil, // Body
 				nil,
 				testL.JSON,
+				testL.Method,
+				testL.Options,
+				"", nil,
+				&svcstatus.Status{},
+				testL.URL,
+				nil, nil),
+		},
+		"body - used on POST": {
+			body:   test.StringPtr("bish"),
+			method: test.StringPtr("POST"),
+
+			previous: testLookup(),
+			want: New(
+				testL.AllowInvalidCerts,
+				nil,
+				test.StringPtr("bish"), // Body
+				nil,
+				testL.JSON,
+				"POST",
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -202,11 +241,12 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous: testLookup(),
 			want: New(
 				testL.AllowInvalidCerts,
-				nil,
+				nil, nil,
 				&[]Header{ // Headers
 					{Key: "bish", Value: "bash"},
 					{Key: "bosh", Value: "bosh"}},
 				"version",
+				testL.Method,
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -219,8 +259,26 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous: testLookup(),
 			want: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				"bish", // JSON
+				testL.Method,
+				testL.Options,
+				"", nil,
+				&svcstatus.Status{},
+				testL.URL,
+				nil, nil),
+		},
+		"method": {
+			method: test.StringPtr("POST"),
+
+			previous: testLookup(),
+			want: New(
+				testL.AllowInvalidCerts,
+				nil,
+				nil,
+				nil,
+				testL.JSON,
+				"POST",
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -233,8 +291,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous: testLookup(),
 			want: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				"version",
+				testL.Method,
 				testL.Options,
 				"bish", nil, // RegEx
 				&svcstatus.Status{},
@@ -248,8 +307,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previousRegex: "([0-9]+)",
 			want: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				"version",
+				testL.Method,
 				testL.Options,
 				"([0-9]+)",
 				test.StringPtr("$1.$4"), // RegEx Template
@@ -263,8 +323,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous: testLookup(),
 			want: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				testL.JSON,
+				testL.Method,
 				opt.New(
 					test.BoolPtr(false), "", nil,
 					nil, nil),
@@ -279,8 +340,9 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			previous: testLookup(),
 			want: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				testL.JSON,
+				testL.Method,
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -314,8 +376,10 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			got, err := tc.previous.applyOverrides(
 				tc.allowInvalidCerts,
 				tc.basicAuth,
+				tc.body,
 				tc.headers,
 				tc.json,
+				tc.method,
 				tc.regex,
 				tc.regexTemplate,
 				tc.semanticVersioning,
@@ -340,7 +404,8 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 			}
 			// AND we get the expected result otherwise
 			if tc.want.String("") != got.String("") {
-				t.Errorf("expected:\n%v\nbut got:\n%v", tc.want, got)
+				t.Errorf("expected:\n%v\nbut got:\n%v",
+					tc.want.String(""), got.String(""))
 			}
 		})
 	}
@@ -357,8 +422,10 @@ func TestLookup_Refresh(t *testing.T) {
 	tests := map[string]struct {
 		allowInvalidCerts        *string
 		basicAuth                *string
+		body                     *string
 		headers                  *string
 		json                     *string
+		method                   *string
 		regex                    *string
 		regexTemplate            *string
 		semanticVersioning       *string
@@ -395,8 +462,9 @@ func TestLookup_Refresh(t *testing.T) {
 		"Refresh new version": {
 			lookup: New(
 				testL.AllowInvalidCerts,
-				nil, nil,
+				nil, nil, nil,
 				testL.JSON,
+				testL.Method,
 				testL.Options,
 				"", nil,
 				&svcstatus.Status{},
@@ -434,8 +502,10 @@ func TestLookup_Refresh(t *testing.T) {
 			got, gotAnnounce, err := tc.lookup.Refresh(
 				tc.allowInvalidCerts,
 				tc.basicAuth,
+				tc.body,
 				tc.headers,
 				tc.json,
+				tc.method,
 				tc.regex,
 				tc.regexTemplate,
 				tc.semanticVersioning,

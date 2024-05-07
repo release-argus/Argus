@@ -53,7 +53,7 @@ const REGEX = ({ name }: { name: string }) => {
         name={`${name}.template_toggle`}
         size="lg"
         label="T"
-        tooltip="Use the RegEx to create a template ($1,$2,etc to reference capture groups)"
+        tooltip="Use the RegEx to create a template"
         smallLabel
         col_sm={1}
         col_xs={2}
@@ -64,6 +64,7 @@ const REGEX = ({ name }: { name: string }) => {
         <FormItem
           name={`${name}.template`}
           label="Template"
+          tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
           smallLabel
           col_sm={12}
           col_xs={8}
