@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.18.0](https://github.com/release-argus/Argus/compare/0.17.4...0.18.0) (2024-05-07)
+
+
+### Features
+
+* **deployed_version:** support for POST requests ([#398](https://github.com/release-argus/Argus/issues/398)) ([9504d7d](https://github.com/release-argus/Argus/commits/9504d7de5fd1429ed86b805dc9c9e3de299766af)), closes [#397](https://github.com/release-argus/Argus/issues/397)
+
+
+### Bug Fixes
+
+* **edit:** properly remove notify defaults that aren't overriden ([a49939d](https://github.com/release-argus/Argus/commits/a49939d52a64d8da50255e524a11290664fe80cf))
+
 ### [0.17.4](https://github.com/release-argus/Argus/compare/0.17.3...0.17.4) (2024-04-27)
 
 
