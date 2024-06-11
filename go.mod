@@ -18,10 +18,10 @@ require (
 require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	modernc.org/libc v1.50.9 // indirect
+	modernc.org/libc v1.52.1 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.30.0
+	modernc.org/sqlite v1.30.1
 )
 
 require (
