@@ -60,7 +60,7 @@ jobs:
       - name: Build and push (release)
         id: docker_build_release
         if: github.event_name == 'release'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -85,7 +85,7 @@ jobs:
       - name: Build and push (master)
         id: docker_build_master
         if: github.event_name != 'release'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
