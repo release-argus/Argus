@@ -11,11 +11,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "husky": "^9.0.11",
+    "husky": "^9.1.4",
     "standard-version": "^9.5.0"
   },
   "dependencies": {
-    "@commitlint/cli": "^19.3.0",
+    "@commitlint/cli": "^19.4.0",
     "@commitlint/config-conventional": "^19.2.2"
   }
 }
