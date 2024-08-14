@@ -81,8 +81,7 @@ func (s *Service) Init(
 		copy(s.Command, defaults.Command)
 		s.commandFromDefaults = true
 	}
-	//nolint:typecheck
-	if s.Command != nil && len(s.Command) != 0 {
+	if len(s.Command) != 0 {
 		s.CommandController = &command.Controller{}
 		s.CommandController.Init(
 			&s.Status,

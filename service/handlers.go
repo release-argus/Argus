@@ -38,9 +38,7 @@ func (s *Service) UpdatedVersion(writeToDB bool) {
 	}
 	// Don't update DeployedVersion to LatestVersion if we have a lookup check
 	if s.DeployedVersionLookup != nil {
-		//nolint:typecheck
-		if (s.Command != nil && len(s.Command) != 0) ||
-			s.WebHook != nil {
+		if len(s.Command) != 0 || len(s.WebHook) != 0 {
 			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
 			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
 			// They should have all ran/sent successfully at this point

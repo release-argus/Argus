@@ -15,8 +15,8 @@
 package config
 
 import (
+	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -327,7 +327,8 @@ func (s *Settings) WebCertFile() *string {
 		if !filepath.IsAbs(*certFile) {
 			path, execErr := os.Executable()
 			jLog.Error(execErr, &util.LogFrom{}, execErr != nil)
-			err = fmt.Errorf(strings.Replace(
+			// Add the path to the error message.
+			err = errors.New(strings.Replace(
 				err.Error(),
 				" "+*certFile+":",
 				" "+path+"/"+*certFile+":",
@@ -352,7 +353,8 @@ func (s *Settings) WebKeyFile() *string {
 		if !filepath.IsAbs(*keyFile) {
 			path, execErr := os.Executable()
 			jLog.Error(execErr, &util.LogFrom{}, execErr != nil)
-			err = fmt.Errorf(strings.Replace(
+			// Add the path to the error message.
+			err = errors.New(strings.Replace(
 				err.Error(),
 				" "+*keyFile+":",
 				" "+path+"/"+*keyFile+":",
