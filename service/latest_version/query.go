@@ -17,6 +17,7 @@ package latestver
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -354,7 +355,7 @@ func (l *Lookup) GetVersion(rawBody *[]byte, logFrom *util.LogFrom) (version str
 		// If the Docker tag doesn't exist
 		if err = l.Require.DockerTagCheck(version); err != nil {
 			if strings.HasSuffix(err.Error(), "\n") {
-				err = fmt.Errorf(strings.TrimSuffix(err.Error(), "\n"))
+				err = errors.New(strings.TrimSuffix(err.Error(), "\n"))
 			}
 			jLog.Warn(err, logFrom, true)
 			continue
