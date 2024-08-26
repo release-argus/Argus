@@ -10,7 +10,7 @@ require (
 	github.com/flosch/pongo2/v5 v5.0.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/prometheus/client_golang v1.20.1
+	github.com/prometheus/client_golang v1.20.2
 	github.com/vearutop/statigz v1.4.3
 	gopkg.in/yaml.v3 v3.0.1
 )
