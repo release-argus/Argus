@@ -504,7 +504,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"valid Gotify token": {
 			flag:       "bar",
-			panicRegex: test.StringPtr(`HTTP 404 Not Found`),
+			panicRegex: test.StringPtr(`HTTP 405 Method Not Allowed`),
 			slice: service.Slice{
 				"argus": {
 					Notify: shoutrrr.Slice{
@@ -525,7 +525,7 @@ func TestNotifyTest(t *testing.T) {
 		},
 		"shoutrrr from Root": {
 			flag:       "baz",
-			panicRegex: test.StringPtr(`HTTP 404 Not Found`),
+			panicRegex: test.StringPtr(`HTTP 405 Method Not Allowed`),
 			slice:      service.Slice{},
 			rootSlice: shoutrrr.SliceDefaults{
 				"baz": shoutrrr.NewDefaults(
