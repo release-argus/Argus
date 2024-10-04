@@ -175,6 +175,7 @@ service:
     latest_version:
       type: github
       url: release-argus/argus
+  EmptyServiceIsDeleted:
 `
 
 	writeYAML(path, data, t)
