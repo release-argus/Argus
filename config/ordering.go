@@ -54,8 +54,10 @@ func (c *Config) GetOrder(data []byte) {
 			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
 			var serviceName string
 			// Unmarshal YAML to handle any special characters
-			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarhsal err caught earlier
-			order = append(order, serviceName)
+			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier
+			if serviceName != "" {
+				order = append(order, serviceName)
+			}
 		}
 	}
 

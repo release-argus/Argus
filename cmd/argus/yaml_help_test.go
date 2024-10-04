@@ -113,6 +113,18 @@ service:
         latest_version:
             type: github
             url: release-argus/argus
+#     release-argus/Argus-commented-out:
+#         options:
+#             active: false
+#         latest_version:
+#             type: github
+#             url: release-argus/argus
+    # release-argus/Argus-commented-out-indent:
+    #     options:
+    #         active: false
+    #     latest_version:
+    #         type: github
+    #         url: release-argus/argus
 `
 
 	writeYAML(path, data, t)
