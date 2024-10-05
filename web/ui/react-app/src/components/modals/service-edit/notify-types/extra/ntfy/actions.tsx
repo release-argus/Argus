@@ -83,7 +83,7 @@ const NtfyActions: FC<Props> = ({ name, label, tooltip, defaults }) => {
   // and give the defaults if not overridden
   useEffect(() => {
     // ensure we don't have another types actions
-    for (const item of fieldValues) {
+    for (const item of fieldValues ?? []) {
       if (isEmptyOrNull(item.action)) {
         setValue(name, []);
         break;
