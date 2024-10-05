@@ -107,10 +107,11 @@ func TestConfig_Save(t *testing.T) {
 		"config_test.yml": {
 			file: testYAML_ConfigTest,
 			corrections: map[string]string{
-				"listen_port: 0\n":         "listen_port: \"0\"\n",
-				"semantic_versioning: n\n": "semantic_versioning: false\n",
-				"interval: 123\n":          "interval: 123s\n",
-				"delay: 2\n":               "delay: 2s\n",
+				"listen_port: 0\n":           "listen_port: \"0\"\n",
+				"semantic_versioning: n\n":   "semantic_versioning: false\n",
+				"interval: 123\n":            "interval: 123s\n",
+				"delay: 2\n":                 "delay: 2s\n",
+				"  EmptyServiceIsDeleted:\n": "",
 			}},
 		"argus.yml": {
 			file: testYAML_Argus,
