@@ -91,6 +91,12 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	c.SaveChannel = &saveChannel
 
 	for key := range c.Service {
+		if c.Service[key] == nil {
+			c.Order = util.RemoveElement(c.Order, key)
+			delete(c.Service, key)
+			continue
+		}
+
 		c.Service[key].ID = key
 		c.Service[key].Status = *svcstatus.New(
 			nil, c.DatabaseChannel, c.SaveChannel,

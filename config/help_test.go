@@ -128,10 +128,15 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
-	config.Init(false) // Log already set in TestMain
 	for name, service := range config.Service {
+		if service == nil {
+			config.Order = util.RemoveElement(config.Order, name)
+			delete(config.Service, name)
+			continue
+		}
 		service.ID = name
 	}
+	config.Init(false) // Log already set in TestMain
 	config.CheckValues()
 	t.Log("Loaded", file)
 
