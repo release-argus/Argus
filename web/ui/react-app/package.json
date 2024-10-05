@@ -12,7 +12,7 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@tanstack/react-query": "^5.51.23",
     "bootstrap": "^5.3.3",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.1.0",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.4",
     "react-dom": "^18.3.1",
