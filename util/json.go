@@ -80,7 +80,7 @@ func navigateJSON(jsonData *interface{}, fullKey string) (string, error) {
 	if fullKey == "" {
 		return "", fmt.Errorf("no key was given to navigate the JSON")
 	}
-	//nolint:errcheck -- Verify in deployed_version.verify.CheckValues.
+	//nolint:errcheck // Verify in deployed_version.verify.CheckValues.
 	keys, _ := ParseKeys(fullKey)
 	keyCount := len(keys)
 	keyIndex := 0

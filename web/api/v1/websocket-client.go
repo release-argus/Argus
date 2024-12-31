@@ -134,12 +134,12 @@ func (c *Client) readPump() {
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(
 		func(string) error {
 			//#nosec G104 -- Disregard.
-			//nolint:errcheck -- ^
+			//nolint:errcheck // ^
 			c.conn.SetReadDeadline(time.Now().Add(pongWait))
 			return nil
 		},
@@ -200,7 +200,7 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <-c.send:
 			//#nosec G104 -- Disregard.
-			//nolint:errcheck -- ^
+			//nolint:errcheck // ^
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if !ok {
@@ -263,7 +263,7 @@ func (c *Client) writePump() {
 
 		case <-ticker.C:
 			//#nosec G104 -- Disregard.
-			//nolint:errcheck -- ^
+			//nolint:errcheck // ^
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return

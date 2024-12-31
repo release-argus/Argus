@@ -101,7 +101,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 	w.AnnounceSend()
 	if !w.GetSilentFails() {
 		//#nosec G104 -- Errors are logged to CLI
-		//nolint:errcheck -- ^
+		//nolint:errcheck // ^
 		w.Notifiers.Send("WebHook fail", err.Error(), serviceInfo)
 	}
 	return errors.Join(sendErrs, err)

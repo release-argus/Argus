@@ -63,7 +63,7 @@ type Notifiers struct {
 // CopyFailsFrom target.
 func (c *Controller) CopyFailsFrom(target *Controller) {
 	if c == nil || c.Command == nil ||
-		//nolint:typecheck -- target has no CommandController
+		//nolint:typecheck // target has no CommandController
 		target == nil {
 		return
 	}

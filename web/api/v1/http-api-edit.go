@@ -565,7 +565,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	// Add the new service to the config.
 	api.Config.OrderMutex.RUnlock() // Locked above.
 	//#nosec G104 -- Fail for duplicate service name handled above.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	api.Config.AddService(targetService, newService)
 	api.Config.OrderMutex.RLock() // Lock again for the defer.
 
@@ -611,7 +611,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	// Return 200.
 	w.WriteHeader(http.StatusOK)
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	w.Write([]byte{})
 }
 
@@ -693,6 +693,6 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Return 200.
 	w.WriteHeader(http.StatusOK)
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	w.Write([]byte(`{}`))
 }

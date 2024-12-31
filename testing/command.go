@@ -63,7 +63,7 @@ func CommandTest(
 	}
 
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	service.CommandController.Exec(logFrom)
 	if !log.Testing {
 		os.Exit(0)

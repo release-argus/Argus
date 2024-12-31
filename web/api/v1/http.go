@@ -224,6 +224,6 @@ func failRequest(w *http.ResponseWriter, message string, statusCode int) {
 	}
 	jsonResp, _ := json.Marshal(resp)
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	(*w).Write(jsonResp)
 }

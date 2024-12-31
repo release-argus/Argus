@@ -129,7 +129,7 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 	switch w.GetType() {
 	case "github":
 		//#nosec G104 -- Disregard.
-		//nolint:errcheck -- ^
+		//nolint:errcheck // ^
 		payload, _ := json.Marshal(GitHub{
 			Ref:    "refs/heads/master",
 			Before: util.RandAlphaNumericLower(40),

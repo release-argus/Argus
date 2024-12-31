@@ -44,7 +44,7 @@ func SetEmptyListETag(accessToken string) {
 	// Fallback to /tags to stop the /tags fallback query if on /releases.
 	lookup.data.SetTagFallback()
 	//#nosec G104 -- Disregard.
-	//nolint:errcheck -- ^
+	//nolint:errcheck // ^
 	lookup.httpRequest(util.LogFrom{Primary: "SetEmptyListETag"})
 
 	setEmptyListETag(lookup.data.ETag())

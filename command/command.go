@@ -83,7 +83,7 @@ func (c *Controller) ExecIndex(logFrom util.LogFrom, index int) error {
 	if failed {
 		metricResult = "FAIL"
 		//#nosec G104 -- Errors are logged to CL
-		//nolint:errcheck -- ^
+		//nolint:errcheck // ^
 		c.Notifiers.Shoutrrr.Send(
 			fmt.Sprintf("Command failed for %q", *c.ServiceStatus.ServiceID),
 			(*c.Command)[index].String()+"\n"+err.Error(),
