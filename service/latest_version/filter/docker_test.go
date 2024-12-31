@@ -1609,6 +1609,17 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"", time.Now(), nil),
 			errRegex: `^$`,
 		},
+		"GHCR - OCI Index header": {
+			onlyIfEnvToken: true,
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"immich-app/immich-server",
+				"v1.118.1",
+				"",
+				os.Getenv("GH_TOKEN"),
+				"", time.Now(), nil),
+			errRegex: `^$`,
+		},
 		"Quay with no token, valid tag": {
 			dockerCheck: NewDockerCheck(
 				"quay",
@@ -1879,6 +1890,14 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"hub",
 				"release-argus/argus",
 				"{{ version }",
+				"", "", "", time.Now(), nil),
+		},
+		"invalid tag url encoding": {
+			errRegex: `^tag: .* <invalid>.*$`,
+			dockerCheck: NewDockerCheck(
+				"hub",
+				"release-argus/argus",
+				"1.2	.3+",
 				"", "", "", time.Now(), nil),
 		},
 		"valid Type with image and tag": {
