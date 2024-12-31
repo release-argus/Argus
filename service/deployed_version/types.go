@@ -31,14 +31,14 @@ var (
 
 // Base is the base struct for the Lookup struct.
 type Base struct {
-	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates
+	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
 }
 
 // Defaults are the default values for the Lookup struct.
 type Defaults struct {
 	Base `yaml:",inline" json:",inline"`
 
-	Options *opt.Defaults `yaml:"-" json:"-"` // Options for the lookup
+	Options *opt.Defaults `yaml:"-" json:"-"` // Options for the lookup.
 }
 
 // NewDefaults returns a new Defaults struct.

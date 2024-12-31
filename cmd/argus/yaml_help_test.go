@@ -100,22 +100,34 @@ func testYAML_Argus(path string, t *testing.T) {
 func testYAML_Argus_SomeInactive(path string, t *testing.T) {
 	data := test.TrimYAML(`
 		settings:
-			data:
-				database_file: test-argus-some-inactive.db
-			web:
-				listen_port: 0
+				data:
+						database_file: test-argus-some-inactive.db
+				web:
+						listen_port: 0
 		service:
-			release-argus/Argus:
-				latest_version:
-					type: github
-					url: release-argus/argus
-			release-argus/Argus-Not-Active:
-				options:
-					active: false
-				latest_version:
-					type: github
-					url: release-argus/argus
-	`)
+				release-argus/Argus:
+						latest_version:
+								type: github
+								url: release-argus/argus
+				release-argus/Argus-Not-Active:
+						options:
+								active: false
+						latest_version:
+								type: github
+								url: release-argus/argus
+		#     release-argus/Argus-commented-out:
+		#         options:
+		#             active: false
+		#         latest_version:
+		#             type: github
+		#             url: release-argus/argus
+				# release-argus/Argus-commented-out-indent:
+				#     options:
+				#         active: false
+				#     latest_version:
+				#         type: github
+				#         url: release-argus/argus
+`
 
 	writeFile(path, data, t)
 }

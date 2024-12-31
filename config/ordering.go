@@ -91,9 +91,11 @@ func (c *Config) GetOrder(data []byte) {
 			// Check whether it is a service and not a setting for a service..
 			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
 			var serviceName string
-			// Unmarshal YAML to handle any special characters.
-			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier.
-			order = append(order, serviceName)
+			// Unmarshal YAML to handle any special characters
+			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier
+			if serviceName != "" {
+				order = append(order, serviceName)
+			}
 		}
 	}
 

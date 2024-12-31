@@ -60,7 +60,7 @@ func testYAML_config_test(path string, t *testing.T) {
 					interval: 123
 					semantic_versioning: n
 				latest_version:
-					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+					access_token: ghp_default
 				notify:
 					default: {}
 				command:
@@ -104,7 +104,7 @@ func testYAML_config_test(path string, t *testing.T) {
 					interval: 10m
 				latest_version:
 					type: github
-					url: release-argus/argusA
+					url: release-argus/argus
 					url_commands:
 						- type: regex
 							regex: v(.*)
@@ -136,7 +136,7 @@ func testYAML_config_test(path string, t *testing.T) {
 			WantDefaults:
 				latest_version:
 					type: github
-					url: release-argus/argusB
+					url: release-argus/argus
 					url_commands:
 						- type: regex
 							regex: v(.*)
@@ -146,7 +146,7 @@ func testYAML_config_test(path string, t *testing.T) {
 			Gitea:
 				latest_version:
 					type: github
-					url: go-gitea/giteaC
+					url: go-gitea/gitea
 					url_commands:
 						- type: regex
 							regex: v(.*)
@@ -175,7 +175,8 @@ func testYAML_config_test(path string, t *testing.T) {
 					active: false
 				latest_version:
 					type: github
-					url: release-argus/argusD
+					url: release-argus/argus
+			EmptyServiceIsDeleted:
 	`)
 
 	writeFile(path, data, t)

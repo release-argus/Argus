@@ -134,8 +134,14 @@ func testLoadBasic(file string, t *testing.T) *Config {
 
 	config.Init(false) // Log already set in TestMain
 	for name, service := range config.Service {
+		if service == nil {
+			config.Order = util.RemoveElement(config.Order, name)
+			delete(config.Service, name)
+			continue
+		}
 		service.ID = name
 	}
+	config.Init(false) // Log already set in TestMain
 	config.CheckValues()
 	t.Log("Loaded", file)
 
