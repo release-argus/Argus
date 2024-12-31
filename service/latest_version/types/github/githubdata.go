@@ -75,26 +75,6 @@ type Data struct {
 	tagFallback bool                   // Whether we have fallen back to using /tags instead of /releases.
 }
 
-// newData returns a new Data.
-func newData(
-	eTag string,
-	releases *[]github_types.Release,
-) *Data {
-	// ETag - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
-	if eTag == "" {
-		eTag = getEmptyListETag()
-	}
-	// Releases
-	var releasesDeref []github_types.Release
-	if releases != nil {
-		releasesDeref = *releases
-	}
-
-	return &Data{
-		eTag:     eTag,
-		releases: releasesDeref}
-}
-
 // String returns a string representation of the Status.
 func (g *Data) String() string {
 	if g == nil {
