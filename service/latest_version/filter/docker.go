@@ -220,6 +220,8 @@ func (r *Require) DockerTagCheck(
 		return fmt.Errorf("%s:%s - %w",
 			r.Docker.Image, tag, err)
 	}
+
+	req, _ := http.NewRequest(http.MethodGet, "", nil)
 	switch r.Docker.GetType() {
 	case "hub":
 		url = fmt.Sprintf("https://registry.hub.docker.com/v2/repositories/%s/tags/%s",
@@ -227,11 +229,15 @@ func (r *Require) DockerTagCheck(
 	case "ghcr":
 		url = fmt.Sprintf("https://ghcr.io/v2/%s/manifests/%s",
 			r.Docker.Image, tag)
+		req.Header.Set("Accept", "application/vnd.oci.image.index.v1+json")
 	case "quay":
 		url = fmt.Sprintf("https://quay.io/api/v1/repository/%s/tag/?onlyActiveTags=true&specificTag=%s",
 			r.Docker.Image, tag)
 	}
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	//#nosec G104 -- URL verified in CheckValues.
+	//nolint:errcheck // ^
+	parsedURL, _ := net_url.Parse(url)
+	req.URL = parsedURL
 	if queryToken != "" {
 		req.Header.Set("Authorization", "Bearer "+queryToken)
 	}
@@ -278,26 +284,33 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 			prefix, strings.Join(dockerCheckTypes, ",")))
 	}
 
-	if d.Image == "" {
+	// Image
+	switch {
+	case d.Image == "":
 		errs = append(errs, fmt.Errorf("%simage: <required> (image to check tags for)",
 			prefix))
-	} else {
-		// invalid image.
-		if !util.RegexCheck(`^[\w\-\.\/]+$`, d.Image) {
-			errs = append(errs, fmt.Errorf("%simage: %q <invalid> (non-ASCII)",
-				prefix, d.Image))
-			// e.g. prometheus = library/prometheus on the docker hub api.
-		} else if d.Type == "hub" && strings.Count(d.Image, "/") == 0 {
-			d.Image = fmt.Sprintf("library/%s", d.Image)
-		}
+		// Invalid image.
+	case !util.RegexCheck(`^[\w\-\.\/]+$`, d.Image):
+		errs = append(errs, fmt.Errorf("%simage: %q <invalid> (non-ASCII)",
+			prefix, d.Image))
+		// e.g. prometheus = library/prometheus on the docker hub api.
+	case d.Type == "hub" && strings.Count(d.Image, "/") == 0:
+		d.Image = fmt.Sprintf("library/%s", d.Image)
 	}
 
-	if d.Tag == "" {
+	// Tag
+	switch {
+	case d.Tag == "":
 		errs = append(errs, fmt.Errorf("%stag: <required> (tag of image to check for existence)",
 			prefix))
-	} else if !util.CheckTemplate(d.Tag) {
+	case !util.CheckTemplate(d.Tag):
 		errs = append(errs, fmt.Errorf("%stag: %q <invalid> (didn't pass templating)",
 			prefix, d.Tag))
+	default:
+		if _, err := net_url.Parse(fmt.Sprintf("https://example.com/%s", d.Tag)); err != nil {
+			errs = append(errs, fmt.Errorf("%stag: %q <invalid> (invalid for URL formatting)",
+				prefix, d.Tag))
+		}
 	}
 
 	if err := d.checkToken(); err != nil {
@@ -328,8 +341,8 @@ func (d *DockerCheck) checkToken() error {
 		} else if username == "" && token != "" {
 			return fmt.Errorf("username: <required> (token is for who?)")
 		}
-	case "quay":
-	case "ghcr":
+	case "quay", "ghcr":
+		// Token not required.
 	}
 
 	return nil
