@@ -127,7 +127,7 @@ func testYAML_Argus_SomeInactive(path string, t *testing.T) {
 				#     latest_version:
 				#         type: github
 				#         url: release-argus/argus
-`
+	`)
 
 	writeFile(path, data, t)
 }
