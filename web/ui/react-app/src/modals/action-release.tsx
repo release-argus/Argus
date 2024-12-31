@@ -34,7 +34,7 @@ import { useDelayedRender } from "hooks/delayed-render";
 const isSendingService = (
   serviceName: string,
   sentCommands: string[],
-  sentWebHooks: string[]
+  sentWebHooks: string[],
 ) => {
   const prefixStr = `${serviceName} `;
   for (const id of sentCommands) {
@@ -52,10 +52,10 @@ const isSendingService = (
  */
 const ActionReleaseModal = () => {
   // modal.actionType:
-  // RESEND - 0 WebHooks failed. Resend Modal
-  // SEND   - Send WebHooks for this new version. New release Modal
-  // SKIP   - Release not wanted. Skip release Modal
-  // RETRY  - 1+ WebHooks failed to send. Retry send Modal
+  // RESEND - 0 WebHooks failed. Resend Modal.
+  // SEND   - Send WebHooks for this new version. New release Modal.
+  // SKIP   - Release not wanted. Skip release Modal.
+  // RETRY  - 1+ WebHooks failed to send. Retry send Modal.
   const { handleModal, modal } = useContext(ModalContext);
   const delayedRender = useDelayedRender(250);
   const [modalData, setModalData] = useReducer(reducerActionModal, {
@@ -71,11 +71,11 @@ const ActionReleaseModal = () => {
     handleModal("", { id: "", loading: true });
   }, []);
 
-  // Handle deployed version becoming latest when there's no deployed version check
+  // Handle deployed version becoming latest when there's no deployed version check.
   // (close the modal)
   useEffect(() => {
     if (
-      // Allow resend and edit/create modals to stay open
+      // Allow resend and edit/create modals to stay open.
       !["RESEND", "EDIT"].includes(modal.actionType) &&
       modal.service?.status?.deployed_version &&
       modal.service?.status?.latest_version &&
@@ -87,27 +87,25 @@ const ActionReleaseModal = () => {
 
   const isSendingThisService = useMemo(
     () => isSendingService(modal.service.id, modalData.sentC, modalData.sentWH),
-    [modal.service.id, modalData]
+    [modal.service.id, modalData],
   );
   const canSendUnspecific = useMemo(() => {
-    // Currently sending/running an action for this service
+    // Currently sending/running an action for this service.
     if (isSendingThisService) return false;
-    // has no actions - allow unspecific (SKIP)
+    // has no actions - allow unspecific (SKIP).
     if (isEmptyObject(modalData.commands) && isEmptyObject(modalData.webhooks))
       return true;
-    // has an action that's runnable
+    // has an action that's runnable.
     return (
       Object.keys(modalData.commands).find((command_id) =>
         modalData.commands[command_id].next_runnable
-          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            !dateIsAfterNow(modalData.commands[command_id].next_runnable!)
-          : true
+          ? !dateIsAfterNow(modalData.commands[command_id].next_runnable)
+          : true,
       ) !== undefined ||
       Object.keys(modalData.webhooks).find((webhook_id) =>
         modalData.webhooks[webhook_id].next_runnable
-          ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            !dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable!)
-          : true
+          ? !dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable)
+          : true,
       ) !== undefined
     );
   }, [isSendingThisService, modalData]);
@@ -131,46 +129,40 @@ const ActionReleaseModal = () => {
       let command_data: CommandSummaryListType | undefined = {};
       let webhook_data: WebHookSummaryListType | undefined = {};
       if (!data.unspecificTarget) {
-        // Targeting specific command/webhook
+        // Targeting specific command/webhook.
         if (data.isWebHook)
           webhook_data = { [data.target.slice("webhook_".length)]: {} };
         else command_data = { [data.target.slice("command_".length)]: {} };
       } else {
-        // All Commands/WebHooks have been sent successfully
+        // All Commands/WebHooks have been sent successfully.
         const allSuccessful =
           Object.keys(modalData.commands).every(
-            (command_id) => modalData.commands[command_id].failed === false
+            (command_id) => modalData.commands[command_id].failed === false,
           ) &&
           Object.keys(modalData.webhooks).every(
-            (webhook_id) => modalData.webhooks[webhook_id].failed === false
+            (webhook_id) => modalData.webhooks[webhook_id].failed === false,
           );
 
-        // sending these commands
+        // sending these command(s).
         for (const command_id in modalData.commands) {
           // skip commands that aren't after next_runnable
-          // and commands that have already succeeded if some commands haven't
+          // and commands that have already succeeded if some commands haven't.
           if (
             (modalData.commands[command_id].next_runnable !== undefined &&
-              dateIsAfterNow(
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                modalData.commands[command_id].next_runnable!
-              )) ||
+              dateIsAfterNow(modalData.commands[command_id].next_runnable)) ||
             (!allSuccessful && modalData.commands[command_id].failed === false)
           )
             continue;
           command_data[command_id] = {};
         }
 
-        // sending these webhooks
+        // sending these webhook(s).
         for (const webhook_id in modalData.webhooks) {
           // skip webhooks that aren't after next_runnable
-          // and webhooks that have already succeeded if some webhooks haven't
+          // and webhooks that have already succeeded if some webhooks haven't.
           if (
             (modalData.webhooks[webhook_id].next_runnable !== undefined &&
-              dateIsAfterNow(
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                modalData.webhooks[webhook_id].next_runnable!
-              )) ||
+              dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable)) ||
             (!allSuccessful && modalData.webhooks[webhook_id].failed === false)
           )
             continue;
@@ -197,7 +189,7 @@ const ActionReleaseModal = () => {
         "ARGUS_SKIP",
       ].includes(target);
 
-      // don't allow unspecific non-skip targets if currently sending this service
+      // don't allow unspecific non-skip targets if currently sending this service.
       if (
         !(!canSendUnspecific && unspecificTarget && target !== "ARGUS_SKIP")
       ) {
@@ -216,7 +208,7 @@ const ActionReleaseModal = () => {
 
       if (unspecificTarget) hideModal();
     },
-    [modal.service, canSendUnspecific]
+    [modal.service, canSendUnspecific],
   );
 
   const { data } = useQuery<ActionAPIType>({
@@ -239,12 +231,12 @@ const ActionReleaseModal = () => {
         webhook_data: data?.webhook,
         command_data: data?.command,
       }),
-    [data]
+    [data],
   );
 
   useEffect(() => {
     if (modal.actionType !== "EDIT" && modal.service.id !== "") {
-      // Handler to listen to WebSocket messages
+      // Handler to listen to WebSocket messages.
       const handler = (event: WebSocketResponse) => {
         if (event && ["ACTIONS", "COMMAND", "WEBHOOK"].includes(event.type))
           setModalData(event);
@@ -268,7 +260,7 @@ const ActionReleaseModal = () => {
 
   const confirmButtonText = (
     actionType: ModalType,
-    canSendUnspecific: boolean
+    canSendUnspecific: boolean,
   ) => {
     if (actionType === "SKIP" || actionType === "SKIP_NO_WH")
       return "Skip release";
@@ -319,9 +311,9 @@ const ActionReleaseModal = () => {
                       <>
                         {formatRelative(
                           new Date(
-                            modal.service?.status?.deployed_version_timestamp
+                            modal.service?.status?.deployed_version_timestamp,
                           ),
-                          new Date()
+                          new Date(),
                         )}
                       </>
                     ) : (
@@ -346,9 +338,9 @@ const ActionReleaseModal = () => {
                       <>
                         {formatRelative(
                           new Date(
-                            modal.service?.status?.latest_version_timestamp
+                            modal.service?.status?.latest_version_timestamp,
                           ),
-                          new Date()
+                          new Date(),
                         )}
                       </>
                     ) : (

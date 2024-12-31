@@ -9,12 +9,18 @@ import {
   beautifyGoErrors,
   convertToQueryParams,
   fetchJSON,
+  getChanges,
   removeEmptyValues,
 } from "utils";
+import {
+  convertUIDeployedVersionDataEditToAPI,
+  convertUILatestVersionDataEditToAPI,
+} from "components/modals/service-edit/util";
 import { faSpinner, faSync } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ServiceOptionsType } from "types/config";
 import { useErrors } from "hooks/errors";
 import { useQuery } from "@tanstack/react-query";
 import useValuesRefetch from "hooks/values-refetch";
@@ -24,6 +30,7 @@ interface Props {
   vType: 0 | 1; // 0: Latest, 1: Deployed
   serviceName: string;
   original?: LatestVersionLookupEditType | DeployedVersionLookupEditType;
+  original_options?: ServiceOptionsType;
 }
 
 /**
@@ -32,34 +39,65 @@ interface Props {
  * @param vType - 0: Latest, 1: Deployed
  * @param serviceName - The name of the service
  * @param original - The original values in the form
+ * @param original_options - The original service.options of the form
  * @returns The version with a button to refresh the version
  */
-const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
+const VersionWithRefresh: FC<Props> = ({
+  vType,
+  serviceName,
+  original,
+  original_options,
+}) => {
   const [lastFetched, setLastFetched] = useState(0);
   const { monitorData } = useWebSocket();
   const { trigger } = useFormContext();
-  const dataTarget = useMemo(
-    () => (vType === 0 ? "latest_version" : "deployed_version"),
-    []
-  );
+  const dataTarget = vType === 0 ? "latest_version" : "deployed_version";
+  const convertedOriginal = useMemo(() => {
+    if (original === null) return {};
+    // Latest version
+    if (dataTarget === "latest_version")
+      return convertUILatestVersionDataEditToAPI(
+        original as LatestVersionLookupEditType
+      );
+    // Deployed version
+    return convertUIDeployedVersionDataEditToAPI(
+      original as DeployedVersionLookupEditType
+    );
+  }, [serviceName, dataTarget]);
   const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
   const dataTargetErrors = useErrors(dataTarget, true);
   const { data, refetchData } = useValuesRefetch(dataTarget);
   const { data: semanticVersioning, refetchData: refetchSemanticVersioning } =
     useValuesRefetch("options.semantic_versioning");
 
-  const fetchVersionJSON = () =>
-    fetchJSON<ServiceRefreshType>({
+  const fetchVersionJSON = () => {
+    let semantic_versioning;
+    if (
+      (semanticVersioning ?? "") !==
+      (original_options?.semantic_versioning ?? "")
+    ) {
+      if (semanticVersioning === null) {
+        semantic_versioning = "null";
+      } else {
+        semantic_versioning = `${semanticVersioning}`;
+      }
+    }
+    const overrides = data
+      ? getChanges({
+          params: data,
+          defaults: convertedOriginal,
+          target: dataTarget,
+        })
+      : "";
+    return fetchJSON<ServiceRefreshType>({
       url: `api/v1/${vType === 0 ? "latest" : "deployed"}_version/refresh${
         serviceName ? `/${encodeURIComponent(serviceName)}` : ""
-      }?${
-        data &&
-        convertToQueryParams({
-          params: { ...data, semantic_versioning: semanticVersioning },
-          defaults: original,
-        })
-      }`,
+      }${convertToQueryParams({
+        overrides,
+        semantic_versioning,
+      })}`,
     });
+  };
 
   const {
     data: versionData,
@@ -90,17 +128,17 @@ const VersionWithRefresh: FC<Props> = ({ vType, serviceName, original }) => {
   });
 
   const refetch = async () => {
-    // Prevent refetching too often
+    // Prevent refetching too often.
     const currentTime = Date.now();
     if (currentTime - lastFetched < 1000) return;
 
-    // Ensure valid form
+    // Ensure valid form.
     const result = await trigger(dataTarget, { shouldFocus: true });
     if (!result) return;
 
     refetchSemanticVersioning();
     refetchData();
-    // setTimeout to allow time for refetch setState's ^
+    // setTimeout to allow time for refetch setStates ^
     const timeout = setTimeout(() => {
       if (url) {
         refetchVersion();

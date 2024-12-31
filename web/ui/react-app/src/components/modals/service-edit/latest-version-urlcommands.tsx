@@ -22,11 +22,11 @@ const FormURLCommands = () => {
         type: "regex",
         regex: "",
         text: "",
-        index: 0,
+        index: null,
         old: "",
         new: "",
       },
-      { shouldFocus: false }
+      { shouldFocus: false },
     );
   }, []);
   const removeLast = useCallback(() => {

@@ -13,7 +13,7 @@ import { fetchJSON } from "utils";
  */
 export default function reducerMonitor(
   state: MonitorSummaryType,
-  action: WebSocketResponse
+  action: WebSocketResponse,
 ): MonitorSummaryType {
   switch (action.type) {
     // INIT
@@ -62,7 +62,7 @@ export default function reducerMonitor(
           if (state.service[id]?.status === undefined) return state;
 
           // last_queried
-          state.service[id].status!.last_queried =
+          state.service[id].status.last_queried =
             action.service_data?.status?.last_queried;
           break;
         }
@@ -75,13 +75,13 @@ export default function reducerMonitor(
           state.service[id].status = state.service[id].status ?? {};
 
           // latest_version
-          state.service[id].status!.latest_version =
+          state.service[id].status.latest_version =
             action.service_data?.status?.latest_version;
 
           // latest_version_timestamp
-          state.service[id].status!.latest_version_timestamp =
+          state.service[id].status.latest_version_timestamp =
             action.service_data?.status?.latest_version_timestamp;
-          state.service[id].status!.last_queried =
+          state.service[id].status.last_queried =
             action.service_data?.status?.latest_version_timestamp;
           break;
         }
@@ -90,18 +90,18 @@ export default function reducerMonitor(
           state.service[id].status = state.service[id].status ?? {};
 
           // deployed_version
-          state.service[id].status!.deployed_version =
+          state.service[id].status.deployed_version =
             action.service_data?.status?.deployed_version;
-          state.service[id].status!.approved_version =
+          state.service[id].status.approved_version =
             action.service_data?.status?.deployed_version;
 
           // deployed_version_timestamp
-          state.service[id].status!.deployed_version_timestamp =
+          state.service[id].status.deployed_version_timestamp =
             action.service_data?.status?.deployed_version_timestamp;
           break;
         }
         case "INIT": {
-          // Check we have the service
+          // Check we have the service.
           if (
             state.service[id] === undefined ||
             action.service_data?.status === undefined
@@ -111,20 +111,20 @@ export default function reducerMonitor(
           state.service[id].status = state.service[id].status ?? {};
 
           // latest_version
-          state.service[id].status!.latest_version =
+          state.service[id].status.latest_version =
             action.service_data?.status?.latest_version;
-          state.service[id].status!.latest_version_timestamp =
+          state.service[id].status.latest_version_timestamp =
             action.service_data?.status?.latest_version_timestamp;
           // last_queried
-          state.service[id].status!.last_queried =
+          state.service[id].status.last_queried =
             action.service_data?.status?.latest_version_timestamp;
 
-          // deployed_version - if it doesn't exist, set it
-          state.service[id].status!.deployed_version =
-            state.service[id].status!.deployed_version ??
+          // deployed_version - if it doesn't exist, set it.
+          state.service[id].status.deployed_version =
+            state.service[id].status.deployed_version ??
             action.service_data?.status?.latest_version;
-          state.service[id].status!.deployed_version_timestamp =
-            state.service[id].status!.deployed_version_timestamp ??
+          state.service[id].status.deployed_version_timestamp =
+            state.service[id].status.deployed_version_timestamp ??
             action.service_data?.status?.latest_version_timestamp;
 
           // url
@@ -137,7 +137,7 @@ export default function reducerMonitor(
           if (state.service[id]?.status === undefined) return state;
 
           // approved_version
-          state.service[id].status!.approved_version =
+          state.service[id].status.approved_version =
             action.service_data?.status?.approved_version;
 
           break;
@@ -147,7 +147,7 @@ export default function reducerMonitor(
         }
       }
 
-      // Gotta update the state more for the reload
+      // Gotta update the state more for the reload.
       state = JSON.parse(JSON.stringify(state));
 
       return state;
@@ -160,16 +160,16 @@ export default function reducerMonitor(
         return state;
       }
 
-      // If we're editing an existing service
+      // If we're editing an existing service.
       if (action.sub_type !== undefined) {
         service = state.service[action.sub_type];
-        // Check this service exists
+        // Check this service exists.
         if (service === undefined) {
           console.error(`Service ${action.sub_type} does not exist`);
           return state;
         }
 
-        // Update the vars of this service
+        // Update the vars of this service.
         service.id = action.service_data?.id ?? service.id;
         service.active = action.service_data?.active ?? service.active;
         service.type = action.service_data?.type ?? service.type;
@@ -201,7 +201,7 @@ export default function reducerMonitor(
         service.status!.last_queried =
           action.service_data?.status?.last_queried ??
           service.status!.last_queried;
-        // create and the service already exists
+        // create and the service already exists.
       } else if (state.service[service.id] !== undefined) {
         console.error(`Service ${service.id} already exists`);
         return state;
@@ -210,15 +210,15 @@ export default function reducerMonitor(
       service.loading = false;
       state.service[service.id] = service;
 
-      // If the service has been renamed, we need to update the order
+      // If the service has been renamed, we need to update the order.
       if (service.id !== action.sub_type && action.sub_type !== undefined) {
         delete state.service[action.sub_type];
         state.order[state.order.indexOf(action.sub_type)] = service.id;
 
-        // If the service is new, we need to add it to the order
+        // If the service is new, we need to add it to the order.
       } else action.sub_type === undefined && state.order.push(service.id);
 
-      // Gotta update the state more for the reload
+      // Gotta update the state more for the reload.
       state = JSON.parse(JSON.stringify(state));
 
       return state;
@@ -234,17 +234,17 @@ export default function reducerMonitor(
         return state;
       }
 
-      // Remove the service from the state
+      // Remove the service from the state.
       if (state.service[action.sub_type] !== undefined)
         delete state.service[action.sub_type];
       state.order = action.order;
 
-      // Check whether we've missed any other removals
+      // Check whether we've missed any other removals.
       for (const id in state.service) {
         if (!action.order.includes(id)) delete state.service[id];
       }
 
-      // Check whether we've missed any additions
+      // Check whether we've missed any additions.
       for (const id of action.order) {
         if (state.service[id] === undefined)
           fetchJSON<ServiceSummaryType | undefined>({
@@ -254,7 +254,7 @@ export default function reducerMonitor(
           });
       }
 
-      // Gotta update the state more for the reload
+      // Gotta update the state more for the reload.
       state = JSON.parse(JSON.stringify(state));
 
       return state;

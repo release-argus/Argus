@@ -4,7 +4,11 @@ import {
   containsStartsWith,
   diffObjects,
 } from "./diff-objects";
-import { convertToQueryParams, stringifyQueryParam } from "./query-params";
+import {
+  convertToQueryParams,
+  getChanges,
+  stringifyQueryParam,
+} from "./query-params";
 import { extractErrors, getNestedError } from "./errors";
 import { isEmptyArray, isEmptyObject } from "./is-empty";
 
@@ -27,6 +31,7 @@ export {
   containsEndsWith,
   containsStartsWith,
   convertToQueryParams,
+  getChanges,
   cleanEmpty,
   dateIsAfterNow,
   diffObjects,
@@ -36,11 +41,11 @@ export {
   firstNonDefault,
   firstNonEmpty,
   getBasename,
+  getNestedError,
   isEmptyArray,
   isEmptyObject,
   isEmptyOrNull,
   removeEmptyValues,
   stringifyQueryParam,
   strToBool,
-  getNestedError,
 };

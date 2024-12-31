@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,59 +12,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/webhook"
 )
 
-// UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
-// to `s.Status.LatestVersion` if there's no DeployedVersionLookup and announce the change.
-func (s *Service) UpdatedVersion(writeToDB bool) {
-	if s.Status.DeployedVersion() == s.Status.LatestVersion() {
-		return
-	}
-
-	// Check that no WebHook(s) failed
-	if !s.Status.Fails.WebHook.AllPassed() {
-		return
-	}
-	// Check that no Command(s) failed
-	if !s.Status.Fails.Command.AllPassed() {
-		return
-	}
-	// Don't update DeployedVersion to LatestVersion if we have a lookup check
-	if s.DeployedVersionLookup != nil {
-		if len(s.Command) != 0 || len(s.WebHook) != 0 {
-			// Update ApprovedVersion if there are Commands/WebHooks that should update DeployedVersion
-			// (only having `deployed_version`,`command` or `webhook` would only use ApprovedVersion to track skips)
-			// They should have all ran/sent successfully at this point
-			s.UpdateLatestApproved()
-		}
-		return
-	}
-	s.Status.SetDeployedVersion(s.Status.LatestVersion(), writeToDB)
-
-	// Announce version change to WebSocket clients
-	s.Status.AnnounceUpdate()
-}
-
-// UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
-// set the LatestVersion as approved in the Status, and announce the approval (if not previously).
-func (s *Service) UpdateLatestApproved() {
-	// Only announce once
-	lv := s.Status.LatestVersion()
-	if s.Status.ApprovedVersion() != lv {
-		s.Status.SetApprovedVersion(lv, true)
+// HandleSkip will set `version` to skipped and announce it to the websocket.
+func (s *Service) HandleSkip() {
+	// Ignore skips if latest_version is deployed.
+	if s.Status.DeployedVersion() != s.Status.LatestVersion() {
+		s.Status.SetApprovedVersion("SKIP_"+s.Status.LatestVersion(), true)
 	}
 }
 
-// HandleUpdateActions will run all commands and send all WebHooks for this service if it has been called
-// automatically and auto-approve is true. If new releases aren't auto-approved, then these will
-// only be run/send if this is triggered fromUser (via the WebUI).
+// HandleCommand will find the specified command on this Service (and run it if found).
+func (s *Service) HandleCommand(command string) {
+	// Find the command.
+	index, err := s.CommandController.Find(command)
+	if err != nil {
+		jLog.Warn(err, util.LogFrom{Primary: "Command", Secondary: s.ID}, true)
+		return
+	}
+
+	// Skip if it ran less than 2*Interval ago.
+	if !(*s.CommandController).IsRunnable(index) {
+		return
+	}
+
+	// Send the Command.
+	err = (*s.CommandController).ExecIndex(util.LogFrom{Primary: "Command", Secondary: s.ID}, index)
+	if err == nil {
+		s.UpdatedVersion(true)
+	}
+}
+
+// HandleWebHook will find tne specified WebHook on this Service (and send it if found).
+func (s *Service) HandleWebHook(webhookID string) {
+	//nolint:typecheck
+	if s.WebHook == nil || s.WebHook[webhookID] == nil {
+		return
+	}
+
+	// Skip if before NextRunnable.
+	if !s.WebHook[webhookID].IsRunnable() {
+		return
+	}
+
+	// Send the WebHook.
+	err := s.WebHook[webhookID].Send(s.ServiceInfo(), false)
+	if err == nil {
+		s.UpdatedVersion(true)
+	}
+}
+
+// HandleUpdateActions runs all commands and send all WebHooks for this service if auto-approve true.
+// If new releases not auto-approved, then these will
+// only run/send if manually triggered fromUser (via the WebUI).
 func (s *Service) HandleUpdateActions(writeToDB bool) {
 	serviceInfo := s.ServiceInfo()
 
@@ -77,17 +87,17 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 		if s.Dashboard.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
 				s.Status.LatestVersion())
-			jLog.Info(msg, &util.LogFrom{Primary: s.ID}, true)
+			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
 
-			// Run the Command(s)
+			// Run the Command(s).
 			go func() {
-				err := s.CommandController.Exec(&util.LogFrom{Primary: "Command", Secondary: s.ID})
+				err := s.CommandController.Exec(util.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
 					s.UpdatedVersion(writeToDB)
 				}
 			}()
 
-			// Send the WebHook(s)
+			// Send the WebHook(s).
 			go func() {
 				err := s.WebHook.Send(serviceInfo, true)
 				if err == nil && len(s.WebHook) != 0 {
@@ -95,21 +105,21 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				}
 			}()
 		} else {
-			jLog.Info("Waiting for approval on the Web UI", &util.LogFrom{Primary: s.ID}, true)
+			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
 
 			s.Status.AnnounceQueryNewVersion()
 		}
 	} else {
-		// Auto-update version for Service(s) without WebHook(s)
+		// Auto-update version for Service(s) without WebHook(s).
 		s.UpdatedVersion(writeToDB)
 	}
 }
 
 // HandleFailedActions will re-send all the WebHooks for this service
-// that have either failed, or not been sent for this version. Otherwise,
-// if all WebHooks have been sent successfully, then they'll all be resent.
+// that have either failed, or not sent for this version. Otherwise,
+// if all WebHooks have sent successfully, then they will all resend.
 func (s *Service) HandleFailedActions() {
-	errChan := make(chan error)
+	errChan := make(chan error, len(s.WebHook)+len(s.Command))
 	errored := false
 
 	retryAll := s.shouldRetryAll()
@@ -118,58 +128,56 @@ func (s *Service) HandleFailedActions() {
 	// Send the WebHook(s).
 	if len(s.WebHook) != 0 {
 		potentialErrors += len(s.WebHook)
-		for key := range s.WebHook {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
-				// Skip if it's before NextRunnable
-				if !s.WebHook[key].IsRunnable() {
+		for key, wh := range s.WebHook {
+			if retryAll || util.DereferenceOrNilValue(s.Status.Fails.WebHook.Get(key), true) {
+				// Skip if before NextRunnable.
+				if !wh.IsRunnable() {
 					potentialErrors--
 					continue
 				}
-				// Send
-				go func(key string) {
-					err := s.WebHook[key].Send(s.ServiceInfo(), false)
+				// Send.
+				go func(wh *webhook.WebHook) {
+					err := wh.Send(s.ServiceInfo(), false)
 					errChan <- err
-				}(key)
+				}(wh)
 				// Space out WebHooks.
-				time.Sleep(250 * time.Millisecond)
+				//#nosec G404 -- sleep does not need cryptographic security.
+				time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 			} else {
 				potentialErrors--
 			}
 		}
 	}
-	// Run the Command(s)
+	// Run the Command(s).
 	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
 		logFrom := util.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
-			if retryAll || util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
-				// Skip if it's before NextRunnable
+			if retryAll || util.DereferenceOrNilValue(s.Status.Fails.Command.Get(key), true) {
+				// Skip if before NextRunnable.
 				if !s.CommandController.IsRunnable(key) {
 					potentialErrors--
 					continue
 				}
-				// Run
+				// Run.
 				go func(key int) {
-					err := s.CommandController.ExecIndex(&logFrom, key)
+					err := s.CommandController.ExecIndex(logFrom, key)
 					errChan <- err
 				}(key)
 				// Space out Commands.
-				time.Sleep(250 * time.Millisecond)
+				//#nosec G404 -- sleep does not need cryptographic security.
+				time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 			} else {
 				potentialErrors--
 			}
 		}
 	}
 
-	var errs error
 	for potentialErrors != 0 {
-		err := <-errChan
-		potentialErrors--
-		if err != nil {
+		if err := <-errChan; err != nil {
 			errored = true
-			errs = fmt.Errorf("%s\n%w",
-				util.ErrorToString(errs), err)
 		}
+		potentialErrors--
 	}
 
 	if !errored {
@@ -177,75 +185,63 @@ func (s *Service) HandleFailedActions() {
 	}
 }
 
-// HandleCommand will handle running the Command for this service
-// to the matching Command.
-func (s *Service) HandleCommand(command string) {
-	// Find the command
-	index := s.CommandController.Find(command)
-	if index == nil {
-		jLog.Warn(command+" not found", &util.LogFrom{Primary: "Command", Secondary: s.ID}, true)
-		return
-	}
-
-	// Skip if it ran less than 2*Interval ago
-	if !(*s.CommandController).IsRunnable(*index) {
-		return
-	}
-
-	// Send the Command.
-	err := (*s.CommandController).ExecIndex(&util.LogFrom{Primary: "Command", Secondary: s.ID}, *index)
-	if err == nil {
-		s.UpdatedVersion(true)
-	}
-}
-
-// HandleWebHook will handle sending the WebHook for this service
-// to the WebHook with a matching ID.
-func (s *Service) HandleWebHook(webhookID string) {
-	//nolint:typecheck
-	if s.WebHook == nil || s.WebHook[webhookID] == nil {
-		return
-	}
-
-	// Skip if it's before NextRunnable.
-	if !s.WebHook[webhookID].IsRunnable() {
-		return
-	}
-
-	// Send the WebHook.
-	err := s.WebHook[webhookID].Send(s.ServiceInfo(), false)
-	if err == nil {
-		s.UpdatedVersion(true)
-	}
-}
-
-// HandleSkip will set `version` to skipped and announce it to the websocket.
-func (s *Service) HandleSkip() {
-	// Ignore skips if latest version is deployed
-	if s.Status.DeployedVersion() != s.Status.LatestVersion() {
-		s.Status.SetApprovedVersion("SKIP_"+s.Status.LatestVersion(), true)
-	}
-}
-
-func (s *Service) shouldRetryAll() (retry bool) {
-	retry = true
-	// retry all only if every WebHook has been sent successfully
-	if len(s.WebHook) != 0 {
-		for key := range s.WebHook {
-			if util.EvalNilPtr(s.Status.Fails.WebHook.Get(key), true) {
-				retry = false
-				break
-			}
+// shouldRetryAll determines whether all WebHooks and Commands should be retried.
+// It returns true if every WebHook has sent successfully and every Command
+// has run successfully. If any WebHook or Command has failed, it returns false.
+func (s *Service) shouldRetryAll() bool {
+	// Retry all only if every WebHook has sent successfully.
+	for key := range s.WebHook {
+		if util.DereferenceOrNilValue(s.Status.Fails.WebHook.Get(key), true) {
+			return false
 		}
 	}
-	// AND every Command has been run successfully
-	if retry && len(s.Command) != 0 {
-		for key := range s.Command {
-			if util.EvalNilPtr(s.Status.Fails.Command.Get(key), true) {
-				retry = false
-				break
-			}
+	// AND every Command has run successfully.
+	for key := range s.Command {
+		if util.DereferenceOrNilValue(s.Status.Fails.Command.Get(key), true) {
+			return false
 		}
 	}
-	return
+
+	return true
+}
+
+// UpdatedVersion will register the version change, setting `s.Status.DeployedVersion`
+// to `s.Status.LatestVersion` if there's no DeployedVersionLookup and announce the change.
+func (s *Service) UpdatedVersion(writeToDB bool) {
+	if s.Status.DeployedVersion() == s.Status.LatestVersion() {
+		return
+	}
+
+	// Check that no WebHook(s) failed.
+	if !s.Status.Fails.WebHook.AllPassed() {
+		return
+	}
+	// Check that no Command(s) failed.
+	if !s.Status.Fails.Command.AllPassed() {
+		return
+	}
+	// Do not update DeployedVersion to LatestVersion if we have a deployed lookup check.
+	if s.DeployedVersionLookup != nil {
+		if len(s.Command) != 0 || len(s.WebHook) != 0 {
+			// Update ApprovedVersion if Commands/WebHooks may update DeployedVersion.
+			// (only having `deployed_version`, `command` or `webhook` would only use ApprovedVersion to track skips)
+			// They should have all ran/sent successfully at this point.
+			s.UpdateLatestApproved()
+		}
+		return
+	}
+	s.Status.SetDeployedVersion(s.Status.LatestVersion(), "", writeToDB)
+
+	// Announce version change to WebSocket clients.
+	s.Status.AnnounceUpdate()
+}
+
+// UpdateLatestApproved will check if all WebHook(s) have sent successfully for this Service,
+// set the LatestVersion as approved in the Status, and announce the approval (if not previously).
+func (s *Service) UpdateLatestApproved() {
+	// Only announce once.
+	lv := s.Status.LatestVersion()
+	if s.Status.ApprovedVersion() != lv {
+		s.Status.SetApprovedVersion(lv, true)
+	}
 }

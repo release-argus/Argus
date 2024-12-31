@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/release-argus/Argus/util"
 )
 
 func TestHTTP_httpRuntimeInfo(t *testing.T) {
@@ -32,12 +33,12 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 	file := "TestHTTP_httpRuntimeInfo.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
-	defer func() {
+	t.Cleanup(func() {
 		os.RemoveAll(file)
-		if api.Config.Settings.Data.DatabaseFile != nil {
-			os.RemoveAll(*api.Config.Settings.Data.DatabaseFile)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
-	}()
+	})
 	want := `
 		{
 			"start_time":"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[^"]*",
@@ -53,7 +54,7 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 	api.httpRuntimeInfo(w, req)
 	apiMutex.RUnlock()
 	res := w.Result()
-	defer res.Body.Close()
+	t.Cleanup(func() { res.Body.Close() })
 
 	// THEN the expected body is returned as expected
 	data, err := io.ReadAll(res.Body)
@@ -64,8 +65,7 @@ func TestHTTP_httpRuntimeInfo(t *testing.T) {
 	got := string(data)
 	want = strings.ReplaceAll(want, "\t", "")
 	want = strings.ReplaceAll(want, "\n", "")
-	wantRe := regexp.MustCompile(want)
-	if !wantRe.MatchString(got) {
+	if !util.RegexCheck(want, got) {
 		t.Errorf("%q doesn't match regex %q",
 			got, want)
 	}

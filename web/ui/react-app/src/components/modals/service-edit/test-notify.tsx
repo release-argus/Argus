@@ -74,7 +74,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
         notify: original?.name,
       },
       {
-        // ...getValues(path) - shallow copy as convertNotifyToAPI mutates the object
+        // ...getValues(path) - shallow copy as convertNotifyToAPI mutates the object.
         params: convertNotifyToAPI({ ...getValues(path) }),
       },
     ],
@@ -89,7 +89,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
   });
 
   const refetch = async () => {
-    // Prevent refetching too often
+    // Prevent refetching too often.
     const currentTime = Date.now();
     if (currentTime - lastFetched < 2000) return;
 

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 // LogInit for this package.
@@ -27,27 +28,27 @@ func LogInit(log *util.JLog) {
 }
 
 // Init the Slice metrics and hand out the defaults/notifiers.
-func (w *Slice) Init(
-	serviceStatus *svcstatus.Status,
+func (s *Slice) Init(
+	serviceStatus *status.Status,
 	mains *SliceDefaults,
-	defaults *WebHookDefaults,
-	hardDefaults *WebHookDefaults,
+	defaults, hardDefaults *Defaults,
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
 ) {
-	if w == nil || len(*w) == 0 {
+	if s == nil || len(*s) == 0 {
 		return
 	}
 	if mains == nil {
 		mains = &SliceDefaults{}
 	}
 
-	for id := range *w {
-		if (*w)[id] == nil {
-			(*w)[id] = &WebHook{}
+	for id, wh := range *s {
+		if wh == nil {
+			wh = &WebHook{}
+			(*s)[id] = wh // Update the map.
 		}
-		(*w)[id].ID = id
-		(*w)[id].Init(
+		wh.ID = id
+		wh.Init(
 			serviceStatus,
 			(*mains)[id], defaults, hardDefaults,
 			shoutrrrNotifiers,
@@ -58,49 +59,48 @@ func (w *Slice) Init(
 
 // Init the WebHook metrics and give the defaults/notifiers.
 func (w *WebHook) Init(
-	serviceStatus *svcstatus.Status,
-	main *WebHookDefaults,
-	defaults *WebHookDefaults,
-	hardDefaults *WebHookDefaults,
+	serviceStatus *status.Status,
+	main *Defaults,
+	defaults, hardDefaults *Defaults,
 	shoutrrrNotifiers *shoutrrr.Slice,
 	parentInterval *string,
 ) {
 	w.ParentInterval = parentInterval
 	w.ServiceStatus = serviceStatus
 
-	// Give the matching main
+	// Give the matching main.
 	w.Main = main
-	// Create an empty Main if it's nil
+	// Create an empty Main if nil.
 	if w.Main == nil {
-		w.Main = &WebHookDefaults{}
+		w.Main = &Defaults{}
 	}
 
 	w.Failed = &w.ServiceStatus.Fails.WebHook
 	w.Failed.Set(w.ID, nil)
 
-	// Remove the type if it's the same as the main or the type is in the ID
+	// Remove the type if it matches the main type or matches the ID.
 	if w.Type == w.Main.Type || w.ID == w.Type {
 		w.Type = ""
 	}
 
-	// Give the defaults
+	// Give the defaults.
 	w.Defaults = defaults
 	w.HardDefaults = hardDefaults
 
-	// WebHook fail notifiers
+	// WebHook fail notifiers.
 	w.Notifiers = &Notifiers{
 		Shoutrrr: shoutrrrNotifiers,
 	}
 }
 
 // InitMetrics of the Slice.
-func (w *Slice) InitMetrics() {
-	if w == nil {
+func (s *Slice) InitMetrics() {
+	if s == nil {
 		return
 	}
 
-	for id := range *w {
-		(*w)[id].initMetrics()
+	for _, wh := range *s {
+		wh.initMetrics()
 	}
 }
 
@@ -126,13 +126,13 @@ func (w *WebHook) initMetrics() {
 }
 
 // DeleteMetrics of the Slice.
-func (w *Slice) DeleteMetrics() {
-	if w == nil {
+func (s *Slice) DeleteMetrics() {
+	if s == nil {
 		return
 	}
 
-	for id := range *w {
-		(*w)[id].deleteMetrics()
+	for _, wh := range *s {
+		wh.deleteMetrics()
 	}
 }
 

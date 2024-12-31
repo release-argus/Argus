@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ func TestHub_RunWithInvalidBroadcast(t *testing.T) {
 	got := len(client.send)
 	want := 0
 	if got != want {
-		t.Errorf("Sent message should have failed Unmarshal and notohing sent. Got %d messages",
+		t.Errorf("Sent message should have failed Unmarshal and not sent. Got %d messages",
 			got)
 	}
 }

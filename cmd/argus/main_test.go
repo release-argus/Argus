@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func resetFlags() {
 }
 
 func TestTheMain(t *testing.T) {
-	// GIVEN different Config's to test
+	// GIVEN different Configs to test
 	jLog = *util.NewJLog("WARN", false)
 	jLog.Testing = true
 	tests := map[string]struct {
@@ -72,7 +72,7 @@ func TestTheMain(t *testing.T) {
 			file := fmt.Sprintf("%s.yml", name)
 			os.Remove(tc.db)
 			tc.file(file, t)
-			defer os.Remove(tc.db)
+			t.Cleanup(func() { os.Remove(tc.db) })
 			resetFlags()
 			configFile = &file
 			accessToken := os.Getenv("GITHUB_TOKEN")

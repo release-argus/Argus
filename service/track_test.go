@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,245 +23,421 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
-	metric "github.com/release-argus/Argus/web/metrics"
+	apitype "github.com/release-argus/Argus/web/api/types"
+	metric "github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
-	test_webhook "github.com/release-argus/Argus/webhook/test"
+	webhook_test "github.com/release-argus/Argus/webhook/test"
+	"gopkg.in/yaml.v3"
 )
 
-func TestSlice_Track(t *testing.T) {
-	// GIVEN a Slice
-	tests := map[string]struct {
-		ordering     []string
-		slice        []string
-		active       []bool
-		expectFinish bool
-	}{
-		"empty Ordering does no queries": {
-			ordering: []string{},
-			slice:    []string{"github", "url"}},
-		"only tracks active Services": {
-			ordering: []string{"github", "url"},
-			slice:    []string{"github", "url"},
-			active:   []bool{false, true}},
-	}
-
-	for name, tc := range tests {
-		var slice *Slice
-		if len(tc.slice) != 0 {
-			slice = &Slice{}
-			i := 0
-			for _, j := range tc.slice {
-				switch j {
-				case "github":
-					(*slice)[j] = testService(name, "github")
-				case "url":
-					(*slice)[j] = testService(name, "url")
-				}
-				if len(tc.active) != 0 {
-					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
-				}
-				(*slice)[j].Status.SetLatestVersion("", false)
-				(*slice)[j].Status.SetDeployedVersion("", false)
-				i++
-			}
-		}
-
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN Track is called on it
-			slice.Track(&tc.ordering, &sync.RWMutex{})
-
-			// THEN the function exits straight away
-			time.Sleep(2 * time.Second)
-			for i := range *slice {
-				if !util.Contains(tc.ordering, i) {
-					if (*slice)[i].Status.LatestVersion() != "" {
-						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
-							i, tc.ordering, (*slice)[i].Status.String())
-					}
-				} else if (*slice)[i].Options.GetActive() {
-					if (*slice)[i].Status.LatestVersion() == "" {
-						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
-							(*slice)[i].Status.String())
-					}
-				} else if (*slice)[i].Status.LatestVersion() != "" {
-					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
-						i, (*slice)[i].Status.String())
-				}
-
-				// Set Deleting to stop the Track
-				(*slice)[i].Status.SetDeleting()
-			}
-		})
-	}
-}
-
 func TestService_Track(t *testing.T) {
-	testSVC := testService("TestService_Track", "url")
-	testSVC.LatestVersion.Query(false, &util.LogFrom{})
-	testLatestVersion := testSVC.Status.LatestVersion()
+	testURLService := testService(t, "TestService_Track", "url")
+	testURLService.LatestVersion.Query(false, util.LogFrom{})
+	testURLLatestVersion := testURLService.Status.LatestVersion()
+	testGitHubSVC := testService(t, "TestService_Track", "github")
+	testGitHubSVC.LatestVersion.Query(false, util.LogFrom{})
+	// testGitHubLatestVersion := testGitHubSVC.Status.LatestVersion()
+
+	type overrides struct {
+		latestVersion    string
+		nilLatestVersion bool
+		other            string
+	}
+	type versions struct {
+		startLatestVersion, wantLatestVersion     string
+		startDeployedVersion, wantDeployedVersion string
+	}
 	// GIVEN a Service
 	tests := map[string]struct {
-		active               *bool
-		url                  string
-		urlRegex             string
-		urlRegexTemplate     string
-		signedCerts          bool
+		latestVersionType    string
+		overrides            overrides
 		wantQueryIn          string
 		keepDeployedLookup   bool
-		deployedVersionJSON  string
-		nilRequire           bool
-		autoApprove          bool
-		webhook              *webhook.WebHook
-		expectFinish         bool
 		livenessMetric       int
 		ignoreLivenessMetric bool
 		takesAtLeast         time.Duration
-		startLatestVersion   string
-		startDeployedVersion string
-		wantLatestVersion    string
-		wantDeployedVersion  string
+		versions             versions
 		wantAnnounces        int
 		wantDatabaseMessages int
 		deleting             bool
 	}{
 		"first query updates LatestVersion and DeployedVersion": {
-			livenessMetric:     1,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			latestVersionType: "url",
+			livenessMetric:    1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"first query updates LatestVersion and DeployedVersion - unchanged by active=true": {
-			livenessMetric: 1, active: test.BoolPtr(true),
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					options:
+						active: true
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"query finds a newer version and updates LatestVersion and DeployedVersion - no commands/webhooks": {
-			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
-			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
 		},
 		"query finds a newer version and updates LatestVersion and not DeployedVersion - has webhook": {
-			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
-			webhook:            test_webhook.WebHook(false, false, false),
-			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: "1.2.1",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+				`),
+				other: test.TrimYAML(`
+					webhook:
+						test:
+							` + test.Indent(
+					webhook_test.WebHook(false, false, false).String(), 4) + `
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.1"},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 1, // db: 1 for latest
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
-			urlRegex: "ver([0-9.]+)", livenessMetric: 1,
-			webhook:            test_webhook.WebHook(false, false, false),
-			autoApprove:        true,
-			startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+				`),
+				other: test.TrimYAML(`
+					webhook:
+						test:
+							` + test.Indent(
+					webhook_test.WebHook(false, false, false).String(), 4) + `
+					dashboard:
+						auto_approve: true
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
 			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed
 			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
 		},
 		"query doesn't update versions if it finds one that's older semantically": {
+			latestVersionType: "url",
 			// would get 1.2.1, but stay on 1.2.2
-			urlRegex: `"([0-9.]+)"`, livenessMetric: 4, nilRequire: true,
-			startLatestVersion: testLatestVersion, startDeployedVersion: testLatestVersion,
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: testLatestVersion,
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: '([0-9.]+)'
+					require: null
+				`),
+			},
+			livenessMetric: 4,
+			versions: versions{
+				startLatestVersion: testURLLatestVersion, startDeployedVersion: testURLLatestVersion,
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"track on invalid cert allowed": {
-			urlRegex: `"([0-9.]+)"`, livenessMetric: 1, nilRequire: true,
-			url: "https://invalid.release-argus.io/plain", signedCerts: false,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url: https://invalid.release-argus.io/plain
+					allow_invalid_certs: true
+					url_commands:
+						- type: regex
+							regex: '([0-9.]+)'
+					require: null
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"track on signed cert allowed": {
-			urlRegex: `"([0-9.]+)"`, livenessMetric: 1, nilRequire: true,
-			url: "https://valid.release-argus.io/plain", signedCerts: true,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url: https://valid.release-argus.io/plain
+					allow_invalid_certs: false
+					url_commands:
+						- type: regex
+							regex: '([0-9.]+)'
+					require: null
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
-		"url regex fail": {
-			urlRegex: "ver[0-9.]foo", livenessMetric: 2,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "", wantDeployedVersion: "",
+		"github - urlCommand, regex fail": {
+			latestVersionType: "github",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)foo'
+				`),
+			},
+			livenessMetric: 2,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
-		"handle leading v's": {
-			urlRegex: "ver([0-9.]+)", urlRegexTemplate: "v$1",
-			livenessMetric: 1, nilRequire: true,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
+		"url - urlCommand, regex fail": {
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)foo'
+				`),
+			},
+			livenessMetric: 2,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
+			wantAnnounces: 0, wantDatabaseMessages: 0,
+		},
+		"github - urlCommand, split fail": {
+			latestVersionType: "github",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: split
+							text: '_-_'
+				`),
+			},
+			livenessMetric: 2,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
+			wantAnnounces: 0, wantDatabaseMessages: 0,
+		},
+		"url - urlCommand, split fail": {
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: split
+							text: '_-_'
+				`),
+			},
+			livenessMetric: 2,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
+			wantAnnounces: 0, wantDatabaseMessages: 0,
+		},
+		"handle leading v's - semantic": {
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+							template: 'v$1'
+					require: null
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
+			wantAnnounces:        1, // announce: 1 for latest query
+			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+		},
+		"handle leading v's - non-semantic": {
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					options:
+						semantic_versioning: false
+				`),
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+							template: 'v$1'
+					require: null
+				`),
+			},
+			livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
 		},
 		"non-semantic version fail": {
-			urlRegex: `"ver[0-9.]+`, livenessMetric: 3, nilRequire: true,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "", wantDeployedVersion: "",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver[0-9.]+'
+					require: null
+				`),
+			},
+			livenessMetric: 3,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"progressive version fail (got older version)": {
-			urlRegex: "ver([0-9.]+)", livenessMetric: 4,
-			startLatestVersion: "1.2.3", startDeployedVersion: "1.2.3",
-			wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.3",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url_commands:
+						- type: regex
+							regex: 'ver([0-9.]+)'
+					regexp_template: 'v$1'
+					require: null
+				`),
+			},
+			livenessMetric: 4,
+			versions: versions{
+				startLatestVersion: "1.2.3", startDeployedVersion: "1.2.3",
+				wantLatestVersion: "1.2.3", wantDeployedVersion: "1.2.3"},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"other fail (invalid cert)": {
-			urlRegex: `"([0-9.]+)"`, livenessMetric: 0, nilRequire: true,
-			url: "https://invalid.release-argus.io/plain", signedCerts: true,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "", wantDeployedVersion: "",
+			latestVersionType: "url",
+			overrides: overrides{
+				latestVersion: test.TrimYAML(`
+					url: https://invalid.release-argus.io/plain
+					allow_invalid_certs: false
+					url_commands:
+						- type: regex
+							regex: '([0-9.]+)'
+					require: null
+				`),
+			},
+			livenessMetric: 0,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"track gets DeployedVersion": {
-			keepDeployedLookup: true, deployedVersionJSON: "bar", livenessMetric: 1,
-			startLatestVersion: testLatestVersion, startDeployedVersion: "1.2.0",
-			wantLatestVersion: testLatestVersion, wantDeployedVersion: "1.2.2",
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					deployed_version:
+						json: bar
+				`),
+			},
+			keepDeployedLookup: true, livenessMetric: 1,
+			versions: versions{
+				startLatestVersion: testURLLatestVersion, startDeployedVersion: "1.2.0",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.2"},
 			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed change
 			wantDatabaseMessages: 1, // db: 1 for deployed change
 		},
 		"track gets DeployedVersion that's newer updates LatestVersion too": {
-			keepDeployedLookup: true, deployedVersionJSON: "foo.bar.version",
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					deployed_version:
+						json: foo.bar.version
+				`),
+			},
+			keepDeployedLookup:   true,
 			ignoreLivenessMetric: true, // ignore as deployed lookup may be done before
-			startLatestVersion:   testLatestVersion, startDeployedVersion: "0.0.0",
-			wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1",
+			versions: versions{
+				startLatestVersion: testURLLatestVersion, startDeployedVersion: "0.0.0",
+				wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1"},
 			wantAnnounces: 3, // announce: 1 for latest query (as it'll give <latestVersion, but be called before we have deployedVersion),
 			// 1 for latest change,
 			// 1 for deployed change
 			wantDatabaseMessages: 2, // db: 1 for latest change, 1 for deployed change
 		},
 		"track that last did a Query less than interval ago waits until interval": {
-			wantQueryIn:          "5s",
-			keepDeployedLookup:   false,
-			deployedVersionJSON:  "bar",
-			livenessMetric:       1,
-			takesAtLeast:         5 * time.Second,
-			startLatestVersion:   testLatestVersion,
-			wantLatestVersion:    testLatestVersion,
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					deployed_version:
+						json: bar
+				`),
+			},
+			wantQueryIn:        "5s",
+			keepDeployedLookup: false,
+			livenessMetric:     1,
+			takesAtLeast:       5 * time.Second,
+			versions: versions{
+				startLatestVersion: testURLLatestVersion,
+				wantLatestVersion:  testURLLatestVersion},
 			wantAnnounces:        1, // announce: 1 for latest query
 			wantDatabaseMessages: 0, // db: 0 for nothing changing
 		},
 		"inactive service doesn't track": {
-			livenessMetric: 0, active: test.BoolPtr(false),
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "", wantDeployedVersion: "",
+			latestVersionType: "url",
+			overrides: overrides{
+				other: test.TrimYAML(`
+					options:
+						active: false
+				`),
+			},
+			livenessMetric: 0,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 		"deleting service stops track": {
-			livenessMetric: 0, deleting: true,
-			startLatestVersion: "", startDeployedVersion: "",
-			wantLatestVersion: "", wantDeployedVersion: "",
+			latestVersionType: "url",
+			livenessMetric:    0, deleting: true,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
+			wantAnnounces: 0, wantDatabaseMessages: 0,
+		},
+		"nil latest_version doesn't track": {
+			latestVersionType: "url",
+			overrides: overrides{
+				nilLatestVersion: true},
+			livenessMetric: 0,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: "", wantDeployedVersion: ""},
 			wantAnnounces: 0, wantDatabaseMessages: 0,
 		},
 	}
@@ -270,33 +446,31 @@ func TestService_Track(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(name, "url")
+			svc := testService(t, name, tc.latestVersionType)
+
+			// overrides - other
+			err := yaml.Unmarshal([]byte(tc.overrides.other), &svc)
+			if err != nil {
+				t.Fatalf("failed to unmarshal overrides: %s", err)
+			}
+			// overrides - latest_version
+			if lv, ok := svc.LatestVersion.(*web.Lookup); ok {
+				err = yaml.Unmarshal([]byte(tc.overrides.latestVersion), lv)
+				if err != nil {
+					t.Fatalf("failed to unmarshal overrides: %s", err)
+				}
+			}
+			if tc.overrides.nilLatestVersion {
+				svc.LatestVersion = nil
+			}
+
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}
-			svc.Options.Active = tc.active
-			svc.Status.SetLatestVersion(tc.startLatestVersion, false)
-			svc.Status.SetDeployedVersion(tc.startDeployedVersion, false)
-			if tc.keepDeployedLookup {
-				svc.DeployedVersionLookup.JSON = tc.deployedVersionJSON
-			} else {
+			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
+			svc.Status.SetDeployedVersion(tc.versions.startDeployedVersion, "", false)
+			if !tc.keepDeployedLookup {
 				svc.DeployedVersionLookup = nil
-			}
-			if tc.nilRequire {
-				svc.LatestVersion.Require = nil
-			}
-			if tc.urlRegex != "" {
-				svc.LatestVersion.URLCommands[0].Regex = &tc.urlRegex
-				if tc.urlRegexTemplate != "" {
-					svc.LatestVersion.URLCommands[0].Template = &tc.urlRegexTemplate
-				}
-			}
-			if tc.url != "" {
-				svc.LatestVersion.URL = tc.url
-			}
-			if tc.webhook != nil {
-				svc.WebHook = make(webhook.Slice, 1)
-				svc.WebHook["test"] = tc.webhook
 			}
 			interval := svc.Options.GetIntervalDuration()
 			// subtract this from now to get the timestamp
@@ -307,13 +481,14 @@ func TestService_Track(t *testing.T) {
 			}
 			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
 			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
-			*svc.Dashboard.AutoApprove = tc.autoApprove
-			allowInvalidCerts := !tc.signedCerts
-			svc.LatestVersion.AllowInvalidCerts = &allowInvalidCerts
+			shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
+			shoutrrrHardDefaults.Default()
+			webhookHardDefaults := webhook.Defaults{}
+			webhookHardDefaults.Default()
 			svc.Init(
 				svc.Defaults, svc.HardDefaults,
-				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 			didFinish := make(chan bool, 1)
 
 			// WHEN Track is called on it
@@ -322,8 +497,11 @@ func TestService_Track(t *testing.T) {
 				didFinish <- true
 			}()
 			for i := 0; i < 200; i++ {
-				passQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, "SUCCESS"))
-				failQ := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, "FAIL"))
+				var passQ, failQ float64
+				if !tc.overrides.nilLatestVersion {
+					passQ = testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
+					failQ = testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "FAIL"))
+				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
 						passQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(svc.ID, "SUCCESS"))
@@ -361,17 +539,19 @@ func TestService_Track(t *testing.T) {
 			}
 
 			// THEN the scrape updates the Status correctly
-			if tc.wantLatestVersion != svc.Status.LatestVersion() ||
-				tc.wantDeployedVersion != svc.Status.DeployedVersion() {
+			if tc.versions.wantLatestVersion != svc.Status.LatestVersion() ||
+				tc.versions.wantDeployedVersion != svc.Status.DeployedVersion() {
 				t.Fatalf("\nLatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
-					tc.wantLatestVersion, svc.Status.LatestVersion(),
-					tc.wantDeployedVersion, svc.Status.DeployedVersion())
+					tc.versions.wantLatestVersion, svc.Status.LatestVersion(),
+					tc.versions.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
 			// LatestVersionQueryMetric
-			gotMetric := testutil.ToFloat64(metric.LatestVersionQueryLiveness.WithLabelValues(svc.ID))
-			if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
-				t.Errorf("LatestVersionQueryLiveness should be %d, not %f",
-					tc.livenessMetric, gotMetric)
+			if !tc.overrides.nilLatestVersion {
+				gotMetric := testutil.ToFloat64(metric.LatestVersionQueryLiveness.WithLabelValues(svc.ID, svc.LatestVersion.GetType()))
+				if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
+					t.Errorf("LatestVersionQueryLiveness should be %d, not %f",
+						tc.livenessMetric, gotMetric)
+				}
 			}
 			// AnnounceChannel
 			gotAnnounceMessages := len(*svc.Status.AnnounceChannel)
@@ -379,7 +559,7 @@ func TestService_Track(t *testing.T) {
 				t.Errorf("expected AnnounceChannel to have %d messages in queue, not %d",
 					tc.wantAnnounces, gotAnnounceMessages)
 				for gotAnnounceMessages > 0 {
-					var msg api_type.WebSocketMessage
+					var msg apitype.WebSocketMessage
 					msgBytes := <-*svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
 					t.Logf("got message:\n{%v}\n", msg)
@@ -392,7 +572,7 @@ func TestService_Track(t *testing.T) {
 				t.Errorf("expected DatabaseChannel to have %d messages in queue, not %d",
 					tc.wantDatabaseMessages, gotDatabaseMessages)
 				for gotDatabaseMessages > 0 {
-					var msg api_type.WebSocketMessage
+					var msg apitype.WebSocketMessage
 					msgBytes := <-*svc.Status.AnnounceChannel
 					json.Unmarshal(msgBytes, &msg)
 					t.Logf("got message:\n{%v}\n", msg)
@@ -400,18 +580,86 @@ func TestService_Track(t *testing.T) {
 				}
 			}
 			// Track should finish if it's not active and is not being deleted
-			shouldFinish := util.EvalNilPtr(tc.active, true) && !tc.deleting
-			// Finished when it shouldn't have?
-			if len(didFinish) != 0 && shouldFinish {
-				t.Fatal("didn't expect Track to finish")
-			}
+			shouldFinish := !svc.Options.GetActive() || tc.deleting || tc.overrides.nilLatestVersion
 			// Didn't finish but should have?
-			if len(didFinish) == 0 && !shouldFinish {
-				t.Fatal("expected Track to finish when not active, or is deleting")
+			if shouldFinish && len(didFinish) == 0 {
+				t.Fatal("expected Track to finish when not active, deleting, or LatestVersion is nil")
+			}
+			// Finished when it shouldn't have?
+			if !shouldFinish && len(didFinish) != 0 {
+				t.Fatal("didn't expect Track to finish")
 			}
 
 			// Set Deleting to stop the Track
 			svc.Status.SetDeleting()
+		})
+	}
+}
+
+func TestSlice_Track(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		ordering []string
+		slice    []string
+		active   []bool
+	}{
+		"empty Ordering does no queries": {
+			ordering: []string{},
+			slice:    []string{"github", "url"}},
+		"only tracks active Services": {
+			ordering: []string{"github", "url"},
+			slice:    []string{"github", "url"},
+			active:   []bool{false, true}},
+	}
+
+	for name, tc := range tests {
+		var slice *Slice
+		if len(tc.slice) != 0 {
+			slice = &Slice{}
+			i := 0
+			for _, j := range tc.slice {
+				switch j {
+				case "github":
+					(*slice)[j] = testService(t, name, "github")
+				case "url":
+					(*slice)[j] = testService(t, name, "url")
+				}
+				if len(tc.active) != 0 {
+					(*slice)[j].Options.Active = test.BoolPtr(tc.active[i])
+				}
+				(*slice)[j].Status.SetLatestVersion("", "", false)
+				(*slice)[j].Status.SetDeployedVersion("", "", false)
+				i++
+			}
+		}
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN Track is called on it
+			slice.Track(&tc.ordering, &sync.RWMutex{})
+
+			// THEN the function exits straight away
+			time.Sleep(2 * time.Second)
+			for i := range *slice {
+				if !util.Contains(tc.ordering, i) {
+					if (*slice)[i].Status.LatestVersion() != "" {
+						t.Fatalf("didn't expect Query to have done anything for %s as it's not in the ordering %v\n%#v",
+							i, tc.ordering, (*slice)[i].Status.String())
+					}
+				} else if (*slice)[i].Options.GetActive() {
+					if (*slice)[i].Status.LatestVersion() == "" {
+						t.Fatalf("expected Query to have found a LatestVersion\n%#v",
+							(*slice)[i].Status.String())
+					}
+				} else if (*slice)[i].Status.LatestVersion() != "" {
+					t.Fatalf("didn't expect Query to have done anything for %s\n%#v",
+						i, (*slice)[i].Status.String())
+				}
+
+				// Set Deleting to stop the Track
+				(*slice)[i].Status.SetDeleting()
+			}
 		})
 	}
 }

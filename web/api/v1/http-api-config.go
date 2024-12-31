@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -19,22 +20,22 @@ import (
 	"net/http"
 
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// wsConfig handles getting the config that's in use and sending it as YAML.
+// wsConfig handles getting the config in use and sending it as YAML.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
-	logFrom := &util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	cfg := &api_type.Config{}
+	cfg := &apitype.Config{}
 
 	// Settings
-	cfg.Settings = &api_type.Settings{
-		Log: api_type.LogSettings{
+	cfg.Settings = &apitype.Settings{
+		Log: apitype.LogSettings{
 			Timestamps: api.Config.Settings.Log.Timestamps,
 			Level:      api.Config.Settings.Log.Level},
-		Web: api_type.WebSettings{
+		Web: apitype.WebSettings{
 			ListenHost:  api.Config.Settings.Web.ListenHost,
 			ListenPort:  api.Config.Settings.Web.ListenPort,
 			CertFile:    api.Config.Settings.Web.CertFile,
@@ -50,40 +51,40 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 			serviceNotifyDefaults[notify] = struct{}{}
 		}
 	}
-	serviceCommandDefaults := make(api_type.CommandSlice, len(api.Config.Defaults.Service.Command))
+	serviceCommandDefaults := make(apitype.CommandSlice, len(api.Config.Defaults.Service.Command))
 	for i, command := range api.Config.Defaults.Service.Command {
-		serviceCommandDefaults[i] = make(api_type.Command, len(command))
+		serviceCommandDefaults[i] = make(apitype.Command, len(command))
 		copy(serviceCommandDefaults[i], command)
 	}
 
-	var serviceWebHookDefaults map[string]struct{}
+	var serviceDefaults map[string]struct{}
 	if api.Config.Defaults.Service.WebHook != nil {
-		serviceWebHookDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.WebHook))
+		serviceDefaults = make(map[string]struct{}, len(api.Config.Defaults.Service.WebHook))
 		for webhook := range api.Config.Defaults.Service.WebHook {
-			serviceWebHookDefaults[webhook] = struct{}{}
+			serviceDefaults[webhook] = struct{}{}
 		}
 	}
 
 	notifyDefaults := convertAndCensorNotifySliceDefaults(&api.Config.Defaults.Notify)
 	webhookDefaults := convertAndCensorWebHookDefaults(&api.Config.Defaults.WebHook)
 
-	cfg.Defaults = &api_type.Defaults{
-		Service: api_type.ServiceDefaults{
-			Options: &api_type.ServiceOptions{
+	cfg.Defaults = &apitype.Defaults{
+		Service: apitype.ServiceDefaults{
+			Options: &apitype.ServiceOptions{
 				Interval:           api.Config.Defaults.Service.Options.Interval,
 				SemanticVersioning: api.Config.Defaults.Service.Options.SemanticVersioning},
-			DeployedVersionLookup: &api_type.DeployedVersionLookup{
+			DeployedVersionLookup: &apitype.DeployedVersionLookup{
 				AllowInvalidCerts: api.Config.Defaults.Service.DeployedVersionLookup.AllowInvalidCerts},
-			Dashboard: &api_type.DashboardOptions{
+			Dashboard: &apitype.DashboardOptions{
 				AutoApprove: api.Config.Defaults.Service.Dashboard.AutoApprove},
-			LatestVersion: &api_type.LatestVersionDefaults{
-				AccessToken:       util.DefaultOrValue(api.Config.Defaults.Service.LatestVersion.AccessToken, "<secret>"),
+			LatestVersion: &apitype.LatestVersionDefaults{
+				AccessToken:       util.ValueUnlessDefault(api.Config.Defaults.Service.LatestVersion.AccessToken, util.SecretValue),
 				AllowInvalidCerts: api.Config.Defaults.Service.LatestVersion.AllowInvalidCerts,
 				UsePreRelease:     api.Config.Defaults.Service.LatestVersion.UsePreRelease,
 				Require:           serviceLatestVersionRequireDefaults},
 			Notify:  serviceNotifyDefaults,
 			Command: serviceCommandDefaults,
-			WebHook: serviceWebHookDefaults},
+			WebHook: serviceDefaults},
 		Notify:  *notifyDefaults,
 		WebHook: *webhookDefaults}
 
@@ -95,7 +96,7 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Service
 	api.Config.OrderMutex.RLock()
-	serviceConfig := make(api_type.ServiceSlice, len(api.Config.Order))
+	serviceConfig := make(apitype.ServiceSlice, len(api.Config.Order))
 	if api.Config.Service != nil {
 		for _, key := range api.Config.Order {
 			service := api.Config.Service[key]

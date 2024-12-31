@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,22 +22,20 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
+	github "github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-// Unsure why Go tests give a different result than the compiled binary
-var initialEmptyListETag string
-
 func TestMain(m *testing.M) {
-	// initialize jLog
+	// initialise jLog
 	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	LogInit(jLog)
-	FindEmptyListETag(os.Getenv("GITHUB_TOKEN"))
-	initialEmptyListETag = getEmptyListETag()
 
 	// run other tests
 	exitCode := m.Run()
@@ -46,49 +44,76 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup(urlType bool, allowInvalidCerts bool) *Lookup {
+func testLookup(lookupType string, failing bool) Lookup {
+	lookup, _ := New(
+		lookupType,
+		"yaml", "",
+		nil,
+		nil,
+		nil, nil)
+
+	// Hard defaults
+	hardDefaults := &base.Defaults{}
+	hardDefaults.Default()
+	// Defaults
+	defaults := &base.Defaults{}
+	// Options
+	hardDefaultOptions := &opt.Defaults{}
+	hardDefaultOptions.Default()
+	options := opt.New(
+		nil, "5m", test.BoolPtr(false),
+		&opt.Defaults{}, hardDefaultOptions)
+	// Status
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
-	svcStatus := svcstatus.New(
+	svcStatus := status.New(
 		&announceChannel, &databaseChannel, &saveChannel,
 		"", "", "", "", "", "")
-	lookup := New(
-		test.StringPtr(os.Getenv("GITHUB_TOKEN")),
-		test.BoolPtr(allowInvalidCerts),
-		nil,
-		opt.New(
-			nil, "", test.BoolPtr(true),
-			&opt.OptionsDefaults{},
-			opt.NewDefaults(
-				"0s", test.BoolPtr(true))),
-		&filter.Require{}, nil,
-		"github",
-		"release-argus/Argus",
-		nil,
-		nil,
-		&LookupDefaults{},
-		&LookupDefaults{})
-	lookup.Status = svcStatus
-	if urlType {
-		lookup.Type = "url"
-		lookup.URL = "https://invalid.release-argus.io/plain"
-		lookup.URLCommands = filter.URLCommandSlice{
-			{Type: "regex", Regex: test.StringPtr("ver([0-9.]+)")}}
-	} else {
-		lookup.GitHubData = NewGitHubData("", nil)
-		lookup.URLCommands = filter.URLCommandSlice{
-			{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}}
-		lookup.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
-		lookup.UsePreRelease = test.BoolPtr(false)
-	}
-	lookup.Status.Init(
+	svcStatus.Init(
 		0, 0, 0,
 		test.StringPtr("serviceID"),
 		test.StringPtr("http://example.com"),
 	)
-	lookup.Require.Status = lookup.Status
-	lookup.Defaults = &LookupDefaults{}
-	lookup.HardDefaults = &LookupDefaults{}
+
+	switch l := lookup.(type) {
+	case *github.Lookup:
+		l.URL = "release-argus/Argus"
+		l.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: `([0-9.]+)`}}
+		l.AccessToken = os.Getenv("GITHUB_TOKEN")
+		if failing {
+			l.AccessToken = "invalid"
+		}
+		l.UsePreRelease = test.BoolPtr(false)
+		l.Init(
+			options,
+			svcStatus,
+			defaults, hardDefaults)
+
+	case *web.Lookup:
+		l.URL = "https://invalid.release-argus.io/plain"
+		l.AllowInvalidCerts = test.BoolPtr(true)
+		if failing {
+			*l.AllowInvalidCerts = false
+		}
+		l.URLCommands = filter.URLCommandSlice{
+			{Type: "regex", Regex: `ver([0-9.]+)`}}
+		l.Init(
+			options,
+			svcStatus,
+			defaults, hardDefaults)
+	}
+
 	return lookup
+}
+
+func getType(lookup Lookup) string {
+	switch lookup.(type) {
+	case *github.Lookup:
+		return "github"
+	case *web.Lookup:
+		return "url"
+	}
+	return "unknown"
 }

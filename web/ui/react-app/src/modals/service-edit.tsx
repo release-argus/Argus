@@ -109,7 +109,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
     queryKey: ["service/edit", { id: serviceID }],
     queryFn: () =>
       fetchJSON<ServiceEditAPIType>({
-        url: `api/v1/service/update/${serviceID}`,
+        url: `api/v1/service/update/${encodeURIComponent(serviceID)}`,
       }),
     enabled: !!serviceID,
     refetchOnMount: "always",
@@ -126,13 +126,13 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
         ? convertAPIServiceDataEditToUI(
             serviceID,
             serviceData,
-            otherOptionsData
+            otherOptionsData,
           )
         : {},
-    [serviceData, otherOptionsData, isRefetching]
+    [serviceData, otherOptionsData, isRefetching],
   );
 
-  // Not fetched yet
+  // Not fetched yet.
   if (loadingModal || !hasFetched) {
     return (
       <Modal size="lg" show onHide={hideModal}>
@@ -176,7 +176,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
     );
   }
 
-  // Service edit modal
+  // Service edit modal.
   return (
     <ServiceEditModalWithData
       serviceID={serviceID}
@@ -230,7 +230,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
   useEffect(() => {
     if (defaultData) form.reset(defaultData);
   }, [defaultData]);
-  // null if submitting
+  // null if submitting.
   const [err, setErr] = useState<string | null>("");
 
   const resetAndHideModal = useCallback(() => {
@@ -244,11 +244,13 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
     const payload = getPayload(data);
 
     await fetch(
-      serviceID ? `api/v1/service/update/${serviceID}` : "api/v1/service/new",
+      serviceID
+        ? `api/v1/service/update/${encodeURIComponent(serviceID)}`
+        : "api/v1/service/new",
       {
-        method: serviceID ? "PUT" : "POST",
+        method: "PUT",
         body: JSON.stringify(payload),
-      }
+      },
     )
       .then((response) => {
         if (!response.ok) throw response;
@@ -269,7 +271,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 
   const onDelete = async () => {
     console.log(`Deleting ${serviceID}`);
-    await fetch(`api/v1/service/delete/${serviceID}`, {
+    await fetch(`api/v1/service/delete/${encodeURIComponent(serviceID)}`, {
       method: "DELETE",
     }).then(() => {
       hideModal();
@@ -343,7 +345,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                     {/* Render either the server error or form validation error */}
                     {err ? (
                       <>
-                        {err.split("\\").map((line) => (
+                        {err.split(`\\n`).map((line) => (
                           <pre key={line} className="no-margin">
                             {line}
                           </pre>
@@ -352,7 +354,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                     ) : (
                       <ul>
                         {Object.entries(
-                          extractErrors(form.formState.errors) ?? []
+                          extractErrors(form.formState.errors) ?? [],
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

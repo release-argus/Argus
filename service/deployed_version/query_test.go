@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,17 +18,17 @@ package deployedver
 
 import (
 	"os"
-	"regexp"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dbtype "github.com/release-argus/Argus/db/types"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	metric "github.com/release-argus/Argus/web/metric"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLookup_HTTPRequest(t *testing.T) {
@@ -40,24 +40,24 @@ func TestLookup_HTTPRequest(t *testing.T) {
 	}{
 		"invalid url": {
 			url:      "invalid://	test",
-			errRegex: "invalid control character in URL"},
+			errRegex: `invalid control character in URL`},
 		"unknown url": {
 			url:      "https://release-argus.invalid-tld",
-			errRegex: "no such host"},
+			errRegex: `no such host`},
 		"valid url": {
-			url:      "https://release-argus.io",
-			errRegex: "^$"},
+			url:      "https://valid.release-argus.io/plain",
+			errRegex: `^$`},
 		"url from env": {
-			env:      map[string]string{"TESTLOOKUP_DV_HTTPREQUEST_ONE": "https://release-argus.io"},
-			url:      "${TESTLOOKUP_DV_HTTPREQUEST_ONE}",
-			errRegex: "^$"},
+			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": "https://valid.release-argus.io/plain"},
+			url:      "${TEST_LOOKUP__DV_HTTP_REQUEST_ONE}",
+			errRegex: `^$`},
 		"url from env partial": {
-			env:      map[string]string{"TESTLOOKUP_DV_HTTPREQUEST_TWO": "release-argus"},
-			url:      "https://${TESTLOOKUP_DV_HTTPREQUEST_TWO}.io",
-			errRegex: "^$"},
+			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_TWO": "valid.release-argus"},
+			url:      "https://${TEST_LOOKUP__DV_HTTP_REQUEST_TWO}.io/plain",
+			errRegex: `^$`},
 		"404": {
-			errRegex: "non-2XX response code: 404",
-			url:      "https://release-argus.io/foo/bar",
+			errRegex: `non-2XX response code: 404`,
+			url:      "https://valid.release-argus.io/foo/bar",
 		},
 	}
 
@@ -72,13 +72,11 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it
-			_, err := lookup.httpRequest(&util.LogFrom{})
+			_, err := lookup.httpRequest(util.LogFrom{})
 
 			// THEN any err is expected
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -89,120 +87,160 @@ func TestLookup_HTTPRequest(t *testing.T) {
 func TestLookup_Query(t *testing.T) {
 	// GIVEN a Lookup()
 	tests := map[string]struct {
-		env                  map[string]string
-		method               string
-		url                  string
-		allowInvalidCerts    bool
-		noSemanticVersioning bool
-		basicAuth            *BasicAuth
-		headers              []Header
-		body                 *string
-		json                 string
-		regex                string
-		regexTemplate        *string
-		errRegex             string
-		wantVersion          string
+		env                         map[string]string
+		overrides, optionsOverrides string
+		errRegex                    string
+		wantVersion                 string
 	}{
 		"JSON lookup value that doesn't exist": {
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/json
+				json: something
+			`),
 			errRegex: `failed to find value for \"[^"]+\" in `,
-			url:      "https://api.github.com/repos/release-argus/argus/releases/latest",
-			json:     "something",
 		},
 		"URL that doesn't resolve to JSON": {
-			errRegex: "failed to unmarshal",
-			url:      "https://release-argus.io",
-			json:     "something",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				json: something
+			`),
+			errRegex: `failed to unmarshal`,
 		},
 		"POST - success": {
+			overrides: test.TrimYAML(`
+				method: POST
+				url: https://valid.release-argus.io/plain_post
+				body: '{"argus":"test"}'
+				regex: ver([0-9.]+)
+			`),
 			wantVersion: "[0-9.]+",
 			errRegex:    `^$`,
-			method:      "POST",
-			url:         "https://valid.release-argus.io/plain_post",
-			body:        test.StringPtr(`{"argus":"test"}`),
-			regex:       `ver([0-9.]+)`,
 		},
 		"POST - fail, invalid body": {
+			overrides: test.TrimYAML(`
+				method: POST
+				url: https://valid.release-argus.io/plain_post
+				body: '{"argus":"fail"}'
+			`),
 			errRegex: `non-2XX response code`,
-			method:   "POST",
-			url:      "https://valid.release-argus.io/plain_post",
-			body:     test.StringPtr(`{"argus":"fail"}`),
 		},
 		"passing regex": {
-			noSemanticVersioning: true,
-			wantVersion:          "[0-9]{4}",
-			errRegex:             "^$",
-			url:                  "https://release-argus.io",
-			regex:                `([0-9]+)\s<[^>]+>The Argus Developers`,
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: 'version: "([^"]+)'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			wantVersion: `\d\.\d\.\d`,
+			errRegex:    `^$`,
 		},
 		"url from env": {
-			env:                  map[string]string{"TESTLOOKUP_DV_QUERY_ONE": "https://release-argus.io"},
-			noSemanticVersioning: true,
-			wantVersion:          "[0-9]{4}",
-			errRegex:             "^$",
-			url:                  "${TESTLOOKUP_DV_QUERY_ONE}",
-			regex:                `([0-9]+)\s<[^>]+>The Argus Developers`,
+			env: map[string]string{"TEST_LOOKUP__DV_QUERY_ONE": "https://valid.release-argus.io/plain"},
+			overrides: test.TrimYAML(`
+				url: ${TEST_LOOKUP__DV_QUERY_ONE}
+				regex: 'version: "([^"]+)'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			wantVersion: `\d\.\d\.\d`,
+			errRegex:    `^$`,
 		},
 		"url from env partial": {
-			env:                  map[string]string{"TESTLOOKUP_DV_QUERY_TWO": "release-argus"},
-			noSemanticVersioning: true,
-			wantVersion:          "[0-9]{4}",
-			errRegex:             "^$",
-			url:                  "https://${TESTLOOKUP_DV_QUERY_TWO}.io",
-			regex:                `([0-9]+)\s<[^>]+>The Argus Developers`,
+			env: map[string]string{"TEST_LOOKUP__DV_QUERY_TWO": "valid.release-argus"},
+			overrides: test.TrimYAML(`
+				url: https://${TEST_LOOKUP__DV_QUERY_TWO}.io/json
+				json: foo.bar.version
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			wantVersion: `\d\.\d\.\d`,
+			errRegex:    `^$`,
 		},
 		"passing regex with no capture group": {
-			noSemanticVersioning: true,
-			wantVersion:          "[0-9]{4}",
-			errRegex:             "^$",
-			url:                  "https://release-argus.io",
-			regex:                "[0-9]{4}",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: '[0-9.]+'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			wantVersion: "[0-9.]+",
+			errRegex:    `^$`,
 		},
 		"regex with template": {
-			noSemanticVersioning: true,
-			errRegex:             "^$",
-			url:                  "https://release-argus.io",
-			regex:                `([0-9]+)\s<[^>]+>(The) (Argus) (Developers)`,
-			regexTemplate:        test.StringPtr("$2 $1 $4, $3"),
-			wantVersion:          "The [0-9]+ Developers, Argus",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: '(stable).*(version).*"([\d.]+).*(and)'
+				regex_template: '$2 $1 $4, $3'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			errRegex:    `^$`,
+			wantVersion: "version stable and, 1.2.1",
 		},
 		"failing regex": {
-			errRegex: "regex .* didn't find a match on",
-			url:      "https://release-argus.io",
-			regex:    "^bishbashbosh$",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: '^bishBashBosh$'
+			`),
+			errRegex: `regex .* didn't return any matches on`,
 		},
 		"handle non-semantic (only major) version": {
-			noSemanticVersioning: false,
-			url:                  "https://release-argus.io",
-			regex:                `([0-9]+)\s<[^>]+>The Argus Developers`,
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: '(\d+)'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
 		},
 		"want semantic versioning but get non-semantic version": {
-			noSemanticVersioning: false,
-			errRegex:             "failed converting .* to a semantic version",
-			url:                  "https://release-argus.io",
-			regex:                `([0-9]+\s)<[^>]+>The Argus Developers`,
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: 'non-semantic: "([^"]+)'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: true
+			`),
+			errRegex: `failed converting .* to a semantic version`,
 		},
 		"allow non-semantic versioning and get non-semantic version": {
-			noSemanticVersioning: true,
-			errRegex:             "^$",
-			url:                  "https://release-argus.io",
-			regex:                `([0-9]+\s)<[^>]+>The Argus Developers`,
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/plain
+				regex: 'non-semantic: "([^"]+)'
+			`),
+			optionsOverrides: test.TrimYAML(`
+				semantic_versioning: false
+			`),
+			errRegex: `^$`,
 		},
 		"valid semantic version": {
-			errRegex:    "^$",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/json
+				json: bar
+			`),
+			errRegex:    `^$`,
 			wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`,
-			regex:       "argus-([0-9.]+)\\.",
-			url:         "https://release-argus.io/docs/getting-started/",
 		},
 		"headers fail": {
-			errRegex: "non-2XX response code: 401",
-			headers: []Header{
-				{Key: "Authorization", Value: "token ghp_FAIL"}},
-			url:  "https://api.github.com/repos/release-argus/argus/releases/latest",
-			json: "something",
+			overrides: test.TrimYAML(`
+				url: https://api.github.com/repos/release-argus/argus/releases/latest
+				json: something
+				headers:
+					- key: Authorization
+						value: token ghp_FAIL
+			`),
+			errRegex: `non-2XX response code: 401`,
 		},
 		"404": {
-			errRegex: "non-2XX response code: 404",
-			url:      "https://release-argus.io/foo/bar",
+			overrides: test.TrimYAML(`
+				url: https://valid.release-argus.io/foo/bar
+			`),
+			errRegex: `non-2XX response code: 404`,
 		},
 	}
 
@@ -212,35 +250,31 @@ func TestLookup_Query(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 			dvl := testLookup()
-			dvl.URL = tc.url
-			dvl.AllowInvalidCerts = &tc.allowInvalidCerts
-			dvl.BasicAuth = tc.basicAuth
-			dvl.Headers = tc.headers
-			dvl.Body = tc.body
-			dvl.JSON = tc.json
-			dvl.Regex = tc.regex
-			dvl.RegexTemplate = tc.regexTemplate
-			*dvl.Options.SemanticVersioning = !tc.noSemanticVersioning
+			dvl.JSON = ""
+			err := yaml.Unmarshal([]byte(tc.overrides), dvl)
+			if err != nil {
+				t.Fatalf("failed to unmarshal overrides: %s", err)
+			}
+			err = yaml.Unmarshal([]byte(tc.optionsOverrides), dvl.Options)
+			if err != nil {
+				t.Fatalf("failed to unmarshal options overrides: %s", err)
+			}
 
 			// WHEN Query is called on it
-			version, err := dvl.Query(true, &util.LogFrom{})
+			version, err := dvl.Query(true, util.LogFrom{})
 
 			// THEN any err is expected
 			if tc.wantVersion != "" {
-				re := regexp.MustCompile(tc.wantVersion)
-				match := re.MatchString(version)
-				if !match {
+				if !util.RegexCheck(tc.wantVersion, version) {
 					t.Errorf("want version=%q\ngot  version=%q",
 						tc.wantVersion, version)
 				}
 			}
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -255,21 +289,17 @@ func TestLookup_Track(t *testing.T) {
 	jsonBarVersion := "1.2.2"
 	// GIVEN a Lookup()
 	tests := map[string]struct {
-		env                  map[string]string
-		lookup               *Lookup
-		allowInvalidCerts    bool
-		semanticVersioning   bool
-		basicAuth            *BasicAuth
-		expectFinish         bool
-		wait                 time.Duration
-		errRegex             string
-		startDeployedVersion string
-		wantDeployedVersion  string
-		startLatestVersion   string
-		wantLatestVersion    string
-		wantAnnounces        int
-		wantDatabaseMessages int
-		deleting             bool
+		env                                       map[string]string
+		lookup                                    *Lookup
+		allowInvalidCerts, semanticVersioning     bool
+		basicAuth                                 *BasicAuth
+		expectFinish                              bool
+		wait                                      time.Duration
+		errRegex                                  string
+		startDeployedVersion, wantDeployedVersion string
+		startLatestVersion, wantLatestVersion     string
+		wantAnnounces, wantDatabaseMessages       int
+		deleting                                  bool
 	}{
 		"nil Lookup exits immediately": {
 			lookup:       nil,
@@ -339,13 +369,13 @@ func TestLookup_Track(t *testing.T) {
 		},
 		"env vars in basic auth": {
 			env: map[string]string{
-				"TESTLOOKUP_DV_TRACK_ONE": "tes",
-				"TESTLOOKUP_DV_TRACK_TWO": "23"},
+				"TEST_LOOKUP__DV_TRACK_ONE": "tes",
+				"TEST_LOOKUP__DV_TRACK_TWO": "23"},
 			startLatestVersion:  plainNonSemanticVersionAsSemantic,
 			wantDeployedVersion: plainNonSemanticVersionAsSemantic,
 			basicAuth: &BasicAuth{
-				Username: "${TESTLOOKUP_DV_TRACK_ONE}t",
-				Password: "1${TESTLOOKUP_DV_TRACK_TWO}"},
+				Username: "${TEST_LOOKUP__DV_TRACK_ONE}t",
+				Password: "1${TEST_LOOKUP__DV_TRACK_TWO}"},
 			lookup: &Lookup{
 				URL:   "https://valid.release-argus.io/basic-auth",
 				Regex: `non-semantic: "ver([^"]+)`},
@@ -451,40 +481,34 @@ func TestLookup_Track(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 			if tc.lookup != nil {
 				tc.lookup.AllowInvalidCerts = test.BoolPtr(tc.allowInvalidCerts)
 				tc.lookup.BasicAuth = tc.basicAuth
-				tc.lookup.Defaults = &LookupDefaults{}
-				tc.lookup.HardDefaults = &LookupDefaults{}
+				tc.lookup.Defaults = &Defaults{}
+				tc.lookup.HardDefaults = &Defaults{}
+				tc.lookup.HardDefaults.Default()
 				tc.lookup.Options = opt.New(
 					nil, "2s", &tc.semanticVersioning,
-					&opt.OptionsDefaults{}, &opt.OptionsDefaults{})
+					&opt.Defaults{}, &opt.Defaults{})
 				dbChannel := make(chan dbtype.Message, 4)
 				announceChannel := make(chan []byte, 4)
-				svcStatus := svcstatus.New(
+				svcStatus := status.New(
 					&announceChannel, &dbChannel, nil,
-					"", "", "", "", "", "")
+					"",
+					tc.startDeployedVersion, "",
+					tc.startLatestVersion, "",
+					"")
 				tc.lookup.Status = svcStatus
 				tc.lookup.Status.ServiceID = test.StringPtr(name)
 				tc.lookup.Status.WebURL = &tc.lookup.URL
 				if tc.deleting {
 					tc.lookup.Status.SetDeleting()
 				}
-				tc.lookup.Status.SetDeployedVersion(tc.startDeployedVersion, false)
-				tc.lookup.Status.SetLatestVersion(tc.startLatestVersion, false)
 
-				metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
-					*tc.lookup.Status.ServiceID,
-					"",
-					"",
-					"SUCCESS")
-				metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
-					*tc.lookup.Status.ServiceID,
-					"",
-					"",
-					"FAIL")
+				tc.lookup.InitMetrics()
+				t.Cleanup(func() { tc.lookup.DeleteMetrics() })
 			}
 			didFinish := make(chan bool, 1)
 

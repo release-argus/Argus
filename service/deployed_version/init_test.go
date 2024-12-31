@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,75 +20,105 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	metric "github.com/release-argus/Argus/web/metrics"
+	metric "github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Metrics(t *testing.T) {
-	// GIVEN a Lookup
-	lookup := testLookup()
-	*lookup.Status.ServiceID += "TestLookup_Metrics"
-
-	// WHEN the Prometheus metrics are initialised with initMetrics
-	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
-	hadG := testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
-	lookup.InitMetrics()
-
-	// THEN it can be collected
-	// counters
-	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
-	wantC := 2
-	if (gotC - hadC) != wantC {
-		t.Errorf("%d Counter metrics's were initialised, expecting %d",
-			(gotC - hadC), wantC)
-	}
-	// gauges - not initialised
-	gotG := testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
-	wantG := 0
-	if (gotG - hadG) != wantG {
-		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
-			(gotG - hadG), wantG)
-	}
-	// But can be added
-	lookup.queryMetrics(false)
-	gotG = testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
-	wantG = 1
-	if (gotG - hadG) != wantG {
-		t.Errorf("%d Gauge metrics's were initialised, expecting %d",
-			(gotG - hadG), wantG)
+	// GIVEN a Lookup pointer
+	tests := map[string]struct {
+		lookup      *Lookup
+		serviceID   string
+		wantMetrics bool
+	}{
+		"non-nil": {
+			lookup:      testLookup(),
+			serviceID:   "TestLookup_Metrics",
+			wantMetrics: true,
+		},
+		"nil": {
+			lookup:      nil,
+			wantMetrics: false,
+		},
 	}
 
-	// AND it can be deleted
-	lookup.DeleteMetrics()
-	// counters
-	gotC = testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
-	if gotC != hadC {
-		t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
-			gotC, hadC)
-	}
-	// gauges
-	gotG = testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
-	if gotG != hadG {
-		t.Errorf("Gauge metrics were not deleted, got %d. expecting %d",
-			gotG, hadG)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're testing metrics
+
+			// WHEN the Prometheus metrics are initialised with initMetrics
+			hadC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
+			hadG := testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
+			tc.lookup.InitMetrics()
+
+			// THEN it can be collected
+			// counters
+			gotC := testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
+			wantC := 2
+			if !tc.wantMetrics {
+				wantC = hadC
+			}
+			if (gotC - hadC) != wantC {
+				t.Errorf("%d Counter metrics were initialised, expecting %d",
+					(gotC - hadC), wantC)
+			}
+			// gauges - not initialised
+			gotG := testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
+			wantG := 0
+			if !tc.wantMetrics {
+				wantG = hadG
+			}
+			if (gotG - hadG) != wantG {
+				t.Errorf("%d Gauge metrics were initialised, expecting %d",
+					(gotG - hadG), wantG)
+			}
+			// But can be added
+			if tc.lookup != nil {
+				tc.lookup.queryMetrics(false)
+			}
+			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
+			wantG = 1
+			if !tc.wantMetrics {
+				wantG = hadG
+			}
+			if (gotG - hadG) != wantG {
+				t.Errorf("%d Gauge metrics were initialised, expecting %d",
+					(gotG - hadG), wantG)
+			}
+
+			// AND it can be deleted
+			tc.lookup.DeleteMetrics()
+			// counters
+			gotC = testutil.CollectAndCount(metric.DeployedVersionQueryMetric)
+			if gotC != hadC {
+				t.Errorf("Counter metrics were not deleted, got %d. expecting %d",
+					gotC, hadC)
+			}
+			// gauges
+			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryLiveness)
+			if gotG != hadG {
+				t.Errorf("Gauge metrics were not deleted, got %d. expecting %d",
+					gotG, hadG)
+			}
+		})
 	}
 }
 
 func TestLookup_Init(t *testing.T) {
 	// GIVEN a Lookup and vars for the Init
 	lookup := testLookup()
-	defaults := &LookupDefaults{}
-	hardDefaults := &LookupDefaults{}
-	status := svcstatus.Status{ServiceID: test.StringPtr("TestInit")}
+	defaults := &Defaults{}
+	hardDefaults := &Defaults{}
+	status := status.Status{ServiceID: test.StringPtr("TestInit")}
 	var options opt.Options
 
 	// WHEN Init is called on it
 	lookup.Init(
-		defaults, hardDefaults,
+		&options,
 		&status,
-		&options)
+		defaults, hardDefaults)
 
 	// THEN pointers to those vars are handed out to the Lookup
 	// defaults
@@ -114,10 +144,7 @@ func TestLookup_Init(t *testing.T) {
 
 	var nilLookup *Lookup
 	nilLookup.Init(
-		defaults, hardDefaults,
+		&options,
 		&status,
-		&options)
-	if nilLookup != nil {
-		t.Error("Init on nil shouldn't have initialised the Lookup")
-	}
+		defaults, hardDefaults)
 }

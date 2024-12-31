@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
@@ -36,8 +37,8 @@ func (l *Lookup) GetURL() string {
 
 // GetBody will return the Body of the Lookup.
 func (l *Lookup) GetBody() io.Reader {
-	if l.Body == nil {
+	if l.Body == "" {
 		return nil
 	}
-	return strings.NewReader(*l.Body)
+	return strings.NewReader(l.Body)
 }

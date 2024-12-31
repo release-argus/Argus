@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,212 +12,111 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-// applyOverrides to the Lookup and return that new Lookup.
-func (l *Lookup) applyOverrides(
-	allowInvalidCerts *string,
-	basicAuth *string,
-	body *string,
-	headers *string,
-	json *string,
-	method *string,
-	regex *string,
-	regexTemplate *string,
-	semanticVersioning *string,
-	url *string,
-	serviceID *string,
-	logFrom *util.LogFrom,
-) (*Lookup, error) {
-	// Use the provided overrides, or the defaults.
-	// allow_invalid_certs
-	useAllowInvalidCerts := l.AllowInvalidCerts
-	if allowInvalidCerts != nil {
-		useAllowInvalidCerts = util.StringToBoolPtr(*allowInvalidCerts)
-	}
-	// basic_auth
-	useBasicAuth := basicAuthFromString(
-		basicAuth,
-		l.BasicAuth,
-		logFrom)
-	// body
-	useBody := util.FirstNonNilPtr(body, l.Body)
-	// headers
-	useHeaders := headersFromString(
-		headers,
-		&l.Headers,
-		logFrom)
-	// json
-	useJSON := util.PtrValueOrValue(json, l.JSON)
-	// method
-	useMethod := util.PtrValueOrValue(method, l.Method)
-	// regex
-	useRegex := util.PtrValueOrValue(regex, l.Regex)
-	useRegexTemplate := util.PtrValueOrValue(regexTemplate, util.DefaultIfNil(l.RegexTemplate))
-	// semantic_versioning
-	var useSemanticVersioning *bool
-	if semanticVersioning != nil {
-		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
-	}
-	// url
-	useURL := util.PtrValueOrValue(url, l.URL)
-
-	// options
-	options := opt.New(
-		nil, "",
-		useSemanticVersioning,
-		l.Options.Defaults,
-		l.Options.HardDefaults)
-
-	// Create a new lookup with the overrides.
-	lookup := New(
-		useAllowInvalidCerts,
-		useBasicAuth,
-		useBody,
-		useHeaders,
-		useJSON,
-		useMethod,
-		options,
-		useRegex,
-		&useRegexTemplate,
-		&svcstatus.Status{},
-		useURL,
-		l.Defaults,
-		l.HardDefaults)
-	if err := lookup.CheckValues(""); err != nil {
-		jLog.Error(err, logFrom, true)
-		return nil, fmt.Errorf("values failed validity check:\n%w", err)
-	}
-	lookup.Status.Init(
-		0, 0, 0,
-		serviceID,
-		nil)
-	return lookup, nil
-}
-
-// Refresh (query) the Lookup with the provided overrides,
-// returning the version found with this query
+// Refresh creates a new Lookup instance (if overrides are provided), and queries the Lookup for the deployed version
+// and returns that version.
 func (l *Lookup) Refresh(
-	allowInvalidCerts *string,
-	basicAuth *string,
-	body *string,
-	headers *string,
-	json *string,
-	method *string,
-	regex *string,
-	regexTemplate *string,
+	serviceID *string,
+	overrides *string,
 	semanticVersioning *string,
-	url *string,
-) (version string, announceUpdate bool, err error) {
-	serviceID := *l.Status.ServiceID
-	logFrom := &util.LogFrom{Primary: "deployed_version/refresh", Secondary: serviceID}
+) (string, error) {
+	if l == nil {
+		return "", fmt.Errorf("lookup is nil")
+	}
+	logFrom := util.LogFrom{Primary: "deployed_version/refresh", Secondary: *serviceID}
 
-	var lookup *Lookup
-	lookup, err = l.applyOverrides(
-		allowInvalidCerts,
-		basicAuth,
-		body,
-		headers,
-		json,
-		method,
-		regex,
-		regexTemplate,
-		semanticVersioning,
-		url,
-		&serviceID,
-		logFrom)
-	if err != nil {
-		return
+	// Whether this new semantic_version resolves differently than the current one.
+	semanticVerDiff := semanticVersioning != nil && (
+	// semantic_versioning is explicitly null, and the default resolves to a different value.
+	(*semanticVersioning == "null" && l.Options.GetSemanticVersioning() == *util.FirstNonNilPtr(
+		l.Defaults.Options.SemanticVersioning, l.HardDefaults.Options.SemanticVersioning)) ||
+		// semantic_versioning now resolves to a different value than the default.
+		(*semanticVersioning == "true") != l.Options.GetSemanticVersioning())
+	// Whether we need to create a new Lookup.
+	usingOverrides := overrides != nil || semanticVerDiff
+
+	lookup := l
+	// Create a new lookup if we don't have one, or overrides were provided.
+	if usingOverrides {
+		var err error
+		lookup, err = applyOverridesJSON(
+			l,
+			overrides,
+			semanticVerDiff,
+			semanticVersioning)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	// Log the lookup being used if debug.
+	// Log the lookup in use.
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
-			fmt.Sprintf("Refreshing with:\n%v", lookup),
+			fmt.Sprintf("Refreshing with:\n%q", lookup.String("")),
 			logFrom, true)
 	}
 
-	// Whether overrides were provided or not, we can update the status if not.
-	overrides := headers != nil ||
-		l.Options.GetSemanticVersioning() != lookup.Options.GetSemanticVersioning() ||
-		url != nil ||
-		json != nil ||
-		regex != nil ||
-		regexTemplate != nil
-
 	// Query the lookup.
-	version, err = lookup.Query(!overrides, logFrom)
+	version, err := lookup.Query(!usingOverrides, logFrom)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	// Update the deployed version if it has changed.
 	if version != l.Status.DeployedVersion() &&
-		// and no overrides that may change a successful query were provided
-		!overrides {
-		announceUpdate = true
-		l.Status.SetDeployedVersion(version, true)
-		l.Status.AnnounceUpdate()
+		// and no overrides that may change a successful query were provided.
+		!usingOverrides {
+		l.HandleNewVersion(version, true)
 	}
 
-	return
+	return version, nil
 }
 
-func basicAuthFromString(jsonStr *string, previous *BasicAuth, logFrom *util.LogFrom) *BasicAuth {
-	// jsonStr == nil when it hasn't been changed, so return the previous
-	if jsonStr == nil {
-		return previous
+// applyOverridesJSON applies JSON-based overrides and semantic versioning changes to a copy of the Lookup object
+// and returns that copy.
+//
+// Note: The semanticVersioning parameter can be (nil, "true", "false", or "null")
+// to indicate (unchanged, true, false, or default) values respectively.
+func applyOverridesJSON(
+	lookup *Lookup,
+	overrides *string,
+	semanticVerDiff bool,
+	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, "true", "false", default).
+) (*Lookup, error) {
+	// Copy the existing lookup.
+	lookup = Copy(lookup)
+
+	// Apply the new semantic_versioning json value.
+	if semanticVerDiff {
+		var newSemanticVersioning *bool
+		// Apply the new semantic_versioning json value.
+		if err := json.Unmarshal([]byte(*semanticVersioning), &newSemanticVersioning); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal semantic_versioning: %w", err)
+		}
+		lookup.Options.SemanticVersioning = newSemanticVersioning
 	}
 
-	basicAuth := &BasicAuth{}
-	err := json.Unmarshal([]byte(*jsonStr), &basicAuth)
-	// Ignore the JSON if it failed to unmarshal
-	if err != nil {
-		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			logFrom, true)
-		return previous
-	}
-	keys := util.GetKeysFromJSON(*jsonStr)
-
-	// Had no previous, so can't use it as defaults
-	if previous == nil {
-		return basicAuth
+	// Apply the overrides.
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &lookup); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal deployed_version: %w", err)
+		}
 	}
 
-	// defaults
-	if !util.Contains(keys, "username") {
-		basicAuth.Username = previous.Username
+	// Check the overrides.
+	errs := lookup.CheckValues("")
+	if errs != nil {
+		return nil, errors.Join(errs)
 	}
-	if !util.Contains(keys, "password") {
-		basicAuth.Password = previous.Password
-	}
-
-	return basicAuth
-}
-
-func headersFromString(jsonStr *string, previous *[]Header, logFrom *util.LogFrom) *[]Header {
-	// jsonStr == nil when it hasn't been changed, so return the previous
-	if jsonStr == nil {
-		return previous
-	}
-
-	var headers []Header
-	err := json.Unmarshal([]byte(*jsonStr), &headers)
-	// Ignore the JSON if it failed to unmarshal
-	if err != nil {
-		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			logFrom, true)
-		return previous
-	}
-
-	return &headers
+	return lookup, nil
 }

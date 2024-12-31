@@ -15,7 +15,7 @@ interface Props {
 /**
  * Returns the form fields for `webhook`
  *
- * @param mains - The global WebHook's
+ * @param mains - The global WebHooks
  * @param defaults - The default values for a WebHook
  * @param hard_defaults - The hard default values for a WebHook
  * @returns The form fields for `webhook`
@@ -28,10 +28,10 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
     () => ({
       custom_headers: firstNonEmpty(
         defaults?.custom_headers,
-        hard_defaults?.custom_headers
+        hard_defaults?.custom_headers,
       ).map(() => ({ key: "", item: "" })),
     }),
-    [defaults, hard_defaults]
+    [defaults, hard_defaults],
   );
   const addItem = useCallback(() => {
     append(
@@ -40,7 +40,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
         name: "",
         custom_headers: convertedDefaults.custom_headers,
       },
-      { shouldFocus: false }
+      { shouldFocus: false },
     );
   }, []);
 
@@ -58,7 +58,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
           ))}
       </>
     ),
-    [mains]
+    [mains],
   );
 
   return (

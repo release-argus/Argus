@@ -1,7 +1,7 @@
 import { Accordion, FormGroup, Row } from "react-bootstrap";
 import {
   DefaultDockerFilterType,
-  DefaultLatestVersionFiltersType,
+  DefaultLatestVersionRequireType,
   DockerFilterRegistryType,
   DockerFilterType,
 } from "types/config";
@@ -19,8 +19,8 @@ const DockerRegistryOptions = [
 ];
 
 type Props = {
-  defaults?: DefaultLatestVersionFiltersType;
-  hard_defaults?: DefaultLatestVersionFiltersType;
+  defaults?: DefaultLatestVersionRequireType;
+  hard_defaults?: DefaultLatestVersionRequireType;
 };
 
 /**
@@ -43,7 +43,7 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
 
     const defaultDockerRegistryLabel = DockerRegistryOptions.find(
       (option) =>
-        option.value.toLowerCase() === defaultDockerRegistry.toLowerCase()
+        option.value.toLowerCase() === defaultDockerRegistry.toLowerCase(),
     );
 
     if (defaultDockerRegistryLabel)
@@ -62,8 +62,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
     name: "latest_version.require.docker.type",
   });
   const selectedDockerRegistry: DockerFilterRegistryType | undefined =
-    dockerRegistry ?? defaultDockerRegistry;
-  const showUsernameField = (dockerRegistry ?? defaultDockerRegistry) === "hub";
+    dockerRegistry || defaultDockerRegistry;
+  const showUsernameField = selectedDockerRegistry === "hub";
 
   const convertedDefaults = useMemo(
     () =>
@@ -71,18 +71,18 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
         ? {
             token: firstNonDefault(
               defaults?.docker?.[selectedDockerRegistry]?.token,
-              hard_defaults?.docker?.[selectedDockerRegistry]?.token
+              hard_defaults?.docker?.[selectedDockerRegistry]?.token,
             ),
             username: firstNonDefault(
               defaults?.docker?.[selectedDockerRegistry]?.username,
-              hard_defaults?.docker?.[selectedDockerRegistry]?.username
+              hard_defaults?.docker?.[selectedDockerRegistry]?.username,
             ),
           }
         : {
             token: undefined,
             username: undefined,
           },
-    [selectedDockerRegistry]
+    [selectedDockerRegistry],
   );
 
   useEffect(() => {

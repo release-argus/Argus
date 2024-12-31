@@ -161,14 +161,14 @@ const SMTP = ({
 
   useEffect(() => {
     const currentAuth = getValues(`${name}.params.auth`);
-    // Normalise selected auth, or default it
+    // Normalise selected auth, or default it.
     if (convertedDefaults.params.auth === "")
       setValue(
         `${name}.params.auth`,
         normaliseForSelect(SMTPAuthOptions, currentAuth)?.value || "Unknown"
       );
 
-    // Normalise selected encryption, or default it
+    // Normalise selected encryption, or default it.
     if (convertedDefaults.params.encryption === "")
       setValue(
         `${name}.params.encryption`,

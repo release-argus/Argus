@@ -3,6 +3,7 @@ import { memo, useMemo } from "react";
 
 import { NotifyOptionsType } from "types/config";
 import { firstNonDefault } from "utils";
+import { numberRangeTest } from "components/generic/form-validate";
 
 /**
  * Returns the form fields for the `notify.X.options` section
@@ -32,20 +33,20 @@ export const NotifyOptions = ({
       delay: firstNonDefault(
         main?.delay,
         defaults?.delay,
-        hard_defaults?.delay
+        hard_defaults?.delay,
       ),
       max_tries: firstNonDefault(
         main?.max_tries,
         defaults?.max_tries,
-        hard_defaults?.max_tries
+        hard_defaults?.max_tries,
       ),
       message: firstNonDefault(
         main?.message,
         defaults?.message,
-        hard_defaults?.message
+        hard_defaults?.message,
       ),
     }),
-    [main, defaults, hard_defaults]
+    [main, defaults, hard_defaults],
   );
 
   return (
@@ -64,6 +65,7 @@ export const NotifyOptions = ({
           col_xs={6}
           label="Max tries"
           isNumber
+          validationFunc={(value: string) => numberRangeTest(value, 0, 255)}
           defaultVal={convertedDefaults.max_tries}
           position="right"
         />

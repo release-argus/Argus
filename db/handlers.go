@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package db provides database functionality for Argus to keep track of versions found/deployed/approved.
 package db
 
 import (
@@ -19,20 +20,19 @@ import (
 	"strings"
 
 	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/util"
 )
 
 // handler will listen to the DatabaseChannel and act on
 // incoming messages.
 func (api *api) handler() {
 	for message := range *api.config.DatabaseChannel {
-		// If the message is to delete a row
+		// If the message is to delete a row.
 		if message.Delete {
 			api.deleteRow(message.ServiceID)
 			continue
 		}
 
-		// Else, the message is to update a row
+		// Else, the message is to update a row.
 		api.updateRow(
 			message.ServiceID,
 			message.Cells,
@@ -42,26 +42,36 @@ func (api *api) handler() {
 
 // updateRow will update the cells of the serviceID row.
 func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
-	// The columns to update
-	setVars := ""
-	for i := range cells {
-		setVars += fmt.Sprintf("`%s` = ?,",
-			cells[i].Column)
+	if len(cells) == 0 {
+		return
 	}
-	// Trim the trailing ,
-	setVars = setVars[:len(setVars)-1]
 
-	// Get the vars for the SQL statement
-	params := make([]interface{}, len(cells)+1)
+	// The columns to update.
+	var setVarsBuilder strings.Builder // `column` = ?,`column` = ?,...
+	for i, cell := range cells {
+		// Add separator before columns after the first.
+		if i != 0 {
+			setVarsBuilder.WriteString(",")
+		}
+
+		// `column` = ?
+		setVarsBuilder.WriteString("`")
+		setVarsBuilder.WriteString(cell.Column)
+		setVarsBuilder.WriteString("` = ?")
+	}
+
+	// The SQL statement.
+	//#nosec G201 -- setVarsBuilder is built from trusted sources.
+	sqlStmt := fmt.Sprintf("UPDATE status SET %s WHERE id = ?",
+		setVarsBuilder.String())
+
+	// Get the vars for the SQL statement.
+	params := make([]any, len(cells)+1)
 	params[len(params)-1] = serviceID
-	// The values to update with
+	// The values to update with.
 	for i := range cells {
 		params[i] = cells[i].Value
 	}
-
-	// The SQL statement
-	sqlStmt := fmt.Sprintf("UPDATE status SET %s WHERE id = ?",
-		setVars)
 
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
@@ -69,67 +79,75 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 			logFrom, true)
 	}
 	res, err := api.db.Exec(sqlStmt, params...)
-	// Query failed
+	// Query failed.
 	if err != nil {
 		jLog.Error(
-			fmt.Sprintf("updateRow UPDATE: %q %v, %s", sqlStmt, params, util.ErrorToString(err)),
+			fmt.Sprintf("updateRow UPDATE: %q %v, %s",
+				sqlStmt, params, err),
 			logFrom, true)
 		return
 	}
 
 	count, _ := res.RowsAffected()
-	// If this ServiceID wasn't in the DB
-	if count == 0 {
-		// The columns to insert
-		columns := ""
-		for i := range cells {
-			columns += fmt.Sprintf("'%s',", cells[i].Column)
-		}
-		// The values to insert
-		values := strings.Repeat("?,", len(cells))
-		// Trim the trailing ,'s
-		values = values[:len(values)-1]
-		columns = columns[:len(columns)-1]
+	// If the row was updated, return.
+	if count != 0 {
+		return
+	}
 
-		// The SQL statement
-		sqlStmt = fmt.Sprintf("INSERT INTO status ('id', %s) VALUES (?,%s)",
-			columns, values)
-
-		// Get the vars for the SQL statement
-		params := make([]interface{}, len(cells)+1)
-		params[0] = serviceID
-		for i := range cells {
-			params[i+1] = cells[i].Value
+	// This ServiceID was not in the DB, insert it.
+	// The columns to insert.
+	var columnsBuilder strings.Builder           // `column`,`column`,...
+	var valuesPlaceholderBuilder strings.Builder // ?,?,...
+	for i, cell := range cells {
+		// Add separator before entries after the first.
+		if i != 0 {
+			columnsBuilder.WriteString(",")
+			valuesPlaceholderBuilder.WriteString(",")
 		}
 
-		if jLog.IsLevel("DEBUG") {
-			jLog.Debug(
-				fmt.Sprintf("%s, %v", sqlStmt, params),
-				logFrom, true)
-		}
-		_, err = api.db.Exec(sqlStmt, params...)
+		// `column`
+		columnsBuilder.WriteString("`")
+		columnsBuilder.WriteString(cell.Column)
+		columnsBuilder.WriteString("`")
+		// ?
+		valuesPlaceholderBuilder.WriteString("?")
+	}
+
+	// The SQL statement.
+	sqlStmt = fmt.Sprintf("INSERT INTO status (%s,`id`) VALUES (?,%s)",
+		columnsBuilder.String(), valuesPlaceholderBuilder.String())
+	// Log the SQL statement.
+	if jLog.IsLevel("DEBUG") {
+		jLog.Debug(
+			fmt.Sprintf("%s, %v", sqlStmt, params),
+			logFrom, true)
+	}
+
+	// Execute and log any errors.
+	if _, err := api.db.Exec(sqlStmt, params...); err != nil {
 		jLog.Error(
 			fmt.Sprintf("updateRow INSERT: %q %v, %s",
-				sqlStmt, params, util.ErrorToString(err)),
-			logFrom,
-			err != nil)
+				sqlStmt, params, err),
+			logFrom, true)
 	}
 }
 
 // deleteRow will remove the row of a service from the db.
 func (api *api) deleteRow(serviceID string) {
-	// The SQL statement
+	// The SQL statement.
 	sqlStmt := "DELETE FROM status WHERE id = ?"
-
+	// Log the SQL statement.
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, serviceID),
 			logFrom, true)
 	}
-	_, err := api.db.Exec(sqlStmt, serviceID)
-	jLog.Error(
-		fmt.Sprintf("deleteRow: %q with %q, %s",
-			sqlStmt, serviceID, util.ErrorToString(err)),
-		logFrom,
-		err != nil)
+
+	// Execute and log any errors.
+	if _, err := api.db.Exec(sqlStmt, serviceID); err != nil {
+		jLog.Error(
+			fmt.Sprintf("deleteRow: %q with %q, %s",
+				sqlStmt, serviceID, err),
+			logFrom, true)
+	}
 }

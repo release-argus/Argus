@@ -1,11 +1,11 @@
 type Props = {
-  // The URL to fetch data from
+  // The URL to fetch data from.
   url: string;
-  // The HTTP method to use, either GET or POST
+  // The HTTP method to use, either GET or POST.
   method?: "GET" | "POST";
-  // Optional headers to include in the request
+  // Optional headers to include in the request.
   headers?: Record<string, string>;
-  // Optional request body, applicable for POST requests
+  // Optional request body, applicable for POST requests.
   body?: string;
 };
 

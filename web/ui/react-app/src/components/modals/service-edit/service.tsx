@@ -5,7 +5,7 @@ import EditServiceCommands from "components/modals/service-edit/commands";
 import EditServiceDashboard from "components/modals/service-edit/dashboard";
 import EditServiceDeployedVersion from "components/modals/service-edit/deployed-version";
 import EditServiceLatestVersion from "components/modals/service-edit/latest-version";
-import EditServiceNotifys from "components/modals/service-edit/notifys";
+import EditServiceNotifies from "components/modals/service-edit/notifies";
 import EditServiceOptions from "components/modals/service-edit/options";
 import EditServiceWebHooks from "components/modals/service-edit/webhooks";
 import { FC } from "react";
@@ -39,7 +39,7 @@ const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
               const validation =
                 value === ""
                   ? false
-                  : // Name hasn't changed or name isn't in use
+                  : // Name hasn't changed or name isn't in use.
                     name === value || !monitorData.order.includes(value);
               return (
                 validation || (value === "" ? "Required" : "Must be unique")
@@ -58,12 +58,14 @@ const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
       <EditServiceLatestVersion
         serviceName={name}
         original={defaultData?.latest_version}
+        original_options={defaultData?.options}
         defaults={otherOptionsData?.defaults?.service?.latest_version}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.latest_version}
       />
       <EditServiceDeployedVersion
         serviceName={name}
         original={defaultData?.deployed_version}
+        original_options={defaultData?.options}
         defaults={otherOptionsData?.defaults?.service?.deployed_version}
         hard_defaults={
           otherOptionsData?.hard_defaults?.service?.deployed_version
@@ -75,7 +77,7 @@ const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
         defaults={otherOptionsData?.defaults?.webhook as WebHookType}
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
       />
-      <EditServiceNotifys
+      <EditServiceNotifies
         serviceName={name}
         originals={defaultData?.notify}
         mains={otherOptionsData?.notify}

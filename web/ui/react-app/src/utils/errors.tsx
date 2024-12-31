@@ -38,7 +38,7 @@ export const extractErrors = (
       const value = obj[key];
       if (value !== null) {
         const fullPath = prefix ? `${prefix}.${key}` : key;
-        const atPath = fullPath.startsWith(path); // if the path is in the key
+        const atPath = fullPath.startsWith(path); // if the path is in the key.
         if (atPath || path.includes(fullPath)) {
           if (typeof value === "object" && !value.hasOwnProperty("ref"))
             traverse(fullPath, value);

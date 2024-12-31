@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,10 @@
 
 //go:build unit
 
-package svcstatus
+package status
 
 import (
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
@@ -373,20 +372,23 @@ func TestFailsBase_Length(t *testing.T) {
 				failsWebHook.Set(k, v)
 			}
 
-			// WHEN we call Lanegth
-			langthC := failsCommand.Length()
-			langthS := failsShoutrrr.Length()
-			langthWH := failsWebHook.Length()
+			// WHEN we call Length
+			lengthC := failsCommand.Length()
+			lengthS := failsShoutrrr.Length()
+			lengthWH := failsWebHook.Length()
 
-			// THEN the langth's are returned correctly
-			if langthC != tc.size {
-				t.Errorf("FailsCommand - want: %v, got: %v", tc.size, langthC)
+			// THEN the lengths are returned correctly
+			if lengthC != tc.size {
+				t.Errorf("FailsCommand - want: %v, got: %v",
+					tc.size, lengthC)
 			}
-			if langthS != len(tc.setAtMap) {
-				t.Errorf("FailsShoutrrr - want: %v, got: %v", len(tc.setAtMap), langthS)
+			if lengthS != len(tc.setAtMap) {
+				t.Errorf("FailsShoutrrr - want: %v, got: %v",
+					len(tc.setAtMap), lengthS)
 			}
-			if langthWH != len(tc.setAtMap) {
-				t.Errorf("FailsWebHook - want: %v, got: %v", len(tc.setAtMap), langthWH)
+			if lengthWH != len(tc.setAtMap) {
+				t.Errorf("FailsWebHook - want: %v, got: %v",
+					len(tc.setAtMap), lengthWH)
 			}
 		})
 	}
@@ -395,10 +397,9 @@ func TestFailsBase_Length(t *testing.T) {
 func TestFails_String(t *testing.T) {
 	// GIVEN a Fails
 	tests := map[string]struct {
-		commandFails  []*bool
-		shoutrrrFails map[string]*bool
-		webhookFails  map[string]*bool
-		want          string
+		commandFails                []*bool
+		shoutrrrFails, webhookFails map[string]*bool
+		want                        string
 	}{
 		"empty fails": {
 			commandFails:  []*bool{},
@@ -415,34 +416,53 @@ func TestFails_String(t *testing.T) {
 			webhookFails: map[string]*bool{
 				"bar": nil,
 				"foo": test.BoolPtr(false)},
-			want: `
-shoutrrr: {bar: false, foo: nil},
- command: [0: nil, 1: false],
- webhook: {bar: nil, foo: false}`,
+			want: test.TrimYAML(`
+				shoutrrr:
+					bar: false
+					foo: nil
+				command:
+					- 0: nil
+					- 1: false
+				webhook:
+					bar: nil
+					foo: false
+				`),
 		},
 		"only shoutrrr": {
 			shoutrrrFails: map[string]*bool{
 				"bash": test.BoolPtr(false),
 				"bish": nil,
 				"bosh": test.BoolPtr(true)},
-			want: `
-shoutrrr: {bash: false, bish: nil, bosh: true}`,
+			want: test.TrimYAML(`
+				shoutrrr:
+					bash: false
+					bish: nil
+					bosh: true
+				`),
 		},
 		"only command": {
 			commandFails: []*bool{
 				nil,
 				test.BoolPtr(false),
 				test.BoolPtr(true)},
-			want: `
-command: [0: nil, 1: false, 2: true]`,
+			want: test.TrimYAML(`
+				command:
+					- 0: nil
+					- 1: false
+					- 2: true
+			`),
 		},
 		"only webhook": {
 			webhookFails: map[string]*bool{
 				"bash": test.BoolPtr(true),
 				"bish": test.BoolPtr(false),
 				"bosh": nil},
-			want: `
-webhook: {bash: true, bish: false, bosh: nil}`,
+			want: test.TrimYAML(`
+				webhook:
+					bash: true
+					bish: false
+					bosh: nil
+			`),
 		},
 		"all": {
 			shoutrrrFails: map[string]*bool{
@@ -457,10 +477,20 @@ webhook: {bash: true, bish: false, bosh: nil}`,
 				"bash": test.BoolPtr(false),
 				"bish": nil,
 				"bosh": test.BoolPtr(true)},
-			want: `
-shoutrrr: {bash: false, bish: true, bosh: nil},
- command: [0: nil, 1: false, 2: true],
- webhook: {bash: false, bish: nil, bosh: true}`,
+			want: test.TrimYAML(`
+				shoutrrr:
+					bash: false
+					bish: true
+					bosh: nil
+				command:
+					- 0: nil
+					- 1: false
+					- 2: true
+				webhook:
+					bash: false
+					bish: nil
+					bosh: true
+			`),
 		},
 		"maps are alphabetical": {
 			shoutrrrFails: map[string]*bool{
@@ -472,13 +502,23 @@ shoutrrr: {bash: false, bish: true, bosh: nil},
 				test.BoolPtr(true),
 				test.BoolPtr(false)},
 			webhookFails: map[string]*bool{
-				"zip":  test.BoolPtr(true),
-				"zap":  test.BoolPtr(true),
-				"zoop": test.BoolPtr(true)},
-			want: `
-shoutrrr: {bash: true, bish: true, bosh: true},
- command: [0: nil, 1: true, 2: false],
- webhook: {zap: true, zip: true, zoop: true}`,
+				"zip": test.BoolPtr(true),
+				"zap": test.BoolPtr(true),
+				"zop": test.BoolPtr(true)},
+			want: test.TrimYAML(`
+				shoutrrr:
+					bash: true
+					bish: true
+					bosh: true
+				command:
+					- 0: nil
+					- 1: true
+					- 2: false
+				webhook:
+					zap: true
+					zip: true
+					zop: true
+				`),
 		},
 	}
 
@@ -503,13 +543,12 @@ shoutrrr: {bash: true, bish: true, bosh: true},
 			}
 
 			// WHEN the Fails is stringified with String
-			got := fails.String()
+			got := fails.String("")
 
 			// THEN the result is as expected
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+				t.Errorf("Fails.String() mismatch\n%q\ngot:\n%q",
+					tc.want, got)
 			}
 		})
 	}

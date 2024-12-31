@@ -10,7 +10,7 @@ import { isEmptyOrNull } from "utils";
  */
 export const urlCommandTrim = (
   command: URLCommandType,
-  sending: boolean
+  sending: boolean,
 ): URLCommandType => {
   // regex
   if (command.type === "regex")
@@ -18,27 +18,27 @@ export const urlCommandTrim = (
       return {
         type: "regex",
         regex: command.regex,
-        index: command.index ? Number(command.index) : undefined,
-        template: command.template,
+        index: command.index ? Number(command.index) : null,
+        template: command.template ?? "",
       };
     else
       return {
         type: "regex",
         regex: command.regex,
-        index: command.index ? Number(command.index) : undefined,
-        template: command.template ? command.template : undefined,
+        index: command.index ? Number(command.index) : null,
+        template: command.template ?? "",
         template_toggle: !isEmptyOrNull(command.template),
       };
 
   // replace
   if (command.type === "replace")
-    return { type: "replace", old: command.old, new: command.new };
+    return { type: "replace", old: command.old, new: command.new ?? "" };
 
-  // else, it's a split
+  // else, it's a split.
   return {
     type: "split",
     text: command.text,
-    index: command.index ? Number(command.index) : undefined,
+    index: command.index ? Number(command.index) : null,
   };
 };
 
@@ -55,7 +55,7 @@ export const urlCommandsTrim = (commands: {
 };
 
 export const urlCommandsTrimArray = (
-  commands: URLCommandType[]
+  commands: URLCommandType[],
 ): URLCommandType[] => {
   return commands.map((value) => urlCommandTrim(value, false));
 };

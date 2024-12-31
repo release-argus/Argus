@@ -19,15 +19,15 @@ import { getBasename } from "utils";
 const App = (): ReactElement => {
   // This dynamically/generically determines the pathPrefix by stripping the first known
   // endpoint suffix from the window location path. It works out of the box for both direct
-  // hosting and reverse proxy deployments with no additional configurations required.
+  // hosting, and reverse proxy deployments with no additional configurations required.
   const basename = getBasename();
 
   const queryClient = new QueryClient();
   queryClient.setDefaultOptions({
     queries: {
-      gcTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes.
       refetchOnWindowFocus: true,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5, // 5 minutes.
     },
   });
 

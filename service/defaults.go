@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
-// SetDefaults for Services.
-func (s *Defaults) SetDefaults() {
+// Default sets this Defaults to the default values.
+func (d *Defaults) Default() {
 	// Service.Options
-	serviceSemanticVersioning := true
-	s.Options.Interval = "10m"
-	s.Options.SemanticVersioning = &serviceSemanticVersioning
+	d.Options.Default()
 
 	// Service.LatestVersion
-	serviceLatestVersionAllowInvalidCerts := false
-	usePreRelease := false
-	s.LatestVersion.AllowInvalidCerts = &serviceLatestVersionAllowInvalidCerts
-	s.LatestVersion.UsePreRelease = &usePreRelease
-	s.LatestVersion.Require.Docker.Type = "hub"
+	d.LatestVersion.Default()
 
 	// Service.DeployedVersionLookup
-	serviceDeployedVersionLookupAllowInvalidCerts := false
-	s.DeployedVersionLookup.AllowInvalidCerts = &serviceDeployedVersionLookupAllowInvalidCerts
+	d.DeployedVersionLookup.Default()
 
 	// Service.Dashboard
 	serviceAutoApprove := false
-	s.Dashboard.AutoApprove = &serviceAutoApprove
+	d.Dashboard.AutoApprove = &serviceAutoApprove
+
+	d.Init()
+}
+
+// Init will hand out the appropriate Defaults.X pointer(s) between structs.
+func (d *Defaults) Init() {
+	d.LatestVersion.Options = &d.Options
+	d.DeployedVersionLookup.Options = &d.Options
 }

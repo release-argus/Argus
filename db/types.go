@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package db provides database functionality for Argus to keep track of versions found/deployed/approved.
 package db
 
 import (
@@ -28,5 +29,5 @@ type api struct {
 
 var (
 	jLog    *util.JLog
-	logFrom *util.LogFrom
+	logFrom util.LogFrom
 )

@@ -51,7 +51,7 @@ export interface ServiceRefreshType {
   error?: string;
   timestamp: string;
 
-  message?: string; // Route disabled message
+  message?: string; // Route disabled message.
 }
 
 export interface LatestVersionLookupEditType {
@@ -99,11 +99,11 @@ export type NotifyEditType = NotifyTypesValues & {
 };
 
 export interface HeaderEditType extends HeaderType {
-  oldIndex?: number; // Index of existing secret
+  oldIndex?: number; // Index of existing secret.
 }
 
 export interface WebHookEditType extends WebHookType {
-  oldIndex?: string; // Index of existing secret
+  oldIndex?: string; // Index of existing secret.
 }
 
 /////////////////////////////////

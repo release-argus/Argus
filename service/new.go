@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
@@ -20,36 +21,37 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	shoutrrr_vars "github.com/release-argus/Argus/notifiers/shoutrrr/types"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrr_types "github.com/release-argus/Argus/notify/shoutrrr/types"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
-// oldIntIndex to look at for any <secret>'s used
+// oldIntIndex to look at for any SecretValues used.
 type oldIntIndex struct {
 	OldIndex *int `json:"oldIndex,omitempty"`
 }
 
-// oldStringIndex to look at for any <secret>'s used
+// oldStringIndex to look at for any SecretValues used.
 type oldStringIndex struct {
-	OldIndex *string `json:"oldIndex,omitempty"`
+	OldIndex string `json:"oldIndex,omitempty"`
 }
 
-// dvSecretRef contains the reference for the DeployedVersionLookup <secret>'s
+// dvSecretRef contains the reference for the DeployedVersionLookup SecretValues.
 type dvSecretRef struct {
 	Headers []oldIntIndex `json:"headers,omitempty"`
 }
 
-// whSecretRef contains the reference for the WebHook <secret>'s
+// whSecretRef contains the reference for the WebHook SecretValues.
 type whSecretRef struct {
-	OldIndex      *string       `json:"oldIndex,omitempty"`
+	OldIndex      string        `json:"oldIndex,omitempty"`
 	CustomHeaders []oldIntIndex `json:"custom_headers,omitempty"`
 }
 
-// oldSecretRefs contains the indexes to use for <secret>'s
+// oldSecretRefs contains the indexes to use for SecretValues.
 type oldSecretRefs struct {
 	Name                  string                    `json:"name"`
 	DeployedVersionLookup dvSecretRef               `json:"deployed_version,omitempty"`
@@ -57,49 +59,60 @@ type oldSecretRefs struct {
 	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
 }
 
-// FromPayload will create a new/edited Service from a payload.
+// FromPayload creates a new/edited Service from a payload.
 func FromPayload(
 	oldService *Service,
 	payload *io.ReadCloser,
 
-	serviceDefaults *Defaults,
-	serviceHardDefaults *Defaults,
+	serviceDefaults, serviceHardDefaults *Defaults,
 
 	notifyGlobals *shoutrrr.SliceDefaults,
-	notifyDefaults *shoutrrr.SliceDefaults,
-	notifyHardDefaults *shoutrrr.SliceDefaults,
+	notifyDefaults, notifyHardDefaults *shoutrrr.SliceDefaults,
 
 	webhookGlobals *webhook.SliceDefaults,
-	webhookDefaults *webhook.WebHookDefaults,
-	webhookHardDefaults *webhook.WebHookDefaults,
+	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 
-	logFrom *util.LogFrom,
-) (newService *Service, err error) {
+	logFrom util.LogFrom,
+) (*Service, error) {
 	var buf bytes.Buffer
-	if _, err = buf.ReadFrom(*payload); err != nil {
-		return
+	if _, err := buf.ReadFrom(*payload); err != nil {
+		return nil, err //nolint:wrapcheck
 	}
 
-	// Service
-	newService = &Service{}
+	// Service.
+	newService := &Service{}
 	dec1 := json.NewDecoder(bytes.NewReader(buf.Bytes()))
-	err = dec1.Decode(newService)
-	if err != nil {
-		jLog.Error(err, logFrom, true)
-		jLog.Verbose(fmt.Sprintf("Payload: %s", buf.String()), logFrom, true)
-		return
+	if err := dec1.Decode(newService); err != nil {
+		// Error may result from a nil LatestVersion caused by missing type.
+		if newService.LatestVersion == nil && oldService != nil && oldService.LatestVersion != nil {
+			// So use the previous Type.
+			newService.LatestVersion, _ = latestver.New(
+				oldService.LatestVersion.GetType(),
+				"yaml", "",
+				nil,
+				nil,
+				&serviceDefaults.LatestVersion, &serviceHardDefaults.LatestVersion)
+			dec1 = json.NewDecoder(bytes.NewReader(buf.Bytes()))
+			err = dec1.Decode(newService)
+		}
+		if err != nil {
+			jLog.Error(err, logFrom, true)
+			jLog.Verbose(
+				fmt.Sprintf("Payload: %s", buf.String()),
+				logFrom, true)
+			return nil, err //nolint:wrapcheck
+		}
 	}
 
-	// SecretRefs
+	// SecretRefs.
 	dec2 := json.NewDecoder(bytes.NewReader(buf.Bytes()))
 	var secretRefs oldSecretRefs
-	err = dec2.Decode(&secretRefs)
-	if err != nil {
+	if err := dec2.Decode(&secretRefs); err != nil {
 		jLog.Error(err, logFrom, true)
-		return
+		return nil, err //nolint:wrapcheck
 	}
 
-	// Name + Channels
+	// Name + Channels.
 	newService.ID = secretRefs.Name
 	newService.Status.AnnounceChannel = serviceHardDefaults.Status.AnnounceChannel
 	newService.Status.DatabaseChannel = serviceHardDefaults.Status.DatabaseChannel
@@ -110,81 +123,60 @@ func FromPayload(
 		serviceDefaults, serviceHardDefaults,
 		notifyGlobals, notifyDefaults, notifyHardDefaults,
 		webhookGlobals, webhookDefaults, webhookHardDefaults)
-	// Turn Active true into nil
+	// Turn Active true into nil.
 	if newService.Options.GetActive() {
 		newService.Options.Active = nil
 	}
 
-	// If the Docker type/image/tag is empty, remove the Docker requirement
-	if newService.LatestVersion.Require != nil && newService.LatestVersion.Require.Docker != nil {
-		dockerType := newService.LatestVersion.Require.Docker.Type
-		// Remove the Docker requirement if only the type if there's no image or tag
-		if newService.LatestVersion.Require.Docker.Image == "" &&
-			newService.LatestVersion.Require.Docker.Tag == "" {
-
-			newService.LatestVersion.Require.Docker = nil
-			// If that was the only requirement, remove the requirement
-			if newService.LatestVersion.Require.String() == "{}\n" {
-				newService.LatestVersion.Require = nil
-			}
-			// If the Docker type is the same as the default, remove the type
-		} else if dockerType == util.FirstNonDefault(
-			serviceDefaults.LatestVersion.Require.Docker.Type,
-			serviceHardDefaults.LatestVersion.Require.Docker.Type) {
-			newService.LatestVersion.Require.Docker.Type = ""
-		}
-	}
-
-	// If EDIT, give the secrets from the oldService
+	// If EDIT, give the secrets from the oldService.
 	newService.giveSecrets(oldService, secretRefs)
 
 	return newService, nil
 }
 
-// giveSecretsLatestVersion from the `oldLatestVersion`
-func (s *Service) giveSecretsLatestVersion(oldLatestVersion *latestver.Lookup) {
-	// Referencing oldService's AccessToken
-	if util.DefaultIfNil(s.LatestVersion.AccessToken) == "<secret>" {
-		s.LatestVersion.AccessToken = oldLatestVersion.AccessToken
+// giveSecretsLatestVersion from the `oldLatestVersion`.
+func (s *Service) giveSecretsLatestVersion(oldLatestVersion latestver.Lookup) {
+	if s == nil || oldLatestVersion == nil {
+		return
 	}
-	// New service has a Require
-	if s.LatestVersion.Require != nil {
-		// with the Require.Docker referencing the oldService's Docker token
-		if oldLatestVersion.Require != nil && oldLatestVersion.Require.Docker != nil &&
-			s.LatestVersion.Require.Docker != nil && s.LatestVersion.Require.Docker.Token == "<secret>" {
-			s.LatestVersion.Require.Docker.Token = oldLatestVersion.Require.Docker.Token
+
+	// GitHub specific.
+	if lv, ok := s.LatestVersion.(*github.Lookup); ok {
+		if oldLV, ok := oldLatestVersion.(*github.Lookup); ok {
+			// AccessToken
+			if lv.AccessToken == util.SecretValue {
+				lv.AccessToken = oldLV.AccessToken
+			}
 		}
 	}
-	// GitHubData
-	if s.LatestVersion.Type == "github" && oldLatestVersion.Type == "github" {
-		s.LatestVersion.GitHubData = oldLatestVersion.GitHubData
-	}
+
+	s.LatestVersion.Inherit(oldLatestVersion)
 }
 
-// giveSecretsDeployedVersion from the `oldDeployedVersion`
+// giveSecretsDeployedVersion from the `oldDeployedVersion`.
 func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Lookup, secretRefs *dvSecretRef) {
 	if s.DeployedVersionLookup == nil || oldDeployedVersion == nil {
 		return
 	}
 
 	if s.DeployedVersionLookup.BasicAuth != nil &&
-		s.DeployedVersionLookup.BasicAuth.Password == "<secret>" &&
+		s.DeployedVersionLookup.BasicAuth.Password == util.SecretValue &&
 		oldDeployedVersion.BasicAuth != nil {
 		s.DeployedVersionLookup.BasicAuth.Password = oldDeployedVersion.BasicAuth.Password
 	}
 
-	// If we have headers in old and new
+	// If we have headers in old and new.
 	if len(s.DeployedVersionLookup.Headers) != 0 &&
 		len(oldDeployedVersion.Headers) != 0 {
 		for i := range s.DeployedVersionLookup.Headers {
-			// If we're referencing a secret of an existing header
-			if s.DeployedVersionLookup.Headers[i].Value == "<secret>" {
-				// Don't have a secretRef for this header
+			// If referencing a secret of an existing header.
+			if s.DeployedVersionLookup.Headers[i].Value == util.SecretValue {
+				// Don't have a secretRef for this header.
 				if i >= len(secretRefs.Headers) {
 					break
 				}
 				oldIndex := secretRefs.Headers[i].OldIndex
-				// Not a reference to an old Header
+				// Not a reference to an old Header.
 				if oldIndex == nil {
 					continue
 				}
@@ -197,143 +189,141 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Loo
 	}
 }
 
-// giveSecretsNotify from the `oldNotifies`
-func (s *Service) giveSecretsNotify(oldNotifies *shoutrrr.Slice, secretRefs *map[string]oldStringIndex) {
+// giveSecretsNotify from the `oldNotifies`.
+func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[string]oldStringIndex) {
 	//nolint:typecheck
 	if s.Notify == nil || oldNotifies == nil ||
-		secretRefs == nil || len(*secretRefs) == 0 {
+		len(secretRefs) == 0 {
 		return
 	}
 
-	for i := range s.Notify {
-		// {OldIndex: "disc", Type: "discord", ...} - <secret> is mapped to values in the 'disc' Notify
-		// Map <secret> in `i` to this index
-		oldIndex := (*secretRefs)[i].OldIndex
+	for i, notify := range s.Notify {
+		// {OldIndex: "disc", Type: "discord", ...} - SecretValue maps to values in the 'disc' Notify.
+		// Map SecretValue in `i` to this index.
+		oldIndex := secretRefs[i].OldIndex
 		// Not a reference to an old Notify?
-		if oldIndex == nil {
+		if oldIndex == "" {
 			continue
 		}
-		oldNotify := (*oldNotifies)[*oldIndex]
+		oldNotify := oldNotifies[oldIndex]
 		// Reference doesn't exist?
 		if oldNotify == nil {
 			continue
 		}
 
 		// url_fields
-		util.CopyIfSecret(oldNotify.URLFields, s.Notify[i].URLFields, shoutrrr_vars.CensorableURLFields[:])
+		util.CopySecretValues(oldNotify.URLFields, notify.URLFields, shoutrrr_types.CensorableURLFields[:])
 		// params
-		util.CopyIfSecret(oldNotify.Params, s.Notify[i].Params, shoutrrr_vars.CensorableParams[:])
+		util.CopySecretValues(oldNotify.Params, notify.Params, shoutrrr_types.CensorableParams[:])
 	}
 }
 
-// giveSecretsWebHook from the `oldWebHooks`
-func (s *Service) giveSecretsWebHook(oldWebHooks *webhook.Slice, secretRefs *map[string]whSecretRef) {
+// giveSecretsWebHook from the `oldWebHooks`.
+func (s *Service) giveSecretsWebHook(oldWebHooks webhook.Slice, secretRefs map[string]whSecretRef) {
 	//nolint:typecheck
 	if s.WebHook == nil || oldWebHooks == nil ||
-		secretRefs == nil || len(*secretRefs) == 0 {
+		len(secretRefs) == 0 {
 		return
 	}
 
-	for i := range s.WebHook {
-		// {OldIndex: "update", Type: "github", ...} - <secret> is mapped to values in the 'update' WebHook
-		// Map <secret> in `i` to this index
-		oldIndex := (*secretRefs)[i].OldIndex
+	for i, wh := range s.WebHook {
+		// {OldIndex: "update", Type: "github", ...} - SecretValue maps values in the 'update' WebHook.
+		// Map SecretValue in `i` to this index.
+		oldIndex := secretRefs[i].OldIndex
 		// Not a reference to an old WebHook?
-		if oldIndex == nil {
+		if oldIndex == "" {
 			continue
 		}
-		// Reference doesn't exist?
-		oldWebHook := (*oldWebHooks)[*oldIndex]
+		// Reference doesn't exist?.
+		oldWebHook := oldWebHooks[oldIndex]
 		if oldWebHook == nil {
 			continue
 		}
+		whSecretRefs := secretRefs[i]
 
-		// secret
-		if s.WebHook[i].Secret == "<secret>" {
-			s.WebHook[i].Secret = oldWebHook.Secret
+		// secret.
+		if wh.Secret == util.SecretValue {
+			wh.Secret = oldWebHook.Secret
 		}
 
-		// custom_headers
-		// Check we have headers in old and new
-		if s.WebHook[i].CustomHeaders != nil && oldWebHook.CustomHeaders != nil ||
-			len((*secretRefs)[i].CustomHeaders) != 0 {
-			for hI := range *s.WebHook[i].CustomHeaders {
-				// Skip if we're out of range or
-				// not referencing a secret of an existing header
-				if hI >= len((*secretRefs)[i].CustomHeaders) ||
-					(*s.WebHook[i].CustomHeaders)[hI].Value != "<secret>" {
+		// custom_headers.
+		// Check we have headers in old and new.
+		if wh.CustomHeaders != nil && oldWebHook.CustomHeaders != nil ||
+			len(whSecretRefs.CustomHeaders) != 0 {
+			for headerIndex := range *wh.CustomHeaders {
+				// Skip if out of range,
+				// or not referencing a secret of an existing header.
+				if headerIndex >= len(whSecretRefs.CustomHeaders) ||
+					(*wh.CustomHeaders)[headerIndex].Value != util.SecretValue {
 					continue
 				}
 
-				// Index for this headers secret in the old Service
-				// Map <secret> in `i.hI` to this index
-				oldHeaderIndex := (*secretRefs)[i].CustomHeaders[hI].OldIndex
-				// New header, or not referencing a previous secret
+				// Index for this headers secret in the old Service.
+				// Map SecretValue in `i.hI` to this index.
+				oldHeaderIndex := whSecretRefs.CustomHeaders[headerIndex].OldIndex
+				// New header, or not referencing a previous secret.
 				if oldHeaderIndex == nil || len(*oldWebHook.CustomHeaders) <= *oldHeaderIndex {
 					continue
 				}
 
-				// Set the new header value to the old one
-				(*s.WebHook[i].CustomHeaders)[hI].Value = (*oldWebHook.CustomHeaders)[*oldHeaderIndex].Value
+				// Set the new header value to the old one.
+				(*wh.CustomHeaders)[headerIndex].Value = (*oldWebHook.CustomHeaders)[*oldHeaderIndex].Value
 			}
 		}
 
 		// failed
-		if oldWebHook.String() == s.WebHook[i].String() {
-			s.WebHook[i].Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
+		if oldWebHook.String() == wh.String() {
+			wh.Failed.Set(i, oldWebHook.Failed.Get(oldWebHook.ID))
 		}
 		// next_runnable
-		nextRunnable := oldWebHook.NextRunnable()
-		s.WebHook[i].SetNextRunnable(&nextRunnable)
+		wh.SetNextRunnable(oldWebHook.NextRunnable())
 	}
 }
 
-// giveSecrets will replace <secret> in this Service with that of the oldService and uses secretRefs to find
-// secrets inside maps/lists
+// giveSecrets replaces `SecretValue` in this Service with the corresponding value from oldService,
+// using secretRefs to locate secrets in maps/lists.
 func (s *Service) giveSecrets(oldService *Service, secretRefs oldSecretRefs) {
 	if oldService == nil {
 		return
 	}
 
-	// Latest Version
-	s.giveSecretsLatestVersion(&oldService.LatestVersion)
-	// Deployed Version
+	// Latest Version.
+	s.giveSecretsLatestVersion(oldService.LatestVersion)
+	// Deployed Version.
 	s.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &secretRefs.DeployedVersionLookup)
-	// Notify
-	s.giveSecretsNotify(&oldService.Notify, &secretRefs.Notify)
-	// WebHook
-	s.giveSecretsWebHook(&oldService.WebHook, &secretRefs.WebHook)
-	// Command
+	// Notify.
+	s.giveSecretsNotify(oldService.Notify, secretRefs.Notify)
+	// WebHook.
+	s.giveSecretsWebHook(oldService.WebHook, secretRefs.WebHook)
+	// Command.
 	s.CommandController.CopyFailsFrom(oldService.CommandController)
 
-	// Keep LatestVersion if the LatestVersion lookup is unchanged
-	if s.LatestVersion.IsEqual(&oldService.LatestVersion) {
+	// Keep LatestVersion if the LatestVersion Lookup is unchanged.
+	if s.LatestVersion.IsEqual(s.LatestVersion, oldService.LatestVersion) {
 		s.Status.SetApprovedVersion(oldService.Status.ApprovedVersion(), false)
-		s.Status.SetLatestVersion(oldService.Status.LatestVersion(), false)
-		s.Status.SetLatestVersionTimestamp(oldService.Status.LatestVersionTimestamp())
+		s.Status.SetLatestVersion(oldService.Status.LatestVersion(), oldService.Status.LatestVersionTimestamp(), false)
 		s.Status.SetLastQueried(oldService.Status.LastQueried())
 	}
-	// Keep DeployedVersion if the DeployedVersionLookup is unchanged
+	// Keep DeployedVersion if the DeployedVersionLookup is unchanged.
 	if s.DeployedVersionLookup.IsEqual(oldService.DeployedVersionLookup) &&
 		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
-		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), false)
-		s.Status.SetDeployedVersionTimestamp(oldService.Status.DeployedVersionTimestamp())
+		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), oldService.Status.DeployedVersionTimestamp(), false)
 	}
 }
 
-// CheckFetches will check that, if set, the LatestVersion and DeployedVersion can be fetched
-func (s *Service) CheckFetches() (err error) {
-	// Don't check if the service is inactive
+// CheckFetches verifies that, if set, the LatestVersion and DeployedVersion can be retrieved.
+func (s *Service) CheckFetches() error {
+	// Don't check if the Service is inactive.
 	if !s.Options.GetActive() {
-		return
+		return nil
 	}
 
-	// nil the channels so we don't make any updates
+	// nil the channels, so we don't make any updates.
 	announceChannel := s.Status.AnnounceChannel
 	databaseChannel := s.Status.DatabaseChannel
 	s.Status.AnnounceChannel = nil
 	s.Status.DatabaseChannel = nil
-	// Restore on exit
+	// Restore on exit.
 	defer func() {
 		s.Status.AnnounceChannel = announceChannel
 		s.Status.DatabaseChannel = databaseChannel
@@ -341,73 +331,73 @@ func (s *Service) CheckFetches() (err error) {
 
 	logFrom := util.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
 
-	// Fetch latest version
+	// Fetch latest version.
 	{
-		// Erase DeployedVersion so that 'require' is checked
+		// Erase DeployedVersion so that 'require' is checked.
 		deployedVersion := s.Status.DeployedVersion()
-		s.Status.SetDeployedVersion("", false)
+		s.Status.SetDeployedVersion("", "", false)
 
-		_, err = s.LatestVersion.Query(
+		if _, err := s.LatestVersion.Query(
 			false,
-			&logFrom)
-		if err != nil {
-			err = fmt.Errorf("latest_version - %w", err)
-			return
+			logFrom); err != nil {
+			return fmt.Errorf("latest_version - %w", err)
 		}
-		s.Status.SetDeployedVersion(deployedVersion, false)
+		s.Status.SetDeployedVersion(deployedVersion, "", false)
 	}
 
-	// Fetch deployed version
+	// Fetch deployed version.
 	if s.DeployedVersionLookup != nil {
-		var version string
-		version, err = s.DeployedVersionLookup.Query(
+		version, err := s.DeployedVersionLookup.Query(
 			false,
-			&logFrom)
+			logFrom)
 		if err != nil {
-			err = fmt.Errorf("deployed_version - %w", err)
-			return
+			return fmt.Errorf("deployed_version - %w", err)
 		}
-		s.Status.SetDeployedVersion(version, false)
+		s.Status.SetDeployedVersion(version, "", false)
 	}
 
-	return
+	return nil
 }
 
-func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
+// removeDefaults removes Notify/Command/WebHook values from the `newService` that match defaults.
+func removeDefaults(oldService, newService *Service, d *Defaults) {
+	// Defaults in use.
 	notifyDefaults, commandDefaults, webhookDefaults := oldService.UsingDefaults()
+	// No defaults in use.
 	if !notifyDefaults && !commandDefaults && !webhookDefaults {
 		return
 	}
 
-	// Notify
+	// Notify.
 	if notifyDefaults {
-		defaultNotifys := util.SortedKeys(d.Notify)
-		usingNotifys := util.SortedKeys(newService.Notify)
-		// If the length is different, then we're not using defaults
-		if len(defaultNotifys) != len(usingNotifys) {
+		defaultNotifiers := util.SortedKeys(d.Notify)
+		usingNotifiers := util.SortedKeys(newService.Notify)
+		// If the length differs, defaults not in use.
+		if len(defaultNotifiers) != len(usingNotifiers) {
 			notifyDefaults = false
 		} else {
-			// Check that the Notify's haven't changed (still match the defaults)
-			for i, notify := range usingNotifys {
-				// Name has changed or now has values that override the defaults
-				if defaultNotifys[i] != notify || newService.Notify[notify].String("") != fmt.Sprintf("type: %s\n", newService.Notify[notify].Type) {
+			// Check whether the Notifier(s) have changed.
+			for i, notify := range usingNotifiers {
+				// Name has changed or now has values that override the defaults.
+				if defaultNotifiers[i] != notify ||
+					newService.Notify[notify].String("") != fmt.Sprintf("type: %s\n", newService.Notify[notify].Type) {
 					notifyDefaults = false
 					break
 				}
 			}
 		}
-		// If we're using defaults, then remove them
+		// If using defaults, remove them.
 		if notifyDefaults {
 			newService.Notify = nil
 		}
 	}
 
-	// Command
+	// Command.
 	if commandDefaults {
 		if len(newService.Command) != len(d.Command) {
 			commandDefaults = false
 		} else {
-			// Check that the Commands haven't changed (still match the defaults)
+			// Check whether the Command(s) have changed.
 			for i, command := range d.Command {
 				if newService.Command[i].FormattedString() != command.FormattedString() {
 					commandDefaults = false
@@ -415,30 +405,30 @@ func removeDefaults(oldService *Service, newService *Service, d *Defaults) {
 				}
 			}
 		}
-		// If we're using defaults, then remove them
+		// If using defaults, remove them.
 		if commandDefaults {
 			newService.Command = nil
 		}
 	}
 
-	// WebHook
+	// WebHook.
 	if webhookDefaults {
 		defaultWebHooks := util.SortedKeys(d.WebHook)
 		usingWebHooks := util.SortedKeys(newService.WebHook)
-		// If the length is different, then we're not using defaults
+		// If the length differs, defaults not in use.
 		if len(defaultWebHooks) != len(usingWebHooks) {
 			webhookDefaults = false
 		} else {
-			// Check that the WebHooks haven't changed (still match the defaults)
-			for i, webhook := range usingWebHooks {
-				// Name has changed or now has values that override the defaults
-				if defaultWebHooks[i] != webhook || newService.WebHook[webhook].String() != fmt.Sprintf("type: %s\n", newService.WebHook[webhook].Type) {
+			// Check whether the WebHook(s) have changed.
+			for i, wh := range usingWebHooks {
+				// Name has changed or now has values that override the defaults.
+				if defaultWebHooks[i] != wh || newService.WebHook[wh].String() != fmt.Sprintf("type: %s\n", newService.WebHook[wh].Type) {
 					webhookDefaults = false
 					break
 				}
 			}
 		}
-		// If we're using defaults, then remove them
+		// If using defaults, remove them.
 		if webhookDefaults {
 			newService.WebHook = nil
 		}

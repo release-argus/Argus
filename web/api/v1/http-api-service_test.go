@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestHTTP_httpServiceOrder(t *testing.T) {
@@ -36,12 +36,12 @@ func TestHTTP_httpServiceOrder(t *testing.T) {
 	file := "TestHTTP_httpServiceOrder.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
-	defer func() {
+	t.Cleanup(func() {
 		os.RemoveAll(file)
-		if api.Config.Settings.Data.DatabaseFile != nil {
-			os.RemoveAll(*api.Config.Settings.Data.DatabaseFile)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
-	}()
+	})
 
 	tests := map[string]struct {
 		order []string
@@ -72,7 +72,7 @@ func TestHTTP_httpServiceOrder(t *testing.T) {
 			api.httpServiceOrder(w, req)
 			apiMutex.RUnlock()
 			res := w.Result()
-			defer res.Body.Close()
+			t.Cleanup(func() { res.Body.Close() })
 
 			// THEN the expected body is returned as expected
 			data, err := io.ReadAll(res.Body)
@@ -101,12 +101,12 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 	api := testAPI(file)
 	api.Config.Service[testSVC.ID] = testSVC
 	api.Config.Order = append(api.Config.Order, testSVC.ID)
-	defer func() {
+	t.Cleanup(func() {
 		os.RemoveAll(file)
-		if api.Config.Settings.Data.DatabaseFile != nil {
-			os.RemoveAll(*api.Config.Settings.Data.DatabaseFile)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
-	}()
+	})
 
 	tests := map[string]struct {
 		serviceName    string
@@ -140,7 +140,7 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpServiceSummary(w, req)
 			res := w.Result()
-			defer res.Body.Close()
+			t.Cleanup(func() { res.Body.Close() })
 
 			// THEN the expected status code is returned
 			if res.StatusCode != tc.wantStatusCode {
@@ -154,9 +154,7 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 					err)
 			}
 			got := string(data)
-			re := regexp.MustCompile(tc.wantBody)
-			match := re.MatchString(got)
-			if !match {
+			if !util.RegexCheck(tc.wantBody, got) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.wantBody, got)
 			}

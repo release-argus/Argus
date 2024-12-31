@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024]] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
 
 //go:build unit
 
-package svcstatus
+package status
 
 import (
 	"encoding/json"
 	"testing"
 
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestStatus_AnnounceFirstVersion(t *testing.T) {
@@ -54,7 +54,7 @@ func TestStatus_AnnounceFirstVersion(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_type.WebSocketMessage
+			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q",
@@ -102,7 +102,7 @@ func TestStatus_AnnounceQuery(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_type.WebSocketMessage
+			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -147,7 +147,7 @@ func TestStatus_AnnounceQueryNewVersion(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_type.WebSocketMessage
+			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -196,7 +196,7 @@ func TestStatus_AnnounceUpdate(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_type.WebSocketMessage
+			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",
@@ -244,7 +244,7 @@ func TestStatus_announceApproved(t *testing.T) {
 				return
 			}
 			gotData := <-*status.AnnounceChannel
-			var got api_type.WebSocketMessage
+			var got apitype.WebSocketMessage
 			json.Unmarshal(gotData, &got)
 			if got.ServiceData.ID != wantID {
 				t.Fatalf("ID - got %q, want %q\n%#v",

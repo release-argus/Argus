@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,18 @@ import (
 	"os"
 	"testing"
 
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	dbtype "github.com/release-argus/Argus/db/types"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestMain(m *testing.M) {
-	// initialize jLog
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
+	// initialise jLog
+	mainJLog := util.NewJLog("DEBUG", false)
+	mainJLog.Testing = true
+	LogInit(mainJLog)
 
 	// run other tests
 	exitCode := m.Run()
@@ -38,23 +40,41 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func testLookup() (lookup *Lookup) {
-	lookup = New(
-		test.BoolPtr(true),
-		nil,
-		nil,
-		nil,
-		"version",
-		"GET",
-		opt.New(
-			nil, "", test.BoolPtr(true),
-			&opt.OptionsDefaults{},
-			opt.NewDefaults("", test.BoolPtr(true))),
-		"", nil,
-		&svcstatus.Status{
-			ServiceID: test.StringPtr("test")},
-		"https://invalid.release-argus.io/json",
-		&LookupDefaults{},
-		&LookupDefaults{})
-	return
+func testLookup() *Lookup {
+	// Hard defaults
+	hardDefaults := &Defaults{}
+	hardDefaults.Default()
+	// Defaults
+	defaults := &Defaults{}
+	// Options
+	hardDefaultOptions := &opt.Defaults{}
+	hardDefaultOptions.Default()
+	options := opt.New(
+		nil, "", test.BoolPtr(true),
+		&opt.Defaults{}, hardDefaultOptions)
+	// Status
+	announceChannel := make(chan []byte, 24)
+	saveChannel := make(chan bool, 5)
+	databaseChannel := make(chan dbtype.Message, 5)
+	status := status.New(
+		&announceChannel, &databaseChannel, &saveChannel,
+		"", "", "", "", "", "")
+	status.Init(
+		0, 0, 0,
+		test.StringPtr("serviceID"),
+		test.StringPtr("http://example.com"),
+	)
+
+	lookup, _ := New(
+		"yaml", test.TrimYAML(`
+			method: GET
+			url: https://invalid.release-argus.io/json
+			allow_invalid_certs: true
+			json: version
+		`),
+		options,
+		status,
+		defaults, hardDefaults)
+
+	return lookup
 }

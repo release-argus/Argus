@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
@@ -22,43 +23,17 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Track will call Track on all Services in this Slice.
-func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
-	orderMutex.RLock()
-	defer orderMutex.RUnlock()
-	for _, key := range *ordering {
-		// Skip inactive Services (and services that were deleted on startup)
-		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {
-			continue
-		}
-		(*s)[key].Options.Active = nil
-
-		jLog.Verbose(
-			fmt.Sprintf("Tracking %s at %s every %s",
-				(*s)[key].ID, (*s)[key].LatestVersion.ServiceURL(true), (*s)[key].Options.GetInterval()),
-			&util.LogFrom{Primary: (*s)[key].ID},
-			true)
-
-		// Track this Service in a infinite loop goroutine.
-		go (*s)[key].Track()
-
-		// Space out the tracking of each Service.
-		time.Sleep(time.Second / 2)
-	}
-}
-
-// Track the Service and send Notify messages (Service.Notify) as
-// well as WebHooks (Service.WebHook) when a new release is spotted.
-// It sleeps for Service.Interval between each check.
+// Track the Service and send Notify messages and WebHooks when a new release is found.
+// Pause for s.Interval between each check.
 func (s *Service) Track() {
-	// Skip inactive Services
+	// Skip inactive Services.
 	if !s.Options.GetActive() {
 		s.DeleteMetrics()
 		return
 	}
 	s.ResetMetrics()
 
-	// If this Service was last queried less than interval ago, wait until interval has elapsed.
+	// Wait until the interval has elapsed.
 	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.LastQueried())
 	if time.Since(lastQueriedAt) < s.Options.GetIntervalDuration() {
 		time.Sleep(s.Options.GetIntervalDuration() - time.Since(lastQueriedAt))
@@ -71,23 +46,52 @@ func (s *Service) Track() {
 		go s.DeployedVersionLookup.Track()
 	}()
 
+	// If we have no LatestVersion, we can't track.
+	if s.LatestVersion == nil {
+		return
+	}
+
 	// Track forever.
 	logFrom := util.LogFrom{Primary: s.ID}
+	jLog.Verbose(
+		fmt.Sprintf("Tracking %s at %s every %s",
+			s.ID, s.LatestVersion.ServiceURL(true), s.Options.GetInterval()),
+		logFrom,
+		true)
 	for {
-		// If we're deleting this Service, stop tracking it.
+		// Stop tracking if deleting.
 		if s.Status.Deleting() {
 			return
 		}
 
-		// If new release found by this query.
-		newVersion, _ := s.LatestVersion.Query(true, &logFrom)
+		// Query the Lookup.
+		newVersion, _ := s.LatestVersion.Query(true, logFrom)
 
-		// If a new version was found
+		// If new version found.
 		if newVersion {
 			go s.HandleUpdateActions(true)
 		}
 
 		// Sleep interval between checks.
 		time.Sleep(s.Options.GetIntervalDuration())
+	}
+}
+
+// Track will call Track on all Services in this Slice, each in their own goroutine.
+func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
+	orderMutex.RLock()
+	defer orderMutex.RUnlock()
+	for _, key := range *ordering {
+		// Skip inactive Services (and services that deleted on start up).
+		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {
+			continue
+		}
+		(*s)[key].Options.Active = nil
+
+		// Track this Service in an infinite loop goroutine.
+		go (*s)[key].Track()
+
+		// Space out the tracking of each Service.
+		time.Sleep(time.Second / 2)
 	}
 }

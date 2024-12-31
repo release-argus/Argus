@@ -51,7 +51,7 @@ const sendableTimeout = (
   if (sending) setSendable(false);
   else if (!sendable) {
     let timeout = differenceInMilliseconds(nextRunnable, now);
-    // if we're already after nextRunnable, just wait a second
+    // if we're already after nextRunnable, just wait a second.
     if (now > nextRunnable) timeout = 1000;
     const timer = setTimeout(() => setSendable(true), timeout);
     return () => clearTimeout(timer);
@@ -82,23 +82,23 @@ export const Item: FC<Props> = ({
   const now = new Date();
   const [sendable, setSendable] = useState(!sending && nextRunnable <= now);
 
-  // disable resend button until nextRunnable
+  // disable resend button until nextRunnable.
   useEffect(() => {
     sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
   }, [next_runnable, sending]);
 
-  // add timeout if it wasn't sent by this user
+  // add timeout if it wasn't sent by this user.
   useEffect(() => {
     if (!sending && nextRunnable <= now)
       sendableTimeout(sendable, sending, setSendable, now, nextRunnable);
   }, []);
 
   const faIcon = () => {
-    // Sending and hasn't failed
+    // Sending and hasn't failed.
     if (sending && failed === undefined) return faCircleNotch;
-    // Send first time
+    // Send first time.
     if (modalType === "SEND" && failed === undefined) return faPaperPlane;
-    // Resend
+    // Resend.
     return faRedo;
   };
 
@@ -191,7 +191,7 @@ export const Item: FC<Props> = ({
               size="sm"
               onClick={() => ack(title, itemType === "WEBHOOK")}
               className="float-end"
-              // Disable if success or waiting send response
+              // Disable if success or waiting send response.
               disabled={!sendable}
             >
               <FontAwesomeIcon

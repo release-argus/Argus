@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -24,7 +25,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// API is the API to use for the webserver.
+// API holds the configuration and routing information.
 type API struct {
 	Config      *config.Config
 	BaseRouter  *mux.Router
@@ -45,12 +46,12 @@ func NewAPI(cfg *config.Config, log *util.JLog) *API {
 		RoutePrefix: routePrefix,
 	}
 
-	// For cases where routePrefix is "/", remove it to prevent "//"
+	// In cases where routePrefix equals "/", trim to prevent "//".
 	routePrefix = strings.TrimSuffix(routePrefix, "/")
-	// On baseRouter as Router may have basicAuth
+	// On baseRouter as Router may have basicAuth.
 	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", routePrefix)).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logFrom := util.LogFrom{Primary: "apiHealthcheck", Secondary: getIP(r)}
-		jLog.Verbose("-", &logFrom, true)
+		jLog.Verbose("-", logFrom, true)
 		w.Header().Set("Connection", "close")
 		fmt.Fprintf(w, "Alive")
 	})

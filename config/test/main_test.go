@@ -68,19 +68,19 @@ func TestBareConfig(t *testing.T) {
 		}
 	}
 
-	// WHEN the config is initialized
+	// WHEN the config is initialised
 	cfg := BareConfig(true)
 	strFlags = map[string]struct {
 		flag *string
 		cfg  *string
 	}{
-		"log.level":          {cfg: cfg.Settings.FromFlags.Log.Level},
-		"data.database-file": {cfg: cfg.Settings.FromFlags.Data.DatabaseFile},
-		"web.listen-host":    {cfg: cfg.Settings.FromFlags.Web.ListenHost},
-		"web.listen-port":    {cfg: cfg.Settings.Web.ListenPort},
-		"web.cert-file":      {cfg: cfg.Settings.FromFlags.Web.CertFile},
-		"web.pkey-file":      {cfg: cfg.Settings.FromFlags.Web.KeyFile},
-		"web.route-prefix":   {cfg: cfg.Settings.FromFlags.Web.RoutePrefix},
+		"log.level":          {cfg: &cfg.Settings.FromFlags.Log.Level},
+		"data.database-file": {cfg: &cfg.Settings.FromFlags.Data.DatabaseFile},
+		"web.listen-host":    {cfg: &cfg.Settings.FromFlags.Web.ListenHost},
+		"web.listen-port":    {cfg: &cfg.Settings.Web.ListenPort},
+		"web.cert-file":      {cfg: &cfg.Settings.FromFlags.Web.CertFile},
+		"web.pkey-file":      {cfg: &cfg.Settings.FromFlags.Web.KeyFile},
+		"web.route-prefix":   {cfg: &cfg.Settings.FromFlags.Web.RoutePrefix},
 	}
 	boolFlags = map[string]struct {
 		flag *bool
@@ -99,11 +99,14 @@ func TestBareConfig(t *testing.T) {
 	// THEN all flags should be nil
 	for key, value := range strFlags {
 		if value.flag != nil {
-			t.Errorf("flag: expected %s to be nil but got %s",
+			t.Errorf("flag: expected %s to be nil but got %q",
 				key, *value.flag)
 		}
-		if value.cfg != nil {
-			t.Errorf("cfg: expected %s to be nil but got %s",
+		if value.cfg == nil {
+			t.Errorf("cfg: expected %s to be non-nil but got %v",
+				key, value.cfg)
+		} else if *value.cfg != "" {
+			t.Errorf("cfg: expected %s to be empty but got %q",
 				key, *value.cfg)
 		}
 	}

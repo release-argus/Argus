@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
@@ -25,7 +26,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 // Track the deployed version (DeployedVersion) of the `parent`.
@@ -37,13 +38,13 @@ func (l *Lookup) Track() {
 
 	// Track forever.
 	for {
-		// If we're deleting this Service, stop tracking it.
+		// If we are deleting this Service, stop tracking it.
 		if l.Status.Deleting() {
 			return
 		}
 
 		// Query the deployed version.
-		deployedVersion, _ := l.Query(true, &logFrom)
+		deployedVersion, _ := l.Query(true, logFrom)
 		// If new release found by ^ query.
 		l.HandleNewVersion(deployedVersion, true)
 		// Sleep interval between queries.
@@ -52,8 +53,8 @@ func (l *Lookup) Track() {
 }
 
 // query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
-	rawBody, err := l.httpRequest(logFrom)
+func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
+	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
 	}
@@ -61,15 +62,15 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 	var version string
 	// If JSON is provided, use it to extract the version.
 	if l.JSON != "" {
-		version, err = util.GetValueByKey(rawBody, l.JSON, l.GetURL())
+		version, err = util.GetValueByKey(body, l.JSON, l.GetURL())
 		if err != nil {
 			jLog.Error(err, logFrom, true)
 			//nolint:wrapcheck
 			return "", err
 		}
 	} else {
-		// Use the whole body if not parsing as JSON.
-		version = string(rawBody)
+		// Use the entire body if not parsing as JSON.
+		version = string(body)
 	}
 
 	// If a regex is provided, use it to extract the version.
@@ -78,8 +79,8 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 		texts := re.FindAllStringSubmatch(version, 1)
 
 		if len(texts) == 0 {
-			err := fmt.Errorf("regex %q didn't find a match on %q",
-				l.Regex, version)
+			err := fmt.Errorf("regex %q didn't return any matches on %q",
+				l.Regex, util.TruncateMessage(version, 100))
 			jLog.Warn(err, logFrom, true)
 			return "", err
 		}
@@ -88,7 +89,7 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 		version = util.RegexTemplate(regexMatches, l.RegexTemplate)
 	}
 
-	// If semantic versioning is enabled, check that the version is in the correct format.
+	// If semantic versioning is enabled, check the version is in the correct format.
 	if l.Options.GetSemanticVersioning() {
 		_, err = semver.NewVersion(version)
 		if err != nil {
@@ -106,14 +107,14 @@ func (l *Lookup) query(logFrom *util.LogFrom) (string, error) {
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) Query(metrics bool, logFrom *util.LogFrom) (version string, err error) {
-	version, err = l.query(logFrom)
+func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (string, error) {
+	version, err := l.query(logFrom)
 
 	if metrics {
 		l.queryMetrics(err == nil)
 	}
 
-	return
+	return version, err
 }
 
 // queryMetrics sets the Prometheus metrics for the DeployedVersion query.
@@ -125,7 +126,7 @@ func (l *Lookup) queryMetrics(successfulQuery bool) {
 			"",
 			"SUCCESS")
 		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
-			*l.Status.ServiceID,
+			*l.Status.ServiceID, "",
 			1)
 	} else {
 		metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
@@ -134,7 +135,7 @@ func (l *Lookup) queryMetrics(successfulQuery bool) {
 			"",
 			"FAIL")
 		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
-			*l.Status.ServiceID,
+			*l.Status.ServiceID, "",
 			0)
 	}
 }
@@ -148,26 +149,24 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 	}
 
 	// Set the new Deployed version.
-	l.Status.SetDeployedVersion(version, writeToDB)
+	l.Status.SetDeployedVersion(version, "", writeToDB)
 
-	// If this new version isn't LatestVersion
-	// Check that it's not a later version than LatestVersion
+	// If this new version is not LatestVersion,
+	// check it is not a later version than LatestVersion.
 	latestVersion := l.Status.LatestVersion()
 	if latestVersion == "" {
-		l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
-		l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
+		l.Status.SetLatestVersion(l.Status.DeployedVersion(), l.Status.DeployedVersionTimestamp(), writeToDB)
 		l.Status.AnnounceQueryNewVersion()
 	} else if version != latestVersion &&
 		l.Options.GetSemanticVersioning() {
-		//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning
+		//#nosec G104 -- Disregard as deployedVersion will always be semantic if GetSemanticVersioning.
 		deployedVersionSV, _ := semver.NewVersion(version)
-		//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning
+		//#nosec G104 -- Disregard as LatestVersion will always be semantic if GetSemanticVersioning.
 		latestVersionSV, _ := semver.NewVersion(latestVersion)
 
-		// Update LatestVersion to DeployedVersion if it's newer
+		// Update LatestVersion to DeployedVersion if newer.
 		if latestVersionSV.LessThan(deployedVersionSV) {
-			l.Status.SetLatestVersion(l.Status.DeployedVersion(), writeToDB)
-			l.Status.SetLatestVersionTimestamp(l.Status.DeployedVersionTimestamp())
+			l.Status.SetLatestVersion(l.Status.DeployedVersion(), l.Status.DeployedVersionTimestamp(), writeToDB)
 			l.Status.AnnounceQueryNewVersion()
 		}
 	}
@@ -175,12 +174,13 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 	// Announce version change to WebSocket clients.
 	jLog.Info(
 		fmt.Sprintf("Updated to %q", version),
-		&util.LogFrom{Primary: *l.Status.ServiceID},
+		util.LogFrom{Primary: *l.Status.ServiceID},
 		true)
 	l.Status.AnnounceUpdate()
 }
 
-func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) {
+// httpRequest sends an HTTP request to the URL and returns the response body.
+func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 	// HTTPS insecure skip verify.
 	customTransport := &http.Transport{}
 	if l.GetAllowInvalidCerts() {
@@ -193,14 +193,14 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 	req, err := http.NewRequest(l.Method, l.GetURL(), l.GetBody())
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		return
+		return nil, err //nolint:wrapcheck
 	}
-	// Set headers
+	// Set headers.
 	req.Header.Set("Connection", "close")
 	for _, header := range l.Headers {
 		req.Header.Set(util.EvalEnvVars(header.Key), util.EvalEnvVars(header.Value))
 	}
-	// Basic auth
+	// Basic auth.
 	if l.BasicAuth != nil {
 		req.SetBasicAuth(util.EvalEnvVars(l.BasicAuth.Username), util.EvalEnvVars(l.BasicAuth.Password))
 	}
@@ -213,22 +213,22 @@ func (l *Lookup) httpRequest(logFrom *util.LogFrom) (rawBody []byte, err error) 
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
 			jLog.Warn(err, logFrom, true)
-			return
+			return nil, err
 		}
 		jLog.Error(err, logFrom, true)
-		return
+		return nil, err
 	}
 
 	// Ignore non-2XX responses.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
 		jLog.Warn(err, logFrom, true)
-		return
+		return nil, err
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
-	rawBody, err = io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	jLog.Error(err, logFrom, err != nil)
-	return
+	return body, err //nolint:wrapcheck
 }

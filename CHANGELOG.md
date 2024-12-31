@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Bug Fixes
 
-* **edit:** properly remove notify defaults that aren't overriden ([a49939d](https://github.com/release-argus/Argus/commits/a49939d52a64d8da50255e524a11290664fe80cf))
+* **edit:** properly remove notify defaults that aren't overridden ([a49939d](https://github.com/release-argus/Argus/commits/a49939d52a64d8da50255e524a11290664fe80cf))
 
 ### [0.17.4](https://github.com/release-argus/Argus/compare/0.17.3...0.17.4) (2024-04-27)
 

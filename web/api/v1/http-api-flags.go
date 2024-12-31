@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -19,16 +20,16 @@ import (
 	"net/http"
 
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpFlags returns the values of vars that can be set with flags.
+// httpFlags retrieves the values of vars that may get set with flags.
 func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
-	logFrom := &util.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	// Create and send status page data
-	msg := api_type.Flags{
+	// Create and send status page data.
+	msg := apitype.Flags{
 		ConfigFile:       api.Config.File,
 		LogLevel:         api.Config.Settings.LogLevel(),
 		LogTimestamps:    api.Config.Settings.LogTimestamps(),

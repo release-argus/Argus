@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ package webhook
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestSliceDefaults_Print(t *testing.T) {
-	testValid := testWebHookDefaults(false, false, false)
-	testInvalid := testWebHookDefaults(true, true, false)
+	testValid := testDefaults(false, false)
+	testInvalid := testDefaults(true, false)
 	// GIVEN a SliceDefaults
 	tests := map[string]struct {
 		slice *SliceDefaults
@@ -42,42 +41,42 @@ func TestSliceDefaults_Print(t *testing.T) {
 		"single element slice": {
 			slice: &SliceDefaults{
 				"single": testValid},
-			want: `
-webhook:
-  single:
-    type: ` + testValid.Type + `
-    url: ` + testValid.URL + `
-    allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
-    secret: ` + testValid.Secret + `
-    desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
-    delay: ` + fmt.Sprint(testValid.Delay) + `
-    max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
-    silent_fails: ` + fmt.Sprint(*testValid.SilentFails),
+			want: test.TrimYAML(`
+				webhook:
+					single:
+						type: ` + testValid.Type + `
+						url: ` + testValid.URL + `
+						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
+						secret: ` + testValid.Secret + `
+						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
+						delay: ` + fmt.Sprint(testValid.Delay) + `
+						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
+						silent_fails: ` + fmt.Sprint(*testValid.SilentFails)),
 		},
 		"multiple element slice": {
 			slice: &SliceDefaults{
 				"first":  testValid,
 				"second": testInvalid},
-			want: `
-webhook:
-  first:
-    type: ` + testValid.Type + `
-    url: ` + testValid.URL + `
-    allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
-    secret: ` + testValid.Secret + `
-    desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
-    delay: ` + fmt.Sprint(testValid.Delay) + `
-    max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
-    silent_fails: ` + fmt.Sprint(*testValid.SilentFails) + `
-  second:
-    type: ` + testInvalid.Type + `
-    url: ` + testInvalid.URL + `
-    allow_invalid_certs: ` + fmt.Sprint(*testInvalid.AllowInvalidCerts) + `
-    secret: ` + testInvalid.Secret + `
-    desired_status_code: ` + fmt.Sprint(*testInvalid.DesiredStatusCode) + `
-    delay: ` + fmt.Sprint(testInvalid.Delay) + `
-    max_tries: ` + fmt.Sprint(*testInvalid.MaxTries) + `
-    silent_fails: ` + fmt.Sprint(*testInvalid.SilentFails),
+			want: test.TrimYAML(`
+				webhook:
+					first:
+						type: ` + testValid.Type + `
+						url: ` + testValid.URL + `
+						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
+						secret: ` + testValid.Secret + `
+						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
+						delay: ` + fmt.Sprint(testValid.Delay) + `
+						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
+						silent_fails: ` + fmt.Sprint(*testValid.SilentFails) + `
+					second:
+						type: ` + testInvalid.Type + `
+						url: ` + testInvalid.URL + `
+						allow_invalid_certs: ` + fmt.Sprint(*testInvalid.AllowInvalidCerts) + `
+						secret: ` + testInvalid.Secret + `
+						desired_status_code: ` + fmt.Sprint(*testInvalid.DesiredStatusCode) + `
+						delay: ` + fmt.Sprint(testInvalid.Delay) + `
+						max_tries: ` + fmt.Sprint(*testInvalid.MaxTries) + `
+						silent_fails: ` + fmt.Sprint(*testInvalid.SilentFails)),
 		},
 	}
 
@@ -97,26 +96,26 @@ webhook:
 			stdout := releaseStdout()
 			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if stdout != tc.want {
-				t.Errorf("Print should have given\n%q\nbut gave\n%q",
+				t.Errorf("stdout should have matched\n%q\ngot:\n%q",
 					tc.want, stdout)
 			}
 		})
 	}
 }
 
-func TestWebHookDefaults_CheckValues(t *testing.T) {
-	// GIVEN a WebHookDefaults
+func TestDefaults_CheckValues(t *testing.T) {
+	// GIVEN a Defaults
 	tests := map[string]struct {
-		webhook   *WebHookDefaults
+		webhook   *Defaults
 		wantDelay string
-		errRegex  []string
+		errRegex  string
 	}{
 		"valid WebHook": {
-			webhook: testWebHookDefaults(false, false, false),
+			webhook: testDefaults(false, false),
 		},
 		"invalid delay": {
-			errRegex: []string{
-				"^delay: .* <invalid>"},
+			errRegex: test.TrimYAML(`
+				^delay: "4y" <invalid>`),
 			webhook: NewDefaults(
 				nil, nil,
 				"4y",
@@ -130,16 +129,16 @@ func TestWebHookDefaults_CheckValues(t *testing.T) {
 			wantDelay: "3s",
 		},
 		"invalid type": {
-			errRegex: []string{
-				"^type: .*foo.* <invalid>"},
+			errRegex: test.TrimYAML(`
+				^type: .*foo.* <invalid>`),
 			webhook: NewDefaults(
 				nil, nil, "", nil, nil, "", nil,
 				"foo",
 				""),
 		},
 		"invalid url template": {
-			errRegex: []string{
-				"url: .* <invalid>"},
+			errRegex: test.TrimYAML(`
+				url: ".+" <invalid>`),
 			webhook: NewDefaults(
 				nil, nil, "", nil, nil, "", nil, "",
 				"https://example.com/{{ version }"),
@@ -153,9 +152,9 @@ func TestWebHookDefaults_CheckValues(t *testing.T) {
 				"https://example.com/{{ version }"),
 		},
 		"invalid custom headers": {
-			errRegex: []string{
-				`^custom_headers:$`,
-				`^  bar: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				custom_headers:
+					bar: "[^"]+" <invalid>`),
 			webhook: NewDefaults(
 				nil,
 				&Headers{
@@ -164,10 +163,12 @@ func TestWebHookDefaults_CheckValues(t *testing.T) {
 				"", nil, nil, "", nil, "", ""),
 		},
 		"all errs": {
-			errRegex: []string{
-				`^type: "[^"]+" <invalid>`,
-				`^delay: "[^"]+" <invalid>`,
-				`^url: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				type: "[^"]+" <invalid>.*
+				url: "[^"]+" <invalid>.*
+				custom_headers:
+					bar: "[^"]+" <invalid>.*
+				delay: "[^"]+" <invalid>.*$`),
 			webhook: NewDefaults(
 				nil,
 				&Headers{
@@ -187,23 +188,21 @@ func TestWebHookDefaults_CheckValues(t *testing.T) {
 			// WHEN CheckValues is called
 			err := tc.webhook.CheckValues("")
 
-			// THEN it err's when expected
+			// THEN it errors when expected
 			e := util.ErrorToString(err)
-			lines := strings.Split(e, `\`)
-			if len(tc.errRegex) > len(lines) {
-				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
-					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			lines := strings.Split(e, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n")
+			if wantLines > len(lines) {
+				t.Errorf("WebHook.CheckValues() error mismatch\nwant %d errors:\n%q\ngot %d errors:\n%q",
+					wantLines, tc.errRegex, len(lines), e)
 				return
 			}
-			for i := range tc.errRegex {
-				re := regexp.MustCompile(tc.errRegex[i])
-				match := re.MatchString(lines[i])
-				if !match {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], e)
-					return
-				}
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("WebHook.CheckValues() error mismatch\n%q\ngot:\n%q",
+					tc.errRegex, e)
+				return
 			}
+			// AND the delay is fixed when expected
 			if tc.wantDelay != "" && tc.webhook.Delay != tc.wantDelay {
 				t.Errorf("want delay=%q\ngot  delay=%q",
 					tc.wantDelay, tc.webhook.Delay)
@@ -215,79 +214,70 @@ func TestWebHookDefaults_CheckValues(t *testing.T) {
 func TestWebHook_CheckValues(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		delay         string
-		wantDelay     string
-		whType        *string
-		whMainType    string
-		url           *string
-		secret        *string
-		customHeaders Headers
-		errRegex      []string
+		delay, wantDelay string
+		whType           *string
+		whMainType       string
+		url, secret      *string
+		customHeaders    Headers
+		errRegex         string
 	}{
 		"valid WebHook": {},
 		"invalid delay": {
-			errRegex: []string{
-				"^delay: .* <invalid>"},
-			delay: "5x",
+			errRegex: `^delay: .* <invalid>`,
+			delay:    "5x",
 		},
 		"fix int delay": {
 			delay:     "5",
 			wantDelay: "5s",
 		},
 		"invalid type": {
-			errRegex: []string{
-				"^type: .*foo.* <invalid>"},
-			whType: test.StringPtr("foo"),
+			errRegex: `^type: .*foo.* <invalid>`,
+			whType:   test.StringPtr("foo"),
 		},
 		"invalid main type": {
-			errRegex:   []string{}, // Invalid, but caught in the Defaults CheckValues
+			errRegex:   "", // Invalid, but caught in the Defaults CheckValues
 			whType:     test.StringPtr(""),
 			whMainType: "bar",
 		},
 		"mismatching type and main type": {
-			errRegex: []string{
-				`^type: "github" != "gitlab" <invalid>`},
+			errRegex:   `^type: "github" != "gitlab" <invalid>.*$`,
 			whType:     test.StringPtr("github"),
 			whMainType: "gitlab",
 		},
 		"no type": {
-			errRegex: []string{
-				"^type: <required>"},
-			whType: test.StringPtr(""),
+			errRegex: `^type: <required>.*$`,
+			whType:   test.StringPtr(""),
 		},
 		"invalid url template": {
-			errRegex: []string{
-				"url: .* <invalid>"},
-			url: test.StringPtr("{{ version }"),
+			errRegex: `^url: .* <invalid>.*$`,
+			url:      test.StringPtr("{{ version }"),
 		},
 		"no url": {
-			errRegex: []string{
-				"^url: <required>"},
-			url: test.StringPtr(""),
+			errRegex: `^url: <required>.*$`,
+			url:      test.StringPtr(""),
 		},
 		"no secret": {
-			errRegex: []string{
-				"^secret: <required>"},
-			secret: test.StringPtr(""),
+			errRegex: `^secret: <required>.*$`,
+			secret:   test.StringPtr(""),
 		},
 		"valid custom headers": {
 			customHeaders: Headers{
 				{Key: "foo", Value: "bar"}},
 		},
 		"invalid custom headers": {
-			errRegex: []string{
-				`^custom_headers:$`,
-				`^  bar: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^custom_headers:
+					bar: "[^"]+" <invalid>.*$`),
 			customHeaders: Headers{
 				{Key: "foo", Value: "bar"},
 				{Key: "bar", Value: "{{ version }"}},
 		},
 		"all errs": {
-			errRegex: []string{
-				`^type: "[^"]+" <invalid>`,
-				`^delay: "[^"]+" <invalid>`,
-				`^url: <required>`,
-				`^secret: <required>`},
+			errRegex: test.TrimYAML(`
+				^type: "[^"]+" <invalid>.*
+				delay: "[^"]+" <invalid>.*
+				url: <required>.*
+				secret: <required>.*$`),
 			delay:  "5x",
 			whType: test.StringPtr("foo"),
 			url:    test.StringPtr(""),
@@ -320,23 +310,21 @@ func TestWebHook_CheckValues(t *testing.T) {
 			// WHEN CheckValues is called
 			err := webhook.CheckValues("")
 
-			// THEN it err's when expected
+			// THEN it errors when expected
 			e := util.ErrorToString(err)
-			lines := strings.Split(e, `\`)
-			if len(tc.errRegex) > len(lines) {
-				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
-					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			lines := strings.Split(e, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n")
+			if wantLines > len(lines) {
+				t.Fatalf("latestver.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+					wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
-			for i := range tc.errRegex {
-				re := regexp.MustCompile(tc.errRegex[i])
-				match := re.MatchString(lines[i])
-				if !match {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], e)
-					return
-				}
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("latestver.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+					tc.errRegex, e)
+				return
 			}
+			// AND the delay is fixed when expected
 			if tc.wantDelay != "" && webhook.Delay != tc.wantDelay {
 				t.Errorf("want delay=%q\ngot  delay=%q",
 					tc.wantDelay, webhook.Delay)
@@ -349,18 +337,17 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 	// GIVEN a SliceDefaults
 	tests := map[string]struct {
 		slice    *SliceDefaults
-		errRegex []string
+		errRegex string
 	}{
 		"nil slice": {},
 		"valid single element slice": {
 			slice: &SliceDefaults{
-				"a": testWebHookDefaults(true, false, false)},
+				"a": testDefaults(true, false)},
 		},
 		"invalid single element slice": {
-			errRegex: []string{
-				`^webhook:$`,
-				`^  a:$`,
-				`^    delay: .* <invalid>`},
+			errRegex: test.TrimYAML(`
+				^a:
+					delay: .* <invalid>.*$`),
 			slice: &SliceDefaults{
 				"a": NewDefaults(
 					nil, nil,
@@ -369,17 +356,16 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 		},
 		"valid multi element slice": {
 			slice: &SliceDefaults{
-				"a": testWebHookDefaults(true, false, false),
-				"b": testWebHookDefaults(false, false, false)},
+				"a": testDefaults(true, false),
+				"b": testDefaults(false, false)},
 		},
 		"invalid multi element slice": {
-			errRegex: []string{
-				`^webhook:$`,
-				`^  a:$`,
-				`^    delay: "[^"]+" <invalid>`,
-				`^  b:$`,
-				`^    type: "[^"]+" <invalid>`,
-				`^    url: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^a:
+					delay: "[^"]+" <invalid>.*
+				b:
+					type: "[^"]+" <invalid>.*
+					url: "[^"]+" <invalid>.*$`),
 			slice: &SliceDefaults{
 				"a": NewDefaults(
 					nil, nil,
@@ -399,22 +385,19 @@ func TestSliceDefaults_CheckValues(t *testing.T) {
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 
-			// THEN it err's when expected
+			// THEN it errors when expected
 			e := util.ErrorToString(err)
-			lines := strings.Split(e, `\`)
-			if len(tc.errRegex) > len(lines) {
-				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
-					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			lines := strings.Split(e, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n")
+			if wantLines > len(lines) {
+				t.Fatalf("webhook.SliceDefaults.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+					wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
-			for i := range tc.errRegex {
-				re := regexp.MustCompile(tc.errRegex[i])
-				match := re.MatchString(lines[i])
-				if !match {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], e)
-					return
-				}
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("webhook.SliceDefaults.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+					tc.errRegex, e)
+				return
 			}
 		})
 	}
@@ -424,7 +407,7 @@ func TestSlice_CheckValues(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
 		slice    *Slice
-		errRegex []string
+		errRegex string
 	}{
 		"nil slice": {},
 		"valid single element slice": {
@@ -432,10 +415,12 @@ func TestSlice_CheckValues(t *testing.T) {
 				"a": testWebHook(true, false, false)},
 		},
 		"invalid single element slice": {
-			errRegex: []string{
-				`^webhook:$`,
-				`^  a:$`,
-				`^    delay: .* <invalid>`},
+			errRegex: test.TrimYAML(`
+				^a:
+					type: <required>.*
+					delay: "5x" <invalid>.*
+					url: <required>.*
+					secret: <required>.*$`),
 			slice: &Slice{
 				"a": New(
 					nil, nil,
@@ -448,17 +433,16 @@ func TestSlice_CheckValues(t *testing.T) {
 				"b": testWebHook(false, false, false)},
 		},
 		"invalid multi element slice": {
-			errRegex: []string{
-				`^webhook:$`,
-				`^  a:$`,
-				`^    delay: "[^"]+" <invalid>`,
-				`^    type: <required>`,
-				`^    url: <required>`,
-				`^    secret: <required>`,
-				`^  b:$`,
-				`^    type: "[^"]+" <invalid>`,
-				`^    url: <required>`,
-				`^    secret: <required>`},
+			errRegex: test.TrimYAML(`
+				^a:
+					type: <required>.*
+					delay: "5x" <invalid>.*
+					url: <required>.*
+					secret: <required>.*
+				b:
+					type: "foo" <invalid>.*
+					url: <required>.*
+					secret: <required>.*$`),
 			slice: &Slice{
 				"a": New(
 					nil, nil,
@@ -468,9 +452,8 @@ func TestSlice_CheckValues(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil, "", nil,
 					"foo",
 					"",
-					&WebHookDefaults{},
-					&WebHookDefaults{},
-					&WebHookDefaults{})},
+					&Defaults{},
+					&Defaults{}, &Defaults{})},
 		},
 	}
 
@@ -479,35 +462,33 @@ func TestSlice_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			if tc.slice != nil {
-				svcStatus := svcstatus.Status{}
+				svcStatus := status.Status{}
 				svcStatus.Init(
 					0, 0, len(*tc.slice),
 					nil, nil)
 				tc.slice.Init(
 					&svcStatus,
-					&SliceDefaults{}, &WebHookDefaults{}, &WebHookDefaults{},
+					&SliceDefaults{},
+					&Defaults{}, &Defaults{},
 					nil, nil)
 			}
 
 			// WHEN CheckValues is called
 			err := tc.slice.CheckValues("")
 
-			// THEN it err's when expected
+			// THEN it errors when expected
 			e := util.ErrorToString(err)
-			lines := strings.Split(e, `\`)
-			if len(tc.errRegex) > len(lines) {
-				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
-					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			lines := strings.Split(e, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n")
+			if wantLines > len(lines) {
+				t.Fatalf("webhook.Slice.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+					wantLines, tc.errRegex, len(lines), lines, e)
 				return
 			}
-			for i := range tc.errRegex {
-				re := regexp.MustCompile(tc.errRegex[i])
-				match := re.MatchString(lines[i])
-				if !match {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], e)
-					return
-				}
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("webhook.Slice.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+					tc.errRegex, e)
+				return
 			}
 		})
 	}

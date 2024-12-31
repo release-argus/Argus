@@ -29,7 +29,7 @@ export const Approvals = (): ReactElement => {
   } = useQuery({
     queryKey: ["service/order"],
     queryFn: () => fetchJSON<OrderAPIResponse>({ url: "api/v1/service/order" }),
-    gcTime: 1000 * 60 * 30, // 30 mins
+    gcTime: 1000 * 60 * 30, // 30 mins.
     initialData: { order: monitorData.order },
   });
   useEffect(() => {
@@ -42,7 +42,7 @@ export const Approvals = (): ReactElement => {
       });
   }, [orderData]);
 
-  // Keep local storage and state in sync
+  // Keep local storage and state in sync.
   useEffect(() => {
     setLSToolbarOptions({
       search: toolbarDefaults.search,
@@ -66,13 +66,13 @@ export const Approvals = (): ReactElement => {
           const upToDate =
             svc.status?.deployed_version === svc.status?.latest_version;
           return (
-            // hideUpToDate - deployed_version NOT latest_version
+            // hideUpToDate - deployed_version NOT latest_version.
             (!toolbarOptions.hide.includes(0) || !upToDate) &&
-            // hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version
+            // hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version.
             (!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
-            // hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version
+            // hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version.
             (!toolbarOptions.hide.includes(2) || !skipped) &&
-            // hideInactive - active NOT false
+            // hideInactive - active NOT false.
             (!toolbarOptions.hide.includes(3) || svc.active !== false)
           );
         }

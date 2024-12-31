@@ -54,7 +54,7 @@ const BooleanWithDefault: FC<Props> = ({
     icon: defaultValue ? faCheckCircle : faCircleXmark,
     class: defaultValue ? "success" : "danger",
   };
-  // on load, convert the value if it's a string
+  // on load, convert the value if it's a string.
   useEffect(() => {
     const timeout = setTimeout(() => {
       setValue(name, strToBool(getValues(name)));

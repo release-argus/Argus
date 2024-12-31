@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbtype
+// Package types provides types for the Database.
+package types
 
-// message to be used in the channel for messages to the Database
-// e.g. update deployed_version/latest_version_timestamp.
+// Message to be used in the channel for messages to the Database.
+//
+//	e.g. update deployed_version/latest_version_timestamp.
 type Message struct {
 	ServiceID string
 	Delete    bool
 	Cells     []Cell
 }
 
+// Cell to be modified in the Database.
 type Cell struct {
 	Column string
 	Value  string

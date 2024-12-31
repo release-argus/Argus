@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,173 +12,254 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package filter provides filtering for latest_version queries.
 package filter
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
-// URLCommandSlice to be used to filter version from the URL Content.
+var urlCommandTypes = []string{"regex", "replace", "split"}
+
+// URLCommandSlice is a list of URLCommand that filter version(s) from the URL Content.
 type URLCommandSlice []URLCommand
 
-// String returns a string representation of the URLCommandSlice.
-func (s *URLCommandSlice) String() (str string) {
-	if s != nil {
-		str = util.ToYAMLString(s, "")
-	}
-	return
-}
+// UnmarshalJSON allows handling of a dict as well as a list of dicts.
+//
+// It will convert a dict to a list of a dict.
+//
+//	e.g. URLCommandSlice: { "type": "split" }
+//	becomes URLCommandSlice: [ { "type": "split" } ]
+func (s *URLCommandSlice) UnmarshalJSON(data []byte) error {
+	// Handle the case where data is a quoted JSON string. (from web requests).
+	if len(data) > 0 && data[0] == '"' && data[len(data)-1] == '"' {
+		var jsonStr string
+		if err := json.Unmarshal(data, &jsonStr); err != nil {
+			return err //nolint:wrapcheck
+		}
 
-// URLCommand is a command to be ran to filter version from the URL body.
-type URLCommand struct {
-	Type     string  `yaml:"type" json:"type"`                             // regex/replace/split
-	Regex    *string `yaml:"regex,omitempty" json:"regex,omitempty"`       // regex: regexp.MustCompile(Regex)
-	Index    int     `yaml:"index,omitempty" json:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index]
-	Template *string `yaml:"template,omitempty" json:"template,omitempty"` // regex: template
-	Text     *string `yaml:"text,omitempty" json:"text,omitempty"`         // split: strings.Split(tgtString, "Text")
-	New      *string `yaml:"new,omitempty" json:"new,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New")
-	Old      *string `yaml:"old,omitempty" json:"old,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New")
-}
-
-// String returns a string representation of the URLCommand.
-func (c *URLCommand) String() (str string) {
-	if c != nil {
-		str = util.ToYAMLString(c, "")
+		data = []byte(jsonStr)
 	}
-	return
+
+	// Try to unmarshal as a list of URLCommands.
+	var multi []URLCommand
+	if err := json.Unmarshal(data, &multi); err == nil {
+		*s = multi
+		return nil
+	}
+
+	// Else, try to unmarshal as a single URLCommand.
+	var single URLCommand
+	err := json.Unmarshal(data, &single)
+	if err == nil {
+		*s = []URLCommand{single}
+		return nil
+	}
+
+	return err //nolint:wrapcheck
 }
 
 // UnmarshalYAML allows handling of a dict as well as a list of dicts.
 //
 // It will convert a dict to a list of a dict.
 //
-// e.g.    URLCommandSlice: { type: "split" }
-//
-// becomes URLCommandSlice: [ { type: "split" } ]
-func (s *URLCommandSlice) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+//	e.g. URLCommandSlice: { type: "split" }
+//	becomes URLCommandSlice: [ { type: "split" } ]
+func (s *URLCommandSlice) UnmarshalYAML(value *yaml.Node) error {
+	// Try to unmarshal as a list of URLCommands.
 	var multi []URLCommand
-	err = unmarshal(&multi)
-	if err != nil {
-		var single URLCommand
-		err = unmarshal(&single)
-		if err != nil {
-			return
-		}
-		*s = []URLCommand{single}
-	} else {
+	if err := value.Decode(&multi); err == nil {
 		*s = multi
+		return nil
 	}
-	return
+
+	// Else, try to unmarshal as a single URLCommand.
+	var single URLCommand
+	err := value.Decode(&single)
+	if err == nil {
+		*s = []URLCommand{single}
+		return nil
+	}
+
+	return err //nolint:wrapcheck
 }
 
-// Run all of the URLCommand(s) in this URLCommandSlice.
-func (s *URLCommandSlice) Run(text string, logFrom *util.LogFrom) (string, error) {
+// String returns a string representation of the URLCommandSlice.
+func (s *URLCommandSlice) String() string {
 	if s == nil {
-		return text, nil
+		return ""
+	}
+	return util.ToYAMLString(s, "")
+}
+
+// URLCommand is a command to filter version(s) from the URL body.
+type URLCommand struct {
+	Type     string  `yaml:"type" json:"type"`                             // regex/replace/split.
+	Regex    string  `yaml:"regex,omitempty" json:"regex,omitempty"`       // regex: regexp.MustCompile(Regex).
+	Index    *int    `yaml:"index,omitempty" json:"index,omitempty"`       // regex/split: re.FindAllString(URL_content, -1)[Index]  /  strings.Split("text")[Index].
+	Template string  `yaml:"template,omitempty" json:"template,omitempty"` // regex: template.
+	Text     string  `yaml:"text,omitempty" json:"text,omitempty"`         // split: strings.Split(tgtString, "Text").
+	New      *string `yaml:"new,omitempty" json:"new,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
+	Old      string  `yaml:"old,omitempty" json:"old,omitempty"`           // replace: strings.ReplaceAll(tgtString, "Old", "New").
+}
+
+// String returns a string representation of the URLCommand.
+func (c *URLCommand) String() string {
+	if c == nil {
+		return ""
+	}
+	return util.ToYAMLString(c, "")
+}
+
+// GetVersions from `text` using the URLCommand(s) in this URLCommandSlice.
+func (s *URLCommandSlice) GetVersions(text string, logFrom util.LogFrom) ([]string, error) {
+	// No URLCommands to run, so treat the text as a single version.
+	if len(*s) == 0 {
+		if text == "" {
+			return nil, nil
+		}
+		return []string{text}, nil
+	}
+	return s.Run(text, logFrom)
+}
+
+// Run all of the URLCommand(s) in this URLCommandSlice on `text`.
+func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) ([]string, error) {
+	if s == nil {
+		return nil, nil
 	}
 
-	urlCommandLogFrom := &util.LogFrom{Primary: logFrom.Primary, Secondary: "url_commands"}
+	urlCommandLogFrom := util.LogFrom{Primary: logFrom.Primary, Secondary: "url_commands"}
+	versions := []string{text}
+	for _, urlCommand := range *s {
+		if err := urlCommand.run(&versions, urlCommandLogFrom); err != nil {
+			return nil, err
+		}
+	}
+	return versions, nil
+}
+
+// run this URLCommand on `text`.
+func (c *URLCommand) run(versions *[]string, logFrom util.LogFrom) error {
 	var err error
-	for commandIndex := range *s {
-		text, err = (*s)[commandIndex].run(text, urlCommandLogFrom)
+
+	for i, version := range *versions {
+		// Iterate through the commands to filter the text.
+		if jLog.IsLevel("DEBUG") {
+			jLog.Debug(
+				fmt.Sprintf("Looking through:\n%q", version),
+				logFrom, true)
+		}
+
+		var msg string
+		switch c.Type {
+		case "split":
+			msg = fmt.Sprintf("Splitting on %q with index %d", c.Text, c.Index)
+			err = c.split(i, versions, logFrom)
+		case "replace":
+			msg = fmt.Sprintf("Replacing %q with %q", c.Old, *c.New)
+			(*versions)[i] = strings.ReplaceAll(version, c.Old, *c.New)
+		case "regex":
+			msg = fmt.Sprintf("Regexing %q", c.Regex)
+			if c.Template != "" {
+				msg = fmt.Sprintf("%s with template %q", msg, c.Template)
+			}
+			err = c.regex(i, versions, logFrom)
+		}
 		if err != nil {
-			return text, err
+			return err
+		}
+
+		if jLog.IsLevel("DEBUG") {
+			msg = fmt.Sprintf("%s\nResolved to %q", msg, version)
+			jLog.Debug(msg, logFrom, true)
 		}
 	}
-	return text, nil
+	return nil
 }
 
-// run this URLCommand on `text`
-func (c *URLCommand) run(text string, logFrom *util.LogFrom) (string, error) {
-	var err error
-	// Iterate through the commands to filter the text.
-	textBak := text
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
-			fmt.Sprintf("Looking through:\n%q", text),
-			logFrom, true)
-	}
+// regex applies the URLCommands regex to `versions[versionIndex]`.
+//
+// Parameters:
+//   - versionIndex: The index of the version in the `versions` slice to validate.
+//   - versions: A pointer to the slice of version string(s) to regex.
+//   - logFrom: Used for logging the source of the operation.
+func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom util.LogFrom) error {
+	re := regexp.MustCompile(c.Regex)
 
-	var msg string
-	switch c.Type {
-	case "split":
-		msg = fmt.Sprintf("Splitting on %q with index %d", *c.Text, c.Index)
-		text, err = c.split(text, logFrom)
-	case "replace":
-		msg = fmt.Sprintf("Replacing %q with %q", *c.Old, *c.New)
-		text = strings.ReplaceAll(text, *c.Old, *c.New)
-	case "regex":
-		msg = fmt.Sprintf("Regexing %q", *c.Regex)
-		if c.Template != nil {
-			msg = fmt.Sprintf("%s with template %q", msg, *c.Template)
-		}
-		text, err = c.regex(text, logFrom)
-	}
-	if err != nil {
-		return textBak, err
-	}
-
-	msg = fmt.Sprintf("%s\nResolved to %s", msg, text)
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(msg, logFrom, true)
-	}
-	return text, err
-}
-
-// regex `text` with the URLCommand's regex.
-func (c *URLCommand) regex(text string, logFrom *util.LogFrom) (string, error) {
-	re := regexp.MustCompile(*c.Regex)
-
-	index := c.Index
-	texts := re.FindAllStringSubmatch(text, -1)
-	// Handle negative indices.
-	if index < 0 {
-		index = len(texts) + c.Index
-	}
-
+	version := (*versions)[versionIndex]
+	matches := re.FindAllStringSubmatch(version, -1)
 	// No matches.
-	if len(texts) == 0 {
-		err := fmt.Errorf("%s %q didn't return any matches",
-			c.Type, *c.Regex)
-		if len(text) < 20 {
-			err = fmt.Errorf("%w on %q",
-				err, text)
+	if len(matches) == 0 {
+		err := fmt.Errorf("%s %q didn't return any matches on %q",
+			c.Type, c.Regex, util.TruncateMessage(version, 50))
+		jLog.Warn(err, logFrom, true)
+		return err
+	}
+
+	// Specific index requested.
+	if c.Index != nil {
+		index := *c.Index
+		// Handle negative indices.
+		if index < 0 {
+			index = len(matches) + *c.Index
 		}
-		jLog.Warn(err, logFrom, true)
 
-		return text, err
+		// Index out of range.
+		if (len(matches) - index) < 1 {
+			err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
+				c.Type, c.Regex, len(matches), version, index+1)
+			jLog.Warn(err, logFrom, true)
+			return err
+		}
+
+		(*versions)[len(*versions)-1] = util.RegexTemplate(matches[index], c.Template)
+		return nil
 	}
-	// Index out of range.
-	if (len(texts) - index) < 1 {
-		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
-			c.Type, *c.Regex, len(texts), text, (index + 1))
-		jLog.Warn(err, logFrom, true)
 
-		return text, err
+	// Add all subMatches to the versions list.
+	subMatch := make([]string, len(matches))
+	for i := range matches {
+		subMatch[i] = util.RegexTemplate(matches[i], c.Template)
 	}
 
-	regexMatches := texts[index]
-	return util.RegexTemplate(regexMatches, c.Template), nil
+	// Replace the current version in the list with the ordered subVersions.
+	util.ReplaceWithElements(versions, versionIndex, subMatch)
+	return nil
 }
 
-// split `text` with the URLCommand's text amd return the index specified.
-func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
-	texts := strings.Split(text, *c.Text)
-
-	if len(texts) == 1 {
-		err := fmt.Errorf("%s didn't find any %q to split on",
-			c.Type, *c.Text)
-		jLog.Warn(err, logFrom, true)
-
-		return text, err
+// split processes the version string at `versions[versionIndex]` by splitting it
+// using the URLCommands text pattern, and updates the element at `versionIndex`.
+//
+//   - If no `Index` is specified, the entire split result replaces the version string at `versionIndex`.
+//   - If `Index` is specified, the element at that index replaces the current version string at `versionIndex`.
+//   - Negative indices are supported, where `-1` refers to the last element.
+//   - If the split result does not contain enough elements to retrieve the specified index, an error is returned.
+//
+// Parameters:
+//   - versionIndex: The index of the version in the `versions` slice to process.
+//   - versions: A pointer to the slice of version string(s) to modify.
+//   - logFrom: Used for logging the source of the operation.
+func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom util.LogFrom) error {
+	texts, err := c.splitAllMatches((*versions)[versionIndex], logFrom)
+	if err != nil {
+		return err
 	}
 
-	index := c.Index
+	// If no index specified, replace versionIndex with the split text.
+	if c.Index == nil {
+		util.ReplaceWithElements(versions, versionIndex, texts)
+		return nil
+	}
+
+	index := *c.Index
 	// Handle negative indices.
 	if index < 0 {
 		index = len(texts) + index
@@ -186,104 +267,86 @@ func (c *URLCommand) split(text string, logFrom *util.LogFrom) (string, error) {
 
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
-			c.Type, *c.Text, len(texts), text, (index + 1))
+			c.Type, c.Text, len(texts), (*versions)[versionIndex], index+1)
 		jLog.Warn(err, logFrom, true)
 
-		return text, err
+		return err
 	}
 
-	return texts[index], nil
+	(*versions)[versionIndex] = texts[index]
+	return nil
 }
 
-// CheckValues of the URLCommand(s) in the URLCommandSlice.
-func (s *URLCommandSlice) CheckValues(prefix string) (errs error) {
+// splitAllMatches will split `text` on the URLCommands text, and return all matches.
+func (c *URLCommand) splitAllMatches(text string, logFrom util.LogFrom) ([]string, error) {
+	texts := strings.Split(text, c.Text)
+	if len(texts) == 1 {
+		err := fmt.Errorf("%s didn't find any %q to split on",
+			c.Type, c.Text)
+		jLog.Warn(err, logFrom, true)
+
+		return nil, err
+	}
+	return texts, nil
+}
+
+// CheckValues validates the fields of each URLCommand in the URLCommandSlice.
+func (s *URLCommandSlice) CheckValues(prefix string) error {
 	if s == nil {
-		return
+		return nil
 	}
 
-	for index := range *s {
-		if err := (*s)[index].CheckValues(prefix + "    "); err != nil {
-			errs = fmt.Errorf("%s%s  item_%d:\\%w",
-				util.ErrorToString(errs), prefix, index, err)
-		}
+	itemPrefix := prefix + "  "
+	var errs []error
+	for index, urlCommand := range *s {
+		util.AppendCheckError(&errs, prefix, fmt.Sprintf("- item_%d", index),
+			urlCommand.CheckValues(itemPrefix))
 	}
 
-	if errs != nil {
-		errs = fmt.Errorf("%surl_commands:\\%s",
-			prefix, util.ErrorToString(errs))
+	if len(errs) == 0 {
+		return nil
 	}
-	return
+	return errors.Join(errs...)
 }
 
-// CheckValues of the URLCommand.
-func (c *URLCommand) CheckValues(prefix string) (errs error) {
-	validType := true
+// CheckValues validates the fields of the URLCommand struct.
+func (c *URLCommand) CheckValues(prefix string) error {
+	if !util.Contains(urlCommandTypes, c.Type) {
+		return fmt.Errorf("%stype: %q <invalid> is not a valid url_command [regex, replace, split]",
+			prefix, c.Type)
+	}
 
+	errs := []error{
+		fmt.Errorf("%stype: %s", prefix, c.Type)}
 	switch c.Type {
 	case "regex":
-		if c.Regex == nil {
-			errs = fmt.Errorf("%s%sregex: <required> (regex to use)\\",
-				util.ErrorToString(errs), prefix)
+		if c.Regex == "" {
+			errs = append(errs, fmt.Errorf("%sregex: <required> (regex to use)",
+				prefix))
 		} else {
-			_, err := regexp.Compile(*c.Regex)
+			_, err := regexp.Compile(c.Regex)
 			if err != nil {
-				errs = fmt.Errorf("%s%sregex: %q <invalid> (Invalid RegEx)\\",
-					util.ErrorToString(errs), prefix, *c.Regex)
+				errs = append(errs, fmt.Errorf("%sregex: %q <invalid> (Invalid RegEx)",
+					prefix, c.Regex))
 			}
 		}
-		// Remove the template if it's empty
-		if util.DefaultIfNil(c.Template) == "" {
-			c.Template = nil
-		}
 	case "replace":
-		if c.New == nil {
-			errs = fmt.Errorf("%s%snew: <required> (text you want to replace with)\\",
-				util.ErrorToString(errs), prefix)
+		if c.Old == "" {
+			errs = append(errs, fmt.Errorf("%sold: <required> (text you want replaced)",
+				prefix))
 		}
-		if c.Old == nil {
-			errs = fmt.Errorf("%s%sold: <required> (text you want replaced)\\",
-				util.ErrorToString(errs), prefix)
+		if c.New == nil {
+			c.New = new(string)
 		}
 	case "split":
-		if c.Text == nil {
-			errs = fmt.Errorf("%s%stext: <required> (text to split on)\\",
-				util.ErrorToString(errs), prefix)
+		if c.Text == "" {
+			errs = append(errs, fmt.Errorf("%stext: <required> (text to split on)",
+				prefix))
 		}
-	default:
-		validType = false
-		errs = fmt.Errorf("%s%stype: %q <invalid> is not a valid url_command (regex/replace/split)\\",
-			util.ErrorToString(errs), prefix, c.Type)
 	}
 
-	if errs != nil && validType {
-		errs = fmt.Errorf("%stype: %s\\%w",
-			prefix, c.Type, errs)
+	if len(errs) == 1 {
+		return nil
 	}
-	return errs
-}
-
-// URLCommandsFromStr converts a JSON string to a URLCommandSlice.
-func URLCommandsFromStr(jsonStr *string, defaults *URLCommandSlice, logFrom *util.LogFrom) (*URLCommandSlice, error) {
-	// jsonStr == nil when it hasn't been changed, so just use defaults
-	if jsonStr == nil {
-		return defaults, nil
-	}
-
-	// Try and unmarshal this JSON string
-	var urlCommands URLCommandSlice
-	err := json.Unmarshal([]byte(*jsonStr), &urlCommands)
-	// Ignore the JSON if it failed to unmarshal
-	if err != nil {
-		jLog.Error(fmt.Sprintf("Failed converting JSON - %q\n%s", *jsonStr, util.ErrorToString(err)),
-			logFrom, err != nil)
-		return defaults, fmt.Errorf("failed converting JSON - %w", err)
-	}
-
-	// Check the URLCommands
-	err = urlCommands.CheckValues("")
-	if err != nil {
-		return defaults, err
-	}
-
-	return &urlCommands, nil
+	return errors.Join(errs...)
 }

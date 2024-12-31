@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package util provides utility functions for the Argus project.
 package util
 
 import (
@@ -20,30 +21,30 @@ import (
 	"strings"
 )
 
-// regexCheck returns whether there is a regex match of `re` on `text`.
-func RegexCheck(re string, text string) bool {
+// RegexCheck returns true if a regex match of `re` matches `text`.
+func RegexCheck(re, text string) bool {
 	regex := regexp.MustCompile(re)
-	// Return whether there's a regex match.
+	// Return regex match case.
 	return regex.MatchString(text)
 }
 
-// regexCheckWithParams returns the result of a regex match of `re` on `text`
+// RegexCheckWithVersion returns true if a regex match of `re` occurs on `text`
 // after replacing "{{ version }}" with the version string.
-func RegexCheckWithParams(re string, text string, version string) bool {
+func RegexCheckWithVersion(re, text, version string) bool {
 	re = TemplateString(re, ServiceInfo{LatestVersion: version})
 	return RegexCheck(re, text)
 }
 
-// RegexTemplate on `texts[index]` with the regex `template“.
-func RegexTemplate(regexMatches []string, template *string) (result string) {
-	// No template, return the text at the index.
-	if template == nil {
+// RegexTemplate on `texts[index]` with the regex `template`.
+func RegexTemplate(regexMatches []string, template string) string {
+	// No template, return the text at the last index.
+	if template == "" {
 		return regexMatches[len(regexMatches)-1]
 	}
 
-	// Replace placeholders in the template with matched groups in reverse order
-	// (so that '$10' isn't replace by '$1')
-	result = *template
+	// Replace placeholders with matched groups in reverse order
+	// (to prevent replacing '$10' with '$1').
+	result := template
 	for i := len(regexMatches) - 1; i > 0; i-- {
 		placeholder := fmt.Sprintf("$%d", i)
 		result = strings.ReplaceAll(result, placeholder, regexMatches[i])

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package config provides the configuration for Argus.
 package config
 
 import (
+	"fmt"
+	"math"
+	"regexp"
 	"strings"
 
 	"github.com/release-argus/Argus/util"
@@ -28,29 +32,63 @@ func (c *Config) GetOrder(data []byte) {
 	order := make([]string, 0, len(c.Service))
 	afterService := false
 	indentation := ""
-	for index, line := range lines {
-		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "#") && len(lines[index]) != 0 {
-			// Find `service:` start
+	for index := 0; index < len(lines); index++ {
+		line := lines[index]
+		// Skip empty lines and comments.
+		if util.RegexCheck(`^\s*$`, line) {
+			continue
+		}
+
+		// If we're on the start of a new block.
+		if util.RegexCheck(`^[^\s].+:$`, line) {
+			// Find `service:` start.
 			if line == "service:" {
 				afterService = true
 
-				// If a service isn't on the next line
-				if index == len(lines)-1 || (len(lines[index+1]) != 0 && lines[index+1][0] != ' ') {
+				// If this is the last line, break.
+				if index == len(lines)-1 {
 					break
 				}
 
-				// Get indentation on the next line
+				// Get indentation on the next line.
 				// (Only do this once)
 				if indentation == "" {
-					indentation = getIndentation(lines[index+1])
-					c.Settings.Indentation = uint8(len(indentation))
+					index++
+					// Search for the next service line if there is an empty line immediately after the service line.
+					if lines[index] == "" {
+						foundService := false
+						serviceRegex := regexp.MustCompile(`^(\s*)[^:]+:$`)
+						for i := index + 1; i < len(lines); i++ {
+							if matches := serviceRegex.FindStringSubmatch(lines[i]); matches != nil {
+								// Start of a new non-Service block!.
+								if matches[1] == "" {
+									return
+								}
+								index = i
+								foundService = true
+								break
+							}
+						}
+						// No potential service found.
+						if !foundService {
+							return
+						}
+					}
+					line = lines[index]
+
+					indentation = Indentation(lines[index])
+					c.Settings.Indentation = uint8(math.Min(float64(len(indentation)), 16))
 				}
 			} else if afterService {
 				break
 			}
 		}
-		if afterService && strings.HasPrefix(line, indentation) && !strings.HasPrefix(line, indentation+" ") {
-			// Check that it's a service and not a setting for a service.
+
+		if afterService &&
+			util.RegexCheck(
+				fmt.Sprintf(`^%s[^ ].*:$`, indentation),
+				line) {
+			// Check whether it is a service and not a setting for a service..
 			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
 			var serviceName string
 			// Unmarshal YAML to handle any special characters
@@ -66,7 +104,8 @@ func (c *Config) GetOrder(data []byte) {
 	c.OrderMutex.Unlock()
 }
 
-func getIndentation(line string) (indentation string) {
+// Indentation returns the indentation (leading spaces) of the line.
+func Indentation(line string) (indentation string) {
 	for _, v := range line {
 		if v == ' ' {
 			indentation += " "

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package apitype
+package types
 
 import (
 	"strings"
@@ -90,7 +90,7 @@ func TestWebSocketMessage_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN the GitHubData is stringified with String
+			// WHEN the Data is stringified with String
 			got := tc.websocketMessage.String()
 
 			// THEN the result is as expected

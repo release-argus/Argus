@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
@@ -22,7 +23,7 @@ import (
 
 // DashboardOptionsBase are the base options for the Dashboard.
 type DashboardOptionsBase struct {
-	AutoApprove *bool `yaml:"auto_approve,omitempty" json:"auto_approve,omitempty"` // default - true = Requre approval before sending WebHook(s) for new releases
+	AutoApprove *bool `yaml:"auto_approve,omitempty" json:"auto_approve,omitempty"` // Default - true = Require approval before sending WebHook(s) for new releases.
 }
 
 // DashboardOptionsDefaults are the default values for DashboardOptions.
@@ -30,6 +31,7 @@ type DashboardOptionsDefaults struct {
 	DashboardOptionsBase `yaml:",inline" json:",inline"`
 }
 
+// NewDashboardOptionsDefaults creates a new DashboardOptionsDefaults.
 func NewDashboardOptionsDefaults(
 	autoApprove *bool,
 ) DashboardOptionsDefaults {
@@ -42,12 +44,12 @@ func NewDashboardOptionsDefaults(
 type DashboardOptions struct {
 	DashboardOptionsBase `yaml:",inline" json:",inline"`
 
-	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`                 // Icon URL to use for messages/Web UI
-	IconLinkTo string `yaml:"icon_link_to,omitempty" json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to
-	WebURL     string `yaml:"web_url,omitempty" json:"web_url,omitempty"`           // URL to provide on the Web UI
+	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
+	IconLinkTo string `yaml:"icon_link_to,omitempty" json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+	WebURL     string `yaml:"web_url,omitempty" json:"web_url,omitempty"`           // URL to provide on the Web UI.
 
-	Defaults     *DashboardOptionsDefaults `yaml:"-" json:"-"` // Defaults
-	HardDefaults *DashboardOptionsDefaults `yaml:"-" json:"-"` // Hard defaults
+	Defaults     *DashboardOptionsDefaults `yaml:"-" json:"-"` // Defaults.
+	HardDefaults *DashboardOptionsDefaults `yaml:"-" json:"-"` // Hard defaults.
 }
 
 // NewDashboardOptions creates a new DashboardOptions.
@@ -56,8 +58,7 @@ func NewDashboardOptions(
 	icon string,
 	iconLinkTo string,
 	webURL string,
-	defaults *DashboardOptionsDefaults,
-	hardDefaults *DashboardOptionsDefaults,
+	defaults, hardDefaults *DashboardOptionsDefaults,
 ) *DashboardOptions {
 	return &DashboardOptions{
 		DashboardOptionsBase: DashboardOptionsBase{
@@ -69,7 +70,7 @@ func NewDashboardOptions(
 		HardDefaults: hardDefaults}
 }
 
-// GetAutoApprove will return whether new releases should be auto-approved.
+// GetAutoApprove returns whether new releases are auto-approved.
 func (d *DashboardOptions) GetAutoApprove() bool {
 	return *util.FirstNonDefault(
 		d.AutoApprove,
@@ -77,20 +78,16 @@ func (d *DashboardOptions) GetAutoApprove() bool {
 		d.HardDefaults.AutoApprove)
 }
 
-// CheckValues of the Dashboardoption.
-func (d *DashboardOptions) CheckValues(prefix string) (errs error) {
+// CheckValues validates the fields of the DashboardOptions struct.
+func (d *DashboardOptions) CheckValues(prefix string) error {
 	if d == nil {
-		return
+		return nil
 	}
 
 	if !util.CheckTemplate(d.WebURL) {
-		errs = fmt.Errorf("%s  web_url: %q <invalid> (didn't pass templating)\\",
+		return fmt.Errorf("%sweb_url: %q <invalid> (didn't pass templating)",
 			prefix, d.WebURL)
 	}
 
-	if errs != nil {
-		errs = fmt.Errorf("%sdashboard:\\%s",
-			prefix, util.ErrorToString(errs))
-	}
-	return
+	return nil
 }

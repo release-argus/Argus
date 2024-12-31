@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
@@ -26,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// SetGitHubHeaders of the req based on the payload and secret.
+// SetGitHubHeaders adds headers for a webhook that mimics GitHub.
 func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	req.Header.Set("X-Github-Event", "push")
 	req.Header.Set("X-Github-Hook-Id", util.RandNumeric(9))

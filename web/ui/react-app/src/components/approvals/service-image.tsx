@@ -47,7 +47,7 @@ export const ServiceImage: FC<Props> = ({
   };
 
   const iconRender = () => {
-    // URL icon
+    // URL icon.
     if (icon)
       return (
         <Card.Img
@@ -58,7 +58,7 @@ export const ServiceImage: FC<Props> = ({
         />
       );
 
-    // Loading spinner
+    // Loading spinner.
     if (loading)
       return (
         <div
@@ -75,7 +75,7 @@ export const ServiceImage: FC<Props> = ({
         </div>
       );
 
-    // Default icon
+    // Default icon.
     return (
       <FontAwesomeIcon
         icon={service_type === "github" ? faGithub : faWindowMaximize}

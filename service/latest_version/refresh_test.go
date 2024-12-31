@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,285 +17,133 @@
 package latestver
 
 import (
-	"os"
-	"regexp"
 	"testing"
 	"time"
 
-	dbtype "github.com/release-argus/Argus/db/types"
-	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	github "github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestLookup_ApplyOverrides(t *testing.T) {
-	testL := testLookup(true, true)
-	// GIVEN various json strings to parse as parts of a Lookup
+func TestLookup_Refresh(t *testing.T) {
+	testURL := testLookup("url", false).(*web.Lookup)
+	testURL.Query(true, util.LogFrom{})
+	testVersionURL := testURL.Status.LatestVersion()
+	testGitHub := testLookup("github", false).(*github.Lookup)
+	testGitHub.Query(true, util.LogFrom{})
+	testVersionGitHub := testGitHub.Status.LatestVersion()
+
+	type args struct {
+		overrides          *string
+		semanticVersioning *string
+	}
+
+	// GIVEN a Lookup and a possible yaml string to override parts of it
 	tests := map[string]struct {
-		accessToken         *string
-		allowInvalidCerts   *string
-		require             *string
-		semanticVersioning  *string
-		typeStr             *string
-		url                 *string
-		urlCommands         *string
-		usePreRelease       *string
-		previous            *Lookup
-		gitHubData          *GitHubData
-		carryOverGitHubData bool
-		errRegex            string
-		want                *Lookup
+		args          args
+		latestVersion string
+		previous      Lookup
+		errRegex      string
+		want          string
+		announce      bool
 	}{
-		"all nil": {
-			previous: testLookup(true, true),
-			want:     testLookup(true, true),
+		"nil Lookup": {
+			errRegex: `lookup is nil`,
 		},
-		"access token": {
-			accessToken: test.StringPtr("foo"),
-			previous:    testLookup(true, true),
-			want: New(
-				test.StringPtr("foo"),
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				testL.Type,
-				testL.URL,
-				&testL.URLCommands,
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
+		"Change of URL": {
+			args: args{
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url": "https://valid.release-argus.io/plain"
+				}`)),
+			},
+			previous: testLookup("url", true),
+			errRegex: `^$`,
+			want:     testVersionURL,
 		},
-		"allow invalid certs": {
-			allowInvalidCerts: test.StringPtr("false"),
-			previous:          testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				test.BoolPtr(false),
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				testL.Type,
-				testL.URL,
-				&testL.URLCommands,
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
+		"Fail CheckValues": {
+			args: args{
+				overrides: test.StringPtr(
+					test.TrimYAML(`{
+						"url_commands": [
+							{"type": "unknown"}
+						]
+				}`)),
+			},
+			previous: testLookup("url", false),
+			errRegex: test.TrimYAML(`
+				^url_commands:
+					- item_0:
+						type: "[^"]+" <invalid>.*$`),
 		},
-		"require": {
-			require: test.StringPtr(`{
-				"docker": {
-					"type": "ghcr",
-					"image": "release-argus/Argus",
-					"tag": "latest"}}`),
-			previous: testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"ghcr",
-						"release-argus/Argus",
-						"latest",
-						"", "", "", time.Now(), nil)},
-				nil,
-				testL.Type,
-				testL.URL,
-				&testL.URLCommands,
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
+		"Change of a few vars": {
+			args: args{
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"url_commands": [
+							{"type": "regex", "regex": "beta: \"v?([^\\\"]+)\""}
+						]
+				}`)),
+				semanticVersioning: test.StringPtr("false"),
+			},
+			previous: testLookup("url", false),
+			errRegex: `^$`,
+			want:     testVersionURL + "-beta",
 		},
-		"require - no docker.type fail": {
-			require: test.StringPtr(`{
-				"docker": {
-					"type": "",
-					"image": "release-argus/Argus",
-					"tag": "latest"}}`),
-			previous: testLookup(true, true),
-			errRegex: `^require:[^ ]+  docker:[^ ]+    type: <required>`,
+		"Change of vars that fail Query": {
+			args: args{
+				overrides: test.StringPtr(
+					test.TrimYAML(`{
+						"allow_invalid_certs": false
+				}`)),
+			},
+			previous: testLookup("url", false),
+			errRegex: `x509 \(certificate invalid\)`,
 		},
-		"require - invalid": {
-			require: test.StringPtr(`{
-				"docker": {
-					"type": "foo",
-					"image": "release-argus/Argus",
-					"tag": "latest"}}`),
-			previous: testLookup(true, true),
-			errRegex: `type: ".*" <invalid>`,
+		"GitHub - Refresh new version": {
+			previous:      testLookup("github", false),
+			latestVersion: "0.0.0",
+			errRegex:      `^$`,
+			want:          testVersionGitHub,
+			announce:      true,
 		},
-		"semantic versioning": {
-			semanticVersioning: test.StringPtr("false"),
-			previous:           testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				opt.New(
-					nil, "", test.BoolPtr(false),
-					nil, nil),
-				testL.Require,
-				nil,
-				testL.Type,
-				testL.URL,
-				&testL.URLCommands,
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
+		"URL - Refresh new version": {
+			previous:      testLookup("url", false),
+			latestVersion: "0.0.0",
+			errRegex:      `^$`,
+			want:          testVersionURL,
+			announce:      true,
 		},
-		"url": {
-			url:      test.StringPtr("https://valid.release-argus.io/json"),
-			previous: testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				testL.Type,
-				"https://valid.release-argus.io/json",
-				&testL.URLCommands,
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
+		"GitHub -> URL": {
+			previous: testLookup("github", false),
+			args: args{
+				overrides: test.StringPtr(
+					test.TrimYAML(`{
+						"type": "url",
+						"url": "https://valid.release-argus.io/plain",
+						"url_commands": [
+							{"type": "regex", "regex": "ver([0-9.]+)"}
+						]
+				}`)),
+				semanticVersioning: test.StringPtr("false")},
+			latestVersion: "0.0.0",
+			errRegex:      `^$`,
+			want:          testVersionURL,
+			announce:      false,
 		},
-		"url commands": {
-			urlCommands: test.StringPtr(`[
-					{"type": "regex", "regex": "v?([0-9.]})"}
-				]`),
-			previous: testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				testL.Type,
-				testL.URL,
-				&filter.URLCommandSlice{
-					{Type: "regex", Regex: test.StringPtr("v?([0-9.]})")}},
-				testL.UsePreRelease,
-				&LookupDefaults{},
-				&LookupDefaults{}),
-		},
-		"url commands - invalid": {
-			urlCommands: test.StringPtr(`[
-					{"type": "foo", "regex": "v?([0-9.]})"}]`),
-			previous: testLookup(true, true),
-			want:     nil,
-			errRegex: `type: .* <invalid>`,
-		},
-		"use prerelease": {
-			usePreRelease: test.StringPtr("true"),
-			previous:      testLookup(true, true),
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				testL.Type,
-				testL.URL,
-				&testL.URLCommands,
-				test.BoolPtr(true),
-				&LookupDefaults{},
-				&LookupDefaults{}),
-		},
-		"type github defaulted if not set": {
-			url: test.StringPtr("release-argus/Argus"),
-			previous: &Lookup{
-				Options: &opt.Options{},
-				Status: &svcstatus.Status{
-					ServiceID: test.StringPtr("test")}},
-			want: &Lookup{
-				Type:       "github",
-				URL:        "release-argus/Argus",
-				GitHubData: NewGitHubData("", nil)},
-		},
-		"type github carries over Releases and ETag": {
-			url: test.StringPtr("release-argus/other"),
-			previous: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				"github",
-				"release-argus/Argus",
-				nil,
-				test.BoolPtr(false),
-				&LookupDefaults{},
-				&LookupDefaults{}),
-			carryOverGitHubData: true,
-			gitHubData: &GitHubData{
-				eTag: "123",
-				releases: []github_types.Release{
-					{TagName: "v1.0.0"}}},
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				"github",
-				"release-argus/other",
-				nil,
-				test.BoolPtr(false),
-				&LookupDefaults{},
-				&LookupDefaults{}),
-		},
-		"GitHubData removed if type changed from github": {
-			url:     test.StringPtr("https://valid.release-argus.io/json"),
-			typeStr: test.StringPtr("url"),
-			previous: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				"github",
-				"release-argus/Argus",
-				nil,
-				test.BoolPtr(false),
-				&LookupDefaults{},
-				&LookupDefaults{}),
-			carryOverGitHubData: false,
-			gitHubData: &GitHubData{
-				eTag: "123",
-				releases: []github_types.Release{
-					{TagName: "v1.0.0"}}},
-			want: New(
-				testL.AccessToken,
-				testL.AllowInvalidCerts,
-				nil,
-				testL.Options,
-				testL.Require,
-				nil,
-				"url",
-				"https://valid.release-argus.io/json",
-				nil,
-				test.BoolPtr(false),
-				&LookupDefaults{},
-				&LookupDefaults{}),
-		},
-		"override with invalid (empty) url": {
-			url:      test.StringPtr(""),
-			previous: testLookup(true, true),
-			want:     nil,
-			errRegex: "url: <required>",
+		"GitHub -> UNKNOWN": {
+			previous: testLookup("github", false),
+			args: args{
+				overrides: test.StringPtr(`{
+					"type": "unknown"
+				}`),
+				semanticVersioning: test.StringPtr("false")},
+			latestVersion: "0.0.0",
+			errRegex:      `^type: "unknown" <invalid>.*$`,
+			announce:      false,
 		},
 	}
 
@@ -303,179 +151,43 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.previous.Status.ServiceID = &name
-			tc.previous.GitHubData = tc.gitHubData
-			if tc.carryOverGitHubData {
-				tc.want.GitHubData = tc.gitHubData
+			// status we'll be working with
+			var targetStatus *status.Status
+			switch l := tc.previous.(type) {
+			case *github.Lookup:
+				targetStatus = l.Status
+			case *web.Lookup:
+				targetStatus = l.Status
 			}
 
-			// WHEN we call applyOverrides
-			got, err := tc.previous.applyOverrides(
-				tc.accessToken,
-				tc.allowInvalidCerts,
-				tc.require,
-				tc.semanticVersioning,
-				tc.typeStr,
-				tc.url,
-				tc.urlCommands,
-				tc.usePreRelease,
-				&name,
-				&util.LogFrom{Primary: name})
+			// Copy the starting status
+			var previousStatus *status.Status
+			if tc.previous != nil {
+				targetStatus.Init(
+					0, 0, 0,
+					&name,
+					nil)
+				// Set the latest version
+				if tc.latestVersion != "" {
+					targetStatus.SetLatestVersion(tc.latestVersion, "", false)
+				}
+				previousStatus = targetStatus.Copy()
+			}
+
+			// WHEN we call Refresh
+			got, gotAnnounce, err := Refresh(
+				tc.previous,
+				tc.args.overrides,
+				tc.args.semanticVersioning)
 
 			// THEN we get an error if expected
 			if tc.errRegex != "" || err != nil {
-				// No error expected
-				if tc.errRegex == "" {
-					tc.errRegex = "^$"
-				}
 				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
+				if !util.RegexCheck(tc.errRegex, e) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
 				return
-			}
-			// AND we get the expected result otherwise
-			if tc.want.String("") != got.String("") {
-				t.Errorf("expected:\n%v\nbut got:\n%v",
-					tc.want, got)
-			}
-			// AND the GitHubData is only carried over to github types
-			if tc.want.GitHubData.String() != got.GitHubData.String() {
-				t.Errorf("expected:\n%s\nbut got:\n%s",
-					tc.want.GitHubData, got.GitHubData)
-			}
-		})
-	}
-}
-
-func TestLookup_Refresh(t *testing.T) {
-	testURL := testLookup(true, true)
-	testURL.Query(true, &util.LogFrom{})
-	testVersionURL := testURL.Status.LatestVersion()
-	testGitHub := testLookup(false, false)
-	testGitHub.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
-	testGitHub.Query(true, &util.LogFrom{})
-	testVersionGitHub := testGitHub.Status.LatestVersion()
-
-	// GIVEN a Lookup and various json strings to override parts of it
-	tests := map[string]struct {
-		accessToken        *string
-		allowInvalidCerts  *string
-		require            *string
-		semanticVersioning *string
-		typeStr            *string
-		url                *string
-		urlCommands        *string
-		usePreRelease      *string
-		latestVersion      string
-		previous           *Lookup
-		errRegex           string
-		want               string
-		announce           bool
-	}{
-		"Change of URL": {
-			url:      test.StringPtr("https://valid.release-argus.io/plain"),
-			previous: testLookup(true, true),
-			want:     testVersionURL,
-		},
-		"Removal of URL": {
-			url:      test.StringPtr(""),
-			previous: testLookup(true, true),
-			errRegex: "url: <required>",
-			want:     "",
-		},
-		"Change of a few vars": {
-			urlCommands: test.StringPtr(`[
-					{"type": "regex", "regex": "beta: \"v?([^\"]+)"}]`),
-			semanticVersioning: test.StringPtr("false"),
-			previous:           testLookup(true, true),
-			want:               testVersionURL + "-beta",
-		},
-		"Change of vars that fail Query": {
-			allowInvalidCerts: test.StringPtr("false"),
-			previous:          testLookup(true, true),
-			errRegex:          `x509 \(certificate invalid\)`,
-		},
-		"URL - Refresh new version": {
-			previous: New(
-				nil,
-				testURL.AllowInvalidCerts,
-				nil,
-				testURL.Options,
-				testURL.Require,
-				nil,
-				testURL.Type,
-				testURL.URL,
-				&testURL.URLCommands,
-				testURL.UsePreRelease,
-				testURL.Defaults,
-				testURL.HardDefaults),
-			want:     testVersionURL,
-			announce: true,
-		},
-		"GitHub - Refresh new version": {
-			previous: New(
-				testGitHub.AccessToken,
-				testGitHub.AllowInvalidCerts,
-				nil,
-				testGitHub.Options,
-				testGitHub.Require,
-				nil,
-				testGitHub.Type,
-				testGitHub.URL,
-				&testGitHub.URLCommands,
-				testGitHub.UsePreRelease,
-				testGitHub.Defaults,
-				testGitHub.HardDefaults),
-			latestVersion: "0.0.0",
-			want:          testVersionGitHub,
-			announce:      true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tc.previous.AccessToken = test.StringPtr(os.Getenv("GITHUB_TOKEN"))
-			// Copy the starting status
-			tc.previous.Status.Init(
-				0, 0, 0,
-				&name,
-				nil)
-			// Set the latest version
-			if tc.latestVersion != "" {
-				tc.previous.Status.SetLatestVersion(tc.latestVersion, false)
-			}
-			previousStatus := tc.previous.Status
-
-			// WHEN we call Refresh
-			got, gotAnnounce, err := tc.previous.Refresh(
-				tc.accessToken,
-				tc.allowInvalidCerts,
-				tc.require,
-				tc.semanticVersioning,
-				tc.typeStr,
-				tc.url,
-				tc.urlCommands,
-				tc.usePreRelease)
-
-			// THEN we get an error if expected
-			if tc.errRegex != "" || err != nil {
-				// No error expected
-				if tc.errRegex == "" {
-					tc.errRegex = "^$"
-				}
-				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
-				}
 			}
 			// AND announce is only true when expected
 			if tc.announce != gotAnnounce {
@@ -489,23 +201,23 @@ func TestLookup_Refresh(t *testing.T) {
 			// AND the timestamp only changes if the version changed
 			if previousStatus.LatestVersionTimestamp() != "" {
 				// If the possible query-changing overrides are nil
-				if tc.require == nil && tc.semanticVersioning == nil && tc.url == nil && tc.urlCommands == nil {
+				if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
 					// The timestamp should change only if the version changed
-					if previousStatus.LatestVersion() != tc.previous.Status.LatestVersion() &&
-						previousStatus.LatestVersionTimestamp() == tc.previous.Status.LatestVersionTimestamp() {
+					if previousStatus.LatestVersion() != targetStatus.LatestVersion() &&
+						previousStatus.LatestVersionTimestamp() == targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
 						// The timestamp shouldn't change as the version didn't change
-					} else if previousStatus.LatestVersionTimestamp() != tc.previous.Status.LatestVersionTimestamp() {
+					} else if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
 					}
 					// If the overrides are not nil
 				} else {
 					// The timestamp shouldn't change
-					if previousStatus.LatestVersionTimestamp() != tc.previous.Status.LatestVersionTimestamp() {
+					if previousStatus.LatestVersionTimestamp() != targetStatus.LatestVersionTimestamp() {
 						t.Errorf("expected timestamp %q but got %q",
-							previousStatus.LatestVersionTimestamp(), tc.previous.Status.LatestVersionTimestamp())
+							previousStatus.LatestVersionTimestamp(), targetStatus.LatestVersionTimestamp())
 					}
 				}
 			}
@@ -513,408 +225,280 @@ func TestLookup_Refresh(t *testing.T) {
 	}
 }
 
-func TestLookup_updateFromRefresh(t *testing.T) {
-	// GIVEN a Lookup and a refreshed version of that Lookup
+func TestApplyOverridesJSON(t *testing.T) {
+	tLookup := testLookup("url", false)
+	// GIVEN a Lookup and a possible json string to override parts of it
+	type args struct {
+		lookup             Lookup
+		overrides          *string
+		semanticVerDiff    bool
+		semanticVersioning *string
+	}
 	tests := map[string]struct {
-		previous          *Lookup
-		now               *Lookup
-		changingOverrides bool
-		want              *Lookup
+		args               args
+		lookupRequire      *filter.Require
+		wantStr            string
+		wantRequireInherit bool
+		wantErr            bool
+		errRegex           string
 	}{
-		"No changes": {
-			previous: New(
-				nil, nil, nil, nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil, nil, nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil, nil, nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"no overrides, no semantic versioning change": {
+			args: args{
+				lookup:             tLookup,
+				overrides:          nil,
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantStr: tLookup.String(tLookup, ""),
+			wantErr: false,
 		},
-		"new ETag - changing overrides": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: true,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"invalid semantic versioning JSON": {
+			args: args{
+				lookup:             tLookup,
+				overrides:          nil,
+				semanticVerDiff:    true,
+				semanticVersioning: test.StringPtr("invalid"),
+			},
+			wantErr:  true,
+			errRegex: `failed to unmarshal latestver.Lookup.SemanticVersioning`,
 		},
-		"new ETag - no changing overrides - update last_queried": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"valid semantic versioning change": {
+			args: args{
+				lookup:             tLookup,
+				overrides:          nil,
+				semanticVerDiff:    true,
+				semanticVersioning: test.StringPtr("true"),
+			},
+			wantStr: tLookup.String(tLookup, ""),
+			wantErr: false,
 		},
-		"new version not set/announced if changingOverrides": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: true,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"valid overrides JSON": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": "https://valid.release-argus.io/json"
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantStr: test.TrimYAML(`
+				type: url
+				url: https://valid.release-argus.io/json
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				allow_invalid_certs: true
+			`),
+			wantErr: false,
 		},
-		"new version set and announced if no changingOverrides": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"invalid overrides JSON - Invalid JSON": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": "
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `failed to unmarshal latestver.Lookup`,
 		},
-		"docker queryToken not copied over if Docker is new": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"", "",
-						"argus", "SECRET",
-						"", time.Time{}, nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil, nil,
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"invalid overrides JSON - different var type": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": ["newType"]
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `failed to unmarshal latestver.Lookup`,
 		},
-		"docker queryToken copied over": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"", "",
-						"argus", "SECRET",
-						"oldQueryToken", time.Time{}, nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"", "",
-						"argus", "SECRET",
-						"newToken", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"", "",
-						"argus", "SECRET",
-						"newToken", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"overrides that make CheckValues fail": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": ""
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `^url: <required>.*$`,
 		},
-		"docker queryToken not copied over if Docker target changed": {
-			previous: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "old-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"argus", "",
-						"argus", "SECRET",
-						"oldQueryToken", time.Time{}, nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.4.0", "2020-01-01T00:00:00Z",
-					"2021-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			now: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"somethingElse", "",
-						"argus", "SECRET",
-						"newToken", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-						nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
-			changingOverrides: false,
-			want: New(
-				nil, nil,
-				&GitHubData{
-					eTag: "new-etag"},
-				nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"hub",
-						"argus", "",
-						"argus", "SECRET",
-						"oldQueryToken", time.Time{},
-						nil)},
-				svcstatus.New(
-					nil, nil, nil,
-					"0.0.0",
-					"0.1.0", "2020-01-01T00:00:00Z",
-					"0.6.0", "2022-01-01T00:00:00Z",
-					"2022-01-01T00:00:00Z"),
-				"github",
-				"release-argus/Argus",
-				nil, nil, nil, nil),
+		"change type with valid overrides": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"type": "github",
+					"url": "release-argus/Argus",
+					"access_token": "token"
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantStr: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				access_token: token
+			`),
+			wantErr: false,
+		},
+		"change type to unknown type": {
+			args: args{
+				lookup: tLookup,
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"type": "newType",
+					"url": []
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `^type: "newType" <invalid> \(expected one of \[github, url\]\)$`,
+		},
+		"inherit Require.Docker.* - same Lookup.type": {
+			args: args{
+				lookup:             testLookup("url", false),
+				overrides:          nil,
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			lookupRequire: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"ghcr",
+					"release-argus/argus", "{{ version }}",
+					"user", "pass",
+					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
+			wantRequireInherit: true,
+			wantStr: test.TrimYAML(`
+				type: url
+				url: https://invalid.release-argus.io/plain
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				require:
+					docker:
+						type: ghcr
+						username: user
+						token: pass
+						image: release-argus/argus
+						tag: '{{ version }}'
+				allow_invalid_certs: true
+			`),
+			wantErr: false,
+		},
+		"inherit Require.Docker.* - different Lookup.type": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(`{
+					"type": "github"
+				}`),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			lookupRequire: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"ghcr",
+					"release-argus/argus", "{{ version }}",
+					"user", "pass",
+					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
+			wantRequireInherit: true,
+			wantStr: test.TrimYAML(`
+				type: github
+				url: invalid.release-argus.io/plain
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				require:
+					docker:
+						type: ghcr
+						username: user
+						token: pass
+						image: release-argus/argus
+						tag: '{{ version }}'
+			`),
+			wantErr: false,
+		},
+		"don't inherit Require.Docker.* - same Lookup.type": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"require": {
+							"docker": {
+								"image": "release-argus/test"
+				}}}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			lookupRequire: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"ghcr",
+					"release-argus/argus", "{{ version }}",
+					"user", "pass",
+					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
+			wantRequireInherit: false,
+			wantStr: test.TrimYAML(`
+				type: url
+				url: https://invalid.release-argus.io/plain
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				require:
+					docker:
+						type: ghcr
+						username: user
+						token: pass
+						image: release-argus/test
+						tag: '{{ version }}'
+				allow_invalid_certs: true
+			`),
+			wantErr: false,
+		},
+		"don't inherit Require.Docker.* - different Lookup.type": {
+			args: args{
+				lookup: testLookup("url", false),
+				overrides: test.StringPtr(
+					test.TrimJSON(`{
+						"type": "github",
+						"require": {
+							"docker": {
+								"image": "release-argus/test"
+				}}}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			lookupRequire: &filter.Require{
+				Docker: filter.NewDockerCheck(
+					"ghcr",
+					"release-argus/argus", "{{ version }}",
+					"user", "pass",
+					"queryToken!", time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+					nil)},
+			wantRequireInherit: false,
+			wantStr: test.TrimYAML(`
+				type: github
+				url: invalid.release-argus.io/plain
+				url_commands:
+					- type: regex
+						regex: ver([0-9.]+)
+				require:
+					docker:
+						type: ghcr
+						username: user
+						token: pass
+						image: release-argus/test
+						tag: '{{ version }}'
+			`),
+			wantErr: false,
 		},
 	}
 
@@ -922,66 +506,63 @@ func TestLookup_updateFromRefresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dbChannel := make(chan dbtype.Message, 2)
-			tc.previous.Status.DatabaseChannel = &dbChannel
-			tc.now.Status.ServiceID = &name
-			tc.previous.Status.ServiceID = &name
-			tc.want.Status.ServiceID = &name
-			expectNewLatestVersion := tc.previous.Status.LatestVersion() != tc.want.Status.LatestVersion()
-
-			// WHEN we call updateFromRefresh
-			tc.previous.updateFromRefresh(tc.now, tc.changingOverrides)
-
-			// THEN we get the expected result
-			if tc.previous.String("") != tc.want.String("") {
-				t.Errorf("expected\n%q\ngot\n%q",
-					tc.want.String(""), tc.previous.String(""))
-			}
-			// ETag copied when expected
-			if tc.previous.GitHubData != nil && tc.want.GitHubData == nil ||
-				tc.previous.GitHubData == nil && tc.want.GitHubData != nil {
-				t.Errorf("expected GitHubData %v, not %v",
-					tc.want.GitHubData, tc.previous.GitHubData)
-			} else if tc.previous.GitHubData != nil &&
-				tc.previous.GitHubData.ETag() != tc.want.GitHubData.ETag() {
-				t.Errorf("expected ETag %q, not %q",
-					tc.want.GitHubData.ETag(), tc.previous.GitHubData.ETag())
-			}
-			// LastQueried copied over when expected
-			if tc.previous.Status.LastQueried() != tc.want.Status.LastQueried() {
-				t.Errorf("expected LastQueried %q, not %q",
-					tc.want.Status.LastQueried(), tc.previous.Status.LastQueried())
-			}
-			// Docker queryToken copied over when expected
-			if tc.want.Require == nil && tc.previous.Require != nil ||
-				tc.want.Require != nil && tc.previous.Require == nil {
-				t.Errorf("expected Require %v, not %v",
-					tc.want.Require, tc.previous.Require)
-			} else if tc.want.Require == nil { // No Require in either, skip
-			} else if tc.want.Require.Docker == nil && tc.previous.Require.Docker != nil ||
-				tc.want.Require.Docker != nil && tc.previous.Require.Docker == nil {
-				t.Errorf("expected Docker %v, not %v",
-					tc.want.Require.Docker, tc.previous.Require.Docker)
-			} else if tc.want.Require != nil && tc.want.Require.Docker != nil {
-				wantToken, wantValidUntil := tc.want.Require.Docker.CopyQueryToken()
-				gotToken, gotValidUntil := tc.previous.Require.Docker.CopyQueryToken()
-				if wantToken != gotToken {
-					t.Errorf("expected Docker queryToken %q, not %q",
-						wantToken, gotToken)
-				}
-				if wantValidUntil != gotValidUntil {
-					t.Errorf("expected Docker queryToken validUntil %q, not %q",
-						wantValidUntil, gotValidUntil)
+			if tc.lookupRequire != nil {
+				if lv, ok := tc.args.lookup.(*web.Lookup); ok {
+					lv.Require = tc.lookupRequire
+				} else if lv, ok := tc.args.lookup.(*github.Lookup); ok {
+					lv.Require = tc.lookupRequire
 				}
 			}
-			// latest_version copied over when expected
-			if tc.want.Status.LatestVersion() != tc.previous.Status.LatestVersion() {
-				t.Errorf("expected LatestVersion %q, not %q",
-					tc.want.Status.LatestVersion(), tc.previous.Status.LatestVersion())
-			} else if expectNewLatestVersion {
-				if len(*tc.previous.Status.DatabaseChannel) != 1 {
-					t.Errorf("expected 1 message on database channel, not %d",
-						len(*tc.previous.Status.DatabaseChannel))
+
+			// WHEN we call applyOverridesJSON
+			got, err := applyOverridesJSON(
+				tc.args.lookup,
+				tc.args.overrides,
+				tc.args.semanticVerDiff,
+				tc.args.semanticVersioning)
+
+			// THEN we get an error matching the format expected
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("applyOverridesJSON() error mismatch\n%q\ngot:\n%q",
+					tc.errRegex, e)
+			}
+			if !tc.wantErr {
+				// AND the result is as expected
+				if got == nil {
+					t.Errorf("applyOverridesJSON() got: nil, want: non-nil\n%s",
+						e)
+					return
+				}
+				gotStr := got.String(got, "")
+				if gotStr != tc.wantStr {
+					t.Errorf("applyOverridesJSON() got:\n%q\nwant:\n%q",
+						gotStr, tc.wantStr)
+				}
+				// AND Require.Docker.* is inherited when expected
+				gotRequire := got.GetRequire()
+				if tc.wantRequireInherit {
+					if gotRequire == nil || gotRequire.Docker == nil {
+						t.Errorf("applyOverridesJSON() Require, got: nil, want: non-nil")
+					} else {
+						gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
+						wantQueryToken, wantValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
+						if gotRequire.Docker.Token != tc.lookupRequire.Docker.Token ||
+							gotQueryToken != wantQueryToken ||
+							gotValidUntil != wantValidUntil {
+							t.Errorf("applyOverridesJSON() Require.Docker mismatch, got:\n%+v\nwant:\n%+v",
+								gotRequire.Docker, tc.lookupRequire.Docker)
+						}
+					}
+				} else if gotRequire != nil && gotRequire.Docker != nil &&
+					tc.lookupRequire != nil && tc.lookupRequire.Docker != nil {
+					gotQueryToken, gotValidUntil := gotRequire.Docker.CopyQueryToken()
+					avoidQueryToken, avoidValidUntil := tc.lookupRequire.Docker.CopyQueryToken()
+					if gotQueryToken == avoidQueryToken &&
+						gotValidUntil == avoidValidUntil {
+						t.Errorf("applyOverridesJSON() Require.Docker copied over unexpectedly\ngot:\n%+v\nhad:\n%+v",
+							gotRequire.Docker, tc.lookupRequire.Docker)
+					}
 				}
 			}
 		})

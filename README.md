@@ -25,19 +25,18 @@
 </div>
 
 Argus will query websites at a user defined interval for new software releases and then trigger Gotify/Slack/Other notification(s) and/or WebHook(s) when one has been found.
-For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers  something (like AWX) to update Argus on your server.
+For example, you could set it to monitor the Argus repo ([release-argus/argus](https://github.com/release-argus/Argus)). This will query the [GitHub API](https://api.github.com/repos/release-argus/argus/releases) and track the "tag_name" variable. When this variable changes from what it was on a previous query, a GitHub-style WebHook could be sent that triggers something (like AWX) to update Argus on your server.
 
 ##### Table of Contents
 
-- [Argus](#argus)
-  - [Demo](#demo)
-  - [Command-line arguments](#command-line-arguments)
-  - [Building from source](#building-from-source)
-    - [Prereqs](#prereqs)
-    - [Go changes](#go-changes)
-    - [React changes](#react-changes)
-  - [Getting started](#config-formatting)
-    - [Config formatting](#getting-started)
+- [Demo](#demo)
+- [Command-line arguments](#command-line-arguments)
+- [Building from source](#building-from-source)
+  - [Prerequisites](#prerequisites)
+  - [Go changes](#go-changes)
+  - [React changes](#react-changes)
+- [Getting started](#config-formatting)
+  - [Config formatting](#getting-started)
 
 ## Demo
 
@@ -78,29 +77,31 @@ Usage of /usr/local/bin/argus:
 
 ## Building from source
 
-#### Prereqs
+### Prerequisites
 
-The backend of Argus is built with [Go](https://go.dev/) and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
+The backend of Argus is built with [Go](https://go.dev/), and the frontend with [React](https://reactjs.org/). The React frontend is built and then [embedded](https://pkg.go.dev/embed) into the Go binary so that those web files can be served.
+
 - [Go 1.22+](https://go.dev/dl/)
 - [NodeJS 20](https://nodejs.org/en/download/)
 
-#### Go changes
+### Go changes
 
-To see the changes you've made by modifying any of the `.go` files, you must compile Argus. Run `make build` the first time to ensure the web components are available locally. Amy future builds that don't need the web-ui to be rebuilt can be done with `make go-build` (faster than `make build`). (Running either of these in the root dir will produce an `argus` binary)
+To see the changes you've made by modifying any of the `.go` files, you must compile Argus. Run `make build` the first time to ensure the web components are available locally. Any future builds that don't need the web-ui to be rebuilt can be done with `make go-build` (faster than `make build`). (Running either of these in the root dir will produce an `argus` binary)
 
-#### React changes
+### React changes
 
-To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend as well as the React frontend. This can be done by running `make build`. (Running this in the root dir will produce the `argus` binary)
+To see the changes after modifying anything in `web/ui/react-app`, you must recompile both the Go backend and the React frontend. This can be done by running `make build`. (Running this in the root dir will produce the `argus` binary)
 
 ## Getting started
 
-To get started with Argus, simply download the binary from the [releases page](https://github.com/release-argus/Argus/releases), and setup the config for that binary.
+To get started with Argus, simply download the binary from the [releases page](https://github.com/release-argus/Argus/releases), and set up the config for that binary.
 
 For further help, check out the [Getting Started](https://release-argus.io/docs/getting-started/) page on our website.
 
-#### Config formatting
+### Config formatting
 
 The config can be broken down into 5 key areas. ([Further help](https://release-argus.io/docs/config/))
+
 - [defaults](https://release-argus.io/docs/config/defaults/) - This is broken down into areas with defaults for [services](https://release-argus.io/docs/config/defaults/#service-portion), [notify](https://release-argus.io/docs/config/defaults/#notify-portion) and [webhooks](https://release-argus.io/docs/config/defaults/#webhook-portion).
 - [settings](https://release-argus.io/docs/config/settings/) - Settings for the Argus server.
 - [service](https://release-argus.io/docs/config/service/) - A dictionary mapping of all the services to monitor as well as what to notify when a new release is found.

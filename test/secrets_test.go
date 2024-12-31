@@ -32,12 +32,12 @@ func TestShoutrrrGotifyToken(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - not parallel because we are manipulating the environment
+			// t.Parallel() - Cannot run in parallel since we're manipulating the environment
 
 			want := tc.env
 			if tc.env != "" {
 				os.Setenv("ARGUS_TEST_GOTIFY_TOKEN", tc.env)
-				defer os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN")
+				t.Cleanup(func() { os.Unsetenv("ARGUS_TEST_GOTIFY_TOKEN") })
 			}
 
 			// WHEN ShoutrrrGotifyToken is called

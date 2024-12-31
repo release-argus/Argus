@@ -90,9 +90,9 @@ endif
 
 .PHONY: common-build
 common-build:
-	@sh -c "trap 'echo \">> restoring assets\"; scripts/compress_web.sh -d;' EXIT; \
+	@sh -c "trap 'echo \">> restoring assets\"; web/ui/compress_web.sh -d;' EXIT; \
 			echo '>> compressing assets'; \
-			scripts/compress_web.sh; \
+			web/ui/compress_web.sh; \
 			echo '>> building binaries'; \
 			CGO_ENABLED=0; \
 			go build \
@@ -209,7 +209,7 @@ build-windows:
 
 .PHONY: compress-web
 compress-web:
-	@sh "scripts/compress_web.sh"
+	@sh "web/ui/compress_web.sh"
 
 .PHONY: common-docker $(BUILD_DOCKER_ARCHS)
 common-docker: $(BUILD_DOCKER_ARCHS)

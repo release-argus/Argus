@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -34,48 +37,48 @@ var (
 type Slice map[string]*WebHook
 
 // String returns a string representation of the Slice.
-func (s *Slice) String() (str string) {
-	if s != nil {
-		str = util.ToYAMLString(s, "")
+func (s *Slice) String() string {
+	if s == nil {
+		return ""
 	}
-	return
+	return util.ToYAMLString(s, "")
 }
 
-// Slice of Header.
+// Headers is a list of Header.
 type Headers []Header
 
-// WebHookBase is the base struct for WebHook.
-type WebHookBase struct {
-	Type              string   `yaml:"type,omitempty" json:"type,omitempty"`                               // "github"/"url"
-	URL               string   `yaml:"url,omitempty" json:"url,omitempty"`                                 // "https://example.com"
-	AllowInvalidCerts *bool    `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates.
-	CustomHeaders     *Headers `yaml:"custom_headers,omitempty" json:"custom_headers,omitempty"`           // Custom Headers for the WebHook
-	Secret            string   `yaml:"secret,omitempty" json:"secret,omitempty"`                           // "SECRET"
-	DesiredStatusCode *int     `yaml:"desired_status_code,omitempty" json:"desired_status_code,omitempty"` // e.g. 202
+// Base is the base struct for WebHook.
+type Base struct {
+	Type              string   `yaml:"type,omitempty" json:"type,omitempty"`                               // "github"/"url".
+	URL               string   `yaml:"url,omitempty" json:"url,omitempty"`                                 // "https://example.com".
+	AllowInvalidCerts *bool    `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates.
+	CustomHeaders     *Headers `yaml:"custom_headers,omitempty" json:"custom_headers,omitempty"`           // Custom Headers for the WebHook.
+	Secret            string   `yaml:"secret,omitempty" json:"secret,omitempty"`                           // 'SECRET'.
+	DesiredStatusCode *uint16  `yaml:"desired_status_code,omitempty" json:"desired_status_code,omitempty"` // e.g. 202.
 	Delay             string   `yaml:"delay,omitempty" json:"delay,omitempty"`                             // The delay before sending the WebHook.
-	MaxTries          *uint    `yaml:"max_tries,omitempty" json:"max_tries,omitempty"`                     // Number of times to attempt sending the WebHook if the desired status code is not received.
+	MaxTries          *uint8   `yaml:"max_tries,omitempty" json:"max_tries,omitempty"`                     // Amount of times to attempt sending the WebHook until we receive the desired status code.
 	SilentFails       *bool    `yaml:"silent_fails,omitempty" json:"silent_fails,omitempty"`               // Whether to notify if this WebHook fails MaxTries times.
 }
 
-// WebHookDefaults are the default values for WebHook.
-type WebHookDefaults struct {
-	WebHookBase `yaml:",inline" json:",inline"`
+// Defaults are the default values for WebHook.
+type Defaults struct {
+	Base `yaml:",inline" json:",inline"`
 }
 
-// NewDefaults returns a new WebHookDefaults.
+// NewDefaults returns a new Defaults.
 func NewDefaults(
 	allowInvalidCerts *bool,
 	customHeaders *Headers,
 	delay string,
-	desiredStatusCode *int,
-	maxTries *uint,
+	desiredStatusCode *uint16,
+	maxTries *uint8,
 	secret string,
 	silentFails *bool,
 	wType string,
 	url string,
-) *WebHookDefaults {
-	return &WebHookDefaults{
-		WebHookBase: WebHookBase{
+) *Defaults {
+	return &Defaults{
+		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
 			CustomHeaders:     customHeaders,
 			Delay:             delay,
@@ -87,19 +90,19 @@ func NewDefaults(
 			URL:               url}}
 }
 
-// String returns a string representation of the WebHookDefaults.
-func (w *WebHookDefaults) String(prefix string) (str string) {
-	if w != nil {
-		str = util.ToYAMLString(w, prefix)
+// String returns a string representation of the Defaults.
+func (d *Defaults) String(prefix string) string {
+	if d == nil {
+		return ""
 	}
-	return
+	return util.ToYAMLString(d, prefix)
 }
 
-// SliceDefaults mapping of WebHookDefaults.
-type SliceDefaults map[string]*WebHookDefaults
+// SliceDefaults mapping of Defaults.
+type SliceDefaults map[string]*Defaults
 
 // String returns a string representation of the SliceDefaults.
-func (s *SliceDefaults) String(prefix string) (str string) {
+func (s *SliceDefaults) String(prefix string) string {
 	if s == nil {
 		return ""
 	}
@@ -109,37 +112,40 @@ func (s *SliceDefaults) String(prefix string) (str string) {
 		return "{}\n"
 	}
 
+	var builder strings.Builder
+	itemPrefix := prefix + "  "
 	for _, k := range keys {
-		itemStr := (*s)[k].String(prefix + "  ")
+		itemStr := (*s)[k].String(itemPrefix)
 		if itemStr != "" {
 			delim := "\n"
 			if itemStr == "{}\n" {
 				delim = " "
 			}
-			str += fmt.Sprintf("%s%s:%s%s",
-				prefix, k, delim, itemStr)
+			builder.WriteString(fmt.Sprintf("%s%s:%s%s",
+				prefix, k, delim, itemStr))
 		}
 	}
 
-	return
+	return builder.String()
 }
 
-// WebHook to send.
+// WebHook to send for a new version.
 type WebHook struct {
-	WebHookBase `yaml:",inline" json:",inline"`
+	Base `yaml:",inline" json:",inline"`
 
-	ID string `yaml:"-" json:"-"` // Unique across the Slice
+	ID string `yaml:"-" json:"-"` // Unique across the Slice.
 
-	mutex          sync.RWMutex            `yaml:"-" json:"-"` // Mutex for concurrent access.
-	Failed         *svcstatus.FailsWebHook `yaml:"-" json:"-"` // Whether the last send attempt failed
-	nextRunnable   time.Time               `yaml:"-" json:"-"` // Time the WebHook can next be run (for staggering)
-	Notifiers      *Notifiers              `yaml:"-" json:"-"` // The Notify's to notify on failures
-	ServiceStatus  *svcstatus.Status       `yaml:"-" json:"-"` // Status of the Service (used for templating vars and Announce channel)
-	ParentInterval *string                 `yaml:"-" json:"-"` // Interval between the parent Service's queries
+	mutex        sync.RWMutex         // Mutex for concurrent access.
+	Failed       *status.FailsWebHook `yaml:"-" json:"-"` // Whether the last send attempt failed.
+	nextRunnable time.Time            // Time at which the WebHook can next run (for staggering).
 
-	Main         *WebHookDefaults `yaml:"-" json:"-"` // The Webhook that this Webhook is calling (and may override parts of)
-	Defaults     *WebHookDefaults `yaml:"-" json:"-"` // Default values
-	HardDefaults *WebHookDefaults `yaml:"-" json:"-"` // Hardcoded default values
+	Notifiers      *Notifiers     `yaml:"-" json:"-"` // The Notifiers to notify on failures.
+	ServiceStatus  *status.Status `yaml:"-" json:"-"` // Status of the Service (used for templating vars, and the Announce channel).
+	ParentInterval *string        `yaml:"-" json:"-"` // Interval between the parent Service's queries.
+
+	Main         *Defaults `yaml:"-" json:"-"` // The root Webhook (That this WebHook may override parts of).
+	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
+	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
 }
 
 // New WebHook.
@@ -147,21 +153,20 @@ func New(
 	allowInvalidCerts *bool,
 	customHeaders *Headers,
 	delay string,
-	desiredStatusCode *int,
-	failed *svcstatus.FailsWebHook,
-	maxTries *uint,
+	desiredStatusCode *uint16,
+	failed *status.FailsWebHook,
+	maxTries *uint8,
 	notifiers *Notifiers,
 	parentInterval *string,
 	secret string,
 	silentFails *bool,
 	wType string,
 	url string,
-	main *WebHookDefaults,
-	defaults *WebHookDefaults,
-	hardDefaults *WebHookDefaults,
+	main *Defaults,
+	defaults, hardDefaults *Defaults,
 ) *WebHook {
 	return &WebHook{
-		WebHookBase: WebHookBase{
+		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts,
 			CustomHeaders:     customHeaders,
 			Delay:             delay,
@@ -180,45 +185,46 @@ func New(
 }
 
 // String returns a string representation of the WebHook.
-func (w *WebHook) String() (str string) {
-	if w != nil {
-		str = util.ToYAMLString(w, "")
+func (w *WebHook) String() string {
+	if w == nil {
+		return ""
 	}
-	return
+	return util.ToYAMLString(w, "")
 }
 
 // Notifiers to use when their WebHook fails.
 type Notifiers struct {
-	Shoutrrr *shoutrrr.Slice // Shoutrrr
+	Shoutrrr *shoutrrr.Slice
 }
 
 // Header to use in the HTTP request.
 type Header struct {
-	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig
-	Value string `yaml:"value" json:"value"` // Value to give the key
+	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig.
+	Value string `yaml:"value" json:"value"` // Value to give the key.
 }
 
-// UnmarshalYAML, converting map[string]string to {key: "X", val: "Y"}
-func (h *Headers) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	// try and unmarshal as a Header list
+// UnmarshalYAML and convert map[string]string to {key: "X", val: "Y"}.
+func (h *Headers) UnmarshalYAML(value *yaml.Node) error {
+	// try and unmarshal as a Header list.
 	var headers []Header
-	err = unmarshal(&headers)
-	if err != nil {
-		// it's not a list, try a map
-		var headers map[string]string
-		err = unmarshal(&headers)
-		if err != nil {
-			return
-		}
-		// sort the map keys
-		keys := util.SortedKeys(headers)
-
-		// convert map to list
-		for _, key := range keys {
-			*h = append(*h, Header{Key: key, Value: headers[key]})
-		}
-		return
+	if err := value.Decode(&headers); err == nil {
+		*h = headers
+		return nil
 	}
-	*h = headers
-	return
+
+	// Treat it as a map?
+	var headersMap map[string]string
+	if err := value.Decode(&headersMap); err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	// sort the map keys.
+	keys := util.SortedKeys(headersMap)
+	*h = make([]Header, 0, len(keys))
+
+	// convert map to list.
+	for _, key := range keys {
+		*h = append(*h, Header{Key: key, Value: headersMap[key]})
+	}
+	return nil
 }

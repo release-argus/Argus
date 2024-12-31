@@ -20,11 +20,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
+	"testing"
 )
 
-var StdoutMutex sync.Mutex // Only one test should write to stdout at a time
+var StdoutMutex sync.Mutex // Only one test should write to stdout at a time.
 func CaptureStdout() func() string {
 	stdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -39,42 +41,97 @@ func CaptureStdout() func() string {
 	}
 }
 
-// BoolPtr returns a pointer to the given boolean value
+// BoolPtr returns a pointer to the given boolean value.
 func BoolPtr(val bool) *bool { return &val }
 
-// IntPtr returns a pointer to the given integer value
+// IntPtr returns a pointer to the given integer value.
 func IntPtr(val int) *int { return &val }
 
-// StringPtr returns a pointer to the given string value
+// StringPtr returns a pointer to the given string value.
 func StringPtr(val string) *string { return &val }
 
-// UIntPtr returns a pointer to the given unsigned integer value
-func UIntPtr(val int) *uint {
-	converted := uint(val)
+// UInt8Ptr returns a pointer to the given unsigned integer value.
+func UInt8Ptr(val int) *uint8 {
+	converted := uint8(val)
 	return &converted
 }
 
-// StringifyPtr returns a string representation of the given pointer
+// UInt16Ptr returns a pointer to the given unsigned integer value.
+func UInt16Ptr(val int) *uint16 {
+	converted := uint16(val)
+	return &converted
+}
+
+// StringifyPtr returns a string representation of the given pointer.
 func StringifyPtr[T comparable](ptr *T) string {
-	str := "nil"
+	str := "<nil>"
 	if ptr != nil {
 		str = fmt.Sprint(*ptr)
 	}
 	return str
 }
 
-// TrimJSON removes unnecessary whitespace from a JSON string
+// TrimJSON removes unnecessary whitespace from a JSON string.
 func TrimJSON(str string) string {
-	str = strings.TrimSpace(str)
-	str = strings.ReplaceAll(str, "\n", "")
-	str = strings.ReplaceAll(str, "\t", "")
-	str = strings.ReplaceAll(str, `": `, `":`)
-	str = strings.ReplaceAll(str, `", `, `",`)
-	str = strings.ReplaceAll(str, `, "`, `,"`)
-	return str
+	replacer := strings.NewReplacer(
+		"\n", "",
+		"\t", "",
+		`": `, `":`,
+		`", `, `",`,
+		`, "`, `,"`,
+	)
+	return replacer.Replace(strings.TrimSpace(str))
 }
 
-// Combinations generates all possible combinations of the given input
+// TrimYAML removes unnecessary whitespace from a YAML string.
+// and converts leading tabs to spaces.
+func TrimYAML(str string) string {
+	return normaliseLeadingWhitespace(str, "\n")
+}
+
+// FlattenMultilineString takes in a string with \n and \t characters, and returns a string with those characters
+// replaced with spaces.
+func FlattenMultilineString(str string) string {
+	return normaliseLeadingWhitespace(str, " ")
+}
+
+// normaliseLeadingWhitespace normalises the leading whitespace of each line in the given string.
+// It trims any leading newline character from the input string, splits the string into lines,
+// and processes each line to remove or replace leading whitespace. It then joins the lines back
+// together with the given `joinWith` string.
+func normaliseLeadingWhitespace(str string, joinWith string) string {
+	str = strings.TrimPrefix(str, "\n")
+	lines := strings.Split(str, "\n")
+	leadingWhitespaceRegEx := regexp.MustCompile(`^(\s*)`)
+	fullWhitespaceRegEx := regexp.MustCompile(`^\s*$`)
+	var whitespacePrefix string
+	for i := range lines {
+		if i != 0 {
+			// Remove whitespacePrefix from the beginning of the line.
+			lines[i] = strings.TrimPrefix(lines[i], whitespacePrefix)
+		}
+
+		leadingWhitespace := leadingWhitespaceRegEx.FindString(lines[i])
+
+		if i == 0 {
+			whitespacePrefix = leadingWhitespace
+			lines[i] = strings.Replace(lines[i], leadingWhitespace, "", 1)
+		} else if leadingWhitespace != "" && strings.Contains(leadingWhitespace, "\t") {
+			// Empty the line if it contains only whitespace.
+			if fullWhitespaceRegEx.MatchString(lines[i]) {
+				lines[i] = ""
+			} else {
+				// Convert leading tabs to spaces.
+				newWhitespace := strings.ReplaceAll(leadingWhitespace, "\t", "  ")
+				lines[i] = strings.Replace(lines[i], leadingWhitespace, newWhitespace, 1)
+			}
+		}
+	}
+
+	return strings.Join(lines, joinWith)
+}
+
+// Combinations generates all possible combinations of the given input.
 func Combinations[T comparable](input []T) [][]T {
 	var result [][]T
 
@@ -93,5 +150,24 @@ func Combinations[T comparable](input []T) [][]T {
 	}
 
 	generate(0, []T{})
+	return result
+}
+
+// Indent returns a string with lines indented by the given amount of spaces.
+func Indent(str string, indent int) string {
+	lines := strings.Split(str, "\n")
+
+	return strings.Join(lines, "\n"+strings.Repeat(" ", indent))
+}
+
+// IgnoreError calls the given function and returns the result, ignoring any error.
+func IgnoreError[T any](t *testing.T, fn func() (T, error)) T {
+	result, err := fn()
+	if err != nil {
+		var bare T
+		t.Logf("unexpected error: %v", err)
+		return bare
+	}
+
 	return result
 }

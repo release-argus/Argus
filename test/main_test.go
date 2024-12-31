@@ -16,7 +16,53 @@
 
 package test
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
+
+func TestCaptureStdout(t *testing.T) {
+	// GIVEN a function that writes to stdout
+	tests := map[string]struct {
+		fn   func()
+		want string
+	}{
+		"single line": {
+			fn: func() {
+				fmt.Println("hello")
+			},
+			want: "hello\n",
+		},
+		"multiple lines": {
+			fn: func() {
+				fmt.Println("hello")
+				fmt.Println("world")
+			},
+			want: "hello\nworld\n",
+		},
+		"empty": {
+			fn:   func() {},
+			want: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+
+			// WHEN CaptureStdout is called
+			capture := CaptureStdout()
+			tc.fn()
+			result := capture()
+
+			// THEN the result should be the expected stdout output
+			if result != tc.want {
+				t.Errorf("stdout mismatch\n%q\ngot:\n%q",
+					tc.want, result)
+			}
+		})
+	}
+}
 
 func TestBoolPtr(t *testing.T) {
 	// GIVEN a boolean value
@@ -94,7 +140,7 @@ func TestStringPtr(t *testing.T) {
 	}
 }
 
-func TestUIntPtr(t *testing.T) {
+func TestUInt8Ptr(t *testing.T) {
 	// GIVEN an integer value
 	tests := map[string]struct {
 		val uint
@@ -107,11 +153,11 @@ func TestUIntPtr(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN UIntPtr is called
-			result := UIntPtr(int(tc.val))
+			// WHEN UInt8Ptr is called
+			result := UInt8Ptr(int(tc.val))
 
 			// THEN the result should be a pointer to the unsigned integer value
-			if *result != uint(tc.val) {
+			if *result != uint8(tc.val) {
 				t.Errorf("expected %d but got %d",
 					tc.val, *result)
 			}
@@ -125,11 +171,11 @@ func TestStringifyPtr(t *testing.T) {
 		ptr  interface{}
 		want string
 	}{
-		"nil":           {ptr: nil, want: "nil"},
+		"nil":           {ptr: nil, want: "<nil>"},
 		"int, positive": {ptr: IntPtr(1), want: "1"},
 		"int, negative": {ptr: IntPtr(-1), want: "-1"},
 		"string":        {ptr: StringPtr("hello"), want: "hello"},
-		"uint":          {ptr: UIntPtr(1), want: "1"},
+		"uint":          {ptr: UInt8Ptr(1), want: "1"},
 		"bool":          {ptr: BoolPtr(true), want: "true"},
 	}
 
@@ -146,7 +192,7 @@ func TestStringifyPtr(t *testing.T) {
 				result = StringifyPtr(v)
 			case *string:
 				result = StringifyPtr(v)
-			case *uint:
+			case *uint8:
 				result = StringifyPtr(v)
 			case nil:
 				var nilPtr *int
@@ -223,6 +269,139 @@ func TestTrimJSON(t *testing.T) {
 	}
 }
 
+func TestTrimYAML(t *testing.T) {
+	// GIVEN a YAML string
+	tests := map[string]struct {
+		str  string
+		want string
+	}{
+		"empty": {
+			str:  "",
+			want: "",
+		},
+		"single line": {
+			str:  "key1: value",
+			want: "key1: value",
+		},
+		"multi line": {
+			str: `key1: value
+key2: value2`,
+			want: `key1: value
+key2: value2`,
+		},
+		"with leading newline": {
+			str: `
+key1: value
+key2: value2`,
+			want: `key1: value
+key2: value2`,
+		},
+		"with tabs": {
+			str: `	key1: value
+	key2: value2`,
+			want: `key1: value
+key2: value2`,
+		},
+		"with spaces": {
+			str: `  key1: value
+  key2: value2`,
+			want: `key1: value
+key2: value2`,
+		},
+		"mixed": {
+			str: `
+	key1:
+	  key1.1: value1.1
+	  key1.2: value1.2
+		key1.3: value1.3
+	key2: value2`,
+			want: `key1:
+  key1.1: value1.1
+  key1.2: value1.2
+  key1.3: value1.3
+key2: value2`,
+		},
+		"clear whitespace-only lines": {
+			str: `
+
+key1: value
+
+key2: value2
+
+`,
+			want: `
+key1: value
+
+key2: value2
+
+`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN TrimYAML is called
+			result := TrimYAML(tc.str)
+
+			// THEN the result should be the YAML string without unnecessary whitespace
+			if result != tc.want {
+				t.Errorf("mismatch\n%q\ngot:\n%q",
+					tc.want, result)
+			}
+		})
+	}
+}
+
+func TestFlattenMultilineString(t *testing.T) {
+	// GIVEN a multiline string
+	tests := map[string]struct {
+		str  string
+		want string
+	}{
+		"empty": {
+			str:  "",
+			want: "",
+		},
+		"single line": {
+			str:  "line",
+			want: "line",
+		},
+		"multi line": {
+			str:  "line1\nline2",
+			want: "line1 line2",
+		},
+		"multi line with leading spaces": {
+			str:  "  line1\n  line2",
+			want: "line1 line2",
+		},
+		"multi line with mixed whitespace": {
+			str:  "line1\n\tline2\n  line3",
+			want: "line1   line2   line3",
+		},
+		"multi line with empty lines": {
+			str:  "\n  line1\n  \t\n  line2",
+			want: "line1  line2",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN FlattenMultilineString is called
+			result := FlattenMultilineString(tc.str)
+
+			// THEN the result should be the string with newlines and tabs replaced with spaces
+			if result != tc.want {
+				t.Errorf("mismatch\n%q\ngot:\n%q",
+					tc.want, result)
+			}
+		})
+	}
+}
+
 func TestCombinations(t *testing.T) {
 	// GIVEN a slice of values
 	tests := map[string]struct {
@@ -282,6 +461,92 @@ func TestCombinations(t *testing.T) {
 							tc.want, result)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestIndent(t *testing.T) {
+	// GIVEN a string and an indent value
+	tests := map[string]struct {
+		str    string
+		indent int
+		want   string
+	}{
+		"empty string": {
+			str:    "",
+			indent: 2,
+			want:   "",
+		},
+		"single line": {
+			str:    "line",
+			indent: 2,
+			want:   "line",
+		},
+		"multi line": {
+			str:    "line1\nline2",
+			indent: 2,
+			want:   "line1\n  line2",
+		},
+		"multi line with different indent": {
+			str:    "line1\nline2",
+			indent: 4,
+			want:   "line1\n    line2",
+		},
+		"multi line with zero indent": {
+			str:    "line1\nline2",
+			indent: 0,
+			want:   "line1\nline2",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN Indent is called
+			result := Indent(tc.str, tc.indent)
+
+			// THEN the result should be the string with each line indented by the given number of spaces
+			if result != tc.want {
+				t.Errorf("expected %q but got %q",
+					tc.want, result)
+			}
+		})
+	}
+}
+
+func TestIgnoreError(t *testing.T) {
+	tests := map[string]struct {
+		fn    func() (int, error)
+		panic bool
+		want  int
+	}{
+		"no error": {
+			fn: func() (int, error) {
+				return 42, nil
+			},
+			want: 42,
+		},
+		"with error": {
+			fn: func() (int, error) {
+				return 6, fmt.Errorf("some error")
+			},
+			panic: true,
+			want:  0,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			// WHEN IgnoreError is called
+			result := IgnoreError(t, tc.fn)
+
+			// THEN the result should be the expected value
+			if result != tc.want {
+				t.Errorf("expected %d but got %d",
+					tc.want, result)
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ func TestGetFS(t *testing.T) {
 	// THEN those files can be accessed
 	fileThatExists := "index.html"
 	_, errFileShouldExist := fs.Open(fileThatExists)
-	fileThatDoesntExist := fileThatExists + "a"
-	_, errDoesntExist := fs.Open(fileThatDoesntExist)
+	fileThatDoesNotExist := fileThatExists + "a"
+	_, errDoesNotExist := fs.Open(fileThatDoesNotExist)
 	if errFileShouldExist != nil {
 		t.Errorf("%q should exist in FS",
 			fileThatExists)
 	}
-	if errDoesntExist == nil {
+	if errDoesNotExist == nil {
 		t.Errorf("%q shouldn't exist in FS",
-			fileThatDoesntExist)
+			fileThatDoesNotExist)
 	}
 }

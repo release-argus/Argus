@@ -179,7 +179,7 @@ const BARK = ({
   }, [convertedDefaults.params.sound]);
 
   useEffect(() => {
-    // Normalise selected scheme, or default it
+    // Normalise selected scheme, or default it.
     if (convertedDefaults.params.scheme === "")
       setValue(
         `${name}.params.scheme`,
@@ -189,7 +189,7 @@ const BARK = ({
         )?.value || "https"
       );
 
-    // Normalise selected sound, or default it
+    // Normalise selected sound, or default it.
     if (
       convertedDefaults.params.sound === "" &&
       getValues(`${name}.params.sound`) !== undefined

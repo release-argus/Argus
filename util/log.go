@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package util provides utility functions for the Argus project.
 package util
 
 import (
@@ -23,7 +24,7 @@ import (
 )
 
 var (
-	levelMap = map[string]uint{
+	levelMap = map[string]uint8{
 		"ERROR":   0,
 		"WARN":    1,
 		"INFO":    2,
@@ -32,26 +33,28 @@ var (
 	}
 )
 
-// JLog is a log for various levels of logging.
+// JLog handles logging at multiple levels.
 //
-// It supports ERROR, WARNING, INFO, VERBOSE and DEBUG.
+// It supports ERROR, WARNING, INFO, VERBOSE, and DEBUG.
 type JLog struct {
-	// Level is the level of the Log
-	// 0 = ERROR  1 = WARN,
-	// 2 = INFO,  3 = VERBOSE,
-	// 4 = DEBUG
-	Level      uint
-	Timestamps bool // whether to log timestamps with the msg, or just the msg.
-	Testing    bool // Whether we're in tests (don't Fatal)
-
 	mutex sync.RWMutex
+	// Minimum level of logs to print.
+	// 	0 = ERROR 1 = WARN,
+	// 	2 = INFO, 3 = VERBOSE,
+	// 	4 = DEBUG
+	Level      uint8
+	Timestamps bool // Whether to log timestamps with the msg, or just the msg.
+
+	Testing bool // Indicates if running in tests (avoids panic in Fatal).
 }
 
+// LogFrom is the source of the log.
 type LogFrom struct {
 	Primary   string
 	Secondary string
 }
 
+// NewJLog creates a new JLog with the given log level and timestamps.
 func NewJLog(level string, timestamps bool) *JLog {
 	newJLog := JLog{}
 	newJLog.SetLevel(level)
@@ -59,19 +62,20 @@ func NewJLog(level string, timestamps bool) *JLog {
 	return &newJLog
 }
 
-// SetLevel of the JLog.
-//
-// If value is out of the range (<0 or >4), then exit.
+// SetLevel modifies the logging level.
 func (l *JLog) SetLevel(level string) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	level = strings.ToUpper(level)
 	value := levelMap[level]
 
-	msg := fmt.Sprintf("%q is not a valid log.level. It should be one of ERROR, WARN, INFO, VERBOSE or DEBUG.", level)
-	l.Fatal(msg, &LogFrom{}, value == 0 && level != "ERROR")
+	if value == 0 && level != "ERROR" {
+		l.Fatal(fmt.Sprintf("%q is not a valid log.level. It should be one of ERROR, WARN, INFO, VERBOSE or DEBUG.",
+			level),
+			LogFrom{}, true)
+	}
 
-	l.Level = uint(value)
+	l.Level = value
 }
 
 // SetTimestamps on the logs.
@@ -81,38 +85,31 @@ func (l *JLog) SetTimestamps(enable bool) {
 	l.Timestamps = enable
 }
 
-// FormatMessageSource for logging.
-//
-// from.Primary and from.Secondary defined = `from.Primary (from.Secondary) `
-//
-// from.Primary defined = `from.Primary `
-//
-// from.Secondary defined = `from.Secondary `
-func FormatMessageSource(from *LogFrom) (msg string) {
-	// from.Primary defined
-	if from.Primary != "" {
-		// from.Primary and from.Secondary are defined
-		if from.Secondary != "" {
-			msg = fmt.Sprintf("%s (%s), ", from.Primary, from.Secondary)
-			return
+// String produces the string representation of the LogFrom.
+func (lf LogFrom) String() string {
+	// Have Primary.
+	if lf.Primary != "" {
+		// Have Primary and Secondary.
+		if lf.Secondary != "" {
+			return fmt.Sprintf("%s (%s), ",
+				lf.Primary, lf.Secondary)
 		}
-		// Just from.Primary defined
-		msg = fmt.Sprintf("%s, ", from.Primary)
-		return
+		// Just Primary.
+		return fmt.Sprintf("%s, ",
+			lf.Primary)
 	}
 
-	// Just from.Secondary defined
-	if from.Secondary != "" {
-		msg = fmt.Sprintf("%s, ", from.Secondary)
-		return
+	// Just Secondary.
+	if lf.Secondary != "" {
+		return fmt.Sprintf("%s, ",
+			lf.Secondary)
 	}
 
-	// Neither from.Primary nor from.Secondary defined
-	return
+	// Neither Primary nor Secondary.
+	return ""
 }
 
-// IsLevel will return whether the `level` of the JLog.
-// is value
+// IsLevel checks if the JLog `level` matches the provided `level`.
 func (l *JLog) IsLevel(level string) bool {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
@@ -125,95 +122,8 @@ func (l *JLog) IsLevel(level string) bool {
 	return l.Level == value
 }
 
-// Error log the msg.
-//
-// (if otherCondition is true)
-func (l *JLog) Error(msg interface{}, from *LogFrom, otherCondition bool) {
-	if otherCondition {
-		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-		// ERROR: msg from.Primary (from.Secondary)
-		if l.Timestamps {
-			log.Printf("ERROR: %s\n", msgString)
-		} else {
-			fmt.Printf("ERROR: %s\n", msgString)
-		}
-	}
-}
-
-// Warn log msg if l.Level is > 0 (WARNING, INFO, VERBOSE or DEBUG).
-//
-// (if otherCondition is true)
-func (l *JLog) Warn(msg interface{}, from *LogFrom, otherCondition bool) {
-	if l.Level > 0 && otherCondition {
-		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-		// WARNING: msg from.Primary (from.Secondary)
-		if l.Timestamps {
-			log.Printf("WARNING: %s\n", msgString)
-		} else {
-			fmt.Printf("WARNING: %s\n", msgString)
-		}
-	}
-}
-
-// Info log msg if l.Level is > 1 (INFO, VERBOSE or DEBUG).
-//
-// (if otherCondition is true)
-func (l *JLog) Info(msg interface{}, from *LogFrom, otherCondition bool) {
-	if l.Level > 1 && otherCondition {
-		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-		// INFO: msg from.Primary (from.Secondary)
-		if l.Timestamps {
-			log.Printf("INFO: %s\n", msgString)
-		} else {
-			fmt.Printf("INFO: %s\n", msgString)
-		}
-	}
-}
-
-// Verbose log msg if l.Level is > 2 (VERBOSE or DEBUG).
-//
-// (if otherCondition is true)
-func (l *JLog) Verbose(msg interface{}, from *LogFrom, otherCondition bool) {
-	if l.Level > 2 && otherCondition {
-		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
-		// limit size of msgString to 1000 chars
-		if len(msgString) > 1000 {
-			msgString = msgString[:1000] + "..."
-		}
-
-		// VERBOSE: msg from.Primary (from.Secondary)
-		if l.Timestamps {
-			log.Printf("VERBOSE: %s\n", msgString)
-		} else {
-			fmt.Printf("VERBOSE: %s\n", msgString)
-		}
-	}
-}
-
-// Debug log msg if l.Level is 4 (DEBUG).
-//
-// (if otherCondition is true)
-func (l *JLog) Debug(msg interface{}, from *LogFrom, otherCondition bool) {
-	if l.Level == 4 && otherCondition {
-		msgString := fmt.Sprintf("%s%v", FormatMessageSource(from), msg)
-
-		// limit size of msgString to 1000 chars
-		if len(msgString) > 1000 {
-			msgString = msgString[:1000] + "..."
-		}
-
-		// DEBUG: msg from.Primary (from.Secondary)
-		if l.Timestamps {
-			log.Printf("DEBUG: %s\n", msgString)
-		} else {
-			fmt.Printf("DEBUG: %s\n", msgString)
-		}
-	}
-}
-
-// Fatal is equivalent to Error() followed by a call to os.Exit(1).
-func (l *JLog) Fatal(msg interface{}, from *LogFrom, otherCondition bool) {
+// Fatal calls Error() followed by an os.Exit(1).
+func (l *JLog) Fatal(msg interface{}, from LogFrom, otherCondition bool) {
 	if otherCondition {
 		l.Error(msg, from, true)
 		if !l.Testing {
@@ -221,4 +131,93 @@ func (l *JLog) Fatal(msg interface{}, from *LogFrom, otherCondition bool) {
 		}
 		panic(msg)
 	}
+}
+
+// Error log the msg.
+//
+// (if `otherCondition` true)
+func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
+	if !otherCondition {
+		return
+	}
+
+	// ERROR: msg from.Primary (from.Secondary)
+	l.logMessage(
+		fmt.Sprintf("ERROR: %s%v",
+			from, msg))
+}
+
+// Warn log msg if l.Level > 0 (WARNING, INFO, VERBOSE or DEBUG).
+//
+// (if otherCondition true)
+func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
+	if l.Level == 0 || !otherCondition {
+		return
+	}
+
+	// WARNING: msg from.Primary (from.Secondary)
+	l.logMessage(
+		fmt.Sprintf("WARNING: %s%v",
+			from, msg))
+}
+
+// Info log msg if l.Level > 1 (INFO, VERBOSE or DEBUG).
+//
+// (if otherCondition true)
+func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
+	if l.Level < 2 || !otherCondition {
+		return
+	}
+
+	// INFO: msg from.Primary (from.Secondary)
+	l.logMessage(
+		fmt.Sprintf("INFO: %s%v",
+			from, msg))
+}
+
+// Verbose log msg if l.Level > 2 (VERBOSE or DEBUG).
+//
+// (if otherCondition true)
+func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
+	if l.Level < 3 || !otherCondition {
+		return
+	}
+
+	// VERBOSE: msg from.Primary (from.Secondary)
+	l.logMessage(
+		TruncateMessage(
+			fmt.Sprintf("VERBOSE: %s%v", from, msg),
+			997))
+}
+
+// Debug log msg if l.Level 4 (DEBUG).
+//
+// (if otherCondition true)
+func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
+	if l.Level != 4 || !otherCondition {
+		return
+	}
+
+	// DEBUG: msg from.Primary (from.Secondary)
+	l.logMessage(
+		TruncateMessage(
+			fmt.Sprintf("DEBUG: %s%v", from, msg),
+			997))
+}
+
+// logMessage logs a message with/without a timestamp based on the Timestamps flag.
+func (l *JLog) logMessage(msg string) {
+	if l.Timestamps {
+		log.Println(msg)
+	} else {
+		fmt.Println(msg)
+	}
+}
+
+// TruncateMessage shortens a message to `maxLength` and appends "..." if it exceeds the limit.
+func TruncateMessage(msg string, maxLength int) string {
+	if len(msg) > maxLength {
+		return msg[:maxLength] + "..."
+	}
+	return msg
 }

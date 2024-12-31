@@ -40,11 +40,11 @@ const FormItemWithPreview: FC<Props> = ({
   const formValue: string | undefined = useWatch({ name: name });
   const error = useError(name, true);
 
-  // The preview image URL, or undefined if invalid
+  // The preview image URL, or undefined if invalid.
   const [previewURL, setPreviewURL] = useState(
-    urlTest(formValue, true) ? formValue : undefined
+    urlTest(formValue, true) ? formValue : undefined,
   );
-  // Set the preview image
+  // Set the preview image.
   const setPreview = useCallback((url?: string) => {
     const previewSource = url || defaultVal;
     if (previewSource && urlTest(previewSource, true) === true) {
@@ -54,7 +54,7 @@ const FormItemWithPreview: FC<Props> = ({
     }
   }, []);
 
-  // Wait for a period of no typing to set the preview
+  // Wait for a period of no typing to set the preview.
   useEffect(() => {
     const timer = setTimeout(() => setPreview(formValue), 750);
     return () => clearTimeout(timer);

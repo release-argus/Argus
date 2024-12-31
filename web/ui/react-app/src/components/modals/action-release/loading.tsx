@@ -33,7 +33,7 @@ export const Loading: FC<Props> = ({ modalType, delayedRender }) => {
             variant="secondary"
             size="sm"
             className="float-end"
-            // Disable if success or waiting send response
+            // Disable if success or waiting send response.
             disabled
           >
             <FontAwesomeIcon icon={faSquareFull} />

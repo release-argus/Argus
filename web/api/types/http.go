@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apitype
+// Package types provides the types for the Argus API.
+package types
 
 import "time"
 
@@ -26,6 +27,5 @@ type VersionAPI struct {
 // RefreshAPI used in /api/v1/*_version/refresh
 type RefreshAPI struct {
 	Version string    `json:"version"`
-	Error   string    `json:"error,omitempty"`
 	Date    time.Time `json:"timestamp"`
 }

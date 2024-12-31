@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import (
 	config_test "github.com/release-argus/Argus/config/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestHTTP_Version(t *testing.T) {
@@ -44,7 +44,7 @@ func TestHTTP_Version(t *testing.T) {
 	w := httptest.NewRecorder()
 	api.httpVersion(w, req)
 	res := w.Result()
-	defer res.Body.Close()
+	t.Cleanup(func() { res.Body.Close() })
 
 	// THEN the version is returned in JSON format
 	data, err := io.ReadAll(res.Body)
@@ -52,9 +52,9 @@ func TestHTTP_Version(t *testing.T) {
 		t.Errorf("expected error to be nil got %v",
 			err)
 	}
-	var got api_type.VersionAPI
+	var got apitype.VersionAPI
 	json.Unmarshal(data, &got)
-	want := api_type.VersionAPI{
+	want := apitype.VersionAPI{
 		Version:   util.Version,
 		BuildDate: util.BuildDate,
 		GoVersion: util.GoVersion,
@@ -99,13 +99,12 @@ func TestHTTP_BasicAuth(t *testing.T) {
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
-			cfg.Settings.Web.RoutePrefix = test.StringPtr("")
 			api := NewAPI(&cfg, util.NewJLog("WARN", false))
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
 				return
 			})
 			ts := httptest.NewServer(api.BaseRouter)
-			defer ts.Close()
+			t.Cleanup(func() { ts.Close() })
 
 			// WHEN a HTTP request is made to this router
 			client := http.Client{}
@@ -141,9 +140,8 @@ func TestHTTP_BasicAuth(t *testing.T) {
 func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 	// GIVEN an API with/without favicon overrides
 	tests := map[string]struct {
-		favicon *config.FaviconSettings
-		urlPNG  string
-		urlSVG  string
+		favicon        *config.FaviconSettings
+		urlPNG, urlSVG string
 	}{
 		"no override": {
 			urlPNG: "",
@@ -169,7 +167,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			api := NewAPI(cfg, util.NewJLog("WARN", false))
 			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
-			defer ts.Close()
+			t.Cleanup(func() { ts.Close() })
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router (apple-touch-icon.png)
@@ -226,8 +224,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 func TestHTTP_DisableRoutes(t *testing.T) {
 	// GIVEN an API and a bunch of routes
 	tests := map[string]struct {
-		method             string
-		path               string
+		method, path       string
 		replaceLastPathDir string
 		wantStatus         int
 		wantBody           string
@@ -274,8 +271,8 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 				"data.database-file":"[^"]+",
 				"web.listen-host":"[\d.]+",
 				"web.listen-port":"\d+",
-				"web.cert-file":null,
-				"web.pkey-file":null
+				"web.cert-file":"",
+				"web.pkey-file":""
 			`,
 		},
 		"-order": {
@@ -338,7 +335,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			path:       "latest_version/refresh",
 			wantStatus: http.StatusBadRequest,
 			wantBody: `{
-				"version":"","error":"values failed [^"]*".*
+				"message":"overrides: .*required.*"
 			}`,
 		},
 		"dv_refresh_new": {
@@ -346,7 +343,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			path:       "deployed_version/refresh",
 			wantStatus: http.StatusBadRequest,
 			wantBody: `{
-				"version":"","error":"values failed [^"]*".*
+				"message":"overrides: .*required.*"
 			}`,
 		},
 		"lv_refresh": {
@@ -379,13 +376,13 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			method:             http.MethodPut,
 			path:               "service/update/{service_name:.+}",
 			replaceLastPathDir: "test",
-			wantStatus:         http.StatusBadRequest,
+			wantStatus:         http.StatusNotFound,
 			wantBody: `{
 				"message":"edit \\"[^"]+\\" failed[^"]*"
 			}`,
 		},
 		"service_create": {
-			method:     http.MethodPost,
+			method:     http.MethodPut,
 			path:       "service/new",
 			wantStatus: http.StatusBadRequest,
 			wantBody: `{
@@ -396,7 +393,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			method:             http.MethodDelete,
 			path:               "service/delete/{service_name:.+}",
 			replaceLastPathDir: "test",
-			wantStatus:         http.StatusBadRequest,
+			wantStatus:         http.StatusNotFound,
 			wantBody: `{
 				"message":"delete \\"[^"]+\\" failed[^"]*"
 			}`,
@@ -407,7 +404,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 	disableCombinations := test.Combinations(util.SortedKeys(tests))
 
 	// Split tests into groups
-	groupSize := len(disableCombinations) / (runtime.NumCPU())
+	groupSize := max(1, len(disableCombinations)/runtime.NumCPU())
 	numGroups := len(disableCombinations) / groupSize
 	for i := 0; i < numGroups; i++ {
 		groupStart := i * groupSize
@@ -429,13 +426,13 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 					routePrefix := ""
 					if j%2 == 0 {
 						routePrefix = "/test"
-						cfg.Settings.Web.RoutePrefix = &routePrefix
+						cfg.Settings.Web.RoutePrefix = routePrefix
 					}
 					api := NewAPI(cfg, log)
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					ts.Config.Handler = api.Router
-					defer ts.Close()
+					t.Cleanup(func() { ts.Close() })
 					client := http.Client{}
 
 					// Test each route for this set of disabled routes
@@ -491,6 +488,74 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						}
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
+	// GIVEN an API with NodeJS routes
+	tests := map[string]struct {
+		route       string
+		wantStatus  int
+		wantContent string
+	}{
+		"approvals route": {
+			route:      "/approvals",
+			wantStatus: http.StatusOK,
+		},
+		"config route": {
+			route:      "/config",
+			wantStatus: http.StatusOK,
+		},
+		"flags route": {
+			route:      "/flags",
+			wantStatus: http.StatusOK,
+		},
+		"status route": {
+			route:      "/status",
+			wantStatus: http.StatusOK,
+		},
+		"catch-all route - file not found": {
+			route:      "/some/random/path",
+			wantStatus: http.StatusNotFound,
+		},
+		"catch-all route - file exists": {
+			route:      "/robots.txt",
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := config_test.BareConfig(true)
+			api := NewAPI(cfg, util.NewJLog("WARN", false))
+			api.SetupRoutesNodeJS()
+			ts := httptest.NewServer(api.Router)
+			t.Cleanup(func() { ts.Close() })
+			client := http.Client{}
+
+			// WHEN a HTTP request is made to this router
+			req, err := http.NewRequest("GET", ts.URL+tc.route, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// THEN the status code is as expected
+			if resp.StatusCode != tc.wantStatus {
+				t.Errorf("Expected status %d, got %d", tc.wantStatus, resp.StatusCode)
+			}
+
+			// AND the content type is as expected
+			if tc.wantContent != "" {
+				contentType := resp.Header.Get("Content-Type")
+				if !strings.Contains(contentType, tc.wantContent) {
+					t.Errorf("Expected content type %s, got %s", tc.wantContent, contentType)
+				}
 			}
 		})
 	}

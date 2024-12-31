@@ -7,7 +7,6 @@ linters:
     - durationcheck
     - errcheck
     - errorlint
-    - execinquery
     - gci
     - gocritic
     - misspell

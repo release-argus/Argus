@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	metric "github.com/release-argus/Argus/web/metrics"
+	metric "github.com/release-argus/Argus/web/metric"
 )
 
 func TestSlice_Metrics(t *testing.T) {
@@ -38,28 +38,28 @@ func TestSlice_Metrics(t *testing.T) {
 		"with one": {
 			slice: &Slice{
 				"foo": &WebHook{
-					Main: &WebHookDefaults{}}}},
+					Main: &Defaults{}}}},
 		"no Main, no metrics": {
 			slice: &Slice{
 				"foo": &WebHook{}}},
 		"multiple": {
 			slice: &Slice{
 				"bish": &WebHook{
-					Main: &WebHookDefaults{}},
+					Main: &Defaults{}},
 				"bash": &WebHook{
-					Main: &WebHookDefaults{}},
+					Main: &Defaults{}},
 				"bosh": &WebHook{
-					Main: &WebHookDefaults{}}}},
+					Main: &Defaults{}}}},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - not parallel as we are testing metrics
+			// t.Parallel() - Cannot run in parallel since we're testing metrics
 
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
 					s.ID = name
-					s.ServiceStatus = &svcstatus.Status{ServiceID: test.StringPtr(name + "-service")}
+					s.ServiceStatus = &status.Status{ServiceID: test.StringPtr(name + "-service")}
 				}
 			}
 
@@ -120,7 +120,7 @@ func TestWebHook_Metrics(t *testing.T) {
 				wantC = 0
 			}
 			if (gotC - hadC) != wantC {
-				t.Errorf("%d Counter metrics's were initialised, expecting %d",
+				t.Errorf("%d Counter metrics were initialised, expecting %d",
 					(gotC - hadC), wantC)
 			}
 
@@ -128,7 +128,7 @@ func TestWebHook_Metrics(t *testing.T) {
 			webhook.deleteMetrics()
 			gotC = testutil.CollectAndCount(metric.WebHookMetric)
 			if gotC != hadC {
-				t.Errorf("Counter metrics were not deleted, still have %d. expexting %d",
+				t.Errorf("Counter metrics were not deleted, still have %d. expecting %d",
 					gotC, hadC)
 			}
 		})
@@ -139,10 +139,9 @@ func TestWebHook_Init(t *testing.T) {
 	// GIVEN a WebHook and vars for the Init
 	webhook := testWebHook(true, false, false)
 	var notifiers shoutrrr.Slice
-	var main WebHookDefaults
-	var defaults WebHookDefaults
-	var hardDefaults WebHookDefaults
-	status := svcstatus.Status{ServiceID: test.StringPtr("TestInit")}
+	var main Defaults
+	var defaults, hardDefaults Defaults
+	status := status.Status{ServiceID: test.StringPtr("TestInit")}
 	status.Init(
 		0, 0, 1,
 		test.StringPtr("TestInit"),
@@ -188,11 +187,10 @@ func TestSlice_Init(t *testing.T) {
 	// GIVEN a Slice and vars for the Init
 	var notifiers shoutrrr.Slice
 	tests := map[string]struct {
-		slice        *Slice
-		nilSlice     bool
-		mains        *SliceDefaults
-		defaults     *WebHookDefaults
-		hardDefaults *WebHookDefaults
+		slice                  *Slice
+		nilSlice               bool
+		mains                  *SliceDefaults
+		defaults, hardDefaults *Defaults
 	}{
 		"nil slice": {
 			slice: nil, nilSlice: true,
@@ -209,15 +207,15 @@ func TestSlice_Init(t *testing.T) {
 			slice: &Slice{
 				"fail": nil},
 			mains: &SliceDefaults{
-				"fail": testWebHookDefaults(false, false, false)},
+				"fail": testDefaults(false, false)},
 		},
 		"have matching mains": {
 			slice: &Slice{
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 			mains: &SliceDefaults{
-				"fail": testWebHookDefaults(false, false, false),
-				"pass": testWebHookDefaults(true, false, false),
+				"fail": testDefaults(false, false),
+				"pass": testDefaults(true, false),
 			},
 		},
 		"some matching mains": {
@@ -225,8 +223,8 @@ func TestSlice_Init(t *testing.T) {
 				"fail": testWebHook(true, false, false),
 				"pass": testWebHook(false, false, false)},
 			mains: &SliceDefaults{
-				"other": testWebHookDefaults(false, false, false),
-				"pass":  testWebHookDefaults(true, false, false)},
+				"other": testDefaults(false, false),
+				"pass":  testDefaults(true, false)},
 		},
 	}
 
@@ -241,7 +239,7 @@ func TestSlice_Init(t *testing.T) {
 					}
 				}
 			}
-			serviceStatus := svcstatus.Status{ServiceID: &name}
+			serviceStatus := status.Status{ServiceID: &name}
 			mainCount := 0
 			if tc.mains != nil {
 				mainCount = len(*tc.mains)

@@ -10,11 +10,11 @@ if [ "$(id -u)" -eq 0 ]; then
   sed -i -e "s/^argus:x:[0-9]\+:argus$/argus:x:${ARGUS_GID}:argus:/" /etc/group
 
   if [ -f "/etc/argus/config.yml" ]; then
-    echo "---------------------------------------------------------------------"
-    echo "Warning - symlinking /app/config.yml to your /etc/argus/config.yml"
+    echo "---------------------------------------------------------------------------"
+    echo "Warning - creating symlink at /app/config.yml to your /etc/argus/config.yml"
     echo "please move your mount to /app/config.yml (everything should continue"
-    echo "working for now, but in future versions I may remove this symlinking)"
-    echo "---------------------------------------------------------------------"
+    echo "working for now, but in future versions this auto-symlink may be removed)"
+    echo "---------------------------------------------------------------------------"
     touch /app/config.yml
     rm /app/config.yml >/dev/null
     ln -s /etc/argus/config.yml /app/config.yml

@@ -12,22 +12,22 @@ import isEmptyOrNull from "./is-empty-or-null";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const removeEmptyValues = (obj: { [x: string]: any }) => {
   for (const key in obj) {
-    // [] Array
+    // [] Array.
     if (Array.isArray(obj[key])) {
-      // Empty array - remove
+      // Empty array - remove.
       if (isEmptyArray(obj[key])) delete obj[key];
-      // {} Object
+      // {} Object.
     } else if (
       typeof obj[key] === "object" &&
-      !["notify", "webhook"].includes(key) // not notify/webhook as they may be empty to reference globals
+      !["notify", "webhook"].includes(key) // not notify/webhook as they may be empty to reference globals.
     ) {
-      // Check object
+      // Check object.
       removeEmptyValues(obj[key]);
-      // Empty object - remove
+      // Empty object - remove.
       if (isEmptyObject(obj[key])) {
         delete obj[key];
       }
-      // "" Empty/undefined string - remove
+      // "" Empty/undefined string - remove.
     } else if (isEmptyOrNull(obj[key])) delete obj[key];
   }
   return obj;

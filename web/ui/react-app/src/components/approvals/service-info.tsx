@@ -58,14 +58,14 @@ export const ServiceInfo: FC<Props> = ({
 
   const status = useMemo(
     () => ({
-      // If the version hasn't been found
+      // If the version hasn't been found.
       not_found:
         isEmptyOrNull(service?.status?.deployed_version) ||
         isEmptyOrNull(service?.status?.latest_version) ||
         isEmptyOrNull(service?.status?.last_queried),
-      // If a new version has been found (and not skipped)
+      // If a new version has been found (and not skipped).
       warning: updateAvailable && !updateSkipped,
-      // If the latest version is the same as the approved version
+      // If the latest version is the same as the approved version.
       updateApproved:
         service?.status?.latest_version !== undefined &&
         service.status.latest_version === service?.status?.approved_version,

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,50 +17,85 @@
 package db
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestAPI_UpdateRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	tests := map[string]struct {
-		cells  []dbtype.Cell
-		target string
+		cells           []dbtype.Cell
+		target          string
+		exists          bool
+		databaseDeleted bool
 	}{
+		"no cells": {
+			target: "new",
+		},
 		"update single column of a row": {
-			target: "keep0",
+			target: "existing",
 			cells: []dbtype.Cell{
 				{Column: "latest_version",
 					Value: "9.9.9"}},
+			exists: true,
 		},
 		"trailing 0 is kept": {
-			target: "keep0",
+			target: "existing",
 			cells: []dbtype.Cell{
 				{Column: "latest_version",
-					Value: "1.20"}}},
+					Value: "1.20"}},
+			exists: true,
+		},
 		"update multiple columns of a row": {
-			target: "keep0",
+			target: "existing",
 			cells: []dbtype.Cell{
 				{Column: "deployed_version",
 					Value: "8.8.8"},
 				{Column: "deployed_version_timestamp",
 					Value: time.Now().UTC().Format(time.RFC3339)}},
+			exists: true,
 		},
-		"update single column of a non-existing row (new service)": {
-			target: "new0",
+		"insert single column (new service)": {
+			target: "new",
 			cells: []dbtype.Cell{
 				{Column: "latest_version",
 					Value: "9.9.9"}},
 		},
-		"update multiple columns of a non-existing row (new service)": {
-			target: "new1",
+		"insert multiple columns (new service)": {
+			target: "new",
 			cells: []dbtype.Cell{
 				{Column: "deployed_version",
 					Value: "8.8.8"},
 				{Column: "deployed_version_timestamp",
 					Value: time.Now().UTC().Format(time.RFC3339)}},
+		},
+		"fail insert with invalid timestamp": {
+			target: "new",
+			cells: []dbtype.Cell{
+				{Column: "deployed_version",
+					Value: "8.8.8"},
+				{Column: "deployed_version_timestamp",
+					Value: "invalid"}},
+		},
+		"fail update with unknown column": {
+			target: "existing",
+			cells: []dbtype.Cell{
+				{Column: "foo",
+					Value: "bar"}},
+			exists: true,
+		},
+		"fail as db is deleted": {
+			target: "existing",
+			cells: []dbtype.Cell{
+				{Column: "latest_version",
+					Value: "9.9.9"}},
+			exists:          true,
+			databaseDeleted: true,
 		},
 	}
 
@@ -69,8 +104,18 @@ func TestAPI_UpdateRow(t *testing.T) {
 			t.Parallel()
 
 			tAPI := testAPI(name, "TestAPI_UpdateRow")
-			defer dbCleanup(tAPI)
+			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
+
+			// Ensure the row exists if tc.exists
+			if tc.exists {
+				tAPI.db.Exec("INSERT INTO status (id) VALUES (?)",
+					tc.target)
+			}
+			// Delete the DB file
+			if tc.databaseDeleted {
+				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+			}
 
 			// WHEN updateRow is called targeting single/multiple cells
 			tAPI.updateRow(tc.target, tc.cells)
@@ -91,10 +136,17 @@ func TestAPI_UpdateRow(t *testing.T) {
 					got = row.DeployedVersionTimestamp()
 				case "approved_version":
 					got = row.ApprovedVersion()
+				default:
+					continue // Skip unknown columns
 				}
 				if got != cell.Value {
-					t.Errorf("expecting %s to have been updated to %q. got %q",
-						cell.Column, cell.Value, got)
+					if !tc.databaseDeleted {
+						t.Errorf("expecting %s to have been updated to %q. got %q",
+							cell.Column, cell.Value, got)
+					}
+				} else if tc.databaseDeleted {
+					t.Errorf("expecting %s to not have been updated. got %q",
+						cell.Column, got)
 				}
 			}
 			time.Sleep(100 * time.Millisecond)
@@ -105,8 +157,9 @@ func TestAPI_UpdateRow(t *testing.T) {
 func TestAPI_DeleteRow(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	tests := map[string]struct {
-		serviceID string
-		exists    bool
+		serviceID       string
+		exists          bool
+		databaseDeleted bool
 	}{
 		"delete a row": {
 			serviceID: "TestDeleteRow0",
@@ -114,14 +167,20 @@ func TestAPI_DeleteRow(t *testing.T) {
 		"delete a non-existing row": {
 			serviceID: "TestDeleteRow1",
 			exists:    false},
+		"delete a row on a deleted DB": {
+			serviceID:       "TestDeleteRow2",
+			exists:          true,
+			databaseDeleted: true},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
 
 			tAPI := testAPI(name, "TestAPI_DeleteRow")
-			defer dbCleanup(tAPI)
+			os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 
 			// Ensure the row exists if tc.exists
@@ -133,22 +192,37 @@ func TestAPI_DeleteRow(t *testing.T) {
 				)
 				time.Sleep(100 * time.Millisecond)
 			}
-			// Check the row existance before the test
+			// Check the row existence before the test
 			row := queryRow(t, tAPI.db, tc.serviceID)
 			if tc.exists && (row.LatestVersion() == "" || row.DeployedVersion() == "") {
 				t.Errorf("expecting row to exist. got %#v", row)
+			}
+			// Delete the DB file
+			if tc.databaseDeleted {
+				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
 			// WHEN deleteRow is called targeting a row
 			tAPI.deleteRow(tc.serviceID)
 			time.Sleep(100 * time.Millisecond)
 
-			// THEN the row is deleted from the DB
+			// THEN if we deleted the DB before the statement, we should have logged an error
+			stdout := releaseStdout()
+			deleteFailRegex := `ERROR: [^)]+\), deleteRow`
+			if tc.databaseDeleted != util.RegexCheck(deleteFailRegex, stdout) {
+				t.Errorf("stdout mismatch:\nwant=%t (%q)\ngot:\n%q",
+					tc.databaseDeleted, deleteFailRegex, stdout)
+			}
+			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted)
 			row = queryRow(t, tAPI.db, tc.serviceID)
 			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
-				t.Errorf("expecting row to be deleted. got %#v", row)
+				// no delete if we deleted the db
+				if !tc.databaseDeleted {
+					t.Errorf("expecting row to be deleted.\ngot %#v", row)
+				}
+			} else if tc.databaseDeleted {
+				t.Errorf("expecting row to exist as we deleted the db.\ngot %#v", row)
 			}
-			time.Sleep(100 * time.Millisecond)
 		})
 	}
 }
@@ -156,7 +230,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 func TestAPI_Handler(t *testing.T) {
 	// GIVEN a DB with a few service status'
 	tAPI := testAPI("TestAPI_Handler", "db")
-	defer dbCleanup(tAPI)
+	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
 	go tAPI.handler()
 
@@ -167,7 +241,7 @@ func TestAPI_Handler(t *testing.T) {
 	cell2 := dbtype.Cell{
 		Column: cell1.Column, Value: cell1.Value + "-dev"}
 	want := queryRow(t, tAPI.db, target)
-	want.SetLatestVersion(cell1.Value, false)
+	want.SetLatestVersion(cell1.Value, "", false)
 	msg1 := dbtype.Message{
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell1},

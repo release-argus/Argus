@@ -2,6 +2,7 @@ import { Accordion, Row } from "react-bootstrap";
 import {
   DefaultLatestVersionLookupType,
   LatestVersionLookupType,
+  ServiceOptionsType,
 } from "types/config";
 import { FC, memo, useMemo } from "react";
 import { FormItem, FormSelect } from "components/generic/form";
@@ -18,6 +19,7 @@ import { useWatch } from "react-hook-form";
 interface Props {
   serviceName: string;
   original?: LatestVersionLookupEditType;
+  original_options?: ServiceOptionsType;
   defaults?: DefaultLatestVersionLookupType;
   hard_defaults?: DefaultLatestVersionLookupType;
 }
@@ -27,6 +29,7 @@ interface Props {
  *
  * @param serviceName - The name of the service
  * @param original - The original values in the form
+ * @param original_options - The original service.options of the form
  * @param defaults - The default values
  * @param hard_defaults - The hard default values
  * @returns The form fields for the `latest_version`
@@ -34,6 +37,7 @@ interface Props {
 const EditServiceLatestVersion: FC<Props> = ({
   serviceName,
   original,
+  original_options,
   defaults,
   hard_defaults,
 }) => {
@@ -54,13 +58,13 @@ const EditServiceLatestVersion: FC<Props> = ({
     () => ({
       access_token: firstNonDefault(
         defaults?.access_token,
-        hard_defaults?.access_token
+        hard_defaults?.access_token,
       ),
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
       use_prerelease: defaults?.use_prerelease ?? hard_defaults?.use_prerelease,
     }),
-    [defaults, hard_defaults]
+    [defaults, hard_defaults],
   );
 
   return (
@@ -126,6 +130,7 @@ const EditServiceLatestVersion: FC<Props> = ({
             vType={0}
             serviceName={serviceName}
             original={original}
+            original_options={original_options}
           />
         </Row>
       </Accordion.Body>

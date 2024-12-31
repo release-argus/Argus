@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package config provides the configuration for Argus.
 package config
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"reflect"
-	"strconv"
-	"strings"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
@@ -29,33 +27,33 @@ import (
 
 // Defaults for the other Structs.
 type Defaults struct {
-	Service service.Defaults        `yaml:"service,omitempty" json:"service,omitempty"`
-	Notify  shoutrrr.SliceDefaults  `yaml:"notify,omitempty" json:"notify,omitempty"`
-	WebHook webhook.WebHookDefaults `yaml:"webhook,omitempty" json:"webhook,omitempty"`
+	Service service.Defaults       `yaml:"service,omitempty" json:"service,omitempty"`
+	Notify  shoutrrr.SliceDefaults `yaml:"notify,omitempty" json:"notify,omitempty"`
+	WebHook webhook.Defaults       `yaml:"webhook,omitempty" json:"webhook,omitempty"`
 }
 
 // String returns a string representation of the Defaults.
-func (d *Defaults) String(prefix string) (str string) {
-	if d != nil {
-		str = util.ToYAMLString(d, prefix)
+func (d *Defaults) String(prefix string) string {
+	if d == nil {
+		return ""
 	}
-	return
+	return util.ToYAMLString(d, prefix)
 }
 
-// SetDefaults (last resort vars).
-func (d *Defaults) SetDefaults() {
-	d.Service.SetDefaults()
+// Default sets this Defaults to the default values.
+func (d *Defaults) Default() {
+	d.Service.Default()
 
-	// Notify defaults
-	d.Notify.SetDefaults()
+	// Notify defaults.
+	d.Notify.Default()
 
 	// WebHook defaults.
-	d.WebHook.SetDefaults()
+	d.WebHook.Default()
 
 	// Overwrite defaults with environment variables.
 	d.MapEnvToStruct()
 
-	// Notify Types
+	// Notify Types.
 	for notifyType, notify := range d.Notify {
 		notify.Type = notifyType
 	}
@@ -65,202 +63,39 @@ func (d *Defaults) SetDefaults() {
 func (d *Defaults) MapEnvToStruct() {
 	err := mapEnvToStruct(d, "", nil)
 	if err == nil {
-		err = d.CheckValues("")
+		// env vars parsed correctly, check the values are valid in the struct.
+		if err = d.CheckValues(""); err != nil {
+			err = convertToEnvErrors(err)
+		}
 	}
+
 	if err != nil {
 		jLog.Fatal(
-			"One or more 'ARGUS_' environment variables are incorrect:\n"+
-				strings.ReplaceAll(util.ErrorToString(err), "\\", "\n"),
-			&util.LogFrom{}, true)
+			"One or more 'ARGUS_' environment variables are invalid:\n"+err.Error(),
+			util.LogFrom{}, true)
 	}
 }
 
-// mapEnvToStruct maps environment variables to a struct.
-func mapEnvToStruct(src interface{}, prefix string, envVars *[]string) (err error) {
-	srcV := reflect.ValueOf(src).Elem()
-	// First call, get all matching env vars
-	if prefix == "" {
-		prefix = "ARGUS_"
-		// All env vars
-		allEnvVars := os.Environ()
-		envVarsTrimmed := make([]string, 0, len(allEnvVars))
-		// TRIM non-ARGUS env vars
-		for _, envVar := range allEnvVars {
-			parts := strings.SplitN(envVar, "=", 2)
-			// Skip empty env vars
-			if strings.HasPrefix(envVar, prefix) && parts[1] != "" {
-				envVarsTrimmed = append(envVarsTrimmed, envVar)
-			}
-		}
-		// Have no pointers to map
-		if len(envVarsTrimmed) == 0 {
-			return
-		}
-		envVars = &envVarsTrimmed
+// CheckValues validates the fields of the Defaults struct.
+func (d *Defaults) CheckValues(prefix string) error {
+	itemPrefix := prefix + "  "
+	var errs []error
+
+	// Service.
+	util.AppendCheckError(&errs, prefix, "service", d.Service.CheckValues(itemPrefix))
+	// Notify.
+	util.AppendCheckError(&errs, prefix, "notify", d.Notify.CheckValues(itemPrefix))
+	// WebHook.
+	util.AppendCheckError(&errs, prefix, "webhook", d.WebHook.CheckValues(itemPrefix))
+
+	if len(errs) == 0 {
+		return nil
 	}
 
-	for i := 0; i < srcV.NumField(); i++ {
-		fieldType := srcV.Field(i).Type()
-		kind := fieldType.Kind()
-		// Get kind of this pointer
-		if kind == reflect.Ptr {
-			// Skip nil pointers to non-comparable types
-			if !fieldType.Elem().Comparable() && srcV.Field(i).IsNil() {
-				continue
-			}
-			kind = fieldType.Elem().Kind()
-		}
-
-		// YAML tag of this field
-		srcT := reflect.TypeOf(src).Elem()
-		fieldTag := srcT.Field(i).Tag.Get("yaml")
-		fieldName := strings.Split(fieldTag, ",")[0]
-		if fieldName == "" || fieldName == "-" {
-			if fieldTag == ",inline" {
-				err = mapEnvToStruct(srcV.Field(i).Addr().Interface(), prefix, envVars)
-				if err != nil {
-					return
-				}
-			}
-			continue
-		}
-		fieldName = strings.ToUpper(prefix + fieldName)
-		hasEnvVar := false
-		for _, envVar := range *envVars {
-			if strings.HasPrefix(envVar, fieldName) {
-				hasEnvVar = true
-				break
-			}
-		}
-		if !hasEnvVar {
-			continue
-		}
-
-		switch kind {
-		case reflect.Bool, reflect.Int, reflect.String, reflect.Uint:
-			// Check if env var exists for this field
-			if envValueStr, exists := os.LookupEnv(fieldName); exists {
-				isPointer := fieldType.Kind() == reflect.Ptr
-				// Get ENV var in correct type
-				switch kind {
-				// Boolean
-				case reflect.Bool:
-					envValue, err := strconv.ParseBool(envValueStr)
-					if err != nil {
-						return fmt.Errorf("invalid bool for %s: %q", fieldName, envValueStr)
-					}
-					// All are pointers to distinguish between undefined
-					if isPointer {
-						srcV.Field(i).Set(reflect.ValueOf(&envValue))
-					}
-
-					// Integer
-				case reflect.Int:
-					envValue, err := strconv.Atoi(envValueStr)
-					if err != nil {
-						return fmt.Errorf("invalid integer for %s: %q", fieldName, envValueStr)
-					}
-					// All are pointers to distinguish between undefined
-					if isPointer {
-						srcV.Field(i).Set(reflect.ValueOf(&envValue))
-					}
-
-					// String
-				case reflect.String:
-					envValue := envValueStr
-					if !isPointer {
-						srcV.Field(i).SetString(envValue)
-					} else {
-						srcV.Field(i).Set(reflect.ValueOf(&envValue))
-					}
-
-					// UInt
-				case reflect.Uint:
-					envValue, err := strconv.ParseUint(envValueStr, 10, 32)
-					if err != nil {
-						return fmt.Errorf("invalid uint for %s: %q", fieldName, envValueStr)
-					}
-					// All are pointers to distinguish between undefined
-					if isPointer {
-						uInt := uint(envValue)
-						srcV.Field(i).Set(reflect.ValueOf(&uInt))
-					}
-				}
-			}
-		case reflect.Map:
-			// Notify maps
-			if strings.HasPrefix(fieldName, "ARGUS_NOTIFY_") {
-				for _, envVar := range *envVars {
-					if strings.HasPrefix(envVar, fieldName) {
-						// Get key and value
-						keyValue := strings.SplitN(envVar, "=", 2)
-
-						// Remove fieldName from key (get key of map)
-						// e.g."ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES=7"
-						// -> "max_tries=7"
-						keyValue[0] = strings.ToLower(
-							strings.Replace(keyValue[0], fieldName+"_", "", 1))
-
-						// Set value in map
-						srcV.Field(i).SetMapIndex(reflect.ValueOf(keyValue[0]), reflect.ValueOf(keyValue[1]))
-					}
-				}
-				continue
-			}
-			// Recurse into map
-			for _, key := range srcV.Field(i).MapKeys() {
-				err = mapEnvToStruct(
-					srcV.Field(i).MapIndex(key).Interface(),
-					fmt.Sprintf("%s_%s_", fieldName, strings.ToUpper(key.String())),
-					envVars)
-			}
-		case reflect.Struct:
-			fieldName += "_"
-			if fieldType.Kind() == reflect.Ptr {
-				// If it's nil, create a new instance of this struct
-				if srcV.Field(i).IsNil() {
-					srcV.Field(i).Set(reflect.New(fieldType.Elem()))
-				}
-
-				err = mapEnvToStruct(srcV.Field(i).Interface(), fieldName, envVars)
-			} else {
-				err = mapEnvToStruct(srcV.Field(i).Addr().Interface(), fieldName, envVars)
-			}
-		}
-	}
-	return
+	return errors.Join(errs...)
 }
 
-// CheckValues are valid.
-func (d *Defaults) CheckValues(prefix string) (errs error) {
-	itemPrefix := prefix + "    "
-
-	// Service
-	if err := d.Service.CheckValues(itemPrefix); err != nil {
-		errs = fmt.Errorf("%s%s  service:\\%w",
-			util.ErrorToString(errs), prefix, err)
-	}
-
-	// Notify
-	if err := d.Notify.CheckValues(prefix + "  "); err != nil {
-		errs = fmt.Errorf("%s%w",
-			util.ErrorToString(errs), err)
-	}
-
-	// WebHook
-	if err := d.WebHook.CheckValues(itemPrefix); err != nil {
-		errs = fmt.Errorf("%s%s  webhook:\\%w",
-			util.ErrorToString(errs), prefix, err)
-	}
-
-	if errs != nil {
-		errs = fmt.Errorf("%sdefaults:\\%w",
-			prefix, errs)
-	}
-	return
-}
-
-// Print the defaults Strcut.
+// Print the defaults to the console with the given prefix.
 func (d *Defaults) Print(prefix string) {
 	itemPrefix := prefix + "  "
 	str := d.String(itemPrefix)

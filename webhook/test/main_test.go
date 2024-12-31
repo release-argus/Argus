@@ -25,12 +25,9 @@ import (
 func TestWebHook(t *testing.T) {
 	// GIVEN the failing, self-signed certificate, and custom headers flags
 	tests := map[string]struct {
-		failing         bool
-		selfSignedCert  bool
-		customHeaders   bool
-		expectedURL     string
-		expectedSecret  string
-		expectedHeaders *webhook.Headers
+		failing, selfSignedCert, customHeaders bool
+		expectedURL, expectedSecret            string
+		expectedHeaders                        *webhook.Headers
 	}{
 		"passing, signed, no custom headers": {
 			failing:         false,
@@ -152,9 +149,9 @@ func TestWebHook(t *testing.T) {
 					"test", got.ID)
 			}
 
-			// AND the ServiceStatus should be initialized
+			// AND the ServiceStatus should be initialised
 			if got.ServiceStatus == nil {
-				t.Error("ServiceStatus not initialized")
+				t.Error("ServiceStatus not initialised")
 			}
 
 			// AND the Fails should be set

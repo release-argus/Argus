@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,27 +19,29 @@ package v1
 import (
 	"os"
 	"strings"
+
+	"github.com/release-argus/Argus/test"
 )
 
-func writeYAML(path string, data string) {
+func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
 	os.WriteFile(path, []byte(data), 0644)
 }
 
 func testYAML_Argus(path string) {
-	data := `
-settings:
-    data:
-        database_file: test-argus.db
-    web:
-        listen_port: 0
-service:
-    test:
-        comment: foo
-        latest_version:
-            type: github
-            url: release-argus/Argus
-`
+	data := test.TrimYAML(`
+		settings:
+			data:
+				database_file: test-argus.db
+			web:
+				listen_port: 0
+		service:
+			test:
+				comment: foo
+				latest_version:
+					type: github
+					url: release-argus/Argus
+	`)
 
-	writeYAML(path, data)
+	writeFile(path, data)
 }

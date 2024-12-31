@@ -19,14 +19,14 @@ package test
 import (
 	"strings"
 
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func WebHook(failing bool, selfSignedCert bool, customHeaders bool) *webhook.WebHook {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
+func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
+	desiredStatusCode := uint16(0)
+	whMaxTries := uint8(1)
 	wh := webhook.New(
 		test.BoolPtr(false),
 		nil,
@@ -40,11 +40,10 @@ func WebHook(failing bool, selfSignedCert bool, customHeaders bool) *webhook.Web
 		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{})
+		&webhook.Defaults{},
+		&webhook.Defaults{}, &webhook.Defaults{})
 	wh.ID = "test"
-	wh.ServiceStatus = &svcstatus.Status{}
+	wh.ServiceStatus = &status.Status{}
 	wh.ServiceStatus.Init(
 		0, 0, 1,
 		test.StringPtr("testServiceID"),
@@ -73,7 +72,7 @@ func WebHook(failing bool, selfSignedCert bool, customHeaders bool) *webhook.Web
 		}
 	}
 
-	// Slice to InitMetrics
+	// Slice to InitMetrics.
 	slice := webhook.Slice{"test": wh}
 	slice.InitMetrics()
 

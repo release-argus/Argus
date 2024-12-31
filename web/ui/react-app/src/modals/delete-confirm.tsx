@@ -22,10 +22,10 @@ export const DeleteModal: FC<Props> = ({ onDelete, disabled }) => {
 
   const handleConfirm = async () => {
     setDeleting(true);
-    // Call the onConfirm function
+    // Call the onConfirm function.
     onDelete && onDelete();
 
-    // Close the modal
+    // Close the modal.
     setModalShow(false);
   };
   return (

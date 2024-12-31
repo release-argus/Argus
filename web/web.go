@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package web provides the web server for Argus.
 package web
 
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/util"
-	api_v1 "github.com/release-argus/Argus/web/api/v1"
+	v1 "github.com/release-argus/Argus/web/api/v1"
 )
 
 var jLog *util.JLog
 
-// NewRouter that serves the Prometheus metrics,
-// WebSocket and NodeJS frontend at the RoutePrefix.
-func NewRouter(cfg *config.Config, hub *api_v1.Hub) *mux.Router {
+// NewRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
+func NewRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
 	// Go
-	api := api_v1.NewAPI(cfg, jLog)
+	api := v1.NewAPI(cfg, jLog)
 
 	// Prometheus metrics
 	api.Router.Handle("/metrics", promhttp.Handler())
@@ -40,12 +41,12 @@ func NewRouter(cfg *config.Config, hub *api_v1.Hub) *mux.Router {
 	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Connection", "close")
 		defer r.Body.Close()
-		api_v1.ServeWs(api, hub, w, r)
+		v1.ServeWs(hub, w, r)
 	})
 
 	// HTTP API
 	api.SetupRoutesAPI()
-	// NodeJS
+	// Node.js
 	api.SetupRoutesNodeJS()
 
 	return api.BaseRouter
@@ -53,21 +54,22 @@ func NewRouter(cfg *config.Config, hub *api_v1.Hub) *mux.Router {
 
 // newWebUI will set up everything web-related for Argus.
 func newWebUI(cfg *config.Config) *mux.Router {
-	hub := api_v1.NewHub()
+	hub := v1.NewHub()
 	go hub.Run()
 	router := NewRouter(cfg, hub)
 
 	// Hand out the broadcast channel
 	cfg.HardDefaults.Service.Status.AnnounceChannel = &hub.Broadcast
-	for sKey := range cfg.Service {
-		cfg.Service[sKey].Status.SetAnnounceChannel(&hub.Broadcast)
+	for _, service := range cfg.Service {
+		service.Status.SetAnnounceChannel(&hub.Broadcast)
 	}
 
 	return router
 }
 
+// Run the web server.
 func Run(cfg *config.Config, log *util.JLog) {
-	// Only set if unset (avoid RACE condition in tests)
+	// Only set if unset (avoid RACE condition in tests).
 	if log != nil && jLog == nil {
 		jLog = log
 	}
@@ -75,17 +77,23 @@ func Run(cfg *config.Config, log *util.JLog) {
 	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), &util.LogFrom{}, true)
+	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), util.LogFrom{}, true)
 
-	if cfg.Settings.WebCertFile() != nil && cfg.Settings.WebKeyFile() != nil {
+	srv := &http.Server{
+		Addr:         listenAddress,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second, // Max time to read request headers and body.
+		WriteTimeout: 10 * time.Second, // Max time to write response.
+		IdleTimeout:  0,                // Disable to keep websocket connections open.
+	}
+
+	if cfg.Settings.WebCertFile() != "" && cfg.Settings.WebKeyFile() != "" {
 		jLog.Fatal(
-			http.ListenAndServeTLS(
-				listenAddress, *cfg.Settings.WebCertFile(), *cfg.Settings.WebKeyFile(), router),
-			&util.LogFrom{}, true)
+			srv.ListenAndServeTLS(cfg.Settings.WebCertFile(), cfg.Settings.WebKeyFile()),
+			util.LogFrom{}, true)
 	} else {
 		jLog.Fatal(
-			http.ListenAndServe(
-				listenAddress, router),
-			&util.LogFrom{}, true)
+			srv.ListenAndServe(),
+			util.LogFrom{}, true)
 	}
 }

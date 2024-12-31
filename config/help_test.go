@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,8 @@ import (
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
@@ -52,10 +51,10 @@ func testConfig() Config {
 			Indentation: 4,
 			SettingsBase: SettingsBase{
 				Log: LogSettings{
-					Level: &logLevel}}},
+					Level: logLevel}}},
 		HardDefaults: Defaults{
 			Service: service.Defaults{
-				Status: svcstatus.NewStatusDefaults(
+				Status: status.NewDefaults(
 					nil, &databaseChannel, &saveChannel)}},
 		DatabaseChannel: &databaseChannel,
 		SaveChannel:     &saveChannel,
@@ -64,36 +63,29 @@ func testConfig() Config {
 
 func testSettings() Settings {
 	logTimestamps := true
-	logLevel := "DEBUG"
-	dataDatabaseFile := "somewhere.db"
-	webListenHost := "test"
-	webListenPort := "123"
-	webRoutePrefix := "/something"
-	webCertFile := "../README.md"
-	webKeyFile := "../LICENSE"
 	return Settings{
 		SettingsBase: SettingsBase{
 			Log: LogSettings{
 				Timestamps: &logTimestamps,
-				Level:      &logLevel,
+				Level:      "DEBUG",
 			},
 			Data: DataSettings{
-				DatabaseFile: &dataDatabaseFile,
+				DatabaseFile: "somewhere.db",
 			},
 			Web: WebSettings{
-				ListenHost:  &webListenHost,
-				ListenPort:  &webListenPort,
-				RoutePrefix: &webRoutePrefix,
-				CertFile:    &webCertFile,
-				KeyFile:     &webKeyFile,
+				ListenHost:  "test",
+				ListenPort:  "123",
+				RoutePrefix: "/something",
+				CertFile:    "../README.md",
+				KeyFile:     "../LICENSE",
 			}},
 	}
 }
 
 var loadMutex sync.RWMutex
 
-func testLoad(file string, t *testing.T) (config *Config) {
-	config = &Config{}
+func testLoad(file string, t *testing.T) *Config {
+	config := &Config{}
 
 	flags := make(map[string]bool)
 	log := util.NewJLog("WARN", true)
@@ -102,22 +94,26 @@ func testLoad(file string, t *testing.T) (config *Config) {
 	config.Load(file, &flags, log)
 	t.Cleanup(func() { os.Remove(config.Settings.DataDatabaseFile()) })
 
-	return
+	return config
 }
 
-func testLoadBasic(file string, t *testing.T) (config *Config) {
-	config = &Config{}
+func testLoadBasic(file string, t *testing.T) *Config {
+	config := &Config{}
 
 	config.File = file
 
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
-	jLog.Fatal(fmt.Sprintf("Error reading %q\n%s", file, err),
-		&util.LogFrom{}, err != nil)
+	jLog.Fatal(
+		fmt.Sprintf("Error reading %q\n%s",
+			file, err),
+		util.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, config)
-	jLog.Fatal(fmt.Sprintf("Unmarshal of %q failed\n%s", file, err),
-		&util.LogFrom{}, err != nil)
+	jLog.Fatal(
+		fmt.Sprintf("Unmarshal of %q failed\n%s",
+			file, err),
+		util.LogFrom{}, err != nil)
 
 	saveChannel := make(chan bool, 32)
 	config.SaveChannel = &saveChannel
@@ -128,6 +124,15 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
+	services := util.SortedKeys(config.Service)
+	for _, name := range services {
+		if config.Service[name] == nil {
+			delete(config.Service, name)
+			config.Order = util.RemoveElement(config.Order, name)
+		}
+	}
+
+	config.Init(false) // Log already set in TestMain
 	for name, service := range config.Service {
 		if service == nil {
 			config.Order = util.RemoveElement(config.Order, name)
@@ -140,7 +145,7 @@ func testLoadBasic(file string, t *testing.T) (config *Config) {
 	config.CheckValues()
 	t.Log("Loaded", file)
 
-	return
+	return config
 }
 
 func testServiceURL(id string) *service.Service {
@@ -148,63 +153,67 @@ func testServiceURL(id string) *service.Service {
 		announceChannel = make(chan []byte, 5)
 		saveChannel     = make(chan bool, 5)
 		databaseChannel = make(chan dbtype.Message, 5)
+		defaults        = &service.Defaults{}
+		hardDefaults    = &service.Defaults{}
 	)
+	hardDefaults.Default()
+
+	options := opt.New(
+		test.BoolPtr(true), "5s", test.BoolPtr(true),
+		&defaults.Options, &hardDefaults.Options)
+
+	lv, err := latestver.New(
+		"url",
+		"yaml", test.TrimYAML(`
+			url: https://valid.release-argus.io/plain
+			url_commands:
+				- type: regex
+					regex: 'v([0-9.]+)'
+			require:
+				regex_content: "{{ version }}-beta"
+				regex_version: "[0-9]+"
+			access_token: `+os.Getenv("GITHUB_TOKEN")+`
+		`),
+		nil, nil,
+		&defaults.LatestVersion, &hardDefaults.LatestVersion)
+	if err != nil {
+		panic(err)
+	}
+
+	dv := test.IgnoreError(nil, func() (*deployedver.Lookup, error) {
+		return deployedver.New(
+			"yaml", test.TrimYAML(`
+				method: GET
+				url: https://valid.release-argus.io/json
+				json: version
+		`),
+			nil,
+			nil,
+			&defaults.DeployedVersionLookup, &hardDefaults.DeployedVersionLookup)
+	})
+
 	svc := &service.Service{
-		ID: id,
-		LatestVersion: *latestver.New(
-			nil,
-			test.BoolPtr(false),
-			nil,
-			&opt.Options{},
-			&filter.Require{
-				RegexContent: "{{ version }}-beta",
-				RegexVersion: "[0-9]+"},
-			nil,
-			"url",
-			"https://valid.release-argus.io/plain",
-			&filter.URLCommandSlice{
-				{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
-			test.BoolPtr(false),
-			&latestver.LookupDefaults{}, &latestver.LookupDefaults{}),
-		DeployedVersionLookup: deployedver.New(
-			test.BoolPtr(false),
-			nil, nil, nil,
-			"version",
-			"GET",
-			nil, "", nil, nil,
-			"https://valid.release-argus.io/json",
-			&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{}),
+		ID:                    id,
+		LatestVersion:         lv,
+		DeployedVersionLookup: dv,
 		Dashboard: *service.NewDashboardOptions(
 			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
-		Status: *svcstatus.New(
+		Options: *options,
+		Status: *status.New(
 			&announceChannel, &databaseChannel, &saveChannel,
 			"", "", "", "", "", ""),
-		Options: *opt.New(
-			test.BoolPtr(true), "5s", test.BoolPtr(true),
-			&opt.OptionsDefaults{}, &opt.OptionsDefaults{}),
 		Defaults:     &service.Defaults{},
 		HardDefaults: &service.Defaults{}}
-	svc.Status.ServiceID = &svc.ID
-	svc.Status.Init(
-		len(svc.Notify), len(svc.Command), len(svc.WebHook),
-		&svc.ID,
-		&svc.Dashboard.WebURL)
-	svc.LatestVersion.Init(
-		&latestver.LookupDefaults{}, &latestver.LookupDefaults{},
-		&svc.Status,
-		&svc.Options)
-	svc.DeployedVersionLookup.Init(
-		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
-		&svc.Status,
-		&svc.Options)
-	svc.Status.WebURL = &svc.Dashboard.WebURL
+
+	svc.Init(
+		defaults, hardDefaults,
+		nil, nil, nil,
+		nil, nil, nil)
 
 	svc.Status.SetLastQueried("")
 	svc.Status.SetApprovedVersion("1.1.1", false)
-	svc.Status.SetLatestVersion("2.2.2", false)
-	svc.Status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
-	svc.Status.SetDeployedVersion("0.0.0", false)
-	svc.Status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
+	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
+	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
 	return svc
 }

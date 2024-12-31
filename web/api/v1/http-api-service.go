@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -24,12 +25,13 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// ServiceOrderAPI is the API response for the service order.
 type ServiceOrderAPI struct {
 	Order []string `json:"order"`
 }
 
 func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
-	logFrom := &util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
 	api.Config.OrderMutex.RLock()
@@ -39,11 +41,11 @@ func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
-	logFrom := &util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 	jLog.Verbose(targetService, logFrom, true)
 
-	// Check Service still exists in this ordering
+	// Check Service still exists in this ordering.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	service := api.Config.Service[targetService]
@@ -54,7 +56,7 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get ServiceSummary
+	// Get ServiceSummary.
 	summary := service.Summary()
 
 	err := json.NewEncoder(w).Encode(summary)

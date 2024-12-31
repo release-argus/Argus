@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -25,124 +26,227 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// httpVersionRefreshUncreated will create the latest/deployed version lookup type and query it.
+// httpLatestVersionRefreshUncreated will create the latest version lookup type and query it.
 //
 // # GET
 //
-// params: service params to use
-func (api *API) httpVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
+// Path Parameters:
+//
+//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//	"overrides": Required parameter to provide parameters for the version lookup.
+//
+// Response:
+//
+//	On success: JSON object containing the refreshed version and the current UTC datetime.
+//	On error: HTTP 400 Bad Request with an error message.
+func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	logFromPrimary := "httpVersionRefreshUncreated_Latest"
-	deployedVersionRefresh := strings.Contains(r.URL.String(), "/deployed_version/refresh?")
-	if deployedVersionRefresh {
-		logFromPrimary = "httpVersionRefreshUncreated_Deployed"
-	}
-	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	logFrom := util.LogFrom{Secondary: getIP(r)}
+	logFrom.Primary = "httpVersionRefreshUncreated_Latest"
 	jLog.Verbose("-", logFrom, true)
 
 	queryParams := r.URL.Query()
+	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
 
-	status := svcstatus.Status{}
-	status.Init(
+	// Verify overrides are provided.
+	if overrides == "" {
+		err := errors.New("overrides: <required>")
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Status
+	svcStatus := status.Status{}
+	svcStatus.Init(
 		0, 0, 0,
-		&logFromPrimary,
+		&logFrom.Primary,
 		nil)
 
-	var (
-		version string
-		err     error
-	)
-	if deployedVersionRefresh {
-		deployedVersionLookup := deployedver.New(
-			nil, nil, nil, nil, "",
-			"GET",
-			opt.New(
-				nil, "", nil,
-				&api.Config.Defaults.Service.Options,
-				&api.Config.HardDefaults.Service.Options),
-			"", nil, &status, "",
-			&api.Config.Defaults.Service.DeployedVersionLookup,
-			&api.Config.HardDefaults.Service.DeployedVersionLookup)
-		// Deployed Version
-		version, _, err = deployedVersionLookup.Refresh(
-			getParam(&queryParams, "allow_invalid_certs"),
-			getParam(&queryParams, "basic_auth"),
-			getParam(&queryParams, "body"),
-			getParam(&queryParams, "headers"),
-			getParam(&queryParams, "json"),
-			getParam(&queryParams, "method"),
-			getParam(&queryParams, "regex"),
-			getParam(&queryParams, "regex_template"),
-			getParam(&queryParams, "semantic_versioning"),
-			getParam(&queryParams, "url"))
-	} else {
-		latestVersion := latestver.Lookup{
-			Options: &opt.Options{
-				Defaults:     &api.Config.Defaults.Service.Options,
-				HardDefaults: &api.Config.HardDefaults.Service.Options},
-			Status:       &status,
-			Defaults:     &api.Config.Defaults.Service.LatestVersion,
-			HardDefaults: &api.Config.HardDefaults.Service.LatestVersion}
-		// Latest Version
-		version, _, err = latestVersion.Refresh(
-			getParam(&queryParams, "access_token"),
-			getParam(&queryParams, "allow_invalid_certs"),
-			getParam(&queryParams, "require"),
-			getParam(&queryParams, "semantic_versioning"),
-			getParam(&queryParams, "type"),
-			getParam(&queryParams, "url"),
-			getParam(&queryParams, "url_commands"),
-			getParam(&queryParams, "use_prerelease"))
+	// Options
+	options := opt.New(
+		nil, "",
+		util.StringToBoolPtr(util.PtrValueOrValue(
+			getParam(&queryParams, "semantic_versioning"), "",
+		)),
+		api.Config.Defaults.Service.LatestVersion.Options,
+		api.Config.HardDefaults.Service.LatestVersion.Options)
+
+	// Extract the desired lookup type
+	var temp struct {
+		Type string `yaml:"type" json:"type"`
+	}
+	if err := util.UnmarshalConfig(
+		"json", overrides,
+		&temp); err != nil {
+		err = fmt.Errorf("invalid JSON: %w", err)
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	statusCode := http.StatusOK
-	if err != nil {
-		statusCode = http.StatusBadRequest
+	// Create the LatestVersionLookup
+	lv, err := latestver.New(
+		temp.Type,
+		"json", util.DereferenceOrDefault(
+			getParam(&queryParams, "overrides")),
+		options,
+		&svcStatus,
+		&api.Config.Defaults.Service.LatestVersion, &api.Config.HardDefaults.Service.LatestVersion)
+	if err == nil {
+		err = lv.CheckValues("")
+	} else {
+		err = errors.New(strings.ReplaceAll(err.Error(), "latestver.Lookup", "latest_version"))
 	}
-	w.WriteHeader(statusCode)
-	err = json.NewEncoder(w).Encode(api_type.RefreshAPI{
+	// Error creating/validating the LatestVersionLookup
+	if err != nil {
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Query the latest version lookup
+	version, _, err := latestver.Refresh(
+		lv,
+		nil, nil)
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Return the version found.
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
 		Version: version,
-		Error:   util.ErrorToString(err),
 		Date:    time.Now().UTC(),
 	})
 	jLog.Error(err, logFrom, err != nil)
 }
 
-// httpVersionRefresh refreshes the latest/deployed version of the target service.
+// httpDeployedVersionRefreshUncreated will create the deployed version lookup type and query it.
 //
 // # GET
 //
-// service_name: service name to refresh
+// Path Parameters:
 //
-// ...params?: service params to override
-func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
+//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//	"overrides": Required parameter to provide parameters for the version lookup.
+//
+// Response:
+//
+//	On success: JSON object containing the refreshed version and the current UTC datetime.
+//	On error: HTTP 400 Bad Request with an error message.
+func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	// service to refresh
+	logFrom := util.LogFrom{Secondary: getIP(r)}
+	logFrom.Primary = "httpVersionRefreshUncreated_Deployed"
+	jLog.Verbose("-", logFrom, true)
+
+	queryParams := r.URL.Query()
+	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
+
+	// Verify overrides are provided
+	if overrides == "" {
+		err := errors.New("overrides: <required>")
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Status
+	svcStatus := status.Status{}
+	svcStatus.Init(
+		0, 0, 0,
+		&logFrom.Primary,
+		nil)
+
+	// Options
+	options := opt.New(
+		nil, "",
+		util.StringToBoolPtr(util.PtrValueOrValue(
+			getParam(&queryParams, "semantic_versioning"), "",
+		)),
+		api.Config.Defaults.Service.LatestVersion.Options,
+		api.Config.HardDefaults.Service.LatestVersion.Options)
+
+	// Create the DeployedVersionLookup.
+	dvl, err := deployedver.New(
+		"json", overrides,
+		options,
+		&svcStatus,
+		&api.Config.Defaults.Service.DeployedVersionLookup, &api.Config.HardDefaults.Service.DeployedVersionLookup)
+	if err == nil {
+		err = dvl.CheckValues("")
+	} else {
+		err = errors.New(strings.ReplaceAll(err.Error(), "deployedver.Lookup", "deployed_version"))
+	}
+	// Error creating/validating the DeployedVersionLookup.
+	if err != nil {
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Query the DeployedVersionLookup.
+	version, err := dvl.Refresh(
+		&logFrom.Primary,
+		nil, nil)
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Return the version found.
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+		Version: version,
+		Date:    time.Now().UTC(),
+	})
+	jLog.Error(err, logFrom, err != nil)
+}
+
+// httpLatestVersionRefresh refreshes the latest version of the target service.
+//
+// # GET
+//
+// Path Parameters:
+//
+//	service_name: service name to refresh
+//
+// Query Parameters:
+//
+//	"overrides": Optional parameter to provide parameters for the version lookup.
+//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//
+// Response:
+//
+//	On success: JSON object containing the refreshed version and the current UTC datetime.
+//	On error: HTTP 400 Bad Request with an error message.
+func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
+	// Service to refresh.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
 	logFromPrimary := "httpVersionRefresh_Latest"
-	deployedVersionRefresh := strings.Contains(r.URL.String(), "/deployed_version/refresh/")
-	if deployedVersionRefresh {
-		logFromPrimary = "httpVersionRefresh_Deployed"
-	}
-	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
 
 	queryParams := r.URL.Query()
 
-	// Check if service exists
+	// Check if service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
@@ -152,83 +256,149 @@ func (api *API) httpVersionRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Refresh the latest/deployed version lookup type
+	// Parameters,
 	var (
-		version  string
-		err      error
-		announce bool
+		overrides          = getParam(&queryParams, "overrides")
+		semanticVersioning = getParam(&queryParams, "semantic_versioning")
 	)
-	if deployedVersionRefresh {
-		if api.Config.Service[targetService].DeployedVersionLookup == nil {
-			api.Config.Service[targetService].DeployedVersionLookup = &deployedver.Lookup{
-				Options: &api.Config.Service[targetService].Options,
-				Status: &svcstatus.Status{
-					ServiceID: &targetService},
-				Defaults:     &api.Config.Defaults.Service.DeployedVersionLookup,
-				HardDefaults: &api.Config.HardDefaults.Service.DeployedVersionLookup,
-			}
-		}
-		// Deployed Version
-		version, announce, err = api.Config.Service[targetService].DeployedVersionLookup.Refresh(
-			getParam(&queryParams, "allow_invalid_certs"),
-			getParam(&queryParams, "basic_auth"),
-			getParam(&queryParams, "body"),
-			getParam(&queryParams, "headers"),
-			getParam(&queryParams, "json"),
-			getParam(&queryParams, "method"),
-			getParam(&queryParams, "regex"),
-			getParam(&queryParams, "regex_template"),
-			getParam(&queryParams, "semantic_versioning"),
-			getParam(&queryParams, "url"),
-		)
 
-		if announce {
-			api.Config.Service[targetService].DeployedVersionLookup.HandleNewVersion(version, true)
-		}
-	} else {
-		// Latest Version
-		version, announce, err = api.Config.Service[targetService].LatestVersion.Refresh(
-			getParam(&queryParams, "access_token"),
-			getParam(&queryParams, "allow_invalid_certs"),
-			getParam(&queryParams, "require"),
-			getParam(&queryParams, "semantic_versioning"),
-			getParam(&queryParams, "type"),
-			getParam(&queryParams, "url"),
-			getParam(&queryParams, "url_commands"),
-			getParam(&queryParams, "use_prerelease"),
-		)
-
-		if announce {
-			api.Config.Service[targetService].HandleUpdateActions(true)
-		}
+	// Query the LatestVersion lookup.
+	version, announce, err := latestver.Refresh(
+		api.Config.Service[targetService].LatestVersion,
+		overrides,
+		semanticVersioning)
+	if announce {
+		api.Config.Service[targetService].HandleUpdateActions(true)
+	}
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	err = json.NewEncoder(w).Encode(api_type.RefreshAPI{
+	// Return the version found.
+	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
 		Version: version,
-		Error:   util.ErrorToString(err),
 		Date:    time.Now().UTC(),
 	})
 	jLog.Error(err, logFrom, err != nil)
 }
 
-// httpServiceDetail handles sending details about a Service
+// httpDeployedVersionRefresh refreshes the latest/deployed version of the target service.
 //
 // # GET
 //
-// service_name: service to get details for
+// Path Parameters:
+//
+//	service_name: service name to refresh
+//
+// Query Parameters:
+//
+//	"overrides": Optional parameter to provide parameters for the version lookup.
+//	"semantic_versioning": Optional boolean parameter to override semantic versioning defaults.
+//
+// Response:
+//
+//	On success: JSON object containing the refreshed version and the current UTC datetime.
+//	On error: HTTP 400 Bad Request with an error message.
+func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
+	setCommonHeaders(w)
+
+	// Service to refresh.
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+
+	logFromPrimary := "httpVersionRefresh_Deployed"
+	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	jLog.Verbose(targetService, logFrom, true)
+
+	queryParams := r.URL.Query()
+
+	// Check if service exists,
+	api.Config.OrderMutex.RLock()
+	defer api.Config.OrderMutex.RUnlock()
+	if api.Config.Service[targetService] == nil {
+		err := fmt.Sprintf("service %q not found", targetService)
+		jLog.Error(err, logFrom, true)
+		failRequest(&w, err, http.StatusNotFound)
+		return
+	}
+
+	// Parameters.
+	var (
+		overrides          = getParam(&queryParams, "overrides")
+		semanticVersioning = getParam(&queryParams, "semantic_versioning")
+	)
+
+	// Existing DeployedVersionLookup?
+	dvl := api.Config.Service[targetService].DeployedVersionLookup
+	// Must create the DeployedVersionLookup if it doesn't exist.
+	if dvl == nil {
+		// Status
+		svcStatus := status.Status{}
+		svcStatus.Init(
+			0, 0, 0,
+			&logFrom.Primary,
+			nil)
+
+		var err error
+		dvl, err = deployedver.New(
+			"json", util.DereferenceOrDefault(overrides),
+			&api.Config.Service[targetService].Options,
+			&svcStatus,
+			&api.Config.Service[targetService].Defaults.DeployedVersionLookup, &api.Config.Service[targetService].HardDefaults.DeployedVersionLookup)
+		if err == nil {
+			err = dvl.CheckValues("")
+		}
+		if err != nil {
+			jLog.Error(err, logFrom, true)
+			failRequest(&w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// nil the overrides so that we don't apply them again in the Refresh.
+		overrides = nil
+	}
+
+	// Query the DeployedVersionLookup.
+	version, err := dvl.Refresh(
+		&targetService,
+		overrides,
+		semanticVersioning)
+	if err != nil {
+		failRequest(&w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Return the version found.
+	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+		Version: version,
+		Date:    time.Now().UTC(),
+	})
+	jLog.Error(err, logFrom, err != nil)
+}
+
+// httpServiceDetail handles sending details about a Service.
+//
+// # GET
+//
+// Path Parameters:
+//
+//	service_name: service to get details for
+//
+// Response:
+//
+//	JSON object containing the service details.
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	// service to get details from (empty for create new)
+	// Service to get details from (empty for create new).
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
-	logFrom := &util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
 
-	// Find the Service
+	// Find the Service.
 	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[targetService]
-	// Convert to API Type, censoring secrets
+	// Convert to API Type, censoring secrets.
 	serviceConfig := convertAndCensorService(svc)
 	api.Config.OrderMutex.RUnlock()
 
@@ -239,8 +409,8 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to JSON type that swaps slices for lists
-	serviceJSON := api_type.ServiceEdit{
+	// Convert to JSON type that swaps slices for lists.
+	serviceJSON := apitype.ServiceEdit{
 		Comment:               serviceConfig.Comment,
 		Options:               serviceConfig.Options,
 		LatestVersion:         serviceConfig.LatestVersion,
@@ -256,18 +426,22 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	jLog.Error(err, logFrom, err != nil)
 }
 
-// httpOtherServiceDetails handles sending details about the global notify/webhook's, defaults and hard defaults.
+// httpOtherServiceDetails handles sending details about the global notify/webhooks, defaults and hard defaults.
 //
 // # GET
+//
+// Response:
+//
+//	JSON object containing the global details.
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
 	logFromPrimary := "httpOtherServiceDetails"
-	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	// Convert to JSON type that swaps slices for lists
-	err := json.NewEncoder(w).Encode(api_type.Config{
+	// Convert to JSON type that swaps slices for lists.
+	err := json.NewEncoder(w).Encode(apitype.Config{
 		HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
 		Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
 		Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
@@ -278,47 +452,59 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 
 // httpServiceEdit handles creating/editing a Service.
 //
-// # POST - create
+// # PUT - create/replace
 //
-// # PUT - replace
+// Path Parameters:
 //
-// service_name: service to edit (empty for new service)
+//	service_name: service to edit (empty for new service)
 //
-// ...payload: Service they'd like to create/edit with
+// Body:
+//
+//	JSON object containing the service details.
+//
+// Response:
+//
+//	On success: HTTP 200 OK
+//	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 
-	// service to modify (empty for create new)
+	// Service to modify (empty for create new).
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 	reqType := "create"
 	if targetService != "" {
 		reqType = "edit"
 	}
 
-	logFrom := &util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	jLog.Verbose(fmt.Sprintf("%s %s", reqType, targetService),
+	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
+	jLog.Verbose(
+		fmt.Sprintf("%s %s",
+			reqType, targetService),
 		logFrom, true)
 
-	var oldServiceSummary *api_type.ServiceSummary
-	// EDIT the existing service
+	var oldServiceSummary *apitype.ServiceSummary
+	// EDIT the existing service.
 	if targetService != "" {
 		if api.Config.Service[targetService] == nil {
-			failRequest(&w, fmt.Sprintf("edit %q failed, service could not be found", targetService))
+			failRequest(&w,
+				fmt.Sprintf("edit %q failed, service could not be found",
+					targetService),
+				http.StatusNotFound)
 			return
 		}
 		oldServiceSummary = api.Config.Service[targetService].Summary()
 	}
 
-	// Payload
-	payload := http.MaxBytesReader(w, r.Body, 102400)
+	// Payload.
+	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 
-	// Create the new/edited service
+	// Create the new/modified service.
 	targetServicePtr := api.Config.Service[targetService]
 	newService, err := service.FromPayload(
-		targetServicePtr, // nil if creating new
+		targetServicePtr, // nil if creating new.
 		&payload,
 		&api.Config.Defaults.Service,
 		&api.Config.HardDefaults.Service,
@@ -331,54 +517,60 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		logFrom)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid json)\%s`,
-			reqType, targetService, err.Error()))
+		failRequest(&w,
+			fmt.Sprintf(`%s %q failed (invalid json)\n%s`,
+				reqType, targetService, err),
+			http.StatusBadRequest)
 		return
 	}
 
-	// CREATE a new service, but one with the same name already exists
+	// CREATE a new service, but one with the same name already exists.
 	if targetService == "" && api.Config.Service[newService.ID] != nil {
-		failRequest(&w, fmt.Sprintf("create %q failed, service with this name already exists",
-			newService.ID))
+		failRequest(&w,
+			fmt.Sprintf("create %q failed, service with this name already exists",
+				newService.ID),
+			http.StatusBadRequest)
 		return
 	}
 
-	// Check the values
+	// Check the values.
 	err = newService.CheckValues("")
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		// Remove the service name from the error
-		err = errors.New(strings.Join(strings.Split(err.Error(), `\`)[1:], `\`))
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (invalid values)\%s`,
-			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
+		failRequest(&w,
+			fmt.Sprintf(`%s %q failed (invalid values)\n%s`,
+				reqType, util.FirstNonDefault(targetService, newService.ID), err),
+			http.StatusBadRequest)
 		return
 	}
 
-	// Ensure LatestVersion and DeployedVersion (if set) can fetch
+	// Ensure LatestVersion and DeployedVersion (if set) can fetch.
 	err = newService.CheckFetches()
 	if err != nil {
 		jLog.Error(err, logFrom, true)
 
-		failRequest(&w, fmt.Sprintf(`%s %q failed (fetches failed)\%s`,
-			reqType, util.FirstNonDefault(targetService, newService.ID), err.Error()))
+		failRequest(&w,
+			fmt.Sprintf(`%s %q failed (fetches failed)\n%s`,
+				reqType, util.FirstNonDefault(targetService, newService.ID), err),
+			http.StatusBadRequest)
 		return
 	}
 
-	// Set DeployedVersion to the LatestVersion if there's no DeployedVersionLookup
+	// DeployedVersion is LatestVersion if there is no DeployedVersionLookup.
 	if newService.DeployedVersionLookup == nil {
-		newService.Status.SetDeployedVersion(newService.Status.LatestVersion(), false)
-		newService.Status.SetDeployedVersionTimestamp(newService.Status.LatestVersionTimestamp())
+		newService.Status.SetDeployedVersion(newService.Status.LatestVersion(), newService.Status.LatestVersionTimestamp(), false)
 	}
 
-	// Add the new service to the config
-	api.Config.OrderMutex.RUnlock() // Locked above
-	//nolint:errcheck // Fail for duplicate service name is handled above
+	// Add the new service to the config.
+	api.Config.OrderMutex.RUnlock() // Locked above.
+	//#nosec G104 -- Fail for duplicate service name handled above.
+	//nolint:errcheck // ^
 	api.Config.AddService(targetService, newService)
-	api.Config.OrderMutex.RLock() // Lock again for the defer
+	api.Config.OrderMutex.RLock() // Lock again for the defer.
 
 	newServiceSummary := newService.Summary()
-	// Announce the edit
+	// Announce the edit.
 	api.announceEdit(oldServiceSummary, newServiceSummary)
 }
 
@@ -386,29 +578,40 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //
 // # DELETE
 //
-// service_name: service to delete
+// Path Parameters:
+//
+//	service_name: service to delete
+//
+// Response:
+//
+//	On success: HTTP 200 OK
+//	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
-	// service to delete
+	// Service to delete.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
 
 	logFromPrimary := "httpServiceDelete"
-	logFrom := &util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
 
 	// If service doesn't exist, return 404.
 	if api.Config.Service[targetService] == nil {
-		failRequest(&w, fmt.Sprintf("delete %q failed, service not found", targetService))
+		failRequest(&w,
+			fmt.Sprintf("delete %q failed, service not found",
+				targetService),
+			http.StatusNotFound)
 		return
 	}
 
 	api.Config.DeleteService(targetService)
 
-	// Announce deletion
+	// Announce deletion.
 	api.announceDelete(targetService)
 
-	// Return 200
+	// Return 200.
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
+	//#nosec G104 -- Disregard.
+	//nolint:errcheck // ^
 	w.Write([]byte{})
 }
 
@@ -420,7 +623,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //
 //	service_name_previous?: string (the service name before the current changes)
 //	service_name: string
-//	name_previous?: string (the name of the notify before the current changes)
+//	name_previous?: string (the name of the notifier before the current changes)
 //	name?: string (required if name_previous not set)
 //	type?: string
 //	options?: map[string]string
@@ -431,63 +634,65 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	logFrom := &util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	// Payload
-	payload := http.MaxBytesReader(w, r.Body, 102400)
+	// Payload.
+	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
 		jLog.Error(err, logFrom, true)
-		failRequest(&w, err.Error())
+		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	var parsedPayload shoutrrr.TestPayload
 	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		failRequest(&w, err.Error())
+		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Get the Notify
+	// Get the Notify.
 	var serviceNotify *shoutrrr.Shoutrrr
 	var latestVersion string
+	// From the ServiceNamePrevious.
 	if parsedPayload.ServiceNamePrevious != "" {
 		api.Config.OrderMutex.RLock()
 		defer api.Config.OrderMutex.RUnlock()
-		// Check that the service exists
+		// Check whether service exists.
 		if api.Config.Service[parsedPayload.ServiceNamePrevious] != nil {
-			// Check that the notify exists
+			// Check whether notifier exists.
 			if api.Config.Service[parsedPayload.ServiceNamePrevious].Notify != nil {
 				serviceNotify = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify[parsedPayload.NamePrevious]
 			}
 			latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
 		}
 	}
+	// Apply any overrides.
 	testNotify, serviceURL, err := shoutrrr.FromPayload(
-		&parsedPayload,
+		parsedPayload,
 		serviceNotify,
-		api.Config.Notify,
-		api.Config.Defaults.Notify,
-		api.Config.HardDefaults.Notify)
+		api.Config.Notify, api.Config.Defaults.Notify, api.Config.HardDefaults.Notify)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		failRequest(&w, err.Error())
+		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	testNotify.ServiceStatus.SetLatestVersion(latestVersion, false)
+	// Give the LatestVersion as the message may use it.
+	testNotify.ServiceStatus.SetLatestVersion(latestVersion, "", false)
 
-	// Test the notify
+	// Send the message.
 	err = testNotify.TestSend(serviceURL)
 	if err != nil {
 		jLog.Error(err, logFrom, true)
-		failRequest(&w, err.Error())
+		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Return 200
+	// Return 200.
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
+	//#nosec G104 -- Disregard.
+	//nolint:errcheck // ^
 	w.Write([]byte(`{}`))
 }
