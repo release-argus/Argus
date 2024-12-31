@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
@@ -49,7 +50,7 @@ func (w *WebHook) GetDelayDuration() (duration time.Duration) {
 }
 
 // GetDesiredStatusCode of the WebHook.
-func (w *WebHook) GetDesiredStatusCode() int {
+func (w *WebHook) GetDesiredStatusCode() uint16 {
 	return *util.FirstNonNilPtr(
 		w.DesiredStatusCode,
 		w.Main.DesiredStatusCode,
@@ -58,44 +59,44 @@ func (w *WebHook) GetDesiredStatusCode() int {
 }
 
 // SetNextRunnable time that the WebHook can be re-run.
-func (w *WebHook) SetNextRunnable(time *time.Time) {
+func (w *WebHook) SetNextRunnable(time time.Time) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
-	w.nextRunnable = *time
+	w.nextRunnable = time
 }
 
 // SetExecuting will set a time that the WebHook can be re-run.
 //
-// addDelay - only used on auto_approved releases
+// addDelay - only used on auto_approved releases.
 func (w *WebHook) SetExecuting(addDelay bool, sending bool) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
-	// Different times depending on pass/fail
-	// pass
-	if !util.EvalNilPtr(w.Failed.Get(w.ID), true) {
+	// Different times depending on pass/fail.
+	// pass.
+	if !util.DereferenceOrNilValue(w.Failed.Get(w.ID), true) {
 		parentInterval, _ := time.ParseDuration(*w.ParentInterval)
 		w.nextRunnable = time.Now().UTC().Add(2 * parentInterval)
-		// fail/nil
+		// fail/nil.
 	} else {
 		w.nextRunnable = time.Now().UTC().Add(15 * time.Second)
 	}
 
-	// block for delay
+	// block for delay.
 	if addDelay {
 		w.nextRunnable = w.nextRunnable.Add(w.GetDelayDuration())
 	}
 
-	// Block reruns whilst sending
+	// Block reruns whilst sending.
 	if sending {
 		w.nextRunnable = w.nextRunnable.Add(time.Hour)
-		w.nextRunnable = w.nextRunnable.Add(3 * time.Duration(w.GetMaxTries()) * time.Second)
+		w.nextRunnable = w.nextRunnable.Add(3 * time.Duration(int64(w.GetMaxTries())) * time.Second)
 	}
 }
 
 // GetMaxTries allowed for the WebHook.
-func (w *WebHook) GetMaxTries() uint {
+func (w *WebHook) GetMaxTries() uint8 {
 	return *util.FirstNonNilPtr(
 		w.MaxTries,
 		w.Main.MaxTries,
@@ -111,7 +112,7 @@ func (w *WebHook) NextRunnable() time.Time {
 	return w.nextRunnable
 }
 
-// IsRunnable will return whether the current time is before NextRunnable
+// IsRunnable will return whether the current time is before NextRunnable.
 func (w *WebHook) IsRunnable() bool {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
@@ -127,8 +128,8 @@ func (w *WebHook) BuildRequest() (req *http.Request) {
 	var err error
 	switch w.GetType() {
 	case "github":
-		//#nosec G104 -- Disregard
-		//nolint:errcheck // ^
+		//#nosec G104 -- Disregard.
+		//nolint:errcheck -- ^
 		payload, _ := json.Marshal(GitHub{
 			Ref:    "refs/heads/master",
 			Before: util.RandAlphaNumericLower(40),

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
-// SetDefaults for WebHooks.
-func (w *WebHookDefaults) SetDefaults() {
+// Default sets this Defaults to the default values.
+func (d *Defaults) Default() {
 	// type
-	w.Type = "github"
+	d.Type = "github"
 	// delay
-	w.Delay = "0s"
+	d.Delay = "0s"
 	// allow_invalid_certs
 	webhookAllowInvalidCerts := false
-	w.AllowInvalidCerts = &webhookAllowInvalidCerts
+	d.AllowInvalidCerts = &webhookAllowInvalidCerts
 	// desired_status_code
-	webhookDesiredStatusCode := 0
-	w.DesiredStatusCode = &webhookDesiredStatusCode
+	webhookDesiredStatusCode := uint16(0)
+	d.DesiredStatusCode = &webhookDesiredStatusCode
 	// max_tries
-	webhookMaxTries := uint(3)
-	w.MaxTries = &webhookMaxTries
+	webhookMaxTries := uint8(3)
+	d.MaxTries = &webhookMaxTries
 	// silent_fails
 	webhookSilentFails := false
-	w.SilentFails = &webhookSilentFails
+	d.SilentFails = &webhookSilentFails
 }

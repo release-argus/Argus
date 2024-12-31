@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,31 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
 	"encoding/json"
 
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-// AnnounceSend of the WebHook to the `w.Announce` channel
-// (Broadcast to all WebSocket clients).
+// AnnounceSend of the WebHook to the `w.Announce` channel.
+// (Broadcast to all WebSocket clients)
 func (w *WebHook) AnnounceSend() {
 	w.SetExecuting(false, false)
-	webhookSummary := make(map[string]*api_type.WebHookSummary)
-	webhookSummary[w.ID] = &api_type.WebHookSummary{
+	webhookSummary := make(map[string]*apitype.WebHookSummary)
+	webhookSummary[w.ID] = &apitype.WebHookSummary{
 		Failed:       w.Failed.Get(w.ID),
 		NextRunnable: w.NextRunnable()}
 
-	// WebHook pass/fail
-	payloadData, _ := json.Marshal(api_type.WebSocketMessage{
+	// WebHook pass/fail.
+	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "WEBHOOK",
 		SubType: "EVENT",
-		ServiceData: &api_type.ServiceSummary{
-			ID: util.DefaultIfNil(w.ServiceStatus.ServiceID)},
+		ServiceData: &apitype.ServiceSummary{
+			ID: util.DereferenceOrDefault(w.ServiceStatus.ServiceID)},
 		WebHookData: webhookSummary})
 
 	w.ServiceStatus.SendAnnounce(&payloadData)

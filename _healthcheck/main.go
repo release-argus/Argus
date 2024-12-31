@@ -1,7 +1,7 @@
 /*
 ./healthcheck http://localhost:8080/api/v1/healthcheck
-200   == nothing
-error == os.Exit(1)
+	200   == nothing
+	error == os.Exit(1)
 */
 package main
 
@@ -19,7 +19,9 @@ func main() {
 	}
 	url := os.Args[1]
 
+	//#nosec G402 -- Ignore TLS for healthcheck.
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	//#nosec G107 -- explicitly set URL.
 	if _, err := http.Get(url); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v", err)
 		os.Exit(1)

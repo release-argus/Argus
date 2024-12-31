@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package latestver provides the latest_version lookup service to for a service.
 package latestver
 
 import (
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -29,62 +30,12 @@ import (
 func LogInit(log *util.JLog) {
 	jLog = log
 
+	base.LogInit(log)
+	github.LogInit(log)
+	web.LogInit(log)
+
 	filter.LogInit(log)
 	command.LogInit(log)
 	shoutrrr.LogInit(log)
 	webhook.LogInit(log)
-}
-
-// Init the Lookup, assigning Defaults and initialising child structs.
-func (l *Lookup) Init(
-	defaults *LookupDefaults,
-	hardDefaults *LookupDefaults,
-	status *svcstatus.Status,
-	options *opt.Options,
-) {
-	if l.Type == "github" {
-		l.GitHubData = NewGitHubData("", nil)
-	}
-
-	l.Defaults = defaults
-	l.HardDefaults = hardDefaults
-	l.Status = status
-	l.Options = options
-
-	l.Require.Init(status, &defaults.Require)
-}
-
-// initMetrics for this Lookup.
-func (l *Lookup) InitMetrics() {
-	// ############
-	// # Counters #
-	// ############
-	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
-		*l.Status.ServiceID,
-		"",
-		"",
-		"SUCCESS")
-	metric.InitPrometheusCounter(metric.LatestVersionQueryMetric,
-		*l.Status.ServiceID,
-		"",
-		"",
-		"FAIL")
-}
-
-// DeleteMetrics for this Lookup.
-func (l *Lookup) DeleteMetrics() {
-	// Liveness
-	metric.DeletePrometheusGauge(metric.LatestVersionQueryLiveness,
-		*l.Status.ServiceID)
-	// Counters
-	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
-		*l.Status.ServiceID,
-		"",
-		"",
-		"SUCCESS")
-	metric.DeletePrometheusCounter(metric.LatestVersionQueryMetric,
-		*l.Status.ServiceID,
-		"",
-		"",
-		"FAIL")
 }

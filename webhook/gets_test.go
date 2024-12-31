@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,33 +29,30 @@ import (
 func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		root        *bool
-		main        *bool
-		dfault      *bool
-		hardDefault *bool
-		want        bool
+		rootValue, mainValue, defaultValue, hardDefaultValue *bool
+		want                                                 bool
 	}{
 		"root overrides all": {
-			want:        true,
-			root:        test.BoolPtr(true),
-			main:        test.BoolPtr(false),
-			dfault:      test.BoolPtr(false),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			rootValue:        test.BoolPtr(true),
+			mainValue:        test.BoolPtr(false),
+			defaultValue:     test.BoolPtr(false),
+			hardDefaultValue: test.BoolPtr(false),
 		},
 		"main overrides default+hardDefault": {
-			want:        true,
-			main:        test.BoolPtr(true),
-			dfault:      test.BoolPtr(false),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			mainValue:        test.BoolPtr(true),
+			defaultValue:     test.BoolPtr(false),
+			hardDefaultValue: test.BoolPtr(false),
 		},
 		"default overrides hardDefault": {
-			want:        true,
-			dfault:      test.BoolPtr(true),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			defaultValue:     test.BoolPtr(true),
+			hardDefaultValue: test.BoolPtr(false),
 		},
-		"hardDefault is last resort": {
-			want:        true,
-			hardDefault: test.BoolPtr(true),
+		"hardDefaultValue is last resort": {
+			want:             true,
+			hardDefaultValue: test.BoolPtr(true),
 		},
 	}
 
@@ -64,10 +61,10 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.AllowInvalidCerts = tc.root
-			webhook.Main.AllowInvalidCerts = tc.main
-			webhook.Defaults.AllowInvalidCerts = tc.dfault
-			webhook.HardDefaults.AllowInvalidCerts = tc.hardDefault
+			webhook.AllowInvalidCerts = tc.rootValue
+			webhook.Main.AllowInvalidCerts = tc.mainValue
+			webhook.Defaults.AllowInvalidCerts = tc.defaultValue
+			webhook.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
 			// WHEN GetAllowInvalidCerts is called
 			got := webhook.GetAllowInvalidCerts()
@@ -84,33 +81,30 @@ func TestWebHook_GetAllowInvalidCerts(t *testing.T) {
 func TestWebHook_GetDelay(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		root        string
-		main        string
-		dfault      string
-		hardDefault string
-		want        string
+		rootValue, mainValue, defaultValue, hardDefaultValue string
+		want                                                 string
 	}{
 		"root overrides all": {
-			want:        "1s",
-			root:        "1s",
-			main:        "2s",
-			dfault:      "2s",
-			hardDefault: "2s",
+			want:             "1s",
+			rootValue:        "1s",
+			mainValue:        "2s",
+			defaultValue:     "2s",
+			hardDefaultValue: "2s",
 		},
 		"main overrides default+hardDefault": {
-			want:        "1s",
-			main:        "1s",
-			dfault:      "2s",
-			hardDefault: "2s",
+			want:             "1s",
+			mainValue:        "1s",
+			defaultValue:     "2s",
+			hardDefaultValue: "2s",
 		},
 		"default overrides hardDefault": {
-			want:        "1s",
-			dfault:      "1s",
-			hardDefault: "2s",
+			want:             "1s",
+			defaultValue:     "1s",
+			hardDefaultValue: "2s",
 		},
 		"hardDefault is last resort": {
-			want:        "1s",
-			hardDefault: "1s",
+			want:             "1s",
+			hardDefaultValue: "1s",
 		},
 	}
 
@@ -119,10 +113,10 @@ func TestWebHook_GetDelay(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.Delay = tc.root
-			webhook.Main.Delay = tc.main
-			webhook.Defaults.Delay = tc.dfault
-			webhook.HardDefaults.Delay = tc.hardDefault
+			webhook.Delay = tc.rootValue
+			webhook.Main.Delay = tc.mainValue
+			webhook.Defaults.Delay = tc.defaultValue
+			webhook.HardDefaults.Delay = tc.hardDefaultValue
 
 			// WHEN GetDelay is called
 			got := webhook.GetDelay()
@@ -139,33 +133,30 @@ func TestWebHook_GetDelay(t *testing.T) {
 func TestWebHook_GetDelayDuration(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		root        string
-		main        string
-		dfault      string
-		hardDefault string
-		want        time.Duration
+		rootValue, mainValue, defaultValue, hardDefaultValue string
+		want                                                 time.Duration
 	}{
 		"root overrides all": {
-			want:        1 * time.Second,
-			root:        "1s",
-			main:        "2s",
-			dfault:      "2s",
-			hardDefault: "2s",
+			want:             1 * time.Second,
+			rootValue:        "1s",
+			mainValue:        "2s",
+			defaultValue:     "2s",
+			hardDefaultValue: "2s",
 		},
 		"main overrides default+hardDefault": {
-			want:        1 * time.Second,
-			main:        "1s",
-			dfault:      "2s",
-			hardDefault: "2s",
+			want:             1 * time.Second,
+			mainValue:        "1s",
+			defaultValue:     "2s",
+			hardDefaultValue: "2s",
 		},
 		"default overrides hardDefault": {
-			want:        1 * time.Second,
-			dfault:      "1s",
-			hardDefault: "2s",
+			want:             1 * time.Second,
+			defaultValue:     "1s",
+			hardDefaultValue: "2s",
 		},
 		"hardDefault is last resort": {
-			want:        1 * time.Second,
-			hardDefault: "1s",
+			want:             1 * time.Second,
+			hardDefaultValue: "1s",
 		},
 	}
 
@@ -174,10 +165,10 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.Delay = tc.root
-			webhook.Main.Delay = tc.main
-			webhook.Defaults.Delay = tc.dfault
-			webhook.HardDefaults.Delay = tc.hardDefault
+			webhook.Delay = tc.rootValue
+			webhook.Main.Delay = tc.mainValue
+			webhook.Defaults.Delay = tc.defaultValue
+			webhook.HardDefaults.Delay = tc.hardDefaultValue
 
 			// WHEN GetDelayDuration is called
 			got := webhook.GetDelayDuration()
@@ -194,33 +185,30 @@ func TestWebHook_GetDelayDuration(t *testing.T) {
 func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		root        *int
-		main        *int
-		dfault      *int
-		hardDefault *int
-		want        int
+		rootValue, mainValue, defaultValue, hardDefaultValue *uint16
+		want                                                 uint16
 	}{
 		"root overrides all": {
-			want:        1,
-			root:        test.IntPtr(1),
-			main:        test.IntPtr(2),
-			dfault:      test.IntPtr(2),
-			hardDefault: test.IntPtr(2),
+			want:             1,
+			rootValue:        test.UInt16Ptr(1),
+			mainValue:        test.UInt16Ptr(2),
+			defaultValue:     test.UInt16Ptr(2),
+			hardDefaultValue: test.UInt16Ptr(2),
 		},
 		"main overrides default+hardDefault": {
-			want:        1,
-			main:        test.IntPtr(1),
-			dfault:      test.IntPtr(2),
-			hardDefault: test.IntPtr(2),
+			want:             1,
+			mainValue:        test.UInt16Ptr(1),
+			defaultValue:     test.UInt16Ptr(2),
+			hardDefaultValue: test.UInt16Ptr(2),
 		},
 		"default overrides hardDefault": {
-			want:        1,
-			dfault:      test.IntPtr(1),
-			hardDefault: test.IntPtr(2),
+			want:             1,
+			defaultValue:     test.UInt16Ptr(1),
+			hardDefaultValue: test.UInt16Ptr(2),
 		},
-		"hardDefault is last resort": {
-			want:        1,
-			hardDefault: test.IntPtr(1),
+		"hardDefaultValue is last resort": {
+			want:             1,
+			hardDefaultValue: test.UInt16Ptr(1),
 		},
 	}
 
@@ -229,10 +217,10 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.DesiredStatusCode = tc.root
-			webhook.Main.DesiredStatusCode = tc.main
-			webhook.Defaults.DesiredStatusCode = tc.dfault
-			webhook.HardDefaults.DesiredStatusCode = tc.hardDefault
+			webhook.DesiredStatusCode = tc.rootValue
+			webhook.Main.DesiredStatusCode = tc.mainValue
+			webhook.Defaults.DesiredStatusCode = tc.defaultValue
+			webhook.HardDefaults.DesiredStatusCode = tc.hardDefaultValue
 
 			// WHEN GetDesiredStatusCode is called
 			got := webhook.GetDesiredStatusCode()
@@ -249,33 +237,30 @@ func TestWebHook_GetDesiredStatusCode(t *testing.T) {
 func TestWebHook_GetMaxTries(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		root        *uint
-		main        *uint
-		dfault      *uint
-		hardDefault *uint
-		want        uint
+		rootValue, mainValue, defaultValue, hardDefaultValue *uint8
+		want                                                 uint8
 	}{
 		"root overrides all": {
-			want:        uint(1),
-			root:        test.UIntPtr(1),
-			main:        test.UIntPtr(2),
-			dfault:      test.UIntPtr(2),
-			hardDefault: test.UIntPtr(2),
+			want:             uint8(1),
+			rootValue:        test.UInt8Ptr(1),
+			mainValue:        test.UInt8Ptr(2),
+			defaultValue:     test.UInt8Ptr(2),
+			hardDefaultValue: test.UInt8Ptr(2),
 		},
 		"main overrides default+hardDefault": {
-			want:        uint(1),
-			main:        test.UIntPtr(1),
-			dfault:      test.UIntPtr(2),
-			hardDefault: test.UIntPtr(2),
+			want:             uint8(1),
+			mainValue:        test.UInt8Ptr(1),
+			defaultValue:     test.UInt8Ptr(2),
+			hardDefaultValue: test.UInt8Ptr(2),
 		},
 		"default overrides hardDefault": {
-			want:        uint(1),
-			dfault:      test.UIntPtr(1),
-			hardDefault: test.UIntPtr(2),
+			want:             uint8(1),
+			defaultValue:     test.UInt8Ptr(1),
+			hardDefaultValue: test.UInt8Ptr(2),
 		},
-		"hardDefault is last resort": {
-			want:        uint(1),
-			hardDefault: test.UIntPtr(1),
+		"hardDefaultValue is last resort": {
+			want:             uint8(1),
+			hardDefaultValue: test.UInt8Ptr(1),
 		},
 	}
 
@@ -284,10 +269,10 @@ func TestWebHook_GetMaxTries(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.MaxTries = tc.root
-			webhook.Main.MaxTries = tc.main
-			webhook.Defaults.MaxTries = tc.dfault
-			webhook.HardDefaults.MaxTries = tc.hardDefault
+			webhook.MaxTries = tc.rootValue
+			webhook.Main.MaxTries = tc.mainValue
+			webhook.Defaults.MaxTries = tc.defaultValue
+			webhook.HardDefaults.MaxTries = tc.hardDefaultValue
 
 			// WHEN GetMaxTries is called
 			got := webhook.GetMaxTries()
@@ -410,33 +395,30 @@ func TestWebHook_BuildRequest(t *testing.T) {
 func TestWebHook_GetType(t *testing.T) {
 	// GIVEN a WebHook with Type in various locations
 	tests := map[string]struct {
-		root        string
-		main        string
-		dfault      string
-		hardDefault string
-		want        string
+		rootValue, mainValue, defaultValue, hardDefaultValue string
+		want                                                 string
 	}{
 		"root overrides all": {
-			want:        "github",
-			root:        "github",
-			main:        "url",
-			dfault:      "url",
-			hardDefault: "url",
+			want:             "github",
+			rootValue:        "github",
+			mainValue:        "url",
+			defaultValue:     "url",
+			hardDefaultValue: "url",
 		},
 		"main overrides default+hardDefault": {
-			want:        "github",
-			main:        "github",
-			dfault:      "url",
-			hardDefault: "url",
+			want:             "github",
+			mainValue:        "github",
+			defaultValue:     "url",
+			hardDefaultValue: "url",
 		},
 		"default overrides hardDefault": {
-			want:        "github",
-			dfault:      "github",
-			hardDefault: "url",
+			want:             "github",
+			defaultValue:     "github",
+			hardDefaultValue: "url",
 		},
-		"hardDefault is last resort": {
-			want:        "github",
-			hardDefault: "github",
+		"hardDefaultValue is last resort": {
+			want:             "github",
+			hardDefaultValue: "github",
 		},
 	}
 
@@ -445,10 +427,10 @@ func TestWebHook_GetType(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.Type = tc.root
-			webhook.Main.Type = tc.main
-			webhook.Defaults.Type = tc.dfault
-			webhook.HardDefaults.Type = tc.hardDefault
+			webhook.Type = tc.rootValue
+			webhook.Main.Type = tc.mainValue
+			webhook.Defaults.Type = tc.defaultValue
+			webhook.HardDefaults.Type = tc.hardDefaultValue
 
 			// WHEN GetType is called
 			got := webhook.GetType()
@@ -465,55 +447,52 @@ func TestWebHook_GetType(t *testing.T) {
 func TestWebHook_GetSecret(t *testing.T) {
 	// GIVEN a WebHook with Secret in various locations
 	tests := map[string]struct {
-		env         map[string]string
-		root        string
-		main        string
-		dfault      string
-		hardDefault string
-		want        string
+		env                                                  map[string]string
+		rootValue, mainValue, defaultValue, hardDefaultValue string
+		want                                                 string
 	}{
 		"root overrides all": {
-			want:        "argus-secret",
-			root:        "argus-secret",
-			main:        "unused",
-			dfault:      "unused",
-			hardDefault: "unused",
+			want:             "argus-secret",
+			rootValue:        "argus-secret",
+			mainValue:        "unused",
+			defaultValue:     "unused",
+			hardDefaultValue: "unused",
 		},
 		"main overrides default+hardDefault": {
-			want:        "argus-secret",
-			main:        "argus-secret",
-			dfault:      "unused",
-			hardDefault: "unused",
+			want:             "argus-secret",
+			mainValue:        "argus-secret",
+			defaultValue:     "unused",
+			hardDefaultValue: "unused",
 		},
 		"default overrides hardDefault": {
-			want:        "argus-secret",
-			dfault:      "argus-secret",
-			hardDefault: "unused",
+			want:             "argus-secret",
+			defaultValue:     "argus-secret",
+			hardDefaultValue: "unused",
 		},
-		"hardDefault last resort": {
-			want:        "argus-secret",
-			hardDefault: "argus-secret",
+		"hardDefaultValue last resort": {
+			want:             "argus-secret",
+			hardDefaultValue: "argus-secret",
 		},
 		"env var is used": {
-			want: "argus-secret",
-			env:  map[string]string{"TESTWEBHOOK_GETSECRET_ONE": "argus-secret"},
-			root: "${TESTWEBHOOK_GETSECRET_ONE}",
+			want:      "argus-secret",
+			env:       map[string]string{"TEST_WEBHOOK__GET_SECRET__ONE": "argus-secret"},
+			rootValue: "${TEST_WEBHOOK__GET_SECRET__ONE}",
 		},
 		"env var partial is used": {
-			want: "argus-secret-two",
-			env:  map[string]string{"TESTWEBHOOK_GETSECRET_TWO": "argus-secret"},
-			root: "${TESTWEBHOOK_GETSECRET_TWO}-two",
+			want:      "argus-secret-two",
+			env:       map[string]string{"TEST_WEBHOOK__GET_SECRET__TWO": "argus-secret"},
+			rootValue: "${TEST_WEBHOOK__GET_SECRET__TWO}-two",
 		},
 		"empty env var is ignored": {
-			want:   "argus-secret",
-			env:    map[string]string{"TESTWEBHOOK_GETSECRET_THREE": ""},
-			root:   "${TESTWEBHOOK_GETSECRET_THREE}",
-			dfault: "argus-secret",
+			want:         "argus-secret",
+			env:          map[string]string{"TEST_WEBHOOK__GET_SECRET__THREE": ""},
+			rootValue:    "${TEST_WEBHOOK__GET_SECRET__THREE}",
+			defaultValue: "argus-secret",
 		},
 		"unset env var is used": {
-			want:   "${TESTWEBHOOK_GETSECRET_UNSET}",
-			root:   "${TESTWEBHOOK_GETSECRET_UNSET}",
-			dfault: "argus-secret",
+			want:         "${TEST_WEBHOOK__GET_SECRET__UNSET}",
+			rootValue:    "${TEST_WEBHOOK__GET_SECRET__UNSET}",
+			defaultValue: "argus-secret",
 		},
 	}
 
@@ -523,13 +502,13 @@ func TestWebHook_GetSecret(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 			webhook := testWebHook(true, false, false)
-			webhook.Secret = tc.root
-			webhook.Main.Secret = tc.main
-			webhook.Defaults.Secret = tc.dfault
-			webhook.HardDefaults.Secret = tc.hardDefault
+			webhook.Secret = tc.rootValue
+			webhook.Main.Secret = tc.mainValue
+			webhook.Defaults.Secret = tc.defaultValue
+			webhook.HardDefaults.Secret = tc.hardDefaultValue
 
 			// WHEN GetSecret is called
 			got := webhook.GetSecret()
@@ -546,33 +525,30 @@ func TestWebHook_GetSecret(t *testing.T) {
 func TestWebHook_GetSilentFails(t *testing.T) {
 	// GIVEN a WebHook with SilentFails in various locations
 	tests := map[string]struct {
-		root        *bool
-		main        *bool
-		dfault      *bool
-		hardDefault *bool
-		want        bool
+		rootValue, mainValue, defaultValue, hardDefaultValue *bool
+		want                                                 bool
 	}{
 		"root overrides all": {
-			want:        true,
-			root:        test.BoolPtr(true),
-			main:        test.BoolPtr(false),
-			dfault:      test.BoolPtr(false),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			rootValue:        test.BoolPtr(true),
+			mainValue:        test.BoolPtr(false),
+			defaultValue:     test.BoolPtr(false),
+			hardDefaultValue: test.BoolPtr(false),
 		},
 		"main overrides default+hardDefault": {
-			want:        true,
-			main:        test.BoolPtr(true),
-			dfault:      test.BoolPtr(false),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			mainValue:        test.BoolPtr(true),
+			defaultValue:     test.BoolPtr(false),
+			hardDefaultValue: test.BoolPtr(false),
 		},
 		"default overrides hardDefault": {
-			want:        true,
-			dfault:      test.BoolPtr(true),
-			hardDefault: test.BoolPtr(false),
+			want:             true,
+			defaultValue:     test.BoolPtr(true),
+			hardDefaultValue: test.BoolPtr(false),
 		},
-		"hardDefault is last resort": {
-			want:        true,
-			hardDefault: test.BoolPtr(true),
+		"hardDefaultValue is last resort": {
+			want:             true,
+			hardDefaultValue: test.BoolPtr(true),
 		},
 	}
 
@@ -581,10 +557,10 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.SilentFails = tc.root
-			webhook.Main.SilentFails = tc.main
-			webhook.Defaults.SilentFails = tc.dfault
-			webhook.HardDefaults.SilentFails = tc.hardDefault
+			webhook.SilentFails = tc.rootValue
+			webhook.Main.SilentFails = tc.mainValue
+			webhook.Defaults.SilentFails = tc.defaultValue
+			webhook.HardDefaults.SilentFails = tc.hardDefaultValue
 
 			// WHEN GetSilentFails is called
 			got := webhook.GetSilentFails()
@@ -601,65 +577,62 @@ func TestWebHook_GetSilentFails(t *testing.T) {
 func TestWebHook_GetURL(t *testing.T) {
 	// GIVEN a WebHook with urls in various locations
 	tests := map[string]struct {
-		env           map[string]string
-		root          string
-		main          string
-		dfault        string
-		hardDefault   string
-		want          string
-		latestVersion string
+		env                                                  map[string]string
+		rootValue, mainValue, defaultValue, hardDefaultValue string
+		want                                                 string
+		latestVersion                                        string
 	}{
 		"root overrides all": {
-			want:        "https://release-argus.io",
-			root:        "https://release-argus.io",
-			main:        "https://somewhere.com",
-			dfault:      "https://somewhere.com",
-			hardDefault: "https://somewhere.com",
+			want:             "https://release-argus.io",
+			rootValue:        "https://release-argus.io",
+			mainValue:        "https://somewhere.com",
+			defaultValue:     "https://somewhere.com",
+			hardDefaultValue: "https://somewhere.com",
 		},
 		"main overrides default+hardDefault": {
-			want:        "https://release-argus.io",
-			main:        "https://release-argus.io",
-			dfault:      "https://somewhere.com",
-			hardDefault: "https://somewhere.com",
+			want:             "https://release-argus.io",
+			mainValue:        "https://release-argus.io",
+			defaultValue:     "https://somewhere.com",
+			hardDefaultValue: "https://somewhere.com",
 		},
 		"default is last resort": {
-			want:        "https://release-argus.io",
-			dfault:      "https://release-argus.io",
-			hardDefault: "https://somewhere.com",
+			want:             "https://release-argus.io",
+			defaultValue:     "https://release-argus.io",
+			hardDefaultValue: "https://somewhere.com",
 		},
-		"hardDefault last resort": {
-			want:        "https://release-argus.io",
-			hardDefault: "https://release-argus.io",
+		"hardDefaultValue last resort": {
+			want:             "https://release-argus.io",
+			hardDefaultValue: "https://release-argus.io",
 		},
 		"uses latest_version": {
 			want:          "https://release-argus.io/1.2.3",
-			root:          "https://release-argus.io/{{ version }}",
+			rootValue:     "https://release-argus.io/{{ version }}",
 			latestVersion: "1.2.3",
 		},
-		"empty version when unfound": {
-			want: "https://release-argus.io/",
-			root: "https://release-argus.io/{{ version }}",
+		"empty version when not found": {
+			want:      "https://release-argus.io/",
+			rootValue: "https://release-argus.io/{{ version }}",
 		},
 		"env var is used": {
-			want: "https://release-argus.io",
-			env:  map[string]string{"TESTWEBHOOK_GETURL_ONE": "https://release-argus.io"},
-			root: "${TESTWEBHOOK_GETURL_ONE}",
+			want:      "https://release-argus.io",
+			env:       map[string]string{"TEST_WEBHOOK__GET_URL__ONE": "https://release-argus.io"},
+			rootValue: "${TEST_WEBHOOK__GET_URL__ONE}",
 		},
 		"env var partial is used": {
-			want: "https://release-argus.io",
-			env:  map[string]string{"TESTWEBHOOK_GETURL_TWO": "release-argus"},
-			root: "https://${TESTWEBHOOK_GETURL_TWO}.io",
+			want:      "https://release-argus.io",
+			env:       map[string]string{"TEST_WEBHOOK__GET_URL__TWO": "release-argus"},
+			rootValue: "https://${TEST_WEBHOOK__GET_URL__TWO}.io",
 		},
 		"empty env var is ignored": {
-			want:   "https://release-argus.io",
-			env:    map[string]string{"TESTWEBHOOK_GETURL_THREE": ""},
-			root:   "${TESTWEBHOOK_GETURL_THREE}",
-			dfault: "https://release-argus.io",
+			want:         "https://release-argus.io",
+			env:          map[string]string{"TEST_WEBHOOK__GET_URL__THREE": ""},
+			rootValue:    "${TEST_WEBHOOK__GET_URL__THREE}",
+			defaultValue: "https://release-argus.io",
 		},
 		"undefined env var is used": {
-			want:   "${TESTWEBHOOK_GETURL_UNSET}",
-			root:   "${TESTWEBHOOK_GETURL_UNSET}",
-			dfault: "https://release-argus.io",
+			want:         "${TEST_WEBHOOK__GET_URL__UNSET}",
+			rootValue:    "${TEST_WEBHOOK__GET_URL__UNSET}",
+			defaultValue: "https://release-argus.io",
 		},
 	}
 
@@ -669,14 +642,14 @@ func TestWebHook_GetURL(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 			webhook := testWebHook(true, false, false)
-			webhook.URL = tc.root
-			webhook.Main.URL = tc.main
-			webhook.Defaults.URL = tc.dfault
-			webhook.HardDefaults.URL = tc.hardDefault
-			webhook.ServiceStatus.SetLatestVersion(tc.latestVersion, false)
+			webhook.URL = tc.rootValue
+			webhook.Main.URL = tc.mainValue
+			webhook.Defaults.URL = tc.defaultValue
+			webhook.HardDefaults.URL = tc.hardDefaultValue
+			webhook.ServiceStatus.SetLatestVersion(tc.latestVersion, "", false)
 
 			// WHEN GetURL is called
 			got := webhook.GetURL()
@@ -709,7 +682,7 @@ func TestWebHook_GetIsRunnable(t *testing.T) {
 			t.Parallel()
 
 			webhook := testWebHook(true, false, false)
-			webhook.SetNextRunnable(&tc.nextRunnable)
+			webhook.SetNextRunnable(tc.nextRunnable)
 			time.Sleep(time.Nanosecond)
 
 			// WHEN GetIsRunnable is called
@@ -775,14 +748,13 @@ func TestWebHook_SetExecuting(t *testing.T) {
 			webhook := testWebHook(true, false, false)
 			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.Delay = tc.delay
-			maxTries := uint(tc.maxTries)
-			webhook.MaxTries = &maxTries
+			webhook.MaxTries = test.UInt8Ptr(tc.maxTries)
 
 			// WHEN SetExecuting is run
 			webhook.SetExecuting(tc.addDelay, tc.sending)
 
 			// THEN the correct response is received
-			// next runnable is within expectred range
+			// next runnable is within expected range
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)

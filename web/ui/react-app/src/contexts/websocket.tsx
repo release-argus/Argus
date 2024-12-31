@@ -80,10 +80,10 @@ export const WebSocketProvider = (props: Props) => {
   const { data: orderData, isFetching: orderIsFetching } = useQuery({
     queryKey: ["service/order"],
     queryFn: () => fetchJSON<OrderAPIResponse>({ url: "api/v1/service/order" }),
-    gcTime: 1000 * 60 * 30, // 30 mins
+    gcTime: 1000 * 60 * 30, // 30 mins.
   });
   useEffect(() => {
-    // Not a disconnect, still fetching, or no ordering
+    // Not a disconnect, still fetching, or no ordering.
     if (
       connected === false ||
       orderIsFetching ||
@@ -91,7 +91,7 @@ export const WebSocketProvider = (props: Props) => {
     )
       return;
 
-    // Only if the order has changed
+    // Only if the order has changed.
     if (!compareStringArrays(orderData.order, monitorData.order)) {
       setMonitorData({
         page: "APPROVALS",
@@ -102,7 +102,7 @@ export const WebSocketProvider = (props: Props) => {
     }
 
     orderData.order.forEach((service) => {
-      // If the service is already in the cache, don't fetch it again
+      // If the service is already in the cache, don't fetch it again.
       if (monitorData.service[service]?.status?.latest_version_timestamp)
         return;
       fetchJSON<ServiceSummaryType | undefined>({
@@ -120,7 +120,7 @@ export const WebSocketProvider = (props: Props) => {
   }, [orderData, connected]);
 
   ws.onopen = () => {
-    // Invalidate the cache if it's not the first connect event
+    // Invalidate the cache if it's not the first connect event.
     if (connected !== undefined)
       queryClient.invalidateQueries({
         queryKey: ["service/order"],
@@ -131,11 +131,11 @@ export const WebSocketProvider = (props: Props) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ws.onmessage = (event: any) => {
     if (event.data === "") return;
-    // If message is valid JSON
+    // If message is valid JSON.
     if (event.data.length > 1 && event.data[0] == "{") {
       const msg = JSON.parse(event.data.trim()) as WebSocketResponse;
       handleMessage(msg, setMonitorData);
-      // update/invalidate caches
+      // update/invalidate caches.
       if (msg.page === "APPROVALS") {
         if (msg.type === "EDIT") {
           queryClient.invalidateQueries({
@@ -155,7 +155,7 @@ export const WebSocketProvider = (props: Props) => {
           if (queryData !== undefined) {
             if (msg.command_data)
               for (const command in msg.command_data) {
-                // store it in the cache
+                // store it in the cache.
                 (queryData as ActionAPIType).command[command] = {
                   failed: msg.command_data[command].failed,
                   next_runnable: msg.command_data[command].next_runnable,
@@ -164,7 +164,7 @@ export const WebSocketProvider = (props: Props) => {
 
             if (msg.webhook_data)
               for (const webhook_id in msg.webhook_data) {
-                // store it in the cache
+                // store it in the cache.
                 (queryData as ActionAPIType).webhook[webhook_id] = {
                   failed: msg.webhook_data[webhook_id].failed,
                   next_runnable: msg.webhook_data[webhook_id].next_runnable,
@@ -209,7 +209,6 @@ const messageHandlers = new Map();
 
 export const addMessageHandler = (
   id: string,
-  // handler: any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

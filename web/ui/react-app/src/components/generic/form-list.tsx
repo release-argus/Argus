@@ -41,19 +41,19 @@ const FormList: FC<Props> = ({
     append({ arg: "" }, { shouldFocus: false });
   }, []);
 
-  // keep track of the array values so we can switch defaults when they're unchanged
+  // keep track of the array values so we can switch defaults when they're unchanged.
   const fieldValues: StringFieldArray = useWatch({ name: name });
-  // useDefaults when the fieldValues are undefined or the same as the defaults
+  // useDefaults when the fieldValues are undefined or the same as the defaults.
   const useDefaults = useMemo(
     () =>
       isEmptyArray(defaults) ? false : !diffObjects(fieldValues, defaults),
     [fieldValues, defaults]
   );
-  // trigger validation on change of defaults being used/not
+  // trigger validation on change of defaults being used/not.
   useEffect(() => {
     trigger(name);
 
-    // Give the defaults back if the field is empty
+    // Give the defaults back if the field is empty.
     if (isEmptyArray(fieldValues))
       defaults?.forEach(() => {
         addItem();
@@ -65,8 +65,8 @@ const FormList: FC<Props> = ({
     [useDefaults, defaults]
   );
 
-  // on load, ensure we don't have another types actions
-  // and give the defaults if not overridden
+  // on load, ensure we don't have another types actions,
+  // and give the defaults if not overridden.
   useEffect(() => {
     for (const item of fieldValues) {
       const keys = Object.keys(item);
@@ -77,7 +77,7 @@ const FormList: FC<Props> = ({
     }
   }, []);
 
-  // remove the last item if it's not the only one or doesn't match the defaults
+  // remove the last item if it's not the only one or doesn't match the defaults.
   const removeLast = useCallback(() => {
     !(useDefaults && fields.length == 1) && remove(fields.length - 1);
   }, [fields.length, useDefaults]);

@@ -40,7 +40,7 @@ const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
 
   const addNotification = (notification: NotificationType) => {
-    // Don't repeat notifications
+    // Don't repeat notifications.
     setNotifications((prevState: NotificationType[]) => [
       ...prevState,
       {

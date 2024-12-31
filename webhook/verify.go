@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package webhook provides WebHook functionality to services.
 package webhook
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,105 +25,115 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// CheckValues of this SliceDefaults.
-func (w *SliceDefaults) CheckValues(prefix string) (errs error) {
-	if w == nil {
-		return
+// CheckValues validates the fields of the SliceDefaults struct.
+func (s *SliceDefaults) CheckValues(prefix string) error {
+	if s == nil {
+		return nil
 	}
 
-	keys := util.SortedKeys(*w)
-	itemPrefix := prefix + "    "
+	var errs []error
+	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		if err := (*w)[key].CheckValues(itemPrefix); err != nil {
-			errs = fmt.Errorf("%s%s  %s:\\%w",
-				util.ErrorToString(errs), prefix, key, err)
-		}
+		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
 	}
 
-	if errs != nil {
-		errs = fmt.Errorf("%swebhook:\\%s",
-			prefix, util.ErrorToString(errs))
+	if len(errs) == 0 {
+		return nil
 	}
-	return
+	return errors.Join(errs...)
 }
 
-// CheckValues of this Slice.
-func (w *Slice) CheckValues(prefix string) (errs error) {
-	if w == nil {
-		return
+// CheckValues validates the fields of each WebHook in the Slice.
+func (s *Slice) CheckValues(prefix string) error {
+	if s == nil {
+		return nil
 	}
 
-	keys := util.SortedKeys(*w)
-	itemPrefix := prefix + "    "
+	var errs []error
+	keys := util.SortedKeys(*s)
+	itemPrefix := prefix + "  "
 	for _, key := range keys {
-		if err := (*w)[key].CheckValues(itemPrefix); err != nil {
-			errs = fmt.Errorf("%s%s  %s:\\%w",
-				util.ErrorToString(errs), prefix, key, err)
-		}
+		util.AppendCheckError(&errs, prefix, key, (*s)[key].CheckValues(itemPrefix))
 	}
 
-	if errs != nil {
-		errs = fmt.Errorf("%swebhook:\\%s",
-			prefix, util.ErrorToString(errs))
+	if len(errs) == 0 {
+		return nil
 	}
-	return
+	return errors.Join(errs...)
 }
 
-// CheckValues are valid for this WebHook recipient.
-func (w *WebHookBase) CheckValues(prefix string) (errs error) {
+// CheckValues validates the fields of the Base struct.
+func (b *Base) CheckValues(prefix string) error {
+	var errs []error
 	// type
-	if w.Type != "" && !util.Contains(supportedTypes, w.Type) {
-		errs = fmt.Errorf("%s%stype: %q <invalid> (supported types = [%s])\\",
-			util.ErrorToString(errs), prefix, w.Type, strings.Join(supportedTypes, ","))
-	}
-
-	// delay
-	if w.Delay != "" {
-		// Default to seconds when an integer is provided
-		if _, err := strconv.Atoi(w.Delay); err == nil {
-			w.Delay += "s"
-		}
-		if _, err := time.ParseDuration(w.Delay); err != nil {
-			errs = fmt.Errorf("%s%sdelay: %q <invalid> (Use 'AhBmCs' duration format)\\",
-				util.ErrorToString(errs), prefix, w.Delay)
-		}
+	if b.Type != "" && !util.Contains(supportedTypes, b.Type) {
+		errs = append(errs,
+			fmt.Errorf("%stype: %q <invalid> (supported types = [%s])",
+				prefix, b.Type, strings.Join(supportedTypes, ",")))
 	}
 	// url
-	if !util.CheckTemplate(w.URL) {
-		errs = fmt.Errorf("%s%surl: %q <invalid> (didn't pass templating)\\",
-			util.ErrorToString(errs), prefix, w.URL)
+	if !util.CheckTemplate(b.URL) {
+		errs = append(errs,
+			fmt.Errorf("%surl: %q <invalid> (didn't pass templating)",
+				prefix, b.URL))
 	}
 	// custom_headers
-	var headerErrs error
-	if w.CustomHeaders != nil {
-		for i := range *w.CustomHeaders {
-			if !util.CheckTemplate((*w.CustomHeaders)[i].Value) {
-				headerErrs = fmt.Errorf("%s%s  %s: %q <invalid> (didn't pass templating)\\",
-					util.ErrorToString(headerErrs), prefix, (*w.CustomHeaders)[i].Key, (*w.CustomHeaders)[i].Value)
-			}
+	if b.CustomHeaders != nil {
+		util.AppendCheckError(&errs, prefix, "custom_headers", b.checkValuesCustomHeaders(prefix+"  "))
+	}
+	// delay
+	if b.Delay != "" {
+		// Treat integers as seconds by default.
+		if _, err := strconv.Atoi(b.Delay); err == nil {
+			b.Delay += "s"
+		}
+		if _, err := time.ParseDuration(b.Delay); err != nil {
+			errs = append(errs,
+				fmt.Errorf("%sdelay: %q <invalid> (Use 'AhBmCs' duration format)",
+					prefix, b.Delay))
 		}
 	}
-	if headerErrs != nil {
-		errs = fmt.Errorf("%s%scustom_headers:\\%w",
-			util.ErrorToString(errs), prefix, headerErrs)
-	}
 
-	return
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
-// CheckValues are valid for this WebHook recipient.
-func (w *WebHook) CheckValues(prefix string) (errs error) {
-	errs = w.WebHookBase.CheckValues(prefix)
+func (b *Base) checkValuesCustomHeaders(prefix string) error {
+	var errs []error
+
+	for _, customHeader := range *b.CustomHeaders {
+		if !util.CheckTemplate(customHeader.Value) {
+			errs = append(errs, fmt.Errorf("%s%s: %q <invalid> (didn't pass templating)",
+				prefix, customHeader.Key, customHeader.Value))
+		}
+	}
+
+	if errs == nil {
+		return nil
+	}
+	return errors.Join(errs...)
+}
+
+// CheckValues validates the fields of the WebHook struct.
+func (w *WebHook) CheckValues(prefix string) error {
+	var errs []error
 
 	// type
 	whType := w.GetType()
 	if whType == "" {
-		errs = fmt.Errorf("%s%stype: <required> (supported types = [%s])\\",
-			util.ErrorToString(errs), prefix, strings.Join(supportedTypes, ","))
-		// Check that the Type doesn't differ in the Main
+		errs = append(errs, fmt.Errorf("%stype: <required> (supported types = [%s])",
+			prefix, strings.Join(supportedTypes, ",")))
+		// Check the Type doesn't differ in the Main.
 	} else if w.Main.Type != "" && whType != w.Main.Type {
-		errs = fmt.Errorf("%s%stype: %q != %q <invalid> (omit the type, or make it the same as the root webhook.%s.type)\\",
-			util.ErrorToString(errs), prefix, whType, w.Main.Type, w.ID)
+		errs = append(errs, fmt.Errorf("%stype: %q != %q <invalid> (omit the type, or make it the same as the root webhook.%s.type)",
+			prefix, whType, w.Main.Type, w.ID))
+	}
+
+	if baseErrs := w.Base.CheckValues(prefix); baseErrs != nil {
+		errs = append(errs, baseErrs)
 	}
 
 	// url
@@ -130,24 +142,27 @@ func (w *WebHook) CheckValues(prefix string) (errs error) {
 		w.Main.URL,
 		w.Defaults.URL,
 		w.HardDefaults.URL) == "" {
-		errs = fmt.Errorf("%s%surl: <required> (here, in the root webhook.%s, or in defaults)\\",
-			util.ErrorToString(errs), prefix, w.ID)
+		errs = append(errs, fmt.Errorf("%surl: <required> (here, in the root webhook.%s, or in defaults)",
+			prefix, w.ID))
 	}
 	// secret
 	if w.GetSecret() == "" {
-		errs = fmt.Errorf("%s%ssecret: <required> (here, in the root webhook.%s, or in defaults)\\",
-			util.ErrorToString(errs), prefix, w.ID)
+		errs = append(errs, fmt.Errorf("%ssecret: <required> (here, in the root webhook.%s, or in defaults)",
+			prefix, w.ID))
 	}
 
-	return
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
 }
 
 // Print the SliceDefaults.
-func (w *SliceDefaults) Print(prefix string) {
-	if w == nil || len(*w) == 0 {
+func (s *SliceDefaults) Print(prefix string) {
+	if s == nil || len(*s) == 0 {
 		return
 	}
 
-	str := w.String(prefix + "  ")
+	str := s.String(prefix + "  ")
 	fmt.Printf("%swebhook:\n%s", prefix, str)
 }

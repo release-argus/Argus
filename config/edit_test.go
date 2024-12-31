@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -29,11 +30,9 @@ import (
 func TestConfig_RenameService(t *testing.T) {
 	// GIVEN a service to rename and a Config to act on
 	tests := map[string]struct {
-		oldName   string
-		newName   string
-		wantOrder []string
-		noChange  bool
-		fail      bool
+		oldName, newName string
+		wantOrder        []string
+		noChange, fail   bool
 	}{
 		"Rename service": {
 			oldName: "bravo", newName: "foo",
@@ -65,6 +64,7 @@ func TestConfig_RenameService(t *testing.T) {
 
 			file := fmt.Sprintf("TestConfig_RenameService_%s.yml", name)
 			testYAML_Edit(file, t)
+			t.Cleanup(func() { os.Remove(file) })
 			logMutex.Lock()
 			cfg := testLoadBasic(file, t)
 			newSVC := testServiceURL(tc.newName)
@@ -76,7 +76,7 @@ func TestConfig_RenameService(t *testing.T) {
 
 			// THEN the order should be as expected
 			cfg.OrderMutex.RLock()
-			defer cfg.OrderMutex.RUnlock()
+			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if len(cfg.Order) != len(tc.wantOrder) {
 				t.Errorf("Order length mismatch: got %d, want %d", len(cfg.Order), len(tc.wantOrder))
 			}
@@ -149,7 +149,7 @@ func TestConfig_DeleteService(t *testing.T) {
 
 			// THEN the service was removed
 			cfg.OrderMutex.RLock()
-			defer cfg.OrderMutex.RUnlock()
+			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if cfg.Service[tc.name] != nil {
 				t.Errorf("%q was not removed", tc.name)
 			}
@@ -229,7 +229,7 @@ func TestConfig_AddService(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're using sharing global log state
 
 			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
 			testYAML_Edit(file, t)
@@ -240,7 +240,7 @@ func TestConfig_AddService(t *testing.T) {
 				cfg.Order = []string{}
 			}
 
-			// WEHN AddService is called
+			// WHEN AddService is called
 			loadMutex.RLock()
 			cfg.AddService(tc.oldService, tc.newService)
 			loadMutex.RUnlock()
@@ -249,7 +249,7 @@ func TestConfig_AddService(t *testing.T) {
 			// THEN the service is
 			// added/renamed/replaced
 			cfg.OrderMutex.RLock()
-			defer cfg.OrderMutex.RUnlock()
+			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
 			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
 				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
 			}

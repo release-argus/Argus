@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
+
+	"github.com/release-argus/Argus/util"
 )
 
 func TestSetGitHubHeaders(t *testing.T) {
@@ -55,36 +56,31 @@ func TestSetGitHubHeaders(t *testing.T) {
 			// THEN the GitHub headers are correctly added
 			key := "X-Github-Event"
 			want := "^push$"
-			re := regexp.MustCompile(want)
-			if !re.MatchString(getHeaderKey(req.Header[key])) {
+			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
 				t.Errorf("%s - Wanted %s, got %s",
 					key, want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Id"
 			want = "^[0-9]{9}$"
-			re = regexp.MustCompile(want)
-			if !re.MatchString(getHeaderKey(req.Header[key])) {
+			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
 				t.Errorf("%s - Wanted %s, got %s",
 					key, want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Delivery"
 			want = "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$"
-			re = regexp.MustCompile(want)
-			if !re.MatchString(getHeaderKey(req.Header[key])) {
+			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
 				t.Errorf("%s - Wanted %s, got %s",
 					key, want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Installation-Target-Id"
 			want = "^[0-9]{9}$"
-			re = regexp.MustCompile(want)
-			if !re.MatchString(getHeaderKey(req.Header[key])) {
+			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
 				t.Errorf("%s - Wanted %s, got %s",
 					key, want, getHeaderKey(req.Header[key]))
 			}
 			key = "X-Github-Hook-Installation-Target-Type"
 			want = "^repository$"
-			re = regexp.MustCompile(want)
-			if !re.MatchString(getHeaderKey(req.Header[key])) {
+			if !util.RegexCheck(want, getHeaderKey(req.Header[key])) {
 				t.Errorf("%s - Wanted %s, got %s",
 					key, want, getHeaderKey(req.Header[key]))
 			}

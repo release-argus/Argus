@@ -30,6 +30,7 @@ interface FormItemProps {
   isNumber?: boolean;
   isRegex?: boolean;
   isURL?: boolean;
+  validationFunc?: (value: string) => boolean | string;
   defaultVal?: string;
   placeholder?: string;
 
@@ -53,6 +54,7 @@ interface FormItemProps {
  * @param isNumber - Whether the form item should be a number
  * @param isRegex - Whether the form item should be a regex
  * @param isURL - Whether the form item should be a URL
+ * @param validationFunc - The validation function for the form item
  * @param defaultVal - The default value of the form item
  * @param placeholder - The placeholder of the form item
  * @param position - The position of the form item
@@ -75,6 +77,7 @@ const FormItem: FC<FormItemProps> = ({
   isNumber,
   isRegex,
   isURL,
+  validationFunc,
   defaultVal,
   placeholder,
 
@@ -88,7 +91,7 @@ const FormItem: FC<FormItemProps> = ({
       isNumber ||
       isRegex ||
       isURL ||
-      registerParams["validate"] !== undefined
+      registerParams["validate"] !== undefined,
   );
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -116,7 +119,7 @@ const FormItem: FC<FormItemProps> = ({
                   name,
                   setError,
                   clearErrors,
-                  required
+                  required,
                 ),
               isRegex: (value) => regexTest(value || defaultVal || "", isRegex),
               isNumber: (value) =>
@@ -124,6 +127,8 @@ const FormItem: FC<FormItemProps> = ({
               isUnique: (value) =>
                 uniqueTest(value || defaultVal || "", name, getValues, unique),
               isURL: (value) => urlTest(value || defaultVal || "", isURL),
+              validationFunc: (value) =>
+                !validationFunc || validationFunc(value || defaultVal || ""),
             },
             ...registerParams,
           })}

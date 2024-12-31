@@ -13,6 +13,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { BooleanWithDefault } from "components/generic";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { numberRangeTest } from "components/generic/form-validate";
 
 interface Props {
   name: string;
@@ -29,8 +30,8 @@ interface Props {
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove this WebHook
- * @param globalOptions - The options for the global WebHook's
- * @param mains - The main WebHook's
+ * @param globalOptions - The options for the global WebHooks
+ * @param mains - The main WebHooks
  * @param defaults - The default values for a WebHook
  * @param hard_defaults - The hard default values for a WebHook
  * @returns The form fields for this WebHook
@@ -72,7 +73,7 @@ const EditServiceWebHook: FC<Props> = ({
 
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
-    [name, itemName, itemType]
+    [name, itemName, itemType],
   );
 
   const convertedDefaults = useMemo(
@@ -84,27 +85,27 @@ const EditServiceWebHook: FC<Props> = ({
       custom_headers: firstNonEmpty(
         main?.custom_headers,
         defaults?.custom_headers,
-        hard_defaults?.custom_headers
+        hard_defaults?.custom_headers,
       ),
       delay: firstNonDefault(
         main?.delay,
         defaults?.delay,
-        hard_defaults?.delay
+        hard_defaults?.delay,
       ),
       desired_status_code: firstNonDefault(
         main?.desired_status_code,
         defaults?.desired_status_code,
-        hard_defaults?.desired_status_code
+        hard_defaults?.desired_status_code,
       ),
       max_tries: firstNonDefault(
         main?.max_tries,
         defaults?.max_tries,
-        hard_defaults?.max_tries
+        hard_defaults?.max_tries,
       ),
       secret: firstNonDefault(
         main?.secret,
         defaults?.secret,
-        hard_defaults?.secret
+        hard_defaults?.secret,
       ),
       silent_fails:
         main?.silent_fails ??
@@ -113,7 +114,7 @@ const EditServiceWebHook: FC<Props> = ({
       type: firstNonDefault(main?.type, defaults?.type, hard_defaults?.type),
       url: firstNonDefault(main?.url, defaults?.url, hard_defaults?.url),
     }),
-    [main, defaults, hard_defaults]
+    [main, defaults, hard_defaults],
   );
 
   return (
@@ -212,6 +213,7 @@ const EditServiceWebHook: FC<Props> = ({
             col_xs={6}
             label="Max tries"
             isNumber
+            validationFunc={(value: string) => numberRangeTest(value, 0, 255)}
             defaultVal={convertedDefaults.max_tries}
             position="right"
           />

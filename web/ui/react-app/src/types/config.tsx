@@ -97,8 +97,8 @@ export interface ServiceType {
   [key: string]: any;
   comment?: string;
   options?: ServiceOptionsType;
-  latest_version?: LatestVersionLookupType;
-  deployed_version?: DeployedVersionLookupType;
+  latest_version?: LatestVersionLookupType | null;
+  deployed_version?: DeployedVersionLookupType | null;
   command?: string[][];
   webhook?: Dict<WebHookType>;
   notify?: Dict<NotifyTypesValues>;
@@ -129,31 +129,50 @@ export interface DockerFilterType {
   token?: string;
 }
 
-export interface BaseLatestVersionLookupType {
+export type LatestVersionLookupType =
+  | LatestVersionLookupGitHubType
+  | LatestVersionLookupURLType;
+
+export interface LatestVersionLookupGitHubType
+  extends LatestVersionLookupBaseType {
+  type?: "github";
+  access_token?: string;
+  use_prerelease?: boolean;
+}
+export interface LatestVersionLookupURLType
+  extends LatestVersionLookupBaseType {
+  type?: "url";
+  allow_invalid_certs?: boolean;
+}
+
+export interface DefaultLatestVersionLookupType {
   [key: string]:
     | string
     | boolean
     | undefined
     | URLCommandType[]
-    | LatestVersionFiltersType
-    | DefaultLatestVersionFiltersType;
-  type?: "github" | "url";
+    | DefaultLatestVersionRequireType;
   url?: string;
-  access_token?: string;
-  allow_invalid_certs?: boolean;
-  use_prerelease?: boolean;
   url_commands?: URLCommandType[];
-}
-export interface DefaultLatestVersionLookupType
-  extends BaseLatestVersionLookupType {
-  require?: DefaultLatestVersionFiltersType;
-}
-
-export interface LatestVersionLookupType extends BaseLatestVersionLookupType {
-  require?: LatestVersionFiltersType;
+  require?: DefaultLatestVersionRequireType;
+  access_token?: string;
+  use_prerelease?: boolean;
+  allow_invalid_certs?: boolean;
 }
 
-export interface DefaultLatestVersionFiltersType {
+export interface LatestVersionLookupBaseType {
+  [key: string]:
+    | string
+    | boolean
+    | undefined
+    | URLCommandType[]
+    | LatestVersionRequireType;
+  url?: string;
+  url_commands?: URLCommandType[];
+  require?: LatestVersionRequireType;
+}
+
+export interface DefaultLatestVersionRequireType {
   [key: string]: DefaultDockerFilterType | undefined;
   docker?: DefaultDockerFilterType;
 }
@@ -171,7 +190,7 @@ export interface DefaultDockerFilterRegistryType {
   username?: string;
 }
 
-export interface LatestVersionFiltersType {
+export interface LatestVersionRequireType {
   [key: string]: string | CommandType | DockerFilterType | undefined;
   regex_content?: string;
   regex_version?: string;
@@ -202,16 +221,16 @@ export type CommandType = string[];
 
 export type URLCommandTypes = "regex" | "replace" | "split";
 export interface URLCommandType {
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | undefined | null;
 
   type: URLCommandTypes;
-  regex?: string; // regex
-  text?: string; // split
-  index?: number; // regex,split
-  template?: string; // regex
-  template_toggle?: boolean; // regex
-  old?: string; // replace
-  new?: string; // replace
+  regex?: string; // regex.
+  text?: string; // split.
+  index?: number | null; // regex,split.
+  template?: string; // regex.
+  template_toggle?: boolean; // regex.
+  old?: string; // replace.
+  new?: string; // replace.
 }
 export interface NotifyTypes {
   bark: NotifyBarkType;
@@ -239,7 +258,7 @@ export type NotifyTypesValues = NotifyTypes[keyof NotifyTypes];
 export const NotifyTypesConst: NotifyTypesKeys[] = [
   "bark",
   "discord",
-  "smtp", // email
+  "smtp", // email.
   "googlechat",
   "gotify",
   "ifttt",
@@ -427,15 +446,15 @@ export interface NotifyNtfyAction {
   action: string;
   label: string;
 
-  // view/http
+  // view/http.
   url?: string;
 
-  // http
+  // http.
   method: string;
   headers?: HeaderType[] | StringStringMap;
   body?: string;
 
-  // broadcast
+  // broadcast.
   intent?: string;
   extras?: HeaderType[] | StringStringMap;
 }
@@ -596,7 +615,7 @@ export interface NotifyOptionsType {
 }
 
 export interface WebHookType {
-  // For edit
+  // For edit.
   [key: string]: string | boolean | number | undefined | HeaderType[];
   name?: string;
 

@@ -21,6 +21,25 @@ export const numberTest = (value: string, use?: boolean) => {
 };
 
 /**
+ * Returns an error message if the value is not a number within a range
+ *
+ * @param value - The value to test
+ * @param min - The minimum value
+ * @param max - The maximum value
+ * @returns - An error message if the value is not a number within a range
+ */
+export const numberRangeTest = (value: string, min: number, max: number) => {
+  if (!value) return true;
+
+  if (isNaN(Number(value))) return "Must be a number";
+
+  if (Number(value) < min || Number(value) > max)
+    return `Must be between ${min} and ${max}`;
+
+  return true;
+};
+
+/**
  * Returns an error message if the value is not a valid RegEx
  *
  * @param value - The value to test
@@ -71,7 +90,7 @@ export const requiredTest = (
   name: string,
   setError: UseFormSetError<FieldValues>,
   clearErrors: UseFormClearErrors<FieldValues>,
-  use?: boolean | string
+  use?: boolean | string,
 ) => {
   if (!use) return true;
 
@@ -101,7 +120,7 @@ export const uniqueTest = (
   value: string,
   name: string,
   getValues: UseFormGetValues<FieldValues>,
-  use?: boolean
+  use?: boolean,
 ) => {
   if (!value || !use) return true;
 
@@ -113,7 +132,7 @@ export const uniqueTest = (
     values &&
     values
       .map((item: { [x: string]: string }) => item[uniqueName])
-      // <=1 in case of default value
+      // <=1 in case of default value.
       .filter((item: string) => item === value).length <= 1;
 
   return unique || "Must be unique";

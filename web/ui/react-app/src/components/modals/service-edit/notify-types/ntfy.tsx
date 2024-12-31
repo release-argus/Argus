@@ -190,7 +190,7 @@ const NTFY = ({
   }, [convertedDefaults.params.scheme]);
 
   useEffect(() => {
-    // Normalise selected priority, or default it
+    // Normalise selected priority, or default it.
     if (convertedDefaults.params.priority === "")
       setValue(
         `${name}.params.priority`,
@@ -200,7 +200,7 @@ const NTFY = ({
         )?.value || "default"
       );
 
-    // Normalise selected scheme, or default it
+    // Normalise selected scheme, or default it.
     if (convertedDefaults.params.scheme === "")
       setValue(
         `${name}.params.scheme`,

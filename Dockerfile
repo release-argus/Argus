@@ -4,6 +4,7 @@
 ARG DEBIAN_VERSION="bookworm"
 ARG GO_VERSION="1.22"
 ARG NODE_VERSION="20"
+ARG ALPINE_VEERSION="3.21"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION} AS go_builder
 FROM node:${NODE_VERSION}-${DEBIAN_VERSION} AS base
 
@@ -15,23 +16,23 @@ COPY . /build/
 WORKDIR /build/
 
 ARG BUILD_VERSION="development"
-RUN make BUILD_VERSION=${BUILD_VERSION} build
-RUN chmod 755 /build/argus
-RUN chmod 755 /build/healthcheck
+RUN make BUILD_VERSION=${BUILD_VERSION} build \
+  && chmod 755 /build/argus \
+  && chmod 755 /build/healthcheck
 
 
 #########
 # ARGUS #
 #########
-FROM alpine:latest
+FROM alpine:${ALPINE_VEERSION}
 LABEL maintainer="The Argus Authors <developers@release-argus.io>"
 RUN \
   apk update && \
   apk add --no-cache \
     ca-certificates \
+    curl \
     musl-dev \
-    su-exec \
-    curl && \
+    su-exec && \
   rm -rf \
     /tmp/* \
     /var/cache/*
@@ -50,6 +51,8 @@ RUN \
     /app/data && \
   chown -R argus:argus /app
 WORKDIR /app
+
+USER argus:argus
 
 EXPOSE     8080
 VOLUME     [ "/app/data" ]

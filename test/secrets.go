@@ -20,7 +20,7 @@ import (
 	"os"
 )
 
-// ShoutrrrGotifyToken returns the token for the Gotify test
+// ShoutrrrGotifyToken returns the token for the Gotify test.
 func ShoutrrrGotifyToken() (token string) {
 	token = os.Getenv("ARGUS_TEST_GOTIFY_TOKEN")
 	if token == "" {

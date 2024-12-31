@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,54 +17,63 @@
 package config
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	opt "github.com/release-argus/Argus/service/options"
+	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
-func testVerify() (cfg *Config) {
-	cfg = &Config{}
+func testVerify(t *testing.T) *Config {
+	cfg := &Config{}
 	cfg.Order = []string{"test"}
+
 	cfg.Defaults = Defaults{}
-	cfg.Defaults.SetDefaults()
+	cfg.Defaults.Default()
+	cfg.HardDefaults = Defaults{}
+
 	cfg.Notify = shoutrrr.SliceDefaults{
 		"test": shoutrrr.NewDefaults(
 			"discord",
-			&cfg.Defaults.Notify["discord"].Options,
-			&cfg.Defaults.Notify["discord"].Params,
-			&cfg.Defaults.Notify["discord"].URLFields)}
+			cfg.Defaults.Notify["discord"].Options,
+			cfg.Defaults.Notify["discord"].URLFields,
+			cfg.Defaults.Notify["discord"].Params)}
+
 	cfg.WebHook = webhook.SliceDefaults{
-		"test": &cfg.Defaults.WebHook,
-	}
+		"test": &cfg.Defaults.WebHook}
+
 	serviceID := "test"
 	cfg.Service = service.Slice{
 		serviceID: &service.Service{
 			ID: serviceID,
-			LatestVersion: latestver.Lookup{
-				Type: "github",
-				URL:  "release-argus/argus",
-			},
-		},
-	}
-	return
+			LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New(
+					"github",
+					"yaml", test.TrimYAML(`
+							url: release-argus/argus
+					`),
+					nil,
+					nil,
+					&cfg.Defaults.Service.LatestVersion, &cfg.HardDefaults.Service.LatestVersion)
+			})}}
+
+	return cfg
 }
 
 func TestConfig_CheckValues(t *testing.T) {
 	// GIVEN variations of Config to test
 	tests := map[string]struct {
 		config   *Config
-		errRegex []string
+		errRegex string
 		noPanic  bool
 	}{
 		"valid Config": {
-			config:  testVerify(),
+			config:  testVerify(t),
 			noPanic: true,
 		},
 		"invalid Defaults": {
@@ -72,35 +81,35 @@ func TestConfig_CheckValues(t *testing.T) {
 				Defaults: Defaults{
 					Service: service.Defaults{
 						Options: *opt.NewDefaults("1x", nil)}}},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  service:$`,
-				`^    options:$`,
-				`^      interval: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^defaults:
+					service:
+						options:
+							interval: "[^"]+" <invalid>`),
 		},
 		"invalid Notify": {
 			config: &Config{
 				Notify: shoutrrr.SliceDefaults{
 					"test": shoutrrr.NewDefaults(
 						"discord",
-						&map[string]string{
+						map[string]string{
 							"delay": "2x"},
 						nil, nil)}},
-			errRegex: []string{
-				`^notify:$`,
-				`^  test:$`,
-				`^    options:$`,
-				`^      delay: "[^"]+" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^notify:
+					test:
+						options:
+							delay: "[^"]+" <invalid>`),
 		},
 		"invalid WebHook": {
 			config: &Config{
 				WebHook: webhook.SliceDefaults{
 					"test": webhook.NewDefaults(
 						nil, nil, "3x", nil, nil, "", nil, "", "")}},
-			errRegex: []string{
-				`^webhook:$`,
-				`^  test:$`,
-				`^    delay: "3x" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^webhook:
+					test:
+						delay: "3x" <invalid>`),
 		},
 		"invalid Service": {
 			config: &Config{
@@ -109,11 +118,11 @@ func TestConfig_CheckValues(t *testing.T) {
 						Options: *opt.New(
 							nil, "4x", nil,
 							nil, nil)}}},
-			errRegex: []string{
-				`^service:$`,
-				`^  test:$`,
-				`^    options:$`,
-				`^      interval: "4x" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^service:
+					test:
+						options:
+							interval: "4x" <invalid>.*`),
 		},
 	}
 
@@ -134,22 +143,15 @@ func TestConfig_CheckValues(t *testing.T) {
 					stdout := releaseStdout()
 
 					lines := strings.Split(stdout, "\n")
-					if len(tc.errRegex) == 0 {
-						t.Fatalf("want 0 errors, not %d:\n%v",
-							len(lines), lines)
+					wantLines := strings.Count(tc.errRegex, "\n")
+					if wantLines > len(lines) {
+						t.Fatalf("Config.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+							wantLines, tc.errRegex, len(lines), lines, stdout)
 					}
-					if len(tc.errRegex) > len(lines) {
-						t.Fatalf("want %d errors:\n['%s']\ngot %d errors:\n%v\nstdout: %q",
-							len(tc.errRegex), strings.Join(tc.errRegex, `'  '`), len(lines), lines, stdout)
-					}
-					for i := range tc.errRegex {
-						re := regexp.MustCompile(tc.errRegex[i])
-						match := re.MatchString(lines[i])
-						if !match {
-							t.Errorf("want match for: %q\ngot:  %q",
-								tc.errRegex[i], stdout)
-							return
-						}
+					if !util.RegexCheck(tc.errRegex, stdout) {
+						t.Errorf("Config.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+							tc.errRegex, stdout)
+						return
 					}
 				}()
 			}
@@ -159,20 +161,17 @@ func TestConfig_CheckValues(t *testing.T) {
 
 			// THEN this call will/wont crash the program
 			stdout := releaseStdout()
-			lines := strings.Split(stdout, `\n`)
-			if len(tc.errRegex) > len(lines) {
-				t.Errorf("want %d errors:\n%v\ngot %d errors:\n%v",
-					len(tc.errRegex), tc.errRegex, len(lines), lines)
+			lines := strings.Split(stdout, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n")
+			if wantLines > len(lines) {
+				t.Fatalf("Config.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+					wantLines, tc.errRegex, len(lines), lines, stdout)
 				return
 			}
-			for i := range tc.errRegex {
-				re := regexp.MustCompile(tc.errRegex[i])
-				match := re.MatchString(lines[i])
-				if !match {
-					t.Errorf("want match for: %q\ngot:  %q",
-						tc.errRegex[i], stdout)
-					return
-				}
+			if !util.RegexCheck(tc.errRegex, stdout) {
+				t.Errorf("Config.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+					tc.errRegex, stdout)
+				return
 			}
 		})
 	}
@@ -180,7 +179,7 @@ func TestConfig_CheckValues(t *testing.T) {
 
 func TestConfig_Print(t *testing.T) {
 	// GIVEN a Config and print flags of true and false
-	config := testVerify()
+	config := testVerify(t)
 	tests := map[string]struct {
 		flag  bool
 		lines int
@@ -197,12 +196,12 @@ func TestConfig_Print(t *testing.T) {
 			// WHEN Print is called with these flags
 			config.Print(&tc.flag)
 
-			// THEN config is printed onlt when the flag is true
+			// THEN config is printed only when the flag is true
 			stdout := releaseStdout()
 			got := strings.Count(stdout, "\n")
 			if got != tc.lines {
-				t.Errorf("Print with %s wants %d lines but got %d\n%s",
-					name, tc.lines, got, stdout)
+				t.Errorf("Print with %s wants %d lines but got %d\n%s\n\n%q",
+					name, tc.lines, got, stdout, stdout)
 			}
 		})
 	}

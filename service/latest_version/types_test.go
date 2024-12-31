@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,119 +17,147 @@
 package latestver
 
 import (
-	"os"
-	"strings"
-	"sync"
 	"testing"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
-	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/latest_version/types/base"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 )
 
-var emptyListETagTestMutex = sync.Mutex{}
-
-func TestGetEmptyListETag(t *testing.T) {
-	// GIVEN emptyListETag exists
-	emptyListETagTestMutex.Lock()
-	defer emptyListETagTestMutex.Unlock()
-	emptyListETagMutex.RLock()
-	defer emptyListETagMutex.RUnlock()
-
-	// WHEN getEmptyListETag is called
-	got := getEmptyListETag()
-
-	// THEN the emptyListETag is returned
-	if got != emptyListETag {
-		t.Errorf("getEmptyListETag() = %q, want %q", got, emptyListETag)
+func TestNew(t *testing.T) {
+	// GIVEN a set of args
+	type args struct {
+		lType                  string
+		overrides              interface{}
+		semanticVersioning     *bool
+		defaults, hardDefaults *base.Defaults
 	}
-}
-
-func TestSetEmptyListETag(t *testing.T) {
-	// GIVEN emptyListETag exists
-	emptyListETagTestMutex.Lock()
-	defer emptyListETagTestMutex.Unlock()
-
-	// WHEN setEmptyListETag is called
-	newValue := "foo"
-	setEmptyListETag(newValue)
-
-	// THEN the emptyListETag is set
-	if emptyListETag != newValue {
-		t.Errorf("setEmptyListETag() = %q, want %q",
-			emptyListETag, newValue)
-	}
-}
-
-func TestFindEmptyListETag(t *testing.T) {
-	// GIVEN emptyListETag is set to the incorrect value
-	emptyListETagTestMutex.Lock()
-	defer emptyListETagTestMutex.Unlock()
-	incorrectValue := "foo"
-	setEmptyListETag(incorrectValue)
-
-	// WHEN FindEmptyListETag is called
-	FindEmptyListETag(os.Getenv("GITHUB_TOKEN"))
-
-	// THEN the emptyListETag is set
-	setTo := getEmptyListETag()
-	if setTo == incorrectValue {
-		t.Errorf("emptyListETag wasn't updated. Got %q, want %q",
-			setTo, emptyListETag)
-	}
-	if setTo != initialEmptyListETag {
-		t.Errorf("Empty list ETag has changed from %q to %q",
-			initialEmptyListETag, setTo)
-	}
-}
-
-func TestNewGitHubData(t *testing.T) {
-	emptyListETagTestMutex.Lock()
-	defer emptyListETagTestMutex.Unlock()
-	startingEmptyListETag := getEmptyListETag()
-	// GIVEN a GitHubData is wanted with/without an eTag/releases
 	tests := map[string]struct {
-		eTag     string
-		releases *[]github_types.Release
-		want     *GitHubData
+		args     args
+		wantYAML string
+		errRegex string
 	}{
-		"no eTag or releases": {
-			eTag:     "",
-			releases: nil,
-			want: &GitHubData{
-				eTag:     startingEmptyListETag,
-				releases: []github_types.Release{},
+		"github - bare": {
+			args: args{
+				lType: "github",
+				overrides: `
+					url: release-argus/Argus
+				`,
+				defaults:     &base.Defaults{},
+				hardDefaults: &base.Defaults{},
 			},
+			wantYAML: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				`),
 		},
-		"eTag but no releases": {
-			eTag:     "foo",
-			releases: nil,
-			want: &GitHubData{
-				eTag:     "foo",
-				releases: []github_types.Release{},
+		"github - full": {
+			args: args{
+				lType: "github",
+				overrides: `
+					url: release-argus/Argus
+					access_token: token
+					url_commands:
+						- type: split
+							text: v
+					require:
+						regex_version: v[\d.]+
+					allow_invalid_certs: true
+					use_prerelease: true
+				`,
+				semanticVersioning: test.BoolPtr(false),
+				defaults:           &base.Defaults{},
+				hardDefaults:       &base.Defaults{},
 			},
+			wantYAML: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				access_token: token
+				use_prerelease: true
+			`),
 		},
-		"no eTag but releases": {
-			eTag: "",
-			releases: &[]github_types.Release{
-				{TagName: "bar"}},
-			want: &GitHubData{
-				eTag: startingEmptyListETag,
-				releases: []github_types.Release{
-					{TagName: "bar"}},
+		"url - bare": {
+			args: args{
+				lType: "url",
+				overrides: `
+					url: https://example.com
+					`,
+				defaults:     &base.Defaults{},
+				hardDefaults: &base.Defaults{},
 			},
+			wantYAML: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				`),
 		},
-		"eTag and releases": {
-			eTag: "zing",
-			releases: &[]github_types.Release{
-				{TagName: "zap"}},
-			want: &GitHubData{
-				eTag: "zing",
-				releases: []github_types.Release{
-					{TagName: "zap"}},
+		"url - full": {
+			args: args{
+				lType: "url",
+				overrides: `
+					url: release-argus/Argus
+					access_token: token
+					url_commands:
+					- type: split
+						text: v
+					require:
+						regex_version: v[\d.]+
+					allow_invalid_certs: false
+					use_prerelease: true
+				`,
+				semanticVersioning: test.BoolPtr(true),
+				defaults:           &base.Defaults{},
+				hardDefaults:       &base.Defaults{},
 			},
+			wantYAML: test.TrimYAML(`
+				type: url
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				allow_invalid_certs: false
+				`),
+		},
+		"invalid type": {
+			args: args{
+				lType: "foo",
+				overrides: `
+					url: release-argus/Argus
+				`,
+				defaults:     &base.Defaults{},
+				hardDefaults: &base.Defaults{},
+			},
+			errRegex: `^type: "foo" <invalid> .*$`,
+		},
+		"GitHub - invalid configData type": {
+			args: args{
+				lType:        "github",
+				overrides:    1,
+				defaults:     &base.Defaults{},
+				hardDefaults: &base.Defaults{},
+			},
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal github.Lookup:
+				unsupported configData type: int`),
+		},
+		"URL - invalid configData type": {
+			args: args{
+				lType:        "url",
+				overrides:    1,
+				defaults:     &base.Defaults{},
+				hardDefaults: &base.Defaults{},
+			},
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal web.Lookup:
+				unsupported configData type: int`),
 		},
 	}
 
@@ -137,380 +165,325 @@ func TestNewGitHubData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN NewGitHubData is called
-			got := NewGitHubData(tc.eTag, tc.releases)
-
-			// THEN the correct GitHubData is returned
-			if got.eTag != tc.want.eTag {
-				t.Errorf("eTag: got %q, want %q",
-					got.eTag, tc.want.eTag)
+			if overrides, ok := tc.args.overrides.(string); ok {
+				tc.args.overrides = test.TrimYAML(overrides)
 			}
-			if len(got.releases) != len(tc.want.releases) {
-				t.Errorf("releases: got %v, want %v",
-					got.releases, tc.want.releases)
-			} else {
-				for i, release := range got.releases {
-					if release.TagName != tc.want.releases[i].TagName {
-						t.Errorf("%d: TagName, got %q (%v), want %q (%v)",
-							i, got.releases[i].TagName, got.releases, tc.want.releases[i].TagName, tc.want.releases)
-					}
+
+			// WHEN New is called with the args
+			got, err := New(
+				tc.args.lType,
+				"yaml", tc.args.overrides,
+				opt.New(
+					nil, "",
+					tc.args.semanticVersioning,
+					nil, nil),
+				nil,
+				tc.args.defaults, tc.args.hardDefaults)
+
+			// THEN any error is as expected
+			if err != nil {
+				if !util.RegexCheck(tc.errRegex, err.Error()) {
+					t.Errorf("New() error mismatch\n%q\ngot:  %q",
+						tc.errRegex, err)
 				}
+				return
+			}
+			// THEN the correct type is returned
+			if getType(got) != tc.args.lType {
+				t.Fatalf("New() Type mismatch\nwant: %q\ngot:  %T",
+					tc.args.lType, got)
+			}
+
+			// AND the variables are set correctly
+			gotYAML := util.ToYAMLString(got, "")
+			if gotYAML != tc.wantYAML {
+				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
+					tc.wantYAML, gotYAML)
+			}
+			if got.GetDefaults() != tc.args.defaults {
+				t.Errorf("defaults mismatch\nwant: %p\ngot:  %p",
+					tc.args.defaults, got.GetDefaults())
+			}
+			if got.GetHardDefaults() != tc.args.hardDefaults {
+				t.Errorf("hardDefaults mismatch\nwant: %p\ngot:  %p",
+					tc.args.hardDefaults, got.GetHardDefaults())
 			}
 		})
 	}
 }
 
-func TestGitHubData_hasReleases(t *testing.T) {
-	// GIVEN a GitHubData
-	tests := map[string]struct {
-		gd   *GitHubData
-		want bool
-	}{
-		"no releases": {
-			gd:   &GitHubData{},
-			want: false,
-		},
-		"1 release": {
-			gd: &GitHubData{
-				releases: []github_types.Release{
-					{TagName: "foo"}}},
-			want: true,
-		},
-		"multiple releases": {
-			gd: &GitHubData{
-				releases: []github_types.Release{
-					{TagName: "foo"},
-					{TagName: "bar"}}},
-			want: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN hasReleases is called
-			got := tc.gd.hasReleases()
-
-			// THEN the correct value is returned
-			if got != tc.want {
-				t.Errorf("got %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestGitHubData_TagFallback(t *testing.T) {
-	// GIVEN a GitHubData
-	gd := &GitHubData{}
-	tests := []bool{
-		true, false, true, false, true}
-
-	if gd.tagFallback != false {
-		t.Fatalf("tagFallback wasn't set to false initially")
-	}
-
-	for _, tc := range tests {
-		gd.SetTagFallback()
-
-		// WHEN TagFallback is called
-		got := gd.TagFallback()
-
-		// THEN the correct value is returned
-		if got != tc {
-			t.Errorf("got %t, want %t", got, tc)
-		}
-	}
-}
-
-func TestGitHubData_Copy(t *testing.T) {
-	// GIVEN a fresh GitHubData and a GitHubData to copy from
-	tests := map[string]struct {
-		fresh *GitHubData
-		gd    *GitHubData
-	}{
-		"empty": {
-			gd: &GitHubData{},
-		},
-		"filled": {
-			gd: &GitHubData{
-				eTag: "foo",
-				releases: []github_types.Release{
-					{TagName: "bar"}}},
-		},
-		"filled with data to overwrite": {
-			fresh: &GitHubData{
-				eTag: "fizz",
-				releases: []github_types.Release{
-					{TagName: "bang"}}},
-			gd: &GitHubData{
-				eTag: "foo",
-				releases: []github_types.Release{
-					{TagName: "bar"}}},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			if tc.fresh == nil {
-				tc.fresh = &GitHubData{}
-			}
-
-			// WHEN Copy is called
-			tc.fresh.Copy(tc.gd)
-
-			// THEN the correct GitHubData is returned
-			if tc.fresh.eTag != tc.gd.eTag {
-				t.Errorf("eTag: got %q, want %q",
-					tc.fresh.eTag, tc.gd.eTag)
-			}
-			if len(tc.fresh.releases) != len(tc.gd.releases) {
-				t.Errorf("releases: got %v, want %v",
-					tc.fresh.releases, tc.gd.releases)
-			} else {
-				for i, release := range tc.fresh.releases {
-					if release.TagName != tc.gd.releases[i].TagName {
-						t.Errorf("%d: TagName, got %q (%v), want %q (%v)",
-							i, tc.fresh.releases[i].TagName, tc.fresh.releases, tc.gd.releases[i].TagName, tc.gd.releases)
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestLookup_String(t *testing.T) {
+func TestCopy(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		lookup *Lookup
-		want   string
-	}{
-		"empty": {
-			lookup: &Lookup{},
-			want:   "{}\n",
-		},
-		"filled": {
-			lookup: New(
-				test.StringPtr("token"),
-				test.BoolPtr(true),
-				nil,
-				opt.New(
-					nil, "1h2m3s", nil,
-					nil, nil),
-				&filter.Require{
-					RegexContent: "foo.tar.gz",
-				},
-				nil,
-				"github",
-				"https://test.com",
-				&filter.URLCommandSlice{
-					{Type: "regex", Regex: test.StringPtr("v([0-9.]+)")}},
-				test.BoolPtr(true),
-				NewDefaults(
-					test.StringPtr("foo"), nil, nil, nil),
-				NewDefaults(
-					nil, test.BoolPtr(true), nil, nil)),
-			want: `
-type: github
-url: https://test.com
-access_token: token
-allow_invalid_certs: true
-use_prerelease: true
-url_commands:
-  - type: regex
-    regex: v([0-9.]+)
-require:
-  regex_content: foo.tar.gz
-`,
-		},
-		"quotes otherwise invalid yaml strings": {
-			lookup: New(
-				test.StringPtr(">123"),
-				nil, nil, nil, nil, nil, "", "",
-				&filter.URLCommandSlice{
-					{Type: "regex", Regex: test.StringPtr("{2}([0-9.]+)")}},
-				nil, nil, nil),
-			want: `
-access_token: '>123'
-url_commands:
-  - type: regex
-    regex: '{2}([0-9.]+)'
-`,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN the Lookup is stringified with String
-			got := tc.lookup.String("")
-
-			// THEN the result is as expected
-			tc.want = strings.TrimPrefix(tc.want, "\n")
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
-			}
-		})
-	}
-}
-
-func TestGitHubData_String(t *testing.T) {
-	// GIVEN a GitHubData
-	tests := map[string]struct {
-		githubData *GitHubData
-		want       string
+		lookup   Lookup
+		wantYAML string
 	}{
 		"nil": {
-			githubData: nil,
-			want:       ""},
-		"empty": {
-			githubData: &GitHubData{},
-			want:       "{}"},
-		"filled": {
-			githubData: &GitHubData{
-				eTag: "argus",
-				releases: []github_types.Release{
-					{URL: "https://test.com/1.2.3"},
-					{URL: "https://test.com/3.2.1"},
-				}},
-			want: `
-				{
-					"etag": "argus",
-					"releases": [
-						{"url": "https://test.com/1.2.3"},
-						{"url": "https://test.com/3.2.1"}
-					]
-				}`},
+			lookup: nil,
+		},
+		"github": {
+			lookup: test.IgnoreError(t, func() (base.Interface, error) {
+				return New(
+					"github",
+					"yaml", test.TrimYAML(
+						test.TrimYAML(`
+					url: release-argus/Argus
+					url_commands:
+						- type: split
+							text: v
+					require:
+						regex_version: v[\d.]+
+					use_prerelease: true
+			`)),
+					&opt.Options{},
+					&status.Status{},
+					&base.Defaults{}, &base.Defaults{})
+			}),
+		},
+		"url": {
+			lookup: test.IgnoreError(t, func() (base.Interface, error) {
+				return New(
+					"url",
+					"yaml", test.TrimYAML(`
+						url: release-argus/Argus
+						url_commands:
+							- type: split
+								text: v
+						require:
+							regex_version: v[\d.]+
+						allow_invalid_certs: true
+					`),
+					&opt.Options{},
+					&status.Status{},
+					&base.Defaults{}, &base.Defaults{})
+			}),
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.want = test.TrimJSON(tc.want)
+			// WHEN Copy is called
+			got := Copy(tc.lookup)
 
-			// WHEN the GitHubData is stringified with String
-			got := tc.githubData.String()
+			// THEN the variables are copied over
+			gotYAML := util.ToYAMLString(got, "")
+			wantYAML := util.ToYAMLString(tc.lookup, "")
+			if gotYAML != wantYAML {
+				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
+					wantYAML, gotYAML)
+			}
+			if tc.lookup == nil {
+				return // No further checks
+			}
 
-			// THEN the result is as expected
-			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
-					got, tc.want)
+			if got.GetOptions() == tc.lookup.GetOptions() {
+				t.Error("options shouldn't point to the same memory address")
+			} else if got.GetOptions().String() != tc.lookup.GetOptions().String() {
+				t.Errorf("options mismatch\nwant: %q\ngot:  %q",
+					tc.lookup.GetOptions(), got.GetOptions())
+			}
+
+			if got.GetDefaults() != tc.lookup.GetDefaults() {
+				t.Errorf("defaults mismatch\nwant: %v\ngot:  %v",
+					tc.lookup.GetDefaults(), got.GetDefaults())
+			}
+
+			if got.GetHardDefaults() != tc.lookup.GetHardDefaults() {
+				t.Errorf("hardDefaults mismatch\nwant: %v\ngot:  %v",
+					tc.lookup.GetHardDefaults(), got.GetHardDefaults())
 			}
 		})
 	}
 }
 
-func TestLookup_IsEqual(t *testing.T) {
-	// GIVEN two Lookups
+func TestChangeType(t *testing.T) {
+	type args struct {
+		newType   string
+		lookup    Lookup
+		overrides string
+	}
+
+	// GIVEN a Lookup
 	tests := map[string]struct {
-		a, b *Lookup
-		want bool
+		args     args
+		wantYAML string
+		errRegex string
 	}{
-		"empty": {
-			a:    &Lookup{},
-			b:    &Lookup{},
-			want: true,
+		"github -> github": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							url_commands:
+								- type: split
+									text: v
+							require:
+								regex_version: v[\d.]+
+							use_prerelease: true
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType: "github",
+			},
+			wantYAML: `
+				type: github
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				use_prerelease: true
+				`,
 		},
-		"defaults ignored": {
-			a: &Lookup{
-				Defaults: NewDefaults(
-					nil, test.BoolPtr(false), nil, nil)},
-			b:    &Lookup{},
-			want: true,
+		"github -> url": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							url_commands:
+								- type: split
+									text: v
+							require:
+								regex_version: v[\d.]+
+							use_prerelease: true
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType: "url",
+				overrides: test.TrimYAML(`
+					access_token: token
+					allow_invalid_certs: true
+				`),
+			},
+			wantYAML: `
+				type: url
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				allow_invalid_certs: true
+				`,
 		},
-		"hard_defaults ignored": {
-			a: &Lookup{
-				HardDefaults: NewDefaults(
-					nil, test.BoolPtr(false), nil, nil)},
-			b:    &Lookup{},
-			want: true,
+		"url -> url": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							url_commands:
+								- type: split
+									text: v
+							require:
+								regex_version: v[\d.]+
+							allow_invalid_certs: true
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType: "url",
+			},
+			wantYAML: `
+				type: url
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				allow_invalid_certs: true
+				`,
 		},
-		"equal": {
-			a: New(
-				test.StringPtr("token"),
-				test.BoolPtr(false),
-				nil,
-				opt.New(
-					nil, "", test.BoolPtr(true),
-					nil, nil),
-				&filter.Require{
-					RegexContent: "foo.tar.gz"},
-				nil,
-				"github",
-				"https://example.com",
-				nil, nil,
-				NewDefaults(
-					test.StringPtr("foo"), nil, nil, nil),
-				NewDefaults(
-					nil, test.BoolPtr(true), nil, nil)),
-			b: New(
-				test.StringPtr("token"),
-				test.BoolPtr(false),
-				nil,
-				opt.New(
-					nil, "", test.BoolPtr(true),
-					nil, nil),
-				&filter.Require{
-					RegexContent: "foo.tar.gz"},
-				nil,
-				"github",
-				"https://example.com",
-				nil, nil,
-				NewDefaults(
-					test.StringPtr("foo"), nil, nil, nil),
-				NewDefaults(
-					nil, test.BoolPtr(true), nil, nil)),
-			want: true,
+		"url -> github": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							require:
+								regex_version: v[\d.]+
+							allow_invalid_certs: true
+							url_commands:
+								- type: split
+									text: v
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType: "github",
+			},
+			wantYAML: `
+				type: github
+				url: release-argus/Argus
+				url_commands:
+					- type: split
+						text: v
+				require:
+					regex_version: v[\d.]+
+				`,
 		},
-		"not equal": {
-			a: New(
-				test.StringPtr("token"),
-				test.BoolPtr(false),
-				nil,
-				opt.New(
-					nil, "", test.BoolPtr(true),
-					nil, nil),
-				&filter.Require{
-					RegexContent: "foo.tar.gz"},
-				nil,
-				"github",
-				"https://example.com",
-				nil,
-				test.BoolPtr(true),
-				NewDefaults(
-					test.StringPtr("foo"), nil, nil, nil),
-				NewDefaults(
-					nil, test.BoolPtr(true), nil, nil)),
-			b: New(
-				test.StringPtr("token"),
-				test.BoolPtr(false),
-				nil,
-				opt.New(
-					nil, "", test.BoolPtr(true),
-					nil, nil),
-				&filter.Require{
-					RegexContent: "foo.tar.gz"},
-				nil,
-				"github",
-				"https://example.com/other",
-				nil,
-				test.BoolPtr(true),
-				NewDefaults(
-					test.StringPtr("foo"), nil, nil, nil),
-				NewDefaults(
-					nil, test.BoolPtr(true), nil, nil)),
-			want: false,
+		"url -> unknown": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							url_commands:
+								- type: split
+									text: v
+							require:
+								regex_version: v[\d.]+
+							allow_invalid_certs: true
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType: "foo",
+			},
+			errRegex: `^type: \"foo\" <invalid>.*$`,
+			wantYAML: "",
 		},
-		"not equal with nil": {
-			a: nil,
-			b: &Lookup{
-				URL: "https://example.com"},
-			want: false,
+		"invalid YAML": {
+			args: args{
+				lookup: test.IgnoreError(t, func() (base.Interface, error) {
+					return New(
+						"github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+							url_commands:
+								- type: split
+									text: v
+							require:
+								regex_version: v[\d.]+
+							allow_invalid_certs: true
+						`),
+						&opt.Options{},
+						&status.Status{},
+						&base.Defaults{}, &base.Defaults{})
+				}),
+				newType:   "github",
+				overrides: "invalid",
+			},
+			errRegex: `cannot unmarshal`,
+			wantYAML: "",
 		},
 	}
 
@@ -518,22 +491,335 @@ func TestLookup_IsEqual(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Set Status vars just to ensure they're not printed
-			if tc.a != nil {
-				tc.a.Status = &svcstatus.Status{}
-				tc.a.Status.Init(
-					0, 0, 0,
-					&name,
-					test.StringPtr("http://example.com"))
-				tc.a.Status.SetLatestVersion("foo", false)
+			// WHEN ChangeType is called
+			gotLookup, err := ChangeType(
+				tc.args.newType,
+				tc.args.lookup,
+				tc.args.overrides)
+
+			// THEN the correct type is returned
+			if gotLookup == nil {
+				// Unknown type
+				if tc.errRegex != "" {
+					if !util.RegexCheck(tc.errRegex, err.Error()) {
+						t.Errorf("error mismatch\nwant: %q\ngot:  %q",
+							tc.errRegex, err)
+					}
+					// return // Got expected error
+				} else {
+					t.Errorf("ChangeType() gave nil latestver.Lookup, expected type %q\nerr=%c",
+						tc.args.newType, err)
+				}
+				return
+			}
+			gotType := gotLookup.GetType()
+			if tc.args.newType != gotType {
+				t.Fatalf("Type mismatch\nwant: %q\ngot:  %T",
+					tc.args.newType, gotType)
 			}
 
-			// WHEN the two Lookups are compared
-			got := tc.a.IsEqual(tc.b)
+			// AND the variables are copied over
+			gotYAML := util.ToYAMLString(gotLookup, "")
+			tc.wantYAML = test.TrimYAML(tc.wantYAML)
+			if gotYAML != tc.wantYAML {
+				t.Errorf("YAML mismatch\nwant: %q\ngot:  %q",
+					tc.wantYAML, gotYAML)
+			}
 
-			// THEN the result is as expected
-			if got != tc.want {
-				t.Errorf("got %t, want %t", got, tc.want)
+			if gotLookup.GetOptions() != tc.args.lookup.GetOptions() &&
+				tc.args.lookup.GetOptions() != nil || gotLookup.GetOptions() == nil {
+				t.Errorf("options mismatch\nwant: %v\ngot:  %v",
+					tc.args.lookup.GetOptions(), gotLookup.GetOptions())
+			}
+
+			if gotLookup.GetDefaults() != tc.args.lookup.GetDefaults() {
+				t.Errorf("defaults mismatch\nwant: %v\ngot:  %v",
+					tc.args.lookup.GetDefaults(), gotLookup.GetDefaults())
+			}
+
+			if gotLookup.GetHardDefaults() != tc.args.lookup.GetHardDefaults() {
+				t.Errorf("hardDefaults mismatch\nwant: %v\ngot:  %v",
+					tc.args.lookup.GetHardDefaults(), gotLookup.GetHardDefaults())
+			}
+		})
+	}
+}
+
+func TestUnmarshalJSON(t *testing.T) {
+	tests := map[string]struct {
+		jsonStr  string
+		errRegex string
+		wantJSON *string
+	}{
+		"Empty": {
+			jsonStr:  "",
+			errRegex: `unexpected end of JSON input`,
+			wantJSON: test.StringPtr(""),
+		},
+		"Invalid formatting": {
+			jsonStr:  "invalid",
+			errRegex: `invalid character`,
+		},
+		"Valid - GitHub": {
+			jsonStr: test.TrimJSON(`{
+				"type":"github",
+				"url":"release-argus/Argus",
+				"access_token":"token"
+			}`),
+			errRegex: `^$`,
+		},
+		"Valid - URL": {
+			jsonStr: test.TrimJSON(`{
+				"type":"url",
+				"url":"https://example.com",
+				"allow_invalid_certs":true
+			}`),
+			errRegex: `^$`,
+		},
+		"Invalid - GitHub": {
+			jsonStr: test.TrimJSON(`{"
+				type":"github",
+				"url":"release-argus/Argus",
+				"access_token":1
+			}`),
+			errRegex: `failed to unmarshal github.Lookup`,
+		},
+		"Invalid - URL": {
+			jsonStr: test.TrimJSON(`{
+				"type":"url",
+				"url":"https://example.com",
+				"allow_invalid_certs":"true"
+			}`),
+			errRegex: `failed to unmarshal web.Lookup`,
+		},
+		"unknown type": {
+			jsonStr: test.TrimJSON(`{
+				"type":"foo",
+				"url":"https://example.com",
+				"allow_invalid_certs":true
+			}`),
+			errRegex: `failed to unmarshal latestver.Lookup`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.wantJSON == nil {
+				tc.wantJSON = &tc.jsonStr
+			}
+
+			// WHEN unmarshal is called
+			lookupJSON, errJSON := UnmarshalJSON([]byte(tc.jsonStr))
+
+			// THEN any error is as expected
+			eJSON := util.ErrorToString(errJSON)
+			if !util.RegexCheck(tc.errRegex, eJSON) {
+				t.Errorf("error mismatch on JSON unmarshal of latestver.Lookup:\n%q\ngot:\n%q",
+					tc.errRegex, eJSON)
+			}
+			if tc.errRegex != "^$" {
+				return
+			}
+			// AND the Lookup is unmarshalled as expected
+			gotFromJSON := util.ToJSONString(lookupJSON)
+			if *tc.wantJSON != gotFromJSON {
+				t.Errorf("latestver.Lookup.String() mismatch on JSON unmarshal\n%q\ngot:\n%q",
+					*tc.wantJSON, gotFromJSON)
+			}
+		})
+	}
+}
+
+func TestUnmarshalYAML(t *testing.T) {
+	tests := map[string]struct {
+		yamlStr  string
+		errRegex string
+		wantYAML *string
+	}{
+		"Empty": {
+			yamlStr:  "",
+			errRegex: `failed to unmarshal`,
+			wantYAML: test.StringPtr(""),
+		},
+		"Invalid formatting": {
+			yamlStr:  "{ invalid",
+			errRegex: `did not find expected`,
+		},
+		"Valid - GitHub": {
+			yamlStr: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				access_token: token
+			`),
+			errRegex: `^$`,
+		},
+		"Valid - URL": {
+			yamlStr: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				allow_invalid_certs: true
+			`),
+			errRegex: `^$`,
+		},
+		"Invalid - GitHub": {
+			yamlStr: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				access_token:
+					sub: token
+			`),
+			errRegex: `failed to unmarshal github.Lookup`,
+		},
+		"Invalid - URL": {
+			yamlStr: test.TrimYAML(`
+				type: url
+				url: https://example.com
+				allow_invalid_certs: "true"
+			`),
+			errRegex: `failed to unmarshal web.Lookup`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.wantYAML == nil {
+				tc.wantYAML = &tc.yamlStr
+			}
+
+			// WHEN unmarshal is called
+			lookupYAML, errYAML := UnmarshalYAML([]byte(tc.yamlStr))
+
+			// THEN any error is as expected
+			eYAML := util.ErrorToString(errYAML)
+			if !util.RegexCheck(tc.errRegex, eYAML) {
+				t.Errorf("error mismatch on YAML unmarshal of latestver.Lookup:\n%q\ngot:  %q",
+					tc.errRegex, eYAML)
+			}
+			if tc.errRegex != "^$" {
+				return
+			}
+			// AND the Lookup is unmarshalled as expected
+			gotFromYAML := lookupYAML.String(lookupYAML, "")
+			if *tc.wantYAML != gotFromYAML {
+				t.Errorf("latestver.Lookup.String() mismatch on YAML unmarshal\n%q\ngot:  %q",
+					*tc.wantYAML, gotFromYAML)
+			}
+		})
+	}
+}
+
+func TestUnmarshal(t *testing.T) {
+	tests := map[string]struct {
+		format, data string
+		wantType     string
+		errRegex     string
+	}{
+		"Valid JSON - GitHub": {
+			data: test.TrimJSON(`{
+				"type": "github",
+				"url": "release-argus/Argus"
+			}`),
+			format:   "json",
+			wantType: "github",
+		},
+		"Valid JSON - URL": {
+			data: test.TrimJSON(`{
+				"type": "url",
+				"url": "https://example.com"
+			}`),
+			format:   "json",
+			wantType: "url",
+		},
+		"Valid YAML - GitHub": {
+			data: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+			`),
+			format:   "yaml",
+			wantType: "github",
+		},
+		"Valid YAML - URL": {
+			data: test.TrimYAML(`
+				type: url
+				url: https://example.com
+			`),
+			format:   "yaml",
+			wantType: "url",
+		},
+		"Invalid format": {
+			data:     `{"type": "github"}`,
+			format:   "xml",
+			errRegex: `unknown format: "xml"`,
+		},
+		"Unknown type": {
+			data: test.TrimJSON(`{
+				"type": "unknown",
+				"url": "https://example.com"
+			}`),
+			format: "json",
+			errRegex: test.TrimYAML(`
+			^failed to unmarshal latestver.Lookup:
+			type: "unknown" <invalid>.*$`),
+		},
+		"Invalid JSON": {
+			data: test.TrimYAML(`{
+				"type": "github",
+				"url": release-argus/Argus
+			}`),
+			format: "json",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+				invalid character.*$`),
+		},
+		"Invalid YAML": {
+			data: test.TrimYAML(`
+				type: github
+				url: release-argus/Argus
+				invalid
+			`),
+			format: "yaml",
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal latestver.Lookup:
+				yaml: .*$`),
+		},
+		"Invalid GitHub": {
+			data: test.TrimYAML(`
+				type: github
+				url:
+					repo: release-argus
+			`),
+			format: "yaml",
+			errRegex: test.TrimYAML(`
+				failed to unmarshal github.Lookup:
+				yaml: .+
+				.* cannot unmarshal .*$`),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN unmarshal is called
+			got, err := unmarshal([]byte(tc.data), tc.format)
+
+			// THEN any error is as expected
+			if err != nil {
+				if !util.RegexCheck(tc.errRegex, err.Error()) {
+					t.Errorf("unmarshal() error mismatch\nwant: %q\ngot:  %q",
+						tc.errRegex, err)
+				}
+				return
+			}
+
+			// AND the correct type is returned
+			if got.GetType() != tc.wantType {
+				t.Errorf("unmarshal() type mismatch\nwant: %q\ngot:  %q",
+					tc.wantType, got.GetType())
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,195 +20,418 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/github"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestService_GiveSecretsLatestVersion(t *testing.T) {
+	type otherData struct {
+		githubData            *github.Data
+		githubDataTransformed bool
+	}
+
 	// GIVEN a LatestVersion that may have secrets in it referencing those in another LatestVersion
-	githubData := latestver.GitHubData{}
+	githubData := github.Data{}
 	githubData.SetETag("shazam")
 	tests := map[string]struct {
-		latestVersion *latestver.Lookup
-		otherLV       *latestver.Lookup
-		expected      *latestver.Lookup
+		latestVersion latestver.Lookup
+		otherLV       latestver.Lookup
+		expected      latestver.Lookup
+		otherData     otherData
 	}{
+		"nil oldLatestVersion": {
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: nil,
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+		},
 		"empty AccessToken": {
-			latestVersion: &latestver.Lookup{},
-			otherLV: latestver.New(
-				test.StringPtr("foo"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			expected: &latestver.Lookup{},
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "foo"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"new AccessToken kept": {
-			latestVersion: latestver.New(
-				test.StringPtr("foo"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				test.StringPtr("bar"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				test.StringPtr("foo"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "foo"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "bar"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "foo"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"give old AccessToken": {
-			latestVersion: latestver.New(
-				test.StringPtr("<secret>"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				test.StringPtr("bar"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				test.StringPtr("bar"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "`+util.SecretValue+`"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "bar"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: "bar"
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
-		"referncing default AccessToken": {
-			latestVersion: latestver.New(
-				test.StringPtr("<secret>"),
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil,
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil,
-				nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
+		"referencing default AccessToken": {
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						access_token: util.SecretValue
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"nil Require": {
-			latestVersion: latestver.New(
-				nil, nil, nil, nil, nil,
-				nil,
-				"", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "foo", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil, nil, nil, nil,
-				nil,
-				nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: foo
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"empty Require": {
-			latestVersion: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "foo", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: foo
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"new Require.Docker.Token kept": {
-			latestVersion: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "foo", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "bar", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "foo", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: foo
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: bar
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: foo
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"give old Require.Docker.Token": {
-			latestVersion: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "<secret>", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "bar", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "bar", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: `+util.SecretValue+`
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: bar
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: bar
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
 		"referencing default Require.Docker.Token": {
-			latestVersion: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "<secret>", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			otherLV: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
-			expected: latestver.New(
-				nil, nil, nil, nil,
-				&filter.Require{
-					Docker: filter.NewDockerCheck(
-						"", "", "", "", "", "", time.Now(), nil)},
-				nil, "", "", nil, nil, nil, nil),
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: `+util.SecretValue+`
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", test.TrimYAML(`
+						require:
+							docker:
+								type: ghcr
+								token: `+util.SecretValue+`
+					`),
+					nil,
+					nil,
+					nil, nil)
+			}),
 		},
-		"GitHubData carried over if type still 'github'": {
-			latestVersion: &latestver.Lookup{
-				Type: "github"},
-			otherLV: &latestver.Lookup{
-				Type:       "github",
-				GitHubData: &githubData},
-			expected: &latestver.Lookup{
-				Type:       "github",
-				GitHubData: &githubData},
+		"githubData carried over if type still 'github'": {
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherData: otherData{
+				githubData:            &githubData,
+				githubDataTransformed: true,
+			},
 		},
-		"GitHubData not carried over if type wasn't 'github'": {
-			latestVersion: &latestver.Lookup{
-				Type: "github"},
-			otherLV: &latestver.Lookup{
-				Type:       "url",
-				GitHubData: &githubData}, // would be nil for type url
-			expected: &latestver.Lookup{
-				Type: "github"},
+		"githubData not carried over if type wasn't 'github'": {
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherData: otherData{
+				githubData:            &githubData,
+				githubDataTransformed: false,
+			},
 		},
-		"GitHubData not carried over if type no longer 'github'": {
-			latestVersion: &latestver.Lookup{
-				Type: "url"},
-			otherLV: &latestver.Lookup{
-				Type:       "github",
-				GitHubData: &githubData},
-			expected: &latestver.Lookup{
-				Type: "github"},
+		"githubData not carried over if type no longer 'github'": {
+			latestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New(
+					"url",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherLV: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New("github",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			expected: test.IgnoreError(t, func() (latestver.Lookup, error) {
+				return latestver.New(
+					"url",
+					"yaml", "",
+					nil,
+					nil,
+					nil, nil)
+			}),
+			otherData: otherData{
+				githubData:            &githubData,
+				githubDataTransformed: false,
+			},
 		},
 	}
 
@@ -216,38 +439,68 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			newService := &Service{LatestVersion: *tc.latestVersion}
-			oldService := &Service{LatestVersion: *tc.otherLV}
+			newService := &Service{LatestVersion: tc.latestVersion}
+			oldService := &Service{LatestVersion: tc.otherLV}
 
 			// WHEN we call GiveSecrets
-			newService.giveSecretsLatestVersion(&oldService.LatestVersion)
+			newService.giveSecretsLatestVersion(oldService.LatestVersion)
 
 			// THEN we should get a Service with the secrets from the other Service
 			gotLV := newService.LatestVersion
-			if tc.expected.AccessToken == nil && gotLV.AccessToken != nil {
-				t.Errorf("Expected AccessToken to be nil, got %q", *gotLV.AccessToken)
-			} else if util.DefaultIfNil(gotLV.AccessToken) != util.DefaultIfNil(tc.expected.AccessToken) {
-				t.Errorf("Expected %q, got %q",
-					util.DefaultIfNil(tc.expected.AccessToken), util.DefaultIfNil(gotLV.AccessToken))
+
+			// Only GitHub types have AccessTokens
+			if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
+				if hadLatestVersion, ok := tc.latestVersion.(*github.Lookup); ok {
+					gotAccessToken := gotLatestVersion.AccessToken
+					expectedAccessToken := hadLatestVersion.AccessToken
+					if gotAccessToken != expectedAccessToken {
+						t.Errorf("Access Token\nwant: %q\ngot:  %q",
+							expectedAccessToken, gotAccessToken)
+					}
+				}
 			}
 
+			// Require
+			var gotRequire *filter.Require
+			var expectedRequire *filter.Require
+			// Got
+			if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
+				gotRequire = gotLatestVersion.GetRequire()
+			} else if gotLatestVersion, ok := gotLV.(*web.Lookup); ok {
+				gotRequire = gotLatestVersion.GetRequire()
+			}
+			// Expected
+			if expectedLatestVersion, ok := tc.expected.(*github.Lookup); ok {
+				expectedRequire = expectedLatestVersion.GetRequire()
+			} else if expectedLatestVersion, ok := tc.expected.(*web.Lookup); ok {
+				expectedRequire = expectedLatestVersion.GetRequire()
+			}
 			// newService has a nil Require, but expected non-nil
-			if gotLV.Require == nil && tc.expected.Require != nil {
+			if gotRequire == nil && expectedRequire != nil {
 				t.Errorf("Expected Require to be non-nil, got nil")
 
 				// newService Require/Docker isn't nil when expected is or vice versa
-			} else if gotLV.Require != tc.expected.Require &&
-				gotLV.Require.Docker != tc.expected.Require.Docker &&
+			} else if gotRequire != expectedRequire &&
+				gotRequire.Docker != expectedRequire.Docker &&
 				// newService doesn't have the expected Token
-				gotLV.Require.Docker.Token != tc.expected.Require.Docker.Token {
+				gotRequire.Docker.Token != expectedRequire.Docker.Token {
 				t.Errorf("Expected %q, got %q",
-					tc.expected.Require.Docker.Token, gotLV.Require.Docker.Token)
+					expectedRequire.Docker.Token, gotRequire.Docker.Token)
 			}
 
-			// GitHubData
-			if gotLV.GitHubData != tc.expected.GitHubData {
-				t.Errorf("Expected GitHubData to be %v, got %q",
-					tc.expected.GitHubData, gotLV.GitHubData)
+			// Data
+			if expectedLatestVersion, ok := tc.expected.(*github.Lookup); ok {
+				// Ensure gotLV is a *github.Lookup
+				if gotLatestVersion, ok := gotLV.(*github.Lookup); ok {
+					got := gotLatestVersion.GetGitHubData().String()
+					expected := expectedLatestVersion.GetGitHubData().String()
+					if got != expected {
+						t.Errorf("Expected githubData to be\n%v\ngot\n%v",
+							expected, got)
+					}
+				} else {
+					t.Fatalf("Expected *github.Lookup, got %T", gotLV)
+				}
 			}
 		})
 	}
@@ -256,10 +509,9 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 	// GIVEN a DeployedVersion that may have secrets in it referencing those in another DeployedVersion
 	tests := map[string]struct {
-		deployedVersion *deployedver.Lookup
-		otherDV         *deployedver.Lookup
-		secretRefs      dvSecretRef
-		expected        *deployedver.Lookup
+		deployedVersion, otherDV *deployedver.Lookup
+		secretRefs               dvSecretRef
+		expected                 *deployedver.Lookup
 	}{
 		"nil DeployedVersion": {
 			deployedVersion: nil,
@@ -290,7 +542,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"give old BasicAuth.Password": {
 			deployedVersion: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{
-					Password: "<secret>"}},
+					Password: util.SecretValue}},
 			otherDV: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{
 					Password: "bar"}},
@@ -301,7 +553,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"referencing default BasicAuth.Password": {
 			deployedVersion: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{
-					Password: "<secret>"}},
+					Password: util.SecretValue}},
 			otherDV: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{}},
 			expected: &deployedver.Lookup{
@@ -311,11 +563,11 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"referencing BasicAuth.Password that doesn't exist": {
 			deployedVersion: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{
-					Password: "<secret>"}},
+					Password: util.SecretValue}},
 			otherDV: &deployedver.Lookup{},
 			expected: &deployedver.Lookup{
 				BasicAuth: &deployedver.BasicAuth{
-					Password: "<secret>"}},
+					Password: util.SecretValue}},
 		},
 		"empty Headers": {
 			deployedVersion: &deployedver.Lookup{
@@ -343,32 +595,32 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"Headers with index out of range": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "bish", Value: "<secret>"},
-					{Key: "bash", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "bash", Value: util.SecretValue}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{}},
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "bish", Value: "<secret>"},
-					{Key: "bash", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "bash", Value: util.SecretValue}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: test.IntPtr(0)},
 					{OldIndex: test.IntPtr(1)}}},
 		},
-		"Headers with <secret> but nil index refs": {
+		"Headers with SecretValue but nil index refs": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "bish", Value: "<secret>"},
-					{Key: "bash", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "bash", Value: util.SecretValue}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "bish", Value: "bash"},
-					{Key: "bash", Value: "boop"}}},
+					{Key: "bash", Value: "bop"}}},
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "bish", Value: "<secret>"},
-					{Key: "bash", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "bash", Value: util.SecretValue}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: nil},
@@ -438,14 +690,14 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"referencing old Header value with no refs": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"}}},
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{}},
@@ -453,9 +705,9 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"only new/changed Headers with partial ref (not for all secrets)": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bang"},
-					{Key: "bosh", Value: "<secret>"}}},
+					{Key: "bosh", Value: util.SecretValue}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"},
@@ -464,7 +716,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"},
 					{Key: "bish", Value: "bang"},
-					{Key: "bosh", Value: "<secret>"}}},
+					{Key: "bosh", Value: util.SecretValue}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
 					{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
@@ -472,7 +724,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"referencing old Header value": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
@@ -488,14 +740,14 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"referencing old Header value that doesn't exist": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"}}},
 			expected: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "foo", Value: "<secret>"},
+					{Key: "foo", Value: util.SecretValue},
 					{Key: "bish", Value: "bash"}}},
 			secretRefs: dvSecretRef{
 				Headers: []oldIntIndex{
@@ -505,7 +757,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bang"},
-					{Key: "bish", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"},
@@ -521,8 +773,8 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 		"swap header values": {
 			deployedVersion: &deployedver.Lookup{
 				Headers: []deployedver.Header{
-					{Key: "bish", Value: "<secret>"},
-					{Key: "foo", Value: "<secret>"}}},
+					{Key: "bish", Value: util.SecretValue},
+					{Key: "foo", Value: util.SecretValue}}},
 			otherDV: &deployedver.Lookup{
 				Headers: []deployedver.Header{
 					{Key: "foo", Value: "bar"},
@@ -552,7 +804,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			if gotDV == tc.expected {
 				return
 			}
-			// Got/Epxected nil but not both
+			// Got/Expected nil but not both
 			if gotDV == nil && tc.expected != nil ||
 				gotDV != nil && tc.expected == nil {
 				t.Errorf("Expected %q, got %q",
@@ -564,7 +816,7 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 					t.Errorf("Expected BasicAuth to be nil, got %q", *gotDV.BasicAuth)
 				} else if gotDV.BasicAuth.Password != tc.expected.BasicAuth.Password {
 					t.Errorf("Expected %q, got %q",
-						util.DefaultIfNil(tc.expected.BasicAuth), util.DefaultIfNil(gotDV.BasicAuth))
+						util.DereferenceOrDefault(tc.expected.BasicAuth), util.DereferenceOrDefault(gotDV.BasicAuth))
 				}
 			}
 			// Headers
@@ -586,572 +838,665 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 func TestService_GiveSecretsNotify(t *testing.T) {
 	// GIVEN a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice
 	tests := map[string]struct {
-		notify      shoutrrr.Slice
-		otherNotify *shoutrrr.Slice
-		expected    shoutrrr.Slice
-		secretRefs  *map[string]oldStringIndex
+		notify, otherNotify shoutrrr.Slice
+		secretRefs          map[string]oldStringIndex
+		expected            shoutrrr.Slice
 	}{
 		"nil NotifySlice": {
 			notify: nil,
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "",
+					nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{},
 			expected:   nil,
-			secretRefs: &map[string]oldStringIndex{},
 		},
 		"nil oldNotifies": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "",
+					nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
 			otherNotify: nil,
+			secretRefs:  map[string]oldStringIndex{},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "",
+					nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{},
 		},
 		"nil secretRefs": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "",
+					nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
-					nil, nil, nil)},
-			expected: shoutrrr.Slice{
-				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil,
 					nil, nil, nil)},
 			secretRefs: nil,
+			expected: shoutrrr.Slice{
+				"foo": shoutrrr.New(
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
+					nil, nil, nil)},
 		},
 		"no secretRefs": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{},
 		},
 		"no matching secretRefs": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"bish": {OldIndex: "bash"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"bish": {OldIndex: test.StringPtr("bash")}},
 		},
-		"secretRef referencing nil index": {
+		"secretRef referencing empty index": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: ""}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: nil}},
 		},
 		"secretRef referencing index that doesn't exist": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "baz"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("baz")}},
 		},
 		"secretRefs - url_fields.altid": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.apikey": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.apikey swap vars": {
 			notify: shoutrrr.Slice{
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "shazam"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{
+				"bar": {OldIndex: "foo"},
+				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "shazam"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{
-				"bar": {OldIndex: test.StringPtr("foo")},
-				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - url_fields.apikey swap vars ignores notify order": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"apikey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"apikey": util.SecretValue},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "shazam"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{
+				"bar": {OldIndex: "foo"},
+				"foo": {OldIndex: "bar"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "shazam"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"apikey": "something"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{
-				"bar": {OldIndex: test.StringPtr("foo")},
-				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - url_fields.botkey": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"botkey": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"botkey": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"botkey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"botkey": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"botkey": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"botkey": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.password": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"password": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"password": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"password": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"password": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"password": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"password": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.token": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"token": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"token": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"token": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"token": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"token": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"token": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.tokena": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"tokena": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"tokena": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokena": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokena": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokena": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokena": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - url_fields.tokenb": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"tokenb": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"tokenb": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokenb": "yikes"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokenb": "something"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokenb": "something"},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"tokenb": "yikes"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
-		"secretRefs - url_fields.host ignored as <secret>": {
+		"secretRefs - url_fields.host ignored as SecretValue": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"host": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"host": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"host": "https://example.com"},
+					nil,
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"host": "https://example.com/foo"},
+					nil,
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
-						"host": "<secret>"},
+					nil, "", "", nil,
+					map[string]string{
+						"host": util.SecretValue},
+					nil,
 					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil, nil, "",
-					&map[string]string{
+					nil, "", "", nil,
+					map[string]string{
 						"host": "https://example.com"},
+					nil,
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 		"secretRefs - params.devices": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"devices": "<secret>"},
-					"", nil, nil, nil, nil),
+					nil, "", "",
+					nil, nil,
+					map[string]string{
+						"devices": util.SecretValue},
+					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil, nil,
+					map[string]string{
 						"devices": "yikes"},
-					"", nil, nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+					nil, nil, nil)},
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"devices": "something"},
-					"", nil, nil, nil, nil)},
+					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"devices": "something"},
-					"", nil, nil, nil, nil),
+					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"devices": "yikes"},
-					"", nil, nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
+					nil, nil, nil)},
 		},
-		"secretRefs - params.avatar ignored as <secret>": {
+		"secretRefs - params.avatar ignored as SecretValue": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"avatar": "<secret>"},
-					"", nil, nil, nil, nil),
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
+						"avatar": util.SecretValue},
+					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"avatar": "https://example.com"},
-					"", nil, nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+					nil, nil, nil)},
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"avatar": "https://example.com/fooo"},
-					"", nil, nil, nil, nil)},
+					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"avatar": "<secret>"},
-					"", nil, nil, nil, nil),
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
+						"avatar": util.SecretValue},
+					nil, nil, nil),
 				"bar": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
+					nil, "", "",
+					nil,
+					nil,
+					map[string]string{
 						"avatar": "https://example.com"},
-					"", nil, nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
+					nil, nil, nil)},
 		},
 		"secretRefs - ALL": {
 			notify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"devices": "<secret>"},
-					"",
-					&map[string]string{
-						"altid":    "<secret>",
-						"apikey":   "<secret>",
-						"botkey":   "<secret>",
-						"password": "<secret>",
-						"token":    "<secret>",
-						"tokena":   "<secret>",
-						"tokenb":   "<secret>"},
+					nil, "", "",
+					nil,
+					map[string]string{
+						"altid":    util.SecretValue,
+						"apikey":   util.SecretValue,
+						"botkey":   util.SecretValue,
+						"password": util.SecretValue,
+						"token":    util.SecretValue,
+						"tokena":   util.SecretValue,
+						"tokenb":   util.SecretValue},
+					map[string]string{
+						"devices": util.SecretValue},
 					nil, nil, nil)},
-			otherNotify: &shoutrrr.Slice{
+			otherNotify: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"devices": "id1,id2"},
-					"",
-					&map[string]string{
+					nil, "", "",
+					nil,
+					map[string]string{
 						"altid":    "whoosh",
 						"apikey":   "foo",
 						"botkey":   "bar",
@@ -1159,14 +1504,15 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"token":    "bish",
 						"tokena":   "bosh",
 						"tokenb":   "bash"},
+					map[string]string{
+						"devices": "id1,id2"},
 					nil, nil, nil)},
+			secretRefs: map[string]oldStringIndex{"foo": {OldIndex: "foo"}},
 			expected: shoutrrr.Slice{
 				"foo": shoutrrr.New(
-					nil, "", nil,
-					&map[string]string{
-						"devices": "id1,id2"},
-					"",
-					&map[string]string{
+					nil, "", "",
+					nil,
+					map[string]string{
 						"altid":    "whoosh",
 						"apikey":   "foo",
 						"botkey":   "bar",
@@ -1174,8 +1520,9 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"token":    "bish",
 						"tokena":   "bosh",
 						"tokenb":   "bash"},
+					map[string]string{
+						"devices": "id1,id2"},
 					nil, nil, nil)},
-			secretRefs: &map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}},
 		},
 	}
 
@@ -1199,9 +1546,11 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 
 			// THEN we should get a NotifySlice with the secrets from the other Service
 			gotNotify := newService.Notify
-			if gotNotify.String("") != tc.expected.String("") {
-				t.Errorf("Want:\n%v\n\nGot:\n%v",
-					tc.expected, gotNotify)
+			gotNotifyStr := gotNotify.String("")
+			expectedStr := tc.expected.String("")
+			if gotNotifyStr != expectedStr {
+				t.Errorf("secrets not passed over\nwant:\n%v\n\ngot:\n%v",
+					expectedStr, gotNotifyStr)
 			}
 		})
 	}
@@ -1210,20 +1559,19 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 func TestService_GiveSecretsWebHook(t *testing.T) {
 	// GIVEN a WebHookSlice that may have secrets in it referencing those in another WebHookSliceSlice
 	tests := map[string]struct {
-		webhook      webhook.Slice
-		otherWebhook *webhook.Slice
-		expected     webhook.Slice
-		secretRefs   *map[string]whSecretRef
+		webhook, otherWebhook webhook.Slice
+		secretRefs            map[string]whSecretRef
+		expected              webhook.Slice
 	}{
 		"nil WebHookSlice": {
 			webhook: nil,
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{},
 			expected:   nil,
-			secretRefs: &map[string]whSecretRef{},
 		},
 		"nil otherWebHook": {
 			webhook: webhook.Slice{
@@ -1232,139 +1580,142 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					"shazam",
 					nil, "", "", nil, nil, nil)},
 			otherWebhook: nil,
+			secretRefs:   map[string]whSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{},
 		},
 		"nil secretRefs": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: nil,
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			secretRefs: nil,
 		},
 		"no secretRefs": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{},
 		},
 		"no matching secretRefs": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"bish": {OldIndex: "bash"}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"bish": {OldIndex: test.StringPtr("bash")}},
 		},
-		"secretRef referencing nil index": {
+		"secretRef referencing empty index": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {OldIndex: ""},
+				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: nil},
-				"bar": {OldIndex: nil}},
 		},
 		"secretRef referencing index that doesn't exist": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {OldIndex: "bash"},
+				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: test.StringPtr("bash")},
-				"bar": {OldIndex: nil}},
 		},
 		"secretRefs - secret": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {OldIndex: "foo"},
+				"bar": {OldIndex: ""}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
@@ -1374,21 +1725,18 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: test.StringPtr("foo")},
-				"bar": {OldIndex: nil}},
 		},
 		"secretRefs - secret swap vars": {
 			webhook: webhook.Slice{
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
@@ -1397,6 +1745,9 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"bar": {OldIndex: "foo"},
+				"foo": {OldIndex: "bar"}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
@@ -1406,21 +1757,18 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"bar": {OldIndex: test.StringPtr("foo")},
-				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"secretRefs - secret swap vars ignores order sent": {
 			webhook: webhook.Slice{
 				"bar": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil),
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
-					"<secret>",
+					util.SecretValue,
 					nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
@@ -1429,6 +1777,9 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"whoosh",
 					nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"bar": {OldIndex: "foo"},
+				"foo": {OldIndex: "bar"}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil, nil, "", nil, nil, nil, nil, nil,
@@ -1438,23 +1789,20 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil, nil, "", nil, nil, nil, nil, nil,
 					"shazam",
 					nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"bar": {OldIndex: test.StringPtr("foo")},
-				"foo": {OldIndex: test.StringPtr("bar")}},
 		},
 		"custom headers - no secretRefs": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1465,33 +1813,32 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
-			secretRefs: &map[string]whSecretRef{},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 		},
 		"custom headers - no header secretRefs": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1501,24 +1848,22 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {OldIndex: "foo"},
+				"bar": {OldIndex: "bar"}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {OldIndex: test.StringPtr("foo")},
-				"bar": {OldIndex: test.StringPtr("bar")},
-			},
+						{Key: "foo", Value: "baz"},
+					},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 		},
 		"custom headers - header secretRefs but old secrets unwanted": {
 			webhook: webhook.Slice{
@@ -1531,9 +1876,8 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
-			otherWebhook: &webhook.Slice{
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1543,8 +1887,16 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {
+					OldIndex: "foo",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)}}},
+				"bar": {
+					OldIndex: "bar",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)}}}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
@@ -1555,35 +1907,23 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "baz"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {
-					OldIndex: test.StringPtr("foo"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)}}},
-				"bar": {
-					OldIndex: test.StringPtr("bar"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)}}},
-			},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
 		},
 		"custom headers - header secretRefs, some indices out of range": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bish", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bish", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bang", Value: "<secret>"}},
-					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
-			},
-			otherWebhook: &webhook.Slice{
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bang", Value: util.SecretValue}},
+					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1596,45 +1936,44 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {
+					OldIndex: "foo",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(5)}, {OldIndex: test.IntPtr(1)}}},
+				"bar": {
+					OldIndex: "bar",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(2)}}}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
+						{Key: "foo", Value: util.SecretValue},
 						{Key: "bish", Value: "bash"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
 						{Key: "foo", Value: "bang"},
-						{Key: "bang", Value: "<secret>"}},
+						{Key: "bang", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {
-					OldIndex: test.StringPtr("foo"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(5)}, {OldIndex: test.IntPtr(1)}}},
-				"bar": {
-					OldIndex: test.StringPtr("bar"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(2)}}},
-			},
 		},
 		"custom headers - header secretRefs use all secrets": {
 			webhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bish", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bish", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bang", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bang", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1647,6 +1986,17 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"foo": {
+					OldIndex: "foo",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}},
+				"bar": {
+					OldIndex: "bar",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.Slice{
 				"foo": webhook.New(
 					nil,
@@ -1660,33 +2010,22 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"foo": {
-					OldIndex: test.StringPtr("foo"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)},
-						{OldIndex: test.IntPtr(1)}}},
-				"bar": {
-					OldIndex: test.StringPtr("bar"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)},
-						{OldIndex: test.IntPtr(1)}}}},
 		},
 		"custom headers - header secretRefs, swap names of webhook": {
 			webhook: webhook.Slice{
 				"bar": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bish", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bish", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil),
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
-						{Key: "foo", Value: "<secret>"},
-						{Key: "bang", Value: "<secret>"}},
+						{Key: "foo", Value: util.SecretValue},
+						{Key: "bang", Value: util.SecretValue}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			otherWebhook: &webhook.Slice{
+			otherWebhook: webhook.Slice{
 				"foo": webhook.New(
 					nil,
 					&webhook.Headers{
@@ -1699,6 +2038,17 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
+			secretRefs: map[string]whSecretRef{
+				"bar": {
+					OldIndex: "foo",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}},
+				"foo": {
+					OldIndex: "bar",
+					CustomHeaders: []oldIntIndex{
+						{OldIndex: test.IntPtr(0)},
+						{OldIndex: test.IntPtr(1)}}}},
 			expected: webhook.Slice{
 				"bar": webhook.New(
 					nil,
@@ -1712,17 +2062,6 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 						{Key: "foo", Value: "bang"},
 						{Key: "bang", Value: "boom"}},
 					"", nil, nil, nil, nil, nil, "", nil, "", "", nil, nil, nil)},
-			secretRefs: &map[string]whSecretRef{
-				"bar": {
-					OldIndex: test.StringPtr("foo"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)},
-						{OldIndex: test.IntPtr(1)}}},
-				"foo": {
-					OldIndex: test.StringPtr("bar"),
-					CustomHeaders: []oldIntIndex{
-						{OldIndex: test.IntPtr(0)},
-						{OldIndex: test.IntPtr(1)}}}},
 		},
 	}
 
@@ -1731,7 +2070,15 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			t.Parallel()
 
 			newService := &Service{
-				ID:      name,
+				ID: name,
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: tc.webhook}
 			// New Service Status.Fails
 			newService.Status.Init(
@@ -1741,18 +2088,18 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			newService.Init(
 				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
 			// Other Service Status.Fails
 			if tc.otherWebhook != nil {
-				otherServiceStatus := svcstatus.Status{}
+				otherServiceStatus := status.Status{}
 				otherServiceStatus.Init(
-					len(*tc.otherWebhook), 0, 0,
+					len(tc.otherWebhook), 0, 0,
 					test.StringPtr("otherService"),
 					nil)
 				tc.otherWebhook.Init(
 					&otherServiceStatus,
-					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 					nil,
 					test.StringPtr("10m"))
 			}
@@ -1771,45 +2118,70 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 }
 
 func TestService_GiveSecrets(t *testing.T) {
+	type statusTests struct {
+		oldLatestVersion, expectedLatestVersion                       string
+		oldLatestVersionTimestamp, expectedLatestVersionTimestamp     string
+		oldDeployedVersion, expectedDeployedVersion                   string
+		oldDeployedVersionTimestamp, expectedDeployedVersionTimestamp string
+	}
+	type commandTests struct {
+		oldFails      []*bool
+		expectedFails []*bool
+	}
+	type webhookTests struct {
+		oldFails      map[string]*bool
+		expectedFails map[string]*bool
+	}
+
 	// GIVEN a Service that may have secrets in it referencing those in another Service
 	tests := map[string]struct {
-		svc                              *Service
-		oldService                       *Service
-		oldLatestVersion                 string
-		expectedLatestVersion            string
-		oldLatestVersionTimestamp        string
-		expectedLatestVersionTimestamp   string
-		oldDeployedVersion               string
-		expectedDeployedVersion          string
-		oldDeployedVersionTimestamp      string
-		expectedDeployedVersionTimestamp string
-		oldCommandFails                  []*bool
-		expectedCommandFails             []*bool
-		oldWebHookFails                  map[string]*bool
-		expectedWebHookFails             map[string]*bool
-		secretRefs                       oldSecretRefs
-		expected                         *Service
+		svc          *Service
+		oldService   *Service
+		statusTests  statusTests
+		commandTests commandTests
+		webhookTests webhookTests
+		secretRefs   oldSecretRefs
+		expected     *Service
 	}{
 		"no secrets": {
 			svc: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("something"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "user",
-						Password: "pass"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: something
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: user
+								password: pass
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "salsy"},
+						nil, "", "",
+						nil,
+						map[string]string{
+							"apikey": "saucy"},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
+						nil, "", "",
+						nil,
+						nil,
+						map[string]string{
 							"avatar": "https://example.com"},
-						"", nil, nil, nil, nil)},
+						nil, nil, nil),
+				},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
@@ -1822,27 +2194,44 @@ func TestService_GiveSecrets(t *testing.T) {
 						"foo",
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
 			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "username",
-						Password: "password"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: username
+								password: password
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
+						nil, "", "", nil,
+						nil,
+						map[string]string{
 							"apikey": "sweet"},
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
+						nil, "", "",
+						nil, nil,
+						map[string]string{
 							"avatar": "https://example.com/logo.png"},
-						"", nil, nil, nil, nil)},
+						nil, nil, nil)},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
@@ -1857,25 +2246,43 @@ func TestService_GiveSecrets(t *testing.T) {
 						"http://foo.com",
 						nil, nil, nil)},
 			},
+			secretRefs: oldSecretRefs{},
 			expected: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("something"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "user",
-						Password: "pass"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: something
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: user
+								password: pass
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "salsy"},
+						nil, "", "", nil,
+						map[string]string{
+							"apikey": "saucy"},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
+						nil, "", "",
+						nil, nil,
+						map[string]string{
 							"avatar": "https://example.com"},
-						"", nil, nil, nil, nil)},
+						nil, nil, nil),
+				},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
@@ -1888,143 +2295,227 @@ func TestService_GiveSecrets(t *testing.T) {
 						"foo",
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
-			secretRefs: oldSecretRefs{},
 		},
 		"minimal CREATE": {
-			svc:        &Service{},
+			svc: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 			oldService: nil,
-			expected:   &Service{},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 		},
 		"no oldService (CREATE)": {
 			svc: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("<secret>"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "<secret>"},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "<secret>"},
+						nil, "", "",
+						nil,
+						map[string]string{
+							"apikey": util.SecretValue},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
+						nil, "", "",
+						nil, nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil),
+				},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://foo.com",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
 			oldService: nil,
+			secretRefs: oldSecretRefs{},
 			expected: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("<secret>"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "<secret>"},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "<secret>"},
+						nil, "", "", nil,
+						map[string]string{
+							"apikey": util.SecretValue},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
+						nil, "", "",
+						nil, nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil)},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://foo.com",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://bar.com",
 						nil, nil, nil)},
 			},
-			secretRefs: oldSecretRefs{},
 		},
 		"no secretRefs": {
 			svc: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("<secret>"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "<secret>"},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "<secret>"},
+						nil, "", "", nil,
+						map[string]string{
+							"apikey": util.SecretValue},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
+						nil, "", "",
+						nil,
+						nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil),
+				},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://foo.com",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
 			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "username",
-						Password: "password"},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: username
+								password: password
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
+						nil, "", "", nil,
+						map[string]string{
 							"apikey": "sweet"},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
+						nil, "", "",
+						nil, nil,
+						map[string]string{
 							"avatar": "https://example.com/logo.png"},
-						"", nil, nil, nil, nil)},
+						nil, nil, nil)},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
@@ -2039,146 +2530,162 @@ func TestService_GiveSecrets(t *testing.T) {
 						"http://bar.com",
 						nil, nil, nil)},
 			},
-			oldWebHookFails: map[string]*bool{
-				"foo": test.BoolPtr(false),
-				"bar": test.BoolPtr(true)},
+			webhookTests: webhookTests{
+				oldFails: map[string]*bool{
+					"foo": test.BoolPtr(false),
+					"bar": test.BoolPtr(true)},
+			},
+			secretRefs: oldSecretRefs{},
 			expected: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "password"},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: password
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "<secret>"},
+						nil, "", "", nil,
+						map[string]string{
+							"apikey": util.SecretValue},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
+						nil, "", "",
+						nil, nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil)},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://foo.com",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://bar.com",
 						nil, nil, nil)},
 			},
-			secretRefs: oldSecretRefs{},
 		},
 		"matching secretRefs": {
 			svc: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "password"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "<secret>"},
-						{Key: "X-Bar", Value: "<secret>"},
-					},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: password
+							headers:
+								- key: X-Foo
+									value: `+util.SecretValue+`
+								- key: X-Bar
+									value: `+util.SecretValue+`
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "<secret>"},
+						nil, "", "",
+						nil,
+						map[string]string{
+							"apikey": util.SecretValue},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
+						nil, "", "",
+						nil, nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil),
+				},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://foo.com",
 						nil, nil, nil),
 					"bar": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
-						"<secret>",
+						util.SecretValue,
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
 			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "username",
-						Password: "password"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "foo"},
-						{Key: "X-Bar", Value: "bar"},
-					},
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: username
+								password: password
+							headers:
+								- key: X-Foo
+									value: foo
+								- key: X-Bar
+									value: bar
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
+						nil, "", "",
+						nil,
+						map[string]string{
 							"apikey": "sweet"},
+						nil,
 						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
+						nil, "", "",
+						nil, nil,
+						map[string]string{
 							"avatar": "https://example.com/logo.png"},
-						"", nil, nil, nil, nil)},
-				WebHook: webhook.Slice{
-					"foo": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
-						"foo",
-						nil, "",
-						"http://foo.com",
 						nil, nil, nil),
-					"bar": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil,
-						"bar",
-						nil, "",
-						"http://bar.com",
-						nil, nil, nil)},
-			},
-			expected: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("somethingelse"),
-					nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Username: "<secret>",
-						Password: "password"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "foo"},
-						{Key: "X-Bar", Value: "bar"},
-					},
 				},
-				Notify: shoutrrr.Slice{
-					"foo": shoutrrr.New(
-						nil, "", nil, nil, "",
-						&map[string]string{
-							"apikey": "sweet"},
-						nil, nil, nil),
-					"bar": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"avatar": "<secret>"},
-						"", nil, nil, nil, nil)},
 				WebHook: webhook.Slice{
 					"foo": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil,
@@ -2191,180 +2698,490 @@ func TestService_GiveSecrets(t *testing.T) {
 						"bar",
 						nil, "",
 						"http://bar.com",
-						nil, nil, nil)},
+						nil, nil, nil),
+				},
 			},
 			secretRefs: oldSecretRefs{
 				DeployedVersionLookup: dvSecretRef{Headers: []oldIntIndex{{OldIndex: test.IntPtr(0)}, {OldIndex: test.IntPtr(1)}}},
-				Notify:                map[string]oldStringIndex{"foo": {OldIndex: test.StringPtr("foo")}, "bar": {OldIndex: test.StringPtr("bar")}},
-				WebHook:               map[string]whSecretRef{"foo": {OldIndex: test.StringPtr("foo")}, "bar": {OldIndex: test.StringPtr("bar")}},
+				Notify:                map[string]oldStringIndex{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
+				WebHook:               map[string]whSecretRef{"foo": {OldIndex: "foo"}, "bar": {OldIndex: "bar"}},
+			},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: somethingElse
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								username: `+util.SecretValue+`
+								password: password
+							headers:
+								- key: X-Foo
+									value: foo
+								- key: X-Bar
+									value: bar
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"foo": shoutrrr.New(
+						nil, "", "",
+						nil,
+						map[string]string{
+							"apikey": "sweet"},
+						nil,
+						nil, nil, nil),
+					"bar": shoutrrr.New(
+						nil, "", "",
+						nil, nil,
+						map[string]string{
+							"avatar": util.SecretValue},
+						nil, nil, nil),
+				},
+				WebHook: webhook.Slice{
+					"foo": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil,
+						"foo",
+						nil, "",
+						"http://foo.com",
+						nil, nil, nil),
+					"bar": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil,
+						"bar",
+						nil, "",
+						"http://bar.com",
+						nil, nil, nil),
+				},
 			},
 		},
 		"unchanged LatestVersion.URL retains Status.LatestVersion": {
 			svc: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com",
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
 			oldService: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com",
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
-			oldLatestVersion:               "1.2.3",
-			expectedLatestVersion:          "1.2.3",
-			oldLatestVersionTimestamp:      time.Now().Format(time.RFC3339),
-			expectedLatestVersionTimestamp: time.Now().Format(time.RFC3339),
-			expected: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com"},
+			statusTests: statusTests{
+				oldLatestVersion:               "1.2.3",
+				expectedLatestVersion:          "1.2.3",
+				oldLatestVersionTimestamp:      time.Now().Format(time.RFC3339),
+				expectedLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 		},
 		"changed LatestVersion.URL loses Status.LatestVersion": {
 			svc: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", `url: https://example.com`,
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
 			oldService: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
-			oldLatestVersion:          "1.2.3",
-			oldLatestVersionTimestamp: time.Now().Format(time.RFC3339),
-			expected: &Service{
-				LatestVersion: latestver.Lookup{
-					Type: "URL",
-					URL:  "https://example.com"},
+			statusTests: statusTests{
+				oldLatestVersion:          "1.2.3",
+				oldLatestVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"url",
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 		},
 		"unchanged DeployedVersion.URL retains Status.DeployedVersion": {
 			svc: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com",
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
 			oldService: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com",
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
-			oldDeployedVersion:               "1.2.3",
-			expectedDeployedVersion:          "1.2.3",
-			oldDeployedVersionTimestamp:      time.Now().Format(time.RFC3339),
-			expectedDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
-			expected: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com",
-				},
+			statusTests: statusTests{
+				oldDeployedVersion:               "1.2.3",
+				expectedDeployedVersion:          "1.2.3",
+				oldDeployedVersionTimestamp:      time.Now().Format(time.RFC3339),
+				expectedDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 		},
 		"changed DeployedVersion.URL loses Status.DeployedVersion": {
 			svc: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com",
-				},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
 			oldService: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com/somewhere-else"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com/somewhere-else
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 			},
-			oldDeployedVersion:          "1.2.3",
-			oldDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
-			expected: &Service{
-				DeployedVersionLookup: &deployedver.Lookup{
-					URL: "https://example.com"},
+			statusTests: statusTests{
+				oldDeployedVersion:          "1.2.3",
+				oldDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
 			},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							url: https://example.com
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
 		},
 		"unchanged WebHook retains Failed": {
 			svc: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 						"http://example.com",
-						nil, nil, nil)}},
+						nil, nil, nil),
+				},
+			},
 			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 						"http://example.com",
-						nil, nil, nil)}},
-			expected: &Service{
-				WebHook: webhook.Slice{
-					"test": webhook.New(
-						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
-						"http://example.com",
-						nil, nil, nil)}},
-			oldWebHookFails: map[string]*bool{
-				"test": test.BoolPtr(true)},
-			expectedWebHookFails: map[string]*bool{
-				"test": test.BoolPtr(true)},
+						nil, nil, nil),
+				},
+			},
 			secretRefs: oldSecretRefs{
-				WebHook: map[string]whSecretRef{"test": {OldIndex: test.StringPtr("test")}}},
+				WebHook: map[string]whSecretRef{
+					"test": {OldIndex: "test"}},
+			},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				WebHook: webhook.Slice{
+					"test": webhook.New(
+						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
+						"http://example.com",
+						nil, nil, nil),
+				},
+			},
+			webhookTests: webhookTests{
+				oldFails: map[string]*bool{
+					"test": test.BoolPtr(true)},
+				expectedFails: map[string]*bool{
+					"test": test.BoolPtr(true)},
+			},
 		},
 		"changed WebHook loses Failed": {
 			svc: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 						"http://example.com/other",
-						nil, nil, nil)}},
+						nil, nil, nil)},
+			},
 			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 						"http://example.com",
-						nil, nil, nil)}},
+						nil, nil, nil)},
+			},
+			secretRefs: oldSecretRefs{},
 			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
 					"test": webhook.New(
 						nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 						"http://example.com/other",
-						nil, nil, nil)}},
-			oldWebHookFails: map[string]*bool{
-				"test": test.BoolPtr(true)},
-			secretRefs: oldSecretRefs{
-				WebHook: map[string]whSecretRef{"test": {OldIndex: test.StringPtr("test")}}},
+						nil, nil, nil)},
+			},
+			webhookTests: webhookTests{
+				oldFails: map[string]*bool{
+					"test": test.BoolPtr(true)},
+			},
 		},
 		"unchanged Command retains Failed": {
 			svc: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
-					{"ls", "-la"}}},
+					{"ls", "-la"}},
+			},
 			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{}},
+				CommandController: &command.Controller{},
+			},
 			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{}},
-			oldCommandFails: []*bool{
-				test.BoolPtr(true)},
-			expectedCommandFails: []*bool{
-				test.BoolPtr(true)},
+				CommandController: &command.Controller{},
+			},
 			secretRefs: oldSecretRefs{},
+			commandTests: commandTests{
+				oldFails: []*bool{
+					test.BoolPtr(true)},
+				expectedFails: []*bool{
+					test.BoolPtr(true)},
+			},
 		},
 		"changed Command loses Failed": {
 			svc: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
-					{"ls", "-lah"}}},
+					{"ls", "-lah"}},
+			},
 			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
 					{"ls", "-la"}},
-				CommandController: &command.Controller{}},
-			expected: &Service{
-				Command: command.Slice{
-					{"ls", "-lah"}}},
-			oldCommandFails: []*bool{
-				test.BoolPtr(true)},
+				CommandController: &command.Controller{},
+			},
 			secretRefs: oldSecretRefs{},
+			expected: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Command: command.Slice{
+					{"ls", "-lah"}},
+			},
+			commandTests: commandTests{
+				oldFails: []*bool{
+					test.BoolPtr(true)},
+			},
 		},
 	}
 
@@ -2375,20 +3192,20 @@ func TestService_GiveSecrets(t *testing.T) {
 			tc.svc.Init(
 				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
 			tc.expected.Init(
 				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
 			if tc.expected != nil {
-				for k, v := range tc.expectedCommandFails {
+				for k, v := range tc.commandTests.expectedFails {
 					if v != nil {
 						tc.expected.Status.Fails.Command.Set(k, *v)
 					}
 				}
-				for k, v := range tc.expectedWebHookFails {
+				for k, v := range tc.webhookTests.expectedFails {
 					tc.expected.Status.Fails.WebHook.Set(k, v)
 				}
 			}
@@ -2396,17 +3213,17 @@ func TestService_GiveSecrets(t *testing.T) {
 				tc.oldService.Init(
 					&Defaults{}, &Defaults{},
 					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 				)
 				if tc.oldService.Command != nil {
 					tc.oldService.CommandController.Command = &tc.oldService.Command
 				}
-				for k, v := range tc.oldCommandFails {
+				for k, v := range tc.commandTests.oldFails {
 					if v != nil {
 						tc.oldService.Status.Fails.Command.Set(k, *v)
 					}
 				}
-				for k, v := range tc.oldWebHookFails {
+				for k, v := range tc.webhookTests.oldFails {
 					tc.oldService.Status.Fails.WebHook.Set(k, v)
 				}
 			}
@@ -2416,9 +3233,11 @@ func TestService_GiveSecrets(t *testing.T) {
 
 			// THEN we should get a Service with the secrets from the old Service
 			gotService := tc.svc
-			if gotService.String("") != tc.expected.String("") {
-				t.Errorf("Want:\n%v\n\nGot:\n%v",
-					tc.expected, gotService)
+			gotServiceStr := gotService.String("")
+			expectedStr := tc.expected.String("")
+			if gotServiceStr != expectedStr {
+				t.Errorf("secrets weren't passed on with giveSecrets()\n%q\n\nGot:\n%q",
+					expectedStr, gotServiceStr)
 			}
 
 			if gotService.WebHook != nil {
@@ -2451,747 +3270,59 @@ func TestService_GiveSecrets(t *testing.T) {
 	}
 }
 
-func TestFromPayload_ReadFromFail(t *testing.T) {
-	// GIVEN an invalid payload
-	payloadStr := "this is a long payload"
-	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
-	payload = http.MaxBytesReader(nil, payload, 5)
-
-	// WHEN we call New
-	_, err := FromPayload(
-		&Service{},
-		&payload,
-		&Defaults{},
-		&Defaults{},
-		&shoutrrr.SliceDefaults{},
-		&shoutrrr.SliceDefaults{},
-		&shoutrrr.SliceDefaults{},
-		&webhook.SliceDefaults{},
-		&webhook.WebHookDefaults{},
-		&webhook.WebHookDefaults{},
-		&util.LogFrom{},
-	)
-
-	// THEN we should get an error
-	if err == nil {
-		t.Errorf("Want error, got nil")
-	}
-}
-
-func TestFromPayload(t *testing.T) {
-	// GIVEN a payload and the Service defaults
-	tests := map[string]struct {
-		oldService *Service
-		payload    string
-
-		serviceDefaults     *Defaults
-		serviceHardDefaults *Defaults
-
-		notifyGlobals      *shoutrrr.SliceDefaults
-		notifyDefaults     *shoutrrr.SliceDefaults
-		notifyHardDefaults *shoutrrr.SliceDefaults
-
-		webhookGlobals      *webhook.SliceDefaults
-		webhookDefaults     *webhook.WebHookDefaults
-		webhookHardDefaults *webhook.WebHookDefaults
-
-		want     *Service
-		errRegex string
-	}{
-		"empty payload": {
-			payload:  "",
-			errRegex: "^EOF$",
-		},
-		"invalid payload": {
-			payload:  strings.Repeat("a", 1048577),
-			errRegex: "^invalid character 'a' looking for beginning of value$",
-		},
-		"invalid Service payload": {
-			payload:  `{"name": false}`,
-			errRegex: "^json: cannot unmarshal bool into Go struct field Service.name of type string$",
-		},
-		"invalid SecretRefs payload": {
-			payload: `{
-				"webhook": {
-					"foo": {
-						"oldIndex": false}}}`,
-			errRegex: "^json: cannot unmarshal bool into Go struct field whSecretRef.webhook.oldIndex of type string",
-		},
-		"active True becomes nil": {
-			payload: `{
-				"options": {
-					"active": true}}`,
-			// Defaults as otherwise everything will be zero, so won't print
-			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				Options: opt.Options{
-					Active:   nil,
-					Defaults: &opt.OptionsDefaults{}},
-				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
-		},
-		"active nil stays nil": {
-			payload: `{
-				"options": {
-					"active": null}}`,
-			// Defaults as otherwise everything will be zero, so won't print
-			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				Options: opt.Options{
-					Active:   nil,
-					Defaults: &opt.OptionsDefaults{}},
-				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
-		},
-		"active False stays false": {
-			payload: `{
-				"options": {
-					"active": false}}`,
-			// Defaults as otherwise everything will be zero, so won't print
-			want: &Service{
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				Options: opt.Options{
-					Active:   test.BoolPtr(false),
-					Defaults: &opt.OptionsDefaults{}},
-				LatestVersion: latestver.Lookup{Defaults: &latestver.LookupDefaults{}}},
-		},
-		"Require.Docker removed if no Image&Tag": {
-			payload: `{
-				"latest_version": {
-					"require": {
-						"docker": {
-							"type": "ghcr"}}}}`,
-			want: &Service{
-				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				LatestVersion: latestver.Lookup{
-					Defaults: &latestver.LookupDefaults{}}},
-		},
-		"Require.Docker stays if have Type&Image&Tag": {
-			payload: `{
-				"latest_version": {
-					"require": {
-						"docker": {
-							"type": "ghcr",
-							"image": "release-argus-argus",
-							"tag": "latest"}}}}`,
-			want: &Service{
-				Options: opt.Options{Defaults: &opt.OptionsDefaults{}},
-				LatestVersion: latestver.Lookup{
-					Require: &filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr",
-							"release-argus-argus",
-							"latest",
-							"", "", "", time.Now(), nil)}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}}},
-		},
-		"Give LatestVersion secrets": {
-			payload: `{
-				"latest_version": {
-					"access_token": "<secret>",
-					"require": {
-						"docker": {
-							"type": "ghcr",
-							"image": "release-argus/argus",
-							"tag": "{{ version }}",
-							"token": "<secret>"}}}}`,
-			serviceHardDefaults: &Defaults{
-				LatestVersion: latestver.LookupDefaults{
-					Require: filter.RequireDefaults{
-						Docker: filter.DockerCheckDefaults{
-							Type: "ghcr"}}}},
-			want: &Service{
-				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil)},
-			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil)},
-		},
-		"Give DeployedVersion secrets": {
-			payload: `{
-				"latest_version": {
-					"access_token": "<secret>",
-					"require": {
-						"docker": {
-							"type": "ghcr",
-							"image": "release-argus/argus",
-							"tag": "{{ version }}",
-							"token": "<secret>"}}},
-				"deployed_version": {
-					"basic_auth": {
-						"password": "<secret>"},
-					"headers": [
-						{"key": "X-Foo", "value": "<secret>", "oldIndex": 0}]}}`,
-			want: &Service{
-				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-			},
-			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-			},
-		},
-		"Give Notify secrets": {
-			payload: `{
-				"latest_version": {
-					"access_token": "<secret>",
-					"require": {
-						"docker": {
-							"type": "ghcr",
-							"image": "release-argus/argus",
-							"tag": "{{ version }}",
-							"token": "<secret>"}}},
-				"deployed_version": {
-					"basic_auth": {
-						"password": "<secret>"},
-					"headers": [
-						{"key": "X-Foo","value": "<secret>","oldIndex": 0}]},
-				"notify": {
-					"slack": {
-						"type": "slack",
-						"url_fields": {
-							"token": "<secret>"},
-						"oldIndex": "slack-initial"},
-					"join": {
-						"type": "join",
-						"url_fields": {
-							"apikey": "<secret>"},
-						"params": {
-							"devices": "<secret>",
-							"icon": "https://example.com/icon.png"},
-						"oldIndex": "join-initial"},
-					"zulip": {
-						"type": "zulip",
-						"url_fields": {
-							"botkey": "<secret>"},
-						"oldIndex": "zulip-initial"},
-					"matrix-": {
-						"type": "matrix",
-						"url_fields": {
-							"password": "<secret>"},
-						"oldIndex": "matrix-initial"},
-					"rocketchat": {
-						"type": "rocketchat",
-						"url_fields": {
-							"tokena": "<secret>",
-							"tokenb": "<secret>"},
-						"oldIndex": "rocketchat-initial"},
-					"teams": {
-						"type": "teams",
-						"url_fields": {
-							"altid": "<secret>"},
-						"oldIndex": "teams-initial"}}}`,
-			want: &Service{
-				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/argus", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-				Notify: shoutrrr.Slice{
-					"slack": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"token": "slackToken"},
-						nil, nil, nil),
-					"join": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"devices": "aDevice",
-							"icon":    "https://example.com/icon.png"},
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"apikey": "joinApiKey"},
-						nil, nil, nil),
-					"zulip": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"botkey": "zulipBotKey"},
-						nil, nil, nil),
-					"matrix-": shoutrrr.New(
-						nil, "", nil, nil,
-						"matrix",
-						&map[string]string{
-							"password": "matrixToken"},
-						nil, nil, nil),
-					"rocketchat": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"tokena": "rocketchatTokenA",
-							"tokenb": "rocketchatTokenB"},
-						nil, nil, nil),
-					"teams": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"altid": "teamsAltID"},
-						nil, nil, nil)},
-			},
-			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-				Notify: shoutrrr.Slice{
-					"slack-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"botname": "testBotName"},
-						"slack",
-						&map[string]string{
-							"token":   "slackToken",
-							"channel": "slackChannel"},
-						nil, nil, nil),
-					"join-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"devices": "aDevice"},
-						"join",
-						&map[string]string{
-							"apikey": "joinApiKey"},
-						nil, nil, nil),
-					"zulip-initial": shoutrrr.New(
-						nil, "", nil, nil,
-						"zulip",
-						&map[string]string{
-							"botmail": "zulipBotMail",
-							"botkey":  "zulipBotKey",
-							"host":    "zulipHost"},
-						nil, nil, nil),
-					"matrix-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"title": "matrixTitle"},
-						"matrix",
-						&map[string]string{
-							"password": "matrixToken",
-							"host":     "matrixHost"},
-						nil, nil, nil),
-					"rocketchat-initial": shoutrrr.New(
-						nil, "", nil, nil,
-						"rocketchat",
-						&map[string]string{
-							"host":    "rocketchatHost",
-							"tokena":  "rocketchatTokenA",
-							"tokenb":  "rocketchatTokenB",
-							"channel": "rocketchatChannel"},
-						nil, nil, nil),
-					"teams-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"host": "teamsHost"},
-						"teams",
-						&map[string]string{
-							"group":      "teamsGroup",
-							"tenant":     "teamsTenant",
-							"altid":      "teamsAltID",
-							"groupowner": "teamsGroupOwner"},
-						nil, nil, nil)},
-			},
-		},
-		"Give WebHook secrets": {
-			payload: `{
-				"latest_version": {
-					"access_token": "<secret>",
-					"require": {
-						"docker": {
-							"type": "ghcr",
-							"image": "release-argus/args",
-							"tag": "{{ version }}",
-							"token": "<secret>"}}},
-				"deployed_version": {
-					"basic_auth": {
-						"password": "<secret>"},
-					"headers": [
-						{"key": "X-Foo","value": "<secret>","oldIndex": 0}]},
-				"notify": {
-					"slack": {
-						"type": "slack",
-						"url_fields": {
-							"token": "<secret>"},
-						"oldIndex": "slack-initial"},
-					"join": {
-						"type": "join",
-						"url_fields": {
-							"apikey": "<secret>"},
-						"params": {
-							"devices": "<secret>",
-							"icon": "https://example.com/icon.png"},
-						"oldIndex": "join-initial"},
-					"zulip": {
-						"type": "zulip",
-						"url_fields": {
-							"botkey": "<secret>"},
-						"oldIndex": "zulip-initial"},
-					"matrix-": {
-						"type": "matrix",
-						"url_fields": {
-							"password": "<secret>"},
-						"oldIndex": "matrix-initial"},
-					"rocketchat": {
-						"type": "rocketchat",
-						"url_fields": {
-							"tokena": "<secret>",
-							"tokenb": "<secret>"},
-						"oldIndex": "rocketchat-initial"},
-					"teams": {
-						"type": "teams",
-						"url_fields": {
-							"altid": "<secret>"},
-						"oldIndex": "teams-initial"}},
-				"webhook": {
-					"github": {
-						"type": "github",
-						"secret": "<secret>",
-						"custom_headers": [
-							{"key": "X-Foo", "Value": "<secret>", "oldIndex": 0}],
-						"oldIndex": "github-initial"},
-					"gitlab-": {
-						"type": "gitlab",
-						"secret": "<secret>",
-						"custom_headers": [
-							{"key": "X-Bar", "Value": "<secret>", "oldIndex": 0}],
-						"oldIndex": "gitlab-initial"}}}}`,
-			want: &Service{
-				Options:   opt.Options{Defaults: &opt.OptionsDefaults{}},
-				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-				Notify: shoutrrr.Slice{
-					"slack": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"token": "slackToken"},
-						nil, nil, nil),
-					"join": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"devices": "aDevice",
-							"icon":    "https://example.com/icon.png"},
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"apikey": "joinApiKey"},
-						nil, nil, nil),
-					"zulip": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"botkey": "zulipBotKey"},
-						nil, nil, nil),
-					"matrix-": shoutrrr.New(
-						nil, "", nil, nil,
-						"matrix",
-						&map[string]string{
-							"password": "matrixToken"},
-						nil, nil, nil),
-					"rocketchat": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"tokena": "rocketchatTokenA",
-							"tokenb": "rocketchatTokenB"},
-						nil, nil, nil),
-					"teams": shoutrrr.New(
-						nil, "", nil, nil,
-						"", // Type removed as it's in ID
-						&map[string]string{
-							"altid": "teamsAltId"},
-						nil, nil, nil),
-				},
-				WebHook: webhook.Slice{
-					"github": webhook.New(
-						nil,
-						&webhook.Headers{
-							{Key: "X-Foo", Value: "aFoo"}},
-						"", nil, nil, nil, nil, nil,
-						"githubSecret",
-						nil,
-						"", // Type removed as it's in ID
-						"", nil, nil, nil),
-					"gitlab-": webhook.New(
-						nil,
-						&webhook.Headers{
-							{Key: "X-Bar", Value: "aBar"}},
-						"", nil, nil, nil, nil, nil,
-						"gitlabSecret",
-						nil,
-						"gitlab",
-						"", nil, nil, nil)},
-			},
-			oldService: &Service{
-				LatestVersion: *latestver.New(
-					test.StringPtr("aToken"),
-					nil, nil, nil,
-					&filter.Require{
-						Docker: filter.NewDockerCheck(
-							"ghcr", "release-argus/args", "{{ version }}", "", "anotherToken", "", time.Now(), nil)},
-					nil, "", "", nil, nil, nil, nil),
-				DeployedVersionLookup: &deployedver.Lookup{
-					BasicAuth: &deployedver.BasicAuth{
-						Password: "aPassword"},
-					Headers: []deployedver.Header{
-						{Key: "X-Foo", Value: "aFoo"}}},
-				Notify: shoutrrr.Slice{
-					"slack-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"botname": "testBotName"},
-						"slack",
-						&map[string]string{
-							"token":   "slackToken",
-							"channel": "slackChannel"},
-						nil, nil, nil),
-					"join-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"devices": "aDevice"},
-						"join",
-						&map[string]string{
-							"apikey": "joinApiKey"},
-						nil, nil, nil),
-					"zulip-initial": shoutrrr.New(
-						nil, "", nil, nil,
-						"zulip",
-						&map[string]string{
-							"botmail": "zulipBotMail",
-							"botkey":  "zulipBotKey",
-							"host":    "zulipHost"},
-						nil, nil, nil),
-					"matrix-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"title": "matrixTitle"},
-						"matrix",
-						&map[string]string{
-							"password": "matrixToken",
-							"host":     "matrixHost"},
-						nil, nil, nil),
-					"rocketchat-initial": shoutrrr.New(
-						nil, "", nil, nil,
-						"rocketchat",
-						&map[string]string{
-							"host":    "rocketchatHost",
-							"tokena":  "rocketchatTokenA",
-							"tokenb":  "rocketchatTokenB",
-							"channel": "rocketchatChannel"},
-						nil, nil, nil),
-					"teams-initial": shoutrrr.New(
-						nil, "", nil,
-						&map[string]string{
-							"host": "teamsHost"},
-						"teams",
-						&map[string]string{
-							"group":      "teamsGroup",
-							"tenant":     "teamsTenant",
-							"altid":      "teamsAltId",
-							"groupowner": "teamsGroupOwner"},
-						nil, nil, nil)},
-				WebHook: webhook.Slice{
-					"github-initial": webhook.New(
-						nil,
-						&webhook.Headers{
-							{Key: "X-Foo", Value: "aFoo"}},
-						"", nil, nil, nil, nil, nil,
-						"githubSecret",
-						nil,
-						"github-initial",
-						"", nil, nil, nil),
-					"gitlab-initial": webhook.New(
-						nil,
-						&webhook.Headers{
-							{Key: "X-Bar", Value: "aBar"}},
-						"", nil, nil, nil, nil, nil,
-						"gitlabSecret",
-						nil,
-						"gitlab-initial",
-						"", nil, nil, nil)},
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// Convert the string payload to a ReadCloser
-			tc.payload = test.TrimJSON(tc.payload)
-			reader := bytes.NewReader([]byte(tc.payload))
-			payload := io.NopCloser(reader)
-			if tc.serviceHardDefaults == nil {
-				tc.serviceHardDefaults = &Defaults{}
-			}
-			if tc.serviceDefaults == nil {
-				tc.serviceDefaults = &Defaults{}
-			}
-			if tc.notifyDefaults == nil {
-				tc.notifyDefaults = &shoutrrr.SliceDefaults{}
-			}
-			if tc.notifyHardDefaults == nil {
-				tc.notifyHardDefaults = &shoutrrr.SliceDefaults{}
-			}
-			if tc.oldService != nil {
-				tc.oldService.Init(
-					&Defaults{}, &Defaults{},
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
-			}
-
-			// WHEN we call FromPayload
-			got, err := FromPayload(
-				tc.oldService,
-				&payload,
-				tc.serviceDefaults,
-				tc.serviceHardDefaults,
-				tc.notifyGlobals,
-				tc.notifyDefaults,
-				tc.notifyHardDefaults,
-				tc.webhookGlobals,
-				tc.webhookDefaults,
-				tc.webhookHardDefaults,
-				&util.LogFrom{Primary: name})
-
-			// THEN we get an error if the payload is invalid
-			if tc.errRegex != "" || err != nil {
-				// No error expected
-				if tc.errRegex == "" {
-					tc.errRegex = "^$"
-				}
-				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
-				}
-				return
-			}
-			// AND we should get a new Service otherwise
-			if got.String("") != tc.want.String("") {
-				t.Errorf("Want:\n%s\n\nGot:\n%s",
-					tc.want.String(""), got.String(""))
-			}
-		})
-	}
-}
-
 func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service
-	testLV := testLatestVersion("url", false)
-	testLV.Query(false, &util.LogFrom{})
-	testDVL := testDeployedVersionLookup(false)
-	v, _ := testDVL.Query(false, &util.LogFrom{})
-	testDVL.Status.SetDeployedVersion(v, false)
+	testLV := testLatestVersion(t, "url", false)
+	testLV.Query(false, util.LogFrom{})
+	testDVL := testDeployedVersionLookup(t, false)
+	v, _ := testDVL.Query(false, util.LogFrom{})
+	testDVL.Status.SetDeployedVersion(v, "", false)
 	tests := map[string]struct {
-		svc                  *Service
-		startLatestVersion   string
-		wantLatestVersion    string
-		startDeployedVersion string
-		wantDeployedVersion  string
-		errRegex             string
+		svc                                       *Service
+		startLatestVersion, wantLatestVersion     string
+		startDeployedVersion, wantDeployedVersion string
+		errRegex                                  string
 	}{
 		"Already have LatestVersion, nil DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersion("url", false),
+				LatestVersion:         testLatestVersion(t, "url", false),
 				DeployedVersionLookup: nil},
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.Status.LatestVersion(),
+			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
 			startDeployedVersion: "bar",
 			wantDeployedVersion:  "bar",
-			errRegex:             "^$",
+			errRegex:             `^$`,
 		},
 		"Already have LatestVersion and DeployedVersionLookup": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersion("url", false),
-				DeployedVersionLookup: testDeployedVersionLookup(false)},
+				LatestVersion:         testLatestVersion(t, "url", false),
+				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.Status.LatestVersion(),
+			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
 			wantDeployedVersion:  testDVL.Status.DeployedVersion(),
 			startDeployedVersion: "bar",
-			errRegex:             "^$",
+			errRegex:             `^$`,
 		},
 		"latest_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersion("url", true),
-				DeployedVersionLookup: testDeployedVersionLookup(false)},
+				LatestVersion:         testLatestVersion(t, "url", true),
+				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
 			errRegex: `latest_version - x509 \(certificate invalid\)`,
 		},
 		"deployed_version query fails": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersion("url", false),
-				DeployedVersionLookup: testDeployedVersionLookup(true)},
+				LatestVersion:         testLatestVersion(t, "url", false),
+				DeployedVersionLookup: testDeployedVersionLookup(t, true)},
 			wantLatestVersion: "1.2.2",
 			errRegex:          `deployed_version - x509 \(certificate invalid\)`,
 		},
 		"both queried": {
 			svc: &Service{
-				LatestVersion:         *testLatestVersion("url", false),
-				DeployedVersionLookup: testDeployedVersionLookup(false)},
+				LatestVersion:         testLatestVersion(t, "url", false),
+				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
 			wantLatestVersion:   "1.2.2",
 			wantDeployedVersion: "1.2.3",
-			errRegex:            "^$",
+			errRegex:            `^$`,
 		},
 		"inactive queries neither": {
 			svc: &Service{
@@ -3199,9 +3330,9 @@ func TestService_CheckFetches(t *testing.T) {
 					test.BoolPtr(false), // active
 					"", nil,
 					nil, nil),
-				LatestVersion:         *testLatestVersion("url", false),
-				DeployedVersionLookup: testDeployedVersionLookup(false)},
-			errRegex: "^$",
+				LatestVersion:         testLatestVersion(t, "url", false),
+				DeployedVersionLookup: testDeployedVersionLookup(t, false)},
+			errRegex: `^$`,
 		},
 	}
 
@@ -3209,29 +3340,24 @@ func TestService_CheckFetches(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			hardDefaults := Defaults{}
+			hardDefaults.Default()
 			tc.svc.Init(
-				&Defaults{
-					Options: *opt.NewDefaults(
-						"", nil)},
-				&Defaults{
-					Options: *opt.NewDefaults(
-						"0h", test.BoolPtr(true))},
+				&Defaults{}, &hardDefaults,
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{},
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
 			)
 			announceChannel := make(chan []byte, 5)
 			tc.svc.Status.AnnounceChannel = &announceChannel
-			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, false)
-			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, false)
+			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, "", false)
+			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, "", false)
 
 			// WHEN we call CheckFetches
 			err := tc.svc.CheckFetches()
 
 			// THEN we get the err we expect
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -3259,7 +3385,7 @@ func TestRemoveDefaults(t *testing.T) {
 		svc                     *Service
 		wasUsingNotifyDefaults  bool
 		wasUsingCommandDefaults bool
-		wasUsingWebHookDefaults bool
+		wasUsingDefaults        bool
 		d                       *Defaults
 		want                    *Service
 	}{
@@ -3268,9 +3394,9 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3279,7 +3405,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  false,
 			wasUsingCommandDefaults: false,
-			wasUsingWebHookDefaults: false,
+			wasUsingDefaults:        false,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"bish": {}},
@@ -3290,9 +3416,9 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3305,13 +3431,13 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil),
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil),
 					"gotify": shoutrrr.New(
-						nil, "bar", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "bar", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3320,7 +3446,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
-			wasUsingWebHookDefaults: true,
+			wasUsingDefaults:        true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"foo":    {},
@@ -3337,10 +3463,10 @@ func TestRemoveDefaults(t *testing.T) {
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
 						nil, "foo",
-						&map[string]string{
+						"gotify",
+						map[string]string{
 							"message": "bar"},
 						nil,
-						"gotify",
 						nil, nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
@@ -3350,7 +3476,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
-			wasUsingWebHookDefaults: true,
+			wasUsingDefaults:        true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}},
@@ -3362,10 +3488,10 @@ func TestRemoveDefaults(t *testing.T) {
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
 						nil, "foo",
-						&map[string]string{
+						"gotify",
+						map[string]string{
 							"message": "bar"},
 						nil,
-						"gotify",
 						nil, nil, nil, nil)}},
 		},
 		"WebHook default changed": {
@@ -3373,7 +3499,10 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil, "gotify", nil, nil, nil, nil)},
+						nil, "foo",
+						"gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3384,7 +3513,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
-			wasUsingWebHookDefaults: true,
+			wasUsingDefaults:        true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}},
@@ -3406,9 +3535,9 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3417,7 +3546,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
-			wasUsingWebHookDefaults: true,
+			wasUsingDefaults:        true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}},
@@ -3428,18 +3557,18 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Command: command.Slice{{"rm", "-rf", "foo.txt"}}},
 		},
-		"defaults overriden by changing size of slice": {
+		"defaults overridden by changing size of slice": {
 			svc: &Service{
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil),
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "bar", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "bar", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3452,7 +3581,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}},
 			wasUsingNotifyDefaults:  true,
 			wasUsingCommandDefaults: true,
-			wasUsingWebHookDefaults: true,
+			wasUsingDefaults:        true,
 			d: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}},
@@ -3463,13 +3592,13 @@ func TestRemoveDefaults(t *testing.T) {
 				Comment: "foo",
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil),
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil),
 					"bar": shoutrrr.New(
-						nil, "bar", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "bar", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}, {"rm", "-rf", "foo.txt"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3490,9 +3619,9 @@ func TestRemoveDefaults(t *testing.T) {
 			oldService := Service{
 				Notify: shoutrrr.Slice{
 					"foo": shoutrrr.New(
-						nil, "foo", nil, nil,
-						"gotify",
-						nil, nil, nil, nil)},
+						nil, "foo", "gotify",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{{"ls", "-lah"}},
 				WebHook: webhook.Slice{
 					"bar": webhook.New(
@@ -3501,7 +3630,7 @@ func TestRemoveDefaults(t *testing.T) {
 						"", nil, nil, nil)}}
 			oldService.notifyFromDefaults = tc.wasUsingNotifyDefaults
 			oldService.commandFromDefaults = tc.wasUsingCommandDefaults
-			oldService.webhookFromDefaults = tc.wasUsingWebHookDefaults
+			oldService.webhookFromDefaults = tc.wasUsingDefaults
 
 			// WHEN we call RemoveDefaults
 			removeDefaults(&oldService, tc.svc, tc.d)
@@ -3510,6 +3639,875 @@ func TestRemoveDefaults(t *testing.T) {
 			if tc.want.String("") != tc.svc.String("") {
 				t.Errorf("\nwant: %q\ngot:  %q",
 					tc.want.String(""), tc.svc.String(""))
+			}
+		})
+	}
+}
+
+func TestFromPayload_ReadFromFail(t *testing.T) {
+	// GIVEN an invalid payload
+	payloadStr := "this is a long payload"
+	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
+	payload = http.MaxBytesReader(nil, payload, 5)
+
+	// WHEN we call New
+	_, err := FromPayload(
+		&Service{},
+		&payload,
+		&Defaults{}, &Defaults{},
+		&shoutrrr.SliceDefaults{},
+		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+		&webhook.SliceDefaults{},
+		&webhook.Defaults{}, &webhook.Defaults{},
+		util.LogFrom{},
+	)
+
+	// THEN we should get an error
+	if err == nil {
+		t.Errorf("Want error, got nil")
+	}
+}
+
+func TestFromPayload(t *testing.T) {
+	// GIVEN a payload and the Service defaults
+	tests := map[string]struct {
+		oldService *Service
+		payload    string
+
+		serviceDefaults, serviceHardDefaults *Defaults
+
+		notifyGlobals, notifyDefaults, notifyHardDefaults *shoutrrr.SliceDefaults
+
+		webhookGlobals                       *webhook.SliceDefaults
+		webhookDefaults, webhookHardDefaults *webhook.Defaults
+
+		want     *Service
+		errRegex string
+	}{
+		"empty payload": {
+			payload:  "",
+			errRegex: `^EOF$`,
+		},
+		"invalid payload": {
+			payload:  strings.Repeat("a", 1048577),
+			errRegex: `^invalid character 'a' looking for beginning of value$`,
+		},
+		"invalid Service payload": {
+			payload:  `{"name": false}`,
+			errRegex: `json: cannot unmarshal bool into Go struct field [^ ]+ of type string$`,
+		},
+		"invalid SecretRefs payload": {
+			payload: `{
+				"webhook": {
+					"foo": {
+						"oldIndex": false}}}`,
+			errRegex: `json: cannot unmarshal bool into Go struct field [^ ]+ of type string`,
+		},
+		"active True becomes nil": {
+			payload: `{
+				"options": {
+					"active": true}}`,
+			// Defaults as otherwise everything will be zero, so won't print
+			want: &Service{
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Options: opt.Options{
+					Active:   nil,
+					Defaults: &opt.Defaults{}},
+			},
+			errRegex: `^$`,
+		},
+		"active nil stays nil": {
+			payload: `{
+				"options": {
+					"active": null}}`,
+			// Defaults as otherwise everything will be zero, so won't print
+			want: &Service{
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Options: opt.Options{
+					Active:   nil,
+					Defaults: &opt.Defaults{}},
+			},
+			errRegex: `^$`,
+		},
+		"active False stays false": {
+			payload: `{
+				"options": {
+					"active": false}}`,
+			// Defaults as otherwise everything will be zero, so won't print
+			want: &Service{
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				Options: opt.Options{
+					Active:   test.BoolPtr(false),
+					Defaults: &opt.Defaults{}},
+			},
+			errRegex: `^$`,
+		},
+		"Require.Docker removed if no Image&Tag": {
+			payload: `{
+				"latest_version": {
+					"type": "github",
+					"require": {
+						"docker": {
+							"type": "ghcr"}}}}`,
+			want: &Service{
+				Options:   opt.Options{Defaults: &opt.Defaults{}},
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", "",
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				})},
+			errRegex: `^$`,
+		},
+		"Require.Docker stays if have Type&Image&Tag": {
+			payload: `{
+				"latest_version": {
+					"type": "github",
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus-argus",
+							"tag": "latest"}}}}`,
+			want: &Service{
+				Options: opt.Options{Defaults: &opt.Defaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							require:
+								docker:
+									type: ghcr
+									image: release-argus-argus
+									tag: latest
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+			},
+			errRegex: `^$`,
+		},
+		"Give LatestVersion secrets": {
+			payload: `{
+				"latest_version": {
+					"access_token": "` + util.SecretValue + `",
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
+							"token": "` + util.SecretValue + `"}}}}`,
+			serviceHardDefaults: &Defaults{
+				LatestVersion: latestver_base.Defaults{
+					Require: filter.RequireDefaults{
+						Docker: filter.DockerCheckDefaults{
+							Type: "ghcr"}}},
+			},
+			want: &Service{
+				Options:   opt.Options{Defaults: &opt.Defaults{}},
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+			},
+			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+			},
+			errRegex: `^$`,
+		},
+		"Give DeployedVersion secrets": {
+			payload: `{
+				"latest_version": {
+					"type": "github",
+					"access_token": "` + util.SecretValue + `",
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
+							"token": "` + util.SecretValue + `"}}},
+				"deployed_version": {
+					"basic_auth": {
+						"password": "` + util.SecretValue + `"},
+					"headers": [
+						{"key": "X-Foo", "value": "` + util.SecretValue + `", "oldIndex": 0}]}}`,
+			want: &Service{
+				Options:   opt.Options{Defaults: &opt.Defaults{}},
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
+			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			},
+			errRegex: `^$`,
+		},
+		"Give Notify secrets": {
+			payload: `{
+				"latest_version": {
+					"type": "github",
+					"access_token": "` + util.SecretValue + `",
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/argus",
+							"tag": "{{ version }}",
+							"token": "` + util.SecretValue + `"}}},
+				"deployed_version": {
+					"basic_auth": {
+						"password": "` + util.SecretValue + `"},
+					"headers": [
+						{"key": "X-Foo","value": "` + util.SecretValue + `","oldIndex": 0}]},
+				"notify": {
+					"slack": {
+						"type": "slack",
+						"url_fields": {
+							"token": "` + util.SecretValue + `"},
+						"oldIndex": "slack-initial"},
+					"join": {
+						"type": "join",
+						"url_fields": {
+							"apikey": "` + util.SecretValue + `"},
+						"params": {
+							"devices": "` + util.SecretValue + `",
+							"icon": "https://example.com/icon.png"},
+						"oldIndex": "join-initial"},
+					"zulip": {
+						"type": "zulip",
+						"url_fields": {
+							"botkey": "` + util.SecretValue + `"},
+						"oldIndex": "zulip-initial"},
+					"matrix-": {
+						"type": "matrix",
+						"url_fields": {
+							"password": "` + util.SecretValue + `"},
+						"oldIndex": "matrix-initial"},
+					"rocketchat": {
+						"type": "rocketchat",
+						"url_fields": {
+							"tokena": "` + util.SecretValue + `",
+							"tokenb": "` + util.SecretValue + `"},
+						"oldIndex": "rocketchat-initial"},
+					"teams": {
+						"type": "teams",
+						"url_fields": {
+							"altid": "` + util.SecretValue + `"},
+						"oldIndex": "teams-initial"}}}`,
+			want: &Service{
+				Options:   opt.Options{Defaults: &opt.Defaults{}},
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"slack": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"token": "slackToken"},
+						nil,
+						nil, nil, nil),
+					"join": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"devices": "aDevice",
+							"icon":    "https://example.com/icon.png"},
+						map[string]string{
+							"apikey": "joinApiKey"},
+						nil, nil, nil),
+					"zulip": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"botkey": "zulipBotKey"},
+						nil,
+						nil, nil, nil),
+					"matrix-": shoutrrr.New(
+						nil, "",
+						"matrix",
+						nil,
+						map[string]string{
+							"password": "matrixToken"},
+						nil,
+						nil, nil, nil),
+					"rocketchat": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"tokena": "rocketchatTokenA",
+							"tokenb": "rocketchatTokenB"},
+						nil,
+						nil, nil, nil),
+					"teams": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"altid": "teamsAltID"},
+						nil,
+						nil, nil, nil),
+				},
+			},
+			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/argus
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"slack-initial": shoutrrr.New(
+						nil, "",
+						"slack",
+						nil,
+						map[string]string{
+							"botname": "testBotName"},
+						map[string]string{
+							"token":   "slackToken",
+							"channel": "slackChannel"},
+						nil, nil, nil),
+					"join-initial": shoutrrr.New(
+						nil, "",
+						"join",
+						nil,
+						map[string]string{
+							"apikey": "joinApiKey"},
+						map[string]string{
+							"devices": "aDevice"},
+						nil, nil, nil),
+					"zulip-initial": shoutrrr.New(
+						nil, "",
+						"zulip",
+						nil,
+						map[string]string{
+							"botmail": "zulipBotMail",
+							"botkey":  "zulipBotKey",
+							"host":    "zulipHost"},
+						nil,
+						nil, nil, nil),
+					"matrix-initial": shoutrrr.New(
+						nil, "",
+						"matrix",
+						map[string]string{
+							"title": "matrixTitle"},
+						map[string]string{
+							"password": "matrixToken",
+							"host":     "matrixHost"},
+						nil,
+						nil, nil, nil),
+					"rocketchat-initial": shoutrrr.New(
+						nil, "",
+						"rocketchat",
+						nil,
+						map[string]string{
+							"host":    "rocketchatHost",
+							"tokena":  "rocketchatTokenA",
+							"tokenb":  "rocketchatTokenB",
+							"channel": "rocketchatChannel"},
+						nil,
+						nil, nil, nil),
+					"teams-initial": shoutrrr.New(
+						nil, "",
+						"teams",
+						nil,
+						map[string]string{
+							"group":      "teamsGroup",
+							"tenant":     "teamsTenant",
+							"altid":      "teamsAltID",
+							"groupowner": "teamsGroupOwner"},
+						map[string]string{
+							"host": "teamsHost"},
+						nil, nil, nil),
+				},
+			},
+			errRegex: `^$`,
+		},
+		"Give WebHook secrets": {
+			payload: `{
+				"latest_version": {
+					"type": "github",
+					"access_token": "` + util.SecretValue + `",
+					"require": {
+						"docker": {
+							"type": "ghcr",
+							"image": "release-argus/args",
+							"tag": "{{ version }}",
+							"token": "` + util.SecretValue + `"}}},
+				"deployed_version": {
+					"basic_auth": {
+						"password": "` + util.SecretValue + `"},
+					"headers": [
+						{"key": "X-Foo","value": "` + util.SecretValue + `","oldIndex": 0}]},
+				"notify": {
+					"slack": {
+						"type": "slack",
+						"url_fields": {
+							"token": "` + util.SecretValue + `"},
+						"oldIndex": "slack-initial"},
+					"join": {
+						"type": "join",
+						"url_fields": {
+							"apikey": "` + util.SecretValue + `"},
+						"params": {
+							"devices": "` + util.SecretValue + `",
+							"icon": "https://example.com/icon.png"},
+						"oldIndex": "join-initial"},
+					"zulip": {
+						"type": "zulip",
+						"url_fields": {
+							"botkey": "` + util.SecretValue + `"},
+						"oldIndex": "zulip-initial"},
+					"matrix-": {
+						"type": "matrix",
+						"url_fields": {
+							"password": "` + util.SecretValue + `"},
+						"oldIndex": "matrix-initial"},
+					"rocketchat": {
+						"type": "rocketchat",
+						"url_fields": {
+							"tokena": "` + util.SecretValue + `",
+							"tokenb": "` + util.SecretValue + `"},
+						"oldIndex": "rocketchat-initial"},
+					"teams": {
+						"type": "teams",
+						"url_fields": {
+							"altid": "` + util.SecretValue + `"},
+						"oldIndex": "teams-initial"}},
+				"webhook": {
+					"github": {
+						"type": "github",
+						"secret": "` + util.SecretValue + `",
+						"custom_headers": [
+							{"key": "X-Foo", "Value": "` + util.SecretValue + `", "oldIndex": 0}],
+						"oldIndex": "github-initial"},
+					"gitlab-": {
+						"type": "gitlab",
+						"secret": "` + util.SecretValue + `",
+						"custom_headers": [
+							{"key": "X-Bar", "Value": "` + util.SecretValue + `", "oldIndex": 0}],
+						"oldIndex": "gitlab-initial"}}}}`,
+			want: &Service{
+				Options:   opt.Options{Defaults: &opt.Defaults{}},
+				Dashboard: DashboardOptions{Defaults: &DashboardOptionsDefaults{}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/args
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"slack": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"token": "slackToken"},
+						nil,
+						nil, nil, nil),
+					"join": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"apikey": "joinApiKey"},
+						map[string]string{
+							"devices": "aDevice",
+							"icon":    "https://example.com/icon.png"},
+						nil, nil, nil),
+					"zulip": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"botkey": "zulipBotKey"},
+						nil,
+						nil, nil, nil),
+					"matrix-": shoutrrr.New(
+						nil, "",
+						"matrix",
+						nil,
+						map[string]string{
+							"password": "matrixToken"},
+						nil,
+						nil, nil, nil),
+					"rocketchat": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"tokena": "rocketchatTokenA",
+							"tokenb": "rocketchatTokenB"},
+						nil,
+						nil, nil, nil),
+					"teams": shoutrrr.New(
+						nil, "",
+						"", // Type removed as it's in ID
+						nil,
+						map[string]string{
+							"altid": "teamsAltId"},
+						nil,
+						nil, nil, nil),
+				},
+				WebHook: webhook.Slice{
+					"github": webhook.New(
+						nil,
+						&webhook.Headers{
+							{Key: "X-Foo", Value: "aFoo"}},
+						"", nil, nil, nil, nil, nil,
+						"githubSecret",
+						nil,
+						"", // Type removed as it's in ID
+						"", nil, nil, nil),
+					"gitlab-": webhook.New(
+						nil,
+						&webhook.Headers{
+							{Key: "X-Bar", Value: "aBar"}},
+						"", nil, nil, nil, nil, nil,
+						"gitlabSecret",
+						nil,
+						"gitlab",
+						"", nil, nil, nil),
+				},
+			},
+			oldService: &Service{
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New(
+						"github",
+						"yaml", test.TrimYAML(`
+							access_token: aToken
+							require:
+								docker:
+									type: ghcr
+									image: release-argus/args
+									tag: "{{ version }}"
+									token: anotherToken
+						`),
+						nil,
+						nil,
+						&latestver_base.Defaults{}, &latestver_base.Defaults{})
+				}),
+				DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+					return deployedver.New(
+						"yaml", test.TrimYAML(`
+							basic_auth:
+								password: aPassword
+							headers:
+								- key: X-Foo
+									value: aFoo
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+				Notify: shoutrrr.Slice{
+					"slack-initial": shoutrrr.New(
+						nil, "",
+						"slack",
+						nil,
+						map[string]string{
+							"token":   "slackToken",
+							"channel": "slackChannel"},
+						map[string]string{
+							"botname": "testBotName"},
+						nil, nil, nil),
+					"join-initial": shoutrrr.New(
+						nil, "",
+						"join",
+						nil,
+						map[string]string{
+							"apikey": "joinApiKey"},
+						map[string]string{
+							"devices": "aDevice"},
+						nil, nil, nil),
+					"zulip-initial": shoutrrr.New(
+						nil, "",
+						"zulip",
+						nil,
+						map[string]string{
+							"botmail": "zulipBotMail",
+							"botkey":  "zulipBotKey",
+							"host":    "zulipHost"},
+						nil,
+						nil, nil, nil),
+					"matrix-initial": shoutrrr.New(
+						nil, "",
+						"matrix",
+						map[string]string{
+							"title": "matrixTitle"},
+						map[string]string{
+							"password": "matrixToken",
+							"host":     "matrixHost"},
+						nil,
+						nil, nil, nil),
+					"rocketchat-initial": shoutrrr.New(
+						nil, "",
+						"rocketchat",
+						nil,
+						map[string]string{
+							"host":    "rocketchatHost",
+							"tokena":  "rocketchatTokenA",
+							"tokenb":  "rocketchatTokenB",
+							"channel": "rocketchatChannel"},
+						nil,
+						nil, nil, nil),
+					"teams-initial": shoutrrr.New(
+						nil, "",
+						"teams",
+						nil,
+						map[string]string{
+							"group":      "teamsGroup",
+							"tenant":     "teamsTenant",
+							"altid":      "teamsAltId",
+							"groupowner": "teamsGroupOwner"},
+						map[string]string{
+							"host": "teamsHost"},
+						nil, nil, nil),
+				},
+				WebHook: webhook.Slice{
+					"github-initial": webhook.New(
+						nil,
+						&webhook.Headers{
+							{Key: "X-Foo", Value: "aFoo"}},
+						"", nil, nil, nil, nil, nil,
+						"githubSecret",
+						nil,
+						"github-initial",
+						"", nil, nil, nil),
+					"gitlab-initial": webhook.New(
+						nil,
+						&webhook.Headers{
+							{Key: "X-Bar", Value: "aBar"}},
+						"", nil, nil, nil, nil, nil,
+						"gitlabSecret",
+						nil,
+						"gitlab-initial",
+						"", nil, nil, nil),
+				},
+			},
+			errRegex: `^$`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Convert the string payload to a ReadCloser
+			tc.payload = test.TrimJSON(tc.payload)
+			reader := bytes.NewReader([]byte(tc.payload))
+			payload := io.NopCloser(reader)
+			if tc.serviceHardDefaults == nil {
+				tc.serviceHardDefaults = &Defaults{}
+				tc.serviceHardDefaults.Default()
+			}
+			if tc.serviceDefaults == nil {
+				tc.serviceDefaults = &Defaults{}
+			}
+			if tc.notifyDefaults == nil {
+				tc.notifyDefaults = &shoutrrr.SliceDefaults{}
+			}
+			if tc.notifyHardDefaults == nil {
+				tc.notifyHardDefaults = &shoutrrr.SliceDefaults{}
+				tc.notifyHardDefaults.Default()
+			}
+			if tc.oldService != nil {
+				tc.oldService.Init(
+					&Defaults{}, &Defaults{},
+					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+					&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
+			}
+
+			// WHEN we call FromPayload
+			got, err := FromPayload(
+				tc.oldService,
+				&payload,
+				tc.serviceDefaults,
+				tc.serviceHardDefaults,
+				tc.notifyGlobals,
+				tc.notifyDefaults,
+				tc.notifyHardDefaults,
+				tc.webhookGlobals,
+				tc.webhookDefaults,
+				tc.webhookHardDefaults,
+				util.LogFrom{Primary: name})
+
+			// THEN we get an error if the payload is invalid
+			if tc.errRegex != "" || err != nil {
+				e := util.ErrorToString(err)
+				if !util.RegexCheck(tc.errRegex, e) {
+					t.Fatalf("error doesn't match regex\nwant match for %q\ngot: %q",
+						tc.errRegex, e)
+				}
+				return
+			}
+			// AND we should get a new Service otherwise
+			if got.String("") != tc.want.String("") {
+				t.Errorf("Service mismatch after FromPayload\nwant:\n%s\n\ngot:\n%s",
+					tc.want.String(""), got.String(""))
 			}
 		})
 	}

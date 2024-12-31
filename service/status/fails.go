@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package svcstatus
+// Package status provides the status functionality to keep track of the approved/deployed/latest versions of a Service.
+package status
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/release-argus/Argus/util"
@@ -28,10 +30,10 @@ type Fails struct {
 	WebHook  FailsWebHook  `yaml:"-" json:"-"` // WebHook unsent/fail/pass.
 }
 
-// failsBase is a base struct for the Fails structs.
+// failsBase is the base struct for the Fails structs.
 type failsBase struct {
-	fails map[string]*bool // map of index to fail status.
 	mutex sync.RWMutex     // Mutex for concurrent access.
+	fails map[string]*bool // Map of index to fail status.
 }
 
 // Init the failsBase.
@@ -63,8 +65,8 @@ func (f *failsBase) AllPassed() bool {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
-	for i := range f.fails {
-		if util.EvalNilPtr(f.fails[i], true) {
+	for _, fail := range f.fails {
+		if util.DereferenceOrNilValue(fail, true) {
 			return false
 		}
 	}
@@ -91,9 +93,14 @@ func (f *failsBase) Length() int {
 }
 
 // String representation of failsBase.
-func (f *failsBase) String() (str string) {
+func (f *failsBase) String(prefix string) string {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
+	if len(f.fails) == 0 {
+		return ""
+	}
+
+	var builder strings.Builder
 
 	keys := util.SortedKeys(f.fails)
 
@@ -102,21 +109,20 @@ func (f *failsBase) String() (str string) {
 		if f.fails[key] != nil {
 			val = fmt.Sprint(*f.fails[key])
 		}
-
-		str += fmt.Sprintf("%v: %s, ", key, val)
-	}
-	if len(str) != 0 {
-		str = "{" + str[:len(str)-2] + "}"
+		builder.WriteString(fmt.Sprintf("%s%s: %s\n",
+			prefix, key, val))
 	}
 
-	return
+	return builder.String()
 }
 
+// FailsCommand keeps track of the unsent/fail/pass status of the Command sender.
 type FailsCommand struct {
 	failsBase
 	fails []*bool
 }
 
+// Init will initialise the slice with the given length.
 func (f *FailsCommand) Init(length int) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
@@ -145,8 +151,8 @@ func (f *FailsCommand) AllPassed() bool {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
-	for i := range f.fails {
-		if util.EvalNilPtr(f.fails[i], true) {
+	for _, fail := range f.fails {
+		if util.DereferenceOrNilValue(fail, true) {
 			return false
 		}
 	}
@@ -154,7 +160,7 @@ func (f *FailsCommand) AllPassed() bool {
 	return true
 }
 
-// Reset of the Command's.
+// Reset clears all the entries in the fails slice by setting each element to nil.
 func (f *FailsCommand) Reset() {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
@@ -164,7 +170,8 @@ func (f *FailsCommand) Reset() {
 	}
 }
 
-// Length of the FailsCommand.
+// Length returns the amount of elements in the fails slice.
+// in a thread-safe manner.
 func (f *FailsCommand) Length() int {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
@@ -173,60 +180,67 @@ func (f *FailsCommand) Length() int {
 }
 
 // String representation of FailsCommand.
-func (f *FailsCommand) String() (str string) {
+func (f *FailsCommand) String(prefix string) string {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
+	if len(f.fails) == 0 {
+		return ""
+	}
 
-	for i := range f.fails {
+	var builder strings.Builder
+
+	for i, fail := range f.fails {
 		val := "nil"
-		if f.fails[i] != nil {
-			val = fmt.Sprint(*f.fails[i])
+		if fail != nil {
+			val = fmt.Sprint(*fail)
 		}
 
-		str += fmt.Sprintf("%v: %s, ", i, val)
-	}
-	if len(str) != 0 {
-		str = "[" + str[:len(str)-2] + "]"
+		builder.WriteString(fmt.Sprintf("%s- %d: %s\n",
+			prefix, i, val))
 	}
 
-	return
+	return builder.String()
 }
 
+// FailsShoutrrr keeps track of the unsent/fail/pass status of the Shoutrrr sender.
 type FailsShoutrrr struct {
 	failsBase
 }
 
+// FailsWebHook keeps track of the unsent/fail/pass status of the WebHook sender.
 type FailsWebHook struct {
 	failsBase
 }
 
 // String returns a string representation of the Fails.
-func (f *Fails) String() (str string) {
-	str = ""
+func (f *Fails) String(prefix string) string {
+	var builder strings.Builder
+	itemPrefix := prefix + "  "
 
-	shoutrrrStr := f.Shoutrrr.String()
-	if shoutrrrStr != "" {
-		str += fmt.Sprintf("shoutrrr: %s, ", shoutrrrStr)
+	if shoutrrrStr := f.Shoutrrr.String(itemPrefix); shoutrrrStr != "" {
+		builder.WriteString(fmt.Sprintf("%sshoutrrr:\n%s",
+			prefix, shoutrrrStr))
 	}
 
-	commandStr := f.Command.String()
-	if commandStr != "" {
-		str += fmt.Sprintf("command: %s, ", commandStr)
+	if commandStr := f.Command.String(itemPrefix); commandStr != "" {
+		builder.WriteString(fmt.Sprintf("%scommand:\n%s",
+			prefix, commandStr))
 	}
 
-	webhookStr := f.WebHook.String()
-	if webhookStr != "" {
-		str += fmt.Sprintf("webhook: %s, ", webhookStr)
+	if webhookStr := f.WebHook.String(itemPrefix); webhookStr != "" {
+		builder.WriteString(fmt.Sprintf("%swebhook:\n%s",
+			prefix, webhookStr))
 	}
 
-	if len(str) != 0 {
-		// Trim the trailing ', '
-		str = str[:len(str)-2]
+	if builder.Len() == 0 {
+		return ""
 	}
-	return
+
+	result := builder.String()
+	return result
 }
 
-// Reset all the fails (nil them).
+// resetFails resets the state of the Command, Shoutrrr, and WebHook fails.
 func (f *Fails) resetFails() {
 	f.Command.Reset()
 	f.Shoutrrr.Reset()

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@
 package filter
 
 import (
-	"regexp"
 	"testing"
 
-	command "github.com/release-argus/Argus/commands"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
@@ -33,36 +32,34 @@ func TestRequire_ExecCommand(t *testing.T) {
 		errRegex string
 	}{
 		"no command": {
-			errRegex: "^$"},
+			errRegex: `^$`},
 		"valid command": {
 			cmd:      []string{"true"},
-			errRegex: "^$"},
+			errRegex: `^$`},
 		"valid multi-arg command": {
 			cmd:      []string{"ls", "-lah"},
-			errRegex: "^$"},
+			errRegex: `^$`},
 		"invalid command": {
 			cmd:      []string{"false"},
-			errRegex: "exit status 1"},
+			errRegex: `exit status 1`},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
 			require := Require{Command: tc.cmd}
-			require.Status = &svcstatus.Status{}
+			require.Status = &status.Status{}
 			require.Status.Init(
 				0, 1, 0,
 				&name,
 				test.StringPtr("http://example.com"))
 
 			// WHEN ApplyTemplate is called on the Command
-			err := require.ExecCommand(&util.LogFrom{})
+			err := require.ExecCommand(util.LogFrom{})
 
 			// THEN the err is expected
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}

@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,53 +17,50 @@
 package webhook
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	metric "github.com/release-argus/Argus/web/metric"
 )
 
 func TestWebHook_Try(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		url               *string
-		allowInvalidCerts bool
-		selfSignedCert    bool
-		wouldFail         bool
-		errRegex          string
-		desiredStatusCode int
+		url                                          *string
+		allowInvalidCerts, selfSignedCert, wouldFail bool
+		errRegex                                     string
+		desiredStatusCode                            uint16
 	}{
 		"invalid url": {
 			url:      test.StringPtr("invalid://	test"),
-			errRegex: "failed to get .?http.request"},
+			errRegex: `failed to get .?http.request`},
 		"fail due to invalid secret": {
 			wouldFail: true,
-			errRegex:  "WebHook gave [0-9]+, not "},
+			errRegex:  `WebHook gave [0-9]+, not `},
 		"fail due to invalid cert": {
 			selfSignedCert: true,
-			errRegex:       " x509:"},
+			errRegex:       ` x509:`},
 		"pass with invalid certs allowed": {
 			selfSignedCert:    true,
-			errRegex:          "^$",
+			errRegex:          `^$`,
 			allowInvalidCerts: true},
 		"pass with valid certs": {
-			errRegex:          "^$",
+			errRegex:          `^$`,
 			allowInvalidCerts: true},
 		"fail by not getting desired status code": {
 			desiredStatusCode: 1,
-			errRegex:          "WebHook gave [0-9]+, not ",
+			errRegex:          `WebHook gave [0-9]+, not `,
 			allowInvalidCerts: true},
 		"pass by getting desired status code": {
 			wouldFail:         true,
 			desiredStatusCode: 500,
-			errRegex:          "^$",
+			errRegex:          `^$`,
 			allowInvalidCerts: true},
 	}
 
@@ -87,13 +84,11 @@ func TestWebHook_Try(t *testing.T) {
 				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
 				// WHEN try is called with it
-				err := webhook.try(&util.LogFrom{})
+				err := webhook.try(util.LogFrom{})
 
 				// THEN any err is expected
 				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
+				if !util.RegexCheck(tc.errRegex, e) {
 					if strings.Contains(e, "context deadline exceeded") {
 						contextDeadlineExceeded = true
 						if try != 3 {
@@ -112,32 +107,28 @@ func TestWebHook_Try(t *testing.T) {
 func TestWebHook_Send(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		customHeaders bool
-		wouldFail     bool
-		useDelay      bool
-		delay         string
-		stdoutRegex   string
-		retries       int
-		silentFails   bool
-		notifiers     shoutrrr.Slice
-		deleting      bool
+		customHeaders, wouldFail, useDelay, deleting, silentFails bool
+		delay                                                     string
+		retries                                                   int
+		notifiers                                                 shoutrrr.Slice
+		stdoutRegex                                               string
 	}{
 		"successful webhook": {
-			stdoutRegex: "WebHook received",
+			stdoutRegex: `WebHook received`,
 		},
 		"successful webhook with custom_headers": {
-			stdoutRegex:   "WebHook received",
+			stdoutRegex:   `WebHook received`,
 			customHeaders: true,
 		},
 		"does use delay": {
 			useDelay:    true,
 			delay:       "3s",
-			stdoutRegex: "WebHook received",
+			stdoutRegex: `WebHook received`,
 		},
 		"no delay": {
 			useDelay:    true,
 			delay:       "0s",
-			stdoutRegex: "WebHook received",
+			stdoutRegex: `WebHook received`,
 		},
 		"failing webhook": {
 			wouldFail:   true,
@@ -157,14 +148,14 @@ func TestWebHook_Send(t *testing.T) {
 			wouldFail:   true,
 			stdoutRegex: `WebHook gave 500.*invalid gotify token`,
 			notifiers: shoutrrr.Slice{
-				"fail": test_shoutrrr.Shoutrrr(true, false)},
+				"fail": shoutrrr_test.Shoutrrr(true, false)},
 		},
 		"doesn't try notifiers on fail if silentFails": {
 			wouldFail:   true,
 			silentFails: true,
 			stdoutRegex: `WebHook gave 500.*failed \d times to send the WebHook [^-]+-n$`,
 			notifiers: shoutrrr.Slice{
-				"fail": test_shoutrrr.Shoutrrr(true, false)},
+				"fail": shoutrrr_test.Shoutrrr(true, false)},
 		},
 		"doesn't send if deleting": {
 			deleting:    true,
@@ -187,11 +178,11 @@ func TestWebHook_Send(t *testing.T) {
 					webhook.ServiceStatus.SetDeleting()
 				}
 				webhook.Delay = tc.delay
-				maxTries := uint(tc.retries + 1)
-				webhook.MaxTries = &maxTries
+				webhook.MaxTries = test.UInt8Ptr(tc.retries + 1)
 				webhook.SilentFails = &tc.silentFails
 				webhook.Notifiers = &Notifiers{Shoutrrr: &tc.notifiers}
-				serviceInfo := &util.ServiceInfo{ID: name}
+				serviceInfo := util.ServiceInfo{ID: name}
+				webhook.ServiceStatus.ServiceID = &serviceInfo.ID
 				if tc.retries > 0 {
 					go func() {
 						fails := testutil.ToFloat64(metric.WebHookMetric.WithLabelValues(
@@ -215,10 +206,8 @@ func TestWebHook_Send(t *testing.T) {
 				// THEN the logs are expected
 				completedAt := time.Now()
 				stdout := releaseStdout()
-				re := regexp.MustCompile(tc.stdoutRegex)
 				stdout = strings.ReplaceAll(stdout, "\n", "-n")
-				match := re.MatchString(stdout)
-				if !match {
+				if !util.RegexCheck(tc.stdoutRegex, stdout) {
 					if strings.Contains(stdout, "context deadline exceeded") {
 						contextDeadlineExceeded = true
 						if try != 3 {
@@ -247,17 +236,22 @@ func TestWebHook_Send(t *testing.T) {
 func TestSlice_Send(t *testing.T) {
 	// GIVEN a Slice
 	tests := map[string]struct {
-		slice          *Slice
-		stdoutRegex    string
-		stdoutRegexAlt string
-		notifiers      shoutrrr.Slice
-		useDelay       bool
-		delays         map[string]string
-		repeat         int
+		slice                       *Slice
+		stdoutRegex, stdoutRegexAlt string
+		notifiers                   shoutrrr.Slice
+		useDelay                    bool
+		delays                      map[string]string
+		repeat                      int
 	}{
 		"nil slice": {
 			slice:       nil,
 			stdoutRegex: `^$`},
+		"2 successful webhooks": {
+			slice: &Slice{
+				"pass": testWebHook(false, false, false),
+				"fail": testWebHook(false, false, false)},
+			stdoutRegex:    `WebHook received.*WebHook received`,
+			stdoutRegexAlt: `^$`},
 		"successful and failing webhook": {
 			slice: &Slice{
 				"pass": testWebHook(false, false, false),
@@ -298,14 +292,12 @@ func TestSlice_Send(t *testing.T) {
 					}
 
 					// WHEN try is called with it
-					tc.slice.Send(&util.ServiceInfo{ID: name}, tc.useDelay)
+					tc.slice.Send(util.ServiceInfo{ID: name}, tc.useDelay)
 
 					// THEN the logs are expected
 					stdout := releaseStdout()
 					stdout = strings.ReplaceAll(stdout, "\n", "-n")
-					re := regexp.MustCompile(tc.stdoutRegex)
-					match := re.MatchString(stdout)
-					if !match {
+					if !util.RegexCheck(tc.stdoutRegex, stdout) {
 						if strings.Contains(stdout, "context deadline exceeded") {
 							contextDeadlineExceeded = true
 							if try != 3 {
@@ -314,9 +306,7 @@ func TestSlice_Send(t *testing.T) {
 							}
 						}
 						if tc.stdoutRegexAlt != "" {
-							re = regexp.MustCompile(tc.stdoutRegexAlt)
-							match = re.MatchString(stdout)
-							if !match {
+							if !util.RegexCheck(tc.stdoutRegexAlt, stdout) {
 								t.Errorf("match on %q not found in\n%q",
 									tc.stdoutRegexAlt, stdout)
 							}
@@ -339,15 +329,15 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 		errRegex          string
 	}{
 		"nill Notifiers": {
-			errRegex: "^$"},
+			errRegex: `^$`},
 		"successful notifier": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			shoutrrrNotifiers: &shoutrrr.Slice{
-				"pass": test_shoutrrr.Shoutrrr(false, false)}},
+				"pass": shoutrrr_test.Shoutrrr(false, false)}},
 		"failing notifier": {
-			errRegex: "invalid gotify token",
+			errRegex: `invalid gotify token`,
 			shoutrrrNotifiers: &shoutrrr.Slice{
-				"fail": test_shoutrrr.Shoutrrr(true, false)}},
+				"fail": shoutrrr_test.Shoutrrr(true, false)}},
 	}
 
 	for name, tc := range tests {
@@ -357,13 +347,11 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
 			// WHEN Send is called with them
-			err := notifiers.Send("TestNotifiersSendWithNotifier", name, &util.ServiceInfo{ID: name})
+			err := notifiers.Send("TestNotifiersSendWithNotifier", name, util.ServiceInfo{ID: name})
 
 			// THEN err is as expected
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("match on %q not found in\n%q",
 					tc.errRegex, e)
 			}
@@ -388,6 +376,9 @@ func TestCheckWebHookBody(t *testing.T) {
 			want: false},
 		"adnanh/webhook hook fail": {
 			body: `Hook rules were not satisfied.`,
+			want: false},
+		"case insensitive body message fail": {
+			body: `hook rULEs wEre nOt SATISFiED.`,
 			want: false},
 	}
 

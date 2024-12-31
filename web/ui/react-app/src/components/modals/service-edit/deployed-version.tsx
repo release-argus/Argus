@@ -12,6 +12,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import { BooleanWithDefault } from "components/generic";
 import { DeployedVersionLookupEditType } from "types/service-edit";
+import { ServiceOptionsType } from "types/config";
 import VersionWithLink from "./version-with-link";
 import VersionWithRefresh from "./version-with-refresh";
 
@@ -23,6 +24,7 @@ const DeployedVersionMethodOptions = [
 interface Props {
   serviceName: string;
   original?: DeployedVersionLookupEditType;
+  original_options?: ServiceOptionsType;
   defaults?: DeployedVersionLookupEditType;
   hard_defaults?: DeployedVersionLookupEditType;
 }
@@ -32,6 +34,7 @@ interface Props {
  *
  * @param serviceName - The name of the service
  * @param original - The original values of the form
+ * @param original_options - The original service.options of the form
  * @param defaults - The default values
  * @param hard_defaults - The hard default
  * @returns The form fields for the `deployed_version`
@@ -39,17 +42,18 @@ interface Props {
 const EditServiceDeployedVersion: FC<Props> = ({
   serviceName,
   original,
+  original_options,
   defaults,
   hard_defaults,
 }) => {
   const { setValue } = useFormContext();
 
-  // RegEx Template toggle
+  // RegEx Template toggle.
   const templateToggle: boolean = useWatch({
     name: "deployed_version.template_toggle",
   });
   useEffect(() => {
-    // Clear the template if the toggle is false
+    // Clear the template if the toggle is false.
     if (templateToggle === false) {
       setValue("deployed_version.regex_template", "");
       setValue("deployed_version.template_toggle", false);
@@ -64,7 +68,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
     }),
-    [defaults, hard_defaults]
+    [defaults, hard_defaults],
   );
 
   return (
@@ -173,6 +177,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
           vType={1}
           serviceName={serviceName}
           original={original}
+          original_options={original_options}
         />
       </Accordion.Body>
     </Accordion>

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package filter
 import (
 	"encoding/base64"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -76,9 +75,10 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 		"no image does nothing": {
 			dockerCheck: NewDockerCheck(
 				"hub", "", "", "", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"DockerHub invalid token": {
-			errRegex:       "(.ncorrect username or password|.oo many failed login attempts|.annot log into an organization account|.ncorrect authentication credentials)",
+			errRegex:       `(?i)(incorrect username or password|.oo many failed login attempts|cannot log into an organization account|incorrect authentication credentials)`,
 			onlyIfEnvToken: true,
 			dockerCheck: NewDockerCheck(
 				"hub",
@@ -97,16 +97,17 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				os.Getenv("DOCKER_USERNAME"),
 				os.Getenv("DOCKER_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR invalid repo": {
-			errRegex: "invalid control character",
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"	release-argus/argus",
 				"", "", "", "", time.Now(), nil),
+			errRegex: `invalid control character`,
 		},
 		"GHCR non-existing repo": {
-			errRegex: "invalid repository name",
+			errRegex: `invalid repository name`,
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"release-argus/argus-",
@@ -117,6 +118,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				"ghcr",
 				"release-argus/argus",
 				"", "", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR base64 access token": {
 			onlyIfEnvToken: true,
@@ -127,6 +129,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				"",
 				base64.StdEncoding.EncodeToString([]byte(os.Getenv("GITHUB_TOKEN"))),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR plaintext access token": {
 			onlyIfEnvToken: true,
@@ -137,6 +140,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				"",
 				os.Getenv("GH_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Quay get token": {
 			dockerCheck: NewDockerCheck(
@@ -146,6 +150,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				"",
 				"foo",
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Returns current queryToken if before validUntil": {
 			onlyIfEnvToken: true,
@@ -160,6 +165,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 			hadQueryToken: base64.StdEncoding.EncodeToString([]byte("foo")),
 			wantQueryToken: test.StringPtr(
 				base64.StdEncoding.EncodeToString([]byte("foo"))),
+			errRegex: `^$`,
 		},
 		"Gets token if past validUntil": {
 			onlyIfEnvToken: true,
@@ -171,6 +177,7 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 				os.Getenv("GITHUB_TOKEN"),
 				"", time.Now().UTC().Add(-time.Minute),
 				nil),
+			errRegex: `^$`,
 		},
 	}
 
@@ -187,13 +194,8 @@ func TestDockerCheck_getQueryToken(t *testing.T) {
 			queryToken, err := tc.dockerCheck.getQueryToken()
 
 			// THEN the err is what we expect and a queryToken is retrieved when expected
-			if tc.errRegex == "" {
-				tc.errRegex = "^$"
-			}
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -229,19 +231,11 @@ func TestDockerCheckDefaults_getQueryToken(t *testing.T) {
 		wantToken           string
 		wantValidUntil      time.Time
 
-		queryTokenGHCR string
-		validUntilGHCR time.Time
-		queryTokenHub  string
-		validUntilHub  time.Time
-		queryTokenQuay string
-		validUntilQuay time.Time
+		queryTokenGHCR, queryTokenHub, queryTokenQuay string
+		validUntilGHCR, validUntilHub, validUntilQuay time.Time
 
-		defaultQueryTokenGHCR string
-		defaultValidUntilGHCR time.Time
-		defaultQueryTokenHub  string
-		defaultValidUntilHub  time.Time
-		defaultQueryTokenQuay string
-		defaultValidUntilQuay time.Time
+		defaultQueryTokenGHCR, defaultQueryTokenHub, defaultQueryTokenQuay string
+		defaultValidUntilGHCR, defaultValidUntilHub, defaultValidUntilQuay time.Time
 	}{
 		"nil DockerCheckDefaults": {
 			dockerCheckDefaults: nil,
@@ -488,6 +482,22 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 			setForToken:      "tokenGHCR",
 			changeDefaults:   false,
 		},
+		"GHCR, NOOP token skipped for defaults": {
+			dockerCheck: NewDockerCheck(
+				"ghcr",
+				"", "",
+				"", "",
+				"", time.Time{},
+				NewDockerCheckDefaults(
+					"",
+					"initGHCR",
+					"tokenHub", "",
+					"tokenQuay",
+					nil)),
+			defaultTokenGHCR: test.StringPtr(""),
+			setForToken:      "",
+			changeDefaults:   false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -503,8 +513,8 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 
 			// WHEN SetQueryToken is called on it
 			tc.dockerCheck.SetQueryToken(
-				&tc.setForToken,
-				&queryToken, &validUntil)
+				tc.setForToken,
+				queryToken, validUntil)
 
 			// THEN the query token is what we expect
 			if hadNil {
@@ -591,18 +601,47 @@ func TestDockerCheck_SetQueryToken(t *testing.T) {
 	}
 }
 
+func TestDockerCheck_ClearQueryToken(t *testing.T) {
+	// GIVEN a DockerCheck
+	tests := map[string]struct {
+		dockerCheck *DockerCheck
+	}{
+		"nil DockerCheck does nothing": {
+			dockerCheck: nil,
+		},
+		"non-nil DockerCheck clears queryToken": {
+			dockerCheck: &DockerCheck{
+				DockerCheckRegistryBase: DockerCheckRegistryBase{
+					queryToken: "some-token",
+					validUntil: time.Now().Add(time.Minute)},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN ClearQueryToken is called on it
+			tc.dockerCheck.ClearQueryToken()
+
+			// THEN the queryToken is cleared
+			if tc.dockerCheck != nil && tc.dockerCheck.queryToken != "" {
+				t.Errorf("expected queryToken to be cleared, but got %q", tc.dockerCheck.queryToken)
+			}
+		})
+	}
+}
+
 func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 	// GIVEN a DockerCheckDefaults and a value to set the queryToken/validUntil to
 	queryToken := "something"
 	validUntil := time.Date(2000, 1, 1, 3, 0, 5, 0, time.UTC)
 	tests := map[string]struct {
-		dockerCheckDefaults *DockerCheckDefaults
-		ghcrToken           *string
-		ghcrDefaultToken    *string
-		setForType          string
-		setForToken         string
-		changeDefaults      bool
-		changeMain          bool
+		dockerCheckDefaults         *DockerCheckDefaults
+		ghcrToken, ghcrDefaultToken *string
+		setForType, setForToken     string
+		changeDefaults, changeMain  bool
 	}{
 		"nil": {
 			dockerCheckDefaults: nil,
@@ -746,8 +785,8 @@ func TestDockerCheckDefaults_setQueryToken(t *testing.T) {
 
 			// WHEN setQueryToken is called on it
 			tc.dockerCheckDefaults.setQueryToken(
-				&tc.setForType, &tc.setForToken,
-				&queryToken, &validUntil)
+				tc.setForType, tc.setForToken,
+				queryToken, validUntil)
 
 			// THEN the query token isn't set if the DockerCheckDefaults was nil
 			if hadNil {
@@ -906,12 +945,8 @@ func TestDockerCheck_getValidToken(t *testing.T) {
 		startQueryToken string
 		startValidUntil time.Time
 
-		defaultQueryTokenGHCR string
-		defaultValidUntilGHCR time.Time
-		defaultQueryTokenHub  string
-		defaultValidUntilHub  time.Time
-		defaultQueryTokenQuay string
-		defaultValidUntilQuay time.Time
+		defaultQueryTokenGHCR, defaultQueryTokenHub, defaultQueryTokenQuay string
+		defaultValidUntilGHCR, defaultValidUntilHub, defaultValidUntilQuay time.Time
 	}{
 		"nil": {
 			dockerCheck: nil,
@@ -999,11 +1034,8 @@ func TestDockerCheck_CopyQueryToken(t *testing.T) {
 	tests := map[string]struct {
 		dockerCheck *DockerCheck
 
-		startQueryToken string
-		startValidUntil time.Time
-
-		wantQueryToken string
-		wantValidUntil time.Time
+		startQueryToken, wantQueryToken string
+		startValidUntil, wantValidUntil time.Time
 	}{
 		"nil": {
 			dockerCheck: nil},
@@ -1077,11 +1109,11 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			want: "anotherUser",
 		},
 		"env var is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_ONE": "aUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__ONE": "aUser"},
 			dockerCheck: NewDockerCheck(
 				"",
 				"", "",
-				"${TESTDOCKERCHECK_GETUSERNAME_ONE}", "",
+				"${TEST_DOCKER_CHECK__GET_USERNAME__ONE}", "",
 				"", time.Time{},
 				NewDockerCheckDefaults(
 					"",
@@ -1092,11 +1124,11 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			want: "aUser",
 		},
 		"env var partial is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_TWO": "aUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__TWO": "aUser"},
 			dockerCheck: NewDockerCheck(
 				"",
 				"", "",
-				"a${TESTDOCKERCHECK_GETUSERNAME_TWO}", "",
+				"a${TEST_DOCKER_CHECK__GET_USERNAME__TWO}", "",
 				"", time.Time{},
 				NewDockerCheckDefaults(
 					"",
@@ -1107,11 +1139,11 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			want: "aaUser",
 		},
 		"env var isn't used when empty string": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_THREE": ""},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__THREE": ""},
 			dockerCheck: NewDockerCheck(
 				"",
 				"", "",
-				"${TESTDOCKERCHECK_GETUSERNAME_THREE}", "",
+				"${TEST_DOCKER_CHECK__GET_USERNAME__THREE}", "",
 				"", time.Time{},
 				NewDockerCheckDefaults(
 					"",
@@ -1122,7 +1154,7 @@ func TestDockerCheck_getUsername(t *testing.T) {
 			want: "anotherUser",
 		},
 		"env var is used from default if main empty": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_FOUR": "cUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__FOUR": "cUser"},
 			dockerCheck: NewDockerCheck(
 				"",
 				"", "",
@@ -1131,7 +1163,7 @@ func TestDockerCheck_getUsername(t *testing.T) {
 				NewDockerCheckDefaults(
 					"",
 					"",
-					"", "${TESTDOCKERCHECK_GETUSERNAME_FOUR}",
+					"", "${TEST_DOCKER_CHECK__GET_USERNAME__FOUR}",
 					"",
 					nil)),
 			want: "cUser",
@@ -1144,7 +1176,7 @@ func TestDockerCheck_getUsername(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			// WHEN getUsername is called on it
@@ -1210,11 +1242,11 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 			want: "daUser",
 		},
 		"env var is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_ONE": "aUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__ONE": "aUser"},
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
 				"",
-				"", "${TESTDOCKERCHECK_GETUSERNAME_ONE}",
+				"", "${TEST_DOCKER_CHECK__GET_USERNAME__ONE}",
 				"",
 				NewDockerCheckDefaults(
 					"",
@@ -1225,11 +1257,11 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 			want: "aUser",
 		},
 		"env var partial is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_TWO": "aUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__TWO": "aUser"},
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
 				"",
-				"", "${TESTDOCKERCHECK_GETUSERNAME_TWO}a",
+				"", "${TEST_DOCKER_CHECK__GET_USERNAME__TWO}A",
 				"",
 				NewDockerCheckDefaults(
 					"",
@@ -1237,13 +1269,13 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 					"", "anotherUser",
 					"",
 					nil)),
-			want: "aUsera",
+			want: "aUserA",
 		},
 		"undefined env var is used": {
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
 				"",
-				"", "${TESTDOCKERCHECK_GETUSERNAME_UNSET}",
+				"", "${TEST_DOCKER_CHECK__GET_USERNAME__UNSET}",
 				"",
 				NewDockerCheckDefaults(
 					"",
@@ -1251,14 +1283,14 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 					"", "anotherUser",
 					"",
 					nil)),
-			want: "${TESTDOCKERCHECK_GETUSERNAME_UNSET}",
+			want: "${TEST_DOCKER_CHECK__GET_USERNAME__UNSET}",
 		},
 		"env var isn't used when empty": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_THREE": ""},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__THREE": ""},
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
 				"",
-				"", "${TESTDOCKERCHECK_GETUSERNAME_THREE}",
+				"", "${TEST_DOCKER_CHECK__GET_USERNAME__THREE}",
 				"",
 				NewDockerCheckDefaults(
 					"",
@@ -1269,7 +1301,7 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 			want: "anotherUser",
 		},
 		"env var is used from default if main empty": {
-			env: map[string]string{"TESTDOCKERCHECK_GETUSERNAME_FOUR": "cUser"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_USERNAME__FOUR": "cUser"},
 			dockerCheckDefaults: NewDockerCheckDefaults(
 				"",
 				"",
@@ -1278,7 +1310,7 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 				NewDockerCheckDefaults(
 					"",
 					"",
-					"", "${TESTDOCKERCHECK_GETUSERNAME_FOUR}",
+					"", "${TEST_DOCKER_CHECK__GET_USERNAME__FOUR}",
 					"",
 					nil)),
 			want: "cUser",
@@ -1291,7 +1323,7 @@ func TestDockerCheckDefaults_getUsername(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			// WHEN getUsername is called on it
@@ -1310,9 +1342,7 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 	// GIVEN a DockerCheck and a set of defaults
 	definedDefaults := &DockerCheckDefaults{}
 	tests := map[string]struct {
-		base     *DockerCheckDefaults
-		defaults *DockerCheckDefaults
-		want     *DockerCheckDefaults
+		base, defaults, want *DockerCheckDefaults
 	}{
 		"nil base and defaults does nothing": {
 			base: nil},
@@ -1350,6 +1380,41 @@ func TestDockerCheckDefaults_SetDefaults(t *testing.T) {
 	}
 }
 
+func TestDockerCheckDefaults_Default(t *testing.T) {
+	// GIVEN a DockerCheckDefaults
+	tests := map[string]struct {
+		dockerCheckDefaults *DockerCheckDefaults
+	}{
+		"nil DockerCheckDefaults": {
+			dockerCheckDefaults: nil,
+		},
+		"empty DockerCheckDefaults": {
+			dockerCheckDefaults: &DockerCheckDefaults{},
+		},
+		"non-empty DockerCheckDefaults": {
+			dockerCheckDefaults: &DockerCheckDefaults{Type: "ghcr"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN Default is called on it
+			if tc.dockerCheckDefaults != nil {
+				tc.dockerCheckDefaults.Default()
+			}
+
+			// THEN the Type is set to the default value
+			wantType := "hub"
+			if tc.dockerCheckDefaults != nil && tc.dockerCheckDefaults.Type != wantType {
+				t.Errorf("filter.DockerCheckDefaults.Default() Type mismatch\n%q\nnot: %q",
+					wantType, tc.dockerCheckDefaults.Type)
+			}
+		})
+	}
+}
+
 func TestDockerCheck_CheckToken(t *testing.T) {
 	// GIVEN a DockerCheck
 	tests := map[string]struct {
@@ -1359,15 +1424,17 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 	}{
 		"nil DockerCheck does nothing": {
 			dockerCheck: nil,
+			errRegex:    `^$`,
 		},
 		"DockerHub get default token": {
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
 				"", "", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"DockerHub no token for username": {
-			errRegex: "token: <required>",
+			errRegex: `token: <required>`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
@@ -1376,7 +1443,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				"", "", time.Now(), nil),
 		},
 		"DockerHub no username for token": {
-			errRegex: "username: <required>",
+			errRegex: `username: <required>`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
@@ -1394,12 +1461,14 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				os.Getenv("DOCKER_USERNAME"),
 				os.Getenv("DOCKER_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR get default token": {
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"release-argus/argus",
 				"", "", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR base64 access token": {
 			onlyIfEnvToken: true,
@@ -1409,6 +1478,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				"", "",
 				base64.StdEncoding.EncodeToString([]byte(os.Getenv("GITHUB_TOKEN"))),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR plaintext access token": {
 			onlyIfEnvToken: true,
@@ -1418,6 +1488,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				"", "",
 				os.Getenv("GITHUB_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Quay have token": {
 			dockerCheck: NewDockerCheck(
@@ -1426,6 +1497,7 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 				"", "",
 				"foo",
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 	}
 
@@ -1441,13 +1513,8 @@ func TestDockerCheck_CheckToken(t *testing.T) {
 			err := tc.dockerCheck.checkToken()
 
 			// THEN the err is what we expect
-			if tc.errRegex == "" {
-				tc.errRegex = "^$"
-			}
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -1464,6 +1531,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 	}{
 		"nil DockerCheck does nothing": {
 			dockerCheck: nil,
+			errRegex:    `^$`,
 		},
 		"DockerHub with no token, valid tag": {
 			dockerCheck: NewDockerCheck(
@@ -1471,9 +1539,10 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"releaseargus/argus",
 				"{{ version }}",
 				"", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"DockerHub with no token, invalid tag": {
-			errRegex: "tag .+ not found",
+			errRegex: `tag .+ not found`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
@@ -1489,9 +1558,10 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				os.Getenv("DOCKER_USERNAME"),
 				os.Getenv("DOCKER_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"DockerHub valid token, invalid tag": {
-			errRegex:       "tag .+ not found",
+			errRegex:       `tag .+ not found`,
 			onlyIfEnvToken: true,
 			dockerCheck: NewDockerCheck(
 				"hub",
@@ -1507,9 +1577,10 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"release-argus/argus",
 				"{{ version }}",
 				"", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR with default token, invalid tag": {
-			errRegex: "manifest unknown",
+			errRegex: `manifest unknown`,
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"release-argus/argus",
@@ -1525,6 +1596,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"",
 				base64.StdEncoding.EncodeToString([]byte(os.Getenv("GITHUB_TOKEN"))),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"GHCR plaintext access token, valid tag": {
 			onlyIfEnvToken: true,
@@ -1535,6 +1607,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"",
 				os.Getenv("GH_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Quay with no token, valid tag": {
 			dockerCheck: NewDockerCheck(
@@ -1542,6 +1615,7 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"argus-io/argus",
 				"{{ version }}",
 				"", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Quay with valid token, valid tag": {
 			onlyIfEnvToken: true,
@@ -1552,9 +1626,10 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				"",
 				os.Getenv("QUAY_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"Quay with valid token, invalid tag": {
-			errRegex:       "tag not found",
+			errRegex:       `tag not found`,
 			onlyIfEnvToken: true,
 			dockerCheck: NewDockerCheck(
 				"quay",
@@ -1579,13 +1654,8 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 			err := require.DockerTagCheck("0.9.0")
 
 			// THEN the err is what we expect
-			if tc.errRegex == "" {
-				tc.errRegex = "^$"
-			}
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -1602,7 +1672,6 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 	}{
 		"valid token": {
 			onlyIfEnvToken: true,
-			errRegex:       "^$",
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
@@ -1610,16 +1679,17 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 				os.Getenv("DOCKER_USERNAME"),
 				os.Getenv("DOCKER_TOKEN"),
 				"", time.Now(), nil),
+			errRegex: `^$`,
 		},
 		"invalid token": {
 			onlyIfEnvToken: true,
-			errRegex:       "(incorrect username or password|too many failed login attempts|Cannot log into an organization account)",
+			errRegex:       `(incorrect username or password|too many failed login attempts|Cannot log into an organization account)`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"releaseargus/argus",
 				"",
 				"argus",
-				"dkcr_pat_invalid",
+				"docker_pat_invalid",
 				"", time.Now(), nil),
 		},
 		"no token": {
@@ -1627,6 +1697,7 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 				"hub",
 				"releaseargus/argus",
 				"", "", "", "", time.Now(), nil),
+			errRegex: `^$`,
 		},
 	}
 
@@ -1642,13 +1713,8 @@ func TestDockerCheck_RefreshDockerHubToken(t *testing.T) {
 			err := tc.dockerCheck.refreshDockerHubToken()
 
 			// THEN the err is what we expect
-			if tc.errRegex == "" {
-				tc.errRegex = "^$"
-			}
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -1663,29 +1729,29 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 		errRegex    string
 	}{
 		"nil DockerCheck": {
-			errRegex:    "^$",
+			errRegex:    `^$`,
 			dockerCheck: nil,
 		},
 		"valid Type - ghcr": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheckDefaults(
 				"ghcr",
 				"", "", "", "", nil),
 		},
 		"valid Type - hub": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheckDefaults(
 				"hub",
 				"", "", "", "", nil),
 		},
 		"valid Type - quay": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheckDefaults(
 				"quay",
 				"", "", "", "", nil),
 		},
 		"invalid Type": {
-			errRegex: "^-type: .*<invalid>",
+			errRegex: `^-type: .*<invalid>`,
 			dockerCheck: NewDockerCheckDefaults(
 				"foo",
 				"", "", "", "", nil),
@@ -1701,9 +1767,7 @@ func TestDockerCheckDefaults_CheckValues(t *testing.T) {
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -1719,11 +1783,11 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 		errRegex    string
 	}{
 		"nil DockerCheck": {
-			errRegex:    "^$",
+			errRegex:    `^$`,
 			dockerCheck: nil,
 		},
 		"invalid Type": {
-			errRegex: "^-type: .*<invalid>",
+			errRegex: `^type: .*<invalid>.*$`,
 			dockerCheck: NewDockerCheck(
 				"foo",
 				"release-argus/argus",
@@ -1731,7 +1795,9 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(), nil),
 		},
 		"invalid Type and no Image": {
-			errRegex: "^-type: .*<invalid>.*-image: .*<required>.*",
+			errRegex: test.TrimYAML(`
+				^type: .*<invalid>.*
+				image: .*<required>.*$`),
 			dockerCheck: NewDockerCheck(
 				"foo",
 				"",
@@ -1739,13 +1805,16 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(), nil),
 		},
 		"invalid Type and no Image or Tag": {
-			errRegex: "^-type: .*<invalid>.*-image: .*<required>.*tag: .*<required>",
+			errRegex: test.TrimYAML(`
+				^type: .*<invalid>.*
+				image: .*<required>.*
+				tag: .*<required>.*$`),
 			dockerCheck: NewDockerCheck(
 				"foo",
 				"", "", "", "", "", time.Now(), nil),
 		},
 		"official docker hub image": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"release-argus/argus",
@@ -1753,7 +1822,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(), nil),
 		},
 		"type from defaults": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheck(
 				"",
 				"release-argus/argus",
@@ -1762,7 +1831,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				&DockerCheckDefaults{Type: "hub"}),
 		},
 		"invalid type from defaults": { // defaults are validated separately
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheck(
 				"",
 				"release-argus/argus",
@@ -1771,7 +1840,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				&DockerCheckDefaults{Type: "foo"}),
 		},
 		"no type from defaults": { // defaults are validated separately
-			errRegex: "^-type: .*<required>",
+			errRegex: `^type: .*<required>.*$`,
 			dockerCheck: NewDockerCheck(
 				"",
 				"release-argus/argus",
@@ -1780,14 +1849,14 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				&DockerCheckDefaults{Type: ""}),
 		},
 		"image with period in name": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: &DockerCheck{
 				Type:  "ghcr",
 				Image: "test/image.io",
 				Tag:   "1.2.3"},
 		},
 		"docker hub type with username but no password": {
-			errRegex:  "^-token: <required>",
+			errRegex:  `^token: <required>.*$`,
 			wantImage: "library/ubuntu",
 			dockerCheck: NewDockerCheck(
 				"hub",
@@ -1797,7 +1866,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", time.Now(), nil),
 		},
 		"invalid Image": {
-			errRegex: "image: .* <invalid>",
+			errRegex: `image: .* <invalid>`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"	release-argus/argus",
@@ -1805,7 +1874,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(), nil),
 		},
 		"invalid Tag templating": {
-			errRegex: "tag: .* <invalid>",
+			errRegex: `^tag: .* <invalid>.*$`,
 			dockerCheck: NewDockerCheck(
 				"hub",
 				"release-argus/argus",
@@ -1813,7 +1882,7 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 				"", "", "", time.Now(), nil),
 		},
 		"valid Type with image and tag": {
-			errRegex: "^$",
+			errRegex: `^$`,
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"release-argus/argus",
@@ -1827,13 +1896,11 @@ func TestDockerCheck_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckValues is called on it
-			err := tc.dockerCheck.CheckValues("-")
+			err := tc.dockerCheck.CheckValues("")
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)
-			re := regexp.MustCompile(tc.errRegex)
-			match := re.MatchString(e)
-			if !match {
+			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("want match for %q\nnot: %q",
 					tc.errRegex, e)
 			}
@@ -2026,10 +2093,10 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 			want:     "quayToken",
 		},
 		"env var is used": {
-			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_ONE": "fromEnv"},
+			env: map[string]string{"TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__ONE": "fromEnv"},
 			defaults: NewDockerCheckDefaults(
 				"",
-				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_ONE}",
+				"${TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__ONE}",
 				"hubToken", "",
 				"quayToken",
 				nil),
@@ -2037,10 +2104,10 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 			want:     "fromEnv",
 		},
 		"env var partial is used": {
-			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_TWO": "fromEnv"},
+			env: map[string]string{"TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__TWO": "fromEnv"},
 			defaults: NewDockerCheckDefaults(
 				"",
-				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_TWO}-",
+				"${TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__TWO}-",
 				"hubToken", "",
 				"quayToken",
 				nil),
@@ -2048,10 +2115,10 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 			want:     "fromEnv-",
 		},
 		"empty env var not ignored": {
-			env: map[string]string{"TESTDOCKERCHECKDEFAULTS_GETTOKEN_THREE": ""},
+			env: map[string]string{"TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__THREE": ""},
 			defaults: NewDockerCheckDefaults(
 				"",
-				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_THREE}",
+				"${TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__THREE}",
 				"hubToken", "",
 				"quayToken",
 				nil),
@@ -2061,12 +2128,12 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 		"undefined env var not ignored": {
 			defaults: NewDockerCheckDefaults(
 				"",
-				"${TESTDOCKERCHECKDEFAULTS_GETTOKEN_UNSET}",
+				"${TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__UNSET}",
 				"hubToken", "",
 				"quayToken",
 				nil),
 			seekType: "ghcr",
-			want:     "${TESTDOCKERCHECKDEFAULTS_GETTOKEN_UNSET}",
+			want:     "${TEST_DOCKER_CHECK_DEFAULTS__GET_TOKEN__UNSET}",
 		},
 	}
 
@@ -2076,7 +2143,7 @@ func TestDockerCheckDefaults_getToken(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			// WHEN getToken is called on it
@@ -2135,11 +2202,11 @@ func TestDockerCheck_getToken(t *testing.T) {
 			want: "ghcrToken",
 		},
 		"env var is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_ONE": "fromEnv"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_TOKEN__ONE": "fromEnv"},
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"", "",
-				"", "${TESTDOCKERCHECK_GETTOKEN_ONE}",
+				"", "${TEST_DOCKER_CHECK__GET_TOKEN__ONE}",
 				"", time.Now(),
 				NewDockerCheckDefaults(
 					"ghcr",
@@ -2150,11 +2217,11 @@ func TestDockerCheck_getToken(t *testing.T) {
 			want: "fromEnv",
 		},
 		"env var partial is used": {
-			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_TWO": "fromEnv"},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_TOKEN__TWO": "fromEnv"},
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"", "",
-				"", "${TESTDOCKERCHECK_GETTOKEN_TWO}-",
+				"", "${TEST_DOCKER_CHECK__GET_TOKEN__TWO}-",
 				"", time.Now(),
 				NewDockerCheckDefaults(
 					"ghcr",
@@ -2165,11 +2232,11 @@ func TestDockerCheck_getToken(t *testing.T) {
 			want: "fromEnv-",
 		},
 		"empty env var ignored": {
-			env: map[string]string{"TESTDOCKERCHECK_GETTOKEN_THREE": ""},
+			env: map[string]string{"TEST_DOCKER_CHECK__GET_TOKEN__THREE": ""},
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"", "",
-				"", "${TESTDOCKERCHECK_GETTOKEN_THREE}",
+				"", "${TEST_DOCKER_CHECK__GET_TOKEN__THREE}",
 				"", time.Now(),
 				NewDockerCheckDefaults(
 					"ghcr",
@@ -2183,7 +2250,7 @@ func TestDockerCheck_getToken(t *testing.T) {
 			dockerCheck: NewDockerCheck(
 				"ghcr",
 				"", "",
-				"", "${TESTDOCKERCHECK_GETTOKEN_UNSET}",
+				"", "${TEST_DOCKER_CHECK__GET_TOKEN__UNSET}",
 				"", time.Now(),
 				NewDockerCheckDefaults(
 					"ghcr",
@@ -2191,7 +2258,7 @@ func TestDockerCheck_getToken(t *testing.T) {
 					"hubToken", "",
 					"quayToken",
 					nil)),
-			want: "${TESTDOCKERCHECK_GETTOKEN_UNSET}",
+			want: "${TEST_DOCKER_CHECK__GET_TOKEN__UNSET}",
 		},
 	}
 
@@ -2201,7 +2268,7 @@ func TestDockerCheck_getToken(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			// WHEN getToken is called on it
@@ -2230,8 +2297,8 @@ func TestDockerCheckHub_Print(t *testing.T) {
 					Token:      "SECRET_TOKEN",
 					queryToken: "something",
 					validUntil: time.Now()}},
-			want: `
-token: SECRET_TOKEN`},
+			want: test.TrimYAML(`
+				token: SECRET_TOKEN`)},
 		"filled": {
 			dockerCheckHub: &DockerCheckHub{
 				DockerCheckRegistryBase: DockerCheckRegistryBase{
@@ -2239,9 +2306,9 @@ token: SECRET_TOKEN`},
 					queryToken: "something",
 					validUntil: time.Now()},
 				Username: "admin"},
-			want: `
-token: SECRET_TOKEN
-username: admin`},
+			want: test.TrimYAML(`
+				token: SECRET_TOKEN
+				username: admin`)},
 	}
 
 	for name, tc := range tests {
@@ -2287,8 +2354,8 @@ func TestDockerCheckDefaults_Print(t *testing.T) {
 		"Type only": {
 			dockerCheckDefaults: &DockerCheckDefaults{
 				Type: "ghcr"},
-			want: `
-type: ghcr`},
+			want: test.TrimYAML(`
+				type: ghcr`)},
 		"Filled": {
 			dockerCheckDefaults: &DockerCheckDefaults{
 				Type: "hub",
@@ -2308,15 +2375,16 @@ type: ghcr`},
 						Token:      "HOW_MANY_TOKENS",
 						queryToken: "something",
 						validUntil: time.Now()}}},
-			want: `
-type: hub
-ghcr:
-    token: SECRET_TOKEN
-hub:
-    token: ANOTHER_TOKEN
-    username: admin
-quay:
-    token: HOW_MANY_TOKENS`},
+			want: test.TrimYAML(`
+				type: hub
+				ghcr:
+						token: SECRET_TOKEN
+				hub:
+						token: ANOTHER_TOKEN
+						username: admin
+				quay:
+						token: HOW_MANY_TOKENS`),
+		},
 	}
 
 	for name, tc := range tests {
@@ -2365,25 +2433,25 @@ func TestDockerCheck_String(t *testing.T) {
 		"filled": {
 			docker: NewDockerCheck(
 				"ghcr",
-				"release-argus/Argus",
+				"release-argus/argus",
 				"{{ version }}",
 				"test",
 				"SECRET_TOKEN",
 				"", time.Now(), nil),
-			want: `
-type: ghcr
-username: test
-token: SECRET_TOKEN
-image: release-argus/Argus
-tag: '{{ version }}'`,
+			want: test.TrimYAML(`
+				type: ghcr
+				username: test
+				token: SECRET_TOKEN
+				image: release-argus/argus
+				tag: '{{ version }}'`),
 		},
 		"quotes otherwise invalid yaml strings": {
 			docker: NewDockerCheck(
 				"", "", "",
 				">123",
 				"", "", time.Now(), nil),
-			want: `
-username: '>123'`,
+			want: test.TrimYAML(`
+				username: '>123'`),
 		},
 	}
 

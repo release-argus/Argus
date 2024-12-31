@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/test"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestWebHook_AnnounceSend(t *testing.T) {
@@ -69,7 +69,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 				return
 			}
 			m := <-*webhook.ServiceStatus.AnnounceChannel
-			var parsed api_type.WebSocketMessage
+			var parsed apitype.WebSocketMessage
 			json.Unmarshal(m, &parsed)
 
 			if parsed.WebHookData[webhook.ID] == nil {
@@ -85,7 +85,7 @@ func TestWebHook_AnnounceSend(t *testing.T) {
 					want, got)
 			}
 
-			// next runnable is within expectred range
+			// next runnable is within expected range
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)

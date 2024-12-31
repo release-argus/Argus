@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
@@ -35,7 +35,7 @@ import (
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	databaseFile := "TestRun.db"
+	databaseFile := "TestDB.db"
 
 	// Log
 	jLog := util.NewJLog("DEBUG", false)
@@ -43,12 +43,12 @@ func TestMain(m *testing.M) {
 	LogInit(jLog, databaseFile)
 
 	cfg = testConfig()
-	*cfg.Settings.Data.DatabaseFile = databaseFile
+	cfg.Settings.Data.DatabaseFile = databaseFile
 	go Run(cfg, nil)
 	time.Sleep(250 * time.Millisecond) // Time for db to start
 
 	exitCode := m.Run()
-	os.Remove(*cfg.Settings.Data.DatabaseFile)
+	os.Remove(cfg.Settings.Data.DatabaseFile)
 	os.Exit(exitCode)
 }
 
@@ -60,7 +60,7 @@ func testConfig() (cfg *config.Config) {
 		Settings: config.Settings{
 			SettingsBase: config.SettingsBase{
 				Data: config.DataSettings{
-					DatabaseFile: &databaseFile,
+					DatabaseFile: databaseFile,
 				}},
 		},
 		Service: service.Slice{
@@ -89,17 +89,15 @@ func testConfig() (cfg *config.Config) {
 	for svcName := range cfg.Service {
 		svc := service.Service{
 			ID:     "foo",
-			Status: svcstatus.Status{},
+			Status: status.Status{},
 		}
 		svc.Status.Init(
 			len(svc.Notify), len(svc.Command), len(svc.WebHook),
 			&svc.ID,
 			test.StringPtr("https://example.com"))
 		svc.Status.SetApprovedVersion("1.0.0", false)
-		svc.Status.SetDeployedVersion("2.0.0", false)
-		svc.Status.SetDeployedVersionTimestamp(time.Now().Format(time.RFC3339))
-		svc.Status.SetLatestVersion("3.0.0", false)
-		svc.Status.SetLatestVersionTimestamp(time.Now().Add(time.Hour).Format(time.RFC3339))
+		svc.Status.SetDeployedVersion("2.0.0", "", false)
+		svc.Status.SetLatestVersion("3.0.0", time.Now().Add(time.Hour).Format(time.RFC3339), false)
 
 		// Add service to Config
 		cfg.Service[svcName] = &svc
@@ -111,19 +109,24 @@ func testConfig() (cfg *config.Config) {
 func testAPI(primary string, secondary string) *api {
 	testAPI := api{config: testConfig()}
 
-	databaseFile := strings.ReplaceAll(fmt.Sprintf("%s-%s.db", primary, secondary), " ", "_")
-	testAPI.config.Settings.Data.DatabaseFile = &databaseFile
+	databaseFile := strings.ReplaceAll(
+		fmt.Sprintf("%s-%s.db",
+			primary, secondary),
+		" ", "_")
+	testAPI.config.Settings.Data.DatabaseFile = databaseFile
 
 	return &testAPI
 }
 
 func dbCleanup(api *api) {
-	api.db.Close()
-	os.Remove(*api.config.Settings.Data.DatabaseFile)
-	os.Remove(*api.config.Settings.Data.DatabaseFile + "-journal")
+	if api.db != nil {
+		api.db.Close()
+	}
+	os.Remove(api.config.Settings.Data.DatabaseFile)
+	os.Remove(api.config.Settings.Data.DatabaseFile + "-journal")
 }
 
-func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
+func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 	sqlStmt := `
 	SELECT
 		id,
@@ -147,7 +150,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer row.Close()
+	t.Cleanup(func() { row.Close() })
 
 	var (
 		id  string
@@ -163,15 +166,13 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *svcstatus.Status {
 			t.Fatal(err)
 		}
 	}
-	status := svcstatus.Status{}
+	status := status.Status{}
 	status.Init(
 		0, 0, 0,
 		&id,
 		test.StringPtr("https://example.com"))
-	status.SetLatestVersion(lv, false)
-	status.SetLatestVersionTimestamp(lvt)
-	status.SetDeployedVersion(dv, false)
-	status.SetDeployedVersionTimestamp(dvt)
+	status.SetLatestVersion(lv, lvt, false)
+	status.SetDeployedVersion(dv, dvt, false)
 	status.SetApprovedVersion(av, false)
 
 	return &status

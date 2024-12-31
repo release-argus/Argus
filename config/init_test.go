@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,13 +25,12 @@ import (
 func TestConfig_Load(t *testing.T) {
 	// GIVEN Load is ran on a config
 	file := "TestConfig_Load.yml"
-	testYAML_ConfigTest(file, t)
+	testYAML_config_test(file, t)
 	config := testLoad(file, t)
 
 	// WHEN the vars loaded are inspected
 	tests := map[string]struct {
-		got  string
-		want string
+		got, want string
 	}{
 		"Defaults.Service.Interval": {
 			got:  config.Defaults.Service.Options.Interval,
@@ -57,11 +56,37 @@ func TestConfig_Load(t *testing.T) {
 	}
 }
 
+func TestConfig_LoadDeleteNil(t *testing.T) {
+	// GIVEN config to Load
+	var (
+		config     Config
+		configFile func(path string, t *testing.T) = testYAML_SomeNilServices
+	)
+	flags := make(map[string]bool)
+	file := "TestConfig_LoadDeleteNil.yml"
+	configFile(file, t)
+
+	// WHEN Load is called on it
+	config.Load(file, &flags, &util.JLog{})
+
+	// THEN Services that are nil are deleted
+	for name, service := range config.Service {
+		if service == nil {
+			t.Errorf("Service %q is nil",
+				name)
+		}
+	}
+	if len(config.Service) != 2 {
+		t.Errorf("config.Service has %d entries, want 2",
+			len(config.Service))
+	}
+}
+
 func TestConfig_LoadDefaults(t *testing.T) {
 	// GIVEN config to Load
 	var (
 		config     Config
-		configFile func(path string, t *testing.T) = testYAML_ConfigTest
+		configFile func(path string, t *testing.T) = testYAML_config_test
 	)
 	flags := make(map[string]bool)
 	file := "TestConfig_LoadDefaults.yml"

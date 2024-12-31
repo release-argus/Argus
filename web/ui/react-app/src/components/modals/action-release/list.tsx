@@ -42,7 +42,7 @@ export const ModalList: FC<Props> = ({
   onClickAcknowledge,
   delayedRender,
 }) => {
-  // LOADING
+  // LOADING.
   if (isEmptyObject(data))
     return (
       <Container fluid className="list">

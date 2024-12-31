@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
 	dbtype "github.com/release-argus/Argus/db/types"
 )
 
-// PrepDelete prepares a service for deletion by removing all channels and setting the `deleting“ flag.
+// PrepDelete removes all channels and sets the deleting flag to prepare a service for deletion.
 func (s *Service) PrepDelete(removeFromDB bool) {
 	s.Status.SetDeleting()
 
-	// nil the channels so the service doesn't trigger any more events
+	// Set the channels to nil to prevent the service from triggering further events.
 	s.Status.AnnounceChannel = nil
 	s.Status.DatabaseChannel = nil
 	s.Status.SaveChannel = nil
 
-	// Delete the row for this service in the database
+	// Delete the row for this service in the database.
 	if removeFromDB {
 		*s.HardDefaults.Status.DatabaseChannel <- dbtype.Message{
 			ServiceID: s.ID,

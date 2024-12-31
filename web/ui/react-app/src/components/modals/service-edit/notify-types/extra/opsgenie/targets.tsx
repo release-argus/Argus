@@ -46,34 +46,34 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
         sub_type: "id",
         value: "",
       },
-      { shouldFocus: false }
+      { shouldFocus: false },
     );
   }, []);
 
-  // keep track of the array values so we can switch defaults when they're unchanged
+  // keep track of the array values so we can switch defaults when they're unchanged.
   const fieldValues: NotifyOpsGenieTarget[] = useWatch({ name: name });
-  // useDefaults when the fieldValues are undefined or the same as the defaults
+  // useDefaults when the fieldValues are undefined or the same as the defaults.
   const useDefaults = useMemo(
     () =>
       isEmptyArray(defaults)
         ? false
         : !diffObjects(fieldValues, defaults, [".type", ".sub_type"]),
-    [fieldValues, defaults]
+    [fieldValues, defaults],
   );
   useEffect(() => {
     trigger(name);
 
-    // Give the defaults back if the field is empty
+    // Give the defaults back if the field is empty.
     if (isEmptyArray(fieldValues))
-      defaults?.forEach((dflt) => {
+      defaults?.forEach((value) => {
         append(
-          { type: dflt.type, sub_type: dflt.sub_type, value: "" },
-          { shouldFocus: false }
+          { type: value.type, sub_type: value.sub_type, value: "" },
+          { shouldFocus: false },
         );
       });
   }, [useDefaults]);
 
-  // remove the last item if it's not the only one or doesn't match the defaults
+  // remove the last item if it's not the only one or doesn't match the defaults.
   const removeLast = useCallback(() => {
     !(useDefaults && fields.length == 1) && remove(fields.length - 1);
   }, [fields.length, useDefaults]);
@@ -112,7 +112,7 @@ const OpsGenieTargets: FC<Props> = ({ name, label, tooltip, defaults }) => {
             <OpsGenieTarget
               name={`${name}.${index}`}
               removeMe={
-                // Give the remove that's disabled if there's only one item and it matches the defaults
+                // Give the remove that's disabled if there's only one item and it matches the defaults.
                 fieldValues?.length === 1 ? removeLast : () => remove(index)
               }
               defaults={useDefaults ? defaults?.[index] : undefined}

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 // LogInit for this package.
@@ -28,17 +29,16 @@ func LogInit(log *util.JLog) {
 
 // Init will initialise the Service metric.
 func (l *Lookup) Init(
-	defaults *LookupDefaults,
-	hardDefaults *LookupDefaults,
-	status *svcstatus.Status,
 	options *opt.Options,
+	status *status.Status,
+	defaults, hardDefaults *Defaults,
 ) {
 	if l == nil {
 		return
 	}
 
-	l.Defaults = defaults
 	l.HardDefaults = hardDefaults
+	l.Defaults = defaults
 	l.Status = status
 	l.Options = options
 }
@@ -69,10 +69,10 @@ func (l *Lookup) DeleteMetrics() {
 		return
 	}
 
-	// Liveness
+	// Liveness.
 	metric.DeletePrometheusGauge(metric.DeployedVersionQueryLiveness,
-		*l.Status.ServiceID)
-	// Counters
+		*l.Status.ServiceID, "")
+	// Counters.
 	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
 		*l.Status.ServiceID,
 		"",

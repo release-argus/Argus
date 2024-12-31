@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -22,52 +24,60 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// CheckValues of the Lookup.
-func (l *Lookup) CheckValues(prefix string) (errs error) {
+// CheckValues validates the fields of the Lookup struct.
+func (l *Lookup) CheckValues(prefix string) error {
 	if l == nil {
-		return
+		return nil
 	}
 
+	var errs []error
 	// Method
 	l.Method = strings.ToUpper(l.Method)
 	if l.Method == "" {
 		l.Method = "GET"
 	} else if !util.Contains(supportedTypes, l.Method) {
-		errs = fmt.Errorf("%s%s  method: %q <invalid> (only [%s] are allowed)\\",
-			util.ErrorToString(errs), prefix, l.Method, strings.Join(supportedTypes, ", "))
+		errs = append(errs,
+			fmt.Errorf("%smethod: %q <invalid> (only [%s] are allowed)",
+				prefix, l.Method, strings.Join(supportedTypes, ", ")))
 	}
-	// Body unused in GET, so ensure it's nil.
+	// Body unused in GET, ensure it is empty.
 	if l.Method == "GET" {
-		l.Body = nil
+		l.Body = ""
 	}
 
 	// URL
 	if l.URL == "" && l.Defaults != nil {
-		errs = fmt.Errorf("%s%s  url: <required> (URL to get the deployed_version is required)\\",
-			util.ErrorToString(errs), prefix)
+		errs = append(errs,
+			fmt.Errorf("%surl: <required> (URL to get the deployed_version is required)",
+				prefix))
 	}
 
 	// JSON
-	_, err := util.ParseKeys(l.JSON)
-	if err != nil {
-		errs = fmt.Errorf("%s%s  json: %q <invalid> - %s\\",
-			util.ErrorToString(errs), prefix, l.JSON, err.Error())
+	if l.JSON != "" {
+		_, err := util.ParseKeys(l.JSON)
+		if err != nil {
+			errs = append(errs,
+				fmt.Errorf("%sjson: %q <invalid> - %w",
+					prefix, l.JSON, err))
+		}
 	}
 
 	// RegEx
-	_, err = regexp.Compile(l.Regex)
-	if err != nil {
-		errs = fmt.Errorf("%s%s  regex: %q <invalid>\\",
-			util.ErrorToString(errs), prefix, l.Regex)
+	if l.Regex != "" {
+		_, err := regexp.Compile(l.Regex)
+		if err != nil {
+			errs = append(errs,
+				fmt.Errorf("%sregex: %q <invalid>",
+					prefix, l.Regex))
+		}
 	}
-	// Remove the RegExTemplate if empty or no RegEx.
-	if l.Regex == "" || util.DefaultIfNil(l.RegexTemplate) == "" {
-		l.RegexTemplate = nil
+	// Remove the RegExTemplate if no RegEx.
+	if l.Regex == "" {
+		l.RegexTemplate = ""
 	}
 
-	if errs != nil {
-		errs = fmt.Errorf("%sdeployed_version:\\%w",
-			prefix, errs)
+	if len(errs) == 0 {
+		return nil
 	}
-	return
+	return errors.Join(errs...)
 }

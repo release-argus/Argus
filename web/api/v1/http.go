@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -23,7 +24,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/ui"
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
@@ -32,14 +33,13 @@ import (
 func (api *API) basicAuth() mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer r.Body.Close()
 			username, password, ok := r.BasicAuth()
 			if ok {
-				// Hash purely to prevent ConstantTimeCompare leaking lengths
+				// Hash purely to prevent ConstantTimeCompare leaking lengths.
 				usernameHash := sha256.Sum256([]byte(username))
 				passwordHash := sha256.Sum256([]byte(password))
 
-				// Protect from possible timing attacks
+				// Protect from possible timing attacks.
 				usernameMatch := ConstantTimeCompare(usernameHash, api.Config.Settings.WebBasicAuthUsernameHash())
 				passwordMatch := ConstantTimeCompare(passwordHash, api.Config.Settings.WebBasicAuthPasswordHash())
 
@@ -62,53 +62,53 @@ func setCommonHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-// SetupRoutesAPI will setup the HTTP API routes.
+// SetupRoutesAPI will set up the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
 	// /config
-	//   GET, config
+	//   GET, config.
 	api.Router.HandleFunc("/api/v1/config", api.httpConfig).Methods("GET")
 	// /status
-	//   GET, runtime info
+	//   GET, runtime info.
 	api.Router.HandleFunc("/api/v1/status/runtime", api.httpRuntimeInfo).Methods("GET")
-	//   GET, build info
+	//   GET, build info.
 	api.Router.HandleFunc("/api/v1/version", api.httpVersion).Methods("GET")
 	// /flags
-	//   GET, flags
+	//   GET, flags.
 	api.Router.HandleFunc("/api/v1/flags", api.httpFlags).Methods("GET")
 	// /approvals
-	//   GET, service order
+	//   GET, service order.
 	api.Router.HandleFunc("/api/v1/service/order", api.httpServiceOrder).Methods("GET")
-	//   GET, service summary
+	//   GET, service summary.
 	api.Router.HandleFunc("/api/v1/service/summary/{service_name:.+}", api.httpServiceSummary).Methods("GET")
-	//   GET, service actions (webhooks/commands)
+	//   GET, service actions (webhooks/commands).
 	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceGetActions).Methods("GET")
-	//   POST, service actions (disable=service_actions)
+	//   POST, service actions (disable=service_actions).
 	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceRunActions).Methods("POST")
-	//   GET, service-edit - get details
+	//   GET, service-edit - get details.
 	api.Router.HandleFunc("/api/v1/service/update", api.httpOtherServiceDetails).Methods("GET")
 	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceDetail).Methods("GET")
-	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new)
-	api.Router.HandleFunc("/api/v1/latest_version/refresh", api.httpVersionRefreshUncreated).Methods("GET")
-	api.Router.HandleFunc("/api/v1/deployed_version/refresh", api.httpVersionRefreshUncreated).Methods("GET")
-	//   GET, service-edit - refresh service (disable=[ld]v_refresh)
-	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
-	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_name:.+}", api.httpVersionRefresh).Methods("GET")
-	//   POST, service-edit - test notify (disable=notify_test)
+	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new).
+	api.Router.HandleFunc("/api/v1/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods("GET")
+	api.Router.HandleFunc("/api/v1/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods("GET")
+	//   GET, service-edit - refresh service (disable=[ld]v_refresh).
+	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_name:.+}", api.httpLatestVersionRefresh).Methods("GET")
+	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_name:.+}", api.httpDeployedVersionRefresh).Methods("GET")
+	//   POST, service-edit - test notify (disable=notify_test).
 	api.Router.HandleFunc("/api/v1/notify/test", api.httpNotifyTest).Methods("POST")
-	//   PUT, service-edit - update details (disable=service_edit)
+	//   PUT, service-edit - update details (disable=service_edit).
 	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceEdit).Methods("PUT")
-	//   POST, service-edit - new service (disable=service_create)
-	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("POST")
-	//   DELETE, service-edit - delete service (disable=service_delete)
+	//   PUT, service-edit - new service (disable=service_create).
+	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("PUT")
+	//   DELETE, service-edit - delete service (disable=service_delete).
 	api.Router.HandleFunc("/api/v1/service/delete/{service_name:.+}", api.httpServiceDelete).Methods("DELETE")
 
-	// Disable specified routes
+	// Disable specified routes.
 	api.DisableRoutesAPI()
 }
 
-// DisableRoutesAPI will disable HTTP API routes that are disabled in the config
+// DisableRoutesAPI disables HTTP API routes marked as disabled in the config.
 func (api *API) DisableRoutesAPI() {
-	// Trim suffix to ensure no trailing slash and prevent '//api/v1/...' routes
+	// Trim suffix to ensure no trailing slash and prevent '//api/v1/...' routes.
 	webRoutePrefix := strings.TrimSuffix(api.Config.Settings.WebRoutePrefix(), "/")
 	routes := map[string]*struct {
 		name         string
@@ -116,7 +116,7 @@ func (api *API) DisableRoutesAPI() {
 		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
 		disabled     bool
 	}{
-		webRoutePrefix + "/api/v1/service/new":                                {name: "service_create", method: "POST"},
+		webRoutePrefix + "/api/v1/service/new":                                {name: "service_create", method: "PUT"},
 		webRoutePrefix + "/api/v1/service/update/{service_name:.+}":           {name: "service_update", method: "PUT"},
 		webRoutePrefix + "/api/v1/service/delete/{service_name:.+}":           {name: "service_delete", method: "DELETE"},
 		webRoutePrefix + "/api/v1/notify/test":                                {name: "notify_test", method: "POST"},
@@ -130,11 +130,11 @@ func (api *API) DisableRoutesAPI() {
 		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
 	}
 
-	_ = api.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		// An error will be returned if the route does not define a path.
+	_ = api.Router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+		// Return an error if the route does not define a path.
 		routePath, _ := route.GetPathTemplate()
 
-		// Ignore routes not defined above and routes that are not disabled
+		// Ignore routes not defined above or disabled.
 		r := routes[routePath]
 		if r == nil || !r.disabled {
 			return nil
@@ -142,7 +142,7 @@ func (api *API) DisableRoutesAPI() {
 
 		handler := route.GetHandler()
 
-		// Set the new handler for the route
+		// Set the new handler for the route.
 		disabledMethod := r.method
 		route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			disabledMethod := disabledMethod
@@ -151,15 +151,15 @@ func (api *API) DisableRoutesAPI() {
 				return
 			}
 
-			// Call the original handler for other methods
-			handler.(http.HandlerFunc)(w, r) // Cast the handler to http.HandlerFunc before calling it
+			// Call the original handler for other methods.
+			handler.(http.HandlerFunc)(w, r) // Cast the handler to http.HandlerFunc before calling it.
 		})
 
 		return nil
 	})
 }
 
-// SetupRoutesNodeJS will setup the HTTP routes to the NodeJS files.
+// SetupRoutesNodeJS will set up the HTTP routes to the Node.js files.
 func (api *API) SetupRoutesNodeJS() {
 	nodeRoutes := []string{
 		"/approvals",
@@ -167,20 +167,22 @@ func (api *API) SetupRoutesNodeJS() {
 		"/flags",
 		"/status",
 	}
-	// Serve the NodeJS files
+	// Serve the Node.js files.
 	for _, route := range nodeRoutes {
 		prefix := strings.TrimRight(api.RoutePrefix, "/") + route
-		api.Router.Handle(route, http.StripPrefix(prefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
+		api.Router.Handle(route, http.StripPrefix(prefix,
+			statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 	}
 
-	// Favicon override
+	// Favicon override.
 	api.SetupRoutesFavicon()
 
 	// Catch-all for JS, CSS, etc...
-	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix, statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
+	api.Router.PathPrefix("/").Handler(http.StripPrefix(api.RoutePrefix,
+		statigz.FileServer(ui.GetFS().(fs.ReadDirFS), brotli.AddEncoding)))
 }
 
-// SetupRoutesFavicon will setup the HTTP routes for any favicon overrides.
+// SetupRoutesFavicon adds any favicon route overrides.
 func (api *API) SetupRoutesFavicon() {
 	if api.Config.Settings.Web.Favicon == nil {
 		return
@@ -202,10 +204,10 @@ func (api *API) SetupRoutesFavicon() {
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	logFrom := &util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	err := json.NewEncoder(w).Encode(api_type.VersionAPI{
+	err := json.NewEncoder(w).Encode(apitype.VersionAPI{
 		Version:   util.Version,
 		BuildDate: util.BuildDate,
 		GoVersion: util.GoVersion,
@@ -213,21 +215,15 @@ func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 	jLog.Error(err, logFrom, err != nil)
 }
 
-// failRequest with a JSON response containing a message and status code.
-func failRequest(w *http.ResponseWriter, message string, statusCodeOverride ...int) {
-	// Default to 400 Bad Request
-	statusCode := http.StatusBadRequest
-	// Override if provided
-	if len(statusCodeOverride) > 0 {
-		statusCode = statusCodeOverride[0]
-	}
-
-	// Write response
+// failRequest returns a JSON response containing a message and status code.
+func failRequest(w *http.ResponseWriter, message string, statusCode int) {
+	// Write response.
 	(*w).WriteHeader(statusCode)
 	resp := map[string]string{
 		"message": message,
 	}
 	jsonResp, _ := json.Marshal(resp)
-	//nolint:errcheck
+	//#nosec G104 -- Disregard.
+	//nolint:errcheck -- ^
 	(*w).Write(jsonResp)
 }

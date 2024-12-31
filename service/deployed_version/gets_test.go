@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,23 +29,21 @@ import (
 func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		root        *bool
-		dfault      *bool
-		hardDefault *bool
-		wantBool    bool
+		rootValue, defaultValue, hardDefaultValue *bool
+		want                                      bool
 	}{
 		"root overrides all": {
-			wantBool:    true,
-			root:        test.BoolPtr(true),
-			dfault:      test.BoolPtr(false),
-			hardDefault: test.BoolPtr(false)},
+			want:             true,
+			rootValue:        test.BoolPtr(true),
+			defaultValue:     test.BoolPtr(false),
+			hardDefaultValue: test.BoolPtr(false)},
 		"default overrides hardDefault": {
-			wantBool:    true,
-			dfault:      test.BoolPtr(true),
-			hardDefault: test.BoolPtr(false)},
+			want:             true,
+			defaultValue:     test.BoolPtr(true),
+			hardDefaultValue: test.BoolPtr(false)},
 		"hardDefault is last resort": {
-			wantBool:    true,
-			hardDefault: test.BoolPtr(true)},
+			want:             true,
+			hardDefaultValue: test.BoolPtr(true)},
 	}
 
 	for name, tc := range tests {
@@ -53,17 +51,17 @@ func TestLookup_GetAllowInvalidCerts(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup()
-			lookup.AllowInvalidCerts = tc.root
-			lookup.Defaults.AllowInvalidCerts = tc.dfault
-			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefault
+			lookup.AllowInvalidCerts = tc.rootValue
+			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
+			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
 			// WHEN GetAllowInvalidCerts is called
 			got := lookup.GetAllowInvalidCerts()
 
 			// THEN the function returns the correct result
-			if got != tc.wantBool {
+			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
-					tc.wantBool, got)
+					tc.want, got)
 			}
 		})
 	}
@@ -81,13 +79,13 @@ func TestLookup_GetURL(t *testing.T) {
 			want: "https://example.com",
 		},
 		"returns URL from env": {
-			env:  map[string]string{"TESTLOOKUP_DV_GETURL_ONE": "https://example.com"},
-			url:  "${TESTLOOKUP_DV_GETURL_ONE}",
+			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_ONE": "https://example.com"},
+			url:  "${TEST_LOOKUP__DV_GET_URL_ONE}",
 			want: "https://example.com",
 		},
 		"returns URL partially from env": {
-			env:  map[string]string{"TESTLOOKUP_DV_GETURL_TWO": "example.com"},
-			url:  "https://${TESTLOOKUP_DV_GETURL_TWO}",
+			env:  map[string]string{"TEST_LOOKUP__DV_GET_URL_TWO": "example.com"},
+			url:  "https://${TEST_LOOKUP__DV_GET_URL_TWO}",
 			want: "https://example.com",
 		},
 	}
@@ -98,7 +96,7 @@ func TestLookup_GetURL(t *testing.T) {
 
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			lookup := testLookup()
@@ -119,15 +117,15 @@ func TestLookup_GetURL(t *testing.T) {
 func TestLookup_GetBody(t *testing.T) {
 	// GIVEN a Lookup
 	tests := map[string]struct {
-		body *string
+		body string
 		want io.Reader
 	}{
-		"nil body": {
-			body: nil,
+		"empty body": {
+			body: "",
 			want: nil,
 		},
-		"non-nil body": {
-			body: test.StringPtr("test body"),
+		"non-empty body": {
+			body: ("test body"),
 			want: strings.NewReader("test body"),
 		},
 	}

@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,17 +21,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestMain(m *testing.M) {
-	// initialize jLog
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	shoutrrr.LogInit(jLog)
+	// initialise jLog
+	mainJLog := util.NewJLog("DEBUG", false)
+	mainJLog.Testing = true
+	LogInit(mainJLog)
+	shoutrrr.LogInit(mainJLog)
 
 	// run other tests
 	exitCode := m.Run()
@@ -41,8 +42,8 @@ func TestMain(m *testing.M) {
 }
 
 func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
+	desiredStatusCode := uint16(0)
+	whMaxTries := uint8(1)
 	webhook := New(
 		test.BoolPtr(false),
 		nil,
@@ -56,11 +57,10 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 		test.BoolPtr(false),
 		"github",
 		"https://valid.release-argus.io/hooks/github-style",
-		&WebHookDefaults{},
-		&WebHookDefaults{},
-		&WebHookDefaults{})
+		&Defaults{},
+		&Defaults{}, &Defaults{})
 	webhook.ID = "test"
-	webhook.ServiceStatus = &svcstatus.Status{}
+	webhook.ServiceStatus = &status.Status{}
 	webhook.ServiceStatus.Init(
 		0, 0, 1,
 		test.StringPtr("testServiceID"),
@@ -92,9 +92,9 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	return webhook
 }
 
-func testWebHookDefaults(failing bool, selfSignedCert bool, customHeaders bool) *WebHookDefaults {
-	desiredStatusCode := 0
-	whMaxTries := uint(1)
+func testDefaults(failing bool, customHeaders bool) *Defaults {
+	desiredStatusCode := uint16(0)
+	whMaxTries := uint8(1)
 	webhook := NewDefaults(
 		test.BoolPtr(false),
 		nil,

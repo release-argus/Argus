@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,44 +29,48 @@ import (
 	"testing"
 	"time"
 
-	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
-	test_shoutrrr "github.com/release-argus/Argus/notifiers/shoutrrr/test"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	"github.com/release-argus/Argus/service/latest_version/types/web"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 var mainCfg *config.Config
-var port *string
+var port string
 
 func TestMain(m *testing.M) {
-	// initialize jLog
+	// initialise jLog
 	jLog := util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 
 	// GIVEN a valid config with a Service
-	file := "TestMain.yml"
+	file := "TestWebMain.yml"
 	mainCfg = testConfig(file, jLog, nil)
 	os.Remove(file)
-	defer os.Remove(*mainCfg.Settings.Data.DatabaseFile)
+	defer os.Remove(mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
-	mainCfg.Settings.Web.ListenHost = test.StringPtr("localhost")
+	mainCfg.Settings.Web.ListenHost = "localhost"
 
 	// WHEN the Router is fetched for this Config
 	router = newWebUI(mainCfg)
 	go Run(mainCfg, jLog)
+	time.Sleep(250 * time.Millisecond)
 
 	// THEN Web UI is accessible for the tests
 	code := m.Run()
+
 	os.Exit(code)
 }
 
@@ -84,12 +88,9 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	cfg = &config.Config{}
 
 	// Settings.Log
-	cfg.Settings.Log.Level = test.StringPtr("DEBUG")
+	cfg.Settings.Log.Level = "DEBUG"
 
-	cfg.Load(
-		path,
-		&map[string]bool{},
-		jLog)
+	cfg.Load(path, &map[string]bool{}, jLog)
 	if t != nil {
 		t.Cleanup(func() { os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}
@@ -107,35 +108,38 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 		routePrefix string = "/"
 	)
 	cfg.Settings.Web = config.WebSettings{
-		ListenHost:  &listenHost,
-		ListenPort:  &listenPort,
-		RoutePrefix: &routePrefix,
+		ListenHost:  listenHost,
+		ListenPort:  listenPort,
+		RoutePrefix: routePrefix,
 	}
 
 	// Defaults
-	cfg.Defaults.SetDefaults()
+	cfg.Defaults.Default()
+	cfg.HardDefaults.Default()
 
 	// Service
-	svc := testService("test")
-	svc.DeployedVersionLookup = testDeployedVersion()
-	svc.LatestVersion.URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
-	emptyNotify := shoutrrr.ShoutrrrDefaults{}
+	svc := testService(t, "test")
+	svc.DeployedVersionLookup = testDeployedVersion(t)
+	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
+	emptyNotify := shoutrrr.Defaults{}
 	emptyNotify.InitMaps()
 	notify := shoutrrr.Slice{
-		"test": test_shoutrrr.Shoutrrr(false, false)}
+		"test": shoutrrr_test.Shoutrrr(false, false)}
 	notify["test"].Params = map[string]string{}
 	svc.Notify = notify
-	svc.Comment = "test service's comment"
-	cfg.Service = service.Slice{
-		svc.ID: svc,
-	}
+	svc.Comment = "test services comment"
+	svc.Init(
+		&cfg.Defaults.Service, &cfg.HardDefaults.Service,
+		&cfg.Notify, &cfg.Defaults.Notify, &cfg.HardDefaults.Notify,
+		&cfg.WebHook, &cfg.Defaults.WebHook, &cfg.HardDefaults.WebHook)
+	cfg.AddService(svc.ID, svc)
 
 	// Notify
 	cfg.Notify = cfg.Defaults.Notify
 
 	// WebHook
-	whPass := testWebHookDefaults(false)
-	whFail := testWebHookDefaults(true)
+	whPass := testDefaults(false)
+	whFail := testDefaults(true)
 	cfg.WebHook = webhook.SliceDefaults{
 		"pass": whPass,
 		"fail": whFail,
@@ -147,41 +151,35 @@ func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config)
 	return
 }
 
-func testService(id string) (svc *service.Service) {
-	var (
-		sAnnounceChannel chan []byte         = make(chan []byte, 2)
-		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
-		sSaveChannel     chan bool           = make(chan bool, 5)
-	)
-	webhookDefaults := webhook.WebHookDefaults{}
-	webhookDefaults.SetDefaults()
+func testService(t *testing.T, id string) (svc *service.Service) {
+	hardDefaults := config.Defaults{}
+	hardDefaults.Default()
+
 	svc = &service.Service{
 		ID: id,
-		LatestVersion: *latestver.New(
-			test.StringPtr(""),
-			test.BoolPtr(false),
-			nil, nil,
-			&filter.Require{
-				RegexContent: "content",
-				RegexVersion: "version",
-				Docker: filter.NewDockerCheck(
-					"ghcr",
-					"release-argus/argus",
-					"{{ version }}",
-					"", "", "", time.Time{}, nil)},
-			nil,
-			"url",
-			"https://release-argus.io",
-			&filter.URLCommandSlice{testURLCommandRegex()},
-			test.BoolPtr(false),
-			nil, nil),
-		DeployedVersionLookup: testDeployedVersion(),
+		LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+			return latestver.New(
+				"url",
+				"yaml", test.TrimYAML(`
+					url: release-argus/argus
+					require:
+						regex_content: content
+						regex_version: version
+						docker:
+							type: ghcr
+							image: release-argus/argus
+							tag: "{{ version }}"
+				`),
+				nil,
+				nil,
+				&latestver_base.Defaults{}, &hardDefaults.Service.LatestVersion)
+		}),
+		DeployedVersionLookup: testDeployedVersion(t),
 		Options: *opt.New(
 			nil,
 			"10m",
 			test.BoolPtr(true),
-			&opt.OptionsDefaults{},
-			&opt.OptionsDefaults{}),
+			&opt.Defaults{}, &opt.Defaults{}),
 		Dashboard: *service.NewDashboardOptions(
 			test.BoolPtr(false), "test", "", "https://release-argus.io",
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
@@ -194,6 +192,13 @@ func testService(id string) (svc *service.Service) {
 				nil, nil, "", nil, nil, nil, nil, nil, "", nil, "",
 				"example.com",
 				nil, nil, nil)}}
+
+	// Status
+	var (
+		sAnnounceChannel chan []byte         = make(chan []byte, 2)
+		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
+		sSaveChannel     chan bool           = make(chan bool, 5)
+	)
 	svc.Status.AnnounceChannel = &sAnnounceChannel
 	svc.Status.DatabaseChannel = &sDatabaseChannel
 	svc.Status.SaveChannel = &sSaveChannel
@@ -203,35 +208,41 @@ func testService(id string) (svc *service.Service) {
 		&svc.ID,
 		&svc.Dashboard.WebURL)
 	svc.Status.SetApprovedVersion("2.0.0", false)
-	svc.Status.SetDeployedVersion("2.0.0", false)
-	svc.Status.SetDeployedVersionTimestamp(time.Now().UTC().Format(time.RFC3339))
-	svc.Status.SetLatestVersion("3.0.0", true)
-	svc.Status.SetDeployedVersionTimestamp(time.Now().UTC().Format(time.RFC3339))
+	svc.Status.SetDeployedVersion("2.0.0", "", false)
+	svc.Status.SetLatestVersion("3.0.0", "", true)
+
+	// LatestVersion
 	svc.LatestVersion.Init(
-		&latestver.LookupDefaults{}, &latestver.LookupDefaults{},
+		&svc.Options,
 		&svc.Status,
-		&svc.Options)
+		&latestver_base.Defaults{}, &hardDefaults.Service.LatestVersion)
+
+	// DeployedVersionLookup
 	svc.DeployedVersionLookup.Init(
-		&deployedver.LookupDefaults{}, &deployedver.LookupDefaults{},
+		&svc.Options,
 		&svc.Status,
-		&svc.Options)
+		&deployedver.Defaults{}, &hardDefaults.Service.DeployedVersionLookup)
+
+	// Command
 	svc.CommandController.Init(
 		&svc.Status,
 		&svc.Command,
 		&svc.Notify,
 		&svc.Options.Interval)
+
+	// WebHook
 	svc.WebHook.Init(
 		&svc.Status,
-		&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhookDefaults,
+		&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,
 		&svc.Notify,
 		&svc.Options.Interval)
 
 	return
 }
 
-func testWebHookDefaults(failing bool) *webhook.WebHookDefaults {
-	whDesiredStatusCode := 0
-	whMaxTries := uint(1)
+func testDefaults(failing bool) *webhook.Defaults {
+	whDesiredStatusCode := uint16(0)
+	whMaxTries := uint8(1)
 	wh := webhook.NewDefaults(
 		test.BoolPtr(false),
 		nil,
@@ -248,31 +259,33 @@ func testWebHookDefaults(failing bool) *webhook.WebHookDefaults {
 	return wh
 }
 
-func testDeployedVersion() *deployedver.Lookup {
-	var (
-		allowInvalidCerts = false
-		json              = "something"
-		regex             = `([0-9]+)\s<[^>]+>The Argus Developers`
-		regexTemplate     = "v$1"
-		url               = "https://release-argus.io"
-	)
-	return deployedver.New(
-		&allowInvalidCerts,
-		&deployedver.BasicAuth{
-			Username: "fizz",
-			Password: "buzz"},
-		nil,
-		&[]deployedver.Header{
-			{Key: "foo", Value: "bar"}},
-		json,
-		"GET",
-		nil,
-		regex,
-		&regexTemplate,
-		&svcstatus.Status{},
-		url,
-		&deployedver.LookupDefaults{},
-		&deployedver.LookupDefaults{})
+func testDeployedVersion(t *testing.T) *deployedver.Lookup {
+	defaults := &deployedver.Defaults{}
+	hardDefaults := &deployedver.Defaults{}
+	hardDefaults.Default()
+
+	return test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+		return deployedver.New(
+			"yaml", test.TrimYAML(`
+				method: GET
+				url: https://release-argus.io
+				basic_auth:
+					username: fizz
+					password: buzz
+				headers:
+					- key: foo
+						value: bar
+				json: something
+				regex: '([0-9]+)\s<[^>]+>The Argus Developers'
+				regex_template: 'v$1'
+			`),
+			opt.New(
+				nil, "",
+				test.BoolPtr(false),
+				defaults.Options, hardDefaults.Options),
+			&status.Status{},
+			defaults, hardDefaults)
+	})
 }
 
 func testURLCommandRegex() filter.URLCommand {
@@ -280,8 +293,8 @@ func testURLCommandRegex() filter.URLCommand {
 	index := 0
 	return filter.URLCommand{
 		Type:  "regex",
-		Regex: &regex,
-		Index: index,
+		Regex: regex,
+		Index: &index,
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@ import (
 	"strings"
 	"testing"
 
-	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
+	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -40,12 +41,12 @@ func TestHTTP_Config(t *testing.T) {
 	// GIVEN an API and a request for the config
 	file := "TestHTTP_Config.yml"
 	api := testAPI(file)
-	defer func() {
+	t.Cleanup(func() {
 		os.RemoveAll(file)
-		if api.Config.Settings.Data.DatabaseFile != nil {
-			os.RemoveAll(*api.Config.Settings.Data.DatabaseFile)
+		if api.Config.Settings.Data.DatabaseFile != "" {
+			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
-	}()
+	})
 
 	tests := map[string]struct {
 		settings *config.Settings
@@ -60,7 +61,7 @@ func TestHTTP_Config(t *testing.T) {
 			settings: &config.Settings{
 				SettingsBase: config.SettingsBase{
 					Web: config.WebSettings{
-						ListenHost: test.StringPtr("127.0.0.1")}}},
+						ListenHost: "127.0.0.1"}}},
 			wantBody: `
 				{
 					"settings": {
@@ -90,20 +91,21 @@ func TestHTTP_Config(t *testing.T) {
 		"1. settings + defaults": {
 			defaults: &config.Defaults{
 				Service: service.Defaults{
-					Options: opt.OptionsDefaults{
-						OptionsBase: opt.OptionsBase{
+					Options: opt.Defaults{
+						Base: opt.Base{
 							Interval: "1h"}},
-					LatestVersion: *latestver.NewDefaults(
-						test.StringPtr("foo"),
-						test.BoolPtr(true),
-						test.BoolPtr(false),
-						filter.NewRequireDefaults(
-							filter.NewDockerCheckDefaults(
+					LatestVersion: latestver_base.Defaults{
+						AccessToken:       "foo",
+						AllowInvalidCerts: test.BoolPtr(true),
+						UsePreRelease:     test.BoolPtr(false),
+						Require: filter.RequireDefaults{
+							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr",
 								"tokenForGHCR",
 								"tokenForHub", "usernameForHub",
 								"tokenForQuay",
-								nil)))}},
+								nil)},
+					}}},
 			wantBody: `
 				{
 					"settings": {
@@ -118,21 +120,21 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
 									"docker": {
 										"type": "ghcr",
 										"ghcr": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										},
 										"hub": {
-											"token": "\u003csecret\u003e",
+											"token": ` + secretValueMarshalled + `,
 											"username": "usernameForHub"
 										},
 										"quay": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										}
 									}
 								}
@@ -150,20 +152,20 @@ func TestHTTP_Config(t *testing.T) {
 		"2. settings + defaults (with notify+command+webhook service defaults)": {
 			defaults: &config.Defaults{
 				Service: service.Defaults{
-					Options: opt.OptionsDefaults{
-						OptionsBase: opt.OptionsBase{
+					Options: opt.Defaults{
+						Base: opt.Base{
 							Interval: "1h"}},
-					LatestVersion: *latestver.NewDefaults(
-						test.StringPtr("foo"),
-						test.BoolPtr(true),
-						test.BoolPtr(false),
-						filter.NewRequireDefaults(
-							filter.NewDockerCheckDefaults(
+					LatestVersion: latestver_base.Defaults{
+						AccessToken:       "foo",
+						AllowInvalidCerts: test.BoolPtr(true),
+						UsePreRelease:     test.BoolPtr(false),
+						Require: filter.RequireDefaults{
+							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr",
 								"tokenForGHCR",
 								"tokenForHub", "usernameForHub",
 								"tokenForQuay",
-								nil))),
+								nil)}},
 					Notify: map[string]struct{}{
 						"n1": {}},
 					Command: command.Slice{
@@ -187,21 +189,21 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
 									"docker": {
 										"type": "ghcr",
 										"ghcr": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										},
 										"hub": {
-											"token": "\u003csecret\u003e",
+											"token": ` + secretValueMarshalled + `,
 											"username": "usernameForHub"
 										},
 										"quay": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										}
 									}
 								}
@@ -232,12 +234,12 @@ func TestHTTP_Config(t *testing.T) {
 			notify: &shoutrrr.SliceDefaults{
 				"foo": shoutrrr.NewDefaults(
 					"gotify",
-					&map[string]string{
+					map[string]string{
 						"message": "hello world"},
-					&map[string]string{
-						"title": "UPDATE"},
-					&map[string]string{
-						"token": "secret123"})},
+					map[string]string{
+						"token": "secret123"},
+					map[string]string{
+						"title": "UPDATE"})},
 			wantBody: `
 				{
 					"settings": {
@@ -252,21 +254,21 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
 									"docker": {
 										"type": "ghcr",
 										"ghcr": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										},
 										"hub": {
-											"token": "\u003csecret\u003e",
+											"token": ` + secretValueMarshalled + `,
 											"username": "usernameForHub"
 										},
 										"quay": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										}
 									}
 								}
@@ -295,7 +297,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": "\u003csecret\u003e"
+								"token": ` + secretValueMarshalled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -333,21 +335,21 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
 									"docker": {
 										"type": "ghcr",
 										"ghcr": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										},
 										"hub": {
-											"token": "\u003csecret\u003e",
+											"token": ` + secretValueMarshalled + `,
 											"username": "usernameForHub"
 										},
 										"quay": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										}
 									}
 								}
@@ -376,7 +378,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": "\u003csecret\u003e"
+								"token": ` + secretValueMarshalled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -388,9 +390,9 @@ func TestHTTP_Config(t *testing.T) {
 							"type": "github",
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
-							"secret": "\u003csecret\u003e",
+							"secret": ` + secretValueMarshalled + `,
 							"custom_headers": [
-								{"key": "X-Header","value": "\u003csecret\u003e"}],
+								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
 							"delay": "4s"}},
 					"service": {}
 				}`,
@@ -398,19 +400,29 @@ func TestHTTP_Config(t *testing.T) {
 		"5. settings + defaults (with notify+command+webhook service defaults) + notify + webhook + service": {
 			service: &service.Slice{
 				"alpha": &service.Service{
-					LatestVersion: *latestver.New(
-						test.StringPtr("aToken"),
-						nil, nil, nil, nil, nil,
-						"github",
-						"release-argus/Argus",
-						nil, nil, nil, nil)},
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+								access_token: aToken
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})},
 				"bravo": &service.Service{
-					LatestVersion: *latestver.New(
-						test.StringPtr("otherToken"),
-						nil, nil, nil, nil, nil,
-						"url",
-						"https://example.com/version",
-						nil, nil, nil, nil)}},
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"url",
+							"yaml", test.TrimYAML(`
+								url: https://example.com/version
+								allow_invalid_certs: true
+							`),
+							nil,
+							nil,
+							nil, nil)
+					})}},
 			order: &[]string{"alpha", "bravo"},
 			wantBody: `
 				{
@@ -426,21 +438,21 @@ func TestHTTP_Config(t *testing.T) {
 								"interval": "1h"
 							},
 							"latest_version": {
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"allow_invalid_certs": true,
 								"use_prerelease": false,
 								"require": {
 									"docker": {
 										"type": "ghcr",
 										"ghcr": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										},
 										"hub": {
-											"token": "\u003csecret\u003e",
+											"token": ` + secretValueMarshalled + `,
 											"username": "usernameForHub"
 										},
 										"quay": {
-											"token": "\u003csecret\u003e"
+											"token": ` + secretValueMarshalled + `
 										}
 									}
 								}
@@ -469,7 +481,7 @@ func TestHTTP_Config(t *testing.T) {
 								"message": "hello world"
 							},
 							"url_fields": {
-								"token": "\u003csecret\u003e"
+								"token": ` + secretValueMarshalled + `
 							},
 							"params": {
 								"title": "UPDATE"
@@ -481,9 +493,9 @@ func TestHTTP_Config(t *testing.T) {
 							"type": "github",
 							"url": "https://example.com",
 							"allow_invalid_certs": true,
-							"secret": "\u003csecret\u003e",
+							"secret": ` + secretValueMarshalled + `,
 							"custom_headers": [
-								{"key": "X-Header","value": "\u003csecret\u003e"}],
+								{"key": "X-Header","value": ` + secretValueMarshalled + `}],
 							"delay": "4s"}},
 					"service": {
 						"alpha": {
@@ -491,7 +503,7 @@ func TestHTTP_Config(t *testing.T) {
 							"latest_version": {
 								"type": "github",
 								"url": "release-argus/Argus",
-								"access_token": "\u003csecret\u003e",
+								"access_token": ` + secretValueMarshalled + `,
 								"url_commands": []
 							},
 							"command": [],
@@ -504,7 +516,7 @@ func TestHTTP_Config(t *testing.T) {
 							"latest_version": {
 								"type": "url",
 								"url": "https://example.com/version",
-								"access_token": "\u003csecret\u003e",
+								"allow_invalid_certs": true,
 								"url_commands": []
 							},"command": [],
 							"notify": {},
@@ -519,6 +531,7 @@ func TestHTTP_Config(t *testing.T) {
 				}`,
 		},
 	}
+
 	order := make([]string, len(tests))
 	for i := range order {
 		lookingFor := fmt.Sprintf("%d. ", i)
@@ -565,7 +578,7 @@ func TestHTTP_Config(t *testing.T) {
 			w := httptest.NewRecorder()
 			api.httpConfig(w, req)
 			res := w.Result()
-			defer res.Body.Close()
+			t.Cleanup(func() { res.Body.Close() })
 
 			// THEN the expected body is returned as expected
 			data, err := io.ReadAll(res.Body)

@@ -37,11 +37,11 @@ const Service: FC<Props> = ({ service, editable = false }) => {
 
   const updateStatus = useMemo(
     () => ({
-      // Update available if latest version and deployed version are both defined and differ
+      // Update available if latest version and deployed version are both defined and differ.
       available:
         (service?.status?.deployed_version || undefined) !==
         (service?.status?.latest_version || undefined),
-      // Update is available and approved version is a skip of that latest version
+      // Update is available and approved version is a skip of that latest version.
       skipped:
         (service?.status?.deployed_version || undefined) !==
           (service?.status?.latest_version || undefined) &&
@@ -76,7 +76,7 @@ const Service: FC<Props> = ({ service, editable = false }) => {
               height: "1.5rem",
               width: "1.5rem",
 
-              // lay it on top
+              // lay it on top.
               zIndex: 1,
               position: "absolute",
               top: "0.5rem",

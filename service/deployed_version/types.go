@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package deployedver provides the deployed_version lookup.
 package deployedver
 
 import (
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"encoding/json"
+	"fmt"
+
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -25,86 +29,105 @@ var (
 	supportedTypes = []string{"GET", "POST"}
 )
 
-// LookupBase is the base struct for the Lookup struct.
-type LookupBase struct {
-	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // default - false = Disallows invalid HTTPS certificates
+// Base is the base struct for the Lookup struct.
+type Base struct {
+	AllowInvalidCerts *bool `yaml:"allow_invalid_certs,omitempty" json:"allow_invalid_certs,omitempty"` // Default - false = Disallows invalid HTTPS certificates
 }
 
-// LookupDefaults are the default values for the Lookup struct.
-type LookupDefaults struct {
-	LookupBase `yaml:",inline" json:",inline"`
+// Defaults are the default values for the Lookup struct.
+type Defaults struct {
+	Base `yaml:",inline" json:",inline"`
+
+	Options *opt.Defaults `yaml:"-" json:"-"` // Options for the lookup
 }
 
-// NewDefaults returns a new LookupDefaults struct.
+// NewDefaults returns a new Defaults struct.
 func NewDefaults(
 	allowInvalidCerts *bool,
-) *LookupDefaults {
-	return &LookupDefaults{
-		LookupBase: LookupBase{
+) *Defaults {
+	return &Defaults{
+		Base: Base{
 			AllowInvalidCerts: allowInvalidCerts}}
+}
+
+// Default sets this Defaults to the default values.
+func (ld *Defaults) Default() {
+	allowInvalidCerts := false
+	ld.AllowInvalidCerts = &allowInvalidCerts
 }
 
 // Lookup the deployed version of the service.
 type Lookup struct {
 	Method        string `yaml:"method,omitempty" json:"method,omitempty"` // REQUIRED: HTTP method.
 	URL           string `yaml:"url,omitempty" json:"url,omitempty"`       // REQUIRED: URL to query.
-	LookupBase    `yaml:",inline" json:",inline"`
+	Base          `yaml:",inline" json:",inline"`
 	BasicAuth     *BasicAuth `yaml:"basic_auth,omitempty" json:"basic_auth,omitempty"`         // OPTIONAL: Basic Auth credentials.
 	Headers       []Header   `yaml:"headers,omitempty" json:"headers,omitempty"`               // OPTIONAL: Request Headers.
-	Body          *string    `yaml:"body,omitempty" json:"body,omitempty"`                     // OPTIONAL: Request Body.
+	Body          string     `yaml:"body,omitempty" json:"body,omitempty"`                     // OPTIONAL: Request Body.
 	JSON          string     `yaml:"json,omitempty" json:"json,omitempty"`                     // OPTIONAL: JSON key to use e.g. version_current.
 	Regex         string     `yaml:"regex,omitempty" json:"regex,omitempty"`                   // OPTIONAL: RegEx for the version.
-	RegexTemplate *string    `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
+	RegexTemplate string     `yaml:"regex_template,omitempty" json:"regex_template,omitempty"` // OPTIONAL: Template to apply to the RegEx match.
 
-	Options *opt.Options      `yaml:"-" json:"-"` // Options for the lookups
-	Status  *svcstatus.Status `yaml:"-" json:"-"` // Service Status
+	Options *opt.Options   `yaml:"-" json:"-"` // Options for the lookups.
+	Status  *status.Status `yaml:"-" json:"-"` // Service Status.
 
-	Defaults     *LookupDefaults `yaml:"-" json:"-"` // Default values.
-	HardDefaults *LookupDefaults `yaml:"-" json:"-"` // Hardcoded default values.
+	Defaults     *Defaults `yaml:"-" json:"-"` // Default values.
+	HardDefaults *Defaults `yaml:"-" json:"-"` // Hardcoded default values.
 }
 
-// New returns a new Lookup struct.
+// New returns a new instance of Lookup from the provided configuration data
+// in either JSON or YAML format, and initialises it with the provided
+// options, status, defaults, and hardDefaults.
 func New(
-	allowInvalidCerts *bool,
-	basicAuth *BasicAuth,
-	body *string,
-	headers *[]Header,
-	json string,
-	method string,
+	configFormat string,
+	configData interface{}, // []byte | string | *yaml.Node.
 	options *opt.Options,
-	regex string,
-	regexTemplate *string,
-	status *svcstatus.Status,
-	url string,
-	defaults *LookupDefaults,
-	hardDefaults *LookupDefaults,
-) (lookup *Lookup) {
-	lookup = &Lookup{
-		LookupBase: LookupBase{
-			AllowInvalidCerts: allowInvalidCerts},
-		BasicAuth:     basicAuth,
-		Body:          body,
-		JSON:          json,
-		Method:        method,
-		Options:       options,
-		Regex:         regex,
-		RegexTemplate: regexTemplate,
-		Status:        status,
-		URL:           url,
-		Defaults:      defaults,
-		HardDefaults:  hardDefaults}
-	if headers != nil {
-		lookup.Headers = *headers
+	status *status.Status,
+	defaults, hardDefaults *Defaults,
+) (*Lookup, error) {
+	lookup := &Lookup{}
+
+	// Unmarshal.
+	if err := util.UnmarshalConfig(configFormat, configData, lookup); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal deployedver.Lookup:\n%w", err)
 	}
-	return
+
+	lookup.Init(
+		options,
+		status,
+		defaults, hardDefaults)
+
+	return lookup, nil
+}
+
+// Copy returns a copy of the Lookup.
+func Copy(
+	lookup *Lookup,
+) *Lookup {
+	if lookup == nil {
+		return nil
+	}
+
+	// JSON of existing lookup.
+	lookupJSON, _ := json.Marshal(lookup)
+
+	// Create a new lookup.
+	newLookup, _ := New(
+		"json", lookupJSON,
+		lookup.Options.Copy(),
+		&status.Status{},
+		lookup.Defaults,
+		lookup.HardDefaults)
+
+	return newLookup
 }
 
 // String returns a string representation of the Lookup.
-func (l *Lookup) String(prefix string) (str string) {
-	if l != nil {
-		str = util.ToYAMLString(l, prefix)
+func (l *Lookup) String(prefix string) string {
+	if l == nil {
+		return ""
 	}
-	return
+	return util.ToYAMLString(l, prefix)
 }
 
 // BasicAuth to use on the HTTP(s) request.
@@ -115,11 +138,19 @@ type BasicAuth struct {
 
 // Header to use in the HTTP request.
 type Header struct {
-	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig
-	Value string `yaml:"value" json:"value"` // Value to give the key
+	Key   string `yaml:"key" json:"key"`     // Header key, e.g. X-Sig.
+	Value string `yaml:"value" json:"value"` // Value to give the key.
 }
 
-// isEqual will return a bool of whether this lookup is the same as `other` (excluding status).
+// IsEqual will return a bool of whether this lookup is the same as `other` (excluding status).
 func (l *Lookup) IsEqual(other *Lookup) bool {
-	return l.String("") == other.String("")
+	// If one/both nil.
+	if other == nil || l == nil {
+		// Equal if both nil.
+		return other == nil && l != nil
+	}
+
+	// Equal if Options and Lookup marshal to the same strings.
+	return l.Options.String() == other.Options.String() &&
+		l.String("") == other.String("")
 }

@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,13 +18,15 @@ package config
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
@@ -91,7 +93,7 @@ func TestWaitChannelTimeout(t *testing.T) {
 			elapsed := time.Since(start)
 			if elapsed < tc.timeTaken-100*time.Millisecond ||
 				elapsed > tc.timeTaken+100*time.Millisecond {
-				t.Errorf("waitChannelTimeout should have waited atleast %s, but only waited %s",
+				t.Errorf("waitChannelTimeout should have waited at least %s, but only waited %s",
 					tc.timeTaken, elapsed)
 			}
 		})
@@ -105,7 +107,7 @@ func TestConfig_Save(t *testing.T) {
 		corrections map[string]string
 	}{
 		"config_test.yml": {
-			file: testYAML_ConfigTest,
+			file: testYAML_config_test,
 			corrections: map[string]string{
 				"listen_port: 0\n":         "listen_port: \"0\"\n",
 				"semantic_versioning: n\n": "semantic_versioning: false\n",
@@ -135,7 +137,7 @@ func TestConfig_Save(t *testing.T) {
 		originalData, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatalf("Failed opening the file for the data we were going to Save\n%s",
-				err.Error())
+				err)
 		}
 		had := string(originalData)
 		config := testLoadBasic(file, t)
@@ -151,22 +153,17 @@ func TestConfig_Save(t *testing.T) {
 			loadMutex.RUnlock()
 
 			// THEN it's the same as the original file
-			failed := false
 			newData, err := os.ReadFile(config.File)
 			for from := range tc.corrections {
 				had = strings.ReplaceAll(had, from, tc.corrections[from])
 			}
 			if string(newData) != had {
-				failed = true
-				t.Errorf("%q is different after Save. Got \n%s\nexpecting:\n%s",
+				t.Errorf("%q is different after Save(). Got \n%s\nexpecting:\n%s",
 					file, string(newData), had)
 			}
 			err = os.Remove(config.File)
 			if err != nil {
-				t.Fatal(err)
-			}
-			if failed {
-				t.Fatal()
+				t.Error(err)
 			}
 			time.Sleep(time.Second)
 		})
@@ -175,29 +172,27 @@ func TestConfig_Save(t *testing.T) {
 
 func TestRemoveSection(t *testing.T) {
 	// GIVEN a file as a string and a section to remove from it
-	file := `
-  foo:
-    latest_version:
-      type: url
-      url: https://example.com
-    notify:
-      bish: {}
-      bash: {}
-      bosh: {}
-    command:
-      - ['echo' '"hello"']
-      - ['ls', '-lah']`
+	file := test.TrimYAML(`
+		foo:
+			latest_version:
+				type: url
+				url: https://example.com
+			notify:
+				bish: {}
+				bash: {}
+				bosh: {}
+			command:
+				- ['echo' '"hello"']
+				- ['ls', '-lah']`)
 	tests := map[string]struct {
-		section     string
-		indentation int
-		aStart      int
-		aEnd        int
-		bStart      int
-		bEnd        int
+		section      string
+		indentation  int
+		aStart, aEnd int
+		bStart, bEnd int
 	}{
 		"remove latest_version": {
 			section:     "latest_version",
-			indentation: 2,
+			indentation: 1,
 			aStart:      0,
 			aEnd:        1,
 			bStart:      4,
@@ -205,7 +200,7 @@ func TestRemoveSection(t *testing.T) {
 		},
 		"remove notify": {
 			section:     "notify",
-			indentation: 2,
+			indentation: 1,
 			aStart:      0,
 			aEnd:        4,
 			bStart:      8,
@@ -213,7 +208,7 @@ func TestRemoveSection(t *testing.T) {
 		},
 		"remove command": {
 			section:     "command",
-			indentation: 2,
+			indentation: 1,
 			aStart:      0,
 			aEnd:        8,
 			bStart:      8,
@@ -221,7 +216,7 @@ func TestRemoveSection(t *testing.T) {
 		},
 		"remove root": {
 			section:     "foo",
-			indentation: 1,
+			indentation: 0,
 			aStart:      0,
 			aEnd:        0,
 			bStart:      0,
@@ -233,7 +228,7 @@ func TestRemoveSection(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lines := strings.Split(file, "\n")[1:]
+			lines := strings.Split(file, "\n")
 			want := make([]string, (tc.aEnd-tc.aStart)+(tc.bEnd-tc.bStart))
 			for i := 0; i < (tc.aEnd - tc.aStart); i++ {
 				want[i] = lines[tc.aStart+i]
@@ -278,73 +273,73 @@ func TestRemoveAllServiceDefaults(t *testing.T) {
 			want:     "",
 		},
 		"service using defaults": {
-			lines: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-`,
-			want: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-`,
+			lines: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+			`),
+			want: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+			`),
 			services: &service.Slice{
 				"alpha": &service.Service{}},
 			serviceDefaults: service.Defaults{
@@ -373,87 +368,91 @@ service:
 			currentOrderIndexEnd:   []int{0, 35},
 		},
 		"service overriding defaults": {
-			lines: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			foo:
-				options:
-					message: 123
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-`,
-			want: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			foo:
-				options:
-					message: 123
-			bar: {}
-`,
+			lines: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							foo:
+								options:
+									message: 123
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+			`),
+			want: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							foo:
+								options:
+									message: 123
+							bar: {}
+			`),
 			services: &service.Slice{
 				"alpha": &service.Service{
 					Notify: shoutrrr.Slice{
 						"foo": shoutrrr.New(
-							nil, "foo", nil, nil, "gotify", nil, nil, nil, nil),
+							nil, "foo", "gotify",
+							nil, nil, nil,
+							nil, nil, nil),
 						"bar": shoutrrr.New(
-							nil, "bar", nil, nil, "gotify", nil, nil, nil, nil)}}},
+							nil, "bar", "gotify",
+							nil, nil, nil,
+							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
@@ -480,102 +479,108 @@ service:
 			currentOrderIndexEnd:   []int{0, 37},
 		},
 		"service not using defaults": {
-			lines: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			boop:
-				type: gotify
-			zoop:
-				type: slack
-		command:
-			- ["ls", "-lah"]
-		webhook:
-			bang:
-				type: gitlab
-			crash:
-				type: github
-		`,
-			want: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			boop:
-				type: gotify
-			zoop:
-				type: slack
-		command:
-			- ["ls", "-lah"]
-		webhook:
-			bang:
-				type: gitlab
-			crash:
-				type: github
-		`,
+			lines: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							bop:
+								type: gotify
+							top:
+								type: slack
+						command:
+							- ["ls", "-lah"]
+						webhook:
+							bang:
+								type: gitlab
+							crash:
+								type: github
+			`),
+			want: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							bop:
+								type: gotify
+							top:
+								type: slack
+						command:
+							- ["ls", "-lah"]
+						webhook:
+							bang:
+								type: gitlab
+							crash:
+								type: github
+			`),
 			services: &service.Slice{
 				"alpha": &service.Service{
 					Notify: shoutrrr.Slice{
-						"boop": shoutrrr.New(
-							nil, "boop", nil, nil, "gotify", nil, nil, nil, nil),
-						"zoop": shoutrrr.New(
-							nil, "zoop", nil, nil, "slack", nil, nil, nil, nil)},
+						"bop": shoutrrr.New(
+							nil, "bop", "gotify",
+							nil, nil, nil,
+							nil, nil, nil),
+						"top": shoutrrr.New(
+							nil, "top", "slack",
+							nil, nil, nil,
+							nil, nil, nil)},
 					Command: command.Slice{
 						{"ls", "-lah"}},
 					WebHook: webhook.Slice{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "", nil, nil, nil),
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "", nil, nil, nil)},
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil, nil)},
 				}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
@@ -603,130 +608,130 @@ service:
 			currentOrderIndexEnd:   []int{0, 34},
 		},
 		"service using defaults, service overriding defaults and service not using defaults": {
-			lines: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-	bravo:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["ls", "-lah"]
-		webhook:
-			bash:
-				type: gitlab
-			bish:
-				type: github
-			bosh:
-				type: gitlab
-	charlie:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			boop:
-				type: gotify
-			zoop:
-				type: slack
-		command:
-			- ["ls", "-lah", "/tmp"]
-		webhook:
-			bang:
-				type: gitlab
-			crash:
-				type: github
-`,
-			want: `
-defaults:
-	service:
-		notify:
-			foo: {}
-			bar: {}
-		command:
-			- ["echo", "hello"]
-		webhook:
-			bash: {}
-			bish: {}
-			bosh: {}
-notify:
-	foo:
-		type: gotify
-	bar:
-		type: discord
-webhook:
-	bash:
-		type: github
-	bish:
-		type: gitlab
-	bosh:
-		type: github
-service:
-	alpha:
-		latest_version:
-			url: release-argus/Argus
-	bravo:
-		latest_version:
-			url: release-argus/Argus
-		command:
-			- ["ls", "-lah"]
-		webhook:
-			bash:
-				type: gitlab
-			bish:
-				type: github
-			bosh:
-				type: gitlab
-	charlie:
-		latest_version:
-			url: release-argus/Argus
-		notify:
-			boop:
-				type: gotify
-			zoop:
-				type: slack
-		command:
-			- ["ls", "-lah", "/tmp"]
-		webhook:
-			bang:
-				type: gitlab
-			crash:
-				type: github
-`,
+			lines: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+					bravo:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["ls", "-lah"]
+						webhook:
+							bash:
+								type: gitlab
+							bish:
+								type: github
+							bosh:
+								type: gitlab
+					charlie:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							bop:
+								type: gotify
+							top:
+								type: slack
+						command:
+							- ["ls", "-lah", "/tmp"]
+						webhook:
+							bang:
+								type: gitlab
+							crash:
+								type: github
+			`),
+			want: test.TrimYAML(`
+				defaults:
+					service:
+						notify:
+							foo: {}
+							bar: {}
+						command:
+							- ["echo", "hello"]
+						webhook:
+							bash: {}
+							bish: {}
+							bosh: {}
+				notify:
+					foo:
+						type: gotify
+					bar:
+						type: discord
+				webhook:
+					bash:
+						type: github
+					bish:
+						type: gitlab
+					bosh:
+						type: github
+				service:
+					alpha:
+						latest_version:
+							url: release-argus/Argus
+					bravo:
+						latest_version:
+							url: release-argus/Argus
+						command:
+							- ["ls", "-lah"]
+						webhook:
+							bash:
+								type: gitlab
+							bish:
+								type: github
+							bosh:
+								type: gitlab
+					charlie:
+						latest_version:
+							url: release-argus/Argus
+						notify:
+							bop:
+								type: gotify
+							top:
+								type: slack
+						command:
+							- ["ls", "-lah", "/tmp"]
+						webhook:
+							bang:
+								type: gitlab
+							crash:
+								type: github
+			`),
 			services: &service.Slice{
 				"alpha": &service.Service{},
 				"bravo": &service.Service{
@@ -734,24 +739,33 @@ service:
 						{"ls", "-lah"}},
 					WebHook: webhook.Slice{
 						"bash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "", nil, nil, nil),
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil, nil),
 						"bish": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "", nil, nil, nil),
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil, nil),
 						"bosh": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "", nil, nil, nil)}},
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil, nil)}},
 				"charlie": &service.Service{
 					Notify: shoutrrr.Slice{
-						"boop": shoutrrr.New(
-							nil, "boop", nil, nil, "gotify", nil, nil, nil, nil),
-						"zoop": shoutrrr.New(
-							nil, "zoop", nil, nil, "slack", nil, nil, nil, nil)},
+						"bop": shoutrrr.New(
+							nil, "bop", "gotify",
+							nil, nil, nil,
+							nil, nil, nil),
+						"top": shoutrrr.New(
+							nil, "top", "slack",
+							nil, nil, nil,
+							nil, nil, nil)},
 					Command: command.Slice{
 						{"ls", "-lah", "/tmp"}},
 					WebHook: webhook.Slice{
 						"bang": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "", nil, nil, nil),
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "gitlab", "",
+							nil, nil, nil),
 						"crash": webhook.New(
-							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "", nil, nil, nil)}}},
+							nil, nil, "", nil, nil, nil, nil, nil, "", nil, "github", "",
+							nil, nil, nil)}}},
 			serviceDefaults: service.Defaults{
 				Notify: map[string]struct{}{
 					"foo": {},
@@ -783,10 +797,13 @@ service:
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			indentation := 4
 			tc.lines = strings.TrimLeft(tc.lines, "\n")
+			indentationRegex := regexp.MustCompile(`(\n\s+)`)
+			indentationStr := indentationRegex.FindString(tc.lines)
+			indentation := strings.Count(indentationStr, " ")
 			tc.lines = strings.ReplaceAll(tc.lines, "\t", strings.Repeat(" ", indentation))
 			lines := strings.Split(tc.lines, "\n")
+
 			currentOrder := util.SortedKeys(*tc.services)
 			tc.want = strings.TrimLeft(tc.want, "\n")
 			tc.want = strings.ReplaceAll(tc.want, "\t", strings.Repeat(" ", indentation))
@@ -796,7 +813,7 @@ service:
 				s.Init(
 					&tc.serviceDefaults, &service.Defaults{},
 					&tc.rootNotify, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-					&tc.rootWebHook, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
+					&tc.rootWebHook, &webhook.Defaults{}, &webhook.Defaults{})
 			}
 
 			// WHEN we remove all the service defaults
@@ -810,7 +827,7 @@ service:
 
 			// THEN they're removed
 			if len(want) != len(lines) {
-				t.Fatalf("want %d lines, got %d\nwant:\n%v\n---\ngot:\n%v",
+				t.Fatalf("want %d lines, got %d\nwant:\n%q\n---\ngot:\n%q",
 					len(want), len(lines), want, lines)
 			}
 			failed := false

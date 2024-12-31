@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,29 @@
 
 //go:build unit || integration
 
-package apitype
+package types
+
+import (
+	"encoding/json"
+	"os"
+	"testing"
+
+	"github.com/release-argus/Argus/util"
+)
+
+var secretValueMarshalled string
+
+func TestMain(m *testing.M) {
+	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'
+	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
+	secretValueMarshalled = string(secretValueMarshalledBytes)
+
+	// run other tests
+	exitCode := m.Run()
+
+	// exit
+	os.Exit(exitCode)
+}
 
 func testNotify() Notify {
 	return Notify{

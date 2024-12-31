@@ -41,8 +41,8 @@ interface Props {
  * @param removeMe - The function to remove this Notify
  * @param serviceName - The name of the service
  * @param originals - The original values for the Notify
- * @param globalOptions - The options for the global Notify's
- * @param mains - The main Notify's
+ * @param globalOptions - The options for the global Notifiers
+ * @param mains - The main Notifiers
  * @param defaults - The default values for all Notify types
  * @param hard_defaults - The hard default values for all Notify types
  * @returns The form fields for this Notify
@@ -68,11 +68,11 @@ const Notify: FC<Props> = ({
   const lvURL: string | undefined = useWatch({ name: "latest_version.url" });
   const webURL: string | undefined = useWatch({ name: "dashboard.web_url" });
   useEffect(() => {
-    // Set Type to that of the global for the new name if it exists
+    // Set Type to that of the global for the new name if it exists.
     if (mains?.[itemName]?.type) setValue(`${name}.type`, mains[itemName].type);
     else if (itemType && (NotifyTypesConst as string[]).includes(itemName))
       setValue(`${name}.type`, itemName);
-    // Trigger validation on name/type
+    // Trigger validation on name/type.
     const timeout = setTimeout(() => {
       if (itemName !== "") trigger(`${name}.name`);
       trigger(`${name}.type`);
@@ -81,7 +81,7 @@ const Notify: FC<Props> = ({
   }, [itemName]);
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
-    [name, itemName, itemType]
+    [name, itemName, itemType],
   );
 
   const original: NotifyEditType = useMemo(() => {
@@ -98,23 +98,23 @@ const Notify: FC<Props> = ({
   const onChangeNotifyType = (
     newType: NotifyTypesKeys,
     original: NotifyEditType,
-    otherOptionsData: ServiceEditOtherData
+    otherOptionsData: ServiceEditOtherData,
   ) => {
-    // Reset to original type
+    // Reset to original type.
     if (newType === original?.type) {
       setValue(`${name}.url_fields`, original.url_fields);
       setValue(`${name}.params`, original.params);
       return;
     }
 
-    // Set the default values for the selected type
+    // Set the default values for the selected type.
     setValue(
       `${name}.url_fields`,
-      convertNotifyURLFields(name, newType, undefined, otherOptionsData)
+      convertNotifyURLFields(name, newType, undefined, otherOptionsData),
     );
     setValue(
       `${name}.params`,
-      convertNotifyParams(name, newType, undefined, otherOptionsData)
+      convertNotifyParams(name, newType, undefined, otherOptionsData),
     );
   };
 

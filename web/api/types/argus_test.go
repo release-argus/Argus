@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package apitype
+package types
 
 import (
 	"encoding/json"
@@ -28,8 +28,7 @@ import (
 func TestNotify_Censor(t *testing.T) {
 	// GIVEN a Notify
 	tests := map[string]struct {
-		notify *Notify
-		want   *Notify
+		notify, want *Notify
 	}{
 		"nil": {
 			notify: nil,
@@ -47,13 +46,13 @@ func TestNotify_Censor(t *testing.T) {
 					"tokenb":   "golf"}},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    "<secret>",
-					"apikey":   "<secret>",
-					"botkey":   "<secret>",
-					"password": "<secret>",
-					"token":    "<secret>",
-					"tokena":   "<secret>",
-					"tokenb":   "<secret>"}},
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue}},
 		},
 		"params": {
 			notify: &Notify{
@@ -61,7 +60,7 @@ func TestNotify_Censor(t *testing.T) {
 					"devices": "foo"}},
 			want: &Notify{
 				Params: map[string]string{
-					"devices": "<secret>"}},
+					"devices": util.SecretValue}},
 		},
 		"all censorable": {
 			notify: &Notify{
@@ -77,15 +76,15 @@ func TestNotify_Censor(t *testing.T) {
 					"devices": "hotel"}},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    "<secret>",
-					"apikey":   "<secret>",
-					"botkey":   "<secret>",
-					"password": "<secret>",
-					"token":    "<secret>",
-					"tokena":   "<secret>",
-					"tokenb":   "<secret>"},
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue},
 				Params: map[string]string{
-					"devices": "<secret>"}},
+					"devices": util.SecretValue}},
 		},
 		"all censorable, plus non-censored": {
 			notify: &Notify{
@@ -106,17 +105,17 @@ func TestNotify_Censor(t *testing.T) {
 					"events":  "lima"}},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    "<secret>",
-					"apikey":   "<secret>",
-					"botkey":   "<secret>",
-					"password": "<secret>",
-					"token":    "<secret>",
-					"tokena":   "<secret>",
-					"tokenb":   "<secret>",
+					"altid":    util.SecretValue,
+					"apikey":   util.SecretValue,
+					"botkey":   util.SecretValue,
+					"password": util.SecretValue,
+					"token":    util.SecretValue,
+					"tokena":   util.SecretValue,
+					"tokenb":   util.SecretValue,
 					"port":     "hotel",
 					"username": "india"},
 				Params: map[string]string{
-					"devices": "<secret>",
+					"devices": util.SecretValue,
 					"rooms":   "kilo",
 					"events":  "lima"}},
 		},
@@ -129,7 +128,7 @@ func TestNotify_Censor(t *testing.T) {
 			// WHEN Censor is called on it
 			tc.notify.Censor()
 
-			// THEN nil Notify's are kept
+			// THEN nil Notifiers are kept
 			if tc.notify == tc.want {
 				return
 			}
@@ -153,8 +152,7 @@ func TestNotify_Censor(t *testing.T) {
 func TestNotifySlice_Censor(t *testing.T) {
 	// GIVEN a Notify
 	tests := map[string]struct {
-		notify *NotifySlice
-		want   *NotifySlice
+		notify, want *NotifySlice
 	}{
 		"nil": {
 			notify: nil,
@@ -180,17 +178,17 @@ func TestNotifySlice_Censor(t *testing.T) {
 			want: &NotifySlice{
 				"0": &Notify{
 					URLFields: map[string]string{
-						"password": "<secret>",
+						"password": util.SecretValue,
 						"port":     "bravo"},
 					Params: map[string]string{
-						"devices": "<secret>",
+						"devices": util.SecretValue,
 						"rooms":   "delta"}},
 				"1": &Notify{
 					URLFields: map[string]string{
-						"altid": "<secret>",
+						"altid": util.SecretValue,
 						"port":  "foxtrot"},
 					Params: map[string]string{
-						"devices": "<secret>",
+						"devices": util.SecretValue,
 						"rooms":   "golf"}},
 			},
 		},
@@ -203,7 +201,7 @@ func TestNotifySlice_Censor(t *testing.T) {
 			// WHEN Censor is called on it
 			tc.notify.Censor()
 
-			// THEN nil NotifySlice's are kept
+			// THEN nil NotifySlices are kept
 			if tc.notify == tc.want {
 				return
 			}
@@ -236,7 +234,7 @@ func TestNotifySlice_Flatten(t *testing.T) {
 			notify: nil,
 			want:   nil,
 		},
-		"emmpty": {
+		"empty": {
 			notify: &NotifySlice{},
 			want:   &[]Notify{},
 		},
@@ -283,16 +281,16 @@ func TestNotifySlice_Flatten(t *testing.T) {
 				{ID: "golf",
 					URLFields: map[string]string{
 						"path":   "charlie",
-						"botkey": "<secret>"},
+						"botkey": util.SecretValue},
 					Params: map[string]string{
 						"rooms": "delta"}},
 				{ID: "hotel",
 					URLFields: map[string]string{
 						"port":  "alpha",
-						"altid": "<secret>"},
+						"altid": util.SecretValue},
 					Params: map[string]string{
 						"hosts":   "bravo",
-						"devices": "<secret>"}}},
+						"devices": util.SecretValue}}},
 		},
 	}
 
@@ -303,26 +301,26 @@ func TestNotifySlice_Flatten(t *testing.T) {
 			// WHEN Flatten is called on it
 			got := tc.notify.Flatten()
 
-			// THEN nil NotifySlice's are kept
+			// THEN nil NotifySlices are kept
 			if tc.notify == nil && tc.want == nil {
 				return
 			}
 			// AND defined fields are censored as expected
 			for i := range *tc.want {
-				if (*tc.want)[i].ID != (*got)[i].ID {
+				if (*tc.want)[i].ID != got[i].ID {
 					t.Errorf("ID:\ngot %q, want %q",
-						(*got)[i].ID, (*tc.want)[i].ID)
+						got[i].ID, (*tc.want)[i].ID)
 				}
 				for k := range (*tc.want)[i].URLFields {
-					if (*tc.want)[i].URLFields[k] != (*got)[i].URLFields[k] {
+					if (*tc.want)[i].URLFields[k] != got[i].URLFields[k] {
 						t.Errorf("URLField %q:\ngot %q, want %q",
-							k, (*got)[i].URLFields[k], (*tc.want)[i].URLFields[k])
+							k, got[i].URLFields[k], (*tc.want)[i].URLFields[k])
 					}
 				}
 				for k := range (*tc.want)[i].Params {
-					if (*tc.want)[i].Params[k] != (*got)[i].Params[k] {
+					if (*tc.want)[i].Params[k] != got[i].Params[k] {
 						t.Errorf("Param %q:\ngot %q, want %q",
-							k, (*got)[i].Params[k], (*tc.want)[i].Params[k])
+							k, got[i].Params[k], (*tc.want)[i].Params[k])
 					}
 				}
 			}
@@ -333,8 +331,7 @@ func TestNotifySlice_Flatten(t *testing.T) {
 func TestWebHook_Censor(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
-		webhook *WebHook
-		want    *WebHook
+		webhook, want *WebHook
 	}{
 		"nil": {
 			webhook: nil,
@@ -342,9 +339,9 @@ func TestWebHook_Censor(t *testing.T) {
 		},
 		"secret": {
 			webhook: &WebHook{
-				Secret: test.StringPtr("shazam")},
+				Secret: "shazam"},
 			want: &WebHook{
-				Secret: test.StringPtr("<secret>")},
+				Secret: util.SecretValue},
 		},
 		"custom_headers": {
 			webhook: &WebHook{
@@ -353,20 +350,20 @@ func TestWebHook_Censor(t *testing.T) {
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
 				CustomHeaders: &[]Header{
-					{Key: "X-Header", Value: "<secret>"},
-					{Key: "X-Bing", Value: "<secret>"}}},
+					{Key: "X-Header", Value: util.SecretValue},
+					{Key: "X-Bing", Value: util.SecretValue}}},
 		},
 		"all": {
 			webhook: &WebHook{
-				Secret: test.StringPtr("shazam"),
+				Secret: "shazam",
 				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "something"},
 					{Key: "X-Bing", Value: "Bam"}}},
 			want: &WebHook{
-				Secret: test.StringPtr("<secret>"),
+				Secret: util.SecretValue,
 				CustomHeaders: &[]Header{
-					{Key: "X-Header", Value: "<secret>"},
-					{Key: "X-Bing", Value: "<secret>"}}},
+					{Key: "X-Header", Value: util.SecretValue},
+					{Key: "X-Bing", Value: util.SecretValue}}},
 		},
 	}
 
@@ -377,14 +374,14 @@ func TestWebHook_Censor(t *testing.T) {
 			// WHEN Censor is called on it
 			tc.webhook.Censor()
 
-			// THEN nil WebHook's are kept
+			// THEN nil WebHooks are kept
 			if tc.webhook == tc.want {
 				return
 			}
 			// AND the Secret is censored
-			if util.DefaultIfNil(tc.want.Secret) != util.DefaultIfNil(tc.webhook.Secret) {
+			if tc.want.Secret != tc.webhook.Secret {
 				t.Errorf("Secret uncensored\ngot %q, want %q",
-					util.DefaultIfNil(tc.webhook.Secret), util.DefaultIfNil(tc.want.Secret))
+					tc.webhook.Secret, tc.want.Secret)
 			}
 			if tc.webhook.CustomHeaders != nil {
 				for i := range *tc.want.CustomHeaders {
@@ -402,7 +399,7 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 	// GIVEN a WebHook
 	tests := map[string]struct {
 		webhook *WebHookSlice
-		want    *[]*WebHook
+		want    []*WebHook
 	}{
 		"nil": {
 			webhook: nil,
@@ -410,31 +407,31 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 		},
 		"empty": {
 			webhook: &WebHookSlice{},
-			want:    &[]*WebHook{},
+			want:    []*WebHook{},
 		},
 		"webhooks ordered": {
 			webhook: &WebHookSlice{
-				"alpha": &WebHook{URL: test.StringPtr("https://example.com")},
-				"bravo": &WebHook{URL: test.StringPtr("https://example.com/other")}},
-			want: &[]*WebHook{
-				{ID: "alpha", URL: test.StringPtr("https://example.com")},
-				{ID: "bravo", URL: test.StringPtr("https://example.com/other")}},
+				"alpha": &WebHook{URL: "https://example.com"},
+				"bravo": &WebHook{URL: "https://example.com/other"}},
+			want: []*WebHook{
+				{ID: "alpha", URL: "https://example.com"},
+				{ID: "bravo", URL: "https://example.com/other"}},
 		},
 		"webhooks ordered and censored": {
 			webhook: &WebHookSlice{
 				"alpha": &WebHook{
-					URL:    test.StringPtr("https://example.com"),
-					Secret: test.StringPtr("foo")},
+					URL:    "https://example.com",
+					Secret: "foo"},
 				"bravo": &WebHook{
-					URL:    test.StringPtr("https://example.com/other"),
-					Secret: test.StringPtr("bar")}},
-			want: &[]*WebHook{
+					URL:    "https://example.com/other",
+					Secret: "bar"}},
+			want: []*WebHook{
 				{ID: "alpha",
-					URL:    test.StringPtr("https://example.com"),
-					Secret: test.StringPtr("<secret>")},
+					URL:    "https://example.com",
+					Secret: util.SecretValue},
 				{ID: "bravo",
-					URL:    test.StringPtr("https://example.com/other"),
-					Secret: test.StringPtr("<secret>")}},
+					URL:    "https://example.com/other",
+					Secret: util.SecretValue}},
 		},
 	}
 
@@ -445,11 +442,7 @@ func TestWebHookSlice_Flatten(t *testing.T) {
 			// WHEN Flatten is called on it
 			got := tc.webhook.Flatten()
 
-			// THEN nil WebHook's are kept
-			if got == tc.want {
-				return
-			}
-			// AND the map is flattened, ordered and censored
+			// THEN the map is flattened, ordered and censored
 			gotBytes, _ := json.Marshal(got)
 			wantBytes, _ := json.Marshal(tc.want)
 			if string(gotBytes) != string(wantBytes) {
@@ -477,9 +470,9 @@ func TestServiceSummary_String(t *testing.T) {
 		"some": {
 			summary: &ServiceSummary{
 				ID:      "foo",
-				Type:    test.StringPtr("github"),
-				Command: test.IntPtr(1),
-				WebHook: test.IntPtr(2)},
+				Type:    "github",
+				Command: 1,
+				WebHook: 2},
 			want: `
 				{
 					"id": "foo",
@@ -492,14 +485,14 @@ func TestServiceSummary_String(t *testing.T) {
 			summary: &ServiceSummary{
 				ID:                       "bar",
 				Active:                   test.BoolPtr(true),
-				Comment:                  test.StringPtr("test"),
-				Type:                     test.StringPtr("gitlab"),
+				Comment:                  "test",
+				Type:                     "gitlab",
 				WebURL:                   "http://example.com",
-				Icon:                     test.StringPtr("https://example.com/icon.png"),
-				IconLinkTo:               test.StringPtr("https://release-argus.io"),
+				Icon:                     ("https://example.com/icon.png"),
+				IconLinkTo:               ("https://release-argus.io"),
 				HasDeployedVersionLookup: test.BoolPtr(true),
-				Command:                  test.IntPtr(2),
-				WebHook:                  test.IntPtr(1),
+				Command:                  (2),
+				WebHook:                  (1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3"}},
 			want: `
@@ -540,13 +533,11 @@ func TestServiceSummary_String(t *testing.T) {
 }
 
 func TestServiceSummary_RemoveUnchanged(t *testing.T) {
-	// GIVEN two ServiceSummary's
+	// GIVEN two ServiceSummaries
 	tests := map[string]struct {
-		old  *ServiceSummary
-		new  *ServiceSummary
-		want *ServiceSummary
+		old, new, want *ServiceSummary
 	}{
-		"commpare to nil": {
+		"compare to nil": {
 			old: nil,
 			new: &ServiceSummary{ID: "foo"},
 			want: &ServiceSummary{
@@ -585,48 +576,48 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"same type": {
 			old: &ServiceSummary{
-				Type: test.StringPtr("github")},
+				Type: ("github")},
 			new: &ServiceSummary{
-				Type: test.StringPtr("github")},
+				Type: ("github")},
 			want: &ServiceSummary{},
 		},
 		"different type": {
 			old: &ServiceSummary{
-				Type: test.StringPtr("github")},
+				Type: ("github")},
 			new: &ServiceSummary{
-				Type: test.StringPtr("gitlab")},
+				Type: ("gitlab")},
 			want: &ServiceSummary{
-				Type: test.StringPtr("gitlab")},
+				Type: ("gitlab")},
 		},
 		"same icon": {
 			old: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: ("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: ("https://example.com/icon.png")},
 			want: &ServiceSummary{},
 		},
 		"different icon": {
 			old: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon.png")},
+				Icon: ("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon2.png")},
+				Icon: ("https://example.com/icon2.png")},
 			want: &ServiceSummary{
-				Icon: test.StringPtr("https://example.com/icon2.png")},
+				Icon: ("https://example.com/icon2.png")},
 		},
 		"same icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: ("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: ("https://release-argus.io")},
 			want: &ServiceSummary{},
 		},
 		"different icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io")},
+				IconLinkTo: ("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
+				IconLinkTo: ("https://release-argus.io/other")},
 			want: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
+				IconLinkTo: ("https://release-argus.io/other")},
 		},
 		"same has_deployed_version_lookup": {
 			old: &ServiceSummary{
@@ -672,7 +663,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 					DeployedVersion: "1.2.3"}},
 			want: &ServiceSummary{},
 		},
-		"same deployed_version, different timestaps ignored": {
+		"same deployed_version, different timestamps ignored": {
 			old: &ServiceSummary{
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
@@ -706,7 +697,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 					LatestVersion: "1.2.3"}},
 			want: &ServiceSummary{},
 		},
-		"same latest_version, different timestaps ignored": {
+		"same latest_version, different timestamps ignored": {
 			old: &ServiceSummary{
 				Status: &Status{
 					LatestVersion:          "1.2.3",
@@ -731,19 +722,19 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 					LatestVersion:          "4.5.6",
 					LatestVersionTimestamp: "2020-02-02T00:00:00Z"}},
 		},
-		"mmultiple differences": {
+		"multiple differences": {
 			old: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io"),
+				IconLinkTo: ("https://release-argus.io"),
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
 					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
 			new: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
+				IconLinkTo: ("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
 			want: &ServiceSummary{
-				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
+				IconLinkTo: ("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
@@ -848,15 +839,15 @@ func TestWebHook_String(t *testing.T) {
 			webhook: &WebHook{
 				ServiceID:         "something",
 				ID:                "foobar",
-				Type:              test.StringPtr("url"),
-				URL:               test.StringPtr("https://release-argus.io"),
+				Type:              "url",
+				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
-				Secret:            test.StringPtr("secret"),
+				Secret:            "secret",
 				CustomHeaders: &[]Header{
 					{Key: "X-Header", Value: "bosh"}},
-				DesiredStatusCode: test.IntPtr(200),
+				DesiredStatusCode: test.UInt16Ptr(200),
 				Delay:             "1h",
-				MaxTries:          test.UIntPtr(7),
+				MaxTries:          test.UInt8Ptr(7),
 				SilentFails:       test.BoolPtr(false),
 			},
 			want: `
@@ -910,15 +901,15 @@ func TestWebHookSlice_String(t *testing.T) {
 			slice: &WebHookSlice{
 				"0": {ServiceID: "something",
 					ID:                "foobar",
-					Type:              test.StringPtr("url"),
-					URL:               test.StringPtr("https://release-argus.io"),
+					Type:              "url",
+					URL:               "https://release-argus.io",
 					AllowInvalidCerts: test.BoolPtr(true),
-					Secret:            test.StringPtr("secret"),
+					Secret:            "secret",
 					CustomHeaders: &[]Header{
 						{Key: "X-Header", Value: "bosh"}},
-					DesiredStatusCode: test.IntPtr(200),
+					DesiredStatusCode: test.UInt16Ptr(200),
 					Delay:             "1h",
-					MaxTries:          test.UIntPtr(7),
+					MaxTries:          test.UInt8Ptr(7),
 					SilentFails:       test.BoolPtr(false)},
 			},
 			want: `
@@ -939,9 +930,9 @@ func TestWebHookSlice_String(t *testing.T) {
 		},
 		"multiple webhooks": {
 			slice: &WebHookSlice{
-				"0": {URL: test.StringPtr("bish")},
-				"1": {Secret: test.StringPtr("bash")},
-				"2": {Type: test.StringPtr("github")}},
+				"0": {URL: "bish"},
+				"1": {Secret: "bash"},
+				"2": {Type: "github"}},
 			want: `
 				{
 					"0": {"url": "bish"},
@@ -1083,9 +1074,9 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 				Headers: []Header{
 					{Key: "X-Header", Value: "bosh"},
 					{Key: "X-Other", Value: "bash"}},
-				Body:         test.StringPtr("what"),
+				Body:         "what",
 				JSON:         "boo",
-				Regex:        "bam",
+				Regex:        `bam`,
 				HardDefaults: &DeployedVersionLookup{},
 				Defaults:     &DeployedVersionLookup{}},
 			want: `
@@ -1139,9 +1130,9 @@ func TestURLCommandSlice_String(t *testing.T) {
 		},
 		"one of each type": {
 			slice: &URLCommandSlice{
-				{Type: "regex", Regex: test.StringPtr("bam")},
-				{Type: "replace", Old: test.StringPtr("want-rid"), New: test.StringPtr("replacement")},
-				{Type: "split", Text: test.StringPtr("split on me"), Index: 5},
+				{Type: "regex", Regex: `bam`},
+				{Type: "replace", Old: "want-rid", New: test.StringPtr("replacement")},
+				{Type: "split", Text: "split on me", Index: test.IntPtr(5)},
 			},
 			want: `
 				[
@@ -1172,19 +1163,19 @@ func TestURLCommandSlice_String(t *testing.T) {
 func TestDefaults_String(t *testing.T) {
 	// GIVEN a Defaults
 	tests := map[string]struct {
-		dflts *Defaults
-		want  string
+		defaults *Defaults
+		want     string
 	}{
 		"nil": {
-			dflts: nil,
-			want:  "",
+			defaults: nil,
+			want:     "",
 		},
 		"empty": {
-			dflts: &Defaults{},
-			want:  `{}`,
+			defaults: &Defaults{},
+			want:     `{}`,
 		},
 		"all types": {
-			dflts: &Defaults{
+			defaults: &Defaults{
 				Service: ServiceDefaults{
 					LatestVersion: &LatestVersionDefaults{
 						AccessToken: "foo"}},
@@ -1193,7 +1184,7 @@ func TestDefaults_String(t *testing.T) {
 						URLFields: map[string]string{
 							"url": "https://gotify.example.com"}}},
 				WebHook: WebHook{
-					Secret: test.StringPtr("bar")}},
+					Secret: "bar"}},
 			want: `
 				{
 					"service": {
@@ -1214,7 +1205,7 @@ func TestDefaults_String(t *testing.T) {
 			t.Parallel()
 
 			// WHEN the Defaults are stringified with String
-			got := tc.dflts.String()
+			got := tc.defaults.String()
 
 			// THEN the result is as expected
 			tc.want = test.TrimJSON(tc.want)
@@ -1275,20 +1266,20 @@ func TestLatestVersion_String(t *testing.T) {
 			input: &LatestVersion{
 				Type:              "github",
 				URL:               "release-argus/argus",
-				AccessToken:       "<secret>",
+				AccessToken:       util.SecretValue,
 				AllowInvalidCerts: test.BoolPtr(true),
 				UsePreRelease:     test.BoolPtr(false),
 				URLCommands: &URLCommandSlice{
-					{Type: "replace", Old: test.StringPtr("this"), New: test.StringPtr("withThis")},
-					{Type: "split", Text: test.StringPtr("splitThis"), Index: 8},
-					{Type: "regex", Regex: test.StringPtr("([0-9.]+)")}},
+					{Type: "replace", Old: "this", New: test.StringPtr("withThis")},
+					{Type: "split", Text: "splitThis", Index: test.IntPtr(8)},
+					{Type: "regex", Regex: `([0-9.]+)`}},
 				Require: &LatestVersionRequire{
 					RegexContent: ".*"}},
 			want: `
 				{
 					"type": "github",
 					"url": "release-argus/argus",
-					"access_token": "\u003csecret\u003e",
+					"access_token": ` + secretValueMarshalled + `,
 					"allow_invalid_certs": true,
 					"use_prerelease": false,
 					"url_commands": [
@@ -1313,7 +1304,7 @@ func TestLatestVersion_String(t *testing.T) {
 
 			// THEN the result is as expected
 			if got != tc.want {
-				t.Errorf("got:\n%q\nwant:\n%q",
+				t.Errorf("api.latest_version.String() mismatch\ngot:\n%q\nwant:\n%q",
 					got, tc.want)
 			}
 		})
@@ -1323,17 +1314,17 @@ func TestLatestVersion_String(t *testing.T) {
 func TestLatestVersionRequireDefaults_String(t *testing.T) {
 	// GIVEN a LatestVersionRequireDefaults
 	tests := map[string]struct {
-		lvrd *LatestVersionRequireDefaults
+		lvRD *LatestVersionRequireDefaults
 		want string
 	}{
 		"nil": {
-			lvrd: nil,
+			lvRD: nil,
 			want: ""},
 		"empty": {
-			lvrd: &LatestVersionRequireDefaults{},
+			lvRD: &LatestVersionRequireDefaults{},
 			want: `{}`},
 		"all fields": {
-			lvrd: &LatestVersionRequireDefaults{
+			lvRD: &LatestVersionRequireDefaults{
 				Docker: RequireDockerCheckDefaults{
 					Type: "ghcr",
 					GHCR: &RequireDockerCheckRegistryDefaults{
@@ -1366,7 +1357,7 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 			tc.want = test.TrimJSON(tc.want)
 
 			// WHEN the LatestVersionRequireDefaults are stringified with String
-			got := tc.lvrd.String()
+			got := tc.lvRD.String()
 
 			// THEN the result is as expected
 			if got != tc.want {
@@ -1397,7 +1388,7 @@ func TestLatestVersionRequire_String(t *testing.T) {
 					Image:    "release-argus/argus",
 					Tag:      "{{ version }}",
 					Username: "user",
-					Token:    "<secret>"},
+					Token:    util.SecretValue},
 				RegexContent: ".*",
 				RegexVersion: `([0-9.]+)`},
 			want: `
@@ -1408,7 +1399,7 @@ func TestLatestVersionRequire_String(t *testing.T) {
 						"image": "release-argus/argus",
 						"tag": "{{ version }}",
 						"username": "user",
-						"token": "\u003csecret\u003e"
+						"token": ` + secretValueMarshalled + `
 					},
 					"regex_content": ".*",
 					"regex_version": "([0-9.]+)"

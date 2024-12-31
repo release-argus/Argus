@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -22,8 +23,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Hub maintains the set of active clients and broadcasts messages to those
-// clients.
+// Hub maintains the set of active clients and broadcasts messages to those clients.
 type Hub struct {
 	// Registered clients.
 	clients map[*Client]bool
@@ -48,8 +48,7 @@ func NewHub() *Hub {
 	}
 }
 
-// AnnounceMSG is a minimal JSON struct to check whether the incoming message
-// is valid.
+// AnnounceMSG is minimal JSON to validate the incoming message.
 type AnnounceMSG struct {
 	Type      string `json:"type"`
 	ServiceID string `json:"service_id"`
@@ -60,7 +59,7 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			// Avoid unnecessary writes to the map
+			// Avoid unnecessary writes to the map.
 			if _, ok := h.clients[client]; !ok {
 				h.clients[client] = true
 			}
@@ -75,14 +74,14 @@ func (h *Hub) Run() {
 				if jLog.IsLevel("DEBUG") {
 					jLog.Debug(
 						fmt.Sprintf("Broadcast %s", string(message)),
-						&util.LogFrom{Primary: "WebSocket"},
+						util.LogFrom{Primary: "WebSocket"},
 						len(h.clients) > 0)
 				}
 				var msg AnnounceMSG
 				if err := json.Unmarshal(message, &msg); err != nil {
 					jLog.Warn(
 						"Invalid JSON broadcast to the WebSocket",
-						&util.LogFrom{Primary: "WebSocket"},
+						util.LogFrom{Primary: "WebSocket"},
 						true,
 					)
 					n = len(h.Broadcast)

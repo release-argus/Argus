@@ -29,7 +29,7 @@ export default function reducerActionModal(
       if (action.sub_type == "EVENT") {
         if (action.webhook_data)
           for (const webhook_id in action.webhook_data) {
-            // Remove them from the sending list
+            // Remove them from the sending list.
             newState.sentWH.splice(
               newState.sentWH.indexOf(
                 `${action.service_data.id} ${webhook_id}`
@@ -37,7 +37,7 @@ export default function reducerActionModal(
               1
             );
 
-            // Record the success/fail (if it's the current modal service)
+            // Record the success/fail (if it's the current modal service).
             if (
               action.service_data.id === state.service_id &&
               newState.webhooks[webhook_id] !== undefined
@@ -50,13 +50,13 @@ export default function reducerActionModal(
 
         if (action.command_data)
           for (const command in action.command_data) {
-            // Remove them from the sending list
+            // Remove them from the sending list.
             newState.sentC.splice(
               newState.sentC.indexOf(`${action.service_data.id} ${command}`),
               1
             );
 
-            // Record the success/fail (if it's the current modal service)
+            // Record the success/fail (if it's the current modal service).
             if (
               action.service_data.id === state.service_id &&
               newState.commands[command] !== undefined
@@ -87,23 +87,23 @@ export default function reducerActionModal(
           newState.webhooks = {};
           break;
         case "SENDING":
-          // Commands
+          // Command(s).
           if (action.command_data)
             for (const command in action.command_data) {
-              // reset the failed states
+              // reset the failed states.
               if (newState.commands[command])
                 newState.commands[command].failed = undefined;
-              // set as sending
+              // set as sending.
               newState.sentC.push(`${action.service_data?.id} ${command}`);
             }
 
-          // WebHooks
+          // WebHook(s).
           if (action.webhook_data)
             for (const webhook_id in action.webhook_data) {
-              // reset the failed states
+              // reset the failed states.
               if (newState.webhooks[webhook_id])
                 newState.webhooks[webhook_id].failed = undefined;
-              // set as sending
+              // set as sending.
               newState.sentWH.push(`${action.service_data?.id} ${webhook_id}`);
             }
           break;
@@ -118,7 +118,7 @@ export default function reducerActionModal(
       throw new Error();
   }
 
-  // Gotta update the state more for the reload
+  // Got to update the state more for the reload.
   state = newState;
   return state;
 }

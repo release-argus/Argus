@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ package config
 
 import (
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
+	latestver_base "github.com/release-argus/Argus/service/latest_version/types/base"
+	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
@@ -51,14 +50,17 @@ func TestDefaults_String(t *testing.T) {
 			defaults: &Defaults{
 				Service: service.Defaults{
 					Options: *opt.NewDefaults(
-						"1m",                 // interval
-						test.BoolPtr(false)), // semantic_versioning
-					LatestVersion: *latestver.NewDefaults(
-						test.StringPtr("foo"), // access_token
-						test.BoolPtr(true),    // allow_invalid_certs
-						test.BoolPtr(false),   // use_prerelease
-						filter.NewRequireDefaults(
-							filter.NewDockerCheckDefaults(
+						"1m",
+						test.BoolPtr(false)),
+					LatestVersion: latestver_base.Defaults{
+						AccessToken:       "foo",
+						AllowInvalidCerts: test.BoolPtr(true),
+						UsePreRelease:     test.BoolPtr(false),
+						Options: &opt.Defaults{
+							Base: opt.Base{
+								Interval: "1m"}},
+						Require: filter.RequireDefaults{
+							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr", // type
 								"tokenGHCR",
 								"tokenHub", "usernameHub",
@@ -68,76 +70,76 @@ func TestDefaults_String(t *testing.T) {
 									"otherTokenGHCR",
 									"otherTokenHub", "otherUsernameHub",
 									"otherTokenQuay",
-									nil))),
-					),
+									nil))},
+					},
 					DeployedVersionLookup: *deployedver.NewDefaults(
-						test.BoolPtr(false)), // allow_invalid_certs
+						test.BoolPtr(false)),
 					Dashboard: service.NewDashboardOptionsDefaults(
-						test.BoolPtr(true))}, // auto_approve
+						test.BoolPtr(true))},
 				Notify: shoutrrr.SliceDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{ // options
+						map[string]string{
 							"message": "foo {{ version }}"},
-						&map[string]string{ // params
-							"username": "Argus"},
-						&map[string]string{ // url_params
-							"host": "example.com"})},
+						map[string]string{
+							"host": "example.com"},
+						map[string]string{
+							"username": "Argus"})},
 				WebHook: *webhook.NewDefaults(
-					test.BoolPtr(true), // allow_invalid_certs
-					&webhook.Headers{ // custom_headers
+					test.BoolPtr(true),
+					&webhook.Headers{
 						{Key: "X-Header", Value: "foo"}},
-					"0s",                    // delay
-					test.IntPtr(203),        // desired_status_code
-					test.UIntPtr(2),         // max_tries
-					"secret!!!",             // secret
-					test.BoolPtr(false),     // silent_fails
-					"github",                // type
-					"https://example.comm"), // url
+					"0s",
+					test.UInt16Ptr(203),
+					test.UInt8Ptr(2),
+					"secret!!!",
+					test.BoolPtr(false),
+					"github",
+					"https://example.comm"),
 			},
-			want: `
-service:
-  options:
-    interval: 1m
-    semantic_versioning: false
-  latest_version:
-    access_token: foo
-    allow_invalid_certs: true
-    use_prerelease: false
-    require:
-      docker:
-        type: ghcr
-        ghcr:
-          token: tokenGHCR
-        hub:
-          token: tokenHub
-          username: usernameHub
-        quay:
-          token: tokenQuay
-  deployed_version:
-    allow_invalid_certs: false
-  dashboard:
-    auto_approve: true
-notify:
-  discord:
-    options:
-      message: foo {{ version }}
-    url_fields:
-      host: example.com
-    params:
-      username: Argus
-webhook:
-  type: github
-  url: https://example.comm
-  allow_invalid_certs: true
-  custom_headers:
-    - key: X-Header
-      value: foo
-  secret: secret!!!
-  desired_status_code: 203
-  delay: 0s
-  max_tries: 2
-  silent_fails: false`,
+			want: test.TrimYAML(`
+				service:
+					options:
+						interval: 1m
+						semantic_versioning: false
+					latest_version:
+						access_token: foo
+						allow_invalid_certs: true
+						use_prerelease: false
+						require:
+							docker:
+								type: ghcr
+								ghcr:
+									token: tokenGHCR
+								hub:
+									token: tokenHub
+									username: usernameHub
+								quay:
+									token: tokenQuay
+					deployed_version:
+						allow_invalid_certs: false
+					dashboard:
+						auto_approve: true
+				notify:
+					discord:
+						options:
+							message: foo {{ version }}
+						url_fields:
+							host: example.com
+						params:
+							username: Argus
+				webhook:
+					type: github
+					url: https://example.comm
+					allow_invalid_certs: true
+					custom_headers:
+						- key: X-Header
+							value: foo
+					secret: secret!!!
+					desired_status_code: 203
+					delay: 0s
+					max_tries: 2
+					silent_fails: false`),
 		},
 	}
 
@@ -160,23 +162,23 @@ webhook:
 
 				// THEN the result is as expected
 				if got != want {
-					t.Errorf("(prefix=%q) want: %q\ngot:\n%q",
+					t.Errorf("Defaults.String() mismatch (prefix=%q)\nwant: %q\ngot:  %q",
 						prefix, want, got)
+					return // no need to check other prefixes
 				}
 			}
 		})
 	}
 }
 
-func TestDefaults_SetDefaults(t *testing.T) {
+func TestDefaults_Default(t *testing.T) {
 	// GIVEN nil defaults
 	var defaults Defaults
 
-	// WHEN SetDefaults is called on it
-	defaults.SetDefaults()
+	// WHEN Default is called on it
+	defaults.Default()
 	tests := map[string]struct {
-		got  string
-		want string
+		got, want string
 	}{
 		"Service.Interval": {
 			got:  defaults.Service.Options.Interval,
@@ -204,8 +206,8 @@ func TestDefaults_SetDefaults(t *testing.T) {
 }
 
 func TestDefaults_MapEnvToStruct(t *testing.T) {
-	var defaults Defaults
-	defaults.SetDefaults()
+	var unmodifiedDefaults Defaults
+	unmodifiedDefaults.Default()
 	// GIVEN a defaults and a bunch of env vars
 	test := map[string]struct {
 		env      map[string]string
@@ -232,13 +234,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99 something",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true"},
-			errRegex: `interval: "[^"]+" <invalid>`,
+			errRegex: `ARGUS_SERVICE_OPTIONS_INTERVAL: "[^"]+" <invalid>`,
 		},
 		"service.options - invalid bool - semantic version": {
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "foo"},
-			errRegex: `invalid bool for `,
+			errRegex: `ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING: "foo" <invalid>`,
 		},
 		"service.latest_version": {
 			env: map[string]string{
@@ -247,11 +249,10 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *latestver.NewDefaults(
-						test.StringPtr("ghp_something"),
-						test.BoolPtr(true),
-						test.BoolPtr(true),
-						nil)}},
+					LatestVersion: *&latestver_base.Defaults{
+						AccessToken:       "ghp_something",
+						AllowInvalidCerts: test.BoolPtr(true),
+						UsePreRelease:     test.BoolPtr(true)}}},
 		},
 		"service.latest_version.require": {
 			env: map[string]string{
@@ -262,15 +263,15 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
 			want: &Defaults{
 				Service: service.Defaults{
-					LatestVersion: *latestver.NewDefaults(
-						nil, nil, nil,
-						filter.NewRequireDefaults(
-							filter.NewDockerCheckDefaults(
+					LatestVersion: *&latestver_base.Defaults{
+						Require: filter.RequireDefaults{
+							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr",
 								"tokenForGHCR",
 								"tokenForDockerHub",
 								"usernameForDockerHub",
-								"tokenForQuay", nil)))}},
+								"tokenForQuay", nil),
+						}}}},
 		},
 		"service.latest_version.require - invalid type": {
 			env: map[string]string{
@@ -279,21 +280,21 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_HUB_TOKEN":    "tokenForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_HUB_USERNAME": "usernameForDockerHub",
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_QUAY_TOKEN":   "tokenForQuay"},
-			errRegex: `defaults[^ ]+  service:[^ ]+    latest_version:[^ ]+      require:[^ ]+        docker:[^ ]+          type: "foo" <invalid> `,
+			errRegex: test.TrimYAML(`ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "foo" <invalid> .+`),
 		},
 		"service.latest_version - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "bar",
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true"},
-			errRegex: `invalid bool for [^:]+`,
+			errRegex: `ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS: "bar" <invalid>`,
 		},
 		"service.latest_version - invalid bool - use_prerelease": {
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_something",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "bop"},
-			errRegex: `invalid bool for [^:]+`,
+			errRegex: `ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE: "bop" <invalid>`,
 		},
 		"service.deployed_version": {
 			env: map[string]string{
@@ -306,7 +307,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		"service.deployed_version - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "bang"},
-			errRegex: `invalid bool for [^:]+`,
+			errRegex: `ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS: "bang" <invalid>`,
 		},
 		"service.dashboard": {
 			env: map[string]string{
@@ -319,7 +320,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		"service.dashboard - invalid bool - auto_approve": {
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "zap"},
-			errRegex: `invalid bool for [^:]+`,
+			errRegex: `ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE: "zap" <invalid>`,
 		},
 		"notify.discord": {
 			env: map[string]string{
@@ -343,11 +344,14 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "bish",
 							"max_tries": "1",
 							"delay":     "1h"},
-						&map[string]string{
+						map[string]string{
+							"token":     "foo",
+							"webhookid": "bar"},
+						map[string]string{
 							"avatar":     ":argus:",
 							"color":      "0x50D9ff",
 							"colordebug": "0x7b00ab",
@@ -357,10 +361,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"json":       "no",
 							"splitlines": "yes",
 							"title":      "something",
-							"username":   "test"},
-						&map[string]string{
-							"token":     "foo",
-							"webhookid": "bar"})}},
+							"username":   "test"})}},
 		},
 		"notify.discord - invalid options.delay": {
 			env: map[string]string{
@@ -369,10 +370,11 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"discord": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"delay": "foo"},
 						nil, nil)}},
-			errRegex: `defaults:[^ ]+  notify:[^ ]+    discord:[^ ]+      options:[^ ]+        delay: "foo" <invalid>`,
+			errRegex: test.TrimYAML(`
+				ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+`),
 		},
 		"notify.smtp": {
 			env: map[string]string{
@@ -396,11 +398,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"smtp": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "bing",
 							"max_tries": "2",
 							"delay":     "2m"},
-						&map[string]string{
+						map[string]string{
+							"username": "user",
+							"password": "secret",
+							"host":     "smtp.example.com",
+							"port":     "25"},
+						map[string]string{
 							"fromaddress": "me@example.com",
 							"toaddresses": "you@somewhere.com",
 							"auth":        "Unknown",
@@ -409,12 +416,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"fromname":    "someone",
 							"subject":     "Argus SMTP Notification",
 							"usehtml":     "no",
-							"usestarttls": "yes"},
-						&map[string]string{
-							"username": "user",
-							"password": "secret",
-							"host":     "smtp.example.com",
-							"port":     "25"})}},
+							"usestarttls": "yes"})}},
 		},
 		"notify.gotify": {
 			env: map[string]string{
@@ -432,19 +434,19 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"gotify": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "shazam",
 							"max_tries": "3",
 							"delay":     "3s"},
-						&map[string]string{
-							"disabletls": "no",
-							"priority":   "0",
-							"title":      "Argus Gotify Notification"},
-						&map[string]string{
+						map[string]string{
 							"host":  "gotify.example.com",
 							"port":  "443",
 							"path":  "gotify",
-							"token": "SuperSecretToken"})}},
+							"token": "SuperSecretToken"},
+						map[string]string{
+							"disabletls": "no",
+							"priority":   "0",
+							"title":      "Argus Gotify Notification"})}},
 		},
 		"notify.googlechat": {
 			env: map[string]string{
@@ -456,13 +458,13 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"googlechat": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "whoosh",
 							"max_tries": "4",
 							"delay":     "4h"},
-						nil,
-						&map[string]string{
-							"raw": "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"})}},
+						map[string]string{
+							"raw": "chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz"},
+						nil)}},
 		},
 		"notify.ifttt": {
 			env: map[string]string{
@@ -481,20 +483,20 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"ifttt": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pow",
 							"max_tries": "5",
 							"delay":     "5m"},
-						&map[string]string{
+						map[string]string{
+							"webhookid": "secretWHID"},
+						map[string]string{
 							"events":            "event1,event2",
 							"title":             "Argus IFTTT Notification",
 							"usemessageasvalue": "2",
 							"usetitleasvalue":   "0",
 							"value1":            "bish",
 							"value2":            "bash",
-							"value3":            "bosh"},
-						&map[string]string{
-							"webhookid": "secretWHID"})}},
+							"value3":            "bosh"})}},
 		},
 		"notify.join": {
 			env: map[string]string{
@@ -509,16 +511,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"join": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pew",
 							"max_tries": "6",
 							"delay":     "6s"},
-						&map[string]string{
+						map[string]string{
+							"apikey": "apiKey"},
+						map[string]string{
 							"devices": "device1,device2",
 							"icon":    "example.com/icon.png",
-							"title":   "Argus Join Notification"},
-						&map[string]string{
-							"apikey": "apiKey"})}},
+							"title":   "Argus Join Notification"})}},
 		},
 		"notify.mattermost": {
 			env: map[string]string{
@@ -537,20 +539,20 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"mattermost": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "ping",
 							"max_tries": "7",
 							"delay":     "7h"},
-						&map[string]string{
-							"icon":  ":argus:",
-							"title": "Argus Mattermost Notification"},
-						&map[string]string{
+						map[string]string{
 							"username": "Argus",
 							"host":     "mattermost.example.com",
 							"port":     "443",
 							"path":     "mattermost",
 							"token":    "mattermostToken",
-							"channel":  "argus"})}},
+							"channel":  "argus"},
+						map[string]string{
+							"icon":  ":argus:",
+							"title": "Argus Mattermost Notification"})}},
 		},
 		"notify.matrix": {
 			env: map[string]string{
@@ -569,20 +571,20 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"matrix": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pong",
 							"max_tries": "8",
 							"delay":     "8m"},
-						&map[string]string{
-							"disabletls": "no",
-							"rooms":      "room1,room2",
-							"title":      "Argus Matrix Notification"},
-						&map[string]string{
+						map[string]string{
 							"user":     "argus",
 							"host":     "matrix.example.com",
 							"port":     "443",
 							"path":     "matrix",
-							"password": "matrixPassword"})}},
+							"password": "matrixPassword"},
+						map[string]string{
+							"disabletls": "no",
+							"rooms":      "room1,room2",
+							"title":      "Argus Matrix Notification"})}},
 		},
 		"notify.opsgenie": {
 			env: map[string]string{
@@ -610,11 +612,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"opsgenie": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pang",
 							"max_tries": "9",
 							"delay":     "9s"},
-						&map[string]string{
+						map[string]string{
+							"host":   "opsgenie.example.com",
+							"port":   "443",
+							"path":   "opsgenie",
+							"apikey": "opsGenieApiKey"},
+						map[string]string{
 							"actions":     "action1,action2",
 							"alias":       "argus",
 							"description": "Argus OpsGenie DESC",
@@ -627,12 +634,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 							"tags":        "tag1,tag2",
 							"title":       "Argus OpsGenie Notification",
 							"user":        "argus",
-							"visibleto":   "visible1,visible2"},
-						&map[string]string{
-							"host":   "opsgenie.example.com",
-							"port":   "443",
-							"path":   "opsgenie",
-							"apikey": "opsGenieApiKey"})}},
+							"visibleto":   "visible1,visible2"})}},
 		},
 		"notify.pushbullet": {
 			env: map[string]string{
@@ -646,15 +648,15 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"pushbullet": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pung",
 							"max_tries": "10",
 							"delay":     "10h"},
-						&map[string]string{
-							"title": "Argus Pushbullet Notification"},
-						&map[string]string{
+						map[string]string{
 							"token":   "pushbulletToken",
-							"targets": "target1,target2"})}},
+							"targets": "target1,target2"},
+						map[string]string{
+							"title": "Argus Pushbullet Notification"})}},
 		},
 		"notify.pushover": {
 			env: map[string]string{
@@ -670,17 +672,17 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"pushover": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pung",
 							"max_tries": "11",
 							"delay":     "11m"},
-						&map[string]string{
+						map[string]string{
+							"token": "pushoverToken",
+							"user":  "pushoverUser"},
+						map[string]string{
 							"devices":  "device1,device2",
 							"priority": "0",
-							"title":    "Argus Pushbullet Notification"},
-						&map[string]string{
-							"token": "pushoverToken",
-							"user":  "pushoverUser"})}},
+							"title":    "Argus Pushbullet Notification"})}},
 		},
 		"notify.rocketchat": {
 			env: map[string]string{
@@ -698,19 +700,19 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"rocketchat": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "pung",
 							"max_tries": "12",
 							"delay":     "12s"},
-						nil,
-						&map[string]string{
+						map[string]string{
 							"username": "rocketchatUser",
 							"host":     "rocketchat.example.com",
 							"port":     "443",
 							"path":     "rocketchat",
 							"tokena":   "FIRST_token",
 							"tokenb":   "SECOND_token",
-							"channel":  "rocketchatChannel"})}},
+							"channel":  "rocketchatChannel"},
+						nil)}},
 		},
 		"notify.slack": {
 			env: map[string]string{
@@ -728,23 +730,23 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"slack": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "slung",
 							"max_tries": "13",
 							"delay":     "13h"},
-						&map[string]string{
+						map[string]string{
+							"token":   "slackToken",
+							"channel": "somewhere"},
+						map[string]string{
 							"botname":  "Argus",
-							"color":    "#ff8000",
+							"color":    "%23ff8000",
 							"icon":     ":ghost:",
 							"threadts": "1234567890.123456",
-							"title":    "Argus Slack Notification"},
-						&map[string]string{
-							"token":   "slackToken",
-							"channel": "somewhere"})}},
+							"title":    "Argus Slack Notification"})}},
 		},
 		"notify.teams": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":       "tung",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_MESSAGE":       "hi",
 				"ARGUS_NOTIFY_TEAMS_OPTIONS_MAX_TRIES":     "14",
 				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":         "14m",
 				"ARGUS_NOTIFY_TEAMS_URL_FIELDS_GROUP":      "teamsGroup",
@@ -758,19 +760,19 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"teams": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
-							"message":   "tung",
+						map[string]string{
+							"message":   "hi",
 							"max_tries": "14",
 							"delay":     "14m"},
-						&map[string]string{
-							"color": "#ff8000",
-							"host":  "teams.example.com",
-							"title": "Argus Teams Notification"},
-						&map[string]string{
+						map[string]string{
 							"group":      "teamsGroup",
 							"tenant":     "tenant",
 							"altid":      "otherID?",
-							"groupowner": "owner"})}},
+							"groupowner": "owner"},
+						map[string]string{
+							"color": "#ff8000",
+							"host":  "teams.example.com",
+							"title": "Argus Teams Notification"})}},
 		},
 		"notify.telegram": {
 			env: map[string]string{
@@ -787,22 +789,22 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"telegram": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
+						map[string]string{
 							"message":   "tong",
 							"max_tries": "15",
 							"delay":     "15s"},
-						&map[string]string{
+						map[string]string{
+							"token": "telegramToken"},
+						map[string]string{
 							"chats":        "chat1,chat2",
 							"notification": "yes",
 							"parsemode":    "None",
 							"preview":      "yes",
-							"title":        "Argus Telegram Notification"},
-						&map[string]string{
-							"token": "telegramToken"})}},
+							"title":        "Argus Telegram Notification"})}},
 		},
 		"notify.zulip": {
 			env: map[string]string{
-				"ARGUS_NOTIFY_ZULIP_OPTIONS_MESSAGE":    "zung",
+				"ARGUS_NOTIFY_ZULIP_OPTIONS_MESSAGE":    "hiya",
 				"ARGUS_NOTIFY_ZULIP_OPTIONS_MAX_TRIES":  "16",
 				"ARGUS_NOTIFY_ZULIP_OPTIONS_DELAY":      "16h",
 				"ARGUS_NOTIFY_ZULIP_URL_FIELDS_BOTMAIL": "botmail",
@@ -816,19 +818,19 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				Notify: shoutrrr.SliceDefaults{
 					"zulip": shoutrrr.NewDefaults(
 						"",
-						&map[string]string{
-							"message":   "zung",
+						map[string]string{
+							"message":   "hiya",
 							"max_tries": "16",
 							"delay":     "16h"},
-						&map[string]string{
-							"stream": "stream",
-							"topic":  "topic"},
-						&map[string]string{
+						map[string]string{
 							"botmail": "botmail",
 							"botkey":  "botkey",
 							"host":    "zulip.example.com",
 							"port":    "1234",
-							"path":    "zulip"})}},
+							"path":    "zulip"},
+						map[string]string{
+							"stream": "stream",
+							"topic":  "topic"})}},
 		},
 		"webhook": {
 			env: map[string]string{
@@ -844,8 +846,8 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					test.BoolPtr(false),
 					nil,
 					"99s",
-					test.IntPtr(201),
-					test.UIntPtr(88),
+					test.UInt16Ptr(201),
+					test.UInt8Ptr(88),
 					"",
 					test.BoolPtr(true),
 					"github",
@@ -854,32 +856,48 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		"webhook - invalid str - type": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_TYPE": "pizza"},
-			errRegex: "a",
+			errRegex: `ARGUS_WEBHOOK_TYPE: "pizza" <invalid>`,
 		},
 		"webhook - invalid time.duration - delay": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DELAY": "pasta"},
-			errRegex: `delay: "[^"]+" <invalid>`,
+			errRegex: `ARGUS_WEBHOOK_DELAY: "[^"]+" <invalid>`,
 		},
 		"webhook - invalid uint - max_tries": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_MAX_TRIES": "-1"},
-			errRegex: "invalid uint for ",
+			errRegex: `ARGUS_WEBHOOK_MAX_TRIES: "-1" <invalid>`,
 		},
 		"webhook - invalid bool - allow_invalid_certs": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_ALLOW_INVALID_CERTS": "foo"},
-			errRegex: "invalid bool for ",
+			errRegex: `ARGUS_WEBHOOK_ALLOW_INVALID_CERTS: "foo" <invalid>`,
 		},
 		"webhook - invalid int - desired_status_code": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_DESIRED_STATUS_CODE": "okay"},
-			errRegex: "invalid integer for ",
+			errRegex: `ARGUS_WEBHOOK_DESIRED_STATUS_CODE: "okay" <invalid>`,
 		},
 		"webhook - invalid bool - silent_fails": {
 			env: map[string]string{
 				"ARGUS_WEBHOOK_SILENT_FAILS": "bar"},
-			errRegex: "invalid bool for ",
+			errRegex: `ARGUS_WEBHOOK_SILENT_FAILS: "bar" <invalid>`,
+		},
+		"multiple fails": {
+			env: map[string]string{
+				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":               "foo",
+				"ARGUS_NOTIFY_SLACK_OPTIONS_DELAY":                 "bar",
+				"ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY":                 "baz",
+				"ARGUS_WEBHOOK_DELAY":                              "pasta",
+				"ARGUS_WEBHOOK_TYPE":                               "pizza",
+				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE": "pizza"},
+			errRegex: test.TrimYAML(`
+				ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE: "pizza" <invalid> .+
+				ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+
+				ARGUS_NOTIFY_SLACK_OPTIONS_DELAY: "bar" <invalid> .+
+				ARGUS_NOTIFY_TEAMS_OPTIONS_DELAY: "baz" <invalid> .+
+				ARGUS_WEBHOOK_TYPE: "pizza" <invalid> .+
+				ARGUS_WEBHOOK_DELAY: "pasta" <invalid> .+`),
 		},
 		"no env vars": {
 			want: &Defaults{},
@@ -893,28 +911,34 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 	for name, tc := range test {
 		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars
 
-			dflts := Defaults{
+			defaults := Defaults{
 				Service: service.Defaults{
-					DeployedVersionLookup: deployedver.LookupDefaults{}}}
+					DeployedVersionLookup: deployedver.Defaults{}}}
 			if tc.want == nil {
 				tc.want = &Defaults{
 					Notify: shoutrrr.SliceDefaults{}}
 			}
 			if tc.want.Notify != nil {
-				dflts.Notify = shoutrrr.SliceDefaults{}
-				for notifyType := range defaults.Notify {
-					dflts.Notify[notifyType] = &shoutrrr.ShoutrrrDefaults{}
-					dflts.Notify[notifyType].InitMaps()
+				defaults.Notify = shoutrrr.SliceDefaults{}
+				for notifyType := range unmodifiedDefaults.Notify {
+					defaults.Notify[notifyType] = shoutrrr.NewDefaults(
+						"",
+						nil, nil, nil)
+
+					defaults.Notify[notifyType].InitMaps()
 					if tc.want.Notify[notifyType] == nil {
-						tc.want.Notify[notifyType] = &shoutrrr.ShoutrrrDefaults{}
+						tc.want.Notify[notifyType] = shoutrrr.NewDefaults(
+							"",
+							nil, nil, nil)
 						tc.want.Notify[notifyType].InitMaps()
 					}
 				}
 			}
 			for k, v := range tc.env {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 			// Catch fatal panics.
 			defer func() {
@@ -929,8 +953,8 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				}
 				switch r.(type) {
 				case string:
-					if !regexp.MustCompile(tc.errRegex).MatchString(r.(string)) {
-						t.Errorf("want error matching:\n%v\ngot:\n%v",
+					if !util.RegexCheck(tc.errRegex, r.(string)) {
+						t.Errorf("MapEnvToStruct() want error matching:\n%q\ngot:\n%q",
 							tc.errRegex, r.(string))
 					}
 				default:
@@ -939,16 +963,16 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			}()
 
 			// WHEN MapEnvToStruct is called on it
-			dflts.MapEnvToStruct()
+			defaults.MapEnvToStruct()
 
 			// THEN any error is as expected
 			if tc.errRegex != "" { // Expected a FATAL panic to be caught above
 				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
 			}
 			// AND the defaults are set to the appropriate env vars
-			if dflts.String("") != tc.want.String("") {
-				t.Errorf("want:\n%v\ngot:\n%v",
-					tc.want.String(""), dflts.String(""))
+			if defaults.String("") != tc.want.String("") {
+				t.Errorf("unexpected struct after MapEnvToStruct on defaults:\n%v\ngot:\n%v",
+					tc.want.String(""), defaults.String(""))
 			}
 		})
 	}
@@ -957,73 +981,68 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 func TestDefaults_CheckValues(t *testing.T) {
 	// GIVEN defaults with a test of invalid vars
 	var defaults Defaults
-	defaults.SetDefaults()
+	defaults.Default()
 	tests := map[string]struct {
 		input    *Defaults
-		errRegex []string
+		errRegex string
 	}{
 		"Service.Interval": {
 			input: &Defaults{Service: service.Defaults{
 				Options: *opt.NewDefaults("10x", nil)}},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  service:$`,
-				`^    options:$`,
-				`^      interval: "10x" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^service:
+					options:
+						interval: "10x" <invalid>.*$`),
 		},
 		"Service.LatestVersion.Require.Docker.Type": {
 			input: &Defaults{Service: service.Defaults{
-				LatestVersion: latestver.LookupDefaults{
+				LatestVersion: latestver_base.Defaults{
 					Require: filter.RequireDefaults{
 						Docker: *filter.NewDockerCheckDefaults(
 							"pizza",
 							"", "", "", "", nil)}}}},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  service:$`,
-				`^    latest_version:$`,
-				`^      require:$`,
-				`^        docker:$`,
-				`^          type: "pizza" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^service:
+					latest_version:
+						require:
+							docker:
+								type: "pizza" <invalid>.*$`),
 		},
 		"Service.Interval + Service.DeployedVersionLookup.Regex": {
 			input: &Defaults{Service: service.Defaults{
 				Options: *opt.NewDefaults("10x", nil),
-				LatestVersion: latestver.LookupDefaults{
+				LatestVersion: latestver_base.Defaults{
 					Require: filter.RequireDefaults{
 						Docker: *filter.NewDockerCheckDefaults(
 							"pizza",
 							"", "", "", "", nil)}}}},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  service:$`,
-				`^    options:$`,
-				`^      interval: "10x" <invalid>`,
-				`^    latest_version:$`,
-				`^      require:$`,
-				`^        docker:$`,
-				`^          type: "pizza" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^service:
+					options:
+						interval: "10x" <invalid>.*
+					latest_version:
+						require:
+							docker:
+								type: "pizza" <invalid>.*$`),
 		},
 		"Notify.x.Delay": {
 			input: &Defaults{Notify: shoutrrr.SliceDefaults{
 				"slack": shoutrrr.NewDefaults(
 					"",
-					&map[string]string{"delay": "10x"},
+					map[string]string{"delay": "10x"},
 					nil, nil)}},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  notify:$`,
-				`^    slack:$`,
-				`^      options:`,
-				`^        delay: "10x" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^notify:
+					slack:
+						options:
+							delay: "10x" <invalid>.*$`),
 		},
 		"WebHook.Delay": {
 			input: &Defaults{WebHook: *webhook.NewDefaults(
 				nil, nil, "10x", nil, nil, "", nil, "", "")},
-			errRegex: []string{
-				`^defaults:$`,
-				`^  webhook:$`,
-				`^    delay: "10x" <invalid>`},
+			errRegex: test.TrimYAML(`
+				^webhook:
+					delay: "10x" <invalid>.*$`),
 		},
 	}
 
@@ -1033,24 +1052,26 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			prefixes := []string{"", " ", "  ", "    ", "- "}
 			for _, prefix := range prefixes {
-				errRegex := make([]string, len(tc.errRegex))
-				for i := range errRegex {
-					errRegex[i] = strings.ReplaceAll(tc.errRegex[i], `^`, `^`+prefix)
-				}
+				errRegex := tc.errRegex
+				errRegex = strings.ReplaceAll(errRegex, "^", "^"+prefix)
+				errRegex = strings.ReplaceAll(errRegex, "\n", "\n"+prefix)
 
 				// WHEN CheckValues is called on it
-				err := util.ErrorToString(tc.input.CheckValues(prefix))
+				err := tc.input.CheckValues(prefix)
 
 				// THEN err matches expected
-				lines := strings.Split(err, "\\")
-				for i := range errRegex {
-					re := regexp.MustCompile(errRegex[i])
-					match := re.MatchString(lines[i])
-					if !match {
-						t.Errorf("(prefix=%q) want match for: %q on %q\n%q",
-							prefix, errRegex[i], lines[i], err)
-						return
-					}
+				e := util.ErrorToString(err)
+				lines := strings.Split(e, "\n")
+				wantLines := strings.Count(errRegex, "\n")
+				if wantLines > len(lines) {
+					t.Fatalf("latestver.Lookup.CheckValues() want %d lines of error:\n%q\ngot %d lines:\n%v\nstdout: %q",
+						wantLines, errRegex, len(lines), lines, e)
+					return
+				}
+				if !util.RegexCheck(errRegex, e) {
+					t.Errorf("latestver.Lookup.CheckValues() error mismatch\nwant match for:\n%q\ngot:\n%q",
+						errRegex, e)
+					return
 				}
 			}
 		})
@@ -1060,7 +1081,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 func TestDefaults_Print(t *testing.T) {
 	// GIVEN a set of Defaults
 	var defaults Defaults
-	defaults.SetDefaults()
+	defaults.Default()
 	tests := map[string]struct {
 		input *Defaults
 		lines int

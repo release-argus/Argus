@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package filter provides filtering for latest_version queries.
 package filter
 
 import (
 	"fmt"
+	"strings"
 
-	github_types "github.com/release-argus/Argus/service/latest_version/api_type"
+	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
 )
 
-// RegexCheckVersion returns whether `version` matches the regex
+// RegexCheckVersion returns whether `version` matches the regex.
 func (r *Require) RegexCheckVersion(
 	version string,
-	logFrom *util.LogFrom,
+	logFrom util.LogFrom,
 ) error {
 	if r == nil {
 		return nil
 	}
 
-	// Check that the version grabbed satisfies the specified regex (if there is any).
+	// Check the version grabbed satisfies the specified regex (if there is any).
 	if r.RegexVersion == "" {
 		return nil
 	}
 	regexMatch := util.RegexCheck(r.RegexVersion, version)
 	if !regexMatch {
-		err := fmt.Errorf("regex not matched on version %q",
-			version)
+		err := fmt.Errorf("regex %q not matched on version %q",
+			r.RegexVersion, version)
 		r.Status.RegexMissVersion()
 		jLog.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
@@ -46,63 +48,80 @@ func (r *Require) RegexCheckVersion(
 	return nil
 }
 
-// RegexCheckContent of body with version
-func (r *Require) RegexCheckContent(
+func (r *Require) regexCheckString(
 	version string,
-	body interface{},
-	logFrom *util.LogFrom,
-) error {
-	if r == nil {
-		return nil
-	}
-
-	// Check for a regex match in the body if one is desired.
-	if r.RegexContent == "" {
-		return nil
-	}
-	// Create a list to search as `github` service types we'll only
-	// search asset `name` and `browser_download_url`
-	var searchArea []string
-	switch v := body.(type) {
-	case string:
-		searchArea = []string{body.(string)}
-	case []github_types.Asset:
-		for i := range body.([]github_types.Asset) {
-			searchArea = append(searchArea,
-				body.([]github_types.Asset)[i].Name,
-				body.([]github_types.Asset)[i].BrowserDownloadURL,
-			)
-		}
-	default:
-		return fmt.Errorf("invalid body type %T",
-			v)
-	}
-
-	for i := range searchArea {
-		regexMatch := util.RegexCheckWithParams(r.RegexContent, searchArea[i], version)
+	logFrom util.LogFrom,
+	searchArea ...string,
+) bool {
+	for _, text := range searchArea {
+		regexMatch := util.RegexCheckWithVersion(r.RegexContent, text, version)
 		if jLog.IsLevel("DEBUG") {
 			jLog.Debug(
 				fmt.Sprintf("%q RegexContent on %q, match=%t",
-					r.RegexContent, searchArea[i], regexMatch),
+					r.RegexContent, text, regexMatch),
 				logFrom, true)
 		}
-		if !regexMatch {
-			// if we're on the last asset
-			if i == len(searchArea)-1 {
-				regexStr := util.TemplateString(r.RegexContent, util.ServiceInfo{LatestVersion: version})
-				err := fmt.Errorf(
-					"regex %q not matched on content for version %q",
-					regexStr, version)
-				r.Status.RegexMissContent()
-				jLog.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
-				return err
-			}
-			// continue searching the other assets
-			continue
+		if regexMatch {
+			return true
 		}
-		// regex matched
-		break
+	}
+	return false
+}
+
+// regexCheckContentFail simply returns an error for the RegexCheckContent* functions.
+func (r *Require) regexCheckContentFail(version string, logFrom util.LogFrom) error {
+	// Escape all dots in the version.
+	regexStr := util.TemplateString(r.RegexContent,
+		util.ServiceInfo{
+			LatestVersion: strings.ReplaceAll(version, ".", `\.`)})
+	r.Status.RegexMissContent()
+	err := fmt.Errorf(
+		"regex %q not matched on content for version %q",
+		regexStr, version)
+	jLog.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
+	return err
+}
+
+// RegexCheckContent of body with version.
+func (r *Require) RegexCheckContent(
+	version string,
+	body string,
+	logFrom util.LogFrom,
+) error {
+	if r == nil || r.RegexContent == "" {
+		return nil
 	}
 
-	return nil
+	// Create a list to search as `github` service types we'll only
+	// search asset `name`, and `browser_download_url`.
+	if match := r.regexCheckString(version, logFrom, body); match {
+		return nil
+	}
+
+	return r.regexCheckContentFail(version, logFrom)
+}
+
+// RegexCheckContentGitHub checks the content of the GitHub release assets.
+// for a RegexContent match.
+//
+// Returns the date of release.
+func (r *Require) RegexCheckContentGitHub(
+	version string,
+	assets []github_types.Asset,
+	logFrom util.LogFrom,
+) (string, error) {
+	if r == nil || r.RegexContent == "" {
+		return "", nil
+	}
+
+	for _, asset := range assets {
+		match := r.regexCheckString(version, logFrom,
+			asset.Name, asset.BrowserDownloadURL)
+		if match {
+			// Copy asset date as release date.
+			return asset.CreatedAt, nil
+		}
+	}
+
+	return "", r.regexCheckContentFail(version, logFrom)
 }

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 
 	cfg "github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/db"
-	argus_testing "github.com/release-argus/Argus/testing"
+	"github.com/release-argus/Argus/testing"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web"
 	_ "modernc.org/sqlite"
@@ -55,21 +55,25 @@ func main() {
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	argus_testing.CommandTest(testCommandsFlag, &config, &jLog)
-	argus_testing.NotifyTest(testNotifyFlag, &config, &jLog)
-	argus_testing.ServiceTest(testServiceFlag, &config, &jLog)
+	testing.CommandTest(testCommandsFlag, &config, &jLog)
+	testing.NotifyTest(testNotifyFlag, &config, &jLog)
+	testing.ServiceTest(testServiceFlag, &config, &jLog)
 
-	// Count of active services to monitor (if log level INFO or above)
+	// Count of active services to monitor (if log level INFO or above).
 	if jLog.Level > 1 {
+		// Count active services.
 		serviceCount := len(config.Order)
 		for _, key := range config.Order {
 			if !config.Service[key].Options.GetActive() {
 				serviceCount--
 			}
 		}
-		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		jLog.Info(msg, &util.LogFrom{}, true)
 
+		// Log active count.
+		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
+		jLog.Info(msg, util.LogFrom{}, true)
+
+		// Log names of active services.
 		for _, key := range config.Order {
 			if config.Service[key].Options.GetActive() {
 				fmt.Printf("  - %s\n", config.Service[key].ID)
@@ -82,6 +86,6 @@ func main() {
 	// Track all targets for changes in version and act on any found changes.
 	go (&config).Service.Track(&config.Order, &config.OrderMutex)
 
-	// Web server
+	// Web server.
 	web.Run(&config, &jLog)
 }

@@ -12,12 +12,12 @@ import { useEffect } from "react";
 const REGEX = ({ name }: { name: string }) => {
   const { setValue } = useFormContext();
 
-  // Template toggle
+  // Template toggle.
   const templateToggle: boolean | undefined = useWatch({
     name: `${name}.template_toggle`,
   });
   useEffect(() => {
-    // Clear the template if the toggle is false
+    // Clear the template if the toggle is false.
     if (templateToggle === false) {
       setValue(`${name}.template`, "");
       setValue(`${name}.template_toggle`, false);

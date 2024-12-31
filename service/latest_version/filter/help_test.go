@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import (
 	"testing"
 	"time"
 
-	command "github.com/release-argus/Argus/commands"
+	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/util"
 )
 
 func TestMain(m *testing.M) {
-	// initialize jLog
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	LogInit(jLog)
+	// initialise jLog
+	mainJLog := util.NewJLog("DEBUG", false)
+	mainJLog.Testing = true
+	LogInit(mainJLog)
 
 	// run other tests
 	exitCode := m.Run()
@@ -43,18 +43,19 @@ func testURLCommandRegex() URLCommand {
 	index := 0
 	return URLCommand{
 		Type:  "regex",
-		Regex: &regex,
-		Index: index}
+		Regex: regex,
+		Index: &index}
 }
+
 func testURLCommandRegexTemplate() URLCommand {
 	regex := "-([0-9.]+)-"
 	index := 0
 	template := "_$1_"
 	return URLCommand{
 		Type:     "regex",
-		Regex:    &regex,
-		Index:    index,
-		Template: &template}
+		Regex:    regex,
+		Index:    &index,
+		Template: template}
 }
 
 func testURLCommandReplace() URLCommand {
@@ -62,7 +63,7 @@ func testURLCommandReplace() URLCommand {
 	new := "bar"
 	return URLCommand{
 		Type: "replace",
-		Old:  &old,
+		Old:  old,
 		New:  &new}
 }
 
@@ -71,8 +72,8 @@ func testURLCommandSplit() URLCommand {
 	index := 1
 	return URLCommand{
 		Type:  "split",
-		Text:  &text,
-		Index: index}
+		Text:  text,
+		Index: &index}
 }
 
 func testRequire() Require {

@@ -38,7 +38,7 @@ export const convertValuesToString = (
         ) {
           return result;
         }
-        // convert to string
+        // convert to string.
         result[key] = convertOpsGenieTargetToString(
           value as NotifyOpsGenieTarget[]
         );
@@ -53,7 +53,7 @@ export const convertValuesToString = (
         ) {
           return result;
         }
-        // convert to string
+        // convert to string.
         result[key] =
           notifyType === "ntfy"
             ? convertNtfyActionsToString(value as NotifyNtfyAction[])
@@ -71,13 +71,13 @@ export const convertValuesToString = (
         result[key] = JSON.stringify(flattenHeaderArray(value as HeaderType[]));
       }
     } else {
-      // Give # to slack hex colours
+      // Give # to slack hex colours.
       if (notifyType === "slack" && key === "color") {
         result[key] = (
           /^[\da-f]{6}$/i.test(value as string) ? `#${value}` : value
         ) as string;
 
-        // Convert to string
+        // Convert to string.
       } else result[key] = String(value);
     }
     return result;
@@ -121,7 +121,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           label: item.label,
           url: item.url,
         };
-      // http - headers as {KEY:VAL}, not {key:KEY, val:VAL}
+      // http - headers as {KEY:VAL}, not {key:KEY, val:VAL}.
       else if (item.action === "http")
         return {
           action: item.action,
@@ -131,7 +131,7 @@ const convertNtfyActionsToString = (obj: NotifyNtfyAction[]): string =>
           headers: flattenHeaderArray(item.headers as HeaderType[] | undefined),
           body: item.body,
         };
-      // broadcast - extras as {KEY:VAL}, not {key:KEY, val:VAL}
+      // broadcast - extras as {KEY:VAL}, not {key:KEY, val:VAL}.
       else if (item.action === "broadcast")
         return {
           action: item.action,

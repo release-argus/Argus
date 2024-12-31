@@ -39,7 +39,7 @@ export const convertAPIServiceDataEditToUI = (
   otherOptionsData?: ServiceEditOtherData
 ): ServiceEditType => {
   if (!serviceData || !name)
-    // New service defaults
+    // New service defaults.
     return {
       name: "",
       options: { active: true },
@@ -60,7 +60,7 @@ export const convertAPIServiceDataEditToUI = (
       },
     };
 
-  // Edit service defaults
+  // Edit service defaults.
   return {
     ...serviceData,
     name: name,
@@ -105,13 +105,13 @@ export const convertAPIServiceDataEditToUI = (
     })),
     webhook: serviceData.webhook
       ? serviceData.webhook.map((item) => {
-          // Determine webhook name and type
+          // Determine webhook name and type.
           const whName = item.name as string;
           const whType = (item.type ??
             otherOptionsData?.webhook?.[whName]?.type ??
             whName) as NonNullable<WebHookType["type"]>;
 
-          // Construct custom headers
+          // Construct custom headers.
           const customHeaders = !isEmptyArray(item.custom_headers)
             ? item.custom_headers?.map((header, index) => ({
                 ...header,
@@ -141,7 +141,7 @@ export const convertAPIServiceDataEditToUI = (
       : [],
     notify: serviceData.notify
       ? serviceData.notify.map((item) => {
-          // Determine notify name and type
+          // Determine notify name and type.
           const notifyName = item.name as string;
           const notifyType = (item.type ||
             otherOptionsData?.notify?.[notifyName]?.type ||
@@ -158,7 +158,7 @@ export const convertAPIServiceDataEditToUI = (
               otherOptionsData
             ),
             params: {
-              avatar: "", // controlled param
+              avatar: "", // controlled param.
               color: "", // ^
               icon: "", // ^
               ...convertNotifyParams(
@@ -193,11 +193,11 @@ export const convertStringToFieldArray = (
   defaults?: string,
   key = "arg"
 ): StringFieldArray | undefined => {
-  // already converted
+  // already converted.
   if (typeof str === "object") return str;
   if (!str && typeof defaults === "object") return defaults;
 
-  // undefined/empty
+  // undefined/empty.
   const s = str || defaults || "";
   if (s === "") return [];
 
@@ -209,7 +209,7 @@ export const convertStringToFieldArray = (
     list = [s];
   }
 
-  // map the []string to {arg: string} for the form
+  // map the []string to {arg: string} for the form.
   if (!str) return list.map(() => ({ [key]: "" }));
   return list.map((arg: string) => ({ [key]: arg }));
 };
@@ -227,17 +227,17 @@ export const convertHeadersFromString = (
   str?: string | HeaderType[],
   defaults?: string | HeaderType[]
 ): HeaderType[] => {
-  // already converted
+  // already converted.
   if (typeof str === "object") return str;
   if (!str && typeof defaults === "object") return defaults;
 
-  // undefined/empty
+  // undefined/empty.
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
   const usingStr = !!str;
 
-  // convert from a JSON string
+  // convert from a JSON string.
   try {
     return Object.entries(JSON.parse(s)).map(([key, value], i) => {
       const id = usingStr ? { id: i } : {};
@@ -265,21 +265,21 @@ export const convertOpsGenieTargetFromString = (
   str?: string | NotifyOpsGenieTarget[],
   defaults?: string | NotifyOpsGenieTarget[]
 ): NotifyOpsGenieTarget[] => {
-  // already converted
+  // already converted.
   if (typeof str === "object") return str;
   if (!str && typeof defaults === "object") return defaults;
 
-  // undefined/empty
+  // undefined/empty.
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
   const usingStr = !!str;
 
-  // convert from a JSON string
+  // convert from a JSON string.
   try {
     return JSON.parse(s).map(
       (obj: { id?: string; type: string; name: string; username: string }) => {
-        // team/user - id
+        // team/user - id.
         if (obj.id) {
           return {
             type: obj.type,
@@ -287,7 +287,7 @@ export const convertOpsGenieTargetFromString = (
             value: usingStr ? obj.id : "",
           };
         } else {
-          // team/user - username/name
+          // team/user - username/name.
           return {
             type: obj.type,
             sub_type: obj.type === "user" ? "username" : "name",
@@ -314,17 +314,17 @@ export const convertNtfyActionsFromString = (
   str?: string | NotifyNtfyAction[],
   defaults?: string | NotifyNtfyAction[]
 ): NotifyNtfyAction[] => {
-  // already converted
+  // already converted.
   if (typeof str === "object") return str;
   if (!str && typeof defaults === "object") return defaults;
 
-  // undefined/empty
+  // undefined/empty.
   const s = (str || defaults || "") as string;
   if (s === "") return [];
 
   const usingStr = !!str;
 
-  // convert from a JSON string
+  // convert from a JSON string.
   try {
     return JSON.parse(s).map((obj: NotifyNtfyAction, i: number) => {
       const id = usingStr ? { id: i } : {};
@@ -366,7 +366,7 @@ export const convertNtfyActionsFromString = (
           ),
         };
 
-      // Unknown action
+      // Unknown action.
       return {
         ...id,
         ...obj,
@@ -454,13 +454,13 @@ export const convertNotifyParams = (
     case "join":
     case "mattermost":
       return {
-        icon: "", // controlled param
+        icon: "", // controlled param.
         ...params,
       };
 
     case "discord":
       return {
-        avatar: "", // controlled param
+        avatar: "", // controlled param.
         ...params,
       };
 
@@ -470,7 +470,7 @@ export const convertNotifyParams = (
         | NotifyTypes[typeof type]
         | undefined;
       return {
-        icon: "", // controlled param
+        icon: "", // controlled param.
         ...params,
         actions: convertNtfyActionsFromString(
           params?.actions,
@@ -527,7 +527,7 @@ export const convertNotifyParams = (
     case "slack": {
       return {
         ...params,
-        // Remove hashtag from hex
+        // Remove hashtag from hex.
         color: (params?.color ?? "").replace("%23", "#").replace("#", ""),
       };
     }

@@ -1,4 +1,4 @@
-// Copyright [2022] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,7 @@ package config
 import (
 	"fmt"
 	"os"
-	"sync"
 	"testing"
-
-	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_LoadOrdering(t *testing.T) {
@@ -31,11 +28,14 @@ func TestConfig_LoadOrdering(t *testing.T) {
 		file  func(path string, t *testing.T)
 		order []string
 	}{
-		"with services": {file: testYAML_Ordering_0,
+		"with services": {
+			file:  testYAML_Ordering_0,
 			order: []string{"NoDefaults", "WantDefaults", "Disabled", "Gitea"}},
-		"no services": {file: testYAML_Ordering_1,
+		"no services": {
+			file:  testYAML_Ordering_1_no_services,
 			order: []string{}},
-		"obscure service names": {file: testYAML_Ordering_2,
+		"obscure service names": {
+			file: testYAML_Ordering_2_obscure_service_names,
 			order: []string{
 				`123`,
 				`foo bar`,
@@ -48,25 +48,39 @@ func TestConfig_LoadOrdering(t *testing.T) {
 				`foo "bar"`,
 				`foo: bar, baz`,
 			}},
+		"empty line after 'service:'": {
+			file:  testYAML_Ordering_3_empty_line_after_service_line,
+			order: []string{"C", "B", "A"}},
+		"multiple empty lines after 'service:'": {
+			file:  testYAML_Ordering_4_multiple_empty_lines_after_service_line,
+			order: []string{"P", "L", "S"}},
+		"eof on 'service:'": {
+			file:  testYAML_Ordering_5_eof_is_service_line,
+			order: []string{}},
+		"no services after 'service:' - another block": {
+			file:  testYAML_Ordering_6_no_services_after_service_line_another_block,
+			order: []string{}},
+		"no services after 'service:'": {
+			file:  testYAML_Ordering_7_no_services_after_service_line,
+			order: []string{}},
 	}
 
-	var lock sync.Mutex
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars
 
 			file := fmt.Sprintf("%s.yml", name)
 			tc.file(file, t)
 
 			// WHEN they are loaded
 			flags := make(map[string]bool)
-			log := util.NewJLog("WARN", true)
 			var config Config
-			// Lock as jLog = log would DATA RACE
-			lock.Lock()
-			config.Load(file, &flags, log)
-			lock.Unlock()
-			defer os.Remove(config.Settings.DataDatabaseFile())
+			loadMutex.Lock() // Protect flag env vars
+			config.Load(file, &flags, nil)
+			t.Cleanup(func() {
+				os.Remove(config.Settings.DataDatabaseFile())
+				loadMutex.Unlock()
+			})
 
 			// THEN it gets the ordering correctly
 			gotOrder := config.Order
@@ -83,8 +97,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 func TestIndentationW(t *testing.T) {
 	// GIVEN lines of varying indentation
 	tests := map[string]struct {
-		input string
-		want  string
+		input, want string
 	}{
 		"leading space": {
 			input: "   abc",
@@ -107,8 +120,8 @@ func TestIndentationW(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN getIndentation is called on it
-			got := getIndentation(tc.input)
+			// WHEN Indentation is called on it
+			got := Indentation(tc.input)
 
 			// THEN we get the indentation
 			if got != tc.want {

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 //go:build unit || integration
 
-package svcstatus
+package status
 
 import (
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -38,10 +38,8 @@ func testStatus() (status *Status) {
 		test.StringPtr("test-service"),
 		test.StringPtr("http://example.com"))
 	status.SetApprovedVersion("1.1.1", false)
-	status.SetLatestVersion("2.2.2", false)
-	status.SetLatestVersionTimestamp("2002-02-02T02:02:02Z")
-	status.SetDeployedVersion("0.0.0", false)
-	status.SetDeployedVersionTimestamp("2001-01-01T01:01:01Z")
+	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
+	status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
 	status.SetLastQueried("2002-02-02T00:00:00Z")
 	return status
 }

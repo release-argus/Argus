@@ -9,6 +9,8 @@ import {
 } from "./api-ui-conversions";
 import {
   convertNotifyToAPI,
+  convertUIDeployedVersionDataEditToAPI,
+  convertUILatestVersionDataEditToAPI,
   convertUIServiceDataEditToAPI,
 } from "./ui-api-conversions";
 import {
@@ -29,6 +31,8 @@ export {
   convertOpsGenieTargetFromString,
   convertStringToFieldArray,
   convertNotifyToAPI,
+  convertUILatestVersionDataEditToAPI,
+  convertUIDeployedVersionDataEditToAPI,
   convertUIServiceDataEditToAPI,
   convertValuesToString,
   normaliseForSelect,

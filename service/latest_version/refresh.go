@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,224 +12,142 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package latestver provides the latest_version lookup service to for a service.
 package latestver
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
-	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 )
 
-// applyOverrides to the Lookup and return that new Lookup.
-func (l *Lookup) applyOverrides(
-	accessToken *string,
-	allowInvalidCerts *string,
-	require *string,
-	semanticVersioning *string,
-	typeStr *string,
-	url *string,
-	urlCommands *string,
-	usePreRelease *string,
-	serviceID *string,
-	logFrom *util.LogFrom,
-) (*Lookup, error) {
-	// Use the provided overrides, or the defaults.
-	// access_token
-	useAccessToken := util.FirstNonNilPtr(accessToken, l.AccessToken)
-	// allow_invalid_certs
-	useAllowInvalidCerts := l.AllowInvalidCerts
-	if allowInvalidCerts != nil {
-		useAllowInvalidCerts = util.StringToBoolPtr(*allowInvalidCerts)
-	}
-	// require
-	useRequire, errRequire := filter.RequireFromStr(
-		require,
-		l.Require,
-		logFrom)
-	if errRequire != nil {
-		//nolint:wrapcheck // Don't wrap error.
-		return nil, errRequire
-	}
-	// semantic_versioning
-	var useSemanticVersioning *bool
-	if semanticVersioning != nil {
-		useSemanticVersioning = util.StringToBoolPtr(*semanticVersioning)
-	}
-	// type
-	useType := util.PtrValueOrValue(typeStr, l.Type)
-	if useType == "" {
-		useType = "github"
-	}
-	// url
-	useURL := util.PtrValueOrValue(url, l.URL)
-	// url_commands
-	useURLCommands, errURLCommands := filter.URLCommandsFromStr(
-		urlCommands,
-		&l.URLCommands,
-		logFrom)
-	if errURLCommands != nil {
-		//nolint:wrapcheck // Don't wrap error.
-		return nil, errURLCommands
-	}
-	// use_pre_release
-	useUsePreRelease := l.UsePreRelease
-	if usePreRelease != nil {
-		useUsePreRelease = util.StringToBoolPtr(*usePreRelease)
+// Refresh the Lookup with the provided overrides.
+//
+//	Returns: version, announceUpdate, err.
+func Refresh(
+	lookup Lookup,
+	overrides *string,
+	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
+) (string, bool, error) {
+	if lookup == nil {
+		return "", false, fmt.Errorf("lookup is nil")
 	}
 
-	// Create a new lookup with the overrides.
-	lookup := New(
-		useAccessToken,
-		useAllowInvalidCerts,
-		nil, // GitHubData
-		opt.New(
-			nil, "", useSemanticVersioning,
-			nil, nil),
-		useRequire,
-		nil, // Status
-		useType,
-		useURL,
-		useURLCommands,
-		useUsePreRelease,
-		l.Defaults,
-		l.HardDefaults)
-	lookup.Status = &svcstatus.Status{
-		ServiceID: serviceID}
-	lookup.Options.Defaults = l.Options.Defaults
-	lookup.Options.HardDefaults = l.Options.HardDefaults
-	lookup.Status.Init(
-		0, 0, 0,
-		serviceID,
-		nil)
-	lookup.Status.SetLatestVersion(l.Status.LatestVersion(), false)
+	logFrom := util.LogFrom{Primary: "latest_version/refresh", Secondary: *lookup.GetStatus().ServiceID}
 
-	if lookup.Type == "github" {
-		// Use the current ETag/releases
-		// (if ETag is the same, won't count towards API limit)
-		if l.Type == "github" && l.GitHubData != nil {
-			releases := l.GitHubData.Releases()
-			lookup.GitHubData = NewGitHubData(
-				l.GitHubData.ETag(),
-				&releases)
+	// Whether this new semantic_version resolves differently than the current one.
+	semanticVerDiff := semanticVersioning != nil && (
+	// semantic_versioning explicitly null, and the default resolves to a different value.
+	(*semanticVersioning == "null" && lookup.GetOptions().GetSemanticVersioning() != *util.FirstNonNilPtr(
+		lookup.GetDefaults().Options.SemanticVersioning,
+		lookup.GetHardDefaults().Options.SemanticVersioning)) ||
+		// semantic_versioning now resolves to a different value than the default.
+		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
+	// Whether we need to create a new Lookup.
+	usingOverrides := overrides != nil || semanticVerDiff
 
-			// Type changed to github (or new service)
-		} else {
-			lookup.GitHubData = NewGitHubData("", nil)
+	newLookup := lookup
+	// Create a new Lookup if overrides provided.
+	if usingOverrides {
+		var err error
+		newLookup, err = applyOverridesJSON(
+			lookup,
+			overrides,
+			semanticVerDiff,
+			semanticVersioning)
+		if err != nil {
+			return "", false, err
 		}
 	}
 
-	if err := lookup.CheckValues(""); err != nil {
-		jLog.Error(err, logFrom, true)
-		return nil, fmt.Errorf("values failed validity check:\n%w", err)
-	}
-
-	return lookup, nil
-}
-
-// Refresh queries the Service source with the provided overrides and returns:
-//
-// `version` - found from this query
-//
-// `annoounceUpdate` - Whether that version is new and should be announced (if no overrides provided),
-//
-// `err` - any errs encountered
-func (l *Lookup) Refresh(
-	accessToken *string,
-	allowInvalidCerts *string,
-	require *string,
-	semanticVersioning *string,
-	typeStr *string,
-	url *string,
-	urlCommands *string,
-	usePreRelease *string,
-) (version string, announceUpdate bool, err error) {
-	serviceID := *l.Status.ServiceID
-	logFrom := &util.LogFrom{Primary: "latest_version/refresh", Secondary: serviceID}
-
-	var lookup *Lookup
-	lookup, err = l.applyOverrides(
-		accessToken,
-		allowInvalidCerts,
-		require,
-		semanticVersioning,
-		typeStr,
-		url,
-		urlCommands,
-		usePreRelease,
-		&serviceID,
-		logFrom)
-	if err != nil {
-		return
-	}
-
-	// Log the lookup being used if debug.
+	// Log the lookup in use.
 	if jLog.IsLevel("DEBUG") {
 		jLog.Debug(
-			fmt.Sprintf("Refreshing with:\n%v", lookup),
+			fmt.Sprintf("Refreshing with:\n%q", lookup.String(lookup, "")),
 			logFrom, true)
 	}
 
-	// Whether overrides were provided or not, we can update the status if not.
-	overrides := require != nil ||
-		l.Options.GetSemanticVersioning() != lookup.Options.GetSemanticVersioning() ||
-		url != nil ||
-		urlCommands != nil ||
-		usePreRelease != nil
-
+	hadVersion := lookup.GetStatus().LatestVersion()
 	// Query the lookup.
-	_, err = lookup.Query(!overrides, logFrom)
+	_, err := newLookup.Query(!usingOverrides, logFrom)
 	if err != nil {
-		return
+		return "", false, err //nolint: wrapcheck
 	}
-	version = lookup.Status.LatestVersion()
-	announceUpdate = l.updateFromRefresh(lookup, overrides)
-	return
+
+	version := newLookup.GetStatus().LatestVersion()
+	lookup.Inherit(newLookup)
+
+	// Announce the update? (if not using overrides, and the version changed).
+	announceUpdate := !usingOverrides && version != hadVersion
+
+	return version, announceUpdate, nil
 }
 
-// updateFromRefresh updates the current Lookup with the values from a Query on this
-// new Lookup if the values should retrieve the same data.
-//
-// `changingOverrides` - whether the overrides provided to the Refresh method would change the Query.
-//
-// Returns whether a new version was found and should be announced.
-func (l *Lookup) updateFromRefresh(newLookup *Lookup, changingOverrides bool) (announceUpdate bool) {
-	// Querying the same GitHub repo and the ETag has changed
-	if l.Type == "github" && newLookup.Type == "github" &&
-		l.URL == newLookup.URL &&
-		l.GitHubData != nil &&
-		l.GitHubData.ETag() != newLookup.GitHubData.ETag() {
-		// Update the ETag and releases
-		l.GitHubData.Copy(newLookup.GitHubData)
+// LookupTypeExtractor is a struct that extracts the type from a JSON string.
+type LookupTypeExtractor struct {
+	Type string `json:"type"`
+}
+
+// applyOverridesJSON applies the JSON overrides to the Lookup.
+func applyOverridesJSON(
+	lookup Lookup,
+	overrides *string,
+	semanticVerDiff bool,
+	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
+) (Lookup, error) {
+	var newLookup Lookup
+	var extractedOverrides *LookupTypeExtractor
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &extractedOverrides); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup: %w", err)
+		}
+	}
+	// Copy the existing Lookup.
+	if overrides == nil || (extractedOverrides.Type == "" || extractedOverrides.Type == lookup.GetType()) {
+		newLookup = Copy(lookup)
+	} else {
+		// Convert to the new type.
+		var err error
+		if newLookup, err = ChangeType(extractedOverrides.Type, lookup, ""); err != nil {
+			return nil, err
+		}
+		newRequire := newLookup.GetRequire()
+		if newRequire != nil {
+			newRequire.Inherit(lookup.GetRequire())
+		}
 	}
 
-	// Copy the Docker queryToken if it's what the current would fetch
-	if l.Require != nil && l.Require.Docker != nil &&
-		newLookup.Require != nil && newLookup.Require.Docker != nil &&
-		l.Require.Docker.Type == newLookup.Require.Docker.Type &&
-		l.Require.Docker.Token == newLookup.Require.Docker.Token &&
-		l.Require.Docker.Username == newLookup.Require.Docker.Username &&
-		l.Require.Docker.Image == newLookup.Require.Docker.Image {
-		queryToken, validUntil := newLookup.Require.Docker.CopyQueryToken()
-		l.Require.Docker.SetQueryToken(
-			&newLookup.Require.Docker.Token,
-			&queryToken, &validUntil)
+	// Apply the new semantic_versioning json value.
+	if semanticVerDiff {
+		semanticVersioningRoot := util.CopyPointer(lookup.GetOptions().SemanticVersioning)
+		// Apply the new semantic_versioning json value.
+		if err := json.Unmarshal([]byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup.SemanticVersioning: %w", err)
+		}
+		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
 	}
 
-	// If overrides that may change a successful query were provided
-	if changingOverrides {
-		return
+	// Apply the overrides.
+	if overrides != nil {
+		if err := json.Unmarshal([]byte(*overrides), &newLookup); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal latestver.Lookup: %w", err)
+		}
+		if strings.Contains(*overrides, `"docker":`) {
+			require := newLookup.GetRequire()
+			if require.Docker != nil {
+				require.Docker.ClearQueryToken()
+				require.Inherit(lookup.GetRequire())
+			}
+		}
+		newLookup.Init(
+			newLookup.GetOptions(),
+			newLookup.GetStatus(),
+			newLookup.GetDefaults(), newLookup.GetHardDefaults())
 	}
 
-	// Update the last queried time.
-	l.Status.SetLastQueried(newLookup.Status.LastQueried())
-	// Update the latest version if it has changed.
-	newLatestVersion := newLookup.Status.LatestVersion()
-	if newLatestVersion != l.Status.LatestVersion() {
-		announceUpdate = true
-		l.Status.SetLatestVersion(newLatestVersion, true)
-	}
-	return
+	// Check the overrides.
+	err := newLookup.CheckValues("")
+	return newLookup, err //nolint:wrapcheck
 }

@@ -11,11 +11,11 @@ import isEmptyOrNull from "./is-empty-or-null";
 const firstNonDefault: (...args: unknown[]) => string = (
   ...args: unknown[]
 ) => {
-  // Iterate through all arguments and return the first non-empty one
+  // Iterate through all arguments and return the first non-empty one.
   for (const arg of args) {
     if (!isEmptyOrNull(arg)) return `${arg}`;
   }
-  // If no non-empty argument is found, return an empty string by default
+  // If no non-empty argument is found, return an empty string by default.
   return "";
 };
 

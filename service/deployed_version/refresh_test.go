@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,464 +17,95 @@
 package deployedver
 
 import (
-	"reflect"
-	"regexp"
 	"testing"
 	"time"
 
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
 
-func TestBasicAuthFromString(t *testing.T) {
-	// GIVEN we have a string of basic auth
-	exampleBasicAuth := BasicAuth{
-		Username: "user",
-		Password: "pass"}
-	tests := map[string]struct {
-		basicAuth *string
-		previous  *BasicAuth
-		want      *BasicAuth
-	}{
-		"nil string uses previous": {
-			basicAuth: nil,
-			previous:  &exampleBasicAuth,
-			want:      &exampleBasicAuth,
-		},
-		"empty string uses previous": {
-			basicAuth: test.StringPtr(""),
-			previous:  &exampleBasicAuth,
-			want:      &exampleBasicAuth,
-		},
-		"user and pass set": {
-			basicAuth: test.StringPtr(`{"username": "foo", "password": "bar"}`),
-			previous:  &exampleBasicAuth,
-			want: &BasicAuth{
-				Username: "foo",
-				Password: "bar"},
-		},
-		"only user set, get pass from previous": {
-			basicAuth: test.StringPtr(`{"username": "foo"}`),
-			previous:  &exampleBasicAuth,
-			want: &BasicAuth{
-				Username: "foo",
-				Password: exampleBasicAuth.Password},
-		},
-		"only pass set, get user from previous": {
-			basicAuth: test.StringPtr(`{"password": "bar"}`),
-			previous:  &exampleBasicAuth,
-			want: &BasicAuth{
-				Username: exampleBasicAuth.Username,
-				Password: "bar"},
-		},
-		"only user set, no previous": {
-			basicAuth: test.StringPtr(`{"username": "foo"}`),
-			previous:  nil,
-			want: &BasicAuth{
-				Username: "foo"},
-		},
-		"only pass set, no previous": {
-			basicAuth: test.StringPtr(`{"password": "bar"}`),
-			previous:  nil,
-			want: &BasicAuth{
-				Password: "bar"},
-		},
-		"invalid json": {
-			basicAuth: test.StringPtr(`{"username": false`),
-			previous:  &exampleBasicAuth,
-			want:      &exampleBasicAuth,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN we call basicAuthFromString
-			got := basicAuthFromString(tc.basicAuth, tc.previous, &util.LogFrom{Primary: name})
-
-			// THEN we get the expected result
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("got %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestHeadersFromString(t *testing.T) {
-	// GIVEN we had previous headers and we're given a string of new headers
-	previousHeaders := []Header{
-		{Key: "foo", Value: "bar"}}
-	tests := map[string]struct {
-		headers *string
-		want    *[]Header
-	}{
-		"invalid json": {
-			headers: test.StringPtr(`{"key": false, "value": "bash"}`),
-			want:    &previousHeaders},
-		"nil string": {
-			headers: nil,
-			want:    &previousHeaders},
-		"empty string": {
-			headers: test.StringPtr(""),
-			want:    &previousHeaders},
-		"single header": {
-			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}]`),
-			want: &[]Header{
-				{Key: "bish", Value: "bash"}}},
-		"multiple headers": {
-			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
-			want: &[]Header{
-				{Key: "bish", Value: "bash"},
-				{Key: "bosh", Value: "bosh"}}},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN we call headersFromString
-			got := headersFromString(tc.headers, &previousHeaders, &util.LogFrom{Primary: name})
-
-			// THEN we get the expected headers
-			if !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("expected %v, got %v", tc.want, got)
-			}
-		})
-	}
-}
-
-func TestLookup_ApplyOverrides(t *testing.T) {
-	testL := testLookup()
-	// GIVEN various json strings to parse as parts of a Lookup
-	tests := map[string]struct {
-		allowInvalidCerts  *string
-		basicAuth          *string
-		body               *string
-		headers            *string
-		json               *string
-		method             *string
-		regex              *string
-		regexTemplate      *string
-		semanticVersioning *string
-		url                *string
-		previous           *Lookup
-		previousRegex      string
-		errRegex           string
-		want               *Lookup
-	}{
-		"all nil": {
-			previous: testLookup(),
-			want:     testLookup(),
-		},
-		"allow invalid certs": {
-			allowInvalidCerts: test.StringPtr("false"),
-			previous:          testLookup(),
-			want: New(
-				test.BoolPtr(false), // AllowInvalidCerts
-				nil, nil, nil,
-				testL.JSON,
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"basic auth": {
-			basicAuth: test.StringPtr(`{"username": "foo", "password": "bar"}`),
-			previous:  testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				&BasicAuth{ // BasicAuth
-					Username: "foo",
-					Password: "bar"},
-				nil, nil,
-				testL.JSON,
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"body - ignored on GET": {
-			body: test.StringPtr("bish"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil,
-				nil, // Body
-				nil,
-				testL.JSON,
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"body - used on POST": {
-			body:   test.StringPtr("bish"),
-			method: test.StringPtr("POST"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil,
-				test.StringPtr("bish"), // Body
-				nil,
-				testL.JSON,
-				"POST",
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"headers": {
-			headers: test.StringPtr(`[{"key": "bish", "value": "bash"}, {"key": "bosh", "value": "bosh"}]`),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil,
-				&[]Header{ // Headers
-					{Key: "bish", Value: "bash"},
-					{Key: "bosh", Value: "bosh"}},
-				"version",
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"json": {
-			json: test.StringPtr("bish"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				"bish", // JSON
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"method": {
-			method: test.StringPtr("POST"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil,
-				nil,
-				nil,
-				testL.JSON,
-				"POST",
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"regex": {
-			regex: test.StringPtr("bish"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				"version",
-				testL.Method,
-				testL.Options,
-				"bish", nil, // RegEx
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"regex template": {
-			regexTemplate: test.StringPtr("$1.$4"),
-
-			previous:      testLookup(),
-			previousRegex: "([0-9]+)",
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				"version",
-				testL.Method,
-				testL.Options,
-				"([0-9]+)",
-				test.StringPtr("$1.$4"), // RegEx Template
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"semantic versioning": {
-			semanticVersioning: test.StringPtr("false"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				testL.JSON,
-				testL.Method,
-				opt.New(
-					test.BoolPtr(false), "", nil,
-					nil, nil),
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				nil, nil),
-		},
-		"url": {
-			url: test.StringPtr("https://valid.release-argus.io/json"),
-
-			previous: testLookup(),
-			want: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				testL.JSON,
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				"https://valid.release-argus.io/json", // URL
-				nil, nil),
-		},
-		"override with invalid (empty) url": {
-			url: test.StringPtr(""),
-
-			previous: testLookup(),
-			want:     nil,
-			errRegex: "url: <required>",
-		},
-		"override with invalid regex": {
-			regex: test.StringPtr("v([0-9))"),
-
-			previous: testLookup(),
-			want:     nil,
-			errRegex: "regex: .+ <invalid>",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if tc.previousRegex != "" {
-				tc.previous.Regex = tc.previousRegex
-			}
-
-			// WHEN we call applyOverrides
-			got, err := tc.previous.applyOverrides(
-				tc.allowInvalidCerts,
-				tc.basicAuth,
-				tc.body,
-				tc.headers,
-				tc.json,
-				tc.method,
-				tc.regex,
-				tc.regexTemplate,
-				tc.semanticVersioning,
-				tc.url,
-				&name,
-				&util.LogFrom{Primary: name})
-
-			// THEN we get an error if expected
-			if tc.errRegex != "" || err != nil {
-				// No error expected
-				if tc.errRegex == "" {
-					tc.errRegex = "^$"
-				}
-				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
-					t.Fatalf("want match for %q\nnot: %q",
-						tc.errRegex, e)
-				}
-				return
-			}
-			// AND we get the expected result otherwise
-			if tc.want.String("") != got.String("") {
-				t.Errorf("expected:\n%v\nbut got:\n%v",
-					tc.want.String(""), got.String(""))
-			}
-		})
-	}
-}
-
 func TestLookup_Refresh(t *testing.T) {
 	testL := testLookup()
-	testVersion, _ := testL.Query(true, &util.LogFrom{Primary: "TestRefresh"})
+	testVersion, _ := testL.Query(true, util.LogFrom{Primary: "TestLookup_Refresh"})
 	if testVersion == "" {
 		t.Fatalf("test version is empty")
 	}
 
-	// GIVEN a Lookup and various json strings to override parts of it
-	tests := map[string]struct {
-		allowInvalidCerts        *string
-		basicAuth                *string
-		body                     *string
-		headers                  *string
-		json                     *string
-		method                   *string
-		regex                    *string
-		regexTemplate            *string
-		semanticVersioning       *string
-		url                      *string
-		lookup                   *Lookup
+	type versions struct {
+		latestVersion            string
 		deployedVersion          string
 		deployedVersionTimestamp string
-		errRegex                 string
-		want                     string
-		announce                 bool
+	}
+	type args struct {
+		overrides          *string
+		semanticVersioning *string
+		version            versions
+	}
+
+	// GIVEN a Lookup and various json strings to override parts of it
+	tests := map[string]struct {
+		isNil    bool
+		args     args
+		errRegex string
+		want     string
+		announce int
 	}{
+		"nil Lookup": {
+			isNil:    true,
+			errRegex: `lookup is nil`,
+		},
 		"Change of URL": {
-			url:    test.StringPtr("https://valid.release-argus.io/json"),
-			lookup: testLookup(),
-			want:   testVersion,
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": "https://valid.release-argus.io/json"
+				}`))},
+			errRegex: `^$`,
+			want:     testVersion,
 		},
 		"Removal of URL": {
-			url:      test.StringPtr(""),
-			lookup:   testLookup(),
-			errRegex: "url: <required>",
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": ""
+				}`))},
+			errRegex: `url: <required>`,
 			want:     "",
 		},
 		"Change of a few vars": {
-			json:               test.StringPtr("otherVersion"),
-			semanticVersioning: test.StringPtr("false"),
-			lookup:             testLookup(),
-			want:               testVersion + "-beta",
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"json": "otherVersion"
+				}`)),
+				semanticVersioning: test.StringPtr("false")},
+			errRegex: `^$`,
+			want:     testVersion + "-beta",
 		},
 		"Change of vars that fail Query": {
-			allowInvalidCerts: test.StringPtr("false"),
-			lookup:            testLookup(),
-			errRegex:          `x509 \(certificate invalid\)`,
+			args: args{
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"allow_invalid_certs": false
+				}`))},
+			errRegex: `x509 \(certificate invalid\)`,
 		},
 		"Refresh new version": {
-			lookup: New(
-				testL.AllowInvalidCerts,
-				nil, nil, nil,
-				testL.JSON,
-				testL.Method,
-				testL.Options,
-				"", nil,
-				&svcstatus.Status{},
-				testL.URL,
-				testL.Defaults,
-				testL.HardDefaults),
-			deployedVersion:          "0.0.0",
-			deployedVersionTimestamp: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
-			want:                     testVersion,
-			announce:                 true,
+			args: args{
+				version: versions{
+					latestVersion:            testVersion,
+					deployedVersion:          "0.0.0",
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)}},
+			errRegex: `^$`,
+			want:     testVersion,
+			announce: 1,
+		},
+		"Refresh new version that's newer than latest": {
+			args: args{
+				version: versions{
+					latestVersion:            "0.0.0",
+					deployedVersion:          "0.0.0",
+					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339)}},
+			errRegex: `^$`,
+			want:     testVersion,
+			announce: 2,
 		},
 	}
 
@@ -482,80 +113,175 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			lookup := testLookup()
+
 			// Copy the starting status
-			previousStatus := svcstatus.Status{}
-			if tc.lookup != nil {
-				tc.lookup.Status = &svcstatus.Status{ServiceID: test.StringPtr("serviceID")}
-				previousStatus.SetApprovedVersion(tc.lookup.Status.ApprovedVersion(), false)
-				previousStatus.SetDeployedVersion(tc.lookup.Status.DeployedVersion(), false)
-				previousStatus.SetDeployedVersionTimestamp(tc.lookup.Status.DeployedVersionTimestamp())
-				previousStatus.SetLatestVersion(tc.lookup.Status.LatestVersion(), false)
-				previousStatus.SetLatestVersionTimestamp(tc.lookup.Status.LatestVersionTimestamp())
-				previousStatus.SetLastQueried(tc.lookup.Status.LastQueried())
-				if tc.deployedVersion != "" {
-					tc.lookup.Status.SetDeployedVersion(tc.deployedVersion, false)
-					tc.lookup.Status.SetDeployedVersionTimestamp(tc.deployedVersionTimestamp)
-				}
+			announceChannel := make(chan []byte, 4)
+			svcStatus := status.New(
+				&announceChannel, nil, nil,
+				"",
+				tc.args.version.deployedVersion, tc.args.version.deployedVersionTimestamp,
+				tc.args.version.latestVersion, "",
+				"")
+			svcStatus.ServiceID = test.StringPtr("TestLookup_Refresh - " + name)
+			lookup.Status = svcStatus
+			previousStatus := lookup.Status.Copy()
+			serviceID := lookup.Status.ServiceID
+			if tc.isNil {
+				lookup = nil
 			}
 
 			// WHEN we call Refresh
-			got, gotAnnounce, err := tc.lookup.Refresh(
-				tc.allowInvalidCerts,
-				tc.basicAuth,
-				tc.body,
-				tc.headers,
-				tc.json,
-				tc.method,
-				tc.regex,
-				tc.regexTemplate,
-				tc.semanticVersioning,
-				tc.url)
+			got, err := lookup.Refresh(
+				serviceID,
+				tc.args.overrides,
+				tc.args.semanticVersioning)
 
 			// THEN we get an error if expected
 			if tc.errRegex != "" || err != nil {
-				// No error expected
-				if tc.errRegex == "" {
-					tc.errRegex = "^$"
-				}
 				e := util.ErrorToString(err)
-				re := regexp.MustCompile(tc.errRegex)
-				match := re.MatchString(e)
-				if !match {
+				if !util.RegexCheck(tc.errRegex, e) {
 					t.Fatalf("want match for %q\nnot: %q",
 						tc.errRegex, e)
 				}
+				if tc.isNil {
+					return
+				}
 			}
 			// AND announce is only true when expected
-			if tc.announce != gotAnnounce {
-				t.Errorf("expected announce of %t, not %t",
-					tc.announce, gotAnnounce)
+			gotAnnounces := len(*lookup.Status.AnnounceChannel)
+			if tc.announce != gotAnnounces {
+				t.Errorf("announce count mismatch\n want %d, got %d",
+					tc.announce, gotAnnounces)
 			}
 			// AND we get the expected result otherwise
 			if tc.want != got {
-				t.Errorf("expected version %q, not %q", tc.want, got)
+				t.Errorf("version mismatch\nwant: %q\ngot:  %q",
+					tc.want, got)
 			}
 			// AND the timestamp only changes if the version changed
 			// and the possible query-changing overrides are nil
-			if tc.headers == nil && tc.json == nil && tc.regex == nil && tc.semanticVersioning == nil && tc.url == nil {
+			if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
 				// If the version changed
-				if previousStatus.DeployedVersion() != tc.lookup.Status.DeployedVersion() {
+				if previousStatus.DeployedVersion() != lookup.Status.DeployedVersion() {
 					// then so should the timestamp
-					if previousStatus.DeployedVersionTimestamp() == tc.lookup.Status.DeployedVersionTimestamp() {
-						t.Errorf("expected timestamp to change from %q, but got %q",
-							previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
+					if previousStatus.DeployedVersionTimestamp() == lookup.Status.DeployedVersionTimestamp() {
+						t.Errorf("expected deployed_version_timestamp to change\nfrom: %q\ngot:  %q",
+							previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
 					}
 					// otherwise, the timestamp should remain unchanged
-				} else if previousStatus.DeployedVersionTimestamp() != tc.lookup.Status.DeployedVersionTimestamp() {
-					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
+				} else if previousStatus.DeployedVersionTimestamp() != lookup.Status.DeployedVersionTimestamp() {
+					t.Errorf("expected deployed_version_timestamp to\nremain: %q\ngot:    %q",
+						previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
 				}
 				// If the overrides are not nil
 			} else {
 				// The timestamp shouldn't change
-				if previousStatus.DeployedVersionTimestamp() != tc.lookup.Status.DeployedVersionTimestamp() {
+				if previousStatus.DeployedVersionTimestamp() != lookup.Status.DeployedVersionTimestamp() {
 					t.Errorf("expected timestamp %q but got %q",
-						previousStatus.DeployedVersionTimestamp(), tc.lookup.Status.DeployedVersionTimestamp())
+						previousStatus.DeployedVersionTimestamp(), lookup.Status.DeployedVersionTimestamp())
 				}
+			}
+		})
+	}
+}
+
+func TestApplyOverridesJSON(t *testing.T) {
+	type args struct {
+		lookup             *Lookup
+		overrides          *string
+		semanticVerDiff    bool
+		semanticVersioning *string
+	}
+	tests := map[string]struct {
+		args     args
+		wantErr  bool
+		errRegex string
+	}{
+		"no overrides, no semantic versioning change": {
+			args: args{
+				lookup:             testLookup(),
+				overrides:          nil,
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr: false,
+		},
+		"invalid semantic versioning JSON": {
+			args: args{
+				lookup:             testLookup(),
+				overrides:          nil,
+				semanticVerDiff:    true,
+				semanticVersioning: test.StringPtr("invalid"),
+			},
+			wantErr:  true,
+			errRegex: `failed to unmarshal semantic_versioning`,
+		},
+		"valid semantic versioning change": {
+			args: args{
+				lookup:             testLookup(),
+				overrides:          nil,
+				semanticVerDiff:    true,
+				semanticVersioning: test.StringPtr("true"),
+			},
+			wantErr: false,
+		},
+		"valid overrides JSON": {
+			args: args{
+				lookup: testLookup(),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": "https://valid.release-argus.io/json"
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr: false,
+		},
+		"invalid overrides JSON": {
+			args: args{
+				lookup: testLookup(),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": "
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `failed to unmarshal deployed_version`,
+		},
+		"overrides that make CheckValues fail": {
+			args: args{
+				lookup: testLookup(),
+				overrides: test.StringPtr(test.TrimJSON(`{
+					"url": ""
+				}`)),
+				semanticVerDiff:    false,
+				semanticVersioning: nil,
+			},
+			wantErr:  true,
+			errRegex: `^url: <required>.*$`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := applyOverridesJSON(
+				tc.args.lookup,
+				tc.args.overrides,
+				tc.args.semanticVerDiff,
+				tc.args.semanticVersioning)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("applyOverridesJSON() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+			if tc.wantErr && !util.RegexCheck(tc.errRegex, util.ErrorToString(err)) {
+				t.Errorf("applyOverridesJSON() error = %v, wantErr %v", err, tc.errRegex)
+			}
+			if !tc.wantErr && got == nil {
+				t.Errorf("applyOverridesJSON() got = nil, want non-nil")
 			}
 		})
 	}

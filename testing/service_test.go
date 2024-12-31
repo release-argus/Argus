@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,30 +19,28 @@ package testing
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	"github.com/release-argus/Argus/service/latest_version/filter"
-	opt "github.com/release-argus/Argus/service/options"
-	svcstatus "github.com/release-argus/Argus/service/status"
+	opt "github.com/release-argus/Argus/service/option"
+	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
 func TestServiceTest(t *testing.T) {
 	// GIVEN a Config with a Service
 	tests := map[string]struct {
-		flag        string
-		slice       service.Slice
-		stdoutRegex *string
-		panicRegex  *string
+		flag                    string
+		slice                   service.Slice
+		stdoutRegex, panicRegex *string
 	}{
 		"flag is empty": {
 			flag:        "",
@@ -53,8 +51,7 @@ func TestServiceTest(t *testing.T) {
 					Options: *opt.New(
 						nil, "0s", nil,
 						nil, nil),
-				},
-			},
+				}},
 		},
 		"unknown service": {
 			flag:       "test",
@@ -65,48 +62,56 @@ func TestServiceTest(t *testing.T) {
 					Options: *opt.New(
 						nil, "0s", nil,
 						nil, nil),
-				},
-			},
+				}},
 		},
 		"github service": {
 			flag:        "argus",
 			stdoutRegex: test.StringPtr(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			slice: service.Slice{
 				"argus": {
-					LatestVersion: *latestver.New(
-						test.StringPtr(os.Getenv("GITHUB_TOKEN")),
-						test.BoolPtr(false),
-						nil,
-						opt.New(
-							nil, "0s", nil,
-							nil, nil),
-						nil, nil,
-						"github",
-						"release-argus/Argus",
-						&filter.URLCommandSlice{
-							{Type: "regex", Regex: test.StringPtr("[0-9.]+$")}},
-						nil, nil, nil)},
-			},
+					ID: "argus",
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"github",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+								access_token: `+os.Getenv("GITHUB_TOKEN")+`
+								url_commands:
+									- type: regex
+										regex: '[0-9.]+$'
+							`),
+							opt.New(
+								nil, "0s", nil,
+								nil, nil),
+							status.New(
+								nil, nil, nil,
+								"", "", "", "", "", ""),
+							nil, nil)
+					})}},
 		},
-		"url service type but github owner/repo url": {
+		"url service type but github 'owner/repo' url": {
 			flag:        "argus",
-			stdoutRegex: test.StringPtr("This URL looks to be a GitHub repo, but the service's type is url, not github"),
+			stdoutRegex: test.StringPtr("unsupported protocol scheme"),
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: *latestver.New(
-						nil,
-						test.BoolPtr(false),
-						nil,
-						opt.New(
-							nil, "0s", nil,
-							nil, nil),
-						nil, nil,
-						"url",
-						"release-argus/Argus",
-						&filter.URLCommandSlice{
-							{Type: "regex", Regex: test.StringPtr("[0-9.]+$")}},
-						nil, nil, nil)}},
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"url",
+							"yaml", test.TrimYAML(`
+								url: release-argus/Argus
+								url_commands:
+									- type: regex
+										regex: '[0-9.]+$'
+							`),
+							opt.New(
+								nil, "0s", nil,
+								nil, nil),
+							status.New(
+								nil, nil, nil,
+								"", "", "", "", "", ""),
+							nil, nil)
+					})}},
 		},
 		"url service": {
 			flag:        "argus",
@@ -114,19 +119,23 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: *latestver.New(
-						nil,
-						test.BoolPtr(false),
-						nil,
-						opt.New(
-							nil, "0s", nil,
-							nil, nil),
-						nil, nil,
-						"url",
-						"https://github.com/release-argus/Argus/releases",
-						&filter.URLCommandSlice{
-							{Type: "regex", Regex: test.StringPtr(`tag/([0-9.]+)"`)}},
-						nil, nil, nil)}},
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"url",
+							"yaml", test.TrimYAML(`
+								url: https://github.com/release-argus/Argus/releases
+								url_commands:
+									- type: regex
+										regex: 'tag/([0-9.]+)"'
+							`),
+							opt.New(
+								nil, "0s", nil,
+								nil, nil),
+							status.New(
+								nil, nil, nil,
+								"", "", "", "", "", ""),
+							nil, nil)
+					})}},
 		},
 		"service with deployed version lookup": {
 			flag:        "argus",
@@ -134,24 +143,32 @@ func TestServiceTest(t *testing.T) {
 			slice: service.Slice{
 				"argus": {
 					ID: "argus",
-					LatestVersion: *latestver.New(
-						nil,
-						test.BoolPtr(false),
-						nil, nil, nil, nil,
-						"url",
-						"https://github.com/release-argus/Argus/releases",
-						&filter.URLCommandSlice{
-							{Type: "regex", Regex: test.StringPtr(`tag/([0-9.]+)"`)}},
-						nil, nil, nil),
-					DeployedVersionLookup: deployedver.New(
-						test.BoolPtr(true),
-						nil, nil, nil,
-						"version",
-						"GET",
-						nil, "", nil,
-						&svcstatus.Status{},
-						"https://release-argus.io/demo/api/v1/version",
-						nil, nil),
+					LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+						return latestver.New(
+							"url",
+							"yaml", test.TrimYAML(`
+								url: https://github.com/release-argus/Argus/releases
+								url_commands:
+									- type: regex
+										regex: tag/([0-9.]+)"
+							`),
+							nil,
+							nil,
+							nil, nil)
+					}),
+					DeployedVersionLookup: test.IgnoreError(t, func() (*deployedver.Lookup, error) {
+						return deployedver.New(
+							"yaml", test.TrimYAML(`
+								method: GET
+								url: https://release-argus.io/demo/api/v1/version
+								json: version
+							`),
+							opt.New(
+								nil, "0s", nil,
+								nil, nil),
+							nil,
+							nil, nil)
+					}),
 					Options: *opt.New(
 						nil, "0s", test.BoolPtr(true),
 						nil, nil)}},
@@ -171,29 +188,23 @@ func TestServiceTest(t *testing.T) {
 
 					// Check the panic message
 					rStr := fmt.Sprint(r)
-					re := regexp.MustCompile(*tc.panicRegex)
-					match := re.MatchString(rStr)
-					if !match {
+					if !util.RegexCheck(*tc.panicRegex, rStr) {
 						t.Errorf("expected a panic that matched %q\ngot: %q",
 							*tc.panicRegex, rStr)
 					}
 				}()
 			}
 			if tc.slice[tc.flag] != nil {
-				defaults := config.Defaults{}
-				defaults.SetDefaults()
+				hardDefaults := config.Defaults{}
+				hardDefaults.Default()
 				tc.slice[tc.flag].ID = tc.flag
 				tc.slice[tc.flag].Init(
-					&service.Defaults{}, &defaults.Service,
-					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &defaults.Notify,
-					&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &defaults.WebHook)
+					&service.Defaults{}, &hardDefaults.Service,
+					&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &hardDefaults.Notify,
+					&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook)
 				// will do a call for latest_version* and one for deployed_version*
 				dbChannel := make(chan dbtype.Message, 4)
 				tc.slice[tc.flag].Status.DatabaseChannel = &dbChannel
-				if tc.slice[tc.flag].DeployedVersionLookup != nil {
-					tc.slice[tc.flag].DeployedVersionLookup.Defaults = &deployedver.LookupDefaults{}
-					tc.slice[tc.flag].DeployedVersionLookup.HardDefaults = &deployedver.LookupDefaults{}
-				}
 			}
 
 			// WHEN ServiceTest is called with the test Config
@@ -210,9 +221,7 @@ func TestServiceTest(t *testing.T) {
 			// THEN we get the expected stdout
 			stdout := releaseStdout()
 			if tc.stdoutRegex != nil {
-				re := regexp.MustCompile(*tc.stdoutRegex)
-				match := re.MatchString(stdout)
-				if !match {
+				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
 					t.Errorf("want match on %q\ngot:\n%s",
 						*tc.stdoutRegex, stdout)
 				}

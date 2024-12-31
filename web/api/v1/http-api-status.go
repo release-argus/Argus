@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1 provides the API for the webserver.
 package v1
 
 import (
@@ -21,16 +22,16 @@ import (
 	"runtime"
 
 	"github.com/release-argus/Argus/util"
-	api_type "github.com/release-argus/Argus/web/api/types"
+	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // httpRuntimeInfo returns runtime info about the server.
 func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
-	logFrom := &util.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
+	logFrom := util.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 
-	// Create and send status page data
-	msg := api_type.RuntimeInfo{
+	// Create and send status page data.
+	msg := apitype.RuntimeInfo{
 		StartTime:      util.StartTime,
 		CWD:            util.CWD,
 		GoRoutineCount: runtime.NumGoroutine(),

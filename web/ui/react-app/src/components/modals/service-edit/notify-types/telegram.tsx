@@ -103,7 +103,7 @@ const TELEGRAM = ({
   }, [convertedDefaults.params.parsemode]);
 
   useEffect(() => {
-    // Normalise selected parsemode, or default it
+    // Normalise selected parsemode, or default it.
     if (convertedDefaults.params.parsemode === "")
       setValue(
         `${name}.params.parsemode`,

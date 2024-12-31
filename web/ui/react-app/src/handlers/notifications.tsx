@@ -67,7 +67,7 @@ export const handleNotifications = (props: Props) => {
           });
           break;
         case "ACTION":
-          // Notify on SKIP, ignore latest version being approved
+          // Notify on SKIP, ignore latest version being approved.
           if (props.event.service_data?.status?.approved_version) {
             if (
               props.event.service_data.status.approved_version.startsWith(

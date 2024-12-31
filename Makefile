@@ -14,7 +14,7 @@ go-build: commit-prereqs common-build
 
 .PHONY: go-test
 go-test:
-	go test --tagsunit,integration ./...
+	go test --tags unit,integration ./...
 
 .PHONY: go-test-coverage
 go-test-coverage:

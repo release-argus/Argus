@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package testing provides utilities for CLI-based testing.
 package testing
 
 import (
@@ -23,26 +24,26 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// ServiceTest will query the service and return the version it finds.
+// ServiceTest queries the service and returns the found version.
 func ServiceTest(
 	flag *string,
 	cfg *config.Config,
 	log *util.JLog,
 ) {
-	// Only if flag has been provided
+	// Only if flag provided.
 	if *flag == "" {
 		return
 	}
 
-	// Log what we are testing
-	logFrom := &util.LogFrom{Primary: "Testing", Secondary: *flag}
+	// Log the test details.
+	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
 	log.Info(
 		"",
 		logFrom,
 		true,
 	)
 
-	// Check if service exists
+	// Check service exists.
 	if !util.Contains(cfg.Order, *flag) {
 		log.Fatal(
 			fmt.Sprintf(
@@ -54,29 +55,24 @@ func ServiceTest(
 		)
 	}
 
-	// Service we are testing
+	// Service to test.
 	service := cfg.Service[*flag]
 
-	// LatestVersion
+	// LatestVersion.
 	_, err := service.LatestVersion.Query(false, logFrom)
 	if err != nil {
-		helpMsg := ""
-		if service.LatestVersion.Type == "url" && strings.Count(service.LatestVersion.URL, "/") == 1 && !strings.HasPrefix(service.LatestVersion.URL, "http") {
-			helpMsg = "This URL looks to be a GitHub repo, but the service's type is url, not github. Try using the github service type.\n"
-		}
 		log.Error(
 			fmt.Sprintf(
-				"No version matching the conditions specified could be found for %q at %q\n%s",
+				"No version matching the conditions specified could be found for %q at %q",
 				*flag,
 				service.LatestVersion.ServiceURL(true),
-				helpMsg,
 			),
 			logFrom,
 			true,
 		)
 	}
 
-	// DeployedVersionLookup
+	// DeployedVersionLookup.
 	if service.DeployedVersionLookup != nil {
 		version, err := service.DeployedVersionLookup.Query(false, logFrom)
 		log.Info(

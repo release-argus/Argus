@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package svcstatus
+// Package status provides the status functionality to keep track of the approved/deployed/latest versions of a Service.
+package status
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,53 +23,52 @@ import (
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/util"
-	metric "github.com/release-argus/Argus/web/metrics"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 // statusBase is the base struct for the Status struct.
 type statusBase struct {
-	// Announces
-	AnnounceChannel *chan []byte         // Announce to the WebSocket
-	DatabaseChannel *chan dbtype.Message // Channel for broadcasts to the Database
-	SaveChannel     *chan bool           // Channel for triggering a save of the config
+	AnnounceChannel *chan []byte         // Announce to the WebSocket.
+	DatabaseChannel *chan dbtype.Message // Broadcasts to the Database.
+	SaveChannel     *chan bool           // Trigger a save of the config.
 }
 
-// StatusDefaults are the default values for the Status struct.
-type StatusDefaults struct {
+// Defaults are the default values for the Status struct.
+type Defaults struct {
 	statusBase
 }
 
-// New StatusDefaults struct.
-func NewStatusDefaults(
+// NewDefaults returns a new Defaults struct.
+func NewDefaults(
 	announceChannel *chan []byte,
 	databaseChannel *chan dbtype.Message,
 	saveChannel *chan bool,
-) StatusDefaults {
-	return StatusDefaults{
+) Defaults {
+	return Defaults{
 		statusBase: statusBase{
 			AnnounceChannel: announceChannel,
 			DatabaseChannel: databaseChannel,
 			SaveChannel:     saveChannel}}
 }
 
-// Status is the current state of the Service element (version and regex misses).
+// Status holds the current versioning state of the Service (version, and regex misses).
 type Status struct {
-	statusBase `yaml:"-" json:"-"`
+	statusBase
 
-	ServiceID *string `yaml:"-" json:"-"` // ID of the Service
-	WebURL    *string `yaml:"-" json:"-"` // Web URL of the Service
+	ServiceID *string `yaml:"-" json:"-"` // ID of the Service.
+	WebURL    *string `yaml:"-" json:"-"` // Web URL of the Service.
 
-	approvedVersion          string       // The version that's been approved
-	deployedVersion          string       // Track the deployed version of the service from the last successful WebHook.
-	deployedVersionTimestamp string       // UTC timestamp of DeployedVersion being changed.
+	mutex                    sync.RWMutex // Lock for the Status.
+	approvedVersion          string       // The approved version.
+	deployedVersion          string       // The deployed version.
+	deployedVersionTimestamp string       // UTC timestamp of latest DeployedVersion change.
 	latestVersion            string       // Latest version found from query().
-	latestVersionTimestamp   string       // UTC timestamp of LatestVersion being changed.
-	lastQueried              string       // UTC timestamp that version was last queried/checked.
-	regexMissesContent       uint         // Counter for the number of regex misses on URL content.
-	regexMissesVersion       uint         // Counter for the number of regex misses on version.
-	Fails                    Fails        // Track the Notify/WebHook fails
-	deleting                 bool         // Flag to indicate the service is being deleted
-	mutex                    sync.RWMutex // Lock for the Status
+	latestVersionTimestamp   string       // UTC timestamp of latest LatestVersion change.
+	lastQueried              string       // UTC timestamp of latest LatestVersion query.
+	regexMissesContent       uint         // Counter for the amount of regex misses on the URL content.
+	regexMissesVersion       uint         // Counter for the amount of regex misses on the version.
+	Fails                    Fails        // Track the Notify/WebHook fails.
+	deleting                 bool         // Flag to indicate undergoing deletion.
 }
 
 // New Status struct.
@@ -79,10 +78,8 @@ func New(
 	saveChannel *chan bool,
 
 	av string,
-	dv string,
-	dvT string,
-	lv string,
-	lvT string,
+	dv, dvT string,
+	lv, lvT string,
 	lq string,
 ) *Status {
 	return &Status{
@@ -96,6 +93,23 @@ func New(
 		latestVersion:            lv,
 		latestVersionTimestamp:   lvT,
 		lastQueried:              lq}
+}
+
+// Copy the Status.
+func (s *Status) Copy() *Status {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return New(
+		s.AnnounceChannel,
+		s.DatabaseChannel,
+		s.SaveChannel,
+		s.approvedVersion,
+		s.deployedVersion,
+		s.deployedVersionTimestamp,
+		s.latestVersion,
+		s.latestVersionTimestamp,
+		s.lastQueried)
 }
 
 // String returns a string representation of the Status.
@@ -114,27 +128,35 @@ func (s *Status) String() string {
 	}
 	s.mutex.RUnlock()
 
-	var buf bytes.Buffer
+	var builder strings.Builder
 	for _, f := range fields {
 		switch v := f.Value.(type) {
 		case string:
 			if v != "" {
-				fmt.Fprint(&buf, f.Name, ": ", v, ", ")
+				builder.WriteString(
+					fmt.Sprintf("%s: %v\n",
+						f.Name, v))
 			}
 		case uint:
 			if v != 0 {
-				fmt.Fprint(&buf, f.Name, ": ", v, ", ")
+				builder.WriteString(
+					fmt.Sprintf("%s: %d\n",
+						f.Name, v))
 			}
 		case *Fails:
-			if fails := v.String(); fails != "" {
-				fmt.Fprint(&buf, f.Name, ": {", fails, "}, ")
+			if fails := v.String("  "); fails != "" {
+				builder.WriteString(
+					fmt.Sprintf("%s:\n%s",
+						f.Name, fails))
 			}
 		}
 	}
 
-	return strings.TrimSuffix(buf.String(), ", ")
+	result := builder.String()
+	return result
 }
 
+// SetAnnounceChannel will set the AnnounceChannel.
 func (s *Status) SetAnnounceChannel(channel *chan []byte) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -142,11 +164,9 @@ func (s *Status) SetAnnounceChannel(channel *chan []byte) {
 	s.AnnounceChannel = channel
 }
 
-// Init initialises the Status vars when more than the default value is needed.
+// Init initialises the Status variables when values beyond the default are required.
 func (s *Status) Init(
-	shoutrrrs int,
-	commands int,
-	webhooks int,
+	shoutrrrs, commands, webhooks int,
 	serviceID *string,
 	webURL *string,
 ) {
@@ -165,7 +185,7 @@ func (s *Status) LastQueried() string {
 	return s.lastQueried
 }
 
-// SetLastQueried will update LastQueried to `t`, or now if `t` is empty.
+// SetLastQueried will update LastQueried to `t` (or now if `t` empty).
 func (s *Status) SetLastQueried(t string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -183,7 +203,7 @@ func (s *Status) ApprovedVersion() string {
 	return s.approvedVersion
 }
 
-// SetApprovedVersion.
+// SetApprovedVersion will set .ApprovedVersion to `version`.
 func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 	s.mutex.Lock()
 	{
@@ -193,22 +213,22 @@ func (s *Status) SetApprovedVersion(version string, writeToDB bool) {
 
 	if writeToDB {
 		s.mutex.RLock()
-		// Update metrics if we're acting on the latest version
+		// Update metrics if acting on the latest version.
 		if strings.HasSuffix(s.approvedVersion, s.latestVersion) {
-			value := float64(3) // Skipping latest version
+			value := float64(3) // Skipping latest version.
 			if s.approvedVersion == s.latestVersion {
-				value = 2 // Approving latest version
+				value = 2 // Approving latest version.
 			}
 			if s.ServiceID != nil {
 				metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
-					*s.ServiceID,
+					*s.ServiceID, "",
 					value)
 			}
 		}
 
-		// WebSocket
+		// WebSocket.
 		s.announceApproved()
-		// Database
+		// Database.
 		message := dbtype.Message{
 			ServiceID: *s.ServiceID,
 			Cells: []dbtype.Cell{
@@ -225,25 +245,30 @@ func (s *Status) DeployedVersion() string {
 	return s.deployedVersion
 }
 
-// SetDeployedVersion will set DeployedVersion as well as DeployedVersionTimestamp.
-func (s *Status) SetDeployedVersion(version string, writeToDB bool) {
+// SetDeployedVersion sets the DeployedVersion to `version` and DeployedVersionTimestamp to `releaseDate`
+// (or now if empty).
+func (s *Status) SetDeployedVersion(version, releaseDate string, writeToDB bool) {
 	s.mutex.Lock()
 	{
 		s.deployedVersion = version
-		s.deployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
-		// Reset ApprovedVersion if we're on it
+		if releaseDate != "" {
+			s.deployedVersionTimestamp = releaseDate
+		} else {
+			s.deployedVersionTimestamp = time.Now().UTC().Format(time.RFC3339)
+		}
+		// Reset ApprovedVersion if on it.
 		if version == s.approvedVersion {
 			s.approvedVersion = ""
 		}
 	}
 	s.mutex.Unlock()
 
-	// Write to the database if we're not deleting and have a channel
+	// Write to the database if not deleting and have a channel.
 	if writeToDB {
 		s.mutex.RLock()
 		s.setLatestVersionIsDeployedMetric()
 
-		// Clear the fail status of WebHooks/Commands
+		// Clear the fail status of WebHooks/Commands.
 		s.Fails.resetFails()
 
 		message := dbtype.Message{
@@ -263,15 +288,6 @@ func (s *Status) DeployedVersionTimestamp() string {
 	return s.deployedVersionTimestamp
 }
 
-// SetDeployedVersionTimeestamp will set DeployedVersionTimestamp to `timestamp`.
-func (s *Status) SetDeployedVersionTimestamp(timestamp string) {
-	s.mutex.Lock()
-	{
-		s.deployedVersionTimestamp = timestamp
-	}
-	s.mutex.Unlock()
-}
-
 // LatestVersion returns the latest version.
 func (s *Status) LatestVersion() string {
 	s.mutex.RLock()
@@ -279,21 +295,26 @@ func (s *Status) LatestVersion() string {
 	return s.latestVersion
 }
 
-// SetLatestVersion will set LatestVersion to `version` and LatestVersionTimestamp to s.LastQueried.
-func (s *Status) SetLatestVersion(version string, writeToDB bool) {
+// SetLatestVersion sets the LatestVersion to `version`, and LatestVersionTimestamp to `releaseDate`
+// (or now if empty).
+func (s *Status) SetLatestVersion(version, releaseDate string, writeToDB bool) {
 	s.mutex.Lock()
 	{
 		s.latestVersion = version
-		s.latestVersionTimestamp = s.lastQueried
+		if releaseDate != "" {
+			s.latestVersionTimestamp = releaseDate
+		} else {
+			s.latestVersionTimestamp = s.lastQueried
+		}
 	}
 	s.mutex.Unlock()
 
-	// Write to the database if we're not deleting and have a channel
+	// Write to the database if not deleting, and have a channel.
 	if writeToDB {
 		s.mutex.RLock()
 		s.setLatestVersionIsDeployedMetric()
 
-		// Clear the fail status of WebHooks/Commands
+		// Clear the fail status of WebHooks/Commands.
 		s.Fails.resetFails()
 
 		message := dbtype.Message{
@@ -313,16 +334,7 @@ func (s *Status) LatestVersionTimestamp() string {
 	return s.latestVersionTimestamp
 }
 
-// SetLatestVersionTimeestamp will set LatestVersionTimestamp to `timestamp`.
-func (s *Status) SetLatestVersionTimestamp(timestamp string) {
-	s.mutex.Lock()
-	{
-		s.latestVersionTimestamp = timestamp
-	}
-	s.mutex.Unlock()
-}
-
-// RegexMissContent will increment the count of RegEx misses on content.
+// RegexMissContent increments the count of RegEx misses on content.
 func (s *Status) RegexMissContent() {
 	s.mutex.Lock()
 	{
@@ -331,14 +343,14 @@ func (s *Status) RegexMissContent() {
 	s.mutex.Unlock()
 }
 
-// RegexMissesContent will return the number of RegEx misses on content.
+// RegexMissesContent returns the count of RegEx misses on content.
 func (s *Status) RegexMissesContent() uint {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.regexMissesContent
 }
 
-// RegexMissVersion will increment the count of RegEx misses on version.
+// RegexMissVersion increments the count of RegEx misses on version.
 func (s *Status) RegexMissVersion() {
 	s.mutex.Lock()
 	{
@@ -347,7 +359,7 @@ func (s *Status) RegexMissVersion() {
 	s.mutex.Unlock()
 }
 
-// RegexMissesVersion will return the number of RegEx misses on version.
+// RegexMissesVersion returns the count of RegEx misses on version.
 func (s *Status) RegexMissesVersion() uint {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -364,7 +376,7 @@ func (s *Status) ResetRegexMisses() {
 	s.mutex.Unlock()
 }
 
-// SetDeleting will set the Service to be deleted.
+// SetDeleting will set `deleting` flag.
 func (s *Status) SetDeleting() {
 	s.mutex.Lock()
 	{
@@ -373,7 +385,7 @@ func (s *Status) SetDeleting() {
 	s.mutex.Unlock()
 }
 
-// Deleting returns true if the Service is being deleted.
+// Deleting returns whether the Service is undergoing deletion.
 func (s *Status) Deleting() bool {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -413,7 +425,7 @@ func (s *Status) SendSave() {
 
 // GetWebURL returns the Web URL.
 func (s *Status) GetWebURL() string {
-	if util.DefaultIfNil(s.WebURL) == "" {
+	if util.DereferenceOrDefault(s.WebURL) == "" {
 		return ""
 	}
 
@@ -422,25 +434,25 @@ func (s *Status) GetWebURL() string {
 		util.ServiceInfo{LatestVersion: s.LatestVersion()})
 }
 
-// setLatestVersionIsDeployedMetric will set the metric for whether the latest version is currently deployed.
+// setLatestVersionIsDeployedMetric sets the metric for whether the latest version is deployed.
 func (s *Status) setLatestVersionIsDeployedMetric() {
 	if s.ServiceID == nil {
 		return
 	}
 
-	value := float64(0) // Not deployed
+	value := float64(0) // Not deployed.
 	if s.latestVersion == s.deployedVersion {
-		value = 1 // Is deployed
+		value = 1 // deployed.
 
-		// Latest version isn't deployed, but has been approved/skipped, so carry that over
+		// Latest version not deployed, but is approved/skipped, so carry that over.
 	} else if strings.HasSuffix(s.approvedVersion, s.latestVersion) {
-		value = 3 // Latest version was skipped
+		value = 3 // Latest version skipped.
 		if s.approvedVersion == s.latestVersion {
-			value = 2 // Latest version was approved
+			value = 2 // Latest version approved.
 		}
 	}
 	metric.SetPrometheusGauge(metric.LatestVersionIsDeployed,
-		*s.ServiceID,
+		*s.ServiceID, "",
 		value)
 }
 
@@ -460,5 +472,5 @@ func (s *Status) DeleteMetrics() {
 	}
 
 	metric.DeletePrometheusGauge(metric.LatestVersionIsDeployed,
-		*s.ServiceID)
+		*s.ServiceID, "")
 }

@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,28 +17,36 @@
 package service
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	latestver "github.com/release-argus/Argus/service/latest_version"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	metric "github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
-	test_webhook "github.com/release-argus/Argus/webhook/test"
+	webhook_test "github.com/release-argus/Argus/webhook/test"
+	"gopkg.in/yaml.v3"
 )
 
 func TestService_ServiceInfo(t *testing.T) {
 	// GIVEN a Service
-	svc := testService("TestServiceInfo", "url")
+	svc := testService(t, "TestServiceInfo", "url")
 	id := "test_id"
 	svc.ID = id
 	url := "https://test_url.com"
-	svc.LatestVersion.URL = url
+	yaml.Unmarshal(
+		[]byte("url: "+url),
+		svc.LatestVersion)
 	webURL := "https://test_webURL.com"
 	svc.Dashboard.WebURL = webURL
 	latestVersion := "latest.version"
-	svc.Status.SetLatestVersion(latestVersion, false)
+	svc.Status.SetLatestVersion(latestVersion, "", false)
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
@@ -52,7 +60,7 @@ func TestService_ServiceInfo(t *testing.T) {
 	}
 
 	// THEN we get the correct ServiceInfo
-	if *got != want {
+	if got != want {
 		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
 	}
@@ -73,9 +81,9 @@ func TestService_IconURL(t *testing.T) {
 			want:          "",
 			dashboardIcon: "",
 			notify: shoutrrr.Slice{"test": {
-				Main:         &shoutrrr.ShoutrrrDefaults{},
-				Defaults:     &shoutrrr.ShoutrrrDefaults{},
-				HardDefaults: &shoutrrr.ShoutrrrDefaults{},
+				Main:         &shoutrrr.Defaults{},
+				Defaults:     &shoutrrr.Defaults{},
+				HardDefaults: &shoutrrr.Defaults{},
 			}},
 		},
 		"emoji icon": {
@@ -89,42 +97,42 @@ func TestService_IconURL(t *testing.T) {
 		"notify icon only": {
 			want: "https://example.com/icon.png",
 			notify: shoutrrr.Slice{"test": shoutrrr.New(
-				nil, "", nil,
-				&map[string]string{
+				nil, "", "",
+				nil, nil,
+				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				"", nil,
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{})},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{})},
 		},
 		"notify icon takes precedence over emoji": {
 			want:          "https://example.com/icon.png",
 			dashboardIcon: ":smile:",
 			notify: shoutrrr.Slice{"test": shoutrrr.New(
-				nil, "", nil,
-				&map[string]string{
+				nil, "", "",
+				nil, nil,
+				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				"", nil,
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{})},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{})},
 		},
 		"dashboard icon takes precedence over notify icon": {
 			want:          "https://root.com/icon.png",
 			dashboardIcon: "https://root.com/icon.png",
 			notify: shoutrrr.Slice{"test": shoutrrr.New(
-				nil, "", nil,
-				&map[string]string{
+				nil, "", "",
+				nil, nil,
+				map[string]string{
 					"icon": "https://example.com/icon.png"},
-				"", nil,
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{},
-				&shoutrrr.ShoutrrrDefaults{})},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{},
+				&shoutrrr.Defaults{})},
 		},
 	}
 
 	for name, tc := range tests {
-		svc := testService(name, "github")
+		svc := testService(t, name, "github")
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -137,7 +145,7 @@ func TestService_IconURL(t *testing.T) {
 
 			// THEN the function returns the correct result
 			if got != tc.want {
-				t.Errorf("want: %q\ngot:  %q",
+				t.Errorf("IconURL() mismatch\n%q\ngot:  %q",
 					tc.want, got)
 			}
 		})
@@ -153,38 +161,66 @@ func TestService_Init(t *testing.T) {
 		"bare service": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"}},
-		},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
+			}},
 		"service with notify, command and webhook": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"test": shoutrrr.New(
-						nil, "", nil, nil,
-						"discord",
-						nil, nil, nil, nil)},
+						nil, "", "discord",
+						nil, nil, nil,
+						nil, nil, nil)},
 				Command: command.Slice{
 					{"ls"}},
 				WebHook: webhook.Slice{
-					"test": test_webhook.WebHook(false, false, false)}},
+					"test": webhook_test.WebHook(false, false, false)}},
 		},
-		"service with notifys from defaults": {
+		"service with notifies from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				})},
 			defaults: &Defaults{
 				Notify: map[string]struct{}{
 					"foo": {}}},
 		},
-		"service with notifys not from defaults": {
+		"service with notifies not from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"test": &shoutrrr.Shoutrrr{}}},
 			defaults: &Defaults{
@@ -194,8 +230,15 @@ func TestService_Init(t *testing.T) {
 		"service with commands from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				})},
 			defaults: &Defaults{
 				Command: command.Slice{
 					{"ls"}}},
@@ -203,8 +246,15 @@ func TestService_Init(t *testing.T) {
 		"service with commands not from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Command: command.Slice{
 					{"test"}}},
 			defaults: &Defaults{
@@ -214,8 +264,15 @@ func TestService_Init(t *testing.T) {
 		"service with webhooks from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"}},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				})},
 			defaults: &Defaults{
 				WebHook: map[string]struct{}{
 					"bar": {}}},
@@ -223,19 +280,33 @@ func TestService_Init(t *testing.T) {
 		"service with webhooks not from defaults": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				WebHook: webhook.Slice{
-					"test": test_webhook.WebHook(false, false, false)}},
+					"test": webhook_test.WebHook(false, false, false)}},
 			defaults: &Defaults{
 				WebHook: map[string]struct{}{
 					"bar": {}}},
 		},
-		"service with webhooks/commands from defaults and notify overriden": {
+		"service with webhooks/commands from defaults and notify overridden": {
 			svc: &Service{
 				ID: "Init",
-				LatestVersion: latestver.Lookup{
-					Type: "github", URL: "release-argus/Argus"},
+				LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
+					return latestver.New("github",
+						"yaml", test.TrimYAML(`
+							url: release-argus/Argus
+						`),
+						nil,
+						nil,
+						nil, nil)
+				}),
 				Notify: shoutrrr.Slice{
 					"test": &shoutrrr.Shoutrrr{}}},
 			defaults: &Defaults{
@@ -265,7 +336,7 @@ func TestService_Init(t *testing.T) {
 			tc.svc.Init(
 				tc.defaults, &hardDefaults,
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
-				&webhook.SliceDefaults{}, &webhook.WebHookDefaults{}, &webhook.WebHookDefaults{})
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 
 			// THEN pointers to those vars are handed out to the Lookup
 			// defaults
@@ -306,7 +377,7 @@ func TestService_Init(t *testing.T) {
 					}
 				}
 			}
-			// Notifys shouldn't be overriden if non-empty
+			// Notifies shouldn't be overridden if non-empty
 			if len(hadNotify) != 0 && len(tc.svc.Notify) != len(hadNotify) {
 				t.Fatalf("Notify length changed\n want: %d (%v)\ngot:  %d (%v)",
 					len(hadNotify), hadNotify, len(tc.svc.Notify), util.SortedKeys(tc.svc.Notify))
@@ -331,7 +402,7 @@ func TestService_Init(t *testing.T) {
 				t.Errorf("CommandController should be nil with %v Commands present",
 					tc.svc.Command)
 			}
-			// Command shouldn't be overriden if non-empty
+			// Command shouldn't be overridden if non-empty
 			if len(hadCommand) != 0 && len(tc.svc.Command) != len(hadCommand) {
 				t.Fatalf("Command length changed\n want: %d (%v)\ngot: %d (%v)",
 					len(hadCommand), hadCommand, len(tc.svc.Command), tc.svc.Command)
@@ -355,7 +426,7 @@ func TestService_Init(t *testing.T) {
 					}
 				}
 			}
-			// WebHook shouldn't be overriden if non-empty
+			// WebHook shouldn't be overridden if non-empty
 			if len(hadWebHook) != 0 && len(tc.svc.WebHook) != len(hadWebHook) {
 				t.Fatalf("WebHook length changed\n want: %d (%v)\ngot: %d (%v)",
 					len(hadWebHook), hadWebHook, len(tc.svc.WebHook), util.SortedKeys(tc.svc.WebHook))
@@ -369,6 +440,265 @@ func TestService_Init(t *testing.T) {
 				if tc.svc.WebHook[i] == nil {
 					t.Errorf("hadWebHook[%s] was nil", i)
 				}
+			}
+		})
+	}
+}
+
+func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
+	// GIVEN a Service
+	tests := map[string]struct {
+		nilDeployedVersion bool
+		nilCommand         bool
+		nilNotify          bool
+		nilWebHook         bool
+	}{
+		"all defined": {},
+		"nil DeployedVersionLookup": {
+			nilDeployedVersion: true},
+		"nil Command": {
+			nilCommand: true},
+		"nil Notify": {
+			nilNotify: true},
+		"nil WebHook": {
+			nilWebHook: true},
+		"nil all": {
+			nilDeployedVersion: true,
+			nilCommand:         true,
+			nilNotify:          true,
+			nilWebHook:         true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			testCommand := command.Command{"ls"}
+			testNotify := shoutrrr_test.Shoutrrr(false, false)
+			testWebHook := webhook_test.WebHook(false, false, false)
+			service := &Service{
+				ID: fmt.Sprintf("TestService_InitMetrics_ResetMetrics_DeleteMetrics--%s",
+					name),
+				LatestVersion:         testLatestVersion(t, "github", false),
+				DeployedVersionLookup: testDeployedVersionLookup(t, false),
+				Command: command.Slice{
+					testCommand},
+				Notify: shoutrrr.Slice{
+					testNotify.ID: testNotify},
+				WebHook: webhook.Slice{
+					testWebHook.ID: testWebHook},
+			}
+
+			// Init the service
+			service.Init(
+				&Defaults{}, &Defaults{},
+				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
+				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{},
+			)
+			service.Status.SetLatestVersion("0.0.2", "", false)
+			service.Status.SetDeployedVersion("0.0.2", "", false)
+
+			// nil the vars
+			if tc.nilDeployedVersion {
+				service.DeployedVersionLookup = nil
+			}
+			if tc.nilCommand {
+				service.Command = nil
+			}
+			if tc.nilNotify {
+				service.Notify = nil
+			}
+			if tc.nilWebHook {
+				service.WebHook = nil
+			}
+
+			// metrics
+			latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
+			deployedVersionMetric := metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
+			commandMetric := metric.CommandMetric.WithLabelValues(
+				testCommand.String(), "SUCCESS", service.ID)
+			notifyMetric := metric.NotifyMetric.WithLabelValues(
+				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
+			webhookMetric := metric.WebHookMetric.WithLabelValues(
+				testWebHook.ID, "SUCCESS", service.ID)
+
+			// ################################
+			// WHEN InitMetrics is called on it
+			// ################################
+			service.InitMetrics()
+
+			// THEN the metrics are created
+			want := float64(3)
+			oldWant := want
+			// latest_version
+			latestVersionMetric.Set(want)
+			got := testutil.ToFloat64(latestVersionMetric)
+			if got != want {
+				t.Errorf("Init, Expected latestVersionMetric to be %f, not %f",
+					want, got)
+			}
+			// deployed_version
+			if tc.nilDeployedVersion {
+				want = 0
+			} else {
+				deployedVersionMetric.Set(want)
+			}
+			got = testutil.ToFloat64(deployedVersionMetric)
+			if got != want {
+				t.Errorf("Init, Expected deployedVersionMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+			// command
+			if tc.nilCommand {
+				want = 0
+			} else {
+				commandMetric.Add(want)
+			}
+			got = testutil.ToFloat64(commandMetric)
+			if got != want {
+				t.Errorf("Init, Expected commandMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+			// notify
+			if tc.nilNotify {
+				want = 0
+			} else {
+				notifyMetric.Add(want)
+			}
+			got = testutil.ToFloat64(notifyMetric)
+			if got != want {
+				t.Errorf("Init, Expected notifyMetric to be %f, not %f",
+					want, got)
+			}
+			// webhook
+			want = oldWant
+			if tc.nilWebHook {
+				want = 0
+			} else {
+				webhookMetric.Add(want)
+			}
+			got = testutil.ToFloat64(webhookMetric)
+			if got != want {
+				t.Errorf("Init, Expected webhookMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+
+			// #################################
+			// WHEN ResetMetrics is called on it
+			// #################################
+			service.ResetMetrics()
+
+			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
+			deployedVersionMetric = metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
+			commandMetric = metric.CommandMetric.WithLabelValues(
+				testCommand.String(), "SUCCESS", service.ID)
+			notifyMetric = metric.NotifyMetric.WithLabelValues(
+				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
+			webhookMetric = metric.WebHookMetric.WithLabelValues(
+				testWebHook.ID, "SUCCESS", service.ID)
+
+			// THEN the metrics are reset
+			want--
+			oldWant = want
+			// latest_version
+			latestVersionMetric.Add(want - 1)
+			got = testutil.ToFloat64(latestVersionMetric)
+			if got != want {
+				t.Errorf("Reset, Expected latestVersionMetric to be %f, not %f",
+					want, got)
+			}
+			// deployed_version
+			if tc.nilDeployedVersion {
+				want = 0
+			} else {
+				deployedVersionMetric.Add(want)
+			}
+			got = testutil.ToFloat64(deployedVersionMetric)
+			if got != want {
+				t.Errorf("Reset, Expected deployedVersionMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+			// command
+			if tc.nilCommand {
+				want = 0
+			} else {
+				commandMetric.Add(want)
+			}
+			got = testutil.ToFloat64(commandMetric)
+			if got != want {
+				t.Errorf("Reset, Expected commandMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+			// notify
+			if tc.nilNotify {
+				want = 0
+			} else {
+				notifyMetric.Add(want)
+			}
+			got = testutil.ToFloat64(notifyMetric)
+			if got != want {
+				t.Errorf("Reset, Expected notifyMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+			// webhook
+			if tc.nilWebHook {
+				want = 0
+			} else {
+				webhookMetric.Add(want)
+			}
+			got = testutil.ToFloat64(webhookMetric)
+			if got != want {
+				t.Errorf("Reset, Expected webhookMetric to be %f, not %f",
+					want, got)
+			}
+			want = oldWant
+
+			// ##################################
+			// WHEN DeleteMetrics is called on it
+			// ##################################
+			service.DeleteMetrics()
+
+			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
+			deployedVersionMetric = metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
+			commandMetric = metric.CommandMetric.WithLabelValues(
+				testCommand.String(), "SUCCESS", service.ID)
+			notifyMetric = metric.NotifyMetric.WithLabelValues(
+				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
+			webhookMetric = metric.WebHookMetric.WithLabelValues(
+				testWebHook.ID, "SUCCESS", service.ID)
+
+			// THEN the metrics are deleted
+			want = 0
+			got = testutil.ToFloat64(latestVersionMetric)
+			if got != want {
+				t.Errorf("Delete, Expected latestVersionMetric to be %f, not %f",
+					want, got)
+			}
+			got = testutil.ToFloat64(deployedVersionMetric)
+			if got != want {
+				t.Errorf("Delete, Expected deployedVersionMetric to be %f, not %f",
+					want, got)
+			}
+			got = testutil.ToFloat64(commandMetric)
+			if got != want {
+				t.Errorf("Delete, Expected commandMetric to be %f, not %f",
+					want, got)
+			}
+			got = testutil.ToFloat64(notifyMetric)
+			if got != want {
+				t.Errorf("Delete, Expected notifyMetric to be %f, not %f",
+					want, got)
+			}
+			got = testutil.ToFloat64(webhookMetric)
+			if got != want {
+				t.Errorf("Delete, Expected webhookMetric to be %f, not %f",
+					want, got)
 			}
 		})
 	}

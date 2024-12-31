@@ -8,10 +8,10 @@ export interface ApprovalsToolbarOptions {
   search: string;
   editMode: boolean;
 
-  // 0 - hide up-to-date
-  // 1 - hide updatable
-  // 2 - hide skipped
-  // 3 - hide inactive
+  // 0 - hide up-to-date.
+  // 1 - hide updatable.
+  // 2 - hide skipped.
+  // 3 - hide inactive.
   hide: number[];
 }
 

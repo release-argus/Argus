@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides the service functionality for Argus.
 package service
 
 import (
 	"strings"
 
-	command "github.com/release-argus/Argus/commands"
-	"github.com/release-argus/Argus/notifiers/shoutrrr"
+	"github.com/release-argus/Argus/command"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
@@ -32,36 +33,66 @@ func LogInit(log *util.JLog) {
 	latestver.LogInit(log)
 }
 
+// ServiceInfo returns info about the service.
+func (s *Service) ServiceInfo() util.ServiceInfo {
+	return util.ServiceInfo{
+		ID:            s.ID,
+		URL:           s.LatestVersion.ServiceURL(true),
+		WebURL:        s.Status.GetWebURL(),
+		LatestVersion: s.Status.LatestVersion(),
+	}
+}
+
+// IconURL returns the URL Icon for the Service.
+func (s *Service) IconURL() string {
+	// Service.Icon
+	if strings.HasPrefix(s.Dashboard.Icon, "http") {
+		return s.Dashboard.Icon
+	}
+
+	var icon string
+	//nolint:typecheck
+	if s.Notify != nil {
+		// Search for a web icon.
+		for _, notify := range s.Notify {
+			// `Params.Icon`
+			icon = notify.GetParam("icon")
+			if icon != "" && strings.HasPrefix(icon, "http") {
+				return icon
+			}
+		}
+	}
+
+	return icon
+}
+
 // Init will initialise the Service metric.
 func (s *Service) Init(
-	defaults *Defaults,
-	hardDefaults *Defaults,
+	defaults, hardDefaults *Defaults,
 
 	rootNotifyConfig *shoutrrr.SliceDefaults,
-	notifyDefaults *shoutrrr.SliceDefaults,
-	notifyHardDefaults *shoutrrr.SliceDefaults,
+	notifyDefaults, notifyHardDefaults *shoutrrr.SliceDefaults,
 
 	rootWebHookConfig *webhook.SliceDefaults,
-	webhookDefaults *webhook.WebHookDefaults,
-	webhookHardDefaults *webhook.WebHookDefaults,
+	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 ) {
-	// Status
+	// Status.
 	s.Status.Init(
 		len(s.Notify), len(s.Command), len(s.WebHook),
 		&s.ID,
 		&s.Dashboard.WebURL)
 
-	// Service
+	// Service.
 	s.Defaults = defaults
 	s.HardDefaults = hardDefaults
-	// Dashbooard
+	// Dashboard.
 	s.Dashboard.Defaults = &s.Defaults.Dashboard
 	s.Dashboard.HardDefaults = &s.HardDefaults.Dashboard
-	// Options
+	// Options.
 	s.Options.Defaults = &s.Defaults.Options
 	s.Options.HardDefaults = &s.HardDefaults.Options
 
-	// Notify
+	// Notify/
 	// use defaults?
 	if s.Notify == nil && len(defaults.Notify) != 0 {
 		s.Notify = make(shoutrrr.Slice, len(defaults.Notify))
@@ -74,7 +105,7 @@ func (s *Service) Init(
 		&s.Status,
 		rootNotifyConfig, notifyDefaults, notifyHardDefaults)
 
-	// Command
+	// Command.
 	// use defaults?
 	if len(s.Command) == 0 && len(defaults.Command) != 0 {
 		s.Command = make(command.Slice, len(defaults.Command))
@@ -90,7 +121,7 @@ func (s *Service) Init(
 			s.Options.GetIntervalPointer())
 	}
 
-	// WebHook
+	// WebHook.
 	// use defaults?
 	if s.WebHook == nil && len(defaults.WebHook) != 0 {
 		s.WebHook = make(webhook.Slice, len(defaults.WebHook))
@@ -105,55 +136,27 @@ func (s *Service) Init(
 		&s.Notify,
 		s.Options.GetIntervalPointer())
 
-	// LatestVersion
-	s.LatestVersion.Init(
-		&s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion,
-		&s.Status,
-		&s.Options)
+	// LatestVersion.
+	if s.LatestVersion != nil {
+		s.LatestVersion.Init(
+			&s.Options,
+			&s.Status,
+			&s.Defaults.LatestVersion, &s.HardDefaults.LatestVersion)
+	}
 
-	// DeployedVersionLookup
+	// DeployedVersionLookup.
 	s.DeployedVersionLookup.Init(
-		&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup,
+		&s.Options,
 		&s.Status,
-		&s.Options)
+		&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup)
 
-}
-
-// ServiceInfo returns info about the service.
-func (s *Service) ServiceInfo() *util.ServiceInfo {
-	return &util.ServiceInfo{
-		ID:            s.ID,
-		URL:           s.LatestVersion.ServiceURL(true),
-		WebURL:        s.Status.GetWebURL(),
-		LatestVersion: s.Status.LatestVersion(),
-	}
-}
-
-// IconURL returns the URL Icon for the Service.
-func (s *Service) IconURL() (icon string) {
-	// Service.Icon
-	if strings.HasPrefix(s.Dashboard.Icon, "http") {
-		icon = s.Dashboard.Icon
-		return
-	}
-
-	//nolint:typecheck
-	if s.Notify != nil {
-		for key := range s.Notify {
-			// `Params.Icon`
-			icon = s.Notify[key].GetParam("icon")
-			if icon != "" && strings.HasPrefix(icon, "http") {
-				return
-			}
-		}
-	}
-
-	return
 }
 
 // InitMetrics of the Service.
 func (s *Service) InitMetrics() {
-	s.LatestVersion.InitMetrics()
+	if s.LatestVersion != nil {
+		s.LatestVersion.InitMetrics(s.LatestVersion)
+	}
 	s.DeployedVersionLookup.InitMetrics()
 	s.Notify.InitMetrics()
 	s.CommandController.InitMetrics()
@@ -163,7 +166,9 @@ func (s *Service) InitMetrics() {
 
 // DeleteMetrics of the Service.
 func (s *Service) DeleteMetrics() {
-	s.LatestVersion.DeleteMetrics()
+	if s.LatestVersion != nil {
+		s.LatestVersion.DeleteMetrics(s.LatestVersion)
+	}
 	s.DeployedVersionLookup.DeleteMetrics()
 	s.Notify.DeleteMetrics()
 	s.CommandController.DeleteMetrics()

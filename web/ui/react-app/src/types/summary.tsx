@@ -1,4 +1,4 @@
-import { BaseLatestVersionLookupType } from "./config";
+import { LatestVersionLookupType } from "./config";
 
 export interface OrderAPIResponse {
   order: string[];
@@ -16,7 +16,7 @@ export interface ServiceSummaryType {
   active?: boolean;
   id: string;
   loading?: boolean;
-  type?: BaseLatestVersionLookupType["type"];
+  type?: LatestVersionLookupType["type"];
   url?: string;
   icon?: string;
   icon_link_to?: string;
@@ -64,7 +64,7 @@ export interface StatusFailsSummaryType {
 }
 
 export interface WebHookSummaryType {
-  // undefined = unsent/sending
+  // undefined = unsent/sending.
   failed?: boolean;
   next_runnable?: string;
 }
@@ -74,7 +74,7 @@ export interface WebHookSummaryListType {
 }
 
 export interface CommandSummaryType {
-  // undefined = unsent/sending
+  // undefined = unsent/sending.
   failed?: boolean;
   next_runnable?: string;
 }

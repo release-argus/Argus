@@ -87,7 +87,7 @@ const trimConfig = (
       if (
         isEmptyObject(obj[key]) &&
         !(
-          // notify/webhook objects may be empty to reference mains
+          // notify/webhook objects may be empty to reference mains.
           // .service.*.notify | .service.*.webhook
           // .defaults.service.*.notify | .defaults.service.*.webhook
           (

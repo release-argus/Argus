@@ -1,4 +1,4 @@
-// Copyright [2023] [Argus]
+// Copyright [2024] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package util
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
@@ -28,18 +27,18 @@ func TestTemplate_String(t *testing.T) {
 	// GIVEN a variety of string templates
 	serviceInfo := testServiceInfo()
 	tests := map[string]struct {
-		tmpl       string
+		template   string
 		panicRegex *string
 		want       string
 	}{
 		"no jinja template": {
-			tmpl: "testing 123",
-			want: "testing 123"},
+			template: "testing 123",
+			want:     "testing 123"},
 		"valid jinja template": {
-			tmpl: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			want: "-something-example.com-other.com-NEW"},
+			template: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			want:     "-something-example.com-other.com-NEW"},
 		"invalid jinja template panic": {
-			tmpl:       "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			template:   "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
 			panicRegex: test.StringPtr("Tag name must be an identifier")},
 	}
 
@@ -53,9 +52,7 @@ func TestTemplate_String(t *testing.T) {
 					r := recover()
 
 					rStr := fmt.Sprint(r)
-					re := regexp.MustCompile(*tc.panicRegex)
-					match := re.MatchString(rStr)
-					if !match {
+					if !RegexCheck(*tc.panicRegex, rStr) {
 						t.Errorf("expected a panic that matched %q\ngot: %q",
 							*tc.panicRegex, rStr)
 					}
@@ -63,7 +60,7 @@ func TestTemplate_String(t *testing.T) {
 			}
 
 			// WHEN TemplateString is called
-			got := TemplateString(tc.tmpl, serviceInfo)
+			got := TemplateString(tc.template, serviceInfo)
 
 			// THEN the string stays the same
 			if got != tc.want {
@@ -77,12 +74,12 @@ func TestTemplate_String(t *testing.T) {
 func TestCheckTemplate(t *testing.T) {
 	// GIVEN a variety of string templates
 	tests := map[string]struct {
-		tmpl string
-		pass bool
+		template string
+		pass     bool
 	}{
-		"no jinja template":            {tmpl: "testing 123", pass: true},
-		"valid jinja template":         {tmpl: "{{ version }}-foo", pass: true},
-		"invalid jinja template panic": {tmpl: "{{ version }", pass: false},
+		"no jinja template":            {template: "testing 123", pass: true},
+		"valid jinja template":         {template: "{{ version }}-foo", pass: true},
+		"invalid jinja template panic": {template: "{{ version }", pass: false},
 	}
 
 	for name, tc := range tests {
@@ -90,7 +87,7 @@ func TestCheckTemplate(t *testing.T) {
 			t.Parallel()
 
 			// WHEN CheckTemplate is called
-			got := CheckTemplate(tc.tmpl)
+			got := CheckTemplate(tc.template)
 
 			// THEN the string stays the same
 			if got != tc.pass {

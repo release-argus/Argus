@@ -17,27 +17,27 @@ export function diffObjects<T>(
   allowDefined?: string[],
   key?: string
 ): boolean {
-  // no defaults
+  // no defaults.
   if (b === undefined && a !== undefined) return (a ?? "") !== (b ?? "");
-  // if a is empty/undefined, treat as unchanged
+  // if a is empty/undefined, treat as unchanged.
   if (isEmptyOrNull(a)) return false;
-  // if there are no defaults, treat as changed
+  // if there are no defaults, treat as changed.
   if (isEmptyOrNull(b)) return true;
-  // if a is an array, check it's the same length as b
+  // if a is an array, check it's the same length as b.
   if (
     Array.isArray(a) &&
     (!Array.isArray(b) ||
       a.length !== b.length ||
-      // if only one has an id, ensure it's not a length difference of 1
+      // if only one has an id, ensure it's not a length difference of 1.
       (a.hasOwnProperty("id") != b.hasOwnProperty("id") &&
         Math.abs(a.length - b.length) !== 1))
   )
-    // Non-empty means it's different as the lengths are different
+    // Non-empty means it's different as the lengths are different.
     return !isEmptyArray(a);
 
   if (typeof b === "object") {
     const keys: Array<keyof T> = Object.keys(a as object) as Array<keyof T>;
-    // check each key in object
+    // check each key in object.
     for (const k of keys) {
       if (
         diffObjects(
@@ -50,15 +50,15 @@ export function diffObjects<T>(
         // difference!
         return true;
     }
-    // No differences found
+    // No differences found.
     return false;
   } else if (typeof b === "string") {
-    // a is defined, and on a key that's allowed. is a the same as b?
+    // a is defined, and on a key that's allowed. is a the same as b?.
     if (containsEndsWith(key || "-", allowDefined)) return a !== b;
-    // else, we've got a difference
+    // else, we've got a difference.
     return true;
   }
-  // different - a is defined at a key that is not allowed
+  // different - a is defined at a key that is not allowed.
   else return containsEndsWith(key || "-", allowDefined) ? a !== b : true;
 }
 

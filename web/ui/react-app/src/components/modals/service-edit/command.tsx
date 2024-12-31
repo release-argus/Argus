@@ -26,10 +26,10 @@ const Command: FC<Props> = ({ name, removeMe }) => {
   const addItem = useCallback(() => {
     append({ arg: "" }, { shouldFocus: false });
   }, []);
-  // remove the last argument
+  // remove the last argument.
   const removeLast = useCallback(() => {
     if (fields.length > 1) return remove(fields.length - 1);
-    // if there's only 1 arg left, remove the command
+    // if there's only 1 arg left, remove the command.
     if (removeMe) return removeMe();
     return undefined;
   }, [fields.length, removeMe]);
