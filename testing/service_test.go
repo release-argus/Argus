@@ -160,8 +160,8 @@ func TestServiceTest(t *testing.T) {
 						return deployedver.New(
 							"yaml", test.TrimYAML(`
 								method: GET
-								url: https://release-argus.io/demo/api/v1/version
-								json: version
+								url: https://valid.release-argus.io/json
+								json: foo.bar.version
 							`),
 							opt.New(
 								nil, "0s", nil,

@@ -45,19 +45,19 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			url:      "https://release-argus.invalid-tld",
 			errRegex: `no such host`},
 		"valid url": {
-			url:      "https://release-argus.io",
+			url:      "https://valid.release-argus.io/plain",
 			errRegex: `^$`},
 		"url from env": {
-			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": "https://release-argus.io"},
+			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_ONE": "https://valid.release-argus.io/plain"},
 			url:      "${TEST_LOOKUP__DV_HTTP_REQUEST_ONE}",
 			errRegex: `^$`},
 		"url from env partial": {
-			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_TWO": "release-argus"},
-			url:      "https://${TEST_LOOKUP__DV_HTTP_REQUEST_TWO}.io",
+			env:      map[string]string{"TEST_LOOKUP__DV_HTTP_REQUEST_TWO": "valid.release-argus"},
+			url:      "https://${TEST_LOOKUP__DV_HTTP_REQUEST_TWO}.io/plain",
 			errRegex: `^$`},
 		"404": {
 			errRegex: `non-2XX response code: 404`,
-			url:      "https://release-argus.io/foo/bar",
+			url:      "https://valid.release-argus.io/foo/bar",
 		},
 	}
 
@@ -101,7 +101,7 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"URL that doesn't resolve to JSON": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
+				url: https://valid.release-argus.io/plain
 				json: something
 			`),
 			errRegex: `failed to unmarshal`,
@@ -126,73 +126,73 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"passing regex": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '([0-9]+)\s+[^>]+>The Argus Developers'
+				url: https://valid.release-argus.io/plain
+				regex: 'version: "([^"]+)'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
-			wantVersion: "[0-9]{4}",
+			wantVersion: `\d\.\d\.\d`,
 			errRegex:    `^$`,
 		},
 		"url from env": {
-			env: map[string]string{"TEST_LOOKUP__DV_QUERY_ONE": "https://release-argus.io"},
+			env: map[string]string{"TEST_LOOKUP__DV_QUERY_ONE": "https://valid.release-argus.io/plain"},
 			overrides: test.TrimYAML(`
 				url: ${TEST_LOOKUP__DV_QUERY_ONE}
-				regex: '([0-9]+)\s+[^>]+>The Argus Developers'
+				regex: 'version: "([^"]+)'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
-			wantVersion: "[0-9]{4}",
+			wantVersion: `\d\.\d\.\d`,
 			errRegex:    `^$`,
 		},
 		"url from env partial": {
-			env: map[string]string{"TEST_LOOKUP__DV_QUERY_TWO": "release-argus"},
+			env: map[string]string{"TEST_LOOKUP__DV_QUERY_TWO": "valid.release-argus"},
 			overrides: test.TrimYAML(`
-				url: https://${TEST_LOOKUP__DV_QUERY_TWO}.io
-				regex: '([0-9]+)\s+[^>]+>The Argus Developers'
+				url: https://${TEST_LOOKUP__DV_QUERY_TWO}.io/json
+				json: foo.bar.version
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
-			wantVersion: "[0-9]{4}",
+			wantVersion: `\d\.\d\.\d`,
 			errRegex:    `^$`,
 		},
 		"passing regex with no capture group": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '[0-9]{4}'
+				url: https://valid.release-argus.io/plain
+				regex: '[0-9.]+'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
-			wantVersion: "[0-9]{4}",
+			wantVersion: "[0-9.]+",
 			errRegex:    `^$`,
 		},
 		"regex with template": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '([0-9]+)\s+<[^>]+>(The) (Argus) (Developers)'
+				url: https://valid.release-argus.io/plain
+				regex: '(stable).*(version).*"([\d.]+).*(and)'
 				regex_template: '$2 $1 $4, $3'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
 			`),
 			errRegex:    `^$`,
-			wantVersion: "The [0-9]+ Developers, Argus",
+			wantVersion: "version stable and, 1.2.1",
 		},
 		"failing regex": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
+				url: https://valid.release-argus.io/plain
 				regex: '^bishBashBosh$'
 			`),
 			errRegex: `regex .* didn't return any matches on`,
 		},
 		"handle non-semantic (only major) version": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '([0-9]+)\s+<[^>]+>The Argus Developers'
+				url: https://valid.release-argus.io/plain
+				regex: '(\d+)'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
@@ -200,8 +200,8 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"want semantic versioning but get non-semantic version": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '([0-9]+\s+)<[^>]+>The Argus Developers'
+				url: https://valid.release-argus.io/plain
+				regex: 'non-semantic: "([^"]+)'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: true
@@ -210,8 +210,8 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"allow non-semantic versioning and get non-semantic version": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io
-				regex: '([0-9]+\s+)<[^>]+>The Argus Developers'
+				url: https://valid.release-argus.io/plain
+				regex: 'non-semantic: "([^"]+)'
 			`),
 			optionsOverrides: test.TrimYAML(`
 				semantic_versioning: false
@@ -220,8 +220,8 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"valid semantic version": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io/docs/getting-started/
-				regex: argus-([0-9.]+)\.
+				url: https://valid.release-argus.io/json
+				json: bar
 			`),
 			errRegex:    `^$`,
 			wantVersion: `^[0-9.]+\.[0-9.]+\.[0-9.]+$`,
@@ -238,7 +238,7 @@ func TestLookup_Query(t *testing.T) {
 		},
 		"404": {
 			overrides: test.TrimYAML(`
-				url: https://release-argus.io/foo/bar
+				url: https://valid.release-argus.io/foo/bar
 			`),
 			errRegex: `non-2XX response code: 404`,
 		},

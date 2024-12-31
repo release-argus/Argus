@@ -694,7 +694,7 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 						type: ghcr
 						image: "release-argus/argus"
 						tag: "{{ version }}"
-						token: ` + os.Getenv("GITHUB_TOKEN") + `
+						token: ` + os.Getenv("GH_TOKEN") + `
 			`),
 			want: wants{
 				version:     defaultRelease.TagName,
@@ -711,7 +711,7 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 						type: ghcr
 						image: "release-argus/argus"
 						tag: "x{{ version }}"
-						token: ` + os.Getenv("GITHUB_TOKEN") + `
+						token: ` + os.Getenv("GH_TOKEN") + `
 			`),
 			want: wants{
 				errRegex: `release-argus\/argus:x[0-9.]+ - .*manifest unknown`},
