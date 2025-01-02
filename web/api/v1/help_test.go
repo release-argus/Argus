@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,34 +95,44 @@ func testAPI(name string) API {
 	return API{Config: cfg}
 }
 
-func testService(id string) *service.Service {
+func testService(id string, semVer bool) *service.Service {
 	announceChannel := make(chan []byte, 8)
 	databaseChannel := make(chan dbtype.Message, 8)
 
+	lvRegex := `non-semantic: "([^"]+)"`
+	if semVer {
+		lvRegex = `stable version: "v?([0-9.]+)"`
+	}
 	lv, _ := latestver.New(
 		"url",
 		"yaml", test.TrimYAML(`
-			url: https://valid.release-argus.io/plain
+			url: https://invalid.release-argus.io/plain
 			url_commands:
 				- type: regex
-					regex: 'stable version: "v?([0-9.]+)"'
+					regex: '`+lvRegex+`'
+			allow_invalid_certs: true
 		`),
 		nil,
 		nil,
 		nil, nil)
 
+	dvJSON := "nonSemVer"
+	if semVer {
+		dvJSON = "foo.bar.version"
+	}
 	dv, _ := deployedver.New(
 		"yaml", test.TrimYAML(`
 			method: GET
-			url: https://valid.release-argus.io/json
-			json: foo.bar.version
+			url: https://invalid.release-argus.io/json
+			json: `+dvJSON+`
+			allow_invalid_certs: true
 		`),
 		nil,
 		nil,
 		nil, nil)
 
 	options := opt.New(
-		nil, "", test.BoolPtr(true),
+		nil, "", &semVer,
 		nil, nil)
 
 	svc := service.Service{

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,8 +38,9 @@ func (l *Lookup) Refresh(
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
 	// semantic_versioning is explicitly null, and the default resolves to a different value.
-	(*semanticVersioning == "null" && l.Options.GetSemanticVersioning() == *util.FirstNonNilPtr(
-		l.Defaults.Options.SemanticVersioning, l.HardDefaults.Options.SemanticVersioning)) ||
+	(*semanticVersioning == "null" && l.Options.GetSemanticVersioning() != *util.FirstNonNilPtr(
+		l.Defaults.Options.SemanticVersioning,
+		l.HardDefaults.Options.SemanticVersioning)) ||
 		// semantic_versioning now resolves to a different value than the default.
 		(*semanticVersioning == "true") != l.Options.GetSemanticVersioning())
 	// Whether we need to create a new Lookup.

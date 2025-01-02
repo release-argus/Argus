@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -264,7 +264,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 }
 
 func TestHTTP_LatestVersionRefresh(t *testing.T) {
-	testSVC := testService("TestHTTP_LatestVersionRefresh")
+	testSVC := testService("TestHTTP_LatestVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, util.LogFrom{})
 	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
@@ -288,11 +288,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName                  *string
-		preRefreshSemanticVersioning *bool
-		svc                          *service.Service
-		params                       map[string]string
-		wants                        wants
+		serviceName *string
+		svc         *service.Service
+		params      map[string]string
+		wants       wants
 	}{
 		"no changes": {
 			params: map[string]string{},
@@ -308,65 +307,40 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta)\""}]
-				}`),
-				"semantic_versioning": "false"},
-			wants: wants{
-				body:          `\{"version":"[0-9.]+-beta",.*"\}`,
-				statusCode:    http.StatusOK,
-				latestVersion: ""},
-		},
-		"had non-semantic versioning - kept with semantic_versioning not sent": {
-			preRefreshSemanticVersioning: test.BoolPtr(false),
-			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta)\""}]
 				}`)},
 			wants: wants{
 				body:          `\{"version":"[0-9.]+-beta",.*"\}`,
 				statusCode:    http.StatusOK,
 				latestVersion: ""},
 		},
-		"had non-semantic versioning - kept with semantic_versioning unchanged": {
-			preRefreshSemanticVersioning: test.BoolPtr(false),
-			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta\")"}]
-				}`)},
+		"semantic_versioning not sent - refreshes service": {
 			wants: wants{
-				body:          `\{"version":"[0-9.]+-beta\\\"",.*"\}`,
-				statusCode:    http.StatusOK,
-				latestVersion: ""},
+				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				statusCode:      http.StatusOK,
+				latestVersion:   testSVC.Status.LatestVersion(),
+				deployedVersion: testSVC.Status.LatestVersion(),
+				announce:        true},
 		},
-		"had non-semantic versioning - fail with semantic_versioning=null as default=true": {
-			preRefreshSemanticVersioning: test.BoolPtr(false),
+		"semantic_versioning=null - fail as default=true": {
 			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta\")"}]
-				}`),
 				"semantic_versioning": "null"},
 			wants: wants{
 				body:          `failed converting .* to a semantic version`,
 				statusCode:    http.StatusBadRequest,
 				latestVersion: ""},
 		},
-		"had non-semantic versioning - kept with semantic_versioning=false": {
-			preRefreshSemanticVersioning: test.BoolPtr(false),
+		"semantic_versioning=same - refreshes service": {
 			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta\")"}]
-				}`),
 				"semantic_versioning": "false"},
 			wants: wants{
-				body:          `\{"version":"[0-9.]+-beta\\\"",.*"\}`,
-				statusCode:    http.StatusOK,
-				latestVersion: ""},
+				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				statusCode:      http.StatusOK,
+				latestVersion:   testSVC.Status.LatestVersion(),
+				deployedVersion: testSVC.Status.LatestVersion(),
+				announce:        true},
 		},
-		"had non-semantic versioning - fail with semantic_versioning=true": {
-			preRefreshSemanticVersioning: test.BoolPtr(false),
+		"semantic_versioning=diff - not applied to service": {
 			params: map[string]string{
-				"overrides": test.TrimJSON(`{
-					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta\")"}]
-				}`),
 				"semantic_versioning": "true"},
 			wants: wants{
 				body:          `failed converting .* to a semantic version`,
@@ -402,8 +376,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(name)
-			svc.Options.SemanticVersioning = tc.preRefreshSemanticVersioning
+			svc := testService(name, false)
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
@@ -474,7 +447,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 }
 
 func TestHTTP_DeployedVersionRefresh(t *testing.T) {
-	testSVC := testService("TestHTTP_DeployedVersionRefresh")
+	testSVC := testService("TestHTTP_DeployedVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, util.LogFrom{})
 	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
@@ -497,19 +470,18 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName                  *string
-		preRefreshSemanticVersioning *bool
-		svc                          *service.Service
-		nilDeployedVersion           bool
-		params                       map[string]string
-		wants                        wants
+		serviceName        *string
+		svc                *service.Service
+		nilDeployedVersion bool
+		params             map[string]string
+		wants              wants
 	}{
 		"adding deployed version to service": {
 			nilDeployedVersion: true,
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"url":                 "https://invalid.release-argus.io/json",
-					"json":                "foo.bar.version",
+					"json":                "nonSemVer",
 					"allow_invalid_certs": true
 				}`)},
 			wants: wants{
@@ -526,6 +498,44 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				statusCode:      http.StatusOK,
 				latestVersion:   testSVC.Status.DeployedVersion(), // Latest set to Deployed as not queried
 				deployedVersion: testSVC.Status.DeployedVersion()},
+		},
+		"semantic_versioning not sent - refreshes service": {
+			wants: wants{
+				body:            `\{"version":"ver[\d.]+",.*"\}`,
+				statusCode:      http.StatusOK,
+				latestVersion:   testSVC.Status.DeployedVersion(),
+				deployedVersion: testSVC.Status.DeployedVersion()},
+		},
+		"semantic_versioning=null - fail as default=true": {
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"url_commands": [{"type":"regex","regex":"beta: \"v?([0-9.]+-beta\")"}]
+				}`),
+				"semantic_versioning": "null"},
+			wants: wants{
+				body:            `failed converting .* to a semantic version`,
+				statusCode:      http.StatusBadRequest,
+				deployedVersion: ""},
+		},
+		"semantic_versioning=same - refreshes service": {
+			params: map[string]string{
+				"semantic_versioning": "false",
+			},
+			wants: wants{
+				body:            `\{"version":"ver[0-9.]+",.*"\}`,
+				statusCode:      http.StatusOK,
+				latestVersion:   testSVC.Status.DeployedVersion(),
+				deployedVersion: testSVC.Status.DeployedVersion()},
+		},
+		"semantic_versioning=diff - not applied to service": {
+			params: map[string]string{
+				"semantic_versioning": "true",
+			},
+			wants: wants{
+				body:            `failed converting .* to a semantic version`,
+				statusCode:      http.StatusBadRequest,
+				latestVersion:   "",
+				deployedVersion: ""},
 		},
 		"different json doesn't update service version": {
 			params: map[string]string{
@@ -582,8 +592,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(name)
-			svc.Options.SemanticVersioning = tc.preRefreshSemanticVersioning
+			svc := testService(name, false)
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
@@ -653,7 +662,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		statusCode int
 	}
 
-	testSVC := testService("TestHTTP_ServiceDetail")
+	testSVC := testService("TestHTTP_ServiceDetail", true)
 	// GIVEN an API and a request for detail of a service
 	file := "TestHTTP_ServiceDetail.yml"
 	api := testAPI(file)
@@ -690,7 +699,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(name)
+			svc := testService(name, true)
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
@@ -758,7 +767,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 			t.Parallel()
 
 			tc.wantBody = test.TrimJSON(tc.wantBody)
-			svc := testService(name)
+			svc := testService(name, true)
 			t.Cleanup(func() {
 				os.RemoveAll(file)
 				if api.Config.Settings.Data.DatabaseFile != "" {
@@ -798,7 +807,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 }
 
 func TestHTTP_ServiceEdit(t *testing.T) {
-	testSVC := testService("TestHTTP_ServiceEdit")
+	testSVC := testService("TestHTTP_ServiceEdit", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
 	testSVC.LatestVersion.Query(true, util.LogFrom{})
 	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
@@ -943,7 +952,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := testService(name)
+			svc := testService(name, true)
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			api.Config.Order = append(api.Config.Order, svc.ID)
@@ -1048,7 +1057,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			os.RemoveAll(api.Config.Settings.Data.DatabaseFile)
 		}
 	})
-	svc := testService("TestHTTP_ServiceDelete")
+	svc := testService("TestHTTP_ServiceDelete", true)
 	svc.Init(
 		&api.Config.Defaults.Service, &api.Config.HardDefaults.Service,
 		&api.Config.Notify, &api.Config.Defaults.Notify, &api.Config.HardDefaults.Notify,
