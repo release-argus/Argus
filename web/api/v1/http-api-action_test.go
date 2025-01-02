@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			if tc.statusCode == 0 {
 				tc.statusCode = http.StatusOK
 			}
-			svc := testService(name)
+			svc := testService(name, true)
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
 			svc.Defaults = &cfg.Defaults.Service
 			svc.HardDefaults = &cfg.HardDefaults.Service
@@ -418,7 +418,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			releaseStdout := test.CaptureStdout()
 
 			tc.serviceID = strings.ReplaceAll(tc.serviceID, "__name__", name)
-			svc := testService(tc.serviceID)
+			svc := testService(tc.serviceID, true)
 			svc.Options.Active = tc.active
 			svc.Defaults = &api.Config.Defaults.Service
 			svc.HardDefaults = &api.Config.HardDefaults.Service

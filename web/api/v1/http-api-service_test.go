@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ func TestHTTP_httpServiceOrder(t *testing.T) {
 }
 
 func TestHTTP_httpServiceSummary(t *testing.T) {
-	testSVC := testService("TestHTTP_httpServiceSummary")
+	testSVC := testService("TestHTTP_httpServiceSummary", true)
 	// GIVEN an API and a request for detail of a service
 	file := "TestHTTP_httpServiceSummary.yml"
 	api := testAPI(file)
