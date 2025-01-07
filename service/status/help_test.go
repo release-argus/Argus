@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ func testStatus() (status *Status) {
 	status.WebURL = test.StringPtr("")
 	status.Init(
 		0, 0, 0,
-		test.StringPtr("test-service"),
+		test.StringPtr("test-service"), test.StringPtr("test-service"),
 		test.StringPtr("http://example.com"))
 	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)

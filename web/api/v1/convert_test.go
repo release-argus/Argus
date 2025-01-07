@@ -17,6 +17,8 @@
 package v1
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -147,9 +149,25 @@ func TestConvertAndCensorService(t *testing.T) {
 				WebHook:       &apitype.WebHookSlice{},
 				Dashboard:     &apitype.DashboardOptions{}},
 		},
+		"name ignored when no marshalName": {
+			input: &service.Service{
+				ID:      "Test",
+				Name:    "Test",
+				Comment: "Hi",
+			},
+			want: &apitype.Service{
+				Comment:       "Hi",
+				Options:       &apitype.ServiceOptions{},
+				LatestVersion: nil,
+				Command:       &apitype.CommandSlice{},
+				Notify:        &apitype.NotifySlice{},
+				WebHook:       &apitype.WebHookSlice{},
+				Dashboard:     &apitype.DashboardOptions{}},
+		},
 		"all fields": {
 			input: &service.Service{
 				ID:      "Test",
+				Name:    "Something",
 				Comment: "Comment on the Service",
 				Options: opt.Options{
 					Active: test.BoolPtr(false)},
@@ -200,6 +218,7 @@ func TestConvertAndCensorService(t *testing.T) {
 					time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)),
 			},
 			want: &apitype.Service{
+				Name:    "Something",
 				Comment: "Comment on the Service",
 				Options: &apitype.ServiceOptions{
 					Active: test.BoolPtr(false)},
@@ -226,6 +245,15 @@ func TestConvertAndCensorService(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			// If it has a Name that is different from the ID.
+			if tc.input != nil && tc.input.Name != "" && tc.input.ID != tc.input.Name {
+				// Re-marshal so that Name will unmarshal.
+				serviceJSON, _ := json.Marshal(tc.input)
+				serviceJSON = []byte(strings.Replace(string(serviceJSON),
+					"{", `{"name":"`+tc.input.Name+`",`, 1))
+				json.Unmarshal(serviceJSON, tc.input)
+			}
 
 			// WHEN convertAndCensorService is called
 			got := convertAndCensorService(tc.input)

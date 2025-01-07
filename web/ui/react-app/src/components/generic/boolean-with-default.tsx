@@ -15,7 +15,7 @@ interface Props {
 
   label?: string;
   tooltip?: string;
-  defaultValue?: boolean;
+  defaultValue?: boolean | null;
 }
 
 /**

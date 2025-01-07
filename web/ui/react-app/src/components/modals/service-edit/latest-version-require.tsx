@@ -130,8 +130,8 @@ const EditServiceLatestVersionRequire: FC<Props> = ({
           />
           <FormItem
             name="latest_version.require.docker.image"
-            label="Image"
             col_xs={6}
+            label="Image"
           />
           <FormItem
             name="latest_version.require.docker.tag"

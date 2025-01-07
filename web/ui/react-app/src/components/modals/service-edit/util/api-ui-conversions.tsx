@@ -1,4 +1,14 @@
 import {
+  DeployedVersionLookupEditType,
+  LatestVersionLookupEditType,
+  NotifyEditAPIType,
+  NotifyEditType,
+  ServiceEditAPIType,
+  ServiceEditOtherData,
+  ServiceEditType,
+  WebHookEditType,
+} from "types/service-edit";
+import {
   HeaderType,
   NonNullable,
   NotifyNtfyAction,
@@ -10,17 +20,11 @@ import {
   WebHookType,
 } from "types/config";
 import {
-  NotifyEditType,
-  ServiceEditAPIType,
-  ServiceEditOtherData,
-  ServiceEditType,
-  WebHookEditType,
-} from "types/service-edit";
-import {
   firstNonDefault,
   firstNonEmpty,
   isEmptyArray,
   isEmptyOrNull,
+  strToBool,
 } from "utils";
 
 import { urlCommandsTrimArray } from "./url-command-trim";
@@ -34,14 +38,16 @@ import { urlCommandsTrimArray } from "./url-command-trim";
  * @returns The converted service data for use in the UI
  */
 export const convertAPIServiceDataEditToUI = (
-  name: string,
+  id: string,
   serviceData?: ServiceEditAPIType,
   otherOptionsData?: ServiceEditOtherData
 ): ServiceEditType => {
-  if (!serviceData || !name)
+  if (!serviceData || !id)
     // New service defaults.
     return {
+      id: "",
       name: "",
+      comment: "",
       options: { active: true },
       latest_version: {
         type: "github",
@@ -63,117 +69,58 @@ export const convertAPIServiceDataEditToUI = (
   // Edit service defaults.
   return {
     ...serviceData,
-    name: name,
-    options: {
-      ...serviceData?.options,
-      active: serviceData?.options?.active !== false,
-    },
-    latest_version: {
-      ...serviceData?.latest_version,
-      url_commands:
-        serviceData?.latest_version?.url_commands &&
-        urlCommandsTrimArray(serviceData.latest_version.url_commands),
-      require: {
-        ...serviceData?.latest_version?.require,
-        command: serviceData?.latest_version?.require?.command?.map((arg) => ({
-          arg: arg as string,
-        })),
-        docker: {
-          ...serviceData?.latest_version?.require?.docker,
-          type: serviceData?.latest_version?.require?.docker?.type ?? "",
-        },
+    id: id,
+    name: serviceData.name ?? "",
+    options: convertAPIOptionsDataEditToUI(serviceData?.options),
+    latest_version: convertAPILatestVersionDataEditToUI(
+      serviceData?.latest_version
+    ),
+    deployed_version: convertAPIDeployedVersionDataEditToUI(
+      serviceData?.deployed_version
+    ),
+    command: convertAPICommandDataEditToUI(serviceData?.command),
+    webhook: convertAPIWebhookDataEditToUI(
+      serviceData?.webhook,
+      otherOptionsData
+    ),
+    notify: convertAPINotifyDataEditToUI(serviceData?.notify, otherOptionsData),
+    dashboard: convertAPIDashboardDataEditToUI(serviceData?.dashboard),
+  };
+};
+
+/**
+ * Returns the converted latest_version data for the UI
+ *
+ * @param latest_version - The service.latest_version data from the API.
+ * @returns The converted latest_version data for use in the UI
+ */
+const convertAPILatestVersionDataEditToUI = (
+  latest_version?: LatestVersionLookupEditType
+) => {
+  const typeSpecific =
+    latest_version?.type === "github"
+      ? {
+          use_prerelease: strToBool(latest_version?.use_prerelease),
+        }
+      : {
+          allow_invalid_certs: strToBool(latest_version?.allow_invalid_certs),
+        };
+
+  return {
+    ...latest_version,
+    ...typeSpecific,
+    url_commands:
+      latest_version?.url_commands &&
+      urlCommandsTrimArray(latest_version.url_commands),
+    require: {
+      ...latest_version?.require,
+      command: latest_version?.require?.command?.map((arg) => ({
+        arg: arg as string,
+      })),
+      docker: {
+        ...latest_version?.require?.docker,
+        type: latest_version?.require?.docker?.type ?? "",
       },
-    },
-    deployed_version: {
-      method: "GET",
-      ...serviceData?.deployed_version,
-      basic_auth: {
-        username: serviceData?.deployed_version?.basic_auth?.username ?? "",
-        password: serviceData?.deployed_version?.basic_auth?.password ?? "",
-      },
-      headers:
-        serviceData?.deployed_version?.headers?.map((header, key) => ({
-          ...header,
-          oldIndex: key,
-        })) ?? [],
-      template_toggle: !isEmptyOrNull(
-        serviceData?.deployed_version?.regex_template
-      ),
-    },
-    command: serviceData?.command?.map((args) => ({
-      args: args.map((arg) => ({ arg })),
-    })),
-    webhook: serviceData.webhook
-      ? serviceData.webhook.map((item) => {
-          // Determine webhook name and type.
-          const whName = item.name as string;
-          const whType = (item.type ??
-            otherOptionsData?.webhook?.[whName]?.type ??
-            whName) as NonNullable<WebHookType["type"]>;
-
-          // Construct custom headers.
-          const customHeaders = !isEmptyArray(item.custom_headers)
-            ? item.custom_headers?.map((header, index) => ({
-                ...header,
-                oldIndex: index,
-              }))
-            : firstNonEmpty(
-                otherOptionsData?.webhook?.[whName]?.custom_headers,
-                (
-                  otherOptionsData?.defaults?.webhook?.[whType] as
-                    | WebHookType
-                    | undefined
-                )?.custom_headers,
-                (
-                  otherOptionsData?.hard_defaults?.webhook?.[whType] as
-                    | WebHookType
-                    | undefined
-                )?.custom_headers
-              ).map(() => ({ key: "", item: "" }));
-
-          return {
-            ...item,
-            oldIndex: whName,
-            type: whType,
-            custom_headers: customHeaders,
-          } as WebHookEditType;
-        })
-      : [],
-    notify: serviceData.notify
-      ? serviceData.notify.map((item) => {
-          // Determine notify name and type.
-          const notifyName = item.name as string;
-          const notifyType = (item.type ||
-            otherOptionsData?.notify?.[notifyName]?.type ||
-            notifyName) as NotifyTypesKeys;
-
-          return {
-            ...item,
-            oldIndex: notifyName,
-            type: notifyType,
-            url_fields: convertNotifyURLFields(
-              notifyName,
-              notifyType,
-              item.url_fields,
-              otherOptionsData
-            ),
-            params: {
-              avatar: "", // controlled param.
-              color: "", // ^
-              icon: "", // ^
-              ...convertNotifyParams(
-                notifyName,
-                notifyType,
-                item.params,
-                otherOptionsData
-              ),
-            },
-          } as NotifyEditType;
-        })
-      : [],
-    dashboard: {
-      icon: "",
-      ...serviceData?.dashboard,
     },
   };
 };
@@ -435,6 +382,173 @@ export const convertNotifyURLFields = (
 };
 
 /**
+ * Returns the headers in the format {key: KEY, value: VAL}[] for the UI
+ *
+ * @param headers - The {KEY:VAL, ...} object to convert
+ * @param omitValues - If true, will omit the values from the object
+ * @returns Converted headers, {key: KEY, value: VAL}[] for use in the UI
+ */
+const convertStringMapToHeaderType = (
+  headers?: StringStringMap,
+  omitValues?: boolean
+): HeaderType[] => {
+  if (!headers) return [];
+
+  if (omitValues)
+    return Object.keys(headers).map(() => ({ key: "", value: "" }));
+
+  return Object.keys(headers).map((key) => ({
+    key: key,
+    value: headers[key],
+  }));
+};
+
+/**
+ * Returns the converted deployed_version data for the UI
+ *
+ * @param deployed_version - The service.deployed_version data from the API.
+ * @returns The converted deployed_version data for use in the UI
+ */
+const convertAPIDeployedVersionDataEditToUI = (
+  deployed_version?: DeployedVersionLookupEditType
+): DeployedVersionLookupEditType => {
+  return {
+    method: "GET",
+    ...deployed_version,
+    allow_invalid_certs: strToBool(deployed_version?.allow_invalid_certs),
+    basic_auth: {
+      username: deployed_version?.basic_auth?.username ?? "",
+      password: deployed_version?.basic_auth?.password ?? "",
+    },
+    headers: convertAPIHeadersDataEditToUI(deployed_version?.headers),
+    template_toggle: !isEmptyOrNull(deployed_version?.regex_template),
+  };
+};
+
+/**
+ * Returns the converted options data for the UI
+ *
+ * @param options - The service.options data from the API
+ * @returns The converted options data for use in the UI
+ */
+const convertAPIOptionsDataEditToUI = (
+  options?: ServiceEditType["options"]
+) => {
+  return {
+    ...options,
+    active: options?.active !== false,
+    semantic_versioning: strToBool(options?.semantic_versioning),
+  };
+};
+
+/**
+ * Returns the converted command data for the UI
+ *
+ * @param command - The service.command data from the API
+ * @returns The converted command data for use in the UI
+ */
+const convertAPICommandDataEditToUI = (command?: string[][]) => {
+  if (!command) return [];
+  return command.map((args) => ({
+    args: args.map((arg) => ({ arg })),
+  }));
+};
+
+/**
+ * Returns the converted webhook data for the UI
+ *
+ * @param webhook - The service.webhook data from the API
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted webhook data for use in the UI
+ */
+const convertAPIWebhookDataEditToUI = (
+  webhook?: WebHookType[],
+  otherOptionsData?: ServiceEditOtherData
+) => {
+  if (!webhook) return [];
+
+  return webhook.map((item) => {
+    // Determine webhook name and type.
+    const whName = item.name as string;
+    const whType = (item.type ??
+      otherOptionsData?.webhook?.[whName]?.type ??
+      whName) as NonNullable<WebHookType["type"]>;
+
+    // Construct custom headers.
+    const customHeaders = !isEmptyArray(item.custom_headers)
+      ? item.custom_headers?.map((header, index) => ({
+          ...header,
+          oldIndex: index,
+        }))
+      : firstNonEmpty(
+          otherOptionsData?.webhook?.[whName]?.custom_headers,
+          (
+            otherOptionsData?.defaults?.webhook?.[whType] as
+              | WebHookType
+              | undefined
+          )?.custom_headers,
+          (
+            otherOptionsData?.hard_defaults?.webhook?.[whType] as
+              | WebHookType
+              | undefined
+          )?.custom_headers
+        ).map(() => ({ key: "", item: "" }));
+
+    return {
+      ...item,
+      oldIndex: whName,
+      type: whType,
+      custom_headers: customHeaders,
+    } as WebHookEditType;
+  });
+};
+
+/**
+ * Returns the converted notify data for the UI
+ *
+ * @param notify - The service.notify data from the API
+ * @param otherOptionsData - The other options data, containing globals/defaults/hardDefaults
+ * @returns The converted notify data for use in the UI
+ */
+const convertAPINotifyDataEditToUI = (
+  notify?: NotifyEditAPIType[],
+  otherOptionsData?: ServiceEditOtherData
+) => {
+  if (!notify) return [];
+
+  return notify.map((item) => {
+    // Determine notify name and type.
+    const notifyName = item.name as string;
+    const notifyType = (item.type ||
+      otherOptionsData?.notify?.[notifyName]?.type ||
+      notifyName) as NotifyTypesKeys;
+
+    return {
+      ...item,
+      oldIndex: notifyName,
+      type: notifyType,
+      url_fields: convertNotifyURLFields(
+        notifyName,
+        notifyType,
+        item.url_fields,
+        otherOptionsData
+      ),
+      params: {
+        avatar: "", // controlled param.
+        color: "", // ^
+        icon: "", // ^
+        ...convertNotifyParams(
+          notifyName,
+          notifyType,
+          item.params,
+          otherOptionsData
+        ),
+      },
+    } as NotifyEditType;
+  });
+};
+
+/**
  * Returns the converted notify.X.params for the UI
  *
  * @param name - The react-hook-form path to the notify object
@@ -538,23 +652,31 @@ export const convertNotifyParams = (
 };
 
 /**
- * Returns the headers in the format {key: KEY, value: VAL}[] for the UI
+ * Returns the converted dashboard data for the UI
  *
- * @param headers - The {KEY:VAL, ...} object to convert
- * @param omitValues - If true, will omit the values from the object
- * @returns Converted headers, {key: KEY, value: VAL}[] for use in the UI
+ * @param dashboard - The service.dashboard data from the API
+ * @returns The converted dashboard data for use in the UI
  */
-const convertStringMapToHeaderType = (
-  headers?: StringStringMap,
-  omitValues?: boolean
-): HeaderType[] => {
+const convertAPIDashboardDataEditToUI = (
+  dashboard?: ServiceEditType["dashboard"]
+) => {
+  return {
+    icon: "",
+    ...dashboard,
+    auto_approve: strToBool(dashboard?.auto_approve),
+  };
+};
+
+/**
+ * Returns the converted headers data for the UI with oldIndex tracking
+ *
+ * @param headers - The headers array from the API
+ * @returns The converted headers array with oldIndex for use in the UI
+ */
+const convertAPIHeadersDataEditToUI = (headers?: HeaderType[]) => {
   if (!headers) return [];
-
-  if (omitValues)
-    return Object.keys(headers).map(() => ({ key: "", value: "" }));
-
-  return Object.keys(headers).map((key) => ({
-    key: key,
-    value: headers[key],
+  return headers.map((header, key) => ({
+    ...header,
+    oldIndex: key,
   }));
 };

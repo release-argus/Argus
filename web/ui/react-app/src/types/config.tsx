@@ -106,14 +106,14 @@ export interface ServiceType {
 }
 
 export interface ServiceOptionsType {
-  [key: string]: string | boolean | undefined;
+  [key: string]: string | boolean | null | undefined;
   active?: boolean;
   interval?: string;
-  semantic_versioning?: boolean;
+  semantic_versioning?: boolean | null;
 }
 
 export interface ServiceDashboardOptionsType {
-  auto_approve?: boolean;
+  auto_approve?: boolean | null;
   icon?: string;
   icon_link_to?: string;
   web_url?: string;
@@ -142,13 +142,14 @@ export interface LatestVersionLookupGitHubType
 export interface LatestVersionLookupURLType
   extends LatestVersionLookupBaseType {
   type?: "url";
-  allow_invalid_certs?: boolean;
+  allow_invalid_certs?: boolean | null;
 }
 
 export interface DefaultLatestVersionLookupType {
   [key: string]:
     | string
     | boolean
+    | null
     | undefined
     | URLCommandType[]
     | DefaultLatestVersionRequireType;
@@ -157,13 +158,14 @@ export interface DefaultLatestVersionLookupType {
   require?: DefaultLatestVersionRequireType;
   access_token?: string;
   use_prerelease?: boolean;
-  allow_invalid_certs?: boolean;
+  allow_invalid_certs?: boolean | null;
 }
 
 export interface LatestVersionLookupBaseType {
   [key: string]:
     | string
     | boolean
+    | null
     | undefined
     | URLCommandType[]
     | LatestVersionRequireType;
@@ -198,9 +200,15 @@ export interface LatestVersionRequireType {
   docker?: DockerFilterType;
 }
 export interface DeployedVersionLookupType {
-  [key: string]: string | boolean | undefined | BasicAuthType | HeaderType[];
+  [key: string]:
+    | string
+    | boolean
+    | null
+    | undefined
+    | BasicAuthType
+    | HeaderType[];
   url?: string;
-  allow_invalid_certs?: boolean;
+  allow_invalid_certs?: boolean | null;
   basic_auth?: BasicAuthType;
   headers?: HeaderType[];
   json?: string;
@@ -616,12 +624,12 @@ export interface NotifyOptionsType {
 
 export interface WebHookType {
   // For edit.
-  [key: string]: string | boolean | number | undefined | HeaderType[];
+  [key: string]: string | boolean | number | null | undefined | HeaderType[];
   name?: string;
 
   type?: "github" | "gitlab";
   url?: string;
-  allow_invalid_certs?: boolean;
+  allow_invalid_certs?: boolean | null;
   custom_headers?: HeaderType[];
   secret?: string;
   desired_status_code?: number;

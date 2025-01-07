@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ func TestRequire_Init(t *testing.T) {
 			status := status.Status{}
 			status.Init(
 				0, 0, 0,
-				test.StringPtr("test"),
+				test.StringPtr("test"), nil,
 				test.StringPtr("http://example.com"))
 			status.SetDeployedVersion("1.2.3", "", false)
 			defaults := RequireDefaults{

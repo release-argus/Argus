@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,7 +163,7 @@ func TestIsEqual(t *testing.T) {
 			status := &status.Status{}
 			status.Init(
 				0, 0, 0,
-				&name,
+				&name, nil,
 				test.StringPtr("http://example.com"))
 			status.SetLatestVersion("foo", "", false)
 			tc.a.(*testLookup).Status = status

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,9 @@ func insertionSort(release github_types.Release, filteredReleases *[]github_type
 //   - Non-semantic versions (if semantic versions are required).
 //   - Pre-releases (if not allowed).
 //
-// Returns the filtered list, sorted in descending order (if semantic-versioning wanted).
+// -
+//
+//	Returns the filtered list, sorted in descending order (if semantic-versioning wanted).
 func (l *Lookup) filterGitHubReleases(logFrom util.LogFrom) []github_types.Release {
 	semanticVersioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.usePreRelease()

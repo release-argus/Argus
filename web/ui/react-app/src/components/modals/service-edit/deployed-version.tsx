@@ -22,7 +22,7 @@ const DeployedVersionMethodOptions = [
 ];
 
 interface Props {
-  serviceName: string;
+  serviceID: string;
   original?: DeployedVersionLookupEditType;
   original_options?: ServiceOptionsType;
   defaults?: DeployedVersionLookupEditType;
@@ -32,7 +32,7 @@ interface Props {
 /**
  * Returns the `deployed_version` form fields
  *
- * @param serviceName - The name of the service
+ * @param serviceID - The name of the service
  * @param original - The original values of the form
  * @param original_options - The original service.options of the form
  * @param defaults - The default values
@@ -40,7 +40,7 @@ interface Props {
  * @returns The form fields for the `deployed_version`
  */
 const EditServiceDeployedVersion: FC<Props> = ({
-  serviceName,
+  serviceID,
   original,
   original_options,
   defaults,
@@ -68,7 +68,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
     }),
-    [defaults, hard_defaults],
+    [defaults, hard_defaults]
   );
 
   return (
@@ -156,12 +156,12 @@ const EditServiceDeployedVersion: FC<Props> = ({
           />
           <FormCheck
             name={`deployed_version.template_toggle`}
-            size="lg"
-            label="T"
-            tooltip="Use the RegEx to create a template"
-            smallLabel
             col_sm={1}
             col_xs={2}
+            size="lg"
+            label="T"
+            smallLabel
+            tooltip="Use the RegEx to create a template"
             position="right"
           />
           {templateToggle && (
@@ -175,7 +175,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
         </Row>
         <VersionWithRefresh
           vType={1}
-          serviceName={serviceName}
+          serviceID={serviceID}
           original={original}
           original_options={original_options}
         />

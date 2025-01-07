@@ -7,12 +7,6 @@ import {
   Row,
 } from "react-bootstrap";
 import {
-  CommandType,
-  HeaderType,
-  NotifyTypesValues,
-  WebHookType,
-} from "types/config";
-import {
   FC,
   useCallback,
   useContext,
@@ -32,25 +26,11 @@ import { DeleteModal } from "./delete-confirm";
 import EditService from "components/modals/service-edit/service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { HelpTooltip } from "components/generic";
-import { Loading } from "components/modals/service-edit/loading";
 import { ModalContext } from "contexts/modal";
 import { convertAPIServiceDataEditToUI } from "components/modals/service-edit/util";
 import { convertUIServiceDataEditToAPI } from "components/modals/service-edit/util/ui-api-conversions";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { useQuery } from "@tanstack/react-query";
-
-export interface EditForm {
-  optionsSemanticVersioning?: boolean;
-  lvType?: "github" | "url";
-  lvAllowInvalidCerts?: boolean;
-  lvUsePreReleases?: boolean;
-  dvCustomHeaders?: HeaderType[];
-  dvAllowInvalidCerts?: boolean;
-  commands?: CommandType[];
-  webhooks?: WebHookType[];
-  notify?: NotifyTypesValues[];
-  dashboardAutoApprove?: boolean;
-}
 
 /**
  * @param data - The data to convert
@@ -101,11 +81,7 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
       queryFn: () =>
         fetchJSON<ServiceEditOtherData>({ url: "api/v1/service/update" }),
     });
-  const {
-    data: serviceData,
-    isSuccess: isSuccessServiceData,
-    isRefetching,
-  } = useQuery({
+  const { data: serviceData, isSuccess: isSuccessServiceData } = useQuery({
     queryKey: ["service/edit", { id: serviceID }],
     queryFn: () =>
       fetchJSON<ServiceEditAPIType>({
@@ -122,66 +98,17 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
 
   const defaultData: ServiceEditType = useMemo(
     () =>
-      hasFetched && !isRefetching
-        ? convertAPIServiceDataEditToUI(
-            serviceID,
-            serviceData,
-            otherOptionsData,
-          )
-        : {},
-    [serviceData, otherOptionsData, isRefetching],
+      convertAPIServiceDataEditToUI(serviceID, serviceData, otherOptionsData),
+    [serviceData, otherOptionsData]
   );
 
-  // Not fetched yet.
-  if (loadingModal || !hasFetched) {
-    return (
-      <Modal size="lg" show onHide={hideModal}>
-        <ServiceEditModalHeader />
-        <Modal.Body>
-          <Container
-            fluid
-            className="font-weight-bold"
-            style={{ paddingLeft: "0.25rem", paddingRight: "0.25rem" }}
-          >
-            <Loading name={serviceID} />
-          </Container>
-        </Modal.Body>
-        <Modal.Footer
-          style={{ display: "flex", justifyContent: "space-between" }}
-        >
-          <ButtonGroup>
-            {serviceID && <DeleteModal disabled={!loadingModal} />}
-          </ButtonGroup>
-          <span>
-            <Button
-              id="modal-cancel"
-              variant="secondary"
-              onClick={() => hideModal()}
-              disabled={!loadingModal}
-            >
-              Cancel
-            </Button>
-            <Button
-              id="modal-action"
-              variant="primary"
-              type="submit"
-              className="ms-2"
-              disabled
-            >
-              Confirm
-            </Button>
-          </span>
-        </Modal.Footer>
-      </Modal>
-    );
-  }
-
-  // Service edit modal.
   return (
     <ServiceEditModalWithData
       serviceID={serviceID}
+      serviceName={serviceData?.name}
       defaultData={defaultData}
       otherOptionsData={otherOptionsData}
+      loading={loadingModal || !hasFetched}
       hideModal={hideModal}
     />
   );
@@ -204,23 +131,29 @@ const ServiceEditModalHeader = () => (
 
 interface ServiceEditModalWithDataProps {
   serviceID: string;
+  serviceName?: string;
   defaultData: ServiceEditType;
-  otherOptionsData: ServiceEditOtherData;
+  otherOptionsData?: ServiceEditOtherData;
+  loading: boolean;
   hideModal: () => void;
 }
 /**
  * Returns a modal for editing the service
  *
  * @param serviceID - The ID of the service to edit
+ * @param serviceName - The name of the service
  * @param defaultData - The default data for the service
  * @param otherOptionsData - The mains/defaults/hardDefaults for the service
+ * @param loading - Whether the modal is loading
  * @param hideModal - The function to hide the modal
  * @returns The modal for editing a service
  */
 const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
   serviceID,
+  serviceName,
   defaultData,
   otherOptionsData,
+  loading,
   hideModal,
 }) => {
   const form = useForm<ServiceEditType>({
@@ -250,7 +183,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
       {
         method: "PUT",
         body: JSON.stringify(payload),
-      },
+      }
     )
       .then((response) => {
         if (!response.ok) throw response;
@@ -290,9 +223,11 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
               style={{ paddingLeft: "0.25rem", paddingRight: "0.25rem" }}
             >
               <EditService
-                name={serviceID}
+                id={serviceID}
+                name={serviceName}
                 defaultData={defaultData}
                 otherOptionsData={otherOptionsData}
+                loading={loading}
               />
             </Container>
           </Modal.Body>
@@ -303,7 +238,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
               {serviceID && (
                 <DeleteModal
                   onDelete={() => onDelete()}
-                  disabled={err === null}
+                  disabled={err === null || loading}
                 />
               )}
             </ButtonGroup>
@@ -321,7 +256,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                 id="modal-cancel"
                 variant="secondary"
                 onClick={() => hideModal()}
-                disabled={err === null}
+                disabled={err === null || loading}
               >
                 Cancel
               </Button>
@@ -331,7 +266,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                 type="submit"
                 onClick={form.handleSubmit(onSubmit)}
                 className="ms-2"
-                disabled={err === null || !form.formState.isDirty}
+                disabled={err === null || !form.formState.isDirty || loading}
               >
                 Confirm
               </Button>
@@ -354,7 +289,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
                     ) : (
                       <ul>
                         {Object.entries(
-                          extractErrors(form.formState.errors) ?? [],
+                          extractErrors(form.formState.errors) ?? []
                         ).map(([key, error]) => (
                           <li key={key}>
                             {key}: {error}

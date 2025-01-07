@@ -20,7 +20,7 @@ const HelpTooltip: FC<Props> = ({ text, placement = "top" }) => (
   <OverlayTrigger
     placement={placement}
     delay={{ show: 500, hide: 500 }}
-    overlay={<Tooltip id={`help-semantic-versioning`}>{text}</Tooltip>}
+    overlay={<Tooltip id="help-tooltip">{text}</Tooltip>}
   >
     <FontAwesomeIcon
       icon={faQuestionCircle}

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -156,7 +156,8 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	hardDefaults.Default()
 
 	svc = &service.Service{
-		ID: id,
+		ID:   id,
+		Name: id,
 		LatestVersion: test.IgnoreError(t, func() (latestver.Lookup, error) {
 			return latestver.New(
 				"url",
@@ -205,7 +206,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	svc.Status.Init(
 		len(svc.Notify),
 		len(svc.Command), len(svc.WebHook),
-		&svc.ID,
+		&svc.ID, &svc.Name,
 		&svc.Dashboard.WebURL)
 	svc.Status.SetApprovedVersion("2.0.0", false)
 	svc.Status.SetDeployedVersion("2.0.0", "", false)

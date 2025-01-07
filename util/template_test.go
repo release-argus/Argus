@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,21 +25,42 @@ import (
 
 func TestTemplate_String(t *testing.T) {
 	// GIVEN a variety of string templates
-	serviceInfo := testServiceInfo()
 	tests := map[string]struct {
-		template   string
-		panicRegex *string
-		want       string
+		template    string
+		serviceInfo ServiceInfo
+		panicRegex  *string
+		want        string
 	}{
-		"no jinja template": {
-			template: "testing 123",
-			want:     "testing 123"},
-		"valid jinja template": {
-			template: "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			want:     "-something-example.com-other.com-NEW"},
-		"invalid jinja template panic": {
-			template:   "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
-			panicRegex: test.StringPtr("Tag name must be an identifier")},
+		"no django template": {
+			template:    "testing 123",
+			want:        "testing 123",
+			serviceInfo: testServiceInfo()},
+		"valid django template": {
+			template:    "-{% if 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			want:        "-something-example.com-other.com-NEW",
+			serviceInfo: testServiceInfo()},
+		"valid django template with defaulting - had value": {
+			template:    "{{ service_name | default:service_id }} - {{ version }} released",
+			want:        "another - NEW released",
+			serviceInfo: testServiceInfo()},
+		"valid django template with defaulting - had no value": {
+			template: "{{ service_name | default:service_id }} - {{ version }} released",
+			want:     "something - NEW released",
+			serviceInfo: ServiceInfo{
+				ID:            "something",
+				Name:          "",
+				URL:           "example.com",
+				WebURL:        "other.com",
+				LatestVersion: "NEW",
+			}},
+		"invalid django template panic": {
+			template:    "-{% 'a' == 'a' %}{{ service_id }}{% endif %}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			panicRegex:  test.StringPtr("Tag name must be an identifier"),
+			serviceInfo: testServiceInfo()},
+		"all django vars": {
+			template:    "{{ service_id }}-{{ service_name }}-{{ service_url }}-{{ web_url }}-{{ version }}",
+			want:        "something-another-example.com-other.com-NEW",
+			serviceInfo: testServiceInfo()},
 	}
 
 	for name, tc := range tests {
@@ -60,7 +81,7 @@ func TestTemplate_String(t *testing.T) {
 			}
 
 			// WHEN TemplateString is called
-			got := TemplateString(tc.template, serviceInfo)
+			got := TemplateString(tc.template, tc.serviceInfo)
 
 			// THEN the string stays the same
 			if got != tc.want {
@@ -77,9 +98,9 @@ func TestCheckTemplate(t *testing.T) {
 		template string
 		pass     bool
 	}{
-		"no jinja template":            {template: "testing 123", pass: true},
-		"valid jinja template":         {template: "{{ version }}-foo", pass: true},
-		"invalid jinja template panic": {template: "{{ version }", pass: false},
+		"no django template":            {template: "testing 123", pass: true},
+		"valid django template":         {template: "{{ version }}-foo", pass: true},
+		"invalid django template panic": {template: "{{ version }", pass: false},
 	}
 
 	for name, tc := range tests {

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ import (
 
 // httpServiceActions will return all Command(s)/WebHook(s) of a service.
 //
-// Required params:
+// Required parameters:
 //
-//	service_name - Service ID to get the actions of.
+//	service_id: The ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 	jLog.Verbose(targetService, logFrom, true)
 
 	api.Config.OrderMutex.RLock()
@@ -81,19 +81,18 @@ type RunActionsPayload struct {
 
 // httpServiceRunActions handles approvals/rejections of the latest version of a service.
 //
-// Required params:
+// Required parameters:
 //
-//	service_name - Service ID to target.
-//
-//	target - The action to take. One of:
-//		"ARGUS_ALL" - Approve all actions.
-//		"ARGUS_FAILED" - Approve all failed actions.
-//		"ARGUS_SKIP" - Skip this release.
-//		"webhook_<webhook_id>" - Approve a specific WebHook.
-//		"command_<command_id>" - Approve a specific Command.
+//	service_id: The ID of the Service to target.
+//	target: The action to take. One of:
+//		"ARGUS_ALL": Approve all actions.
+//		"ARGUS_FAILED": Approve all failed actions.
+//		"ARGUS_SKIP": Skip this release.
+//		"webhook_<webhook_id>": Approve a specific WebHook.
+//		"command_<command_id>": Approve a specific Command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 	jLog.Verbose(targetService, logFrom, true)
 
 	// Check the service exists.

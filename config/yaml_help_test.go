@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -100,6 +100,7 @@ func testYAML_config_test(path string, t *testing.T) {
 				max_tries: 1
 		service:
 			NoDefaults:
+				name: something else
 				options:
 					interval: 10m
 				latest_version:
@@ -576,6 +577,7 @@ func testYAML_Edit(path string, t *testing.T) {
 					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 			alpha:
+				name: a
 				latest_version:
 					type: url
 					url: https://valid.release-argus.io/plain
@@ -583,6 +585,7 @@ func testYAML_Edit(path string, t *testing.T) {
 					- type: regex
 						regex: v(.*)
 			bravo:
+				name: b
 				latest_version:
 					type: url
 					url: https://valid.release-argus.io/plain
@@ -590,6 +593,7 @@ func testYAML_Edit(path string, t *testing.T) {
 					- type: regex
 						regex: ([0-9.]+)
 			charlie:
+				name: c
 				latest_version:
 					type: url
 					url: https://valid.release-argus.io/plain

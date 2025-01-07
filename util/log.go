@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,9 +39,11 @@ var (
 type JLog struct {
 	mutex sync.RWMutex
 	// Minimum level of logs to print.
-	// 	0 = ERROR 1 = WARN,
-	// 	2 = INFO, 3 = VERBOSE,
-	// 	4 = DEBUG
+	//	0 = ERROR
+	//	1 = WARN
+	//	2 = INFO
+	//	3 = VERBOSE
+	//	4 = DEBUG
 	Level      uint8
 	Timestamps bool // Whether to log timestamps with the msg, or just the msg.
 

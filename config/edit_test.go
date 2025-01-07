@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,188 @@ import (
 
 	"github.com/release-argus/Argus/service"
 )
+
+func TestConfig_AddService(t *testing.T) {
+	// GIVEN a service to add/replace/rename and a Config to act on
+	tests := map[string]struct {
+		newService *service.Service
+		oldService string
+		wantOrder  []string
+		added      bool
+		dbMessages int
+		nilMap     bool
+	}{
+		"New service": {
+			newService: testServiceURL("test"),
+			wantOrder:  []string{"alpha", "bravo", "charlie", "test"},
+			added:      true,
+			dbMessages: 1,
+		},
+		"Replace service": {
+			oldService: "bravo",
+			newService: testServiceURL("bravo"),
+			wantOrder:  []string{"alpha", "bravo", "charlie"},
+			added:      true,
+			dbMessages: 1,
+		},
+		"Rename service": {
+			oldService: "bravo",
+			newService: testServiceURL("foo"),
+			wantOrder:  []string{"alpha", "foo", "charlie"},
+			added:      true,
+			dbMessages: 2, // 1 for change of id, 1 for change of versions
+		},
+		"ID already exists": {
+			newService: testServiceURL("alpha"),
+			wantOrder:  []string{"alpha", "bravo", "charlie"},
+			added:      false,
+			dbMessages: 0,
+		},
+		"Name already exists": {
+			newService: testServiceURL("a"),
+			wantOrder:  []string{"alpha", "bravo", "charlie"},
+			added:      false,
+			dbMessages: 0,
+		},
+		"Add to nil service map": {
+			newService: testServiceURL("test"),
+			wantOrder:  []string{"test"},
+			added:      true,
+			nilMap:     true,
+			dbMessages: 1,
+		},
+	}
+	logMutex := sync.Mutex{}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using sharing global log state
+
+			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
+			testYAML_Edit(file, t)
+			logMutex.Lock()
+			cfg := testLoadBasic(file, t)
+			if tc.nilMap {
+				cfg.Service = nil
+				cfg.Order = []string{}
+			}
+
+			// WHEN AddService is called
+			loadMutex.RLock()
+			cfg.AddService(tc.oldService, tc.newService)
+			loadMutex.RUnlock()
+			logMutex.Unlock()
+
+			// THEN the service is
+			// added/renamed/replaced
+			cfg.OrderMutex.RLock()
+			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
+			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
+				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
+			}
+			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
+				t.Fatalf("config[%q] shouldn't have been added", tc.newService.ID)
+			}
+			// Added to Order
+			if len(cfg.Order) != len(tc.wantOrder) {
+				t.Errorf("Order length mismatch: got %d, want %d\nwant: %v\ngot: %v",
+					len(cfg.Order), len(tc.wantOrder), cfg.Order, tc.wantOrder)
+			}
+			// In the correct spot
+			for i, service := range cfg.Order {
+				if service != tc.wantOrder[i] {
+					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
+						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
+				}
+			}
+			// AND the DatabaseChannel should have a message waiting if the service was added
+			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
+				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
+					tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
+				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
+					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
+					t.Log(msg)
+				}
+			}
+		})
+	}
+}
+
+func TestConfig_ServiceWithNameExists(t *testing.T) {
+	tests := []struct {
+		name         string
+		config       *Config
+		serviceName  string
+		oldServiceID string
+		want         bool
+	}{
+		{
+			name: "add - empty name",
+			config: &Config{
+				Service: map[string]*service.Service{
+					"service1": {Name: "a"},
+				},
+			},
+			serviceName:  "",
+			oldServiceID: "",
+			want:         false,
+		},
+		{
+			name: "add - new name",
+			config: &Config{
+				Service: map[string]*service.Service{
+					"service1": {Name: "a"},
+				},
+			},
+			serviceName:  "b",
+			oldServiceID: "",
+			want:         false,
+		},
+		{
+			name: "add - conflict",
+			config: &Config{
+				Service: map[string]*service.Service{
+					"service1": {Name: "a"},
+				},
+			},
+			serviceName:  "a",
+			oldServiceID: "",
+			want:         true,
+		},
+		{
+			name: "rename - unchanged",
+			config: &Config{
+				Service: map[string]*service.Service{
+					"service1": {Name: "a"},
+				},
+			},
+			serviceName:  "a",
+			oldServiceID: "service1",
+			want:         false,
+		},
+		{
+			name: "rename - conflict",
+			config: &Config{
+				Service: map[string]*service.Service{
+					"service1": {Name: "a"},
+					"service2": {Name: "b"},
+				},
+			},
+			serviceName:  "b",
+			oldServiceID: "service1",
+			want:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.config.ServiceWithNameExists(tt.serviceName, tt.oldServiceID)
+			if got != tt.want {
+				t.Errorf("Config.ServiceWithNameExists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestConfig_RenameService(t *testing.T) {
 	// GIVEN a service to rename and a Config to act on
@@ -172,106 +354,6 @@ func TestConfig_DeleteService(t *testing.T) {
 			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != want {
 				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
 					want, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
-				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
-					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
-					t.Log(msg)
-				}
-			}
-		})
-	}
-}
-
-func TestConfig_AddService(t *testing.T) {
-	// GIVEN a service to add/replace/rename and a Config to act on
-	tests := map[string]struct {
-		newService *service.Service
-		oldService string
-		wantOrder  []string
-		added      bool
-		dbMessages int
-		nilMap     bool
-	}{
-		"New service": {
-			newService: testServiceURL("test"),
-			wantOrder:  []string{"alpha", "bravo", "charlie", "test"},
-			added:      true,
-			dbMessages: 1,
-		},
-		"Replace service": {
-			oldService: "bravo",
-			newService: testServiceURL("bravo"),
-			wantOrder:  []string{"alpha", "bravo", "charlie"},
-			added:      true,
-			dbMessages: 1,
-		},
-		"Rename service": {
-			oldService: "bravo",
-			newService: testServiceURL("foo"),
-			wantOrder:  []string{"alpha", "foo", "charlie"},
-			added:      true,
-			dbMessages: 2, // 1 for change of id, 1 for change of versions
-		},
-		"Add service that already exists": {
-			newService: testServiceURL("alpha"),
-			wantOrder:  []string{"alpha", "bravo", "charlie"},
-			added:      false,
-			dbMessages: 0,
-		},
-		"Add to nil service map": {
-			newService: testServiceURL("test"),
-			wantOrder:  []string{"test"},
-			added:      true,
-			nilMap:     true,
-			dbMessages: 1,
-		},
-	}
-	logMutex := sync.Mutex{}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using sharing global log state
-
-			file := fmt.Sprintf("TestConfig_AddService_%s.yml", strings.ReplaceAll(name, " ", "_"))
-			testYAML_Edit(file, t)
-			logMutex.Lock()
-			cfg := testLoadBasic(file, t)
-			if tc.nilMap {
-				cfg.Service = nil
-				cfg.Order = []string{}
-			}
-
-			// WHEN AddService is called
-			loadMutex.RLock()
-			cfg.AddService(tc.oldService, tc.newService)
-			loadMutex.RUnlock()
-			logMutex.Unlock()
-
-			// THEN the service is
-			// added/renamed/replaced
-			cfg.OrderMutex.RLock()
-			t.Cleanup(func() { cfg.OrderMutex.RUnlock() })
-			if tc.added && cfg.Service[tc.newService.ID] != tc.newService {
-				t.Fatalf("oldService %q wasn't placed at config[%q]", tc.oldService, tc.newService.ID)
-			}
-			if !tc.added && cfg.Service[tc.newService.ID] == tc.newService {
-				t.Fatalf("config[%q] shouldn't have been added", tc.newService.ID)
-			}
-			// Added to Order
-			if len(cfg.Order) != len(tc.wantOrder) {
-				t.Errorf("Order length mismatch: got %d, want %d\nwant: %v\ngot: %v",
-					len(cfg.Order), len(tc.wantOrder), cfg.Order, tc.wantOrder)
-			}
-			// In the correct spot
-			for i, service := range cfg.Order {
-				if service != tc.wantOrder[i] {
-					t.Fatalf("Order mismatch at index %d: got %s, want %s\ngot:  %v\nwant: %v",
-						i, service, tc.wantOrder[i], cfg.Order, tc.wantOrder)
-				}
-			}
-			// AND the DatabaseChannel should have a message waiting if the service was added
-			if len(*cfg.HardDefaults.Service.Status.DatabaseChannel) != tc.dbMessages {
-				t.Errorf("DatabaseChannel should have %d messages waiting, got %d",
-					tc.dbMessages, len(*cfg.HardDefaults.Service.Status.DatabaseChannel))
 				for i := 0; i <= len(*cfg.HardDefaults.Service.Status.DatabaseChannel); i++ {
 					msg := <-*cfg.HardDefaults.Service.Status.DatabaseChannel
 					t.Log(msg)

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 0,
-		&logFrom.Primary,
+		&logFrom.Primary, nil,
 		nil)
 
 	// Options
@@ -169,7 +169,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 0,
-		&logFrom.Primary,
+		&logFrom.Primary, nil,
 		nil)
 
 	// Options
@@ -223,7 +223,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //
 // Path Parameters:
 //
-//	service_name: service name to refresh
+//	service_id: The ID of the Service to refresh the LatestVersion of.
 //
 // Query Parameters:
 //
@@ -238,7 +238,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	setCommonHeaders(w)
 
 	// Service to refresh.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	logFromPrimary := "httpVersionRefresh_Latest"
 	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
@@ -289,7 +289,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //
 // Path Parameters:
 //
-//	service_name: service name to refresh
+//	service_id: The ID of the Service to refresh the DeployedVersion of.
 //
 // Query Parameters:
 //
@@ -304,7 +304,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	setCommonHeaders(w)
 
 	// Service to refresh.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	logFromPrimary := "httpVersionRefresh_Deployed"
 	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
@@ -336,7 +336,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		svcStatus := status.Status{}
 		svcStatus.Init(
 			0, 0, 0,
-			&logFrom.Primary,
+			&logFrom.Primary, nil,
 			nil)
 
 		var err error
@@ -381,7 +381,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 //
 // Path Parameters:
 //
-//	service_name: service to get details for
+//	service_id: The ID of the Service to get details for.
 //
 // Response:
 //
@@ -390,7 +390,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
 	// Service to get details from (empty for create new).
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	logFrom := util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	jLog.Verbose(targetService, logFrom, true)
@@ -411,6 +411,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to JSON type that swaps slices for lists.
 	serviceJSON := apitype.ServiceEdit{
+		Name:                  serviceConfig.Name,
 		Comment:               serviceConfig.Comment,
 		Options:               serviceConfig.Options,
 		LatestVersion:         serviceConfig.LatestVersion,
@@ -456,7 +457,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //
 // Path Parameters:
 //
-//	service_name: service to edit (empty for new service)
+//	service_id: The ID of the Service to edit (empty for a new service).
 //
 // Body:
 //
@@ -473,7 +474,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 
 	// Service to modify (empty for create new).
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 	reqType := "create"
 	if targetService != "" {
 		reqType = "edit"
@@ -524,8 +525,10 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// CREATE a new service, but one with the same name already exists.
-	if targetService == "" && api.Config.Service[newService.ID] != nil {
+	// CREATE a new service, but one with this id already exists.
+	if (targetService == "" && api.Config.Service[newService.ID] != nil) ||
+		// CREATE/EDIT, but a service with this name already exists.
+		api.Config.ServiceWithNameExists(newService.Name, targetService) {
 		failRequest(&w,
 			fmt.Sprintf("create %q failed, service with this name already exists",
 				newService.ID),
@@ -534,8 +537,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the values.
-	err = newService.CheckValues("")
-	if err != nil {
+	if err := newService.CheckValues(""); err != nil {
 		jLog.Error(err, logFrom, true)
 
 		failRequest(&w,
@@ -546,8 +548,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure LatestVersion and DeployedVersion (if set) can fetch.
-	err = newService.CheckFetches()
-	if err != nil {
+	if err := newService.CheckFetches(); err != nil {
 		jLog.Error(err, logFrom, true)
 
 		failRequest(&w,
@@ -559,7 +560,9 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// DeployedVersion is LatestVersion if there is no DeployedVersionLookup.
 	if newService.DeployedVersionLookup == nil {
-		newService.Status.SetDeployedVersion(newService.Status.LatestVersion(), newService.Status.LatestVersionTimestamp(), false)
+		newService.Status.SetDeployedVersion(
+			newService.Status.LatestVersion(), newService.Status.LatestVersionTimestamp(),
+			false)
 	}
 
 	// Add the new service to the config.
@@ -580,7 +583,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //
 // Path Parameters:
 //
-//	service_name: service to delete
+//	service_id: The ID of the Service to delete.
 //
 // Response:
 //
@@ -588,7 +591,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	// Service to delete.
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	logFromPrimary := "httpServiceDelete"
 	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
@@ -621,7 +624,8 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //
 // Body:
 //
-//	service_name_previous?: string (the service name before the current changes)
+//	service_id_previous?: string (the service id before the current changes)
+//	service_id: string
 //	service_name: string
 //	name_previous?: string (the name of the notifier before the current changes)
 //	name?: string (required if name_previous not set)
@@ -656,17 +660,17 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Get the Notify.
 	var serviceNotify *shoutrrr.Shoutrrr
 	var latestVersion string
-	// From the ServiceNamePrevious.
-	if parsedPayload.ServiceNamePrevious != "" {
+	// From the ServiceIDPrevious.
+	if parsedPayload.ServiceIDPrevious != "" {
 		api.Config.OrderMutex.RLock()
 		defer api.Config.OrderMutex.RUnlock()
 		// Check whether service exists.
-		if api.Config.Service[parsedPayload.ServiceNamePrevious] != nil {
+		if api.Config.Service[parsedPayload.ServiceIDPrevious] != nil {
 			// Check whether notifier exists.
-			if api.Config.Service[parsedPayload.ServiceNamePrevious].Notify != nil {
-				serviceNotify = api.Config.Service[parsedPayload.ServiceNamePrevious].Notify[parsedPayload.NamePrevious]
+			if api.Config.Service[parsedPayload.ServiceIDPrevious].Notify != nil {
+				serviceNotify = api.Config.Service[parsedPayload.ServiceIDPrevious].Notify[parsedPayload.NamePrevious]
 			}
-			latestVersion = api.Config.Service[parsedPayload.ServiceNamePrevious].Status.LatestVersion()
+			latestVersion = api.Config.Service[parsedPayload.ServiceIDPrevious].Status.LatestVersion()
 		}
 	}
 	// Apply any overrides.

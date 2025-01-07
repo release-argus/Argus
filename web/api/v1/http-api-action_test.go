@@ -115,7 +115,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			svc.HardDefaults = &cfg.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&tc.serviceID,
+				&tc.serviceID, nil,
 				test.StringPtr("https://example.com"))
 			svc.Status.SetAnnounceChannel(cfg.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
@@ -153,7 +153,7 @@ func TestHTTP_httpServiceGetActions(t *testing.T) {
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
-				"service_name": tc.serviceID}
+				"service_id": tc.serviceID}
 			req = mux.SetURLVars(req, vars)
 			wHTTP := httptest.NewRecorder()
 			api.httpServiceGetActions(wHTTP, req)
@@ -424,7 +424,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 			svc.HardDefaults = &api.Config.HardDefaults.Service
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&tc.serviceID,
+				&tc.serviceID, &name,
 				test.StringPtr("https://example.com"))
 			svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetApprovedVersion("2.0.0", false)
@@ -492,7 +492,7 @@ func TestHTTP_httpServiceRunActions(t *testing.T) {
 				}
 				req := httptest.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(body))
 				vars := map[string]string{
-					"service_name": tc.serviceID,
+					"service_id": tc.serviceID,
 				}
 				req = mux.SetURLVars(req, vars)
 				wHTTP := httptest.NewRecorder()

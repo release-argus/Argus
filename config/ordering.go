@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ func (c *Config) GetOrder(data []byte) {
 	order := make([]string, 0, len(c.Service))
 	afterService := false
 	indentation := ""
+
+	// Iterate over the lines to find each service.
 	for index := 0; index < len(lines); index++ {
 		line := lines[index]
 		// Skip empty lines and comments.
@@ -88,12 +90,12 @@ func (c *Config) GetOrder(data []byte) {
 			util.RegexCheck(
 				fmt.Sprintf(`^%s[^ ].*:$`, indentation),
 				line) {
-			// Check whether it is a service and not a setting for a service..
+			// Check whether it is a service and not a setting for a service.
 			yamlLine := strings.TrimSpace(strings.TrimRight(line, ":"))
 			var serviceName string
-			// Unmarshal YAML to handle any special characters
-			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier
-			if serviceName != "" {
+			// Unmarshal YAML to handle any special characters.
+			_ = yaml.Unmarshal([]byte(yamlLine), &serviceName) // Unmarshal err caught earlier.
+			if serviceName != "" && c.Service[serviceName] != nil {
 				order = append(order, serviceName)
 			}
 		}

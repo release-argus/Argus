@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ func TestStatus_Init(t *testing.T) {
 			// WHEN Init is called
 			status.Init(
 				tc.shoutrrrs, tc.commands, tc.webhooks,
-				&tc.serviceID,
+				&tc.serviceID, &name,
 				&tc.webURL)
 
 			// THEN the Status is initialised as expected
@@ -145,7 +145,7 @@ func TestStatus_GetWebURL(t *testing.T) {
 			status := Status{}
 			status.Init(
 				0, 0, 0,
-				&name,
+				&name, &name,
 				tc.webURL)
 			status.SetLatestVersion(latestVersion, "", false)
 
@@ -210,7 +210,7 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 				"", "", "", "", "", "")
 			status.Init(
 				0, 0, 0,
-				test.StringPtr("TestStatus_SetApprovedVersion_"+name),
+				test.StringPtr("TestStatus_SetApprovedVersion_"+name), test.StringPtr("TestStatus_SetApprovedVersion_"+name),
 				test.StringPtr("https://example.com"))
 			status.SetLatestVersion(latestVersion, "", false)
 			status.SetDeployedVersion(deployedVersion, "", false)
@@ -300,7 +300,7 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				}
 				status.Init(
 					0, 0, 0,
-					&name,
+					&name, &name,
 					test.StringPtr("http://example.com"))
 				status.SetApprovedVersion(approvedVersion, haveDB)
 				status.SetDeployedVersion(deployedVersion, "", haveDB)
@@ -377,7 +377,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 				}
 				status.Init(
 					0, 0, 0,
-					&name,
+					&name, &name,
 					test.StringPtr("http://example.com"))
 				versions := []string{"0.0.1", "0.0.2", "0.0.2-dev", "something-else"}
 				for _, version := range versions {
@@ -845,7 +845,7 @@ func TestStatus_String(t *testing.T) {
 			{ // Fails
 				tc.status.Init(
 					len(tc.shoutrrrFails), len(tc.commandFails), len(tc.webhookFails),
-					tc.status.ServiceID,
+					tc.status.ServiceID, &name,
 					&name)
 				for k, v := range tc.commandFails {
 					if v != nil {
@@ -921,7 +921,7 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 			status := Status{}
 			status.Init(
 				0, 0, 0,
-				&name,
+				&name, &name,
 				test.StringPtr("http://example.com"))
 			status.SetApprovedVersion(tc.approvedVersion, false)
 			status.SetLatestVersion(tc.latestVersion, "", false)
@@ -967,7 +967,7 @@ func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
 			status := &Status{}
 			status.Init(
 				0, 0, 0,
-				&name,
+				&name, &name,
 				test.StringPtr("http://example.com"))
 			status.SetLatestVersion("0.0.2", "", false)
 			status.SetDeployedVersion("0.0.2", "", false)
@@ -1133,5 +1133,112 @@ func TestStatus_SetDeleting(t *testing.T) {
 	// THEN the deleting flag should still be true
 	if !status.Deleting() {
 		t.Errorf("Expected deleting to be true on second call, but got false")
+	}
+}
+
+func TestStatus_SameVersions(t *testing.T) {
+	type versions struct {
+		approvedVersion, deployedVersion, latestVersion string
+	}
+	// GIVEN different Status version combinations
+	tests := []struct {
+		name             string
+		status1, status2 versions
+		expected         bool
+	}{
+		{
+			name: "identical versions",
+			status1: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			status2: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			expected: true,
+		},
+		{
+			name: "different approved version",
+			status1: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			status2: versions{
+				approvedVersion: "1.1.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			expected: false,
+		},
+		{
+			name: "different deployed version",
+			status1: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			status2: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "1.0.0",
+				latestVersion:   "1.0.0",
+			},
+			expected: false,
+		},
+		{
+			name: "different latest version",
+			status1: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.0.0",
+			},
+			status2: versions{
+				approvedVersion: "1.0.0",
+				deployedVersion: "0.9.0",
+				latestVersion:   "1.1.0",
+			},
+			expected: false,
+		},
+		{
+			name: "all empty versions match",
+			status1: versions{
+				approvedVersion: "",
+				deployedVersion: "",
+				latestVersion:   "",
+			},
+			status2: versions{
+				approvedVersion: "",
+				deployedVersion: "",
+				latestVersion:   "",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			status1 := Status{}
+			status1.SetApprovedVersion(tc.status1.approvedVersion, false)
+			status1.SetDeployedVersion(tc.status1.deployedVersion, "", false)
+			status1.SetLatestVersion(tc.status1.latestVersion, "", false)
+
+			status2 := Status{}
+			status2.SetApprovedVersion(tc.status2.approvedVersion, false)
+			status2.SetDeployedVersion(tc.status2.deployedVersion, "", false)
+			status2.SetLatestVersion(tc.status2.latestVersion, "", false)
+
+			// WHEN comparing versions
+			result := status1.SameVersions(&status2)
+
+			// THEN the result matches expected
+			if result != tc.expected {
+				t.Errorf("got %v, want %v", result, tc.expected)
+			}
+		})
 	}
 }

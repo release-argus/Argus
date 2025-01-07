@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,11 +63,12 @@ func (c *Config) Init(setLog bool) {
 	}
 
 	for i, name := range c.Order {
+		service := c.Service[name]
 		jLog.Debug(
 			fmt.Sprintf("%d/%d %s Init",
-				i+1, len(c.Service), name),
+				i+1, len(c.Service), service.Name),
 			util.LogFrom{}, true)
-		c.Service[name].Init(
+		service.Init(
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
 			&c.WebHook, &c.Defaults.WebHook, &c.HardDefaults.WebHook)
@@ -104,15 +105,7 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	saveChannel := make(chan bool, 32)
 	c.SaveChannel = &saveChannel
 
-	var toDelete []string
-	for key, svc := range c.Service {
-		// Remove the service if nil.
-		if svc == nil {
-			toDelete = append(toDelete, key)
-			continue
-		}
-
-		svc.ID = key
+	for _, svc := range c.Service {
 		svc.Status = *status.New(
 			nil, c.DatabaseChannel, c.SaveChannel,
 			"", "", "", "", "", "")
@@ -123,11 +116,6 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	// Create the service map if it doesn't exist.
 	if c.Service == nil {
 		c.Service = make(map[string]*service.Service)
-	} else if len(toDelete) > 0 {
-		for _, key := range toDelete {
-			c.Order = util.RemoveElement(c.Order, key)
-			delete(c.Service, key)
-		}
 	}
 
 	// Default Empty List ETag as it depends on default access_token.

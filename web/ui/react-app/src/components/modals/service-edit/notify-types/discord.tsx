@@ -92,7 +92,7 @@ const DISCORD = ({
           label="WebHook ID"
           tooltip={
             <>
-              e.g. https://discord.com/api/webhooks/
+              e.g. https://discord.com/api/webhooks/{""}
               <span className="bold-underline">webhook_id</span>
               /token
             </>
@@ -105,7 +105,7 @@ const DISCORD = ({
           label="Token"
           tooltip={
             <>
-              e.g. https://discord.com/api/webhooks/webhook_id/
+              e.g. https://discord.com/api/webhooks/webhook_id/{""}
               <span className="bold-underline">token</span>
             </>
           }

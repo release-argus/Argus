@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,378 @@ import (
 	"github.com/release-argus/Argus/webhook"
 	"gopkg.in/yaml.v3"
 )
+
+func TestSlice_UnmarshalJSON(t *testing.T) {
+	tests := map[string]struct {
+		input    string
+		expected Slice
+		errRegex string
+	}{
+		"empty json": {
+			input:    "{}",
+			expected: Slice{},
+			errRegex: `^$`,
+		},
+		"single service": {
+			input: test.TrimJSON(`{
+				"service1": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo"
+					}
+				}
+			}`),
+			expected: Slice{
+				"service1": &Service{
+					ID: "service1",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"multiple services": {
+			input: test.TrimJSON(`{
+				"service1": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo1"
+					}
+				},
+				"service2": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo2"
+					}
+				}
+			}`),
+			expected: Slice{
+				"service1": &Service{
+					ID: "service1",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo1"},
+					},
+				},
+				"service2": &Service{
+					ID: "service2",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo2"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"nil service is removed": {
+			input: test.TrimJSON(`{
+				"service1": null,
+				"service2": {
+					"latest_version": {
+						"type": "github",
+						"url": "owner/repo"
+					}
+				}
+			}`),
+			expected: Slice{
+				"service2": &Service{
+					ID: "service2",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"invalid json": {
+			input:    `{"invalid": json`,
+			errRegex: `failed to unmarshal Slice`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			// WHEN the YAML is unmarshalled into a Slice
+			var got Slice
+			err := got.UnmarshalJSON([]byte(tc.input))
+
+			// THEN the error is as expected
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("UnmarshalYAML() error mismatch\n%v\ngot:\n%v",
+					tc.errRegex, err)
+				return
+			}
+			// AND the length is as expected
+			if len(got) != len(tc.expected) {
+				t.Errorf("got length %v, expected %v", len(got), len(tc.expected))
+			}
+			// AND the services are as expected
+			for id, expectedService := range tc.expected {
+				gotService, exists := got[id]
+				if !exists {
+					t.Errorf("service %q not found in result", id)
+					continue
+				}
+				if gotService.ID != expectedService.ID {
+					t.Errorf("service %q: got ID %q, expected %q",
+						id, gotService.ID, expectedService.ID)
+				}
+			}
+		})
+	}
+}
+
+func TestSlice_UnmarshalYAML(t *testing.T) {
+	tests := map[string]struct {
+		input    string
+		expected Slice
+		errRegex string
+	}{
+		"empty yaml": {
+			input:    "{}",
+			expected: Slice{},
+			errRegex: `^$`,
+		},
+		"single service": {
+			input: test.TrimYAML(`
+				service1:
+					latest_version:
+						type: github
+						url: owner/repo`),
+			expected: Slice{
+				"service1": &Service{
+					ID: "service1",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"multiple services": {
+			input: test.TrimYAML(`
+				service1:
+					latest_version:
+						type: github
+						url: owner/repo1
+				service2:
+					latest_version:
+						type: github
+						url: owner/repo2`),
+			expected: Slice{
+				"service1": &Service{
+					ID: "service1",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo1"},
+					},
+				},
+				"service2": &Service{
+					ID: "service2",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo2"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"nil service is removed": {
+			input: test.TrimYAML(`
+				service1: null
+				service2:
+					latest_version:
+						type: github
+						url: owner/repo`),
+			expected: Slice{
+				"service2": &Service{
+					ID: "service2",
+					LatestVersion: &github.Lookup{
+						Lookup: latestver_base.Lookup{
+							URL: "owner/repo"},
+					},
+				},
+			},
+			errRegex: `^$`,
+		},
+		"invalid YAML": {
+			input:    "invalid: [yaml: syntax",
+			errRegex: `yaml: line 1: did not find expected`,
+		},
+		"invalid Slice YAML": {
+			input: test.TrimYAML(`
+				service1:
+					latest_version:
+						type: something`),
+			errRegex: `failed to unmarshal Slice`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			var node yaml.Node
+			if err := yaml.Unmarshal([]byte(tc.input), &node); err != nil {
+				if util.RegexCheck(tc.errRegex, err.Error()) {
+					return
+				}
+				t.Fatalf("failed to parse YAML: %v", err)
+			}
+
+			// WHEN the YAML is unmarshalled into a Slice
+			var got Slice
+			err := got.UnmarshalYAML(&node)
+
+			// THEN the error is as expected
+			e := util.ErrorToString(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("UnmarshalYAML() error mismatch\n%v\ngot:\n%v",
+					tc.errRegex, err)
+				return
+			}
+			// AND the length is as expected
+			if len(got) != len(tc.expected) {
+				t.Errorf("got length %v, expected %v", len(got), len(tc.expected))
+			}
+			// AND the services are as expected
+			for id, expectedService := range tc.expected {
+				gotService, exists := got[id]
+				if !exists {
+					t.Errorf("service %q not found in result", id)
+					continue
+				}
+				if gotService.ID != expectedService.ID {
+					t.Errorf("service %q: got ID %q, expected %q",
+						id, gotService.ID, expectedService.ID)
+				}
+			}
+		})
+	}
+}
+
+func TestSlice_giveIDs(t *testing.T) {
+	// GIVEN a Slice
+	tests := map[string]struct {
+		slice    Slice
+		expected Slice
+	}{
+		"nil slice": {
+			slice:    nil,
+			expected: nil,
+		},
+		"empty slice": {
+			slice:    Slice{},
+			expected: Slice{},
+		},
+		"slice with nil service": {
+			slice: Slice{
+				"s1": nil,
+				"s2": &Service{},
+			},
+			expected: Slice{
+				"s2": &Service{ID: "s2", Name: "s2"},
+			},
+		},
+		"multiple services": {
+			slice: Slice{
+				"s1": &Service{},
+				"s2": &Service{},
+				"s3": &Service{},
+			},
+			expected: Slice{
+				"s1": &Service{ID: "s1", Name: "s1"},
+				"s2": &Service{ID: "s2", Name: "s2"},
+				"s3": &Service{ID: "s3", Name: "s3"},
+			},
+		},
+		"service with existing ID": {
+			slice: Slice{
+				"service1": &Service{ID: "oldID"},
+			},
+			expected: Slice{
+				"service1": &Service{ID: "service1", Name: "service1"},
+			},
+		},
+		"services with Name different to ID": {
+			slice: Slice{
+				"s1": &Service{ID: "s1"},
+				"s2": &Service{ID: "s2", Name: "Name 2"},
+			},
+			expected: Slice{
+				"s1": &Service{ID: "s1", Name: "s1"},
+				"s2": &Service{ID: "s2", Name: "Name 2"},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN giveIDs is called
+			tc.slice.giveIDs()
+
+			// THEN the length is as expected
+			if len(tc.slice) != len(tc.expected) {
+				t.Errorf("got length %v, expected %v",
+					len(tc.slice), len(tc.expected))
+			}
+
+			// AND each Service is given its key as ID
+			for id, service := range tc.expected {
+				got, exists := tc.slice[id]
+				if !exists {
+					t.Errorf("service %q not found in result", id)
+					continue
+				}
+				if got.ID != service.ID {
+					t.Errorf("service %q: got ID %q, expected %q",
+						id, got.ID, service.ID)
+				}
+				if got.Name != service.Name {
+					t.Errorf("service %q: got Name %q, expected %q",
+						id, got.Name, service.Name)
+				}
+			}
+		})
+	}
+}
+
+func TestService_MarshalName(t *testing.T) {
+	tests := []struct {
+		name              string
+		marshalName, want bool
+	}{
+		{
+			name:        "true",
+			marshalName: true,
+			want:        true,
+		},
+		{
+			name:        "false",
+			marshalName: false,
+			want:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{
+				marshalName: tt.marshalName,
+			}
+			if got := s.MarshalName(); got != tt.want {
+				t.Errorf("Service.MarshalName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestService_String(t *testing.T) {
 	tests := map[string]struct {
@@ -203,9 +575,11 @@ func TestService_Summary(t *testing.T) {
 		"empty": {
 			svc: &Service{},
 			want: &apitype.ServiceSummary{
+				ID:                       "",
+				Name:                     nil,
 				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
+				Icon:                     "",
+				IconLinkTo:               "",
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Command:                  (0),
 				WebHook:                  (0),
@@ -216,12 +590,16 @@ func TestService_Summary(t *testing.T) {
 				ID: "foo"},
 			want: &apitype.ServiceSummary{
 				ID:                       "foo",
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
+				Status:                   &apitype.Status{}},
+		},
+		"only name": {
+			svc: &Service{
+				Name:        "bar",
+				marshalName: true},
+			want: &apitype.ServiceSummary{
+				Name:                     test.StringPtr("bar"),
+				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
 		"only options.active": {
@@ -230,12 +608,7 @@ func TestService_Summary(t *testing.T) {
 					Active: test.BoolPtr(false)}},
 			want: &apitype.ServiceSummary{
 				Active:                   test.BoolPtr(false),
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only latest_version.type": {
@@ -249,12 +622,8 @@ func TestService_Summary(t *testing.T) {
 						nil, nil)
 				})},
 			want: &apitype.ServiceSummary{
-				Type:                     ("github"),
-				Icon:                     (""),
-				IconLinkTo:               (""),
+				Type:                     "github",
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's a url": {
@@ -262,12 +631,8 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					Icon: "https://example.com/icon.png"}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     ("https://example.com/icon.png"),
-				IconLinkTo:               (""),
+				Icon:                     "https://example.com/icon.png",
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, and it's not a url": {
@@ -275,12 +640,7 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					Icon: "smile"}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, from notify": {
@@ -299,12 +659,8 @@ func TestService_Summary(t *testing.T) {
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     ("https://example.com/notify.png"),
-				IconLinkTo:               (""),
+				Icon:                     "https://example.com/notify.png",
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon, dashboard overrides notify": {
@@ -324,12 +680,8 @@ func TestService_Summary(t *testing.T) {
 						shoutrrr.NewDefaults(
 							"", nil, nil, nil))}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     ("https://example.com/icon.png"),
-				IconLinkTo:               (""),
+				Icon:                     "https://example.com/icon.png",
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only dashboard.icon_link_to": {
@@ -337,36 +689,22 @@ func TestService_Summary(t *testing.T) {
 				Dashboard: DashboardOptions{
 					IconLinkTo: "https://example.com"}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               ("https://example.com"),
+				IconLinkTo:               "https://example.com",
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"only deployed_version": {
 			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(true),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"no commands": {
 			svc: &Service{
 				Command: command.Slice{}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"3 commands": {
@@ -376,24 +714,15 @@ func TestService_Summary(t *testing.T) {
 					{"true"},
 					{"false"}}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Command:                  (3),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"0 webhooks": {
 			svc: &Service{
 				WebHook: webhook.Slice{}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status:                   &apitype.Status{}},
 		},
 		"3 webhooks": {
@@ -412,11 +741,7 @@ func TestService_Summary(t *testing.T) {
 						"gitlab",
 						"", nil, nil, nil)}},
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
 				WebHook:                  (3),
 				Status:                   &apitype.Status{}},
 		},
@@ -430,12 +755,7 @@ func TestService_Summary(t *testing.T) {
 			latestVersionTimestamp:   "3-",
 			lastQueried:              "4",
 			want: &apitype.ServiceSummary{
-				Type:                     "",
-				Icon:                     (""),
-				IconLinkTo:               (""),
 				HasDeployedVersionLookup: test.BoolPtr(false),
-				Command:                  (0),
-				WebHook:                  (0),
 				Status: &apitype.Status{
 					ApprovedVersion:          "1",
 					DeployedVersion:          "2",
@@ -454,7 +774,7 @@ func TestService_Summary(t *testing.T) {
 			if tc.svc != nil {
 				tc.svc.Status.Init(
 					len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
-					&tc.svc.ID,
+					&tc.svc.ID, &name,
 					&tc.svc.Dashboard.WebURL)
 				if tc.approvedVersion != "" {
 					tc.svc.Status.SetApprovedVersion(tc.approvedVersion, false)
@@ -572,6 +892,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 		},
 		"valid type - github (full)": {
 			jsonData: `{
+				"name": "foo",
 				"latest_version": {
 					"type": "github",
 					"url": "release-argus/Argus",
@@ -586,6 +907,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: `^$`,
 			want: &Service{
+				Name:        "foo",
+				marshalName: true,
 				LatestVersion: &github.Lookup{
 					Lookup: latestver_base.Lookup{
 						Type: "github",
@@ -630,6 +953,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 		},
 		"valid type - url (full)": {
 			jsonData: `{
+				"name": "bar",
 				"latest_version": {
 					"type": "url",
 					"url": "https://example.com",
@@ -644,6 +968,8 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			}`,
 			errRegex: `^$`,
 			want: &Service{
+				Name:        "bar",
+				marshalName: true,
 				LatestVersion: &web.Lookup{
 					Lookup: latestver_base.Lookup{
 						Type: "url",
@@ -807,13 +1133,20 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			// THEN the error is as expected
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("unmarshalJSON() error mismatch\nwant: %q\ngot:  %q",
+				t.Errorf("Service.UnmarshalJSON() error mismatch\nwant: %q\ngot:  %q",
 					tc.errRegex, e)
 			}
 			// AND the result is as expected
-			if tc.want != nil && tc.svc.String("") != tc.want.String("") {
-				t.Errorf("unmarshalJSON() result mismatch\n%q\ngot:\n%q",
-					tc.want.String(""), tc.svc.String(""))
+			gotString := tc.svc.String("")
+			wantString := tc.want.String("")
+			if tc.want != nil && gotString != wantString {
+				t.Errorf("Service.UnmarshalJSON() result mismatch\n%q\ngot:\n%q",
+					wantString, gotString)
+			}
+			// AND marshalName is only set if Name is non-empty
+			if tc.svc.MarshalName() != (tc.svc.Name != "") {
+				t.Errorf("Service.UnmarshalJSON() marshalName mismatch\nwant: %t\ngot:  %t",
+					tc.svc.MarshalName(), (tc.svc.Name != ""))
 			}
 		})
 	}
@@ -894,6 +1227,28 @@ func TestService_MarshalJSON(t *testing.T) {
 			}`),
 			errRegex: `^$`,
 		},
+		"name that marshals": {
+			svc: &Service{
+				Name:        "foo",
+				marshalName: true,
+			},
+			want: test.TrimJSON(`{
+				"name":"foo",
+				"options":{},
+				"dashboard":{}
+			}`),
+			errRegex: `^$`,
+		},
+		"name that doesn't marshal": {
+			svc: &Service{
+				Name: "bar",
+			},
+			want: test.TrimJSON(`{
+				"options":{},
+				"dashboard":{}
+			}`),
+			errRegex: `^$`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -943,6 +1298,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 		},
 		"valid type - github (full)": {
 			yamlData: `
+				name: foo
 				latest_version:
 					type: github
 					url: release-argus/Argus
@@ -957,6 +1313,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: `^$`,
 			want: &Service{
+				Name:        "foo",
+				marshalName: true,
 				LatestVersion: &github.Lookup{
 					Lookup: latestver_base.Lookup{
 						Type: "github",
@@ -998,6 +1356,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 		},
 		"valid type - url (full)": {
 			yamlData: `
+				name: foo
 				latest_version:
 					type: url
 					url: https://example.com
@@ -1011,6 +1370,8 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			`,
 			errRegex: `^$`,
 			want: &Service{
+				Name:        "foo",
+				marshalName: true,
 				LatestVersion: &web.Lookup{
 					Lookup: latestver_base.Lookup{
 						Type: "url",
@@ -1167,13 +1528,18 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			// THEN the error is as expected
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf("error mismatch\nwant: %q\ngot:  %q",
+				t.Errorf("Service.UnmarshalYAML() error mismatch\nwant: %q\ngot:  %q",
 					tc.errRegex, e)
 			}
 			// AND the result is as expected
 			if tc.want != nil && tc.svc.String("") != tc.want.String("") {
-				t.Errorf("result mismatch\nwant: %s\ngot:  %s",
+				t.Errorf("Service.UnmarshalYAML() result mismatch\nwant: %s\ngot:  %s",
 					tc.want.String(""), tc.svc.String(""))
+			}
+			// AND marshalName is only set if Name is non-empty
+			if tc.svc.MarshalName() != (tc.svc.Name != "") {
+				t.Errorf("Service.UnmarshalYAML() marshalName mismatch\nwant: %t\ngot:  %t",
+					tc.svc.MarshalName(), (tc.svc.Name != ""))
 			}
 		})
 	}
@@ -1241,6 +1607,23 @@ func TestService_MarshalYAML(t *testing.T) {
 					  type: url
 					  url: https://example.com
 			`),
+			errRegex: `^$`,
+		},
+		"name that marshals": {
+			svc: &Service{
+				Name:        "foo",
+				marshalName: true,
+			},
+			want: test.TrimYAML(`
+				name: foo
+			`),
+			errRegex: `^$`,
+		},
+		"name that doesn't marshal": {
+			svc: &Service{
+				Name: "bar",
+			},
+			want:     "{}\n",
 			errRegex: `^$`,
 		},
 	}

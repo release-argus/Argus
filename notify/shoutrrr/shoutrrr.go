@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -350,11 +350,10 @@ func (s *Shoutrrr) BuildURL() (url string) {
 
 // jsonMapToString returns the JSON param map as an '&' joined list of strings with the prefix added to each key
 //
-// e.g.
-//
-//	{"key1": "val1", "key2": "val2"} with prefix '@'
+//	e.g.
+//		{"key1": "val1", "key2": "val2"} with prefix '@'
 //	returns:
-//	@key1=val1&@key2=val2
+//		@key1=val1&@key2=val2
 func jsonMapToString(param string, prefix string) string {
 	if param == "" {
 		return ""
@@ -421,7 +420,7 @@ func (s *Shoutrrr) BuildParams(context util.ServiceInfo) *types.Params {
 		}
 	}
 
-	// Apply Jinja templating.
+	// Apply django templating.
 	for key, value := range params {
 		params[key] = util.TemplateString(value, context)
 	}
@@ -472,7 +471,7 @@ func (s *Shoutrrr) send(
 // updates the combined error counts, logs the errors, and updates the
 // Prometheus metrics based on the success or failure of the operation.
 //
-// Returns true if the send operation failed over all attempts.
+//	Returns true if the send operation failed over all attempts.
 func (s *Shoutrrr) parseSend(
 	err []error,
 	combinedErrs map[string]int,

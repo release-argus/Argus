@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -510,7 +510,7 @@ func TestSlice_Init(t *testing.T) {
 			}
 			serviceStatus.Init(
 				mainCount, 0, 0,
-				&name,
+				&name, nil,
 				nil)
 			for i := range tc.defaults {
 				tc.defaults[i].URLFields = tc.had

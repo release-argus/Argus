@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,16 +44,12 @@ func WebHook(failing, selfSignedCert, customHeaders bool) *webhook.WebHook {
 		&webhook.Defaults{}, &webhook.Defaults{})
 	wh.ID = "test"
 	wh.ServiceStatus = &status.Status{}
-	wh.ServiceStatus.Init(
-		0, 0, 1,
-		test.StringPtr("testServiceID"),
-		nil)
-	wh.Failed = &wh.ServiceStatus.Fails.WebHook
 	serviceName := "testServiceID"
+	wh.Failed = &wh.ServiceStatus.Fails.WebHook
 	webURL := "https://example.com"
 	wh.ServiceStatus.Init(
 		0, 1, 0,
-		&serviceName,
+		&serviceName, &serviceName,
 		&webURL)
 	if selfSignedCert {
 		wh.URL = strings.Replace(wh.URL, "valid", "invalid", 1)

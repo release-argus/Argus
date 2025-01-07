@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,8 +68,11 @@ func (w *WebHook) SetNextRunnable(time time.Time) {
 
 // SetExecuting will set a time that the WebHook can be re-run.
 //
-// addDelay - only used on auto_approved releases.
-func (w *WebHook) SetExecuting(addDelay bool, sending bool) {
+// Parameters:
+//
+//	addDelay: only used on auto_approved releases.
+//	received: whether the WebHook has received a response.
+func (w *WebHook) SetExecuting(addDelay bool, received bool) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
@@ -83,13 +86,13 @@ func (w *WebHook) SetExecuting(addDelay bool, sending bool) {
 		w.nextRunnable = time.Now().UTC().Add(15 * time.Second)
 	}
 
-	// block for delay.
+	// Block for delay.
 	if addDelay {
 		w.nextRunnable = w.nextRunnable.Add(w.GetDelayDuration())
 	}
 
-	// Block reruns whilst sending.
-	if sending {
+	// Block reruns whilst waiting for a response.
+	if received {
 		w.nextRunnable = w.nextRunnable.Add(time.Hour)
 		w.nextRunnable = w.nextRunnable.Add(3 * time.Duration(int64(w.GetMaxTries())) * time.Second)
 	}

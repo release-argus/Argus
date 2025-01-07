@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			serviceID := "TestShoutrrr_Send - " + name
 			svcStatus.Init(
 				1, 0, 0,
-				&serviceID,
+				&serviceID, nil,
 				nil)
 			tc.shoutrrr.Init(
 				&svcStatus,

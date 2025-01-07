@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,7 +177,7 @@ func TestService_HandleCommand(t *testing.T) {
 			}
 			svc.Status.Init(
 				len(svc.Notify), len(svc.Command), len(svc.WebHook),
-				&svc.ID,
+				&svc.ID, nil,
 				&svc.Dashboard.WebURL)
 			for k, v := range tc.fails {
 				if v != nil {
@@ -325,7 +325,7 @@ func TestService_HandleWebHook(t *testing.T) {
 		svc := testService(t, name, "url")
 		svc.Status.Init(
 			len(svc.Notify), len(tc.webhooks), 0,
-			&svc.ID,
+			&svc.ID, nil,
 			&svc.Dashboard.WebURL)
 		svc.WebHook = tc.webhooks
 		svc.WebHook.Init(
@@ -463,7 +463,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 		svc.WebHook = tc.webhooks
 		svc.Status.Init(
 			len(svc.Notify), len(svc.Command), len(svc.WebHook),
-			&svc.ID,
+			&svc.ID, nil,
 			&svc.Dashboard.WebURL)
 		if len(tc.commands) != 0 {
 			svc.CommandController = &command.Controller{}
@@ -725,7 +725,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 
 			svc.Status.Init(
 				len(svc.Notify), len(tc.commands), len(tc.webhooks),
-				&svc.ID,
+				&svc.ID, nil,
 				&svc.Dashboard.WebURL)
 			if tc.deployedLatest {
 				svc.Status.SetDeployedVersion(svc.Status.LatestVersion(), "", false)
@@ -945,7 +945,7 @@ func TestService_ShouldRetryAll(t *testing.T) {
 			}
 			svc.Status.Init(
 				0, len(svc.Command), len(svc.WebHook),
-				&name,
+				&name, nil,
 				nil)
 			for k, v := range tc.command {
 				if v != nil {
@@ -1135,7 +1135,7 @@ func TestService_UpdatedVersion(t *testing.T) {
 			svc.WebHook = tc.webhooks
 			svc.Status.Init(
 				0, len(svc.Command), len(svc.WebHook),
-				&svc.ID,
+				&svc.ID, nil,
 				&svc.Dashboard.WebURL)
 			svc.DeployedVersionLookup = tc.deployedVersion
 			for i := range tc.commandFails {

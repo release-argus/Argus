@@ -28,7 +28,7 @@ import { useWebSocket } from "contexts/websocket";
 
 interface Props {
   vType: 0 | 1; // 0: Latest, 1: Deployed
-  serviceName: string;
+  serviceID: string;
   original?: LatestVersionLookupEditType | DeployedVersionLookupEditType;
   original_options?: ServiceOptionsType;
 }
@@ -37,14 +37,14 @@ interface Props {
  * Returns the version with a button to refresh
  *
  * @param vType - 0: Latest, 1: Deployed
- * @param serviceName - The name of the service
+ * @param serviceID - The ID of the service
  * @param original - The original values in the form
  * @param original_options - The original service.options of the form
  * @returns The version with a button to refresh the version
  */
 const VersionWithRefresh: FC<Props> = ({
   vType,
-  serviceName,
+  serviceID,
   original,
   original_options,
 }) => {
@@ -63,7 +63,7 @@ const VersionWithRefresh: FC<Props> = ({
     return convertUIDeployedVersionDataEditToAPI(
       original as DeployedVersionLookupEditType
     );
-  }, [serviceName, dataTarget]);
+  }, [serviceID, dataTarget]);
   const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
   const dataTargetErrors = useErrors(dataTarget, true);
   const { data, refetchData } = useValuesRefetch(dataTarget);
@@ -91,7 +91,7 @@ const VersionWithRefresh: FC<Props> = ({
       : "";
     return fetchJSON<ServiceRefreshType>({
       url: `api/v1/${vType === 0 ? "latest" : "deployed"}_version/refresh${
-        serviceName ? `/${encodeURIComponent(serviceName)}` : ""
+        serviceID ? `/${encodeURIComponent(serviceID)}` : ""
       }${convertToQueryParams({
         overrides,
         semantic_versioning,
@@ -107,7 +107,7 @@ const VersionWithRefresh: FC<Props> = ({
     queryKey: [
       "version/refresh",
       dataTarget,
-      { id: serviceName },
+      { id: serviceID },
       {
         params: removeEmptyValues(data),
         semantic_versioning: semanticVersioning,
@@ -117,9 +117,7 @@ const VersionWithRefresh: FC<Props> = ({
     queryFn: () => fetchVersionJSON(),
     enabled: false,
     initialData: {
-      version: monitorData.service[serviceName]
-        ? monitorData.service[serviceName]?.status?.[dataTarget]
-        : "",
+      version: monitorData.service[serviceID]?.status?.[dataTarget] ?? "",
       error: "",
       timestamp: "",
     },

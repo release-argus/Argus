@@ -8,31 +8,34 @@ import { isEmptyArray } from "utils";
 import { useFieldArray } from "react-hook-form";
 
 interface Props {
-  serviceName: string;
+  serviceID: string;
 
   originals?: NotifyEditType[];
   mains?: Dict<NotifyTypesValues>;
   defaults?: NotifyTypes;
   hard_defaults?: NotifyTypes;
+  loading: boolean;
 }
 
 /**
  * Returns the form fields for `notify`
  *
- * @param serviceName - The name of the service
+ * @param serviceID - The ID of the service
  * @param originals - The original values in the form
  * @param mains - The main Notifiers
  * @param defaults - The default values for each `notify` types
  * @param hard_defaults - The hard default values for each `notify` types
+ * @param loading - Whether the modal is loading
  * @returns The form fields for `notify`
  */
 const EditServiceNotifies: FC<Props> = ({
-  serviceName,
+  serviceID,
 
   originals,
   mains,
   defaults,
   hard_defaults,
+  loading,
 }) => {
   const { fields, append, remove } = useFieldArray({
     name: "notify",
@@ -46,7 +49,7 @@ const EditServiceNotifies: FC<Props> = ({
         url_fields: {},
         params: { avatar: "", color: "", icon: "" },
       },
-      { shouldFocus: false },
+      { shouldFocus: false }
     );
   }, []);
 
@@ -64,7 +67,7 @@ const EditServiceNotifies: FC<Props> = ({
           ))}
       </>
     ),
-    [mains],
+    [mains]
   );
 
   return (
@@ -77,7 +80,7 @@ const EditServiceNotifies: FC<Props> = ({
               key={id}
               name={`notify.${index}`}
               removeMe={() => remove(index)}
-              serviceName={serviceName}
+              serviceID={serviceID}
               originals={originals}
               globalOptions={globalNotifyOptions}
               mains={mains}
@@ -90,6 +93,7 @@ const EditServiceNotifies: FC<Props> = ({
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}
+            disabled={loading}
           >
             Add Notify
           </Button>

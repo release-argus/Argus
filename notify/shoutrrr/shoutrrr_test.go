@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,7 +103,8 @@ func TestShoutrrr_getSender(t *testing.T) {
 			}
 			status := status.Status{}
 			status.Init(1, 0, 0,
-				&name, nil)
+				&name, nil,
+				nil)
 			shoutrrr.Init(
 				&status,
 				main,
@@ -644,6 +645,9 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 	// GIVEN a Shoutrrr and ServiceInfo
 	serviceInfo := util.ServiceInfo{
 		ID:            "service_id",
+		Name:          "service_name",
+		URL:           "service_url",
+		WebURL:        "service_web_url",
 		LatestVersion: "1.2.3",
 	}
 	tests := map[string]struct {
@@ -672,15 +676,22 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			want:             "this",
 			hardDefaultValue: test.StringPtr("this"),
 		},
-		"jinja templating": {
+		"django templating": {
 			want:             "this",
 			rootValue:        test.StringPtr("{% if 'a' == 'a' %}this{% endif %}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},
-		"jinja vars": {
+		"django vars": {
 			want:             fmt.Sprintf("foo%s-%s", serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("foo{{ service_id }}-{{ version }}"),
+			defaultValue:     test.StringPtr("not_this"),
+			hardDefaultValue: test.StringPtr("not_this"),
+		},
+		"all django vars": {
+			want: fmt.Sprintf("foo-%s-%s-%s-%s-%s",
+				serviceInfo.ID, serviceInfo.LatestVersion, serviceInfo.Name, serviceInfo.URL, serviceInfo.WebURL),
+			rootValue:        test.StringPtr("foo-{{ service_id }}-{{ version }}-{{ service_name }}-{{ service_url }}-{{ web_url }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),
 		},

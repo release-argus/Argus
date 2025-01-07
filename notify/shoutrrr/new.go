@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,22 +25,23 @@ import (
 
 // TestPayload is the payload for testing a Notify at httpNotifyTest.
 type TestPayload struct {
-	ServiceName         string            `json:"service_name"`
-	ServiceNamePrevious string            `json:"service_name_previous"`
-	Name                string            `json:"name"`
-	NamePrevious        string            `json:"name_previous"`
-	Type                string            `json:"type,omitempty"`
-	Options             map[string]string `json:"options"`
-	URLFields           map[string]string `json:"url_fields"`
-	Params              map[string]string `json:"params"`
-	ServiceURL          string            `json:"service_url"`
-	WebURL              string            `json:"web_url"`
+	ServiceID         string            `json:"service_id"`
+	ServiceIDPrevious string            `json:"service_id_previous"`
+	ServiceName       string            `json:"service_name"`
+	Name              string            `json:"name"`
+	NamePrevious      string            `json:"name_previous"`
+	Type              string            `json:"type,omitempty"`
+	Options           map[string]string `json:"options"`
+	URLFields         map[string]string `json:"url_fields"`
+	Params            map[string]string `json:"params"`
+	ServiceURL        string            `json:"service_url"`
+	WebURL            string            `json:"web_url"`
 }
 
 // FromPayload will create a Shoutrrr from a payload.
 // Replacing any undefined values with that of the previous Notify.
 //
-// Returns the Notify, the ServiceURL, and any errors encountered.
+//	Returns the Notify, the ServiceURL, and any errors encountered.
 func FromPayload(
 	payload TestPayload,
 	serviceNotify *Shoutrrr,
@@ -91,7 +92,7 @@ func FromPayload(
 	s.ServiceStatus = &status.Status{}
 	s.ServiceStatus.Init(
 		1, 0, 0,
-		&payload.ServiceName,
+		&payload.ServiceID, &payload.ServiceName,
 		&payload.WebURL,
 	)
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr

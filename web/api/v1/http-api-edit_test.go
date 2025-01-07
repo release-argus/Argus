@@ -288,10 +288,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName *string
-		svc         *service.Service
-		params      map[string]string
-		wants       wants
+		serviceID *string
+		svc       *service.Service
+		params    map[string]string
+		wants     wants
 	}{
 		"no changes": {
 			params: map[string]string{},
@@ -359,7 +359,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				latestVersion: ""},
 		},
 		"unknown service": {
-			serviceName: test.StringPtr("bish-bash-bosh"),
+			serviceID: test.StringPtr("bish-bash-bosh"),
 			params: map[string]string{
 				"overrides": test.TrimJSON(`{
 					"url_commands": [{"type":"regex","regex":"beta: \\\"v?([0-9.+-beta)\\\""}]
@@ -380,8 +380,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
-			target := fmt.Sprintf("/api/v1/latest_version/refresh/%s",
-				url.QueryEscape(svc.ID))
+			target := "/api/v1/latest_version/refresh/" + url.QueryEscape(svc.ID)
 			// add the params to the URL
 			params := url.Values{}
 			for k, v := range tc.params {
@@ -391,13 +390,13 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// set service_name
-			serviceName := svc.ID
-			if tc.serviceName != nil {
-				serviceName = *tc.serviceName
+			// set service_id
+			serviceID := svc.ID
+			if tc.serviceID != nil {
+				serviceID = *tc.serviceID
 			}
 			vars := map[string]string{
-				"service_name": serviceName,
+				"service_id": serviceID,
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
@@ -470,7 +469,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName        *string
+		serviceID          *string
 		svc                *service.Service
 		nilDeployedVersion bool
 		params             map[string]string
@@ -578,7 +577,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				latestVersion: ""},
 		},
 		"unknown service": {
-			serviceName: test.StringPtr("bish-bash-bosh"),
+			serviceID: test.StringPtr("bish-bash-bosh"),
 			params: map[string]string{
 				"semantic_versioning": "false"},
 			wants: wants{
@@ -599,8 +598,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			if tc.nilDeployedVersion {
 				svc.DeployedVersionLookup = nil
 			}
-			target := fmt.Sprintf("/api/v1/deployed_version/refresh/%s",
-				url.QueryEscape(svc.ID))
+			target := "/api/v1/deployed_version/refresh/" + url.QueryEscape(svc.ID)
 			// add the params to the URL
 			params := url.Values{}
 			for k, v := range tc.params {
@@ -610,13 +608,13 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// set service_name
-			serviceName := svc.ID
-			if tc.serviceName != nil {
-				serviceName = *tc.serviceName
+			// set service_id
+			serviceID := svc.ID
+			if tc.serviceID != nil {
+				serviceID = *tc.serviceID
 			}
 			vars := map[string]string{
-				"service_name": serviceName,
+				"service_id": serviceID,
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
@@ -675,8 +673,8 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName *string
-		wants       wants
+		serviceID *string
+		wants     wants
 	}{
 		"known service": {
 			wants: wants{
@@ -688,7 +686,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 				statusCode: http.StatusOK},
 		},
 		"unknown service": {
-			serviceName: test.StringPtr("bish-bash-bosh"),
+			serviceID: test.StringPtr("bish-bash-bosh"),
 			wants: wants{
 				body:       `\{"message":"service .+ not found"`,
 				statusCode: http.StatusNotFound},
@@ -703,18 +701,17 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			apiMutex.Lock()
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
-			// service_name
-			serviceName := svc.ID
-			if tc.serviceName != nil {
-				serviceName = *tc.serviceName
+			// service_id
+			serviceID := svc.ID
+			if tc.serviceID != nil {
+				serviceID = *tc.serviceID
 			}
-			target := "/api/v1/service/update/"
-			target += url.QueryEscape(serviceName)
+			target := "/api/v1/service/update/" + url.QueryEscape(serviceID)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
-				"service_name": serviceName,
+				"service_id": serviceID,
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
@@ -775,8 +772,7 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 				}
 			})
 			api.Config.Service[svc.ID] = svc
-			target := "/api/v1/service/update/"
-			target += url.QueryEscape(svc.ID)
+			target := "/api/v1/service/update/" + url.QueryEscape(svc.ID)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -835,13 +831,13 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		serviceName *string
-		payload     string
-		wants       wants
+		serviceID *string
+		payload   string
+		wants     wants
 	}{
 		"invalid json": {
 			payload: `
-				"name": "__name__-",
+				"id": "__name__-",
 				"latest_version": {
 					"type": "github",
 					"url": "release-argus/Argus"
@@ -853,7 +849,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		"create new service": {
 			payload: `
 				{
-					"name": "create new service-",
+					"id": "create new service-",
 					"latest_version": {
 						"type": "github",
 						"url": "release-argus/Argus"}
@@ -862,9 +858,22 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				statusCode: http.StatusOK,
 				body:       "^$"},
 		},
+		"create new service, but id already taken": {
+			payload: `
+				{
+					"id": "` + svcName + `",
+					"latest_version": {
+						"type": "github",
+						"url": "release-argus/Argus"}
+				}`,
+			wants: wants{
+				statusCode: http.StatusBadRequest,
+				body:       `\{"message":"create .* failed.*"\}`},
+		},
 		"create new service, but name already taken": {
 			payload: `
 				{
+					"id": "__name__",
 					"name": "` + svcName + `",
 					"latest_version": {
 						"type": "github",
@@ -877,7 +886,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		"create new service, but invalid interval": {
 			payload: `
 				{
-					"name": "__name__-",
+					"id": "__name__-",
 					"latest_version": {
 						"type": "github",
 						"url": "release-argus/Argus"},
@@ -889,10 +898,10 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				body:       `\{"message":"create .* failed.*options:.*interval:.*invalid.*"\}`},
 		},
 		"edit service": {
-			serviceName: test.StringPtr("__name__"),
+			serviceID: test.StringPtr("__name__"),
 			payload: `
 				{
-					"name": "__name__",
+					"id": "__name__",
 					"latest_version": {
 						"type": "url",
 						"url": "https://valid.release-argus.io/plain",
@@ -910,7 +919,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				deployedVersion: ""},
 		},
 		"edit service that doesn't exist": {
-			serviceName: test.StringPtr("service that doesn't exist"),
+			serviceID: test.StringPtr("service that doesn't exist"),
 			payload: `
 				{
 					"latest_version": {
@@ -928,10 +937,10 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				body:       `^\{"message":"edit .* failed.*"\}`},
 		},
 		"edit service that doesn't query successfully": {
-			serviceName: test.StringPtr("__name__"),
+			serviceID: test.StringPtr("__name__"),
 			payload: `
 				{
-					"name": "__name__",
+					"id": "__name__",
 					"latest_version": {
 						"type": "url",
 						"url": "https://valid.release-argus.io/plain",
@@ -965,14 +974,14 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			target := "/api/v1/service/new"
 			req = httptest.NewRequest(http.MethodPost, target, payload)
 			// EDIT
-			if tc.serviceName != nil {
-				// set service_name
-				*tc.serviceName = strings.ReplaceAll(
-					*tc.serviceName, "__name__", name)
+			if tc.serviceID != nil {
+				// set service_id
+				*tc.serviceID = strings.ReplaceAll(
+					*tc.serviceID, "__name__", name)
 				vars := map[string]string{
-					"service_name": url.PathEscape(*tc.serviceName),
+					"service_id": url.PathEscape(*tc.serviceID),
 				}
-				target = "/api/v1/service/update/" + url.PathEscape(*tc.serviceName)
+				target = "/api/v1/service/update/" + url.PathEscape(*tc.serviceID)
 				req = httptest.NewRequest(http.MethodPut, target, payload)
 				req = mux.SetURLVars(req, vars)
 			}
@@ -1005,26 +1014,26 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				return
 			}
 			// AND the service was created
-			serviceName := util.DereferenceOrDefault(tc.serviceName)
+			serviceID := util.DereferenceOrDefault(tc.serviceID)
 			// (CREATE)
-			if serviceName == "" {
+			if serviceID == "" {
 				var data map[string]interface{}
 				json.Unmarshal([]byte(tc.payload), &data)
-				serviceName = data["name"].(string)
+				serviceID = data["id"].(string)
 			}
 			apiMutex.RLock()
-			if tc.serviceName != nil &&
-				api.Config.Service[*tc.serviceName] == nil {
+			if tc.serviceID != nil &&
+				api.Config.Service[*tc.serviceID] == nil {
 				t.Errorf("service %q not created",
-					*tc.serviceName)
+					*tc.serviceID)
 			}
-			svc = api.Config.Service[serviceName]
+			svc = api.Config.Service[serviceID]
 			apiMutex.RUnlock()
 			if svc == nil {
 				if tc.wants.latestVersion != tc.wants.deployedVersion &&
 					tc.wants.latestVersion != "" {
 					t.Errorf("service %q not created",
-						serviceName)
+						serviceID)
 				}
 				return
 			}
@@ -1066,27 +1075,27 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 	// drain db from the Service addition
 	<-*api.Config.DatabaseChannel
 	tests := []struct {
-		name    string
-		service string
-		wants   wants
+		name      string
+		serviceID string
+		wants     wants
 	}{
 		{
-			name:    "unknown service",
-			service: "foo",
+			name:      "unknown service",
+			serviceID: "foo",
 			wants: wants{
 				body:       `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
 		},
 		{
-			name:    "delete service",
-			service: svc.ID,
+			name:      "delete service",
+			serviceID: svc.ID,
 			wants: wants{
 				body:       `^$`,
 				statusCode: http.StatusOK},
 		},
 		{
-			name:    "delete service again",
-			service: svc.ID,
+			name:      "delete service again",
+			serviceID: svc.ID,
 			wants: wants{
 				body:       `{"message":"delete .* failed, service not found"`,
 				statusCode: http.StatusNotFound},
@@ -1097,13 +1106,12 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		name, tc := tc.name, tc
 		t.Run(name, func(t *testing.T) {
 
-			target := "/api/v1/service/delete/"
-			target += url.QueryEscape(tc.service)
+			target := "/api/v1/service/delete/" + url.QueryEscape(tc.serviceID)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
-				"service_name": tc.service,
+				"service_id": tc.serviceID,
 			}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
@@ -1128,20 +1136,20 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 					tc.wants.body, got)
 			}
 			// AND the service is removed from the config
-			if api.Config.Service[tc.service] != nil {
+			if api.Config.Service[tc.serviceID] != nil {
 				t.Errorf("ServiceDelete didn't remove %q from the config",
-					tc.service)
+					tc.serviceID)
 			}
-			if util.Contains(api.Config.Order, tc.service) {
+			if util.Contains(api.Config.Order, tc.serviceID) {
 				t.Errorf("ServiceDelete didn't remove %q from the Order",
-					tc.service)
+					tc.serviceID)
 			}
 			// AND the service is removed from the database (if the req was OK)
 			if tc.wants.statusCode == http.StatusOK {
 				time.Sleep(time.Second)
 				if len(*api.Config.DatabaseChannel) == 0 {
 					t.Errorf("ServiceDelete didn't remove %q from the database",
-						tc.service)
+						tc.serviceID)
 				} else {
 					msg := <-*api.Config.DatabaseChannel
 					if msg.Delete != true {
@@ -1201,14 +1209,14 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no new/old notify": {
 			payload: `{
-				"service_name": "new_service"}`,
+				"service_id": "new_service"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
 				body:       `name and/or name_previous are required`},
 		},
 		"new service, no main": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test_notify",
 				"type": "ntfy"}`,
 			wants: wants{
@@ -1217,7 +1225,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - invalid JSON, options": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test_notify",
 				"type": "ntfy",
 				"options": {
@@ -1229,7 +1237,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - options, invalid": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test_notify",
 				"type": "ntfy",
 				"options": {
@@ -1240,7 +1248,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, have main - options, applied, delay ignored": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test",
 				"options": {
 					"delay": "24h"}}`,
@@ -1249,7 +1257,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - invalid JSON, url_fields": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test_notify",
 				"type": "ntfy",
 				"url_fields": {
@@ -1260,7 +1268,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, have main - url_fields, invalid": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test",
 				"url_fields": {
 					"port": "number"}}`,
@@ -1270,7 +1278,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - no type": {
 			payload: `{
-				"service_name": "also_unknown",
+				"service_id": "also_unknown",
 				"name": "test_notify"}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
@@ -1278,7 +1286,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - unknown type": {
 			payload: `{
-				"service_name": "unknown",
+				"service_id": "unknown",
 				"name": "test_notify",
 				"type": "something"}`,
 			wants: wants{
@@ -1287,7 +1295,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, no main - type from ID": {
 			payload: `{
-				"service_name": "unknown",
+				"service_id": "unknown",
 				"name": "` + validNotify.Type + `",
 				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
@@ -1298,7 +1306,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"new service, have main - type from Main": {
 			payload: `{
-				"service_name": "unknown",
+				"service_id": "unknown",
 				"name": "test",
 				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
@@ -1309,8 +1317,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, have main - type from original": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "test",
+				"service_id_previous": "test",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "test",
 				"url_fields": {
@@ -1322,8 +1330,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, no main - can remove vars": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "test",
+				"service_id_previous": "test",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "no_main",
 				"url_fields": {
@@ -1338,8 +1346,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, no main - unsent vars inherited": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "test",
+				"service_id_previous": "test",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "no_main",
 				"type": "` + validNotify.Type + `",
@@ -1351,8 +1359,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, have main - fail send": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "test",
+				"service_id_previous": "test",
+				"service_id": "test",
 				"name": "test",
 				"name_previous": "test",
 				"type": "` + validNotify.Type + `",
@@ -1366,8 +1374,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"same service, have main - new name, also fail send": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "new_name",
+				"service_id_previous": "test",
+				"service_id": "new_name",
 				"name": "test",
 				"name_previous": "test",
 				"type": "` + validNotify.Type + `",
@@ -1379,10 +1387,10 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				body:       "invalid .* token"},
 		},
-		"service_name_previous that doesn't exist": {
+		"service_id_previous that doesn't exist": {
 			payload: `{
-				"service_name_previous": "does_not_exist",
-				"service_name": "test",
+				"service_id_previous": "does_not_exist",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "test",
 				"url_fields": {
@@ -1395,8 +1403,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		},
 		"name_previous that doesn't exist": {
 			payload: `{
-				"service_name_previous": "test",
-				"service_name": "test",
+				"service_id_previous": "test",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "does_not_exist",
 				"url_fields": {
@@ -1407,10 +1415,10 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				body:       `invalid type "new_notify"`},
 		},
-		"service_name_previous and name_previous that doesn't exist": {
+		"service_id_previous and name_previous that doesn't exist": {
 			payload: `{
-				"service_name_previous": "does_not_exist",
-				"service_name": "test",
+				"service_id_previous": "does_not_exist",
+				"service_id": "test",
 				"name": "new_notify",
 				"name_previous": "also_does_not_exist",
 				"url_fields": {

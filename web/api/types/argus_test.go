@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -470,12 +470,14 @@ func TestServiceSummary_String(t *testing.T) {
 		"some": {
 			summary: &ServiceSummary{
 				ID:      "foo",
+				Name:    test.StringPtr("bar"),
 				Type:    "github",
 				Command: 1,
 				WebHook: 2},
 			want: `
 				{
 					"id": "foo",
+					"name": "bar",
 					"type": "github",
 					"command": 1,
 					"webhook": 2
@@ -484,12 +486,13 @@ func TestServiceSummary_String(t *testing.T) {
 		"full": {
 			summary: &ServiceSummary{
 				ID:                       "bar",
+				Name:                     test.StringPtr("foo"),
 				Active:                   test.BoolPtr(true),
 				Comment:                  "test",
 				Type:                     "gitlab",
 				WebURL:                   "http://example.com",
-				Icon:                     ("https://example.com/icon.png"),
-				IconLinkTo:               ("https://release-argus.io"),
+				Icon:                     "https://example.com/icon.png",
+				IconLinkTo:               "https://release-argus.io",
 				HasDeployedVersionLookup: test.BoolPtr(true),
 				Command:                  (2),
 				WebHook:                  (1),
@@ -498,6 +501,7 @@ func TestServiceSummary_String(t *testing.T) {
 			want: `
 				{
 					"id": "bar",
+					"name": "foo",
 					"active": true,
 					"comment": "test",
 					"type": "gitlab",
@@ -559,6 +563,35 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			want: &ServiceSummary{
 				ID: "bar"},
 		},
+		"name added": {
+			old: &ServiceSummary{},
+			new: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+			want: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+		},
+		"name removed": {
+			old: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+			new: &ServiceSummary{},
+			want: &ServiceSummary{
+				Name: test.StringPtr("")},
+		},
+		"same name": {
+			old: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+			new: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+			want: &ServiceSummary{},
+		},
+		"different name": {
+			old: &ServiceSummary{
+				Name: test.StringPtr("foo")},
+			new: &ServiceSummary{
+				Name: test.StringPtr("bar")},
+			want: &ServiceSummary{
+				Name: test.StringPtr("bar")},
+		},
 		"same active": {
 			old: &ServiceSummary{
 				Active: test.BoolPtr(false)},
@@ -576,48 +609,48 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"same type": {
 			old: &ServiceSummary{
-				Type: ("github")},
+				Type: "github"},
 			new: &ServiceSummary{
-				Type: ("github")},
+				Type: "github"},
 			want: &ServiceSummary{},
 		},
 		"different type": {
 			old: &ServiceSummary{
-				Type: ("github")},
+				Type: "github"},
 			new: &ServiceSummary{
-				Type: ("gitlab")},
+				Type: "gitlab"},
 			want: &ServiceSummary{
-				Type: ("gitlab")},
+				Type: "gitlab"},
 		},
 		"same icon": {
 			old: &ServiceSummary{
-				Icon: ("https://example.com/icon.png")},
+				Icon: "https://example.com/icon.png"},
 			new: &ServiceSummary{
-				Icon: ("https://example.com/icon.png")},
+				Icon: "https://example.com/icon.png"},
 			want: &ServiceSummary{},
 		},
 		"different icon": {
 			old: &ServiceSummary{
-				Icon: ("https://example.com/icon.png")},
+				Icon: "https://example.com/icon.png"},
 			new: &ServiceSummary{
-				Icon: ("https://example.com/icon2.png")},
+				Icon: "https://example.com/icon2.png"},
 			want: &ServiceSummary{
-				Icon: ("https://example.com/icon2.png")},
+				Icon: "https://example.com/icon2.png"},
 		},
 		"same icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io")},
+				IconLinkTo: "https://release-argus.io"},
 			new: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io")},
+				IconLinkTo: "https://release-argus.io"},
 			want: &ServiceSummary{},
 		},
 		"different icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io")},
+				IconLinkTo: "https://release-argus.io"},
 			new: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io/other")},
+				IconLinkTo: "https://release-argus.io/other"},
 			want: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io/other")},
+				IconLinkTo: "https://release-argus.io/other"},
 		},
 		"same has_deployed_version_lookup": {
 			old: &ServiceSummary{
@@ -724,17 +757,17 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"multiple differences": {
 			old: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io"),
+				IconLinkTo: "https://release-argus.io",
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
 					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
 			new: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io/other"),
+				IconLinkTo: "https://release-argus.io/other",
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
 			want: &ServiceSummary{
-				IconLinkTo: ("https://release-argus.io/other"),
+				IconLinkTo: "https://release-argus.io/other",
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},

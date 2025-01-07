@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -451,7 +451,7 @@ func (d *DockerCheck) getValidToken() string {
 
 // getQueryToken recurses into itself to find a query token for the type.
 //
-// Returns the queryToken, and the time it is valid until.
+//	Returns the queryToken, and the time it is valid until.
 func (d *DockerCheckDefaults) getQueryToken(dType string) (string, time.Time) {
 	if d == nil {
 		return "", time.Time{}

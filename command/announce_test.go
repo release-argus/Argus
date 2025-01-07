@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -158,7 +158,7 @@ func TestController_Find(t *testing.T) {
 			}
 			controller.ServiceStatus.Init(
 				0, len(*controller.Command), 0,
-				&name,
+				&name, nil,
 				nil)
 			controller.Failed = &controller.ServiceStatus.Fails.Command
 			controller.ServiceStatus.SetLatestVersion("1.2.3", "", false)

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,16 +62,10 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	webhook.ID = "test"
 	webhook.ServiceStatus = &status.Status{}
 	webhook.ServiceStatus.Init(
-		0, 0, 1,
-		test.StringPtr("testServiceID"),
-		nil)
+		0, 1, 1,
+		test.StringPtr("testServiceID"), nil,
+		test.StringPtr("https://example.com"))
 	webhook.Failed = &webhook.ServiceStatus.Fails.WebHook
-	serviceName := "testServiceID"
-	webURL := "https://example.com"
-	webhook.ServiceStatus.Init(
-		0, 1, 0,
-		&serviceName,
-		&webURL)
 	if selfSignedCert {
 		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
 	}
@@ -80,13 +74,12 @@ func testWebHook(failing bool, selfSignedCert bool, customHeaders bool) *WebHook
 	}
 	if customHeaders {
 		webhook.URL = strings.Replace(webhook.URL, "github-style", "single-header", 1)
+		testHeaderValue := "secret"
 		if failing {
-			webhook.CustomHeaders = &Headers{
-				{Key: "X-Test", Value: "invalid"}}
-		} else {
-			webhook.CustomHeaders = &Headers{
-				{Key: "X-Test", Value: "secret"}}
+			testHeaderValue = "invalid"
 		}
+		webhook.CustomHeaders = &Headers{
+			{Key: "X-Test", Value: testHeaderValue}}
 	}
 	webhook.initMetrics()
 	return webhook

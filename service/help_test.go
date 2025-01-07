@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ func testService(t *testing.T, id string, sType string) *Service {
 	// Status
 	svc.Status.Init(
 		0, 0, 0,
-		&svc.ID,
+		&svc.ID, &svc.ID,
 		&svc.Dashboard.WebURL)
 	svc.Status.SetApprovedVersion("1.1.1", false)
 	svc.Status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)

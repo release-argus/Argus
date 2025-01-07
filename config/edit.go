@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,8 +29,9 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	defer c.OrderMutex.Unlock()
 	logFrom := util.LogFrom{Primary: "AddService"}
 
-	// Check a service does not already exist with the new name, if the name is changing.
-	if oldServiceID != newService.ID && c.Service[newService.ID] != nil {
+	// Check a service does not already exist with the new id/name, if the name is changing.
+	if oldServiceID != newService.ID &&
+		(c.Service[newService.ID] != nil || c.ServiceWithNameExists(newService.ID, oldServiceID)) {
 		err := fmt.Errorf("service %q already exists", newService.ID)
 		jLog.Error(err, logFrom, true)
 		return err
@@ -42,9 +43,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 		c.Service[oldServiceID].String("") != newService.String("")
 	// Whether we need to update the database.
 	changedDB := oldServiceID == "" || c.Service[oldServiceID] == nil ||
-		c.Service[oldServiceID].Status.ApprovedVersion() != newService.Status.ApprovedVersion() ||
-		c.Service[oldServiceID].Status.LatestVersion() != newService.Status.LatestVersion() ||
-		c.Service[oldServiceID].Status.DeployedVersion() != newService.Status.DeployedVersion()
+		!c.Service[oldServiceID].Status.SameVersions(&newService.Status)
 	// New service.
 	if oldServiceID == "" || c.Service[oldServiceID] == nil {
 		jLog.Info("Adding service", logFrom, true)
@@ -93,6 +92,23 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	go c.Service[newService.ID].Track()
 
 	return nil
+}
+
+// ServiceWithNameExists checks whether a Service with the given name exists.
+func (c *Config) ServiceWithNameExists(name, oldServiceID string) bool {
+	// Have no name, so skip the check.
+	if name == "" {
+		return false
+	}
+
+	// Check if the name exists in a service.
+	for id, service := range c.Service {
+		// Name exists, and it's not from the service being modified.
+		if service.Name == name && id != oldServiceID {
+			return true
+		}
+	}
+	return false
 }
 
 // RenameService in the config from `oldService` to `newService` and remove `oldService`.

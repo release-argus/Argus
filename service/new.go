@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ type whSecretRef struct {
 
 // oldSecretRefs contains the indexes to use for SecretValues.
 type oldSecretRefs struct {
-	Name                  string                    `json:"name"`
+	ID                    string                    `json:"id"`
 	DeployedVersionLookup dvSecretRef               `json:"deployed_version,omitempty"`
 	Notify                map[string]oldStringIndex `json:"notify,omitempty"`
 	WebHook               map[string]whSecretRef    `json:"webhook,omitempty"`
@@ -112,8 +112,8 @@ func FromPayload(
 		return nil, err //nolint:wrapcheck
 	}
 
-	// Name + Channels.
-	newService.ID = secretRefs.Name
+	// ID + Channels.
+	newService.ID = secretRefs.ID
 	newService.Status.AnnounceChannel = serviceHardDefaults.Status.AnnounceChannel
 	newService.Status.DatabaseChannel = serviceHardDefaults.Status.DatabaseChannel
 	newService.Status.SaveChannel = serviceHardDefaults.Status.SaveChannel

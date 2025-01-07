@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,10 +42,11 @@ func TemplateString(template string, context ServiceInfo) string {
 
 	// Render the template.
 	result, err := tpl.Execute(pongo2.Context{
-		"service_id":  context.ID,
-		"service_url": context.URL,
-		"web_url":     context.WebURL,
-		"version":     context.LatestVersion})
+		"service_id":   context.ID,
+		"service_name": context.Name,
+		"service_url":  context.URL,
+		"web_url":      context.WebURL,
+		"version":      context.LatestVersion})
 	if err != nil {
 		panic(err)
 	}

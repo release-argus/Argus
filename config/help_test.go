@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -124,23 +124,6 @@ func testLoadBasic(file string, t *testing.T) *Config {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
-	services := util.SortedKeys(config.Service)
-	for _, name := range services {
-		if config.Service[name] == nil {
-			delete(config.Service, name)
-			config.Order = util.RemoveElement(config.Order, name)
-		}
-	}
-
-	config.Init(false) // Log already set in TestMain
-	for name, service := range config.Service {
-		if service == nil {
-			config.Order = util.RemoveElement(config.Order, name)
-			delete(config.Service, name)
-			continue
-		}
-		service.ID = name
-	}
 	config.Init(false) // Log already set in TestMain
 	config.CheckValues()
 	t.Log("Loaded", file)

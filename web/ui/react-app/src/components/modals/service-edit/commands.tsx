@@ -7,15 +7,17 @@ import { useFieldArray } from "react-hook-form";
 
 interface Props {
   name: string;
+  loading: boolean;
 }
 
 /**
  * Returns the form fields for all commands in a service
  *
  * @param name - The name of the field in the form
+ * @param loading - Whether the modal is loading
  * @returns The set of form fields for a list of `command`
  */
-const EditServiceCommands: FC<Props> = ({ name }) => {
+const EditServiceCommands: FC<Props> = ({ name, loading }) => {
   const { fields, append, remove } = useFieldArray({
     name: name,
   });
@@ -44,6 +46,7 @@ const EditServiceCommands: FC<Props> = ({ name }) => {
               className={isEmptyArray(fields) ? "mt-2" : ""}
               variant="secondary"
               onClick={addItem}
+              disabled={loading}
             >
               Add Command
             </Button>

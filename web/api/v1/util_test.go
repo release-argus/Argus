@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -99,9 +99,7 @@ func TestAnnounceDelete(t *testing.T) {
 
 		if wsMessage.Page != "APPROVALS" ||
 			wsMessage.Type != "DELETE" ||
-			wsMessage.SubType != serviceID ||
-			wsMessage.Order == nil || len(*wsMessage.Order) != 1 ||
-			(*wsMessage.Order)[0] != api.Config.Order[0] {
+			wsMessage.SubType != serviceID {
 			t.Errorf("unexpected WebSocketMessage: %+v",
 				wsMessage)
 		}

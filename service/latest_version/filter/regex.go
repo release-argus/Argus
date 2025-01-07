@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ func (r *Require) RegexCheckContent(
 // RegexCheckContentGitHub checks the content of the GitHub release assets.
 // for a RegexContent match.
 //
-// Returns the date of release.
+//	Returns the date of release.
 func (r *Require) RegexCheckContentGitHub(
 	version string,
 	assets []github_types.Asset,

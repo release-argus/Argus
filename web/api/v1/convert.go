@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,8 +73,14 @@ func convertAndCensorService(service *service.Service) *apitype.Service {
 
 	apiService := apitype.Service{}
 
+	// Name
+	if service.MarshalName() {
+		apiService.Name = service.Name
+	}
+	// Comment
 	apiService.Comment = service.Comment
 
+	// Options
 	apiService.Options = &apitype.ServiceOptions{
 		Active:             service.Options.Active,
 		Interval:           service.Options.Interval,

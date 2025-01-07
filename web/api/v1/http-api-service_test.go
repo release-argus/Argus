@@ -109,17 +109,17 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 	})
 
 	tests := map[string]struct {
-		serviceName    string
+		serviceID      string
 		wantBody       string
 		wantStatusCode int
 	}{
 		"known service": {
-			serviceName:    (testSVC.ID),
+			serviceID:      testSVC.ID,
 			wantBody:       testSVC.Summary().String(),
 			wantStatusCode: http.StatusOK,
 		},
 		"unknown service": {
-			serviceName:    ("bish-bash-bosh"),
+			serviceID:      "bish-bash-bosh",
 			wantBody:       `\{"message":"service .+ not found"`,
 			wantStatusCode: http.StatusNotFound,
 		},
@@ -130,12 +130,12 @@ func TestHTTP_httpServiceSummary(t *testing.T) {
 			t.Parallel()
 
 			target := "/api/v1/service/summary/"
-			target += url.QueryEscape(tc.serviceName)
+			target += url.QueryEscape(tc.serviceID)
 
 			// WHEN that HTTP request is sent
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
-				"service_name": tc.serviceName}
+				"service_id": tc.serviceID}
 			req = mux.SetURLVars(req, vars)
 			w := httptest.NewRecorder()
 			api.httpServiceSummary(w, req)

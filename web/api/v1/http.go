@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,28 +79,28 @@ func (api *API) SetupRoutesAPI() {
 	//   GET, service order.
 	api.Router.HandleFunc("/api/v1/service/order", api.httpServiceOrder).Methods("GET")
 	//   GET, service summary.
-	api.Router.HandleFunc("/api/v1/service/summary/{service_name:.+}", api.httpServiceSummary).Methods("GET")
+	api.Router.HandleFunc("/api/v1/service/summary/{service_id:.+}", api.httpServiceSummary).Methods("GET")
 	//   GET, service actions (webhooks/commands).
-	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceGetActions).Methods("GET")
+	api.Router.HandleFunc("/api/v1/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods("GET")
 	//   POST, service actions (disable=service_actions).
-	api.Router.HandleFunc("/api/v1/service/actions/{service_name:.+}", api.httpServiceRunActions).Methods("POST")
+	api.Router.HandleFunc("/api/v1/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods("POST")
 	//   GET, service-edit - get details.
 	api.Router.HandleFunc("/api/v1/service/update", api.httpOtherServiceDetails).Methods("GET")
-	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceDetail).Methods("GET")
+	api.Router.HandleFunc("/api/v1/service/update/{service_id:.+}", api.httpServiceDetail).Methods("GET")
 	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new).
 	api.Router.HandleFunc("/api/v1/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods("GET")
 	api.Router.HandleFunc("/api/v1/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods("GET")
 	//   GET, service-edit - refresh service (disable=[ld]v_refresh).
-	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_name:.+}", api.httpLatestVersionRefresh).Methods("GET")
-	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_name:.+}", api.httpDeployedVersionRefresh).Methods("GET")
+	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods("GET")
+	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods("GET")
 	//   POST, service-edit - test notify (disable=notify_test).
 	api.Router.HandleFunc("/api/v1/notify/test", api.httpNotifyTest).Methods("POST")
 	//   PUT, service-edit - update details (disable=service_edit).
-	api.Router.HandleFunc("/api/v1/service/update/{service_name:.+}", api.httpServiceEdit).Methods("PUT")
+	api.Router.HandleFunc("/api/v1/service/update/{service_id:.+}", api.httpServiceEdit).Methods("PUT")
 	//   PUT, service-edit - new service (disable=service_create).
 	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("PUT")
 	//   DELETE, service-edit - delete service (disable=service_delete).
-	api.Router.HandleFunc("/api/v1/service/delete/{service_name:.+}", api.httpServiceDelete).Methods("DELETE")
+	api.Router.HandleFunc("/api/v1/service/delete/{service_id:.+}", api.httpServiceDelete).Methods("DELETE")
 
 	// Disable specified routes.
 	api.DisableRoutesAPI()
@@ -116,15 +116,15 @@ func (api *API) DisableRoutesAPI() {
 		otherMethods map[string]func(w http.ResponseWriter, r *http.Request)
 		disabled     bool
 	}{
-		webRoutePrefix + "/api/v1/service/new":                                {name: "service_create", method: "PUT"},
-		webRoutePrefix + "/api/v1/service/update/{service_name:.+}":           {name: "service_update", method: "PUT"},
-		webRoutePrefix + "/api/v1/service/delete/{service_name:.+}":           {name: "service_delete", method: "DELETE"},
-		webRoutePrefix + "/api/v1/notify/test":                                {name: "notify_test", method: "POST"},
-		webRoutePrefix + "/api/v1/latest_version/refresh/{service_name:.+}":   {name: "lv_refresh", method: "GET"},
-		webRoutePrefix + "/api/v1/deployed_version/refresh/{service_name:.+}": {name: "dv_refresh", method: "GET"},
-		webRoutePrefix + "/api/v1/latest_version/refresh":                     {name: "lv_refresh_new", method: "GET"},
-		webRoutePrefix + "/api/v1/deployed_version/refresh":                   {name: "dv_refresh_new", method: "GET"},
-		webRoutePrefix + "/api/v1/service/actions/{service_name:.+}":          {name: "service_actions", method: "POST"},
+		webRoutePrefix + "/api/v1/service/new":                              {name: "service_create", method: "PUT"},
+		webRoutePrefix + "/api/v1/service/update/{service_id:.+}":           {name: "service_update", method: "PUT"},
+		webRoutePrefix + "/api/v1/service/delete/{service_id:.+}":           {name: "service_delete", method: "DELETE"},
+		webRoutePrefix + "/api/v1/notify/test":                              {name: "notify_test", method: "POST"},
+		webRoutePrefix + "/api/v1/latest_version/refresh/{service_id:.+}":   {name: "lv_refresh", method: "GET"},
+		webRoutePrefix + "/api/v1/deployed_version/refresh/{service_id:.+}": {name: "dv_refresh", method: "GET"},
+		webRoutePrefix + "/api/v1/latest_version/refresh":                   {name: "lv_refresh_new", method: "GET"},
+		webRoutePrefix + "/api/v1/deployed_version/refresh":                 {name: "dv_refresh_new", method: "GET"},
+		webRoutePrefix + "/api/v1/service/actions/{service_id:.+}":          {name: "service_actions", method: "POST"},
 	}
 	for _, r := range routes {
 		r.disabled = util.Contains(api.Config.Settings.Web.DisabledRoutes, r.name)
