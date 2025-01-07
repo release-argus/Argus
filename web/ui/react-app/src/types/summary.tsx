@@ -6,6 +6,7 @@ export interface OrderAPIResponse {
 
 export interface MonitorSummaryType {
   order: string[];
+  names: Set<string>;
   service: ServiceSummaryListType;
 }
 export interface ServiceSummaryListType {
@@ -15,6 +16,7 @@ export interface ServiceSummaryListType {
 export interface ServiceSummaryType {
   active?: boolean;
   id: string;
+  name?: string;
   loading?: boolean;
   type?: LatestVersionLookupType["type"];
   url?: string;

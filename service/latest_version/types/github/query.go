@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,8 @@ import (
 // Query queries the source,
 // and returns whether a new release was found, and updates LatestVersion if so.
 //
-// metrics - if true, set Prometheus metrics based on the query.
+// Parameters:
+//   - metrics: if true, set Prometheus metrics based on the query.
 func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
 	newVersion, err := l.query(logFrom, 0)
 
@@ -46,7 +47,9 @@ func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
 // Query queries the source,
 // and returns whether a new release was found, and updates LatestVersion if so.
 //
-// checkNumber - 0 for first check, 1 for second check (if the first check found a new version).
+// Parameters:
+//
+//	checkNumber: 0 for first check, 1 for second check (if the first check found a new version).
 func (l *Lookup) query(logFrom util.LogFrom, checkNumber int) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {

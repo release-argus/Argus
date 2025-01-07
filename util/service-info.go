@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package util
 // ServiceInfo holds information about a service.
 type ServiceInfo struct {
 	ID            string
+	Name          string
 	URL           string
 	WebURL        string
 	LatestVersion string

@@ -1,19 +1,29 @@
+import { MonitorSummaryType, ServiceSummaryType } from "types/summary";
+
+import { MutableRefObject } from "react";
 import { NotificationType } from "types/notification";
 import { WebSocketResponse } from "types/websocket";
 
 export interface Props {
   event: WebSocketResponse;
   addNotification: (notification: NotificationType) => void;
+  monitorData: MutableRefObject<MonitorSummaryType>;
 }
 
 /**
  * Adds a notification based on the event type and subtype
  *
- * @param props - The event and the function to add a notification
+ * @param props - The event and the function to add a notification.
  */
 export const handleNotifications = (props: Props) => {
   if (props.event.page !== "APPROVALS") return;
   // APPROVALS
+
+  const service_data = (props.event as { service_data?: ServiceSummaryType })
+    .service_data;
+  const service_name = service_data?.id
+    ? props.monitorData.current?.service[service_data.id]?.name ?? service_data.id
+    : "Unknown";
 
   // VERSION
   // COMMAND
@@ -31,7 +41,7 @@ export const handleNotifications = (props: Props) => {
         case "NEW":
           props.addNotification({
             type: "info",
-            title: props.event.service_data?.id ?? "Unknown",
+            title: service_name,
             body: `New version: ${
               props.event.service_data?.status?.latest_version ?? "Unknown"
             }`,
@@ -44,7 +54,7 @@ export const handleNotifications = (props: Props) => {
         case "UPDATED":
           props.addNotification({
             type: "success",
-            title: props.event.service_data?.id ?? "Unknown",
+            title: service_name,
             body: `Updated to version '${
               props.event.service_data?.status?.deployed_version ?? "Unknown"
             }'`,
@@ -57,7 +67,7 @@ export const handleNotifications = (props: Props) => {
         case "INIT":
           props.addNotification({
             type: "info",
-            title: props.event.service_data?.id ?? "Unknown",
+            title: service_name,
             body: `Latest version: ${
               props.event.service_data?.status?.latest_version ?? "Unknown"
             }`,
@@ -76,7 +86,7 @@ export const handleNotifications = (props: Props) => {
             )
               props.addNotification({
                 type: "info",
-                title: props.event.service_data?.id ?? "Unknown",
+                title: service_name,
                 body: `Skipped version: ${props.event.service_data.status.approved_version.slice(
                   "SKIP_".length
                 )}`,
@@ -97,14 +107,14 @@ export const handleNotifications = (props: Props) => {
         props.event.command_data[key].failed === false
           ? props.addNotification({
               type: "success",
-              title: props.event.service_data?.id ?? "Unknown",
+              title: service_name,
               body: `'${key}' Command ran successfully`,
               small: new Date().toString(),
               delay: 30000,
             })
           : props.addNotification({
               type: "danger",
-              title: props.event.service_data?.id ?? "Unknown",
+              title: service_name,
               body: `'${key}' Command failed`,
               small: new Date().toString(),
               delay: 30000,
@@ -118,14 +128,14 @@ export const handleNotifications = (props: Props) => {
         props.event.webhook_data[key].failed === false
           ? props.addNotification({
               type: "success",
-              title: props.event.service_data?.id ?? "Unknown",
+              title: service_name,
               body: `'${key}' WebHook sent successfully`,
               small: new Date().toString(),
               delay: 30000,
             })
           : props.addNotification({
               type: "danger",
-              title: props.event.service_data?.id ?? "Unknown",
+              title: service_name,
               body: `'${key}' WebHook failed to send`,
               small: new Date().toString(),
               delay: 30000,

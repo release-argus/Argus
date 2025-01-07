@@ -60,11 +60,11 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
           />
           <FormItem
             name={`${name}.label`}
-            label="Label"
-            tooltip="Button name to display on the notification"
             required
             col_xs={6}
             col_sm={4}
+            label="Label"
+            tooltip="Button name to display on the notification"
             defaultVal={defaults?.label}
             placeholder={`e.g. '${typeLabelMap[targetType]}'`}
             position="middle"

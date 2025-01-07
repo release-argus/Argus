@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -400,7 +400,7 @@ func TestAPI_Run(t *testing.T) {
 	want := status.Status{}
 	want.Init(
 		0, 0, 0,
-		&target,
+		&target, nil,
 		test.StringPtr("https://example.com"))
 	want.SetLatestVersion("9.9.9", "2022-01-01T01:01:01Z", false)
 	want.SetApprovedVersion("0.0.1", false)

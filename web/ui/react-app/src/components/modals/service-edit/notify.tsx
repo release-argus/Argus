@@ -26,7 +26,7 @@ interface Props {
   name: string;
   removeMe: () => void;
 
-  serviceName: string;
+  serviceID: string;
   originals?: NotifyEditType[];
   globalOptions: JSX.Element;
   mains?: Dict<NotifyTypesValues>;
@@ -39,7 +39,7 @@ interface Props {
  *
  * @param name - The name of the field in the form
  * @param removeMe - The function to remove this Notify
- * @param serviceName - The name of the service
+ * @param serviceID - The ID of the service
  * @param originals - The original values for the Notify
  * @param globalOptions - The options for the global Notifiers
  * @param mains - The main Notifiers
@@ -51,7 +51,7 @@ const Notify: FC<Props> = ({
   name,
   removeMe,
 
-  serviceName,
+  serviceID,
   originals,
   globalOptions,
   mains,
@@ -81,7 +81,7 @@ const Notify: FC<Props> = ({
   }, [itemName]);
   const header = useMemo(
     () => `${name.split(".").slice(-1)}: (${itemType}) ${itemName}`,
-    [name, itemName, itemType],
+    [name, itemName, itemType]
   );
 
   const original: NotifyEditType = useMemo(() => {
@@ -98,7 +98,7 @@ const Notify: FC<Props> = ({
   const onChangeNotifyType = (
     newType: NotifyTypesKeys,
     original: NotifyEditType,
-    otherOptionsData: ServiceEditOtherData,
+    otherOptionsData: ServiceEditOtherData
   ) => {
     // Reset to original type.
     if (newType === original?.type) {
@@ -110,11 +110,11 @@ const Notify: FC<Props> = ({
     // Set the default values for the selected type.
     setValue(
       `${name}.url_fields`,
-      convertNotifyURLFields(name, newType, undefined, otherOptionsData),
+      convertNotifyURLFields(name, newType, undefined, otherOptionsData)
     );
     setValue(
       `${name}.params`,
-      convertNotifyParams(name, newType, undefined, otherOptionsData),
+      convertNotifyParams(name, newType, undefined, otherOptionsData)
     );
   };
 
@@ -193,7 +193,7 @@ const Notify: FC<Props> = ({
             path={name}
             original={original}
             extras={{
-              service_name_previous: serviceName,
+              service_id_previous: serviceID,
               service_url: serviceURL,
               web_url: webURL,
             }}

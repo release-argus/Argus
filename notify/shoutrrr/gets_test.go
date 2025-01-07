@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -538,13 +538,13 @@ func TestShoutrrr_Message(t *testing.T) {
 			want:             "New version!",
 			hardDefaultValue: test.StringPtr("New version!"),
 		},
-		"jinja templating": {
+		"django templating": {
 			want:             "New version!",
 			rootValue:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),
 		},
-		"jinja vars": {
+		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
@@ -618,13 +618,13 @@ func TestShoutrrr_Title(t *testing.T) {
 			want:             "New version!",
 			hardDefaultValue: test.StringPtr("New version!"),
 		},
-		"jinja templating": {
+		"django templating": {
 			want:             "New version!",
 			rootValue:        test.StringPtr("{% if 'a' == 'a' %}New version!{% endif %}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),
 		},
-		"jinja vars": {
+		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
 				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),

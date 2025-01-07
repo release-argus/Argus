@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1530,7 +1530,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 		newService := &Service{Notify: tc.notify}
 		newService.Status.Init(
 			len(newService.Notify), len(newService.Command), len(newService.WebHook),
-			&name,
+			&name, nil,
 			nil)
 		// Give empty defaults and hardDefaults to the NotifySlice
 		newService.Notify.Init(
@@ -2083,7 +2083,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 			// New Service Status.Fails
 			newService.Status.Init(
 				len(newService.Notify), len(newService.Command), len(newService.WebHook),
-				&newService.ID,
+				&newService.ID, nil,
 				nil)
 			newService.Init(
 				&Defaults{}, &Defaults{},
@@ -2095,7 +2095,7 @@ func TestService_GiveSecretsWebHook(t *testing.T) {
 				otherServiceStatus := status.Status{}
 				otherServiceStatus.Init(
 					len(tc.otherWebhook), 0, 0,
-					test.StringPtr("otherService"),
+					test.StringPtr("otherService"), nil,
 					nil)
 				tc.otherWebhook.Init(
 					&otherServiceStatus,

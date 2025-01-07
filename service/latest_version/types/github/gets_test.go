@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,19 +31,19 @@ func TestAccessToken(t *testing.T) {
 		want                                      string
 	}{
 		"root overrides all": {
-			rootValue:        ("a"),
-			defaultValue:     ("b"),
-			hardDefaultValue: ("c"),
-			want:             ("a"),
+			rootValue:        "a",
+			defaultValue:     "b",
+			hardDefaultValue: "c",
+			want:             "a",
 		},
 		"default overrides hardDefault": {
-			defaultValue:     ("b"),
-			hardDefaultValue: ("c"),
-			want:             ("b"),
+			defaultValue:     "b",
+			hardDefaultValue: "c",
+			want:             "b",
 		},
 		"hardDefault is last resort": {
-			hardDefaultValue: ("c"),
-			want:             ("c"),
+			hardDefaultValue: "c",
+			want:             "c",
 		},
 	}
 

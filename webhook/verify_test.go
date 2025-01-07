@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -465,7 +465,8 @@ func TestSlice_CheckValues(t *testing.T) {
 				svcStatus := status.Status{}
 				svcStatus.Init(
 					0, 0, len(*tc.slice),
-					nil, nil)
+					nil, nil,
+					nil)
 				tc.slice.Init(
 					&svcStatus,
 					&SliceDefaults{},

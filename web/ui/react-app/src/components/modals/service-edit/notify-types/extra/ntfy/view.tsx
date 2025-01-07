@@ -18,9 +18,9 @@ interface Props {
 const VIEW: FC<Props> = ({ name, defaults }) => (
   <FormItem
     name={`${name}.url`}
-    label="URL"
     required
     col_sm={5}
+    label="URL"
     defaultVal={defaults?.url}
     placeholder="e.g. 'http://example.com'"
     position="right"

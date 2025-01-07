@@ -43,9 +43,9 @@ const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
       <Col>
         <Row>
           <FormSelect
+            name={`${name}.type`}
             col_xs={5}
             col_sm={4}
-            name={`${name}.type`}
             label="Type"
             smallLabel
             options={urlCommandTypeOptions}

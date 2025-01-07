@@ -17,7 +17,7 @@ import { firstNonDefault } from "utils";
 import { useWatch } from "react-hook-form";
 
 interface Props {
-  serviceName: string;
+  serviceID: string;
   original?: LatestVersionLookupEditType;
   original_options?: ServiceOptionsType;
   defaults?: DefaultLatestVersionLookupType;
@@ -27,7 +27,7 @@ interface Props {
 /**
  * Returns the `latest_version` form fields
  *
- * @param serviceName - The name of the service
+ * @param serviceID - The ID of the service
  * @param original - The original values in the form
  * @param original_options - The original service.options of the form
  * @param defaults - The default values
@@ -35,7 +35,7 @@ interface Props {
  * @returns The form fields for the `latest_version`
  */
 const EditServiceLatestVersion: FC<Props> = ({
-  serviceName,
+  serviceID,
   original,
   original_options,
   defaults,
@@ -58,13 +58,13 @@ const EditServiceLatestVersion: FC<Props> = ({
     () => ({
       access_token: firstNonDefault(
         defaults?.access_token,
-        hard_defaults?.access_token,
+        hard_defaults?.access_token
       ),
       allow_invalid_certs:
         defaults?.allow_invalid_certs ?? hard_defaults?.allow_invalid_certs,
       use_prerelease: defaults?.use_prerelease ?? hard_defaults?.use_prerelease,
     }),
-    [defaults, hard_defaults],
+    [defaults, hard_defaults]
   );
 
   return (
@@ -103,8 +103,8 @@ const EditServiceLatestVersion: FC<Props> = ({
                 col_sm={12}
                 label="Access Token"
                 tooltip="GitHub Personal Access Token to handle possible rate limits and/or private repos"
-                defaultVal={convertedDefaults.access_token}
                 isURL={latestVersionType !== "github"}
+                defaultVal={convertedDefaults.access_token}
               />
               <BooleanWithDefault
                 name="latest_version.use_prerelease"
@@ -128,7 +128,7 @@ const EditServiceLatestVersion: FC<Props> = ({
 
           <VersionWithRefresh
             vType={0}
-            serviceName={serviceName}
+            serviceID={serviceID}
             original={original}
             original_options={original_options}
           />

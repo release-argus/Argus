@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -216,8 +216,7 @@ func (c *Client) writePump() {
 			}
 
 			var msg apitype.WebSocketMessage
-			err := json.Unmarshal(message, &msg)
-			if err != nil {
+			if err := json.Unmarshal(message, &msg); err != nil {
 				jLog.Error(
 					fmt.Sprintf("Message failed to unmarshal %s",
 						err),

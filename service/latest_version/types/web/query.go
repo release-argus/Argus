@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,9 @@ import (
 // Query queries the source,
 // and returns whether a new release was found, and updates LatestVersion if so.
 //
-// metrics - if true, set Prometheus metrics based on the query.
+// Parameters:
+//
+//	metrics: if true, set Prometheus metrics based on the query.
 func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
 	isNewVersion, err := l.query(logFrom)
 

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ func TestWebHook_Init(t *testing.T) {
 	status := status.Status{ServiceID: test.StringPtr("TestInit")}
 	status.Init(
 		0, 0, 1,
-		test.StringPtr("TestInit"),
+		test.StringPtr("TestInit"), nil,
 		test.StringPtr("https://example.com"))
 
 	// WHEN Init is called on it
@@ -246,7 +246,7 @@ func TestSlice_Init(t *testing.T) {
 			}
 			serviceStatus.Init(
 				0, 0, mainCount,
-				&name,
+				&name, nil,
 				nil)
 			parentInterval := "10s"
 

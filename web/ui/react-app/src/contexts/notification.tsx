@@ -1,15 +1,16 @@
+import { addMessageHandler, useWebSocket } from "./websocket";
 import {
   createContext,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import Notification from "components/notification";
 import { NotificationType } from "types/notification";
 import { ToastContainer } from "react-bootstrap";
-import { addMessageHandler } from "./websocket";
 import { handleNotifications } from "handlers/notifications";
 import { isEmptyArray } from "utils";
 
@@ -38,6 +39,13 @@ const NotificationContext = createContext<NotificationCtx>({
  */
 const NotificationProvider = () => {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const { monitorData } = useWebSocket();
+  const monitorDataRef = useRef(monitorData);
+
+  // Update the ref whenever monitorData changes
+  useEffect(() => {
+    monitorDataRef.current = monitorData;
+  }, [monitorData]);
 
   const addNotification = (notification: NotificationType) => {
     // Don't repeat notifications.
@@ -55,6 +63,7 @@ const NotificationProvider = () => {
   useEffect(() => {
     addMessageHandler("notifications", handleNotifications, {
       addNotification: addNotification,
+      monitorData: monitorDataRef,
     });
   }, []);
 

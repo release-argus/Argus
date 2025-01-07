@@ -101,7 +101,7 @@ const JOIN = ({
           name={`${name}.params.title`}
           col_sm={12}
           label="Title"
-          tooltip="e.g. 'Release - {{ service_id }}'"
+          tooltip="e.g. 'Release - {{ service_name | default:service_id }}'"
           defaultVal={convertedDefaults.params.title}
         />
       </>

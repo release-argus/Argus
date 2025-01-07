@@ -39,9 +39,9 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
       />
       <FormItem
         name={`${name}.url`}
-        label="URL"
         required
         col_sm={12}
+        label="URL"
         defaultVal={defaults?.url}
         placeholder="e.g. 'https://ntfy.sh/mytopic'"
       />
@@ -55,8 +55,8 @@ const HTTP: FC<Props> = ({ name, defaults }) => {
       />
       <FormTextArea
         name={`${name}.body`}
-        label="Body"
         col_sm={12}
+        label="Body"
         defaultVal={defaults?.body}
         placeholder={`e.g. '{"key": "value"}'`}
       />

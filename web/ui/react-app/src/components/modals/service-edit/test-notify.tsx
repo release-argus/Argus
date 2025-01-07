@@ -36,7 +36,7 @@ interface Props {
   path: string;
   original?: NotifyTypesValues;
   extras?: {
-    service_name_previous?: string;
+    service_id_previous?: string;
     service_url?: string;
     web_url?: string;
   };
@@ -56,6 +56,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
         type: getValues(`${path}.type`),
         ...deepDiff(dataJSON, original),
         ...extras,
+        service_id: getValues("id"),
         service_name: getValues("name"),
         name_previous: original?.name,
       }),
@@ -70,7 +71,7 @@ const TestNotify: FC<Props> = ({ path, original, extras }) => {
     queryKey: [
       "test_notify",
       {
-        service: extras?.service_name_previous,
+        service: extras?.service_id_previous,
         notify: original?.name,
       },
       {

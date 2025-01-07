@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func TestRequire_ExecCommand(t *testing.T) {
 			require.Status = &status.Status{}
 			require.Status.Init(
 				0, 1, 0,
-				&name,
+				&name, nil,
 				test.StringPtr("http://example.com"))
 
 			// WHEN ApplyTemplate is called on the Command

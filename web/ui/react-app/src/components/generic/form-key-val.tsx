@@ -45,8 +45,8 @@ const FormKeyVal: FC<Props> = ({
       <Row>
         <FormItem
           name={`${name}.key`}
-          unique
           required
+          unique
           col_sm={6}
           defaultVal={defaults?.key}
           placeholder={keyPlaceholder}

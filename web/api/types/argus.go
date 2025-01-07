@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
 	ID                       string  `json:"id,omitempty" yaml:"id,omitempty"`
+	Name                     *string `json:"name,omitempty" yaml:"name,omitempty"`                                 // Name for this Service.
 	Active                   *bool   `json:"active,omitempty" yaml:"active,omitempty"`                             // Active Service?
 	Comment                  string  `json:"comment,omitempty" yaml:"comment,omitempty"`                           // Comment on the Service.
 	Type                     string  `json:"type,omitempty" yaml:"type,omitempty"`                                 // "github"/"URL".
@@ -56,6 +57,14 @@ func (s *ServiceSummary) RemoveUnchanged(other *ServiceSummary) {
 	// ID
 	if other.ID == s.ID {
 		s.ID = ""
+	}
+	// Name being removed
+	if other.Name != nil && s.Name == nil {
+		emptyName := ""
+		s.Name = &emptyName
+		// Name unchanged
+	} else if other.Name != nil && s.Name != nil && *other.Name == *s.Name {
+		s.Name = nil
 	}
 	// Active
 	if util.DereferenceOrNilValue(other.Active, true) ==
@@ -348,6 +357,7 @@ type ServiceSlice map[string]*Service
 
 // Service defines a software source to track and where/what to notify.
 type Service struct {
+	Name                  string                 `json:"name,omitempty" yaml:"name,omitempty"`                         // Name for this Service.
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.
@@ -648,6 +658,7 @@ type CommandEdit struct {
 
 // ServiceEdit is a Service in API format.
 type ServiceEdit struct {
+	Name                  string                 `json:"name,omitempty" yaml:"name,omitempty"`                         // Name of the Service.
 	Comment               string                 `json:"comment,omitempty" yaml:"comment,omitempty"`                   // Comment on the Service.
 	Options               *ServiceOptions        `json:"options,omitempty" yaml:"options,omitempty"`                   // Options to give the Service.
 	LatestVersion         *LatestVersion         `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`     // Latest version lookup for the Service.

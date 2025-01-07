@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package shoutrrr
 // notifyDefaultOptions are the default options for all notifiers.
 func notifyDefaultOptions() map[string]string {
 	return map[string]string{
-		"message":   "{{ service_id }} - {{ version }} released",
+		"message":   "{{ service_name | default:service_id }} - {{ version }} released",
 		"max_tries": "3",
 		"delay":     "0s"}
 }
@@ -71,7 +71,9 @@ func (s *SliceDefaults) Default() {
 	newSlice["mattermost"] = NewDefaults(
 		"",
 		map[string]string{
-			"message":   "<{{ service_url }}|{{ service_id }}> - {{ version }} released{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
+			"message": "<{{ service_url }}|{{ service_name | default:service_id }}>" +
+				" - {{ version }} released" +
+				"{% if web_url %} (<{{ web_url }}|changelog>){% endif %}",
 			"max_tries": "3",
 			"delay":     "0s"},
 		map[string]string{

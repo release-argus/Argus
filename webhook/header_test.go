@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "test"}},
 			want: map[string]string{},
 		},
-		"header with jinja expression": {
+		"header with django expression": {
 			rootValue: &Headers{
 				{Key: "X-Service", Value: "{% if 'a' == 'a' %}foo{% endif %}"}},
 			want: map[string]string{
@@ -154,7 +154,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			url := "https://example.com"
 			webhook.ServiceStatus.Init(
 				0, 0, 0,
-				&serviceID,
+				&serviceID, nil,
 				&url)
 			webhook.ServiceStatus.SetLatestVersion(latestVersion, "", false)
 			webhook.CustomHeaders = tc.rootValue

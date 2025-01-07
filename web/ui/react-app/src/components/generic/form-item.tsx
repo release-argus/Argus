@@ -26,6 +26,7 @@ interface FormItemProps {
   smallLabel?: boolean;
   tooltip?: string | JSX.Element;
   type?: "text" | "url";
+  labelButton?: JSX.Element;
 
   isNumber?: boolean;
   isRegex?: boolean;
@@ -73,6 +74,7 @@ const FormItem: FC<FormItemProps> = ({
   smallLabel,
   tooltip,
   type = "text",
+  labelButton,
 
   isNumber,
   isRegex,
@@ -91,7 +93,7 @@ const FormItem: FC<FormItemProps> = ({
       isNumber ||
       isRegex ||
       isURL ||
-      registerParams["validate"] !== undefined,
+      registerParams["validate"] !== undefined
   );
 
   const padding = formPadding({ col_xs, col_sm, position, positionXS });
@@ -100,12 +102,20 @@ const FormItem: FC<FormItemProps> = ({
     <Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
       <FormGroup>
         {label && (
-          <FormLabel
-            text={label}
-            tooltip={tooltip}
-            required={required !== false}
-            small={!!smallLabel}
-          />
+          <div
+            className={
+              labelButton &&
+              "d-flex justify-content-between align-items-center w-100"
+            }
+          >
+            <FormLabel
+              text={label}
+              tooltip={tooltip}
+              required={required !== false}
+              small={!!smallLabel}
+            />
+            {labelButton}
+          </div>
         )}
         <FormControl
           type={type}
@@ -119,7 +129,7 @@ const FormItem: FC<FormItemProps> = ({
                   name,
                   setError,
                   clearErrors,
-                  required,
+                  required
                 ),
               isRegex: (value) => regexTest(value || defaultVal || "", isRegex),
               isNumber: (value) =>

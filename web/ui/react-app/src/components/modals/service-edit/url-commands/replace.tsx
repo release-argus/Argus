@@ -11,20 +11,20 @@ const REPLACE = ({ name }: { name: string }) => (
     <FormItem
       key="old"
       name={`${name}.old`}
-      label="Replace"
-      smallLabel
       required
       col_xs={7}
       col_sm={4}
+      label="Replace"
+      smallLabel
       position="middle"
       positionXS="right"
     />
     <FormItem
       key="new"
       name={`${name}.new`}
+      col_sm={4}
       label="With"
       smallLabel
-      col_sm={4}
       position="right"
     />
   </>

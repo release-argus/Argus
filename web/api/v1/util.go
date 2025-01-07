@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,8 +50,7 @@ func (api *API) announceDelete(serviceID string) {
 	payloadData, _ := json.Marshal(apitype.WebSocketMessage{
 		Page:    "APPROVALS",
 		Type:    "DELETE",
-		SubType: serviceID,
-		Order:   &api.Config.Order})
+		SubType: serviceID})
 	*api.Config.HardDefaults.Service.Status.AnnounceChannel <- payloadData
 }
 

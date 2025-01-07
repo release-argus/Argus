@@ -64,7 +64,7 @@ const Service: FC<Props> = ({ service, editable = false }) => {
           rel="noreferrer noopener"
           style={{ height: "100% !important" }}
         >
-          <strong>{service.id}</strong>
+          <strong>{service.name ?? service.id}</strong>
         </a>
         {editable && (
           <Button
@@ -102,7 +102,7 @@ const Service: FC<Props> = ({ service, editable = false }) => {
           }
         />
         <ServiceImage
-          service_id={service.id}
+          service_name={service.name ?? service.id}
           service_type={service.type}
           icon={service.icon}
           icon_link_to={service.icon_link_to}

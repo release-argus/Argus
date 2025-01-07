@@ -103,7 +103,7 @@ const ROCKET_CHAT = ({
           label="Path"
           tooltip={
             <>
-              e.g. rocketchat.example.io/
+              e.g. rocketchat.example.io/{""}
               <span className="bold-underline">path</span>
             </>
           }

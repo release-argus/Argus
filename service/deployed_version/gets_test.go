@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ func TestLookup_GetBody(t *testing.T) {
 			want: nil,
 		},
 		"non-empty body": {
-			body: ("test body"),
+			body: "test body",
 			want: strings.NewReader("test body"),
 		},
 	}

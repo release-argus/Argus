@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_name"])
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 	jLog.Verbose(targetService, logFrom, true)
 
 	// Check Service still exists in this ordering.

@@ -81,6 +81,10 @@ const RenderNotify: FC<RenderTypeProps> = ({
   hard_defaults,
 }) => {
   const RenderTypeComponent = RENDER_TYPE_COMPONENTS[type || "discord"];
+
+  // Unknown type
+  if (!RenderTypeComponent) return null;
+
   return (
     <RenderTypeComponent
       name={name}

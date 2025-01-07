@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 // Inherit values from `fromLookup` if the values should query the same source.
 //
-// Values - githubData, Require.
+//	Values: githubData, Require.
 func (l *Lookup) Inherit(fromLookup base.Interface) {
 	// Check whether inheriting from a GitHub Lookup.
 	if newGitHubLookup, ok := fromLookup.(*Lookup); ok && newGitHubLookup.URL == l.URL {

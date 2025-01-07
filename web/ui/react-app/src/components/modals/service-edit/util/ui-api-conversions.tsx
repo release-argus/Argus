@@ -26,9 +26,10 @@ import { urlCommandTrim } from "./url-command-trim";
  * @returns The formatted service to send to the API
  */
 export const convertUIServiceDataEditToAPI = (
-  data: ServiceEditType,
+  data: ServiceEditType
 ): ServiceType => {
   const payload: ServiceType = {
+    id: data.id,
     name: data.name,
     comment: data.comment,
   };
@@ -42,12 +43,12 @@ export const convertUIServiceDataEditToAPI = (
 
   // Latest version
   payload.latest_version = convertUILatestVersionDataEditToAPI(
-    data.latest_version,
+    data.latest_version
   );
 
   // Deployed version - omit if no url is set.
   payload.deployed_version = convertUIDeployedVersionDataEditToAPI(
-    data.deployed_version,
+    data.deployed_version
   );
 
   // Command
@@ -60,7 +61,7 @@ export const convertUIServiceDataEditToAPI = (
       webhook = removeEmptyValues(webhook);
       // Defaults were being shown if key/value were empty.
       const removeCustomHeaders = (webhook.custom_headers ?? []).find(
-        (header) => header.key === "" || header.value === "",
+        (header) => header.key === "" || header.value === ""
       );
       acc[webhook.name as string] = {
         ...webhook,
@@ -120,7 +121,7 @@ export const convertNotifyToAPI = (notify: NotifyEditType) => {
  * @returns The latest_version in API format
  */
 export const convertUILatestVersionDataEditToAPI = (
-  data?: LatestVersionLookupEditType,
+  data?: LatestVersionLookupEditType
 ): LatestVersionLookupType | null => {
   let converted: LatestVersionLookupType = {
     type: data?.type,
@@ -167,7 +168,7 @@ export const convertUILatestVersionDataEditToAPI = (
  * @returns The deployed_version in API format
  */
 export const convertUIDeployedVersionDataEditToAPI = (
-  data?: DeployedVersionLookupEditType,
+  data?: DeployedVersionLookupEditType
 ): DeployedVersionLookupType | null => {
   if (!data?.url) {
     return null;

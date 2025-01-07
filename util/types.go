@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,11 @@ import (
 
 // UnmarshalConfig will unmarshal configuration data.
 //
-//	configFormat - json/yaml
+// Parameters:
+//
+//	configFormat: json/yaml
+//	configData: []byte | string | *yaml.Node.
+//	to: Pointer to unmarshal into.
 func UnmarshalConfig(
 	configFormat string,
 	configData interface{}, // []byte | string | *yaml.Node.

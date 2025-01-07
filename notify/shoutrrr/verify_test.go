@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,7 +65,8 @@ func TestShoutrrr_checkValuesType(t *testing.T) {
 				"", "", "", "", "", "")
 			svcStatus.Init(
 				1, 0, 0,
-				test.StringPtr(name), nil)
+				&name, nil,
+				nil)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1066,7 +1067,8 @@ func TestShoutrrr_checkValuesURLFields(t *testing.T) {
 				"", "", "", "", "", "")
 			svcStatus.Init(
 				1, 0, 0,
-				test.StringPtr("serviceID"), nil)
+				test.StringPtr("serviceID"), nil,
+				nil)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1247,7 +1249,8 @@ func TestShoutrrr_checkValuesParams(t *testing.T) {
 				"", "", "", "", "", "")
 			svcStatus.Init(
 				1, 0, 0,
-				test.StringPtr("serviceID"), nil)
+				test.StringPtr("serviceID"), nil,
+				nil)
 			shoutrrr.Init(
 				svcStatus,
 				tc.main,
@@ -1395,7 +1398,10 @@ func TestShoutrrr_CorrectSelf(t *testing.T) {
 				NewDefaults("",
 					make(map[string]string), make(map[string]string), make(map[string]string)))
 			serviceStatus := status.Status{}
-			serviceStatus.Init(1, 0, 0, &name, nil)
+			serviceStatus.Init(
+				1, 0, 0,
+				&name, nil,
+				nil)
 			shoutrrr.Init(
 				&serviceStatus,
 				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults)
@@ -1712,7 +1718,9 @@ func TestSlice_CheckValues(t *testing.T) {
 			if tc.slice != nil {
 				svcStatus := &status.Status{}
 				svcStatus.Init(
-					len(*tc.slice), 0, 0, nil, nil)
+					len(*tc.slice), 0, 0,
+					nil, nil,
+					nil)
 				tc.slice.Init(
 					svcStatus,
 					&SliceDefaults{}, &SliceDefaults{}, &SliceDefaults{})

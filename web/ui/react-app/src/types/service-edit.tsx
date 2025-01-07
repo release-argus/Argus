@@ -58,14 +58,15 @@ export interface LatestVersionLookupEditType {
   [key: string]:
     | string
     | boolean
+    | null
     | undefined
     | URLCommandType[]
     | LatestVersionFiltersEditType;
   type?: "github" | "url";
   url?: string;
   access_token?: string;
-  allow_invalid_certs?: boolean;
-  use_prerelease?: boolean;
+  allow_invalid_certs?: boolean | null;
+  use_prerelease?: boolean | null;
   url_commands?: URLCommandType[];
   require?: LatestVersionFiltersEditType;
 }
@@ -81,12 +82,13 @@ export interface DeployedVersionLookupEditType {
   [key: string]:
     | string
     | boolean
+    | null
     | undefined
     | BasicAuthType
     | HeaderEditType[];
   method?: "GET" | "POST";
   url?: string;
-  allow_invalid_certs?: boolean;
+  allow_invalid_certs?: boolean | null;
   basic_auth?: BasicAuthType;
   headers?: HeaderEditType[];
   body?: string;
@@ -110,6 +112,7 @@ export interface WebHookEditType extends WebHookType {
 //             API             //
 /////////////////////////////////
 export interface ServiceEditAPIType {
+  name?: string;
   comment?: string;
   options?: ServiceOptionsType;
   latest_version?: LatestVersionLookupEditType;

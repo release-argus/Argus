@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -87,35 +87,35 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"no name": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test"},
+				ServiceIDPrevious: "test"},
 			errRegex: "name and/or name_previous are required",
 		},
 		"no name, have name_previous": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				NamePrevious:        "test"},
+				ServiceIDPrevious: "test",
+				NamePrevious:      "test"},
 			errRegex: "invalid type",
 		},
 		"no Type": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "no_main_no_defaults_no_hard_defaults",
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              "no_main_no_defaults_no_hard_defaults",
+				URLFields:         typeWithNoDefaultsURLFields},
 			errRegex: "invalid type",
 		},
 		"edit, no Main, no Defaults - No Type": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "no_main_no_type",
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              "no_main_no_type",
+				URLFields:         typeWithNoDefaultsURLFields},
 			errRegex: "invalid type",
 		},
 		"edit, no Main, no Defaults - with Type": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "no_main_no_type",
-				Type:                typeWithNoDefaults,
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              "no_main_no_type",
+				Type:              typeWithNoDefaults,
+				URLFields:         typeWithNoDefaultsURLFields},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
@@ -124,16 +124,16 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"edit, no Main, no Defaults - had Type (missing name_previous)": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "no_main_with_type_and_no_defaults",
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              "no_main_with_type_and_no_defaults",
+				URLFields:         typeWithNoDefaultsURLFields},
 			errRegex: "invalid type",
 		},
 		"edit, no Main, no Defaults - had Type (have name_previous)": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				NamePrevious:        "no_main_with_type_and_no_defaults",
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_type_and_no_defaults",
+				URLFields:         typeWithNoDefaultsURLFields},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
@@ -142,10 +142,10 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"edit, no Main, have Defaults": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "no_main_with_type_and_defaults",
-				Type:                typeWithDefaults,
-				URLFields:           typeWithDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              "no_main_with_type_and_defaults",
+				Type:              typeWithDefaults,
+				URLFields:         typeWithDefaultsURLFields},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithDefaults,
@@ -154,9 +154,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"edit, have Main, no Defaults - Give Type": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_no_type",
-				Type:                typeWithNoDefaults},
+				ServiceIDPrevious: "test",
+				Name:              "main_no_type",
+				Type:              typeWithNoDefaults},
 			want: &Shoutrrr{
 				Base: Base{
 					Type: typeWithNoDefaults}},
@@ -164,15 +164,15 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"edit, have Main, no Defaults - No Type": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_no_type"},
+				ServiceIDPrevious: "test",
+				Name:              "main_no_type"},
 			errRegex: "invalid type",
 		},
 		"edit, have Main, have Defaults": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_with_type_and_defaults",
-				Type:                typeWithDefaults},
+				ServiceIDPrevious: "test",
+				Name:              "main_with_type_and_defaults",
+				Type:              typeWithDefaults},
 			want: &Shoutrrr{
 				Base: Base{
 					Type: typeWithDefaults}},
@@ -180,24 +180,24 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"edit, have Main, have Defaults - Fail, Different Type to Main": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_with_type_and_defaults",
-				Type:                typeWithNoDefaults},
+				ServiceIDPrevious: "test",
+				Name:              "main_with_type_and_defaults",
+				Type:              typeWithNoDefaults},
 			errRegex: `type: "[^"]+" != "[^"]+"`,
 		},
 		"edit, have Main, have Defaults - Fail, Invalid field": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_with_type_and_defaults",
+				ServiceIDPrevious: "test",
+				Name:              "main_with_type_and_defaults",
 				Options: map[string]string{
 					"delay": "number"}},
 			errRegex: `delay: "number" <invalid>`,
 		},
 		"new, no Main, have Defaults, type from name": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                typeWithDefaults,
-				URLFields:           typeWithDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              typeWithDefaults,
+				URLFields:         typeWithDefaultsURLFields},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithDefaults,
@@ -206,9 +206,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"new, no Main, no Defaults, type from name": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                typeWithNoDefaults,
-				URLFields:           typeWithNoDefaultsURLFields},
+				ServiceIDPrevious: "test",
+				Name:              typeWithNoDefaults,
+				URLFields:         typeWithNoDefaultsURLFields},
 			want: &Shoutrrr{
 				Base: Base{
 					Type:      typeWithNoDefaults,
@@ -217,8 +217,8 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"new, have Main, have Defaults": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_not_on_service_with_defaults"},
+				ServiceIDPrevious: "test",
+				Name:              "main_not_on_service_with_defaults"},
 			want: &Shoutrrr{
 				Base: Base{
 					Type: typeWithDefaults}},
@@ -226,9 +226,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"new, have Main, have Defaults - new service": {
 			payload: TestPayload{
-				ServiceNamePrevious: "",
-				ServiceName:         "something",
-				Name:                "main_not_on_service_with_defaults"},
+				ServiceIDPrevious: "",
+				ServiceID:         "something",
+				Name:              "main_not_on_service_with_defaults"},
 			want: &Shoutrrr{
 				Base: Base{
 					Type: typeWithDefaults}},
@@ -236,9 +236,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"new, have Main, have Defaults - Fail, Different Type to Main": {
 			payload: TestPayload{
-				ServiceNamePrevious: "test",
-				Name:                "main_not_on_service_with_defaults",
-				Type:                typeWithNoDefaults},
+				ServiceIDPrevious: "test",
+				Name:              "main_not_on_service_with_defaults",
+				Type:              typeWithNoDefaults},
 			errRegex: `type: "[^"]+" != "[^"]+"`,
 		},
 	}
@@ -296,9 +296,9 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 					got.String(""), tc.want.String(""))
 			}
 			// AND the serviceName is as expected
-			if *got.ServiceStatus.ServiceID != tc.payload.ServiceName {
-				t.Errorf("ServiceName mismatch:\ngot:  %q\nwant: %q",
-					*got.ServiceStatus.ServiceID, tc.payload.ServiceName)
+			if *got.ServiceStatus.ServiceID != tc.payload.ServiceID {
+				t.Errorf("ServiceID mismatch:\ngot:  %q\nwant: %q",
+					*got.ServiceStatus.ServiceID, tc.payload.ServiceID)
 			}
 			// AND the serviceURL is as expected
 			if serviceURL != tc.wantServiceURL {

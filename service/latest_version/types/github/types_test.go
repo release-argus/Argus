@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,9 +57,9 @@ func TestLookup_String(t *testing.T) {
 						nil, nil),
 					nil,
 					&base.Defaults{
-						AccessToken: ("foo")},
+						AccessToken: "foo"},
 					&base.Defaults{
-						AccessToken: ("foo")})
+						AccessToken: "foo"})
 			}),
 			want: test.TrimYAML(`
 				type: github
@@ -103,9 +103,9 @@ func TestLookup_String(t *testing.T) {
 					nil,
 					nil,
 					&base.Defaults{
-						AccessToken: ("foo")},
+						AccessToken: "foo"},
 					&base.Defaults{
-						AccessToken: ("foo")})
+						AccessToken: "foo"})
 			}),
 			want: test.TrimYAML(`
 				type: github
@@ -126,12 +126,12 @@ func TestLookup_String(t *testing.T) {
 					nil,
 					nil,
 					&base.Defaults{
-						AccessToken: ("foo"),
+						AccessToken: "foo",
 						Require: filter.RequireDefaults{
 							Docker: *filter.NewDockerCheckDefaults(
 								"ghcr", "", "", "", "", nil)}},
 					&base.Defaults{
-						AccessToken: ("foo")})
+						AccessToken: "foo"})
 			}),
 			want: test.TrimYAML(`
 				type: github

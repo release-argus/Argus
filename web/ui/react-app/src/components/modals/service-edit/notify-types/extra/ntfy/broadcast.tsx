@@ -18,8 +18,8 @@ const BROADCAST: FC<Props> = ({ name, defaults }) => (
   <>
     <FormItem
       name={`${name}.intent`}
-      label="Intent"
       col_sm={5}
+      label="Intent"
       defaultVal={defaults?.intent}
       placeholder="e.g. 'io.heckel.ntfy.USER_ACTION'"
       position="right"

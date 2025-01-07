@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ func LogInit(log *util.JLog) {
 func (s *Service) ServiceInfo() util.ServiceInfo {
 	return util.ServiceInfo{
 		ID:            s.ID,
+		Name:          s.Name,
 		URL:           s.LatestVersion.ServiceURL(true),
 		WebURL:        s.Status.GetWebURL(),
 		LatestVersion: s.Status.LatestVersion(),
@@ -79,7 +80,7 @@ func (s *Service) Init(
 	// Status.
 	s.Status.Init(
 		len(s.Notify), len(s.Command), len(s.WebHook),
-		&s.ID,
+		&s.ID, &s.Name,
 		&s.Dashboard.WebURL)
 
 	// Service.

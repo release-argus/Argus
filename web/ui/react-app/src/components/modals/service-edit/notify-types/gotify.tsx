@@ -110,7 +110,7 @@ const GOTIFY = ({
           label="Path"
           tooltip={
             <>
-              e.g. gotify.example.io/
+              e.g. gotify.example.io/{""}
               <span className="bold-underline">path</span>
             </>
           }

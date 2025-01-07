@@ -10,6 +10,7 @@ interface Props {
   mains?: Dict<WebHookType>;
   defaults?: WebHookType;
   hard_defaults?: WebHookType;
+  loading: boolean;
 }
 
 /**
@@ -18,9 +19,15 @@ interface Props {
  * @param mains - The global WebHooks
  * @param defaults - The default values for a WebHook
  * @param hard_defaults - The hard default values for a WebHook
+ * @param loading - Whether the modal is loading
  * @returns The form fields for `webhook`
  */
-const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
+const EditServiceWebHooks: FC<Props> = ({
+  mains,
+  defaults,
+  hard_defaults,
+  loading,
+}) => {
   const { fields, append, remove } = useFieldArray({
     name: "webhook",
   });
@@ -28,10 +35,10 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
     () => ({
       custom_headers: firstNonEmpty(
         defaults?.custom_headers,
-        hard_defaults?.custom_headers,
+        hard_defaults?.custom_headers
       ).map(() => ({ key: "", item: "" })),
     }),
-    [defaults, hard_defaults],
+    [defaults, hard_defaults]
   );
   const addItem = useCallback(() => {
     append(
@@ -40,7 +47,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
         name: "",
         custom_headers: convertedDefaults.custom_headers,
       },
-      { shouldFocus: false },
+      { shouldFocus: false }
     );
   }, []);
 
@@ -58,7 +65,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
           ))}
       </>
     ),
-    [mains],
+    [mains]
   );
 
   return (
@@ -82,6 +89,7 @@ const EditServiceWebHooks: FC<Props> = ({ mains, defaults, hard_defaults }) => {
             variant="secondary"
             style={{ width: "100%", marginTop: "1rem" }}
             onClick={addItem}
+            disabled={loading}
           >
             Add WebHook
           </Button>

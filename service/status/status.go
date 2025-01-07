@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,8 +55,9 @@ func NewDefaults(
 type Status struct {
 	statusBase
 
-	ServiceID *string `yaml:"-" json:"-"` // ID of the Service.
-	WebURL    *string `yaml:"-" json:"-"` // Web URL of the Service.
+	ServiceID   *string `yaml:"-" json:"-"` // ID of the Service.
+	ServiceName *string `yaml:"-" json:"-"` // Name of the Service.
+	WebURL      *string `yaml:"-" json:"-"` // Web URL of the Service.
 
 	mutex                    sync.RWMutex // Lock for the Status.
 	approvedVersion          string       // The approved version.
@@ -167,7 +168,7 @@ func (s *Status) SetAnnounceChannel(channel *chan []byte) {
 // Init initialises the Status variables when values beyond the default are required.
 func (s *Status) Init(
 	shoutrrrs, commands, webhooks int,
-	serviceID *string,
+	serviceID, serviceName *string,
 	webURL *string,
 ) {
 	s.Fails.Shoutrrr.Init(shoutrrrs)
@@ -175,6 +176,8 @@ func (s *Status) Init(
 	s.Fails.WebHook.Init(webhooks)
 
 	s.ServiceID = serviceID
+	s.ServiceName = serviceName
+
 	s.WebURL = webURL
 }
 
@@ -194,6 +197,19 @@ func (s *Status) SetLastQueried(t string) {
 	} else {
 		s.lastQueried = t
 	}
+}
+
+// SameVersions returns whether the Status has the same versions as `s`.
+func (s *Status) SameVersions(s2 *Status) bool {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	s2.mutex.RLock()
+	defer s2.mutex.RUnlock()
+
+	return s.approvedVersion == s2.approvedVersion &&
+		s.latestVersion == s2.latestVersion &&
+		s.deployedVersion == s2.deployedVersion
 }
 
 // ApprovedVersion returns the ApprovedVersion.

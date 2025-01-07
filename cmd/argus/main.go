@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ func main() {
 		// Log names of active services.
 		for _, key := range config.Order {
 			if config.Service[key].Options.GetActive() {
-				fmt.Printf("  - %s\n", config.Service[key].ID)
+				fmt.Printf("  - %s\n", config.Service[key].Name)
 			}
 		}
 	}

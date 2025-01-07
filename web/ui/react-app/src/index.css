@@ -154,6 +154,10 @@ code {
   background: none !important;
   border-style: none;
 }
+.btn-border {
+  border: 1px solid;
+  border-color: var(--bs-secondary);
+}
 
 .card-footer {
   border-top: none;

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ func findShoutrrr(
 			notify.ServiceStatus = &status.Status{ServiceID: &serviceID}
 			notify.ServiceStatus.Init(
 				1, 0, 0,
-				notify.ServiceStatus.ServiceID,
+				notify.ServiceStatus.ServiceID, notify.ServiceStatus.ServiceName,
 				notify.ServiceStatus.WebURL)
 			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 

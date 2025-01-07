@@ -29,45 +29,45 @@ const REGEX = ({ name }: { name: string }) => {
       <FormItem
         name={`${name}.regex`}
         required
-        label="RegEx"
-        smallLabel
         col_sm={5}
         col_xs={7}
+        label="RegEx"
+        smallLabel
         isRegex
         position="middle"
         positionXS="right"
       />
       <FormItem
         name={`${name}.index`}
+        col_sm={2}
+        col_xs={2}
         label="Index"
         smallLabel
         isNumber
-        placeholder="0"
-        col_sm={2}
-        col_xs={2}
         isRegex
+        placeholder="0"
         position="middle"
         positionXS="left"
       />
       <FormCheck
         name={`${name}.template_toggle`}
-        size="lg"
-        label="T"
-        tooltip="Use the RegEx to create a template"
-        smallLabel
         col_sm={1}
         col_xs={2}
+        size="lg"
+        label="T"
+        smallLabel
+        tooltip="Use the RegEx to create a template"
         position="right"
         positionXS="middle"
       />
       {templateToggle && (
         <FormItem
           name={`${name}.template`}
-          label="Template"
-          tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
-          smallLabel
           col_sm={12}
           col_xs={8}
+          label="Template"
+          smallLabel
+          tooltip="e.g. RegEx of 'v(\d)-(\d)-(\d)' on 'v4-0-1' with template '$1.$2.$3' would give '4.0.1'"
           position="right"
         />
       )}

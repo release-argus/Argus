@@ -220,8 +220,8 @@ const BARK = ({
         />
         <FormItem
           name={`${name}.url_fields.port`}
-          col_sm={3}
           required
+          col_sm={3}
           label="Port"
           isNumber
           defaultVal={convertedDefaults.url_fields.port}

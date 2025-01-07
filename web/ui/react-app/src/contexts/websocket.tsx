@@ -46,7 +46,7 @@ interface WebSocketCtx {
 export const WebSocketContext = createContext<WebSocketCtx>({
   ws: undefined,
   connected: false,
-  monitorData: { order: [], service: {} },
+  monitorData: { order: [], names: new Set<string>(), service: {} },
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   setMonitorData: () => {},
 });
@@ -63,6 +63,7 @@ export const WebSocketProvider = (props: Props) => {
   const queryClient = useQueryClient();
   const [monitorData, setMonitorData] = useReducer(reducerMonitor, {
     order: ["monitorData_loading"],
+    names: new Set<string>(),
     service: {},
   });
   const [connected, setConnected] = useState<Bool>(undefined);

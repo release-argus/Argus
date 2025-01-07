@@ -11,7 +11,7 @@ import { faGithub } from "@fortawesome/free-brands-svg-icons";
 import { useDelayedRender } from "hooks/delayed-render";
 
 interface Props {
-  service_id: ServiceSummaryType["id"];
+  service_name: ServiceSummaryType["name"];
   service_type: ServiceSummaryType["type"];
   loading: ServiceSummaryType["loading"];
   icon?: ServiceSummaryType["icon"];
@@ -23,7 +23,7 @@ interface Props {
  * Returns the service's image, with a loading spinner if the image is not loaded yet
  * and a link to the service. If the service has no icon, the service type icon (github/url) is displayed.
  *
- * @param service_id - The name of the service
+ * @param service_name - The name of the service
  * @param service_type - The type of the service
  * @param loading - Whether the service is loading
  * @param icon - The URL of the service's icon
@@ -32,7 +32,7 @@ interface Props {
  * @returns A component that displays the image of the service
  */
 export const ServiceImage: FC<Props> = ({
-  service_id,
+  service_name,
   service_type,
   loading,
   icon,
@@ -53,7 +53,7 @@ export const ServiceImage: FC<Props> = ({
         <Card.Img
           variant="top"
           src={icon}
-          alt={`${service_id} Image`}
+          alt={`${service_name}`}
           className="service-image"
         />
       );

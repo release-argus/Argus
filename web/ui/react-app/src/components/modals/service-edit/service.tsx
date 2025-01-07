@@ -1,4 +1,3 @@
-import { FormGroup, Stack } from "react-bootstrap";
 import { ServiceEditOtherData, ServiceEditType } from "types/service-edit";
 
 import EditServiceCommands from "components/modals/service-edit/commands";
@@ -7,16 +6,18 @@ import EditServiceDeployedVersion from "components/modals/service-edit/deployed-
 import EditServiceLatestVersion from "components/modals/service-edit/latest-version";
 import EditServiceNotifies from "components/modals/service-edit/notifies";
 import EditServiceOptions from "components/modals/service-edit/options";
+import EditServiceRoot from "components/modals/service-edit/root";
 import EditServiceWebHooks from "components/modals/service-edit/webhooks";
 import { FC } from "react";
-import { FormItem } from "components/generic/form";
+import { Stack } from "react-bootstrap";
 import { WebHookType } from "types/config";
-import { useWebSocket } from "contexts/websocket";
 
 interface Props {
-  name: string;
+  id: string;
+  name?: string;
   defaultData: ServiceEditType;
-  otherOptionsData: ServiceEditOtherData;
+  otherOptionsData?: ServiceEditOtherData;
+  loading: boolean;
 }
 
 /**
@@ -25,45 +26,34 @@ interface Props {
  * @param name - The name of the service
  * @returns The form fields for creating/editing a service
  */
-const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
-  const { monitorData } = useWebSocket();
-
+const EditService: FC<Props> = ({
+  id,
+  name,
+  defaultData,
+  otherOptionsData,
+  loading,
+}) => {
   return (
     <Stack gap={3}>
-      <FormGroup className="mb-2">
-        <FormItem
-          name="name"
-          required
-          registerParams={{
-            validate: (value: string) => {
-              const validation =
-                value === ""
-                  ? false
-                  : // Name hasn't changed or name isn't in use.
-                    name === value || !monitorData.order.includes(value);
-              return (
-                validation || (value === "" ? "Required" : "Must be unique")
-              );
-            },
-          }}
-          col_sm={12}
-          label="Name"
-        />
-        <FormItem name="comment" col_sm={12} label="Comment" position="right" />
-      </FormGroup>
+      <EditServiceRoot
+        id={id}
+        name={name}
+        original_name={defaultData?.name}
+        loading={loading}
+      />
       <EditServiceOptions
         defaults={otherOptionsData?.defaults?.service?.options}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.options}
       />
       <EditServiceLatestVersion
-        serviceName={name}
+        serviceID={id}
         original={defaultData?.latest_version}
         original_options={defaultData?.options}
         defaults={otherOptionsData?.defaults?.service?.latest_version}
         hard_defaults={otherOptionsData?.hard_defaults?.service?.latest_version}
       />
       <EditServiceDeployedVersion
-        serviceName={name}
+        serviceID={id}
         original={defaultData?.deployed_version}
         original_options={defaultData?.options}
         defaults={otherOptionsData?.defaults?.service?.deployed_version}
@@ -71,18 +61,20 @@ const EditService: FC<Props> = ({ name, defaultData, otherOptionsData }) => {
           otherOptionsData?.hard_defaults?.service?.deployed_version
         }
       />
-      <EditServiceCommands name="command" />
+      <EditServiceCommands name="command" loading={loading} />
       <EditServiceWebHooks
         mains={otherOptionsData?.webhook}
         defaults={otherOptionsData?.defaults?.webhook as WebHookType}
         hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
+        loading={loading}
       />
       <EditServiceNotifies
-        serviceName={name}
+        serviceID={id}
         originals={defaultData?.notify}
         mains={otherOptionsData?.notify}
         defaults={otherOptionsData?.defaults?.notify}
         hard_defaults={otherOptionsData?.hard_defaults?.notify}
+        loading={loading}
       />
       <EditServiceDashboard
         defaults={otherOptionsData?.defaults?.service?.dashboard}
