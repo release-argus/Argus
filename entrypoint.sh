@@ -23,7 +23,7 @@ if [ "$(id -u)" -eq 0 ]; then
 
   echo "Applying perms to config.yml and argus.db"
   touch /app/data/argus.db
-  chown ${ARGUS_UID}:${ARGUS_GID} \
+  chown "${ARGUS_UID}:${ARGUS_GID}" \
     /app \
     /app/data \
     /app/data/argus.db \
