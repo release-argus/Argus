@@ -4,7 +4,7 @@
 ARG DEBIAN_VERSION="bookworm"
 ARG GO_VERSION="1.22"
 ARG NODE_VERSION="20"
-ARG ALPINE_VEERSION="3.21"
+ARG ALPINE_VERSION="3.21"
 FROM golang:${GO_VERSION}-${DEBIAN_VERSION} AS go_builder
 FROM node:${NODE_VERSION}-${DEBIAN_VERSION} AS base
 
@@ -24,7 +24,7 @@ RUN make BUILD_VERSION=${BUILD_VERSION} build \
 #########
 # ARGUS #
 #########
-FROM alpine:${ALPINE_VEERSION}
+FROM alpine:${ALPINE_VERSION}
 LABEL maintainer="The Argus Authors <developers@release-argus.io>"
 RUN \
   apk update && \
