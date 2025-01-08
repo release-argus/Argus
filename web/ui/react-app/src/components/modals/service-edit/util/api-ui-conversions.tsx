@@ -662,6 +662,8 @@ const convertAPIDashboardDataEditToUI = (
 ) => {
 	return {
 		icon: '',
+		icon_link_to: '',
+		web_url: '',
 		...dashboard,
 		auto_approve: strToBool(dashboard?.auto_approve),
 	};

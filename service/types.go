@@ -144,7 +144,6 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		return nil
 	}
 
-	icon := s.IconURL()
 	var latestVersionType string
 	if s.LatestVersion != nil {
 		latestVersionType = s.LatestVersion.GetType()
@@ -158,7 +157,7 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		Active:                   s.Options.Active,
 		Type:                     latestVersionType,
 		WebURL:                   s.Status.GetWebURL(),
-		Icon:                     icon,
+		Icon:                     s.IconURL(),
 		IconLinkTo:               s.Dashboard.IconLinkTo,
 		HasDeployedVersionLookup: &hasDeployedVersionLookup,
 		Command:                  commands,
