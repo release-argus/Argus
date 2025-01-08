@@ -6,7 +6,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
-  padding: 0px;
+  padding: 0;
 }
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
@@ -77,13 +77,12 @@ code {
 
 .service-inner {
   border: none;
-  margin: 0.5rem;
   display: flex;
-  margin-top: auto;
+  margin: auto 0.5rem 0.5rem;
 }
 .service-item {
   display: flex;
-  padding: 0px;
+  padding: 0;
   justify-content: space-between;
   border: none;
   overflow: hidden;
@@ -131,10 +130,13 @@ code {
   background-color: transparent;
   border-color: var(--bs-btn-bg);
   border-width: 0.1rem;
-  color: var(--dark-text) !important;
+  color: var(--bs-btn-bg) !important;
 }
 .btn-secondary-outlined:focus {
   box-shadow: none;
+}
+.btn-secondary-outlined:hover {
+  color: var(--bs-body-color) !important;
 }
 
 .justify-right {
@@ -158,6 +160,10 @@ code {
   border: 1px solid;
   border-color: var(--bs-secondary);
 }
+.btn-border:hover {
+  border-color: var(--bs-secondary);
+  border-style: solid;
+}
 
 .card-footer {
   border-top: none;
@@ -167,7 +173,7 @@ code {
 }
 
 .service-title {
-  padding: 0.5rem 0.75rem 0px 0.75rem;
+  padding: 0.5rem 0.75rem 0 0.75rem;
 }
 .service-title a {
   color: var(--bs-heading-color);
@@ -199,7 +205,7 @@ code {
   color: var(--bs-body-color);
 }
 .list-group-item-warning {
-  color: var(--bs-alert) !important;
+  color: var(--bs-alert-color) !important;
   background-color: var(--bs-alert-bg) !important;
 }
 
@@ -226,15 +232,15 @@ code {
 }
 
 .no-margin {
-  margin: 0px;
+  margin: 0;
 }
 .empty {
-  margin: 0px;
-  padding: 0px;
+  margin: 0;
+  padding: 0;
 }
 
 .modal-item-title {
-  margin: 0px;
+  margin: 0;
   padding: 0.5rem;
   font-size: 1rem !important;
   display: flex;
@@ -255,10 +261,6 @@ code {
   background-color: var(--bs-secondary-bg);
   padding: 1rem;
   /* whiteSpace: "break-spaces" */
-}
-
-.spinner {
-  color: var(--placeholder-color);
 }
 
 .hiddenElement {
@@ -305,7 +307,7 @@ code {
 }
 .form-control-color {
   filter: brightness(100%) !important;
-  padding: 0px !important;
+  padding: 0 !important;
 }
 .is-invalid {
   border-color: var(--bs-danger) !important;
@@ -329,7 +331,7 @@ code {
   margin-top: 0.05rem;
 }
 .form-check:focus {
-  border-color: none;
+  border-color: transparent;
 }
 .form-check-input:focus {
   box-shadow: none;

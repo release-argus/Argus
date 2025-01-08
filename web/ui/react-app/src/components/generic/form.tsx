@@ -1,23 +1,23 @@
-import FormCheck from "./form-check";
-import FormItem from "./form-item";
-import FormItemColour from "./form-item-colour";
-import FormItemWithPreview from "./form-item-with-preview";
-import FormKeyVal from "./form-key-val";
-import FormKeyValMap from "./form-key-val-map";
-import FormLabel from "./form-label";
-import FormList from "./form-list";
-import FormSelect from "./form-select";
-import FormTextArea from "./form-textarea";
+import FormCheck from './form-check';
+import FormColour from './form-colour';
+import FormKeyVal from './form-key-val';
+import FormKeyValMap from './form-key-val-map';
+import FormLabel from './form-label';
+import FormList from './form-list';
+import FormSelect from './form-select';
+import FormText from './form-text';
+import FormTextArea from './form-text-area';
+import FormTextWithPreview from './form-text-with-preview';
 
 export {
-  FormCheck,
-  FormItem,
-  FormItemColour,
-  FormItemWithPreview,
-  FormKeyValMap,
-  FormKeyVal,
-  FormLabel,
-  FormList,
-  FormSelect,
-  FormTextArea,
+	FormCheck,
+	FormColour,
+	FormKeyValMap,
+	FormKeyVal,
+	FormLabel,
+	FormList,
+	FormSelect,
+	FormText,
+	FormTextArea,
+	FormTextWithPreview,
 };

@@ -1,11 +1,11 @@
-import { NotificationContext } from "contexts/notification";
-import { useContext } from "react";
+import { NotificationContext } from 'contexts/notification';
+import { useContext } from 'react';
 
 /**
- * @returns The notifications context
+ * @returns The notifications context.
  */
 const useNotifications = () => {
-  return useContext(NotificationContext);
+	return useContext(NotificationContext);
 };
 
 export default useNotifications;

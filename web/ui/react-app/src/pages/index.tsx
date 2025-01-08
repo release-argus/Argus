@@ -1,7 +1,7 @@
-import { Approvals } from "./approvals";
-import { Config } from "./status/configuration";
-import { Flags } from "./status/cli_flags";
-import { Status } from "./status/runtime_and_build_info";
+import { Approvals } from './approvals';
+import { Config } from './status/configuration';
+import { Flags } from './status/cli_flags';
+import { Status } from './status/runtime_and_build_info';
 
 const ApprovalsPage = Approvals;
 const StatusPage = Status;
