@@ -54,12 +54,13 @@ export const Approvals = (): ReactElement => {
 	const filteredServices = useMemo(() => {
 		const search = toolbarOptions.search.toLowerCase();
 		return Object.values(monitorData.order)
-			.filter((service) => {
+			.filter((service_id) => {
+				const name = monitorData.service[service_id]?.name ?? service_id;
 				if (
-					service.toLowerCase().includes(search) &&
-					monitorData.service[service]
+					name.toLowerCase().includes(search) &&
+					monitorData.service[service_id]
 				) {
-					const svc = monitorData.service[service];
+					const svc = monitorData.service[service_id];
 					const skipped =
 						`SKIP_${svc.status?.latest_version}` ===
 						svc.status?.approved_version;
