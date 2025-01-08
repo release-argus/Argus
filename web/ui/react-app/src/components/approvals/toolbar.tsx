@@ -6,7 +6,7 @@ import {
 	FormControl,
 	InputGroup,
 } from 'react-bootstrap';
-import { FC, memo, useContext, useMemo } from 'react';
+import { FC, memo, useContext, useEffect, useMemo, useRef } from 'react';
 import { ModalType, ServiceSummaryType } from 'types/summary';
 import {
 	faEye,
@@ -104,17 +104,64 @@ const ApprovalsToolbar: FC<Props> = ({ values, setValues }) => {
 		[],
 	);
 
+	const searchInputRef = useRef<HTMLInputElement | null>(null);
+	useEffect(() => {
+		const handleKeyPress = (event: KeyboardEvent) => {
+			// Ignore when in an input/textarea
+			if (
+				event.target instanceof HTMLInputElement ||
+				event.target instanceof HTMLTextAreaElement
+			) {
+				return;
+			}
+
+			if (event.key === '/') {
+				// Focus on the search box.
+				event.preventDefault();
+				searchInputRef.current?.focus();
+			}
+		};
+
+		const handleEscape = (event: KeyboardEvent) => {
+			// Escape pressed and we are in the search box.
+			if (
+				event.key === 'Escape' &&
+				searchInputRef.current &&
+				document.activeElement === searchInputRef.current
+			) {
+				searchInputRef.current.blur();
+				setValue('search', ''); // Clear search on escape
+			}
+		};
+
+		// Add event listener
+		window.addEventListener('keydown', handleKeyPress);
+		window.addEventListener('keydown', handleEscape);
+
+		// Clean up the event listener on unmount
+		return () => {
+			window.removeEventListener('keydown', handleKeyPress);
+			window.removeEventListener('keydown', handleEscape);
+		};
+	}, []);
+
 	return (
 		<Form className="mb-3" style={{ display: 'flex' }}>
 			<InputGroup className="me-3">
 				<FormControl
-					type="string"
-					placeholder="Filter services"
+					type="text"
+					ref={searchInputRef}
+					placeholder="Type '/' to filter services"
 					value={values.search}
 					onChange={(e) => setValue('search', e.target.value)}
+					aria-label="Filter services"
 				/>
 				{values.search.length > 0 && (
-					<Button variant="secondary" onClick={() => setValue('search', '')}>
+					<Button
+						variant="secondary"
+						onClick={() => setValue('search', '')}
+						aria-label="Clear search"
+					>
 						<FontAwesomeIcon icon={faTimes} />
 					</Button>
 				)}
