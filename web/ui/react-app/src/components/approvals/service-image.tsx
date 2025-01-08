@@ -1,10 +1,10 @@
+import { FC, useMemo } from 'react';
 import {
 	faCircleNotch,
 	faWindowMaximize,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { Card } from 'react-bootstrap';
-import { FC } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ServiceSummaryType } from 'types/summary';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
@@ -46,7 +46,7 @@ export const ServiceImage: FC<Props> = ({
 		height: '6rem',
 	};
 
-	const iconRender = () => {
+	const iconRender = useMemo(() => {
 		// URL icon.
 		if (icon)
 			return (
@@ -83,7 +83,7 @@ export const ServiceImage: FC<Props> = ({
 				className="service-image"
 			/>
 		);
-	};
+	}, [service_type, icon, loading, visible]);
 
 	return (
 		<div
@@ -96,7 +96,7 @@ export const ServiceImage: FC<Props> = ({
 				rel="noreferrer noopener"
 				style={{ color: 'inherit', display: 'contents' }}
 			>
-				{iconRender()}
+				{iconRender}
 			</a>
 		</div>
 	);

@@ -536,6 +536,56 @@ func TestServiceSummary_String(t *testing.T) {
 	}
 }
 
+func Test_handleUnchangedOrEmpty(t *testing.T) {
+	tests := []struct {
+		name    string
+		new     string
+		current string
+		want    string
+	}{
+		{
+			name:    "added",
+			new:     "test",
+			current: "",
+			want:    "test",
+		},
+		{
+			name:    "unchanged",
+			new:     "test",
+			current: "test",
+			want:    "",
+		},
+		{
+			name:    "unchanged - both empty",
+			new:     "",
+			current: "",
+			want:    "",
+		},
+		{
+			name:    "different",
+			new:     "new",
+			current: "current",
+			want:    "new",
+		},
+		{
+			name:    "removed",
+			new:     "",
+			current: "test",
+			want:    "~",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := handleUnchangedOrEmpty(tc.new, tc.current)
+			if got != tc.want {
+				t.Errorf("handleUnchangedOrEmpty(%q, %q) = %q, want %q",
+					tc.new, tc.current, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 	// GIVEN two ServiceSummaries
 	tests := map[string]struct {
