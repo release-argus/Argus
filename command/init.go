@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,12 +70,12 @@ func (c *Controller) InitMetrics() {
 	// ############
 	for _, cmd := range *c.Command {
 		name := cmd.String()
-		metric.InitPrometheusCounter(metric.CommandMetric,
+		metric.InitPrometheusCounter(metric.CommandResultTotal,
 			name,
 			*c.ServiceStatus.ServiceID,
 			"",
 			"SUCCESS")
-		metric.InitPrometheusCounter(metric.CommandMetric,
+		metric.InitPrometheusCounter(metric.CommandResultTotal,
 			name,
 			*c.ServiceStatus.ServiceID,
 			"",
@@ -91,12 +91,12 @@ func (c *Controller) DeleteMetrics() {
 
 	for _, cmd := range *c.Command {
 		name := cmd.String()
-		metric.DeletePrometheusCounter(metric.CommandMetric,
+		metric.DeletePrometheusCounter(metric.CommandResultTotal,
 			name,
 			*c.ServiceStatus.ServiceID,
 			"",
 			"SUCCESS")
-		metric.DeletePrometheusCounter(metric.CommandMetric,
+		metric.DeletePrometheusCounter(metric.CommandResultTotal,
 			name,
 			*c.ServiceStatus.ServiceID,
 			"",

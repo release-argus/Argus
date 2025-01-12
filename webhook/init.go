@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -113,12 +113,12 @@ func (w *WebHook) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.WebHookMetric,
+	metric.InitPrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		*w.ServiceStatus.ServiceID,
 		"",
 		"SUCCESS")
-	metric.InitPrometheusCounter(metric.WebHookMetric,
+	metric.InitPrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		*w.ServiceStatus.ServiceID,
 		"",
@@ -142,12 +142,12 @@ func (w *WebHook) deleteMetrics() {
 		return
 	}
 
-	metric.DeletePrometheusCounter(metric.WebHookMetric,
+	metric.DeletePrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		*w.ServiceStatus.ServiceID,
 		"",
 		"SUCCESS")
-	metric.DeletePrometheusCounter(metric.WebHookMetric,
+	metric.DeletePrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		*w.ServiceStatus.ServiceID,
 		"",

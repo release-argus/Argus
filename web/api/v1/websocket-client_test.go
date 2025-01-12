@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 )
 
 func TestGetIP(t *testing.T) {
-	// GIVEN a request
+	// GIVEN a request.
 	tests := map[string]struct {
 		headers    map[string]string
 		remoteAddr string
@@ -74,10 +74,10 @@ func TestGetIP(t *testing.T) {
 			}
 			req.RemoteAddr = tc.remoteAddr
 
-			// WHEN getIP is called on this request
+			// WHEN getIP is called on this request.
 			got := getIP(req)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %v",
 					tc.want, got)
@@ -95,14 +95,14 @@ type wsTestClient struct {
 func setupWSTestClient(t *testing.T) *wsTestClient {
 	t.Helper()
 
-	// Create an upgrader for the test server
+	// Create an upgrader for the test server.
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	// Create test server
+	// Create test server.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -111,7 +111,7 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 		}
 		defer ws.Close()
 
-		// Echo messages back
+		// Echo messages back.
 		for {
 			messageType, message, err := ws.ReadMessage()
 			if err != nil {
@@ -123,14 +123,14 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 		}
 	}))
 
-	// Create WebSocket connection
+	// Create WebSocket connection.
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("could not open websocket connection: %v", err)
 	}
 
-	// Create client
+	// Create client.
 	hub := NewHub()
 	client := &Client{
 		hub:  hub,
@@ -224,23 +224,23 @@ func TestClient_writePump(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// Setup test client
+			// Setup test client.
 			wsTest := setupWSTestClient(t)
 			defer wsTest.cleanup()
 
-			// Start writePump
+			// Start writePump.
 			go wsTest.client.writePump()
 
-			// Create channel to track received messages
+			// Create channel to track received messages.
 			receivedMessages := make([]string, 0)
 			done := make(chan bool)
 
-			// Start goroutine to read messages
+			// Start goroutine to read messages.
 			go func() {
-				for _, _ = range tc.messages {
+				for range tc.messages {
 					_, message, err := wsTest.conn.ReadMessage()
 					if err != nil {
 						if !tc.closeClient {
@@ -257,7 +257,7 @@ func TestClient_writePump(t *testing.T) {
 				done <- true
 			}()
 
-			// Send messages through the client's send channel
+			// Send messages through the client's send channel.
 			for _, msg := range tc.messages {
 				wsTest.client.send <- []byte(msg)
 			}
@@ -266,10 +266,10 @@ func TestClient_writePump(t *testing.T) {
 				close(wsTest.client.send)
 			}
 
-			// Wait for messages or timeout
+			// Wait for messages or timeout.
 			select {
 			case <-done:
-				// Success case
+				// Success.
 			case <-time.After(2 * time.Second):
 				if !tc.closeClient && len(receivedMessages) != len(tc.wantMessages) {
 					t.Errorf("timeout waiting for messages. Got %d messages, want %d",
@@ -277,7 +277,7 @@ func TestClient_writePump(t *testing.T) {
 				}
 			}
 
-			// Verify stdout
+			// Verify stdout.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("stdout did not match regex %q:\n%s", tc.stdoutRegex, stdout)
@@ -324,18 +324,18 @@ func TestClient_readPump(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
-			// Setup test client
+			// Setup test client.
 			wsTest := setupWSTestClient(t)
 			defer wsTest.cleanup()
 
-			// Create channels to coordinate test
+			// Create channels to coordinate test.
 			done := make(chan bool)
 			receivedMessages := make([]string, 0)
 
-			// Start goroutine to collect messages from send channel
+			// Start goroutine to collect messages from send channel.
 			go func() {
 				for msg := range wsTest.client.send {
 					receivedMessages = append(receivedMessages, string(msg))
@@ -346,10 +346,10 @@ func TestClient_readPump(t *testing.T) {
 				}
 			}()
 
-			// Start the readPump
+			// Start the readPump.
 			go wsTest.client.readPump()
 
-			// Send test messages
+			// Send test messages.
 			for _, msg := range tc.messages {
 				err := wsTest.client.conn.WriteMessage(websocket.TextMessage, []byte(msg))
 				if err != nil {
@@ -361,10 +361,10 @@ func TestClient_readPump(t *testing.T) {
 				wsTest.conn.Close()
 			}
 
-			// Wait for messages or timeout
+			// Wait for messages, or timeout.
 			select {
 			case <-done:
-				// Success case
+				// Success.
 			case <-time.After(2 * time.Second):
 				if len(receivedMessages) != len(tc.wantMessages) {
 					t.Errorf("timeout waiting for messages. Got %d messages, want %d",
@@ -372,7 +372,7 @@ func TestClient_readPump(t *testing.T) {
 				}
 			}
 
-			// Verify received messages
+			// Verify received messages.
 			if len(receivedMessages) != len(tc.wantMessages) {
 				t.Errorf("got %d messages, want %d", len(receivedMessages), len(tc.wantMessages))
 			}
@@ -385,7 +385,7 @@ func TestClient_readPump(t *testing.T) {
 				}
 			}
 
-			// THEN verify the results
+			// THEN verify the results.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
 				t.Errorf("stdout did not match regex %q:\n%s", tc.stdoutRegex, stdout)

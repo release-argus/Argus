@@ -81,10 +81,11 @@ func main() {
 		}
 	}
 
-	go db.Run(&config, &jLog)
+	// Setup DB and last known service versions.
+	db.Run(&config, &jLog)
 
 	// Track all targets for changes in version and act on any found changes.
-	go (&config).Service.Track(&config.Order, &config.OrderMutex)
+	go config.Service.Track(&config.Order, &config.OrderMutex)
 
 	// Web server.
 	web.Run(&config, &jLog)

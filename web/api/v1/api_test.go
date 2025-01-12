@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestNewAPI(t *testing.T) {
@@ -134,6 +136,65 @@ func TestNewAPI(t *testing.T) {
 						t.Errorf("Expected basicAuth middleware to pass, got: %s",
 							resp.Body.String())
 					}
+				}
+			}
+		})
+	}
+}
+
+func TestWriteJSON(t *testing.T) {
+	// GIVEN different input strings to write.
+	tests := map[string]struct {
+		response     *http.Response
+		statusCode   int
+		expectedBody string
+		input        interface{}
+		expectedErr  bool
+	}{
+		"successful JSON encoding": {
+			response:     &http.Response{},
+			statusCode:   http.StatusOK,
+			expectedBody: `{"key":"value"}` + "\n",
+			input:        map[string]string{"key": "value"},
+			expectedErr:  false,
+		},
+		"JSON encoding failure": {
+			response:     &http.Response{},
+			statusCode:   http.StatusInternalServerError,
+			expectedBody: "",
+			input:        make(chan int), // Invalid type for JSON encoding.
+			expectedErr:  true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're using stdout
+			releaseStdout := test.CaptureStdout()
+
+			w := httptest.NewRecorder()
+			api := &API{}
+
+			// WHEN writeJSON is called with this input.
+			api.writeJSON(w, tc.input, util.LogFrom{})
+
+			// THEN the status code is as expected.
+			if w.Code != tc.statusCode {
+				t.Errorf("Expected status code %d, got %d",
+					tc.statusCode, w.Code)
+			}
+
+			if body := w.Body.String(); body != tc.expectedBody {
+				t.Errorf("Expected body %q, got %q",
+					tc.expectedBody, body)
+			}
+
+			stdout := releaseStdout()
+			if tc.expectedErr {
+				errRegex := "ERROR: json: unsupported type: chan int"
+				if !util.RegexCheck(errRegex, stdout) {
+					t.Errorf("want match for %q\nnot: %q",
+						errRegex, stdout)
 				}
 			}
 		})

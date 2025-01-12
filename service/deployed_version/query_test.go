@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -71,10 +71,10 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			lookup := testLookup()
 			lookup.URL = tc.url
 
-			// WHEN httpRequest is called on it
+			// WHEN httpRequest is called on it.
 			_, err := lookup.httpRequest(util.LogFrom{})
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("want match for %q\nnot: %q",
@@ -85,7 +85,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN a Lookup()
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		env                         map[string]string
 		overrides, optionsOverrides string
@@ -263,10 +263,10 @@ func TestLookup_Query(t *testing.T) {
 				t.Fatalf("failed to unmarshal options overrides: %s", err)
 			}
 
-			// WHEN Query is called on it
+			// WHEN Query is called on it.
 			version, err := dvl.Query(true, util.LogFrom{})
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			if tc.wantVersion != "" {
 				if !util.RegexCheck(tc.wantVersion, version) {
 					t.Errorf("want version=%q\ngot  version=%q",
@@ -476,7 +476,7 @@ func TestLookup_Track(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			for k, v := range tc.env {
@@ -512,13 +512,13 @@ func TestLookup_Track(t *testing.T) {
 			}
 			didFinish := make(chan bool, 1)
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			go func() {
 				tc.lookup.Track()
 				didFinish <- true
 			}()
 
-			// THEN the function exits straight away
+			// THEN the function exits straight away.
 			time.Sleep(tc.wait)
 			if tc.expectFinish {
 				if len(didFinish) == 0 {
@@ -530,8 +530,8 @@ func TestLookup_Track(t *testing.T) {
 			}
 			haveQueried := false
 			for haveQueried != false {
-				passQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "SUCCESS"))
-				failQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(*tc.lookup.Status.ServiceID, "FAIL"))
+				passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(*tc.lookup.Status.ServiceID, "SUCCESS"))
+				failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(*tc.lookup.Status.ServiceID, "FAIL"))
 				if passQ != float64(0) && failQ != float64(0) {
 					haveQueried = true
 				}
@@ -560,7 +560,7 @@ func TestLookup_Track(t *testing.T) {
 					tc.wantDatabaseMessages, len(*tc.lookup.Status.DatabaseChannel))
 			}
 
-			// Set Deleting to stop the Track
+			// Set Deleting to stop the Track.
 			tc.lookup.Status.SetDeleting()
 		})
 	}

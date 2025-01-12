@@ -37,15 +37,14 @@ var cfg *config.Config
 func TestMain(m *testing.M) {
 	databaseFile := "TestDB.db"
 
-	// Log
+	// Log.
 	jLog := util.NewJLog("DEBUG", false)
 	jLog.Testing = true
 	LogInit(jLog, databaseFile)
 
 	cfg = testConfig()
 	cfg.Settings.Data.DatabaseFile = databaseFile
-	go Run(cfg, nil)
-	time.Sleep(250 * time.Millisecond) // Time for db to start
+	Run(cfg, nil)
 
 	exitCode := m.Run()
 	os.Remove(cfg.Settings.Data.DatabaseFile)
@@ -85,7 +84,7 @@ func testConfig() (cfg *config.Config) {
 		SaveChannel:     &saveChannel,
 	}
 
-	// Services
+	// Services.
 	for svcName := range cfg.Service {
 		svc := service.Service{
 			ID:     "foo",
@@ -99,7 +98,7 @@ func testConfig() (cfg *config.Config) {
 		svc.Status.SetDeployedVersion("2.0.0", "", false)
 		svc.Status.SetLatestVersion("3.0.0", time.Now().Add(time.Hour).Format(time.RFC3339), false)
 
-		// Add service to Config
+		// Add service to Config.
 		cfg.Service[svcName] = &svc
 	}
 
@@ -137,7 +136,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 		approved_version
 	FROM status
 	WHERE id = ?;`
-	// Retry up-to 10 times incase 'database is locked'
+	// Retry up-to 10 times in case 'database is locked'.
 	var row *sql.Rows
 	var err error
 	for i := 0; i < 10; i++ {

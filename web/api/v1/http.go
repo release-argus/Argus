@@ -101,6 +101,8 @@ func (api *API) SetupRoutesAPI() {
 	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("PUT")
 	//   DELETE, service-edit - delete service (disable=service_delete).
 	api.Router.HandleFunc("/api/v1/service/delete/{service_id:.+}", api.httpServiceDelete).Methods("DELETE")
+	//   GET, counts for Heimdall.
+	api.Router.HandleFunc("/api/v1/counts", api.httpCounts).Methods("GET")
 
 	// Disable specified routes.
 	api.DisableRoutesAPI()
@@ -202,8 +204,6 @@ func (api *API) SetupRoutesFavicon() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
 	logFrom := util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
 	jLog.Verbose("-", logFrom, true)
 

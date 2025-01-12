@@ -28,7 +28,7 @@ import (
 )
 
 func TestShoutrrr_Send(t *testing.T) {
-	// GIVEN a Shoutrrr to try and send
+	// GIVEN a Shoutrrr to try and send.
 	tests := map[string]struct {
 		shoutrrr                           *Shoutrrr
 		delay                              string
@@ -112,7 +112,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			}
 			tc.shoutrrr.Options["max_tries"] = fmt.Sprint(tc.retries + 1)
 
-			// WHEN send attempted
+			// WHEN send attempted.
 			msg := strings.ReplaceAll(tc.message, "__name__", name)
 			err := tc.shoutrrr.Send(
 				"test",
@@ -121,18 +121,18 @@ func TestShoutrrr_Send(t *testing.T) {
 				tc.useDelay,
 				!tc.noMetrics)
 
-			// THEN any error should match the expected regex
+			// THEN any error should match the expected regex.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("Shoutrrr.Send() expected error matching:\n%q\ngot:\n%q\n",
 					tc.errRegex, e)
 			}
-			// AND SUCCESS metrics are recorded as expected
+			// AND SUCCESS metrics are recorded as expected.
 			want := 0
 			if tc.errRegex == "^$" && tc.expectMetrics {
 				want = 1
 			}
-			gotMetric := testutil.ToFloat64(metric.NotifyMetric.WithLabelValues(
+			gotMetric := testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
 				"SUCCESS",
 				*svcStatus.ServiceID,
@@ -141,12 +141,12 @@ func TestShoutrrr_Send(t *testing.T) {
 				t.Errorf("Shoutrrr.Send() expected %d success metrics, got %d",
 					want, int(gotMetric))
 			}
-			// AND FAILURE metrics are recorded as expected
+			// AND FAILURE metrics are recorded as expected.
 			want = 0
 			if tc.errRegex != "^$" && tc.expectMetrics {
 				want = int(tc.shoutrrr.GetMaxTries())
 			}
-			gotMetric = testutil.ToFloat64(metric.NotifyMetric.WithLabelValues(
+			gotMetric = testutil.ToFloat64(metric.NotifyResultTotal.WithLabelValues(
 				tc.shoutrrr.ID,
 				"FAIL",
 				*svcStatus.ServiceID,
@@ -160,7 +160,7 @@ func TestShoutrrr_Send(t *testing.T) {
 }
 
 func TestSlice_Send(t *testing.T) {
-	// GIVEN a Slice of Shoutrrr
+	// GIVEN a Slice of Shoutrrr.
 	tests := map[string]struct {
 		slice    *Slice
 		useDelay bool
@@ -206,10 +206,10 @@ func TestSlice_Send(t *testing.T) {
 			serviceInfo := util.ServiceInfo{
 				ID: name}
 
-			// WHEN Send is called
+			// WHEN Send is called.
 			err := tc.slice.Send("TestSlice_Send", name, serviceInfo, tc.useDelay)
 
-			// THEN the expected error state is returned
+			// THEN the expected error state is returned.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("shoutrrr.Slice.Send() wants an error match on\n%q\ngot:\n%q",

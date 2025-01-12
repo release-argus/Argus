@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import (
 )
 
 func TestWebHook_Try(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		url                                          *string
 		allowInvalidCerts, selfSignedCert, wouldFail bool
@@ -83,10 +83,10 @@ func TestWebHook_Try(t *testing.T) {
 				webhook.AllowInvalidCerts = &tc.allowInvalidCerts
 				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
-				// WHEN try is called with it
+				// WHEN try is called on it.
 				err := webhook.try(util.LogFrom{})
 
-				// THEN any err is expected
+				// THEN any err is expected.
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.errRegex, e) {
 					if strings.Contains(e, "context deadline exceeded") {
@@ -105,7 +105,7 @@ func TestWebHook_Try(t *testing.T) {
 }
 
 func TestWebHook_Send(t *testing.T) {
-	// GIVEN a WebHook
+	// GIVEN a WebHook.
 	tests := map[string]struct {
 		customHeaders, wouldFail, useDelay, deleting, silentFails bool
 		delay                                                     string
@@ -165,7 +165,7 @@ func TestWebHook_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
 			try := 0
 			contextDeadlineExceeded := true
@@ -185,10 +185,10 @@ func TestWebHook_Send(t *testing.T) {
 				webhook.ServiceStatus.ServiceID = &serviceInfo.ID
 				if tc.retries > 0 {
 					go func() {
-						fails := testutil.ToFloat64(metric.WebHookMetric.WithLabelValues(
+						fails := testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
 							webhook.ID, "FAIL", serviceInfo.ID))
 						for fails < float64(tc.retries) {
-							fails = testutil.ToFloat64(metric.WebHookMetric.WithLabelValues(
+							fails = testutil.ToFloat64(metric.WebHookResultTotal.WithLabelValues(
 								webhook.ID, "FAIL", serviceInfo.ID))
 							time.Sleep(time.Millisecond * 200)
 						}
@@ -199,11 +199,11 @@ func TestWebHook_Send(t *testing.T) {
 					}()
 				}
 
-				// WHEN try is called with it
+				// WHEN try is called on it.
 				startAt := time.Now()
 				webhook.Send(serviceInfo, tc.useDelay)
 
-				// THEN the logs are expected
+				// THEN the logs are expected.
 				completedAt := time.Now()
 				stdout := releaseStdout()
 				stdout = strings.ReplaceAll(stdout, "\n", "-n")
@@ -218,7 +218,7 @@ func TestWebHook_Send(t *testing.T) {
 					t.Errorf("match on %q not found in\n%q",
 						tc.stdoutRegex, stdout)
 				}
-				// AND the delay is expected
+				// AND the delay is expected.
 				if tc.delay != "" {
 					delayDuration, _ := time.ParseDuration(tc.delay)
 					took := completedAt.Sub(startAt)
@@ -234,7 +234,7 @@ func TestWebHook_Send(t *testing.T) {
 }
 
 func TestSlice_Send(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice                       *Slice
 		stdoutRegex, stdoutRegexAlt string
@@ -272,14 +272,14 @@ func TestSlice_Send(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
 			try := 0
 			contextDeadlineExceeded := true
 			for contextDeadlineExceeded != false {
 				try++
 				contextDeadlineExceeded = false
-				tc.repeat++ // repeat to check delay usage as map order is random
+				tc.repeat++ // repeat to check delay usage as map order is random.
 				for tc.repeat != 0 {
 					releaseStdout := test.CaptureStdout()
 					if tc.slice != nil {
@@ -291,10 +291,10 @@ func TestSlice_Send(t *testing.T) {
 						}
 					}
 
-					// WHEN try is called with it
+					// WHEN try is called on it.
 					tc.slice.Send(util.ServiceInfo{ID: name}, tc.useDelay)
 
-					// THEN the logs are expected
+					// THEN the logs are expected.
 					stdout := releaseStdout()
 					stdout = strings.ReplaceAll(stdout, "\n", "-n")
 					if !util.RegexCheck(tc.stdoutRegex, stdout) {
@@ -323,7 +323,7 @@ func TestSlice_Send(t *testing.T) {
 }
 
 func TestNotifiers_SendWithNotifier(t *testing.T) {
-	// GIVEN Notifiers
+	// GIVEN Notifiers.
 	tests := map[string]struct {
 		shoutrrrNotifiers *shoutrrr.Slice
 		errRegex          string
@@ -346,10 +346,10 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 
 			notifiers := Notifiers{Shoutrrr: tc.shoutrrrNotifiers}
 
-			// WHEN Send is called with them
+			// WHEN Send is called with them.
 			err := notifiers.Send("TestNotifiersSendWithNotifier", name, util.ServiceInfo{ID: name})
 
-			// THEN err is as expected
+			// THEN err is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("match on %q not found in\n%q",
@@ -360,7 +360,7 @@ func TestNotifiers_SendWithNotifier(t *testing.T) {
 }
 
 func TestCheckWebHookBody(t *testing.T) {
-	// GIVEN a response body
+	// GIVEN a response body.
 	tests := map[string]struct {
 		body string
 		want bool
@@ -386,10 +386,10 @@ func TestCheckWebHookBody(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN checkWebHookBody is called on it
+			// WHEN checkWebHookBody is called on it.
 			got := checkWebHookBody(tc.body)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("want: %t\ngot:  %t",
 					tc.want, got)

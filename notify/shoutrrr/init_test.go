@@ -26,7 +26,7 @@ import (
 )
 
 func TestSlice_Metrics(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		slice *Slice
 	}{
@@ -46,7 +46,7 @@ func TestSlice_Metrics(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics
+			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
 			if tc.slice != nil {
 				for name, s := range *tc.slice {
@@ -57,12 +57,12 @@ func TestSlice_Metrics(t *testing.T) {
 				}
 			}
 
-			// WHEN the Prometheus metrics are initialised with initMetrics
-			had := testutil.CollectAndCount(metric.NotifyMetric)
+			// WHEN the Prometheus metrics are initialised with initMetrics.
+			had := testutil.CollectAndCount(metric.NotifyResultTotal)
 			tc.slice.InitMetrics()
 
-			// THEN it can be counted
-			got := testutil.CollectAndCount(metric.NotifyMetric)
+			// THEN it can be counted.
+			got := testutil.CollectAndCount(metric.NotifyResultTotal)
 			want := had
 			if tc.slice != nil {
 				want += 2 * len(*tc.slice)
@@ -72,9 +72,9 @@ func TestSlice_Metrics(t *testing.T) {
 					got, want)
 			}
 
-			// AND the metrics can be deleted
+			// AND the metrics can be deleted.
 			tc.slice.DeleteMetrics()
-			got = testutil.CollectAndCount(metric.NotifyMetric)
+			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
 				t.Errorf("deleted metrics but got %d, expecting %d",
 					got, want)
@@ -84,7 +84,7 @@ func TestSlice_Metrics(t *testing.T) {
 }
 
 func TestShoutrrr_Metrics(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := []string{
 		"a service",
 		"another service",
@@ -96,22 +96,22 @@ func TestShoutrrr_Metrics(t *testing.T) {
 			shoutrrr := testShoutrrr(false, false)
 			*shoutrrr.ServiceStatus.ServiceID = name
 
-			// WHEN the Prometheus metrics are initialised with initMetrics
-			had := testutil.CollectAndCount(metric.NotifyMetric)
+			// WHEN the Prometheus metrics are initialised with initMetrics.
+			had := testutil.CollectAndCount(metric.NotifyResultTotal)
 			shoutrrr.initMetrics()
 
-			// THEN it can be collected
-			// counters
-			got := testutil.CollectAndCount(metric.NotifyMetric)
+			// THEN it can be collected.
+			// counters:
+			got := testutil.CollectAndCount(metric.NotifyResultTotal)
 			want := 2
 			if (got - had) != want {
 				t.Errorf("%d Counter metrics were initialised, expecting %d",
 					(got - had), want)
 			}
 
-			// AND it can be deleted
+			// AND it can be deleted.
 			shoutrrr.deleteMetrics()
-			got = testutil.CollectAndCount(metric.NotifyMetric)
+			got = testutil.CollectAndCount(metric.NotifyResultTotal)
 			if got != had {
 				t.Errorf("Counter metrics were deleted, got %d. expecting %d",
 					got, had)
@@ -121,7 +121,7 @@ func TestShoutrrr_Metrics(t *testing.T) {
 }
 
 func TestShoutrrr_InitOptions(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		had, want map[string]string
 	}{
@@ -145,10 +145,10 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Options = tc.had
 
-			// WHEN initOptions is called on it
+			// WHEN initOptions is called on it.
 			shoutrrr.initOptions()
 
-			// THEN the keys in the map will have been converted to lowercase
+			// THEN the keys in the map will have been converted to lowercase.
 			if len(tc.want) != len(shoutrrr.Options) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.Options)
@@ -164,7 +164,7 @@ func TestShoutrrr_InitOptions(t *testing.T) {
 }
 
 func TestShoutrrr_InitURLFields(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		had, want map[string]string
 	}{
@@ -188,10 +188,10 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.URLFields = tc.had
 
-			// WHEN initURLFields is called on it
+			// WHEN initURLFields is called on it.
 			shoutrrr.initURLFields()
 
-			// THEN the keys in the map will have been converted to lowercase
+			// THEN the keys in the map will have been converted to lowercase.
 			if len(tc.want) != len(shoutrrr.URLFields) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.URLFields)
@@ -207,7 +207,7 @@ func TestShoutrrr_InitURLFields(t *testing.T) {
 }
 
 func TestShoutrrr_InitParams(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		had, want map[string]string
 	}{
@@ -231,10 +231,10 @@ func TestShoutrrr_InitParams(t *testing.T) {
 			*shoutrrr.ServiceStatus.ServiceID = name
 			shoutrrr.Params = tc.had
 
-			// WHEN initParams is called on it
+			// WHEN initParams is called on it.
 			shoutrrr.initParams()
 
-			// THEN the keys in the map will have been converted to lowercase
+			// THEN the keys in the map will have been converted to lowercase.
 			if len(tc.want) != len(shoutrrr.Params) {
 				t.Fatalf("want: %v\ngot: %v",
 					tc.want, shoutrrr.Params)
@@ -250,7 +250,7 @@ func TestShoutrrr_InitParams(t *testing.T) {
 }
 
 func TestShoutrrr_InitMaps(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		had, want   map[string]string
 		nilShoutrrr bool
@@ -282,10 +282,10 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 				shoutrrr = nil
 			}
 
-			// WHEN InitMaps is called on it
+			// WHEN InitMaps is called on it.
 			shoutrrr.InitMaps()
 
-			// THEN the keys in the options/urlFields/params maps will have been converted to lowercase
+			// THEN the keys in the options/urlFields/params maps will have been converted to lowercase.
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",
@@ -324,7 +324,7 @@ func TestShoutrrr_InitMaps(t *testing.T) {
 }
 
 func TestShoutrrr_Init(t *testing.T) {
-	// GIVEN a Shoutrrr
+	// GIVEN a Shoutrrr.
 	tests := map[string]struct {
 		id                           string
 		had, want                    map[string]string
@@ -394,13 +394,13 @@ func TestShoutrrr_Init(t *testing.T) {
 				shoutrrr = nil
 			}
 
-			// WHEN Init is called on it
+			// WHEN Init is called on it.
 			shoutrrr.Init(
 				serviceStatus,
 				tc.main,
 				defaults, hardDefaults)
 
-			// THEN the Shoutrrr is initialised correctly
+			// THEN the Shoutrrr is initialised correctly:
 			if tc.nilShoutrrr {
 				if shoutrrr != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",
@@ -408,22 +408,22 @@ func TestShoutrrr_Init(t *testing.T) {
 				}
 				return
 			}
-			// main
+			// 	main
 			if shoutrrr.Main != tc.main && tc.giveMain {
 				t.Errorf("Main was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					tc.main, &shoutrrr.Main)
 			}
-			// defaults
+			// 	defaults
 			if shoutrrr.Defaults != defaults {
 				t.Errorf("Defaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					&defaults, shoutrrr.Defaults)
 			}
-			// hardDefaults
+			// 	hardDefaults
 			if shoutrrr.HardDefaults != hardDefaults {
 				t.Errorf("HardDefaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					&hardDefaults, shoutrrr.HardDefaults)
 			}
-			// status
+			// 	status
 			if shoutrrr.ServiceStatus != serviceStatus {
 				t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 					&serviceStatus, shoutrrr.ServiceStatus)
@@ -447,7 +447,7 @@ func TestShoutrrr_Init(t *testing.T) {
 }
 
 func TestSlice_Init(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		nilSlice               bool
 		slice                  *Slice
@@ -528,12 +528,12 @@ func TestSlice_Init(t *testing.T) {
 				tc.slice = nil
 			}
 
-			// WHEN Init is called on it
+			// WHEN Init is called on it.
 			tc.slice.Init(
 				&serviceStatus,
 				tc.mains, &tc.defaults, &tc.hardDefaults)
 
-			// THEN the Shoutrrr is initialised correctly
+			// THEN the Shoutrrr is initialised correctly:
 			if tc.nilSlice {
 				if tc.slice != nil {
 					t.Fatalf("nil shoutrrr should still be nil, not %v",
@@ -543,25 +543,25 @@ func TestSlice_Init(t *testing.T) {
 			}
 
 			for id := range *tc.slice {
-				// main
+				// 	main
 				if (*tc.slice)[id].Main == nil ||
 					(tc.mains != nil && (*tc.mains)[id] != nil && (*tc.slice)[id].Main != (*tc.mains)[id]) {
 					t.Errorf("Main was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 						(*tc.mains)[id], &(*tc.slice)[id].Main)
 				}
-				// defaults
+				// 	defaults
 				if tc.defaults[id] != nil &&
 					(*tc.slice)[id].Defaults != tc.defaults[id] {
 					t.Errorf("Defaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 						tc.defaults[id], (*tc.slice)[id].Defaults)
 				}
-				// hardDefaults
+				// 	hardDefaults
 				if tc.hardDefaults[id] != nil &&
 					(*tc.slice)[id].HardDefaults != tc.hardDefaults[id] {
 					t.Errorf("HardDefaults were not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 						tc.hardDefaults[id], (*tc.slice)[id].HardDefaults)
 				}
-				// status
+				// 	status
 				if (*tc.slice)[id].ServiceStatus != &serviceStatus {
 					t.Errorf("Status was not handed to the Shoutrrr correctly\nwant: %v\ngot:  %v",
 						&serviceStatus, (*tc.slice)[id].ServiceStatus)

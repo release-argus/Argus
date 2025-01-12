@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
 	"gopkg.in/yaml.v3"
@@ -38,9 +38,6 @@ func TestService_Track(t *testing.T) {
 	testURLService := testService(t, "TestService_Track", "url")
 	testURLService.LatestVersion.Query(false, util.LogFrom{})
 	testURLLatestVersion := testURLService.Status.LatestVersion()
-	testGitHubSVC := testService(t, "TestService_Track", "github")
-	testGitHubSVC.LatestVersion.Query(false, util.LogFrom{})
-	// testGitHubLatestVersion := testGitHubSVC.Status.LatestVersion()
 
 	type overrides struct {
 		latestVersion    string
@@ -51,7 +48,7 @@ func TestService_Track(t *testing.T) {
 		startLatestVersion, wantLatestVersion     string
 		startDeployedVersion, wantDeployedVersion string
 	}
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		latestVersionType    string
 		overrides            overrides
@@ -71,8 +68,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"first query updates LatestVersion and DeployedVersion - unchanged by active=true": {
 			latestVersionType: "url",
@@ -86,8 +83,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"query finds a newer version and updates LatestVersion and DeployedVersion - no commands/webhooks": {
 			latestVersionType: "url",
@@ -102,8 +99,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		"query finds a newer version and updates LatestVersion and not DeployedVersion - has webhook": {
 			latestVersionType: "url",
@@ -124,8 +121,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.1"},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 1, // db: 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 1, // DB: 1 for latest.
 		},
 		"query finds a newer version does send webhooks if autoApprove enabled": {
 			latestVersionType: "url",
@@ -148,8 +145,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "1.2.1", startDeployedVersion: "1.2.1",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion},
-			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed
-			wantDatabaseMessages: 2, // db: 1 for latest, 1 for deployed
+			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		"query doesn't update versions if it finds one that's older semantically": {
 			latestVersionType: "url",
@@ -184,8 +181,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"track on signed cert allowed": {
 			latestVersionType: "url",
@@ -203,8 +200,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1"},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"github - urlCommand, regex fail": {
 			latestVersionType: "github",
@@ -281,8 +278,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"handle leading v's - non-semantic": {
 			latestVersionType: "url",
@@ -303,8 +300,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2"},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 2, // db: 1 for deployed, 1 for latest
+			wantAnnounces:        1, // Announce: 1 for latest query.
+			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
 		},
 		"non-semantic version fail": {
 			latestVersionType: "url",
@@ -369,8 +366,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: testURLLatestVersion, startDeployedVersion: "1.2.0",
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.2"},
-			wantAnnounces:        2, // announce: 1 for latest query, 1 for deployed change
-			wantDatabaseMessages: 1, // db: 1 for deployed change
+			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
+			wantDatabaseMessages: 1, // DB: 1 for deployed change.
 		},
 		"track gets DeployedVersion that's newer updates LatestVersion too": {
 			latestVersionType: "url",
@@ -381,14 +378,14 @@ func TestService_Track(t *testing.T) {
 				`),
 			},
 			keepDeployedLookup:   true,
-			ignoreLivenessMetric: true, // ignore as deployed lookup may be done before
+			ignoreLivenessMetric: true, // Ignore as DeployedVersionLookup may be done before.
 			versions: versions{
 				startLatestVersion: testURLLatestVersion, startDeployedVersion: "0.0.0",
 				wantLatestVersion: "3.2.1", wantDeployedVersion: "3.2.1"},
-			wantAnnounces: 3, // announce: 1 for latest query (as it'll give <latestVersion, but be called before we have deployedVersion),
-			// 1 for latest change,
-			// 1 for deployed change
-			wantDatabaseMessages: 2, // db: 1 for latest change, 1 for deployed change
+			wantAnnounces: 3, // Announce: 1 for latest query (as it'll give <latestVersion, but be called before we have deployedVersion).
+			// 1 for latest change.
+			// 1 for deployed change.
+			wantDatabaseMessages: 2, // db: 1 for latest change, 1 for deployed change.
 		},
 		"track that last did a Query less than interval ago waits until interval": {
 			latestVersionType: "url",
@@ -405,8 +402,8 @@ func TestService_Track(t *testing.T) {
 			versions: versions{
 				startLatestVersion: testURLLatestVersion,
 				wantLatestVersion:  testURLLatestVersion},
-			wantAnnounces:        1, // announce: 1 for latest query
-			wantDatabaseMessages: 0, // db: 0 for nothing changing
+			wantAnnounces:        1, // announce: 1 for latest query.
+			wantDatabaseMessages: 0, // db: 0 for nothing changing.
 		},
 		"inactive service doesn't track": {
 			latestVersionType: "url",
@@ -464,16 +461,16 @@ func TestService_Track(t *testing.T) {
 				svc.LatestVersion = nil
 			}
 
+			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
+			svc.Status.SetDeployedVersion(tc.versions.startDeployedVersion, "", false)
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}
-			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
-			svc.Status.SetDeployedVersion(tc.versions.startDeployedVersion, "", false)
 			if !tc.keepDeployedLookup {
 				svc.DeployedVersionLookup = nil
 			}
 			interval := svc.Options.GetIntervalDuration()
-			// subtract this from now to get the timestamp
+			// Subtract this from now to get the timestamp.
 			if tc.wantQueryIn != "" {
 				wantQueryIn, _ := time.ParseDuration(tc.wantQueryIn)
 				svc.Status.SetLastQueried(
@@ -491,7 +488,7 @@ func TestService_Track(t *testing.T) {
 				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 			didFinish := make(chan bool, 1)
 
-			// WHEN Track is called on it
+			// WHEN Track is called on it.
 			go func() {
 				svc.Track()
 				didFinish <- true
@@ -499,14 +496,14 @@ func TestService_Track(t *testing.T) {
 			for i := 0; i < 200; i++ {
 				var passQ, failQ float64
 				if !tc.overrides.nilLatestVersion {
-					passQ = testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
-					failQ = testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "FAIL"))
+					passQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "SUCCESS"))
+					failQ = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(svc.ID, svc.LatestVersion.GetType(), "FAIL"))
 				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
-						passQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(svc.ID, "SUCCESS"))
-						failQ := testutil.ToFloat64(metric.DeployedVersionQueryMetric.WithLabelValues(svc.ID, "FAIL"))
-						// if deployedVersionLookup hasn't queried, keep waiting
+						passQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(svc.ID, "SUCCESS"))
+						failQ := testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(svc.ID, "FAIL"))
+						// if deployedVersionLookup hasn't queried, keep waiting.
 						if passQ != float64(0) || failQ != float64(0) {
 							break
 						}
@@ -517,16 +514,16 @@ func TestService_Track(t *testing.T) {
 				time.Sleep(50 * time.Millisecond)
 			}
 			time.Sleep(500 * time.Millisecond)
-			// Check that we waited until interval had gone since the last latestVersionLookup
+			// Check that we waited until interval had gone since the last latestVersionLookup.
 			if tc.wantQueryIn != "" {
-				// When we'd expect the query to be done after
+				// When we'd expect the query to be done after.
 				timeUntilInterval, _ := time.ParseDuration(tc.wantQueryIn)
 				lvPreviousTimestamp, _ := time.Parse(time.RFC3339, latestVersionTimestamp)
 				lvExpectedAfter := lvPreviousTimestamp.Add(timeUntilInterval)
 				dvPreviousTimestamp, _ := time.Parse(time.RFC3339, deployedVersionTimestamp)
 				dvExpectedAfter := dvPreviousTimestamp.Add(timeUntilInterval)
 
-				// WHen we actually did the query
+				// WHen we actually did the query.
 				didAt, _ := time.Parse(time.RFC3339, svc.Status.LastQueried())
 				if didAt.Before(lvExpectedAfter) {
 					t.Errorf("LatestVersionLookup should have waited until\n%s, but did it at\n%s\n%v",
@@ -538,18 +535,18 @@ func TestService_Track(t *testing.T) {
 				}
 			}
 
-			// THEN the scrape updates the Status correctly
+			// THEN the scrape updates the Status correctly.
 			if tc.versions.wantLatestVersion != svc.Status.LatestVersion() ||
 				tc.versions.wantDeployedVersion != svc.Status.DeployedVersion() {
 				t.Fatalf("\nLatestVersion, want %q, got %q\nDeployedVersion, want %q, got %q\n",
 					tc.versions.wantLatestVersion, svc.Status.LatestVersion(),
 					tc.versions.wantDeployedVersion, svc.Status.DeployedVersion())
 			}
-			// LatestVersionQueryMetric
+			// LatestVersionQueryResultTotal
 			if !tc.overrides.nilLatestVersion {
-				gotMetric := testutil.ToFloat64(metric.LatestVersionQueryLiveness.WithLabelValues(svc.ID, svc.LatestVersion.GetType()))
+				gotMetric := testutil.ToFloat64(metric.LatestVersionQueryResultLast.WithLabelValues(svc.ID, svc.LatestVersion.GetType()))
 				if !tc.ignoreLivenessMetric && gotMetric != float64(tc.livenessMetric) {
-					t.Errorf("LatestVersionQueryLiveness should be %d, not %f",
+					t.Errorf("LatestVersionQueryResultLast should be %d, not %f",
 						tc.livenessMetric, gotMetric)
 				}
 			}
@@ -579,9 +576,9 @@ func TestService_Track(t *testing.T) {
 					gotDatabaseMessages = len(*svc.Status.DatabaseChannel)
 				}
 			}
-			// Track should finish if it's not active and is not being deleted
+			// Track should finish if it is not Active and is not being deleted.
 			shouldFinish := !svc.Options.GetActive() || tc.deleting || tc.overrides.nilLatestVersion
-			// Didn't finish but should have?
+			// Didn't finish, but should have?
 			if shouldFinish && len(didFinish) == 0 {
 				t.Fatal("expected Track to finish when not active, deleting, or LatestVersion is nil")
 			}
@@ -590,14 +587,14 @@ func TestService_Track(t *testing.T) {
 				t.Fatal("didn't expect Track to finish")
 			}
 
-			// Set Deleting to stop the Track
+			// Set Deleting to stop the Track.
 			svc.Status.SetDeleting()
 		})
 	}
 }
 
 func TestSlice_Track(t *testing.T) {
-	// GIVEN a Slice
+	// GIVEN a Slice.
 	tests := map[string]struct {
 		ordering []string
 		slice    []string
@@ -636,10 +633,10 @@ func TestSlice_Track(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN Track is called on it
+			// WHEN Track is called on it.
 			slice.Track(&tc.ordering, &sync.RWMutex{})
 
-			// THEN the function exits straight away
+			// THEN the function exits straight away.
 			time.Sleep(2 * time.Second)
 			for i := range *slice {
 				if !util.Contains(tc.ordering, i) {
@@ -657,7 +654,7 @@ func TestSlice_Track(t *testing.T) {
 						i, (*slice)[i].Status.String())
 				}
 
-				// Set Deleting to stop the Track
+				// Set Deleting to stop the Track.
 				(*slice)[i].Status.SetDeleting()
 			}
 		})

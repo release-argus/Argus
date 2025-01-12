@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import (
 )
 
 func TestHTTPRequest(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		failing  bool
 		url      string
@@ -61,10 +61,10 @@ func TestHTTPRequest(t *testing.T) {
 				lookup.URL = tc.url
 			}
 
-			// WHEN httpRequest is called on it
+			// WHEN httpRequest is called on it.
 			_, err := lookup.httpRequest(util.LogFrom{})
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("web.Lookup.httpRequest() want match for %q\nnot: %q",
@@ -75,7 +75,7 @@ func TestHTTPRequest(t *testing.T) {
 }
 
 func TestGetVersion(t *testing.T) {
-	// GIVEN a Lookup and a Body to filter
+	// GIVEN a Lookup and a Body to filter.
 	body := `
 		version 1 is "v0.0.0"
 		version 2 is "ver1.2.3-dev"
@@ -271,17 +271,17 @@ func TestGetVersion(t *testing.T) {
 				lookup.Defaults, lookup.HardDefaults)
 			testBody := util.PtrValueOrValue(tc.bodyOverride, body)
 
-			// WHEN getVersion is called on it
+			// WHEN getVersion is called on it.
 			version, err := lookup.getVersion(
 				testBody, util.LogFrom{})
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
 				t.Errorf("web.Lookup.getVersion() error mismatch:\nwant: %q\ngot:  %q",
 					tc.want.errRegex, e)
 			}
-			// AND the version is as expected
+			// AND the version is as expected.
 			if tc.want.version != version {
 				t.Errorf("web.Lookup.getVersion() version mismatch:\nwant: %q\ngot:  %q",
 					tc.want.version, version)
@@ -305,7 +305,7 @@ func TestQuery(t *testing.T) {
 		errRegex    string
 	}
 
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		overrides          string
 		semanticVersioning *bool
@@ -524,7 +524,7 @@ func TestQuery(t *testing.T) {
 			hadStatus: statusVars{
 				latestVersion: testLookupVersions.Status.LatestVersion()},
 			want: wantVars{
-				announce:   true, // LastQueried announce
+				announce:   true, // LastQueried announce.
 				newVersion: false,
 				errRegex:   `^$`},
 		},
@@ -532,7 +532,7 @@ func TestQuery(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
 			try := 0
 			temporaryFailureInNameResolution := true
@@ -542,7 +542,7 @@ func TestQuery(t *testing.T) {
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(false)
 				lookup.InitMetrics(lookup)
-				// Valid cert switch
+				// Valid cert switch.
 				lookup.URL = strings.Replace(lookup.URL, "://invalid", "://valid", 1)
 				lookup.AllowInvalidCerts = nil
 				lookup.Status.ServiceID = &name
@@ -560,11 +560,11 @@ func TestQuery(t *testing.T) {
 					lookup.Status,
 					lookup.Defaults, lookup.HardDefaults)
 
-				// WHEN Query is called on it
+				// WHEN Query is called on it.
 				var newVersion bool
 				newVersion, err = lookup.Query(true, util.LogFrom{})
 
-				// THEN any err is expected
+				// THEN any err is expected.
 				stdout := releaseStdout()
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.want.errRegex, e) {
@@ -578,12 +578,12 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("web.Lookup.Query() want match for %q\nnot: %q",
 						tc.want.errRegex, e)
 				}
-				// AND the stdout contains the expected strings
+				// AND the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
 					t.Fatalf("web.Lookup.Query() match for %q not found in:\n%q",
 						tc.want.stdoutRegex, stdout)
 				}
-				// AND the LatestVersion is as expected
+				// AND the LatestVersion is as expected.
 				if tc.hadStatus.latestVersionWant != "" &&
 					tc.hadStatus.latestVersionWant != lookup.Status.LatestVersion() {
 					t.Fatalf("web.Lookup.Query() wanted LatestVersion to become %q, not %q",
@@ -596,18 +596,18 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("web.Lookup.Query() wanted newVersion to be %t, not %t",
 						tc.want.newVersion, newVersion)
 				}
-				// AND the metrics are as expected
+				// AND the metrics are as expected.
 				// FAIL
 				want := 0
 				if tc.want.errRegex != "^$" {
 					want = 1
 				}
-				got := testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(
+				got := testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					*lookup.Status.ServiceID,
 					lookup.Type,
 					"FAIL"))
 				if got != float64(want) {
-					t.Fatalf("web.Lookup.Query() LatestVersionQueryMetric - FAIL\nwant: %d\ngot:  %f",
+					t.Fatalf("web.Lookup.Query() LatestVersionQueryResultTotal - FAIL\nwant: %d\ngot:  %f",
 						want, got)
 				}
 				// SUCCESS
@@ -615,12 +615,12 @@ func TestQuery(t *testing.T) {
 				if tc.want.errRegex == "^$" {
 					want = 1
 				}
-				got = testutil.ToFloat64(metric.LatestVersionQueryMetric.WithLabelValues(
+				got = testutil.ToFloat64(metric.LatestVersionQueryResultTotal.WithLabelValues(
 					*lookup.Status.ServiceID,
 					lookup.Type,
 					"SUCCESS"))
 				if got != float64(want) {
-					t.Fatalf("web.Lookup.Query() LatestVersionQueryMetric - FAIL\nwant: %d\ngot:  %f",
+					t.Fatalf("web.Lookup.Query() LatestVersionQueryResultTotal - FAIL\nwant: %d\ngot:  %f",
 						want, got)
 				}
 				lookup.DeleteMetrics(lookup)

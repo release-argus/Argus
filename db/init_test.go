@@ -38,7 +38,7 @@ func TestCheckFile(t *testing.T) {
 		path  string
 		perms fs.FileMode
 	}
-	// GIVEN various paths
+	// GIVEN various paths.
 	tests := map[string]struct {
 		removeBefore     string
 		createDirBefore  []createOptions
@@ -97,7 +97,7 @@ func TestCheckFile(t *testing.T) {
 							err)
 					}
 				}
-				// set perms (in reverse order)
+				// Set perms (in reverse order).
 				for i := len(tc.createDirBefore) - 1; i >= 0; i-- {
 					if err := os.Chmod(tc.createDirBefore[i].path, tc.createDirBefore[i].perms); err != nil {
 						t.Fatalf("%s",
@@ -126,10 +126,10 @@ func TestCheckFile(t *testing.T) {
 				}()
 			}
 
-			// WHEN checkFile is called on that same dir
+			// WHEN checkFile is called on that same dir.
 			checkFile(tc.path)
 
-			// THEN we get here only when we should
+			// THEN we get here only when we should.
 			if tc.panicRegex != "" {
 				t.Fatalf("Expected panic with %q",
 					tc.panicRegex)
@@ -139,7 +139,7 @@ func TestCheckFile(t *testing.T) {
 }
 
 func TestAPI_Initialise(t *testing.T) {
-	// GIVEN a config with a database location
+	// GIVEN a config with a database location.
 	tests := map[string]struct {
 		unreadableDB bool
 	}{
@@ -162,7 +162,7 @@ func TestAPI_Initialise(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				// Ignore nil panics
+				// Ignore nil panics.
 				if r == nil {
 					return
 				}
@@ -172,15 +172,15 @@ func TestAPI_Initialise(t *testing.T) {
 				}
 			}()
 
-			// WHEN the db is initialised with it
+			// WHEN the db is initialised with it.
 			tAPI.initialise()
 
-			// THEN the app panic'd if the db was unreadable
+			// THEN the app panic'd if the db was unreadable.
 			if tc.unreadableDB {
 				t.Error("Expected a panic")
 				return
 			}
-			// THEN the status table was created in the db
+			// THEN the status table was created in the db.
 			rows, err := tAPI.db.Query(`
 				SELECT	id,
 						latest_version,
@@ -209,11 +209,11 @@ func TestAPI_Initialise(t *testing.T) {
 }
 
 func TestDBQueryService(t *testing.T) {
-	// GIVEN a blank DB
+	// GIVEN a blank DB.
 	tAPI := testAPI("TestDBQueryService", "db")
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
-	// Get a Service from the Config
+	// Get a Service from the Config.
 	var serviceName string
 	for k := range tAPI.config.Service {
 		serviceName = k
@@ -221,7 +221,7 @@ func TestDBQueryService(t *testing.T) {
 	}
 	svc := tAPI.config.Service[serviceName]
 
-	// WHEN the database contains data for a Service
+	// WHEN the database contains data for a Service.
 	tAPI.updateRow(
 		serviceName,
 		[]dbtype.Cell{
@@ -233,7 +233,7 @@ func TestDBQueryService(t *testing.T) {
 			{Column: "approved_version", Value: (*svc).Status.ApprovedVersion()}},
 	)
 
-	// THEN that data can be queried
+	// THEN that data can be queried.
 	got := queryRow(t, tAPI.db, serviceName)
 	if (*svc).Status.LatestVersion() != got.LatestVersion() {
 		t.Errorf("LatestVersion %q was not pushed to the db. Got %q",
@@ -258,7 +258,7 @@ func TestDBQueryService(t *testing.T) {
 }
 
 func TestAPI_RemoveUnknownServices(t *testing.T) {
-	// GIVEN a DB with loads of service status'
+	// GIVEN a DB with many service status'.
 	tests := map[string]struct {
 		databaseDeleted bool
 	}{
@@ -308,7 +308,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				// Ignore nil panics
+				// Ignore nil panics.
 				if r == nil {
 					return
 				}
@@ -317,20 +317,20 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 					t.Fatalf("unexpected panic: %v", r)
 				}
 			}()
-			// Delete the DB file
+			// Delete the DB file.
 			if tc.databaseDeleted {
 				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
-			// WHEN the unknown Services are removed with removeUnknownServices
+			// WHEN the unknown Services are removed with removeUnknownServices.
 			tAPI.removeUnknownServices()
 
-			// THEN the app panic'd if the db was deleted
+			// THEN the app panic'd if the db was deleted.
 			if tc.databaseDeleted {
 				t.Error("Expected a panic")
 				return
 			}
-			// AND the rows of Services not in .All are returned
+			// AND the rows of Services not in .All are returned.
 			rows, err := tAPI.db.Query(`
 				SELECT	id,
 						latest_version,
@@ -370,9 +370,9 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 }
 
 func TestAPI_Run(t *testing.T) {
-	// GIVEN a DB is running (see TestMain)
+	// GIVEN a DB is running (see TestMain).
 
-	// WHEN a message is send to the DatabaseChannel targeting latest_version
+	// WHEN a message is send to the DatabaseChannel targeting latest_version.
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	*cfg.DatabaseChannel <- dbtype.Message{
@@ -381,7 +381,7 @@ func TestAPI_Run(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	// THEN the cell was changed in the DB
+	// THEN the cell was changed in the DB.
 	otherCfg := testConfig()
 	otherCfg.Settings.Data.DatabaseFile = "TestAPI_Run-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
@@ -412,13 +412,13 @@ func TestAPI_Run(t *testing.T) {
 }
 
 func TestAPI_extractServiceStatus(t *testing.T) {
-	// GIVEN an API on a DB containing at least 1 row
+	// GIVEN an API on a DB containing at least 1 row.
 	tAPI := testAPI("TestAPI_extractServiceStatus", "db")
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
 	go tAPI.handler()
 	wantStatus := make([]status.Status, len(cfg.Service))
-	// push a random Status for each Service to the DB
+	// Push a random Status for each Service to the DB.
 	index := 0
 	for id, svc := range tAPI.config.Service {
 		id := id
@@ -442,7 +442,7 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 				{Column: "deployed_version", Value: wantStatus[index].DeployedVersion()},
 				{Column: "deployed_version_timestamp", Value: wantStatus[index].DeployedVersionTimestamp()},
 				{Column: "approved_version", Value: wantStatus[index].ApprovedVersion()}}}
-		// Clear the Status in the Config
+		// Clear the Status in the Config.
 		svc.Status = *status.New(
 			svc.Status.AnnounceChannel, svc.Status.DatabaseChannel, svc.Status.SaveChannel,
 			"", "", "", "", "", "")
@@ -450,10 +450,10 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 	}
 	time.Sleep(250 * time.Millisecond)
 
-	// WHEN extractServiceStatus is called
+	// WHEN extractServiceStatus is called.
 	tAPI.extractServiceStatus()
 
-	// THEN the Status in the Config is updated
+	// THEN the Status in the Config is updated.
 	errMsg := "Expected %q to be updated to %q, got %q.\nWant %q"
 	for i := range wantStatus {
 		row := queryRow(t, tAPI.db, *wantStatus[i].ServiceID)
@@ -481,7 +481,7 @@ func TestAPI_extractServiceStatus(t *testing.T) {
 }
 
 func Test_UpdateTypes(t *testing.T) {
-	// GIVEN a DB with the *_version columns as STRING/TEXT
+	// GIVEN a DB with the *_version columns as STRING/TEXT.
 	tests := map[string]struct {
 		columnType                         string
 		databaseDeleted, backupTableExists bool
@@ -507,14 +507,14 @@ func Test_UpdateTypes(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			databaseFile := strings.ReplaceAll(
 				fmt.Sprintf("%s-Test_UpdateColumnTypes.db", name),
 				" ", "_")
 			db, err := sql.Open("sqlite", databaseFile)
-			// Enable foreign key constraint enforcement
+			// Enable foreign key constraint enforcement.
 			if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
 				t.Fatalf("Failed to enable foreign key constraints: %s", err)
 			}
@@ -533,7 +533,7 @@ func Test_UpdateTypes(t *testing.T) {
 				);`
 			sqlStmtTable = strings.ReplaceAll(sqlStmtTable, "TYPE", tc.columnType)
 			db.Exec(sqlStmtTable)
-			// Add a row to the table
+			// Add a row to the table.
 			id := "keepMe"
 			latestVersion, latestVersionTimestamp := "0.0.3", "2020-01-02T01:01:01Z"
 			deployedVersion, deployedVersionTimestamp := "0.0.2", "2020-01-01T01:01:01Z"
@@ -563,7 +563,7 @@ func Test_UpdateTypes(t *testing.T) {
 				tc.cannotAlterTable
 			defer func() {
 				r := recover()
-				// Ignore nil panics
+				// Ignore nil panics.
 				if r == nil {
 					return
 				}
@@ -573,18 +573,18 @@ func Test_UpdateTypes(t *testing.T) {
 					t.Fatalf("unexpected panic: %v", r)
 				}
 			}()
-			// Delete the DB file
+			// Delete the DB file.
 			if tc.databaseDeleted {
 				os.Remove(databaseFile)
 
-				// Create a backup table with different fields
+				// Create a backup table with different fields.
 			} else if tc.backupTableExists {
 				db.Exec(`
 					CREATE TABLE IF NOT EXISTS status_backup (
 						id  TEXT  NOT NULL  PRIMARY KEY
 					);`)
 
-				// Create a foreign key to prevent dropping the status table
+				// Create a foreign key to prevent dropping the status table.
 			} else if tc.cannotDropTable {
 				db.Exec(`
 					CREATE TABLE IF NOT EXISTS fk_table (
@@ -592,12 +592,12 @@ func Test_UpdateTypes(t *testing.T) {
 						fk_id  TEXT     NOT NULL,
 						FOREIGN KEY (fk_id) REFERENCES status(id)
 					);`)
-				// Create a row in the fk_table
+				// Create a row in the fk_table.
 				db.Exec(`
 					INSERT OR REPLACE INTO fk_table ( fk_id )
 					VALUES ( '` + id + `' );`)
 
-				// Create a trigger to prevent altering the status_backup table
+				// Create a trigger to prevent altering the status_backup table.
 			} else if tc.cannotAlterTable {
 				db.Exec(strings.Replace(
 					sqlStmtTable, "status", "status_backup", 1))
@@ -609,16 +609,16 @@ func Test_UpdateTypes(t *testing.T) {
 					END;`)
 			}
 
-			// WHEN updateTable is called
+			// WHEN updateTable is called.
 			updateTable(db)
 
-			// THEN the app panic'd if the db was deleted, or the table manipulation failed
+			// THEN the app panic'd if the db was deleted, or the table manipulation failed.
 			if expectPanic {
 				t.Error("Expected a panic")
 				releaseStdout()
 				return
 			}
-			// AND the id column and all *_version columns are now TEXT
+			// AND the ID column and all *_version columns are now TEXT.
 			wantTextColumns := []string{"id", "latest_version", "deployed_version", "approved_version"}
 			for _, row := range wantTextColumns {
 				var columnType string
@@ -628,7 +628,7 @@ func Test_UpdateTypes(t *testing.T) {
 						row, "TEXT", columnType)
 				}
 			}
-			// AND all rows were carried over
+			// AND all rows were carried over.
 			got := queryRow(t, db, id)
 			if got.LatestVersion() != latestVersion || got.LatestVersionTimestamp() != latestVersionTimestamp ||
 				got.DeployedVersion() != deployedVersion || got.DeployedVersionTimestamp() != deployedVersionTimestamp ||
@@ -637,7 +637,7 @@ func Test_UpdateTypes(t *testing.T) {
 					latestVersion, latestVersionTimestamp, deployedVersion, deployedVersionTimestamp, approvedVersion,
 					got.LatestVersion(), got.LatestVersionTimestamp(), got.DeployedVersion(), got.DeployedVersionTimestamp(), got.ApprovedVersion())
 			}
-			// AND the conversion was printed to stdout
+			// AND the conversion was printed to stdout.
 			stdout := releaseStdout()
 			want := "Finished updating column types"
 			contains := strings.Contains(stdout, want)

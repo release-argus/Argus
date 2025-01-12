@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 		// Delay sending the WebHook message by the defined interval.
 		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
 		jLog.Info(msg, logFrom, true)
-		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay
+		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay.
 		time.Sleep(w.GetDelayDuration())
 	} else {
 		w.SetExecuting(false, true)
@@ -125,7 +125,7 @@ func (w *WebHook) try(logFrom util.LogFrom) error {
 	customTransport := &http.Transport{}
 	if w.GetAllowInvalidCerts() {
 		customTransport = http.DefaultTransport.(*http.Transport).Clone()
-		//#nosec G402 -- explicitly wanted InsecureSkipVerify
+		//#nosec G402 -- explicitly wanted InsecureSkipVerify.
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
@@ -147,7 +147,7 @@ func (w *WebHook) try(logFrom util.LogFrom) error {
 		return nil
 	}
 
-	// FAIL.
+	// FAIL!
 	// Pretty desiredStatusCode.
 	prettyStatusCode := fmt.Sprint(desiredStatusCode)
 	if prettyStatusCode == "0" {
@@ -197,7 +197,7 @@ func checkWebHookBody(body string) (okay bool) {
 func (w *WebHook) parseTry(err error, serviceID string, logFrom util.LogFrom) {
 	// SUCCESS!
 	if err == nil {
-		metric.IncreasePrometheusCounter(metric.WebHookMetric,
+		metric.IncPrometheusCounter(metric.WebHookResultTotal,
 			w.ID,
 			serviceID,
 			"",
@@ -210,7 +210,7 @@ func (w *WebHook) parseTry(err error, serviceID string, logFrom util.LogFrom) {
 
 	// FAIL!
 	jLog.Error(err, logFrom, true)
-	metric.IncreasePrometheusCounter(metric.WebHookMetric,
+	metric.IncPrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		serviceID,
 		"",
