@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ func TestQuery(t *testing.T) {
 		stdoutRegex string
 		errRegex    string
 	}
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		overrides             string
 		overrideETag          *string
@@ -269,7 +269,7 @@ func TestQuery(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 
 			try := 0
 			temporaryFailureInNameResolution := true
@@ -286,20 +286,20 @@ func TestQuery(t *testing.T) {
 				*lookup.Options.SemanticVersioning = !tc.nonSemanticVersioning
 				lookup.Status.SetLatestVersion(tc.status.latestVersion, "", false)
 				lookup.Status.SetDeployedVersion(tc.status.deployedVersion, "", false)
-				// incase require is non-nil, Init to give it Status
+				// In case require is non-nil, Init to give it Status.
 				lookup.Init(
 					lookup.Options,
 					lookup.Status,
 					lookup.Defaults, lookup.HardDefaults)
-				// Clear ETag/Releases if URL changed
+				// Clear ETag/Releases if URL changed.
 				if tc.overrideETag != nil {
 					lookup.data.eTag = *tc.overrideETag
 				}
 
-				// WHEN Query is called on it
+				// WHEN Query is called on it.
 				_, err = lookup.Query(true, util.LogFrom{})
 
-				// THEN any err is expected
+				// THEN any err is expected.
 				stdout := releaseStdout()
 				e := util.ErrorToString(err)
 				if !util.RegexCheck(tc.want.errRegex, e) {
@@ -313,12 +313,12 @@ func TestQuery(t *testing.T) {
 					t.Fatalf("github.Lookup.Query() want match for %q\ngot:\n%q",
 						tc.want.errRegex, e)
 				}
-				// AND the stdout contains the expected strings
+				// AND the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
 					t.Fatalf("github.Lookup.Query() match for\n%q\nnot found in:\n%q",
 						tc.want.stdoutRegex, stdout)
 				}
-				// AND the LatestVersion is as expected
+				// AND the LatestVersion is as expected.
 				if tc.status.wantLatestVersion != nil &&
 					*tc.status.wantLatestVersion != lookup.Status.LatestVersion() {
 					t.Fatalf("github.Lookup.Query() wanted LatestVersion to become %q, not %q",
@@ -330,7 +330,7 @@ func TestQuery(t *testing.T) {
 }
 
 func TestHTTPRequest(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		failing  bool
 		url      string
@@ -368,10 +368,10 @@ func TestHTTPRequest(t *testing.T) {
 				lookup.data.eTag = *tc.eTag
 			}
 
-			// WHEN httpRequest is called on it
+			// WHEN httpRequest is called on it.
 			_, err := lookup.httpRequest(util.LogFrom{})
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("github.Lookup.httpRequest() error mismatch\nwant: %q\ngot:  %q",
@@ -382,11 +382,11 @@ func TestHTTPRequest(t *testing.T) {
 }
 
 func TestGetResponse_ReadError(t *testing.T) {
-	// GIVEN a server that closes the connection immediately to simulate a read error
+	// GIVEN a server that closes the connection immediately to simulate a read error.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Length", "10") // Set Content-Length without sending data
+		w.Header().Set("Content-Length", "10") // Set Content-Length without sending data.
 		w.WriteHeader(http.StatusOK)
-		// Immediately close the connection without writing any body
+		// Immediately close the connection without writing any body.
 		conn, _, _ := w.(http.Hijacker).Hijack()
 		conn.Close()
 	}))
@@ -516,7 +516,7 @@ func TestHandleResponse(t *testing.T) {
 		},
 	}
 
-	// (ensure other tests that modify global state don't interfere)
+	// Ensure other tests that modify global state don't interfere.
 	releaseStdout := test.CaptureStdout()
 	defer releaseStdout()
 	hadEmptyListETag := getEmptyListETag()
@@ -524,7 +524,7 @@ func TestHandleResponse(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying global state
+			// t.Parallel() - Cannot run in parallel since we're modifying global state.
 
 			lookup := testLookup(false)
 			resp := &http.Response{
@@ -581,7 +581,7 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 	}
 
 	defaultRelease := testBodyObject[0]
-	// GIVEN a Lookup with different requirements
+	// GIVEN a Lookup with different requirements.
 	tests := map[string]struct {
 		overrides        string
 		releaseOverrides *github_types.Release
@@ -737,20 +737,20 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			}
 			logFrom := util.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: name}
 
-			// WHEN releaseMeetsRequirements is called on it
+			// WHEN releaseMeetsRequirements is called on it.
 			version, releaseDate, err := lookup.releaseMeetsRequirements(testRelease, logFrom)
 
-			// THEN the version is as expected
+			// THEN the version is as expected.
 			if version != tc.want.version {
 				t.Errorf("github.Lookup.releaseMeetsRequirements() version mismatch\nwant: %q\ngot:  %q",
 					tc.want.version, version)
 			}
-			// AND the releaseDate is as expected
+			// AND the releaseDate is as expected.
 			if releaseDate != tc.want.releaseDate {
 				t.Errorf("github.Lookup.releaseMeetsRequirements() release date mismatch\nwant: %q\ngot:  %q",
 					tc.want.releaseDate, releaseDate)
 			}
-			// AND any err is as expected
+			// AND any err is as expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
 				t.Errorf("github.Lookup.releaseMeetsRequirements() error mismatch\nwant: %q\ngot:  %q",
@@ -767,7 +767,7 @@ func TestGetVersion(t *testing.T) {
 		errRegex    string
 	}
 
-	// GIVEN a body from the GitHub API and a Lookup
+	// GIVEN a body from the GitHub API and a Lookup.
 	body := testBody
 	bodyObject := testBodyObject
 	tests := map[string]struct {
@@ -845,7 +845,7 @@ func TestGetVersion(t *testing.T) {
 				t.Fatalf("github.Lookup.getVersion failed to unmarshal overrides: %v", err)
 			}
 			lookup.data.releases = tc.hadReleases
-			// Ensure the Status has been handed out
+			// Ensure the Status has been handed out.
 			lookup.Init(
 				lookup.Options,
 				lookup.Status,
@@ -856,10 +856,10 @@ func TestGetVersion(t *testing.T) {
 				testBody = []byte(*tc.body)
 			}
 
-			// WHEN getVersion is called on it
+			// WHEN getVersion is called on it.
 			version, releaseDate, err := lookup.getVersion(testBody, logFrom)
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
 				t.Errorf("github.Lookup.getVersion() error mismatch\nwant: %q\ngot:  %q",
@@ -868,12 +868,12 @@ func TestGetVersion(t *testing.T) {
 			if tc.want.errRegex != "^$" {
 				return
 			}
-			// AND the version is as expected
+			// AND the version is as expected.
 			if version != tc.want.version {
 				t.Errorf("github.Lookup.getVersion() version mismatch\nwant: %q\ngot:  %q",
 					tc.want.version, version)
 			}
-			// AND the releaseDate is as expected
+			// AND the releaseDate is as expected.
 			if releaseDate != tc.want.releaseDate {
 				t.Errorf("github.Lookup.getVersion() release date mismatch\nwant: %q\ngot:  %q",
 					tc.want.releaseDate, releaseDate)
@@ -883,7 +883,7 @@ func TestGetVersion(t *testing.T) {
 }
 
 func TestSetReleases(t *testing.T) {
-	// GIVEN a body from the GitHub API and a Lookup
+	// GIVEN a body from the GitHub API and a Lookup.
 	body := testBody
 	tests := map[string]struct {
 		overrides    string
@@ -929,10 +929,10 @@ func TestSetReleases(t *testing.T) {
 				testBody = []byte(tc.body)
 			}
 
-			// WHEN setReleases is called on it
+			// WHEN setReleases is called on it.
 			err = lookup.setReleases(testBody, logFrom)
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			e := util.ErrorToString(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("github.Lookup.setReleases() error mismatch\nwant: %q\ngot:  %q",
@@ -941,7 +941,7 @@ func TestSetReleases(t *testing.T) {
 			if tc.errRegex != "^$" {
 				return
 			}
-			// AND the versions are as expected
+			// AND the versions are as expected.
 			gotReleases := lookup.data.Releases()
 			if !tc.wantReleases {
 				if len(gotReleases) == 0 {
@@ -960,12 +960,12 @@ func TestSetReleases(t *testing.T) {
 			}
 			for i, release := range testBodyObject {
 				for j, asset := range release.Assets {
-					// Asset counts match
+					// Asset counts match.
 					if len(gotReleases[i].Assets) != len(release.Assets) {
 						t.Errorf("github.Lookup.setReleases() wanted %d assets for release %d but got %d",
 							len(release.Assets), i, len(gotReleases[i].Assets))
 					}
-					// non-matching asset
+					// non-matching asset.
 					if gotReleases[i].Assets[j].Name != asset.Name {
 						t.Errorf("github.Lookup.setReleases() wanted the asset at [%d][%d] (%q) but got %v",
 							i, j, asset.Name, gotReleases[i].Assets[j])
@@ -977,7 +977,7 @@ func TestSetReleases(t *testing.T) {
 }
 
 func TestQueryGitHubETag(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		attempts                           int
 		eTagChanged, eTagUnchangedUseCache int
@@ -985,16 +985,16 @@ func TestQueryGitHubETag(t *testing.T) {
 		urlCommands                        filter.URLCommandSlice
 		errRegex                           string
 	}{
-		// Keeps .Releases incase filters change
+		// Keeps .Releases in case filters change.
 		"three requests only uses 1 api limit": {
 			attempts:              3,
 			eTagChanged:           1,
-			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck
+			eTagUnchangedUseCache: 3, // 2 attempts + 1 recheck.
 			errRegex:              `^$`},
 		"if initial request fails filter, cached results will be used": {
 			attempts:                   3,
 			eTagChanged:                1,
-			eTagUnchangedUseCache:      3, // 2 attempts + 1 recheck
+			eTagUnchangedUseCache:      3, // 2 attempts + 1 recheck.
 			initialRequireRegexVersion: `^FOO$`,
 			errRegex: test.TrimYAML(`
 				^no releases were found matching the require field.*
@@ -1012,7 +1012,7 @@ func TestQueryGitHubETag(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			lookup := testLookup(false)
@@ -1024,7 +1024,7 @@ func TestQueryGitHubETag(t *testing.T) {
 			lookup.URLCommands = tc.urlCommands
 
 			attempt := 0
-			// WHEN Query is called on it attempts number of times
+			// WHEN Query is called on it attempts number of times.
 			var errs []error
 			for tc.attempts != attempt {
 				attempt++
@@ -1040,7 +1040,7 @@ func TestQueryGitHubETag(t *testing.T) {
 					attempt, lookup.GetGitHubData().ETag())
 			}
 
-			// THEN any err is expected
+			// THEN any err is expected.
 			stdout := releaseStdout()
 			e := util.ErrorToString(errors.Join(errs...))
 			if !util.RegexCheck(tc.errRegex, e) {
@@ -1062,7 +1062,7 @@ func TestQueryGitHubETag(t *testing.T) {
 }
 
 func TestHandleNoVersionChange(t *testing.T) {
-	// GIVEN a Lookup that got an unchanged version on check X
+	// GIVEN a Lookup that got an unchanged version on check X.
 	type args struct {
 	}
 	tests := map[string]struct {
@@ -1084,15 +1084,15 @@ func TestHandleNoVersionChange(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			lookup := testLookup(false)
 
-			// WHEN handleNoVersionChange is called on it
+			// WHEN handleNoVersionChange is called on it.
 			lookup.handleNoVersionChange(tc.checkNumber, tc.version, util.LogFrom{})
 
-			// THEN a message is printed when expected
+			// THEN a message is printed when expected.
 			stdout := releaseStdout()
 			gotMessage := util.RegexCheck(
 				fmt.Sprintf(`Staying on "%s" as that's the latest version in the second check`, tc.version),

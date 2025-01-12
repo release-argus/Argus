@@ -348,7 +348,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 	return
 }
 
-// jsonMapToString returns the JSON param map as an '&' joined list of strings with the prefix added to each key
+// jsonMapToString returns the JSON param map as an '&' joined list of strings with the prefix added to each key.
 //
 //	e.g.
 //		{"key1": "val1", "key2": "val2"} with prefix '@'
@@ -447,7 +447,7 @@ func (s *Shoutrrr) send(
 			}
 			return nil
 		},
-		s.GetMaxTries(), //#nosec G115 -- Validated in CheckValues
+		s.GetMaxTries(), //#nosec G115 -- Validated in CheckValues.
 		1*time.Second,
 		30*time.Second,
 		s.ServiceStatus.Deleting,
@@ -496,7 +496,7 @@ func (s *Shoutrrr) parseSend(
 
 	// SUCCESS!
 	if !failed {
-		metric.IncreasePrometheusCounter(metric.NotifyMetric,
+		metric.IncPrometheusCounter(metric.NotifyResultTotal,
 			s.ID,
 			serviceName,
 			s.GetType(),
@@ -505,8 +505,8 @@ func (s *Shoutrrr) parseSend(
 		return
 	}
 
-	// FAIL.
-	metric.IncreasePrometheusCounter(metric.NotifyMetric,
+	// FAIL!
+	metric.IncPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		serviceName,
 		s.GetType(),

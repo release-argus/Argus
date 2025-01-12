@@ -35,7 +35,7 @@ import (
 )
 
 func TestService_ServiceInfo(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	svc := testService(t, "TestServiceInfo", "url")
 	id := "test_id"
 	svc.ID = id
@@ -50,7 +50,7 @@ func TestService_ServiceInfo(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	time.Sleep(time.Second)
 
-	// When ServiceInfo is called on it
+	// When ServiceInfo is called on it.
 	got := svc.ServiceInfo()
 	want := util.ServiceInfo{
 		ID:            id,
@@ -59,7 +59,7 @@ func TestService_ServiceInfo(t *testing.T) {
 		LatestVersion: latestVersion,
 	}
 
-	// THEN we get the correct ServiceInfo
+	// THEN we get the correct ServiceInfo.
 	if got != want {
 		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
 			want, got)
@@ -67,7 +67,7 @@ func TestService_ServiceInfo(t *testing.T) {
 }
 
 func TestService_IconURL(t *testing.T) {
-	// GIVEN a Lookup
+	// GIVEN a Lookup.
 	tests := map[string]struct {
 		dashboardIcon string
 		want          string
@@ -140,10 +140,10 @@ func TestService_IconURL(t *testing.T) {
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
-			// WHEN IconURL is called
+			// WHEN IconURL is called.
 			got := svc.IconURL()
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if got != tc.want {
 				t.Errorf("IconURL() mismatch\n%q\ngot:  %q",
 					tc.want, got)
@@ -153,7 +153,7 @@ func TestService_IconURL(t *testing.T) {
 }
 
 func TestService_Init(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		svc      *Service
 		defaults *Defaults
@@ -332,13 +332,13 @@ func TestService_Init(t *testing.T) {
 			hadCommand := make(command.Slice, len(tc.svc.Command))
 			copy(hadCommand, tc.svc.Command)
 
-			// WHEN Init is called on it
+			// WHEN Init is called on it.
 			tc.svc.Init(
 				tc.defaults, &hardDefaults,
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 				&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhook.Defaults{})
 
-			// THEN pointers to those vars are handed out to the Lookup
+			// THEN pointers to those vars are handed out to the Lookup::
 			// defaults
 			if tc.svc.Defaults != tc.defaults {
 				t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
@@ -377,7 +377,7 @@ func TestService_Init(t *testing.T) {
 					}
 				}
 			}
-			// Notifies shouldn't be overridden if non-empty
+			// Notifiers is not overridden if non-empty.
 			if len(hadNotify) != 0 && len(tc.svc.Notify) != len(hadNotify) {
 				t.Fatalf("Notify length changed\n want: %d (%v)\ngot:  %d (%v)",
 					len(hadNotify), hadNotify, len(tc.svc.Notify), util.SortedKeys(tc.svc.Notify))
@@ -402,7 +402,7 @@ func TestService_Init(t *testing.T) {
 				t.Errorf("CommandController should be nil with %v Commands present",
 					tc.svc.Command)
 			}
-			// Command shouldn't be overridden if non-empty
+			// Command is not overridden if non-empty.
 			if len(hadCommand) != 0 && len(tc.svc.Command) != len(hadCommand) {
 				t.Fatalf("Command length changed\n want: %d (%v)\ngot: %d (%v)",
 					len(hadCommand), hadCommand, len(tc.svc.Command), tc.svc.Command)
@@ -426,7 +426,7 @@ func TestService_Init(t *testing.T) {
 					}
 				}
 			}
-			// WebHook shouldn't be overridden if non-empty
+			// WebHook is not overridden if non-empty.
 			if len(hadWebHook) != 0 && len(tc.svc.WebHook) != len(hadWebHook) {
 				t.Fatalf("WebHook length changed\n want: %d (%v)\ngot: %d (%v)",
 					len(hadWebHook), hadWebHook, len(tc.svc.WebHook), util.SortedKeys(tc.svc.WebHook))
@@ -446,7 +446,7 @@ func TestService_Init(t *testing.T) {
 }
 
 func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
-	// GIVEN a Service
+	// GIVEN a Service.
 	tests := map[string]struct {
 		nilDeployedVersion bool
 		nilCommand         bool
@@ -471,7 +471,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
 			testCommand := command.Command{"ls"}
 			testNotify := shoutrrr_test.Shoutrrr(false, false)
@@ -489,7 +489,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					testWebHook.ID: testWebHook},
 			}
 
-			// Init the service
+			// Init the service.
 			service.Init(
 				&Defaults{}, &Defaults{},
 				&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
@@ -498,7 +498,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 			service.Status.SetLatestVersion("0.0.2", "", false)
 			service.Status.SetDeployedVersion("0.0.2", "", false)
 
-			// nil the vars
+			// nil the vars.
 			if tc.nilDeployedVersion {
 				service.DeployedVersionLookup = nil
 			}
@@ -512,32 +512,42 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 				service.WebHook = nil
 			}
 
-			// metrics
-			latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
-			deployedVersionMetric := metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
-			commandMetric := metric.CommandMetric.WithLabelValues(
+			// metrics:
+			// 	latest_version_query_result_total
+			latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
+				service.ID)
+			// 	deployed_version_query_result_last
+			deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
+				service.ID)
+			// 	command_result_total
+			commandMetric := metric.CommandResultTotal.WithLabelValues(
 				testCommand.String(), "SUCCESS", service.ID)
-			notifyMetric := metric.NotifyMetric.WithLabelValues(
+			// 	notify_result_total
+			notifyMetric := metric.NotifyResultTotal.WithLabelValues(
 				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
-			webhookMetric := metric.WebHookMetric.WithLabelValues(
+			// 	webhook_result_total
+			webhookMetric := metric.WebHookResultTotal.WithLabelValues(
 				testWebHook.ID, "SUCCESS", service.ID)
+			// 	service_count_total
+			serviceCountTotal := metric.ServiceCountCurrent
+			initialServiceCountCurrent := testutil.ToFloat64(serviceCountTotal)
 
 			// ################################
-			// WHEN InitMetrics is called on it
+			// WHEN initMetrics is called on it
 			// ################################
-			service.InitMetrics()
+			service.initMetrics()
 
-			// THEN the metrics are created
+			// THEN the metrics are created:
 			want := float64(3)
 			oldWant := want
-			// latest_version
+			// 	latest_version_is_deployed
 			latestVersionMetric.Set(want)
 			got := testutil.ToFloat64(latestVersionMetric)
 			if got != want {
 				t.Errorf("Init, Expected latestVersionMetric to be %f, not %f",
 					want, got)
 			}
-			// deployed_version
+			// 	deployed_version_query_result_last
 			if tc.nilDeployedVersion {
 				want = 0
 			} else {
@@ -549,7 +559,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					want, got)
 			}
 			want = oldWant
-			// command
+			// 	command_result_total
 			if tc.nilCommand {
 				want = 0
 			} else {
@@ -561,7 +571,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					want, got)
 			}
 			want = oldWant
-			// notify
+			// 	notify_result_total
 			if tc.nilNotify {
 				want = 0
 			} else {
@@ -572,7 +582,7 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 				t.Errorf("Init, Expected notifyMetric to be %f, not %f",
 					want, got)
 			}
-			// webhook
+			// 	webhook_result_total
 			want = oldWant
 			if tc.nilWebHook {
 				want = 0
@@ -585,120 +595,74 @@ func TestService_InitMetrics_ResetMetrics_DeleteMetrics(t *testing.T) {
 					want, got)
 			}
 			want = oldWant
-
-			// #################################
-			// WHEN ResetMetrics is called on it
-			// #################################
-			service.ResetMetrics()
-
-			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
-			deployedVersionMetric = metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
-			commandMetric = metric.CommandMetric.WithLabelValues(
-				testCommand.String(), "SUCCESS", service.ID)
-			notifyMetric = metric.NotifyMetric.WithLabelValues(
-				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
-			webhookMetric = metric.WebHookMetric.WithLabelValues(
-				testWebHook.ID, "SUCCESS", service.ID)
-
-			// THEN the metrics are reset
-			want--
-			oldWant = want
-			// latest_version
-			latestVersionMetric.Add(want - 1)
-			got = testutil.ToFloat64(latestVersionMetric)
-			if got != want {
-				t.Errorf("Reset, Expected latestVersionMetric to be %f, not %f",
-					want, got)
+			// 	service_count_total
+			got = testutil.ToFloat64(serviceCountTotal)
+			wantServiceCountCurrent := initialServiceCountCurrent + 1
+			if got != wantServiceCountCurrent {
+				t.Errorf("Reset, Expected ServiceCountCurrent to be %f, not %f",
+					wantServiceCountCurrent, got)
 			}
-			// deployed_version
-			if tc.nilDeployedVersion {
-				want = 0
-			} else {
-				deployedVersionMetric.Add(want)
-			}
-			got = testutil.ToFloat64(deployedVersionMetric)
-			if got != want {
-				t.Errorf("Reset, Expected deployedVersionMetric to be %f, not %f",
-					want, got)
-			}
-			want = oldWant
-			// command
-			if tc.nilCommand {
-				want = 0
-			} else {
-				commandMetric.Add(want)
-			}
-			got = testutil.ToFloat64(commandMetric)
-			if got != want {
-				t.Errorf("Reset, Expected commandMetric to be %f, not %f",
-					want, got)
-			}
-			want = oldWant
-			// notify
-			if tc.nilNotify {
-				want = 0
-			} else {
-				notifyMetric.Add(want)
-			}
-			got = testutil.ToFloat64(notifyMetric)
-			if got != want {
-				t.Errorf("Reset, Expected notifyMetric to be %f, not %f",
-					want, got)
-			}
-			want = oldWant
-			// webhook
-			if tc.nilWebHook {
-				want = 0
-			} else {
-				webhookMetric.Add(want)
-			}
-			got = testutil.ToFloat64(webhookMetric)
-			if got != want {
-				t.Errorf("Reset, Expected webhookMetric to be %f, not %f",
-					want, got)
-			}
-			want = oldWant
 
 			// ##################################
-			// WHEN DeleteMetrics is called on it
+			// WHEN deleteMetrics is called on it
 			// ##################################
-			service.DeleteMetrics()
+			service.deleteMetrics()
 
-			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(service.ID)
-			deployedVersionMetric = metric.DeployedVersionQueryLiveness.WithLabelValues(service.ID)
-			commandMetric = metric.CommandMetric.WithLabelValues(
+			// metrics:
+			// 	latest_version_is_deployed
+			latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
+				service.ID)
+			// 	deployed_version_query_result_last
+			deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
+				service.ID)
+			// 	command_result_total
+			commandMetric = metric.CommandResultTotal.WithLabelValues(
 				testCommand.String(), "SUCCESS", service.ID)
-			notifyMetric = metric.NotifyMetric.WithLabelValues(
+			// 	notify_result_total
+			notifyMetric = metric.NotifyResultTotal.WithLabelValues(
 				testNotify.ID, "SUCCESS", service.ID, testNotify.GetType())
-			webhookMetric = metric.WebHookMetric.WithLabelValues(
+			// 	webhook_result_total
+			webhookMetric = metric.WebHookResultTotal.WithLabelValues(
 				testWebHook.ID, "SUCCESS", service.ID)
 
-			// THEN the metrics are deleted
+			// THEN the metrics are deleted:
 			want = 0
+			// 	latest_version_is_deployed
 			got = testutil.ToFloat64(latestVersionMetric)
 			if got != want {
 				t.Errorf("Delete, Expected latestVersionMetric to be %f, not %f",
 					want, got)
 			}
+			// 	deployed_version_query_result_last
 			got = testutil.ToFloat64(deployedVersionMetric)
 			if got != want {
 				t.Errorf("Delete, Expected deployedVersionMetric to be %f, not %f",
 					want, got)
 			}
+			// 	command_result_total
 			got = testutil.ToFloat64(commandMetric)
 			if got != want {
 				t.Errorf("Delete, Expected commandMetric to be %f, not %f",
 					want, got)
 			}
+			// 	notify_result_total
 			got = testutil.ToFloat64(notifyMetric)
 			if got != want {
 				t.Errorf("Delete, Expected notifyMetric to be %f, not %f",
 					want, got)
 			}
+			// 	webhook_result_total
 			got = testutil.ToFloat64(webhookMetric)
 			if got != want {
 				t.Errorf("Delete, Expected webhookMetric to be %f, not %f",
 					want, got)
+			}
+			// 	service_count_total
+			got = testutil.ToFloat64(serviceCountTotal)
+			// Reset to initial value.
+			if got != initialServiceCountCurrent {
+				t.Errorf("Delete, Expected ServiceCountCurrent to be %f, not %f",
+					wantServiceCountCurrent, got)
 			}
 		})
 	}

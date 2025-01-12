@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,20 +75,28 @@ func checkFile(path string) {
 	}
 }
 
-// Run the database, initialising it and running the handler for any new message(s).
+// Run will start the database, initialise it and run the handler for messages in the background.
 func Run(cfg *config.Config, log *util.JLog) {
-	api := api{config: cfg}
 	if log != nil {
 		LogInit(log, cfg.Settings.DataDatabaseFile())
 	}
+	api := api{config: cfg}
+
 	api.initialise()
-	defer api.db.Close()
+	runningHandler := false
+	defer func() {
+		if !runningHandler {
+			api.db.Close()
+		}
+	}()
+
 	if len(api.config.Order) > 0 {
 		api.removeUnknownServices()
 		api.extractServiceStatus()
 	}
 
-	api.handler()
+	go api.handler()
+	runningHandler = true
 }
 
 func (api *api) initialise() {

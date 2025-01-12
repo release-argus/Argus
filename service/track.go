@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 // Track the Service and send Notify messages and WebHooks when a new release is found.
@@ -28,10 +29,9 @@ import (
 func (s *Service) Track() {
 	// Skip inactive Services.
 	if !s.Options.GetActive() {
-		s.DeleteMetrics()
 		return
 	}
-	s.ResetMetrics()
+	s.initMetrics()
 
 	// Wait until the interval has elapsed.
 	lastQueriedAt, _ := time.Parse(time.RFC3339, s.Status.LastQueried())
@@ -79,17 +79,20 @@ func (s *Service) Track() {
 
 // Track will call Track on all Services in this Slice, each in their own goroutine.
 func (s *Slice) Track(ordering *[]string, orderMutex *sync.RWMutex) {
+	metric.InitMetrics()
+
 	orderMutex.RLock()
 	defer orderMutex.RUnlock()
 	for _, key := range *ordering {
-		// Skip inactive Services (and services that deleted on start up).
-		if !(*s)[key].Options.GetActive() || (*s)[key] == nil {
+		svc := (*s)[key]
+		// Skip inactive Services.
+		if !svc.Options.GetActive() {
 			continue
 		}
-		(*s)[key].Options.Active = nil
+		svc.Options.Active = nil
 
 		// Track this Service in an infinite loop goroutine.
-		go (*s)[key].Track()
+		go svc.Track()
 
 		// Space out the tracking of each Service.
 		time.Sleep(time.Second / 2)

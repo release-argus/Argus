@@ -45,7 +45,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN an API and a request to refresh the latest_version of a service
+	// GIVEN an API and a request to refresh the latest_version of a service.
 	file := "TestHTTP_LatestVersionRefreshUncreated.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -130,7 +130,7 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				params.Set(k, v)
 			}
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -138,12 +138,12 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -164,7 +164,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN an API and a request to refresh the deployed_version of a service
+	// GIVEN an API and a request to refresh the deployed_version of a service.
 	file := "TestHTTP_DeployedVersionRefreshUncreated.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -235,7 +235,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				params.Set(k, v)
 			}
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -243,12 +243,12 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -276,7 +276,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		announce                       bool
 	}
 
-	// GIVEN an API and a request to refresh the latest_version of a service
+	// GIVEN an API and a request to refresh the latest_version of a service.
 	file := "TestHTTP_LatestVersionRefresh.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -381,13 +381,13 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			api.Config.Service[svc.ID] = svc
 			apiMutex.Unlock()
 			target := "/api/v1/latest_version/refresh/" + url.QueryEscape(svc.ID)
-			// add the params to the URL
+			// Add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			// set service_id
@@ -406,12 +406,12 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d\n",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -422,17 +422,17 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 				t.Errorf("want Body to match\n%q\ngot:\n%q\n",
 					tc.wants.body, got)
 			}
-			// AND the LatestVersion is expected
+			// AND the LatestVersion is expected.
 			if svc.Status.LatestVersion() != tc.wants.latestVersion {
 				t.Errorf("VersionRefresh-LatestVersion, expected %q, not %q\n",
 					tc.wants.latestVersion, svc.Status.LatestVersion())
 			}
-			// AND the DeployedVersion is expected
+			// AND the DeployedVersion is expected.
 			if svc.Status.DeployedVersion() != tc.wants.deployedVersion {
 				t.Errorf("VersionRefresh-DeployedVersion, expected %q, not %q\n",
 					tc.wants.deployedVersion, svc.Status.DeployedVersion())
 			}
-			// AND the expected announcement is made
+			// AND the expected announcement is made.
 			wantAnnounces := 0
 			if tc.wants.announce {
 				wantAnnounces = 1
@@ -457,7 +457,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		latestVersion, deployedVersion string
 	}
 
-	// GIVEN an API and a request to refresh the deployed_version of a service
+	// GIVEN an API and a request to refresh the deployed_version of a service.
 	file := "TestHTTP_DeployedVersionRefresh.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -494,8 +494,9 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			wants: wants{
 				body: fmt.Sprintf(`\{"version":%q,.*"\}`,
 					testSVC.Status.DeployedVersion()),
-				statusCode:      http.StatusOK,
-				latestVersion:   testSVC.Status.DeployedVersion(), // Latest set to Deployed as not queried
+				statusCode: http.StatusOK,
+				// Latest set to Deployed as not queried.
+				latestVersion:   testSVC.Status.DeployedVersion(),
 				deployedVersion: testSVC.Status.DeployedVersion()},
 		},
 		"semantic_versioning not sent - refreshes service": {
@@ -599,16 +600,16 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				svc.DeployedVersionLookup = nil
 			}
 			target := "/api/v1/deployed_version/refresh/" + url.QueryEscape(svc.ID)
-			// add the params to the URL
+			// add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// set service_id
+			// Set service_id.
 			serviceID := svc.ID
 			if tc.serviceID != nil {
 				serviceID = *tc.serviceID
@@ -624,12 +625,12 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d\n",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -640,12 +641,12 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 				t.Errorf("want Body to match\n%q\ngot:\n%q\n",
 					tc.wants.body, got)
 			}
-			// AND the LatestVersion is expected
+			// AND the LatestVersion is expected.
 			if svc.Status.LatestVersion() != tc.wants.latestVersion {
 				t.Errorf("VersionRefresh-LatestVersion, expected %q, not %q\n",
 					tc.wants.latestVersion, svc.Status.LatestVersion())
 			}
-			// AND the DeployedVersion is expected
+			// AND the DeployedVersion is expected.
 			if svc.Status.DeployedVersion() != tc.wants.deployedVersion {
 				t.Errorf("VersionRefresh-DeployedVersion, expected %q, not %q\n",
 					tc.wants.deployedVersion, svc.Status.DeployedVersion())
@@ -661,7 +662,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 	}
 
 	testSVC := testService("TestHTTP_ServiceDetail", true)
-	// GIVEN an API and a request for detail of a service
+	// GIVEN an API and a request for detail of a service.
 	file := "TestHTTP_ServiceDetail.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -708,7 +709,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			}
 			target := "/api/v1/service/update/" + url.QueryEscape(serviceID)
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
 				"service_id": serviceID,
@@ -721,12 +722,12 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -742,7 +743,7 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 }
 
 func TestHTTP_OtherServiceDetails(t *testing.T) {
-	// GIVEN an API and a request for detail of a service
+	// GIVEN an API and a request for detail of a service.
 	tests := map[string]struct {
 		wantBody       string
 		wantStatusCode int
@@ -774,19 +775,19 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 			api.Config.Service[svc.ID] = svc
 			target := "/api/v1/service/update/" + url.QueryEscape(svc.ID)
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			w := httptest.NewRecorder()
 			api.httpOtherServiceDetails(w, req)
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wantStatusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wantStatusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -814,7 +815,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 		latestVersion, deployedVersion string
 	}
 
-	// GIVEN an API and a request to create/edit a service
+	// GIVEN an API and a request to create/edit a service.
 	file := "TestHTTP_ServiceEdit.yml"
 	api := testAPI(file)
 	apiMutex := sync.RWMutex{}
@@ -858,7 +859,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				statusCode: http.StatusOK,
 				body:       "^$"},
 		},
-		"create new service, but id already taken": {
+		"create new service, but ID already taken": {
 			payload: `
 				{
 					"id": "` + svcName + `",
@@ -975,7 +976,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			req = httptest.NewRequest(http.MethodPost, target, payload)
 			// EDIT
 			if tc.serviceID != nil {
-				// set service_id
+				// set service_id.
 				*tc.serviceID = strings.ReplaceAll(
 					*tc.serviceID, "__name__", name)
 				vars := map[string]string{
@@ -986,7 +987,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				req = mux.SetURLVars(req, vars)
 			}
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMutex.Lock()
 			api.httpServiceEdit(w, req)
@@ -994,12 +995,12 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Got: %d, Want: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("ServiceEdit unexpected error - %v",
@@ -1013,7 +1014,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 			if tc.wants.statusCode != http.StatusOK {
 				return
 			}
-			// AND the service was created
+			// AND the service was created.
 			serviceID := util.DereferenceOrDefault(tc.serviceID)
 			// (CREATE)
 			if serviceID == "" {
@@ -1037,12 +1038,12 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}
 				return
 			}
-			// AND the LatestVersion is expected
+			// AND the LatestVersion is expected.
 			if !util.RegexCheck(tc.wants.latestVersion, svc.Status.LatestVersion()) {
 				t.Errorf("ServiceEdit-LatestVersion, expected %q, not %q",
 					tc.wants.latestVersion, svc.Status.LatestVersion())
 			}
-			// AND the DeployedVersion is expected
+			// AND the DeployedVersion is expected.
 			if !util.RegexCheck(tc.wants.deployedVersion, svc.Status.DeployedVersion()) {
 				t.Errorf("ServiceEdit-DeployedVersion, expected %q, not %q",
 					tc.wants.deployedVersion, svc.Status.DeployedVersion())
@@ -1057,7 +1058,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN an API and a request to delete a service
+	// GIVEN an API and a request to delete a service.
 	file := "TestHTTP_ServiceDelete.yml"
 	api := testAPI(file)
 	t.Cleanup(func() {
@@ -1072,7 +1073,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		&api.Config.Notify, &api.Config.Defaults.Notify, &api.Config.HardDefaults.Notify,
 		&api.Config.WebHook, &api.Config.Defaults.WebHook, &api.Config.HardDefaults.WebHook)
 	api.Config.AddService("", svc)
-	// drain db from the Service addition
+	// Drain db from the Service addition.
 	<-*api.Config.DatabaseChannel
 	tests := []struct {
 		name      string
@@ -1108,7 +1109,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 
 			target := "/api/v1/service/delete/" + url.QueryEscape(tc.serviceID)
 
-			// WHEN that HTTP request is sent
+			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			vars := map[string]string{
 				"service_id": tc.serviceID,
@@ -1119,12 +1120,12 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected body is returned as expected
+			// AND the expected body is returned as expected.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",
@@ -1135,7 +1136,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 				t.Errorf("want Body to match\n%q\ngot:\n%q",
 					tc.wants.body, got)
 			}
-			// AND the service is removed from the config
+			// AND the service is removed from the config.
 			if api.Config.Service[tc.serviceID] != nil {
 				t.Errorf("ServiceDelete didn't remove %q from the config",
 					tc.serviceID)
@@ -1144,7 +1145,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 				t.Errorf("ServiceDelete didn't remove %q from the Order",
 					tc.serviceID)
 			}
-			// AND the service is removed from the database (if the req was OK)
+			// AND the service is removed from the database (if the req was OK).
 			if tc.wants.statusCode == http.StatusOK {
 				time.Sleep(time.Second)
 				if len(*api.Config.DatabaseChannel) == 0 {
@@ -1168,7 +1169,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN an API and a request to test a notify
+	// GIVEN an API and a request to test a notify.
 	file := "TestHTTP_NotifyTest.yml"
 	api := testAPI(file)
 	t.Cleanup(func() { os.Remove(file) })
@@ -1441,19 +1442,19 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
 
-			// WHEN that request is sent
+			// WHEN that request is sent.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", payload)
 			w := httptest.NewRecorder()
 			api.httpNotifyTest(w, req)
 			res := w.Result()
 			t.Cleanup(func() { res.Body.Close() })
 
-			// THEN the expected status code is returned
+			// THEN the expected status code is returned.
 			if res.StatusCode != tc.wants.statusCode {
 				t.Errorf("unexpected status code. Want: %d, Got: %d",
 					tc.wants.statusCode, res.StatusCode)
 			}
-			// AND the expected message is contained in the body
+			// AND the expected message is contained in the body.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Fatalf("unexpected error - %v",

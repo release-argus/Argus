@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 func TestAPI_UpdateRow(t *testing.T) {
-	// GIVEN a DB with a few service status'
+	// GIVEN a DB with a few service status'.
 	tests := map[string]struct {
 		cells           []dbtype.Cell
 		target          string
@@ -107,21 +107,21 @@ func TestAPI_UpdateRow(t *testing.T) {
 			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 
-			// Ensure the row exists if tc.exists
+			// Ensure the row exists when tc.exists.
 			if tc.exists {
 				tAPI.db.Exec("INSERT INTO status (id) VALUES (?)",
 					tc.target)
 			}
-			// Delete the DB file
+			// Delete the DB file.
 			if tc.databaseDeleted {
 				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
-			// WHEN updateRow is called targeting single/multiple cells
+			// WHEN updateRow is called targeting single/multiple cells.
 			tAPI.updateRow(tc.target, tc.cells)
 			time.Sleep(100 * time.Millisecond)
 
-			// THEN those cell(s) are changed in the DB
+			// THEN those cell(s) are changed in the DB.
 			row := queryRow(t, tAPI.db, tc.target)
 			for _, cell := range tc.cells {
 				var got string
@@ -137,7 +137,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 				case "approved_version":
 					got = row.ApprovedVersion()
 				default:
-					continue // Skip unknown columns
+					continue // Skip unknown columns.
 				}
 				if got != cell.Value {
 					if !tc.databaseDeleted {
@@ -155,7 +155,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 }
 
 func TestAPI_DeleteRow(t *testing.T) {
-	// GIVEN a DB with a few service status'
+	// GIVEN a DB with a few service status'.
 	tests := map[string]struct {
 		serviceID       string
 		exists          bool
@@ -175,7 +175,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			tAPI := testAPI(name, "TestAPI_DeleteRow")
@@ -183,7 +183,7 @@ func TestAPI_DeleteRow(t *testing.T) {
 			t.Cleanup(func() { dbCleanup(tAPI) })
 			tAPI.initialise()
 
-			// Ensure the row exists if tc.exists
+			// Ensure the row exists if tc.exists.
 			if tc.exists {
 				tAPI.updateRow(
 					tc.serviceID,
@@ -192,31 +192,31 @@ func TestAPI_DeleteRow(t *testing.T) {
 				)
 				time.Sleep(100 * time.Millisecond)
 			}
-			// Check the row existence before the test
+			// Check the row existence before the test.
 			row := queryRow(t, tAPI.db, tc.serviceID)
 			if tc.exists && (row.LatestVersion() == "" || row.DeployedVersion() == "") {
 				t.Errorf("expecting row to exist. got %#v", row)
 			}
-			// Delete the DB file
+			// Delete the DB file.
 			if tc.databaseDeleted {
 				os.Remove(tAPI.config.Settings.Data.DatabaseFile)
 			}
 
-			// WHEN deleteRow is called targeting a row
+			// WHEN deleteRow is called targeting a row.
 			tAPI.deleteRow(tc.serviceID)
 			time.Sleep(100 * time.Millisecond)
 
-			// THEN if we deleted the DB before the statement, we should have logged an error
+			// THEN if we deleted the DB before the statement, we should have logged an error.
 			stdout := releaseStdout()
 			deleteFailRegex := `ERROR: [^)]+\), deleteRow`
 			if tc.databaseDeleted != util.RegexCheck(deleteFailRegex, stdout) {
 				t.Errorf("stdout mismatch:\nwant=%t (%q)\ngot:\n%q",
 					tc.databaseDeleted, deleteFailRegex, stdout)
 			}
-			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted)
+			// AND the row is deleted from the DB (if it existed and the DB wasn't deleted).
 			row = queryRow(t, tAPI.db, tc.serviceID)
 			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
-				// no delete if we deleted the db
+				// no delete if we deleted the db.
 				if !tc.databaseDeleted {
 					t.Errorf("expecting row to be deleted.\ngot %#v", row)
 				}
@@ -228,13 +228,13 @@ func TestAPI_DeleteRow(t *testing.T) {
 }
 
 func TestAPI_Handler(t *testing.T) {
-	// GIVEN a DB with a few service status'
+	// GIVEN a DB with a few service status'.
 	tAPI := testAPI("TestAPI_Handler", "db")
 	t.Cleanup(func() { dbCleanup(tAPI) })
 	tAPI.initialise()
 	go tAPI.handler()
 
-	// WHEN a message is sent to the DatabaseChannel targeting latest_version
+	// WHEN a message is sent to the DatabaseChannel targeting latest_version.
 	target := "keep0"
 	cell1 := dbtype.Cell{
 		Column: "latest_version", Value: "9.9.9"}
@@ -253,7 +253,7 @@ func TestAPI_Handler(t *testing.T) {
 	*tAPI.config.DatabaseChannel <- msg1
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN the cell was changed in the DB
+	// THEN the cell was changed in the DB.
 	got := queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != want.LatestVersion() {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",
@@ -262,14 +262,14 @@ func TestAPI_Handler(t *testing.T) {
 
 	// ------------------------------
 
-	// WHEN a message is sent to the DatabaseChannel deleting a row
+	// WHEN a message is sent to the DatabaseChannel deleting a row.
 	*tAPI.config.DatabaseChannel <- dbtype.Message{
 		ServiceID: target,
 		Delete:    true,
 	}
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN the row is deleted from the DB
+	// THEN the row is deleted from the DB.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != "" || got.DeployedVersion() != "" {
 		t.Errorf("Expected row to be deleted\ngot  %#v\nwant %#v", got, want)
@@ -277,13 +277,13 @@ func TestAPI_Handler(t *testing.T) {
 
 	// ------------------------------
 
-	// WHEN multiple messages are targeting the same row in quick succession
+	// WHEN multiple messages are targeting the same row in quick succession.
 	*tAPI.config.DatabaseChannel <- msg1
 	wantLatestVersion := msg2.Cells[0].Value
 	*tAPI.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN the last message is the one that is applied
+	// THEN the last message is the one that is applied.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != wantLatestVersion {
 		t.Errorf("Expected %q to be updated to %q\ngot  %#v\nwant %#v",

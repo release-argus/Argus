@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,31 +24,31 @@ import (
 )
 
 func TestInitPrometheusCounterVec(t *testing.T) {
-	// GIVEN a metric
+	// GIVEN a metric.
 	tests := map[string]struct {
 		metric *prometheus.CounterVec
-		// id, service_id, type, result
+		// id, service_id, type, result.
 		args     []string
 		ordering []int
 	}{
-		"LatestVersionQueryMetric": {
-			metric:   LatestVersionQueryMetric,
+		"LatestVersionQueryResultTotal": {
+			metric:   LatestVersionQueryResultTotal,
 			args:     []string{"ID", "", "TYPE", "RESULT"},
 			ordering: []int{0, 1, 2}},
-		"DeployedVersionQueryMetric": {
-			metric:   DeployedVersionQueryMetric,
+		"DeployedVersionQueryResultTotal": {
+			metric:   DeployedVersionQueryResultTotal,
 			args:     []string{"ID", "", "", "RESULT"},
 			ordering: []int{0, 1}},
-		"CommandMetric": {
-			metric:   CommandMetric,
+		"CommandResultTotal": {
+			metric:   CommandResultTotal,
 			args:     []string{"COMMAND_ID", "SERVICE_ID", "", "RESULT"},
 			ordering: []int{0, 2, 1}},
-		"NotifyMetric": {
-			metric:   NotifyMetric,
+		"NotifyResultTotal": {
+			metric:   NotifyResultTotal,
 			args:     []string{"NOTIFY_ID", "SERVICE_ID", "TYPE", "RESULT"},
 			ordering: []int{0, 3, 1, 2}},
-		"WebHookMetric": {
-			metric:   WebHookMetric,
+		"WebHookResultTotal": {
+			metric:   WebHookResultTotal,
 			args:     []string{"WEBHOOK_ID", "SERVICE_ID", "", "RESULT"},
 			ordering: []int{0, 2, 1}},
 	}
@@ -57,7 +57,7 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Make args unique and remove empty strings
+			// Make args unique and remove empty strings.
 			unorderedArgs := make([]string, 0, len(tc.args))
 			for i := range tc.args {
 				if tc.args[i] != "" {
@@ -65,7 +65,7 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 					unorderedArgs = append(unorderedArgs, tc.args[i])
 				}
 			}
-			// Order the args
+			// Order the args.
 			args := make([]string, len(unorderedArgs))
 			for i, j := range tc.ordering {
 				args[i] = unorderedArgs[j]
@@ -77,8 +77,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 					got, want)
 			}
 
-			// WHEN it's initialised with InitPrometheusCounter
-			// id, service_id, type, result
+			// WHEN it's initialised with InitPrometheusCounter.
+			// id, service_id, type, result.
 			InitPrometheusCounter(tc.metric,
 				tc.args[0],
 				tc.args[1],
@@ -99,8 +99,8 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 					gotValue, wantValue)
 			}
 
-			// THEN it can be increased
-			IncreasePrometheusCounter(tc.metric,
+			// THEN it can be increased.
+			IncPrometheusCounter(tc.metric,
 				tc.args[0],
 				tc.args[1],
 				tc.args[2],
@@ -112,7 +112,7 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 					gotValue, wantValue)
 			}
 
-			// AND it can be deleted
+			// AND it can be deleted.
 			DeletePrometheusCounter(tc.metric,
 				tc.args[0],
 				tc.args[1],
@@ -129,18 +129,18 @@ func TestInitPrometheusCounterVec(t *testing.T) {
 }
 
 func TestPrometheusGaugeVec(t *testing.T) {
-	// GIVEN a metric
+	// GIVEN a metric.
 	tests := map[string]struct {
 		metric     *prometheus.GaugeVec
 		args       []string
 		isGaugeVec bool
 		value      float64
 	}{
-		"LatestVersionQueryLiveness": {
-			metric: LatestVersionQueryLiveness,
+		"LatestVersionQueryResultLast": {
+			metric: LatestVersionQueryResultLast,
 			args:   []string{"SERVICE_ID", "TYPE"}},
-		"DeployedVersionQueryLiveness": {
-			metric: DeployedVersionQueryLiveness,
+		"DeployedVersionQueryResultLast": {
+			metric: DeployedVersionQueryResultLast,
 			args:   []string{"SERVICE_ID", ""}},
 		"LatestVersionIsDeployed": {
 			metric: LatestVersionIsDeployed,
@@ -151,7 +151,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Make args unique and remove empty strings
+			// Make args unique and remove empty strings.
 			args := make([]string, 0, len(tc.args))
 			for i := range tc.args {
 				if tc.args[i] != "" {
@@ -166,7 +166,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 					got, want)
 			}
 
-			// WHEN it's initialised with SetPrometheusGauge
+			// WHEN it's initialised with SetPrometheusGauge.
 			wantValue := float64(3)
 			SetPrometheusGauge(tc.metric,
 				tc.args[0],
@@ -184,7 +184,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 					gotValue, wantValue)
 			}
 
-			// THEN changes can be noticed
+			// THEN changes can be noticed.
 			wantValue = float64(2)
 			SetPrometheusGauge(tc.metric,
 				tc.args[0],
@@ -196,7 +196,7 @@ func TestPrometheusGaugeVec(t *testing.T) {
 					gotValue, wantValue)
 			}
 
-			// AND it can be deleted
+			// AND it can be deleted.
 			DeletePrometheusGauge(tc.metric,
 				tc.args[0],
 				tc.args[1])
@@ -205,6 +205,99 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			if gotValue != wantValue {
 				t.Errorf("has been deleted but got %f, expecting %f",
 					gotValue, wantValue)
+			}
+		})
+	}
+}
+
+func TestMetricsAndVersionState(t *testing.T) {
+	// GIVEN the Prometheus metrics are initialized.
+	InitMetrics()
+
+	tests := map[string]struct {
+		approvedVersion string
+		latestVersion   string
+		deployedVersion string
+		expectedState   float64
+		expectedMetrics map[string]float64
+	}{
+		"latest version deployed": {
+			approvedVersion: "1.0.0",
+			latestVersion:   "1.2.0",
+			deployedVersion: "1.2.0",
+			expectedState:   1, // Latest version deployed.
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 0,
+				"SKIPPED":   0,
+			},
+		},
+		"latest version approved": {
+			approvedVersion: "1.2.0",
+			latestVersion:   "1.2.0",
+			deployedVersion: "1.0.0",
+			expectedState:   2, // Latest version approved.
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 1,
+				"SKIPPED":   0,
+			},
+		},
+		"latest version skipped": {
+			approvedVersion: "SKIP_1.2.0",
+			latestVersion:   "1.2.0",
+			deployedVersion: "1.0.0",
+			expectedState:   3, // Latest version skipped.
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 1,
+				"SKIPPED":   1,
+			},
+		},
+		"latest version neither deployed nor approved nor skipped": {
+			approvedVersion: "1.0.0",
+			latestVersion:   "1.2.0",
+			deployedVersion: "1.1.0",
+			expectedState:   0, // Latest version not deployed/approved/skipped.
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 1,
+				"SKIPPED":   0,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			// Reset metrics for each test.
+			InitMetrics()
+
+			// WHEN GetVersionDeployedState is called.
+			state := GetVersionDeployedState(tc.approvedVersion, tc.latestVersion, tc.deployedVersion)
+
+			// THEN the returned state should match the expected state.
+			if state != tc.expectedState {
+				t.Errorf("GetVersionDeployedState(%q, %q, %q) = %v; want %v",
+					tc.approvedVersion, tc.latestVersion, tc.deployedVersion, state, tc.expectedState)
+			}
+
+			// WHEN SetUpdatesCurrent is called.
+			SetUpdatesCurrent(1, state)
+
+			// THEN metrics should match the expected values.
+			for label, expected := range tc.expectedMetrics {
+				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
+				if metric != expected {
+					t.Errorf("UpdatesCurrent[%q] = %v; want %v", label, metric, expected)
+				}
+			}
+
+			// WHEN SetUpdatesCurrent is called again with the inverse delta.
+			SetUpdatesCurrent(-1, state)
+
+			// THEN metrics should reset back to 0.
+			for label := range tc.expectedMetrics {
+				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
+				if metric != 0 {
+					t.Errorf("UpdatesCurrent[%q] = %v; want 0", label, metric)
+				}
 			}
 		})
 	}

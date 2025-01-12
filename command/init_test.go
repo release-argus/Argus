@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -376,13 +376,13 @@ func TestController_Metrics(t *testing.T) {
 	}
 
 	// WHEN the Prometheus metrics are initialised with initMetrics
-	hadC := testutil.CollectAndCount(metric.CommandMetric)
+	hadC := testutil.CollectAndCount(metric.CommandResultTotal)
 	hadG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	controller.InitMetrics()
 
 	// THEN it can be collected
 	// counters
-	gotC := testutil.CollectAndCount(metric.CommandMetric)
+	gotC := testutil.CollectAndCount(metric.CommandResultTotal)
 	wantC := 2 * len(*controller.Command)
 	if (gotC - hadC) != wantC {
 		t.Errorf("Controller.InitMetrics() %d Counter metrics were initialised, expecting %d",
@@ -399,7 +399,7 @@ func TestController_Metrics(t *testing.T) {
 	// AND it can be deleted
 	// counters
 	controller.DeleteMetrics()
-	gotC = testutil.CollectAndCount(metric.CommandMetric)
+	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
 		t.Errorf("Controller.DeleteMetrics() was called, but Counter metrics mismatch got %d, expecting %d",
 			gotC, hadC)
@@ -416,7 +416,7 @@ func TestController_Metrics(t *testing.T) {
 	// InitMetrics
 	controller.InitMetrics()
 	// counters
-	gotC = testutil.CollectAndCount(metric.CommandMetric)
+	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
 		t.Errorf("Controller.InitMetrics() on nil Controller shouldn't have changed the Counter metrics, got %d. expecting %d",
 			gotC, hadC)
@@ -430,7 +430,7 @@ func TestController_Metrics(t *testing.T) {
 	// DeleteMetrics
 	controller.DeleteMetrics()
 	// counters
-	gotC = testutil.CollectAndCount(metric.CommandMetric)
+	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
 	if gotC != hadC {
 		t.Errorf("Controller.DeleteMetrics() on nil Controller shouldn't have changed the Counter metrics, got %d. expecting %d",
 			gotC, hadC)

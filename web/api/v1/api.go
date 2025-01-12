@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -64,4 +65,16 @@ func NewAPI(cfg *config.Config, log *util.JLog) *API {
 		api.Router.Use(api.basicAuth())
 	}
 	return api
+}
+
+func (api *API) writeJSON(w http.ResponseWriter, v interface{}, logFrom util.LogFrom) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		// Encoding error, 500.
+		w.WriteHeader(http.StatusInternalServerError)
+		jLog.Error(err, logFrom, true)
+		return
+	}
 }

@@ -24,11 +24,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/test"
-	metric "github.com/release-argus/Argus/web/metric"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestStatus_Init(t *testing.T) {
-	// GIVEN we have a Status
+	// GIVEN we have a Status.
 	tests := map[string]struct {
 		shoutrrrs, commands, webhooks int
 		serviceID                     string
@@ -58,24 +59,24 @@ func TestStatus_Init(t *testing.T) {
 
 			var status Status
 
-			// WHEN Init is called
+			// WHEN Init is called.
 			status.Init(
 				tc.shoutrrrs, tc.commands, tc.webhooks,
 				&tc.serviceID, &name,
 				&tc.webURL)
 
-			// THEN the Status is initialised as expected
-			// ServiceID
+			// THEN the Status is initialised as expected:
+			// 	ServiceID
 			if status.ServiceID != &tc.serviceID {
 				t.Errorf("ServiceID not initialised to address of %s (%v). Got %v",
 					tc.serviceID, &tc.serviceID, status.ServiceID)
 			}
-			// WebURL
+			// 	WebURL
 			if status.WebURL != &tc.webURL {
 				t.Errorf("WebURL not initialised to address of %s (%v). Got %v",
 					tc.webURL, &tc.webURL, status.WebURL)
 			}
-			// Shoutrrr
+			// 	Shoutrrr
 			got := status.Fails.Shoutrrr.Length()
 			if got != 0 {
 				t.Errorf("Fails.Shoutrrr was initialised to %d. Want %d",
@@ -91,13 +92,13 @@ func TestStatus_Init(t *testing.T) {
 						tc.shoutrrrs, got)
 				}
 			}
-			// Command
+			// 	Command
 			got = status.Fails.Command.Length()
 			if got != tc.commands {
 				t.Errorf("Fails.Command was initialised to %d. Want %d",
 					got, tc.commands)
 			}
-			// WebHook
+			// 	WebHook
 			got = status.Fails.WebHook.Length()
 			if got != 0 {
 				t.Errorf("Fails.WebHook was initialised to %d. Want %d",
@@ -118,7 +119,7 @@ func TestStatus_Init(t *testing.T) {
 }
 
 func TestStatus_GetWebURL(t *testing.T) {
-	// GIVEN we have a Status
+	// GIVEN we have a Status.
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
 		webURL *string
@@ -149,10 +150,10 @@ func TestStatus_GetWebURL(t *testing.T) {
 				tc.webURL)
 			status.SetLatestVersion(latestVersion, "", false)
 
-			// WHEN GetWebURL is called
+			// WHEN GetWebURL is called.
 			got := status.GetWebURL()
 
-			// THEN the returned WebURL is as expected
+			// THEN the returned WebURL is as expected.
 			if got != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
 					tc.want, got)
@@ -162,15 +163,16 @@ func TestStatus_GetWebURL(t *testing.T) {
 }
 
 func TestStatus_SetLastQueried(t *testing.T) {
-	// GIVEN we have a Status and some webhooks
+	// GIVEN we have a Status and some webhooks.
 	var status Status
 
-	// WHEN we SetLastQueried
+	// WHEN we SetLastQueried.
 	start := time.Now().UTC()
 	status.SetLastQueried("")
 
-	// THEN LastQueried will have been set to the current timestamp
-	since := time.Since(start)
+	// THEN LastQueried will have been set to the current timestamp.
+	lastQueried, _ := time.Parse(time.RFC3339, status.LastQueried())
+	since := lastQueried.Sub(start)
 	if since > time.Second {
 		t.Errorf("LastQueried was %v ago, not recent enough!",
 			since)
@@ -180,24 +182,39 @@ func TestStatus_SetLastQueried(t *testing.T) {
 func TestStatus_ApprovedVersion(t *testing.T) {
 	deployedVersion := "0.0.1"
 	latestVersion := "0.0.3"
-	// GIVEN a Status
+	// GIVEN a Status.
 	tests := map[string]struct {
+		hadApprovedVersion            string
 		approving                     string
 		latestVersionIsDeployedMetric float64
+		wantMessages                  int
 	}{
+		"Same version": {
+			hadApprovedVersion:            "0.0.0",
+			approving:                     "0.0.0",
+			latestVersionIsDeployedMetric: 0,
+			wantMessages:                  0,
+		},
 		"Approving LatestVersion": {
 			approving:                     latestVersion,
 			latestVersionIsDeployedMetric: 2,
+			wantMessages:                  1,
 		},
 		"Skipping LatestVersion": {
 			approving:                     "SKIP_" + latestVersion,
 			latestVersionIsDeployedMetric: 3,
+			wantMessages:                  1,
 		},
 		"Approving non-latest version": {
 			approving:                     "0.0.2a",
 			latestVersionIsDeployedMetric: 0,
+			wantMessages:                  1,
 		},
 	}
+
+	// Changing UpdatesCurrent.
+	metricsMutex.RLock()
+	t.Cleanup(func() { metricsMutex.RUnlock() })
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -207,7 +224,10 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 			databaseChannel := make(chan dbtype.Message, 4)
 			status := New(
 				&announceChannel, &databaseChannel, nil,
-				"", "", "", "", "", "")
+				tc.hadApprovedVersion,
+				"", "",
+				"", "",
+				"")
 			status.Init(
 				0, 0, 0,
 				test.StringPtr("TestStatus_SetApprovedVersion_"+name), test.StringPtr("TestStatus_SetApprovedVersion_"+name),
@@ -215,39 +235,39 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 			status.SetLatestVersion(latestVersion, "", false)
 			status.SetDeployedVersion(deployedVersion, "", false)
 
-			// WHEN SetApprovedVersion is called
+			// WHEN SetApprovedVersion is called.
 			status.SetApprovedVersion(tc.approving, true)
 
-			// THEN the Status is as expected
-			// ApprovedVersion
+			// THEN the Status is as expected:
+			// 	ApprovedVersion
 			got := status.ApprovedVersion()
 			if got != tc.approving {
 				t.Errorf("ApprovedVersion not set to %s. Got %s",
 					tc.approving, got)
 			}
-			// LatestVersion
+			// 	LatestVersion
 			got = status.LatestVersion()
 			if got != latestVersion {
 				t.Errorf("LatestVersion not set to %s. Got %s",
 					latestVersion, got)
 			}
-			// DeployedVersion
+			// 	DeployedVersion
 			got = status.DeployedVersion()
 			if got != deployedVersion {
 				t.Errorf("DeployedVersion not set to %s. Got %s",
 					deployedVersion, got)
 			}
-			// AnnounceChannel
-			if len(*status.AnnounceChannel) != 1 {
-				t.Errorf("AnnounceChannel should have 1 message, but has %d",
-					len(*status.AnnounceChannel))
+			// 	AnnounceChannel
+			if len(*status.AnnounceChannel) != tc.wantMessages {
+				t.Errorf("AnnounceChannel should have %d message(s), but has %d",
+					tc.wantMessages, len(*status.AnnounceChannel))
 			}
-			// DatabaseChannel
-			if len(*status.DatabaseChannel) != 1 {
-				t.Errorf("DatabaseChannel should have 1 message, but has %d",
-					len(*status.DatabaseChannel))
+			// 	DatabaseChannel
+			if len(*status.DatabaseChannel) != tc.wantMessages {
+				t.Errorf("DatabaseChannel should have %d message(s), but has %d",
+					tc.wantMessages, len(*status.DatabaseChannel))
 			}
-			// AND LatestVersionIsDeployedVersion metric is updated
+			// AND LatestVersionIsDeployedVersion metric is updated.
 			gotMetric := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
 			if gotMetric != tc.latestVersionIsDeployedMetric {
 				t.Errorf("LatestVersionIsDeployedVersion metric should be %f, not %f",
@@ -258,33 +278,102 @@ func TestStatus_ApprovedVersion(t *testing.T) {
 }
 
 func TestStatus_DeployedVersion(t *testing.T) {
-	// GIVEN a Status
-	approvedVersion := "0.0.2"
-	deployedVersion := "0.0.1"
-	latestVersion := "0.0.3"
-	tests := map[string]struct {
-		deploying                                       string
+	type values struct {
 		approvedVersion, deployedVersion, latestVersion string
+		deployedVersionTimestamp                        string
+	}
+	type args struct {
+		version, timestamp string
+	}
+	// GIVEN a Status.
+	tests := map[string]struct {
+		had  values
+		args args
+		want values
 	}{
+		"Same version": {
+			had: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+			args: args{
+				version:   "0.0.1",
+				timestamp: "2020-01-01T00:00:00Z",
+			},
+			want: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+		},
 		"Deploying ApprovedVersion - DeployedVersion becomes ApprovedVersion and resets ApprovedVersion": {
-			deploying:       approvedVersion,
-			approvedVersion: "",
-			deployedVersion: approvedVersion,
-			latestVersion:   latestVersion,
+			had: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+			args: args{
+				version: "0.0.2",
+			},
+			want: values{
+				approvedVersion: "",
+				deployedVersion: "0.0.2",
+				latestVersion:   "0.0.3",
+			},
 		},
 		"Deploying unknown Version - DeployedVersion becomes this version": {
-			deploying:       "0.0.4",
-			approvedVersion: approvedVersion,
-			deployedVersion: "0.0.4",
-			latestVersion:   latestVersion,
+			had: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+			args: args{
+				version: "0.0.4-dev",
+			},
+			want: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.4-dev",
+				latestVersion:   "0.0.3",
+			},
 		},
 		"Deploying LatestVersion - DeployedVersion becomes this version": {
-			deploying:       latestVersion,
-			approvedVersion: approvedVersion,
-			deployedVersion: latestVersion,
-			latestVersion:   latestVersion,
+			had: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+			args: args{
+				version: "0.0.3",
+			},
+			want: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.3",
+				latestVersion:   "0.0.3",
+			},
+		},
+		"Deploying X with timestamp - DeployedVersion and DeployedVersionTimestamp are set": {
+			had: values{
+				approvedVersion: "0.0.2",
+				deployedVersion: "0.0.1",
+				latestVersion:   "0.0.3",
+			},
+			args: args{
+				version:   "0.0.4",
+				timestamp: "2020-01-01T00:00:00Z",
+			},
+			want: values{
+				approvedVersion:          "0.0.2",
+				deployedVersion:          "0.0.4",
+				latestVersion:            "0.0.3",
+				deployedVersionTimestamp: "2020-01-01T00:00:00Z",
+			},
 		},
 	}
+
+	// Changing UpdatesCurrent.
+	metricsMutex.RLock()
+	t.Cleanup(func() { metricsMutex.RUnlock() })
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -294,42 +383,59 @@ func TestStatus_DeployedVersion(t *testing.T) {
 				dbChannel := make(chan dbtype.Message, 4)
 				status := New(
 					nil, &dbChannel, nil,
-					"", "", "", "", "", "")
+					tc.had.approvedVersion,
+					tc.had.deployedVersion, tc.had.deployedVersionTimestamp,
+					tc.had.latestVersion, "",
+					"")
 				if !haveDB {
 					status.DatabaseChannel = nil
 				}
 				status.Init(
 					0, 0, 0,
 					&name, &name,
-					test.StringPtr("http://example.com"))
-				status.SetApprovedVersion(approvedVersion, haveDB)
-				status.SetDeployedVersion(deployedVersion, "", haveDB)
-				status.SetLatestVersion(latestVersion, "", haveDB)
+					test.StringPtr("https://example.com"))
 
-				// WHEN SetDeployedVersion is called on it
-				status.SetDeployedVersion(tc.deploying, "", haveDB)
+				// WHEN SetDeployedVersion is called on it.
+				status.SetDeployedVersion(tc.args.version, tc.args.timestamp,
+					haveDB)
 
-				// THEN DeployedVersion is set to this version
-				if status.DeployedVersion() != tc.deployedVersion {
+				// THEN DeployedVersion is set to this version.
+				if status.DeployedVersion() != tc.want.deployedVersion {
 					t.Errorf("Expected DeployedVersion to be set to %q, not %q",
-						tc.deployedVersion, status.DeployedVersion())
+						tc.want.deployedVersion, status.DeployedVersion())
 				}
-				if status.ApprovedVersion() != tc.approvedVersion {
+				if status.ApprovedVersion() != tc.want.approvedVersion {
 					t.Errorf("Expected ApprovedVersion to be set to %q, not %q",
-						tc.approvedVersion, status.ApprovedVersion())
+						tc.want.approvedVersion, status.ApprovedVersion())
 				}
-				if status.LatestVersion() != tc.latestVersion {
+				if status.LatestVersion() != tc.want.latestVersion {
 					t.Errorf("Expected LatestVersion to be set to %q, not %q",
-						tc.latestVersion, status.LatestVersion())
+						tc.want.latestVersion, status.LatestVersion())
 				}
-				// AND the DeployedVersionTimestamp is set to current time
-				d, _ := time.Parse(time.RFC3339, status.DeployedVersionTimestamp())
-				since := time.Since(d)
-				if since > time.Second {
-					t.Errorf("DeployedVersionTimestamp was %v ago, not recent enough!",
-						since)
+				// AND the DeployedVersionTimestamp is unchanged when DeployedVersion is unchanged.
+				if tc.had.deployedVersion == tc.args.version {
+					if timestamp := status.DeployedVersionTimestamp(); timestamp != tc.had.deployedVersionTimestamp {
+						t.Errorf("Expected DeployedVersionTimestamp to be unchanged\n%s\ngot:\n%s",
+							tc.had.deployedVersionTimestamp, timestamp)
+					}
+				} else {
+					// AND the DeployedVersionTimestamp is set to the provided date (when provided).
+					if tc.want.deployedVersionTimestamp != "" {
+						if timestamp := status.DeployedVersionTimestamp(); timestamp != tc.want.deployedVersionTimestamp {
+							t.Errorf("Expected DeployedVersionTimestamp to be set to\n%s\ngot:\n%s",
+								tc.want.deployedVersionTimestamp, timestamp)
+						}
+					} else {
+						// AND the DeployedVersionTimestamp is set to current time (when no releaseDate was given).
+						d, _ := time.Parse(time.RFC3339, status.DeployedVersionTimestamp())
+						since := time.Since(d)
+						if since > time.Second {
+							t.Errorf("DeployedVersionTimestamp was %v ago, not recent enough!",
+								since)
+						}
+					}
 				}
-				// AND the LatestVersionIsDeployedVersion metric is updated
+				// AND the LatestVersionIsDeployedVersion metric is updated.
 				got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
 				want := float64(0)
 				if haveDB && status.LatestVersion() == status.DeployedVersion() {
@@ -345,20 +451,47 @@ func TestStatus_DeployedVersion(t *testing.T) {
 }
 
 func TestStatus_LatestVersion(t *testing.T) {
-	// GIVEN a Status
+	type values struct {
+		version, timestamp string
+	}
+	// GIVEN a Status.
 	lastQueried := "2021-01-01T00:00:00Z"
 	tests := map[string]struct {
-		latestVersionTimestamp, wantLatestVersionTimestamp string
+		had, args values
+		want      *values // Default to args.
 	}{
-		"LatestVersionTimestamp - Empty == Set to lastQueried": {
-			latestVersionTimestamp:     "",
-			wantLatestVersionTimestamp: lastQueried,
+		"same version": {
+			had: values{
+				version: "1.2.3", timestamp: "2020-01-01T00:00:00Z",
+			},
+			args: values{
+				version: "1.2.3", timestamp: "2020-01-01T00:00:00Z",
+			},
 		},
-		"LatestVersionTimestamp - Given == Set to value given": {
-			latestVersionTimestamp:     "2020-01-01T00:00:00Z",
-			wantLatestVersionTimestamp: "2020-01-01T00:00:00Z",
+		"timestamp - Empty == Set to lastQueried": {
+			had: values{
+				version: "0.0.0", timestamp: "2021-01-01T00:00:00Z",
+			},
+			args: values{
+				version: "0.0.1", timestamp: "",
+			},
+			want: &values{
+				version: "0.0.1", timestamp: lastQueried,
+			},
+		},
+		"Timestamp - Given == Set to value given": {
+			had: values{
+				version: "0.0.0", timestamp: "2022-01-01T00:00:00Z",
+			},
+			args: values{
+				version: "0.0.1", timestamp: "2022-01-01T00:00:00Z",
+			},
 		},
 	}
+
+	// Changing UpdatesCurrent.
+	metricsMutex.RLock()
+	t.Cleanup(func() { metricsMutex.RUnlock() })
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -370,7 +503,7 @@ func TestStatus_LatestVersion(t *testing.T) {
 					nil, &dbChannel, nil,
 					"",
 					"", "",
-					"0.0.0", "",
+					tc.had.version, tc.had.timestamp,
 					lastQueried)
 				if !haveDB {
 					status.DatabaseChannel = nil
@@ -378,34 +511,35 @@ func TestStatus_LatestVersion(t *testing.T) {
 				status.Init(
 					0, 0, 0,
 					&name, &name,
-					test.StringPtr("http://example.com"))
-				versions := []string{"0.0.1", "0.0.2", "0.0.2-dev", "something-else"}
-				for _, version := range versions {
+					test.StringPtr("https://example.com"))
+				if tc.want == nil {
+					tc.want = &tc.args
+				}
 
-					// WHEN SetLatestVersion is called on it
-					status.SetLatestVersion(version, tc.latestVersionTimestamp, haveDB)
+				// WHEN SetLatestVersion is called on it.
+				status.SetLatestVersion(tc.args.version, tc.args.timestamp,
+					haveDB)
 
-					// THEN LatestVersion is set to this version
-					if status.LatestVersion() != version {
-						t.Errorf("Expected LatestVersion to be set to %q, not %q",
-							version, status.LatestVersion())
-					}
-					// AND the LatestVersionTimestamp is set to the current time
-					if status.LatestVersionTimestamp() != tc.wantLatestVersionTimestamp {
-						t.Errorf("haveDB=%t LatestVersionTimestamp should've been set to LastQueried \n%q, not \n%q",
-							haveDB, tc.wantLatestVersionTimestamp, status.LatestVersionTimestamp())
-					}
-					// AND the LatestVersionIsDeployedVersion metric is updated
-					got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
-					want := float64(0)
-					if haveDB && status.LatestVersion() == status.DeployedVersion() {
-						want = 1
-					}
-					// LatestVersionIsDeployedVersion incorrect?
-					if got != want {
-						t.Errorf("haveDB=%t LatestVersionIsDeployedVersion metric should be %f, not %f",
-							haveDB, want, got)
-					}
+				// THEN LatestVersion is set to this version.
+				if version := status.LatestVersion(); version != tc.want.version {
+					t.Errorf("Expected LatestVersion to be set to %q, not %q",
+						version, status.LatestVersion())
+				}
+				// AND the LatestVersionTimestamp is set to the current time.
+				if timestamp := status.LatestVersionTimestamp(); timestamp != tc.want.timestamp {
+					t.Errorf("haveDB=%t LatestVersionTimestamp should have been set to \n%q, not \n%q",
+						haveDB, timestamp, status.LatestVersionTimestamp())
+				}
+				// AND the LatestVersionIsDeployedVersion metric is updated.
+				got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
+				want := float64(0)
+				if haveDB && status.LatestVersion() == status.DeployedVersion() {
+					want = 1
+				}
+				// LatestVersionIsDeployedVersion incorrect?
+				if got != want {
+					t.Errorf("haveDB=%t LatestVersionIsDeployedVersion metric should be %f, not %f",
+						haveDB, want, got)
 				}
 			}
 		})
@@ -413,43 +547,43 @@ func TestStatus_LatestVersion(t *testing.T) {
 }
 
 func TestStatus_RegexMissesContent(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	status := Status{}
 
-	// WHEN RegexMissContent is called on it
+	// WHEN RegexMissContent is called on it.
 	status.RegexMissContent()
 
-	// THEN RegexMisses is incremented
+	// THEN RegexMisses is incremented.
 	got := status.RegexMissesContent()
 	if got != 1 {
 		t.Errorf("Expected RegexMisses to be 1, not %d",
 			got)
 	}
 
-	// WHEN RegexMissContent is called on it again
+	// WHEN RegexMissContent is called on it again.
 	status.RegexMissContent()
 
-	// THEN RegexMisses is incremented again
+	// THEN RegexMisses is incremented again.
 	got = status.RegexMissesContent()
 	if got != 2 {
 		t.Errorf("Expected RegexMisses to be 2, not %d",
 			got)
 	}
 
-	// WHEN RegexMissContent is called on it again
+	// WHEN RegexMissContent is called on it again.
 	status.RegexMissContent()
 
-	// THEN RegexMisses is incremented again
+	// THEN RegexMisses is incremented again.
 	got = status.RegexMissesContent()
 	if got != 3 {
 		t.Errorf("Expected RegexMisses to be 3, not %d",
 			got)
 	}
 
-	// WHEN ResetRegexMisses is called on it
+	// WHEN ResetRegexMisses is called on it.
 	status.ResetRegexMisses()
 
-	// THEN RegexMisses is reset
+	// THEN RegexMisses is reset.
 	got = status.RegexMissesContent()
 	if got != 0 {
 		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
@@ -458,43 +592,43 @@ func TestStatus_RegexMissesContent(t *testing.T) {
 }
 
 func TestStatus_RegexMissesVersion(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	status := Status{}
 
-	// WHEN RegexMissVersion is called on it
+	// WHEN RegexMissVersion is called on it.
 	status.RegexMissVersion()
 
-	// THEN RegexMisses is incremented
+	// THEN RegexMisses is incremented.
 	got := status.RegexMissesVersion()
 	if got != 1 {
 		t.Errorf("Expected RegexMisses to be 1, not %d",
 			got)
 	}
 
-	// WHEN RegexMissVersion is called on it again
+	// WHEN RegexMissVersion is called on it again.
 	status.RegexMissVersion()
 
-	// THEN RegexMisses is incremented again
+	// THEN RegexMisses is incremented again.
 	got = status.RegexMissesVersion()
 	if got != 2 {
 		t.Errorf("Expected RegexMisses to be 2, not %d",
 			got)
 	}
 
-	// WHEN RegexMissVersion is called on it again
+	// WHEN RegexMissVersion is called on it again.
 	status.RegexMissVersion()
 
-	// THEN RegexMisses is incremented again
+	// THEN RegexMisses is incremented again.
 	got = status.RegexMissesVersion()
 	if got != 3 {
 		t.Errorf("Expected RegexMisses to be 3, not %d",
 			got)
 	}
 
-	// WHEN ResetRegexMisses is called on it
+	// WHEN ResetRegexMisses is called on it.
 	status.ResetRegexMisses()
 
-	// THEN RegexMisses is reset
+	// THEN RegexMisses is reset.
 	got = status.RegexMissesVersion()
 	if got != 0 {
 		t.Errorf("Expected RegexMisses to be 0 after ResetRegexMisses, not %d",
@@ -503,14 +637,14 @@ func TestStatus_RegexMissesVersion(t *testing.T) {
 }
 
 func TestStatus_SendAnnounce(t *testing.T) {
-	// GIVEN a Status with channels
+	// GIVEN a Status with channels.
 	tests := map[string]struct {
 		deleting   bool
 		nilChannel bool
 	}{
-		"not deleting or nil channel": {},
-		"deleting":                    {deleting: true},
-		"nil channel":                 {nilChannel: true},
+		"not deleting, or nil channel": {},
+		"deleting":                     {deleting: true},
+		"nil channel":                  {nilChannel: true},
 	}
 
 	for name, tc := range tests {
@@ -528,10 +662,10 @@ func TestStatus_SendAnnounce(t *testing.T) {
 				status.SetDeleting()
 			}
 
-			// WHEN SendAnnounce is called on it
+			// WHEN SendAnnounce is called on it.
 			status.SendAnnounce(&[]byte{})
 
-			// THEN the AnnounceChannel is sent a message if not deleting or nil
+			// THEN the AnnounceChannel is sent a message if not deleting or nil.
 			got := 0
 			if status.AnnounceChannel != nil {
 				got = len(*status.AnnounceChannel)
@@ -549,14 +683,14 @@ func TestStatus_SendAnnounce(t *testing.T) {
 }
 
 func TestStatus_sendDatabase(t *testing.T) {
-	// GIVEN a Status with channels
+	// GIVEN a Status with channels.
 	tests := map[string]struct {
 		deleting   bool
 		nilChannel bool
 	}{
-		"not deleting or nil channel": {},
-		"deleting":                    {deleting: true},
-		"nil channel":                 {nilChannel: true},
+		"not deleting, or nil channel": {},
+		"deleting":                     {deleting: true},
+		"nil channel":                  {nilChannel: true},
 	}
 
 	for name, tc := range tests {
@@ -574,10 +708,10 @@ func TestStatus_sendDatabase(t *testing.T) {
 				status.SetDeleting()
 			}
 
-			// WHEN sendDatabase is called on it
+			// WHEN sendDatabase is called on it.
 			status.sendDatabase(&dbtype.Message{})
 
-			// THEN the DatabaseChannel is sent a message if not deleting or nil
+			// THEN the DatabaseChannel is sent a message if not deleting or nil.
 			got := 0
 			if status.DatabaseChannel != nil {
 				got = len(*status.DatabaseChannel)
@@ -595,14 +729,14 @@ func TestStatus_sendDatabase(t *testing.T) {
 }
 
 func TestStatus_SendSave(t *testing.T) {
-	// GIVEN a Status with channels
+	// GIVEN a Status with channels.
 	tests := map[string]struct {
 		deleting   bool
 		nilChannel bool
 	}{
-		"not deleting or nil channel": {},
-		"deleting":                    {deleting: true},
-		"nil channel":                 {nilChannel: true},
+		"not deleting, or nil channel": {},
+		"deleting":                     {deleting: true},
+		"nil channel":                  {nilChannel: true},
 	}
 
 	for name, tc := range tests {
@@ -620,10 +754,10 @@ func TestStatus_SendSave(t *testing.T) {
 				status.SetDeleting()
 			}
 
-			// WHEN SendSave is called on it
+			// WHEN SendSave is called on it.
 			status.SendSave()
 
-			// THEN the SaveChannel is sent a message if not deleting or nil
+			// THEN the SaveChannel is sent a message if not deleting or nil.
 			got := 0
 			if status.SaveChannel != nil {
 				got = len(*status.SaveChannel)
@@ -641,7 +775,7 @@ func TestStatus_SendSave(t *testing.T) {
 }
 
 func TestFails_ResetFails(t *testing.T) {
-	// GIVEN a Fails struct
+	// GIVEN a Fails struct.
 	tests := map[string]struct {
 		commandFails                *[]*bool
 		shoutrrrFails, webhookFails *map[string]*bool
@@ -698,10 +832,10 @@ func TestFails_ResetFails(t *testing.T) {
 				fails.WebHook.Init(len(*tc.webhookFails))
 			}
 
-			// WHEN resetFails is called on it
+			// WHEN resetFails is called on it.
 			fails.resetFails()
 
-			// THEN all the fails become nil
+			// THEN all the fails become nil.
 			if tc.shoutrrrFails != nil {
 				for i := range *tc.shoutrrrFails {
 					if fails.Shoutrrr.Get(i) != nil {
@@ -731,35 +865,36 @@ func TestFails_ResetFails(t *testing.T) {
 }
 
 func TestStatus_String(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	tests := map[string]struct {
-		status                                    *Status
-		approvedVersion                           string
-		deployedVersion, deployedVersionTimestamp string
-		latestVersion, latestVersionTimestamp     string
-		lastQueried                               *string
-		regexMissesContent, regexMissesVersion    int
-		commandFails                              []*bool
-		shoutrrrFails, webhookFails               map[string]*bool
-		want                                      string
+		status                                 *Status
+		regexMissesContent, regexMissesVersion int
+		want                                   string
 	}{
 		"empty status": {
 			status: &Status{},
 			want:   "",
 		},
 		"only fails": {
-			commandFails: []*bool{
-				nil,
-				test.BoolPtr(false),
-				test.BoolPtr(true)},
-			shoutrrrFails: map[string]*bool{
-				"bash": test.BoolPtr(false),
-				"bish": nil,
-				"bosh": test.BoolPtr(true)},
-			webhookFails: map[string]*bool{
-				"bar": nil,
-				"foo": test.BoolPtr(false)},
-			status: &Status{},
+			status: &Status{
+				Fails: Fails{
+					Shoutrrr: FailsShoutrrr{
+						failsBase: failsBase{
+							fails: map[string]*bool{
+								"bash": test.BoolPtr(false),
+								"bish": nil,
+								"bosh": test.BoolPtr(true)}}},
+					Command: FailsCommand{
+						fails: []*bool{
+							nil,
+							test.BoolPtr(false),
+							test.BoolPtr(true)}},
+					WebHook: FailsWebHook{
+						failsBase: failsBase{
+							fails: map[string]*bool{
+								"bar": nil,
+								"foo": test.BoolPtr(false)}}}},
+			},
 			want: test.TrimYAML(`
 				fails:
 					shoutrrr:
@@ -778,24 +913,31 @@ func TestStatus_String(t *testing.T) {
 		"all fields": {
 			regexMissesContent: 1,
 			regexMissesVersion: 2,
-			status:             &Status{},
-			shoutrrrFails: map[string]*bool{
-				"bish": nil,
-				"bash": test.BoolPtr(false),
-				"bosh": test.BoolPtr(true)},
-			commandFails: []*bool{
-				nil,
-				test.BoolPtr(false),
-				test.BoolPtr(true)},
-			webhookFails: map[string]*bool{
-				"foo": test.BoolPtr(false),
-				"bar": nil},
-			approvedVersion:          "1.2.4",
-			deployedVersion:          "1.2.3",
-			deployedVersionTimestamp: "2022-01-01T01:01:02Z",
-			latestVersion:            "1.2.4",
-			latestVersionTimestamp:   "2022-01-01T01:01:01Z",
-			lastQueried:              test.StringPtr("2022-01-01T01:01:01Z"),
+			status: &Status{
+				approvedVersion:          "1.2.4",
+				deployedVersion:          "1.2.3",
+				deployedVersionTimestamp: "2022-01-01T01:01:02Z",
+				latestVersion:            "1.2.4",
+				latestVersionTimestamp:   "2022-01-01T01:01:01Z",
+				lastQueried:              "2022-01-01T01:01:01Z",
+				Fails: Fails{
+					Shoutrrr: FailsShoutrrr{
+						failsBase: failsBase{
+							fails: map[string]*bool{
+								"bish": nil,
+								"bash": test.BoolPtr(false),
+								"bosh": test.BoolPtr(true)}}},
+					Command: FailsCommand{
+						fails: []*bool{
+							nil,
+							test.BoolPtr(false),
+							test.BoolPtr(true)}},
+					WebHook: FailsWebHook{
+						failsBase: failsBase{
+							fails: map[string]*bool{
+								"foo": test.BoolPtr(false),
+								"bar": nil}}}},
+			},
 			want: test.TrimYAML(`
 				approved_version: 1.2.4
 				deployed_version: 1.2.3
@@ -825,16 +967,7 @@ func TestStatus_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.status.SetApprovedVersion(tc.approvedVersion, false)
-			tc.status.SetDeployedVersion(tc.deployedVersion, tc.deployedVersionTimestamp, false)
-			if tc.deployedVersionTimestamp == "" {
-				tc.status.deployedVersionTimestamp = tc.deployedVersionTimestamp
-			}
-			tc.status.SetLatestVersion(tc.latestVersion, tc.latestVersionTimestamp, false)
-			if tc.lastQueried != nil {
-				tc.status.SetLastQueried(*tc.lastQueried)
-			}
-			{ // RegEz misses
+			{ // RegEz misses.
 				for i := 0; i < tc.regexMissesContent; i++ {
 					tc.status.RegexMissContent()
 				}
@@ -842,28 +975,11 @@ func TestStatus_String(t *testing.T) {
 					tc.status.RegexMissVersion()
 				}
 			}
-			{ // Fails
-				tc.status.Init(
-					len(tc.shoutrrrFails), len(tc.commandFails), len(tc.webhookFails),
-					tc.status.ServiceID, &name,
-					&name)
-				for k, v := range tc.commandFails {
-					if v != nil {
-						tc.status.Fails.Command.Set(k, *v)
-					}
-				}
-				for k, v := range tc.shoutrrrFails {
-					tc.status.Fails.Shoutrrr.Set(k, v)
-				}
-				for k, v := range tc.webhookFails {
-					tc.status.Fails.WebHook.Set(k, v)
-				}
-			}
 
-			// WHEN the Status is stringified with String
+			// WHEN the Status is stringified with String.
 			got := tc.status.String()
 
-			// THEN the result is as expected
+			// THEN the result is as expected.
 			if got != tc.want {
 				t.Errorf("Status.String() mismatch\n%q\ngot:\n%q",
 					tc.want, got)
@@ -873,7 +989,7 @@ func TestStatus_String(t *testing.T) {
 }
 
 func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	tests := map[string]struct {
 		serviceID                                       string
 		approvedVersion, latestVersion, deployedVersion string
@@ -902,39 +1018,28 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 			deployedVersion: "1.2.4",
 			want:            3,
 		},
-		"nil ServiceID - initial state": {
-			serviceID: "<nil>",
-			want:      0,
-		},
-		"nil ServiceID - ignore latest version is deployed": {
-			serviceID:       "<nil>",
-			latestVersion:   "1.2.3",
-			deployedVersion: "1.2.3",
-			want:            0,
-		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			status := Status{}
+			status := New(
+				nil, nil, nil,
+				tc.approvedVersion,
+				tc.deployedVersion, testStatus().deployedVersionTimestamp,
+				tc.latestVersion, "",
+				"")
 			status.Init(
 				0, 0, 0,
 				&name, &name,
-				test.StringPtr("http://example.com"))
-			status.SetApprovedVersion(tc.approvedVersion, false)
-			status.SetLatestVersion(tc.latestVersion, "", false)
-			status.SetDeployedVersion(tc.deployedVersion, "", false)
-			if tc.serviceID == "<nil>" {
-				status.ServiceID = nil
-			}
+				test.StringPtr("https://example.com"))
 
-			// WHEN setLatestVersion is called on it
+			// WHEN setLatestVersion is called on it.
 			status.setLatestVersionIsDeployedMetric()
 			got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(name))
 
-			// THEN the metric is as expected
+			// THEN the metric is as expected.
 			if got != tc.want {
 				t.Errorf("Expected SetLatestVersionIsDeployedMetric to be %f, not %f",
 					tc.want, got)
@@ -944,89 +1049,142 @@ func TestStatus_SetLatestVersionIsDeployedMetric(t *testing.T) {
 }
 
 func TestStatus_InitMetrics_DeleteMetrics(t *testing.T) {
-	// GIVEN a Status
+	type versions struct {
+		latestVersion, deployedVersion, approvedVersion string
+	}
+	// GIVEN a Status.
 	tests := map[string]struct {
-		nilStatus, nilServiceID bool
-		wantCreate              float64
+		versions                versions
+		latestVersionIsDeployed float64
 	}{
-		"nil status": {
-			nilStatus: true,
+		"latest version is not deployed": {
+			versions: versions{
+				latestVersion:   "0.0.1",
+				deployedVersion: "0.0.0",
+			},
+			latestVersionIsDeployed: 0,
 		},
-		"nil serviceID": {
-			nilServiceID: true,
+		"latest version is deployed": {
+			versions: versions{
+				latestVersion:   "0.0.0",
+				deployedVersion: "0.0.0",
+			},
+			latestVersionIsDeployed: 1,
 		},
-		"non-nil serviceID": {
-			wantCreate: 1,
+		"latest version is approved": {
+			versions: versions{
+				approvedVersion: "0.0.1",
+				latestVersion:   "0.0.1",
+				deployedVersion: "0.0.0",
+			},
+			latestVersionIsDeployed: 2,
+		},
+		"latest version is skipped": {
+			versions: versions{
+				approvedVersion: "SKIP_0.0.1",
+				latestVersion:   "0.0.1",
+				deployedVersion: "0.0.0",
+			},
+			latestVersionIsDeployed: 3,
 		},
 	}
 
+	// Changing and reading UpdatesCurrent.
+	metricsMutex.Lock()
+	t.Cleanup(func() { metricsMutex.Unlock() })
+
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - Cannot run in parallel since we're testing metrics.
 
-			status := &Status{}
+			// Reset global metrics.
+			metric.InitMetrics()
+
+			status := New(
+				nil, nil, nil,
+				tc.versions.approvedVersion,
+				tc.versions.deployedVersion, "",
+				tc.versions.latestVersion, "",
+				"")
 			status.Init(
 				0, 0, 0,
 				&name, &name,
-				test.StringPtr("http://example.com"))
-			status.SetLatestVersion("0.0.2", "", false)
-			status.SetDeployedVersion("0.0.2", "", false)
-			if tc.nilServiceID {
-				status.ServiceID = nil
+				test.StringPtr("https://example.com"))
+			var updatesCurrentAvailableDelta float64
+			var updatesCurrentSkippedDelta float64
+			switch tc.latestVersionIsDeployed {
+			case 0, 2:
+				updatesCurrentAvailableDelta = 1
+			case 3:
+				updatesCurrentAvailableDelta = 1
+				updatesCurrentSkippedDelta = 1
 			}
-			if tc.nilStatus {
-				status = nil
-			}
+			hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+			hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
 
-			// WHEN InitMetrics is called on it
+			// WHEN InitMetrics is called on it.
 			status.InitMetrics()
 
-			// THEN the metrics are created
-			got := float64(0)
-			if status != nil && status.ServiceID != nil {
-				got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
+			// THEN the metrics are created.
+			if got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID)); got != tc.latestVersionIsDeployed {
+				t.Errorf("InitMetrics, Expected LatestVersionIsDeployed to be %f, not %f",
+					tc.latestVersionIsDeployed, got)
 			}
-			if got != tc.wantCreate {
-				t.Errorf("Expected LatestVersionIsDeployed to be %f, not %f",
-					tc.wantCreate, got)
+			want := hadUpdatesCurrentAvailable + updatesCurrentAvailableDelta
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
+				t.Logf("hadUpdatesCurrentAvailable=%f, updatesCurrentAvailableDelta=%f", hadUpdatesCurrentAvailable, updatesCurrentAvailableDelta)
+				t.Errorf("InitMetrics, Expected UpdatesCurrent('AVAILABLE') to be %f, not %f",
+					want, got)
+			}
+			want = hadUpdatesCurrentSkipped + updatesCurrentSkippedDelta
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
+				t.Logf("hadUpdatesCurrentSkipped=%f, updatesCurrentSkippedDelta=%f", hadUpdatesCurrentSkipped, updatesCurrentSkippedDelta)
+				t.Errorf("InitMetrics, Expected UpdatesCurrent('SKIPPED') to be %f, not %f",
+					updatesCurrentSkippedDelta, got)
 			}
 
-			// WHEN DeleteMetrics is called on it
+			// WHEN DeleteMetrics is called on it.
 			status.DeleteMetrics()
 
-			// THEN the metrics are deleted
-			got = float64(0)
-			if status != nil && status.ServiceID != nil {
-				got = testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID))
-			}
-			if got != 0 {
-				t.Errorf("Expected LatestVersionIsDeployed to be 0, not %f",
+			// THEN the metrics are deleted.
+			if got := testutil.ToFloat64(metric.LatestVersionIsDeployed.WithLabelValues(*status.ServiceID)); got != 0 {
+				t.Errorf("DeleteMetrics, Expected LatestVersionIsDeployed to be 0, not %f",
 					got)
+			}
+			want = hadUpdatesCurrentAvailable
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
+				t.Errorf("DeleteMetrics, Expected UpdatesCurrent('AVAILABLE') to be %f, not %f",
+					want, got)
+			}
+			want = hadUpdatesCurrentSkipped
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
+				t.Errorf("DeleteMetrics, Expected UpdatesCurrent('SKIPPED') to be %f, not %f",
+					want, got)
 			}
 		})
 	}
 }
 
 func TestNewDefaults(t *testing.T) {
-	// GIVEN we have channels
+	// GIVEN we have channels.
 	announceChannel := make(chan []byte, 4)
 	databaseChannel := make(chan dbtype.Message, 4)
 	saveChannel := make(chan bool, 4)
 
-	// WHEN NewDefaults is called
+	// WHEN NewDefaults is called.
 	statusDefaults := NewDefaults(&announceChannel, &databaseChannel, &saveChannel)
 
-	// THEN the AnnounceChannel is set to the given channel
+	// THEN the AnnounceChannel is set to the given channel.
 	if statusDefaults.AnnounceChannel != &announceChannel {
 		t.Errorf("status.NewDefaults() AnnounceChannel not initialised correctly.\nwant: %v\ngot:  %v",
 			&announceChannel, statusDefaults.AnnounceChannel)
 	}
-	// AND the DatabaseChannel is set to the given channel
+	// AND the DatabaseChannel is set to the given channel.
 	if statusDefaults.DatabaseChannel != &databaseChannel {
 		t.Errorf("status.NewDefaults()DatabaseChannel not initialised correctly.\nwant: %v\ngot:  %v",
 			&databaseChannel, statusDefaults.DatabaseChannel)
 	}
-	// AND the SaveChannel is set to the given channel
+	// AND the SaveChannel is set to the given channel.
 	if statusDefaults.SaveChannel != &saveChannel {
 		t.Errorf("status.NewDefaults()SaveChannel not initialised correctly.\nwant: %v\ngot:  %v",
 			&saveChannel, statusDefaults.SaveChannel)
@@ -1034,7 +1192,7 @@ func TestNewDefaults(t *testing.T) {
 }
 
 func TestStatus_Copy(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	announceChannel := make(chan []byte, 4)
 	databaseChannel := make(chan dbtype.Message, 4)
 	saveChannel := make(chan bool, 4)
@@ -1049,10 +1207,10 @@ func TestStatus_Copy(t *testing.T) {
 		approvedVersion, deployedVersion, deployedVersionTimestamp,
 		latestVersion, latestVersionTimestamp, lastQueried)
 
-	// WHEN Copy is called on it
+	// WHEN Copy is called on it.
 	copiedStatus := status.Copy()
 
-	// THEN the copied Status should have the same values as the original
+	// THEN the copied Status should have the same values as the original.
 	if copiedStatus.AnnounceChannel != status.AnnounceChannel {
 		t.Errorf("status.Status.Copy() AnnounceChannel not copied correctly.\nwant: %v\ngot:  %v",
 			status.AnnounceChannel, copiedStatus.AnnounceChannel)
@@ -1092,23 +1250,23 @@ func TestStatus_Copy(t *testing.T) {
 }
 
 func TestStatus_SetAnnounceChannel(t *testing.T) {
-	// GIVEN a Status with an initial AnnounceChannel
+	// GIVEN a Status with an initial AnnounceChannel.
 	initialChannel := make(chan []byte, 4)
 	status := New(
 		&initialChannel, nil, nil,
 		"", "", "", "", "", "")
 
-	// WHEN SetAnnounceChannel is called with a new channel
+	// WHEN SetAnnounceChannel is called with a new channel.
 	newChannel := make(chan []byte, 4)
 	status.SetAnnounceChannel(&newChannel)
 
-	// THEN the AnnounceChannel should be updated to the new channel
+	// THEN the AnnounceChannel should be updated to the new channel.
 	if status.AnnounceChannel != &newChannel {
 		t.Errorf("AnnounceChannel not set correctly.\nwant: %v\ngot:  %v",
 			&newChannel, status.AnnounceChannel)
 	}
 
-	// AND the initial channel should no longer be the AnnounceChannel
+	// AND the initial channel should no longer be the AnnounceChannel.
 	if status.AnnounceChannel == &initialChannel {
 		t.Errorf("AnnounceChannel shouldn't have been reset to be the initial channel.\nwant: %v\ngot:  %v",
 			&newChannel, status.AnnounceChannel)
@@ -1116,21 +1274,21 @@ func TestStatus_SetAnnounceChannel(t *testing.T) {
 }
 
 func TestStatus_SetDeleting(t *testing.T) {
-	// GIVEN a Status
+	// GIVEN a Status.
 	status := Status{}
 
-	// WHEN SetDeleting is called on it
+	// WHEN SetDeleting is called on it.
 	status.SetDeleting()
 
-	// THEN the deleting flag should be set to true
+	// THEN the deleting flag should be set to true.
 	if !status.Deleting() {
 		t.Errorf("Expected deleting to be true, but got false")
 	}
 
-	// WHEN SetDeleting is called on it again
+	// WHEN SetDeleting is called on it again.
 	status.SetDeleting()
 
-	// THEN the deleting flag should still be true
+	// THEN the deleting flag should still be true.
 	if !status.Deleting() {
 		t.Errorf("Expected deleting to be true on second call, but got false")
 	}
@@ -1140,7 +1298,7 @@ func TestStatus_SameVersions(t *testing.T) {
 	type versions struct {
 		approvedVersion, deployedVersion, latestVersion string
 	}
-	// GIVEN different Status version combinations
+	// GIVEN different Status version combinations.
 	tests := []struct {
 		name             string
 		status1, status2 versions
@@ -1222,22 +1380,203 @@ func TestStatus_SameVersions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			status1 := Status{}
-			status1.SetApprovedVersion(tc.status1.approvedVersion, false)
-			status1.SetDeployedVersion(tc.status1.deployedVersion, "", false)
-			status1.SetLatestVersion(tc.status1.latestVersion, "", false)
+			status1 := New(
+				nil, nil, nil,
+				tc.status1.approvedVersion,
+				tc.status1.deployedVersion, "",
+				tc.status1.latestVersion, "",
+				"")
 
-			status2 := Status{}
-			status2.SetApprovedVersion(tc.status2.approvedVersion, false)
-			status2.SetDeployedVersion(tc.status2.deployedVersion, "", false)
-			status2.SetLatestVersion(tc.status2.latestVersion, "", false)
+			status2 := New(
+				nil, nil, nil,
+				tc.status2.approvedVersion,
+				tc.status2.deployedVersion, "",
+				tc.status2.latestVersion, "",
+				"")
 
-			// WHEN comparing versions
-			result := status1.SameVersions(&status2)
+			// WHEN comparing versions.
+			result := status1.SameVersions(status2)
 
-			// THEN the result matches expected
+			// THEN the result matches expected.
 			if result != tc.expected {
 				t.Errorf("got %v, want %v", result, tc.expected)
+			}
+		})
+	}
+}
+
+func TestUpdateUpdatesCurrent(t *testing.T) {
+	type versions struct {
+		approvedVersion, deployedVersion, latestVersion string
+	}
+	// GIVEN a Status that has just had a version change.
+	tests := map[string]struct {
+		previousVersions     versions
+		newVersions          versions
+		updateCountAvailable float64
+		updateCountSkipped   float64
+	}{
+		"0 to 1 - Latest version not deployed/approved/skipped -> Latest version deployed": {
+			previousVersions: versions{
+				approvedVersion: "",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				deployedVersion: "1.2.0",
+			},
+			updateCountAvailable: -1,
+			updateCountSkipped:   0,
+		},
+		"0 to 2 - Latest version not deployed/approved/skipped -> Latest version approved": {
+			previousVersions: versions{
+				approvedVersion: "",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "1.2.0",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   0,
+		},
+		"0 to 3 - Latest version not deployed/approved/skipped -> Latest version skipped": {
+			previousVersions: versions{
+				approvedVersion: "",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "SKIP_1.2.0",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   1,
+		},
+		"1 to 0 - Latest version deployed -> Latest version not deployed/approved/skipped": {
+			previousVersions: versions{
+				approvedVersion: "",
+				deployedVersion: "1.2.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				latestVersion: "1.3.0",
+			},
+			updateCountAvailable: 1,
+			updateCountSkipped:   0,
+		},
+		// Cannot go from deployed to approved/skipped without first being available.
+		// "1 to 2 - Latest version deployed -> Latest version approved": {},
+		// "1 to 3 - Latest version deployed -> Latest version skipped": {},
+		"2 to 0 - Latest version approved -> Latest version not deployed/approved/skipped": {
+			previousVersions: versions{
+				approvedVersion: "1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   0,
+		},
+		"2 to 1 - Latest version approved -> Latest version deployed": {
+			previousVersions: versions{
+				approvedVersion: "1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				deployedVersion: "1.2.0",
+			},
+			updateCountAvailable: -1,
+			updateCountSkipped:   0,
+		},
+		"2 to 3 - Latest version approved -> Latest version skipped": {
+			previousVersions: versions{
+				approvedVersion: "1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "SKIP_1.2.0",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   1,
+		},
+		"3 to 0 - Latest version skipped -> Latest version not deployed/approved/skipped": {
+			previousVersions: versions{
+				approvedVersion: "SKIP_1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   -1,
+		},
+		"3 to 1 - Latest version skipped -> Latest version deployed": {
+			previousVersions: versions{
+				approvedVersion: "SKIP_1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				deployedVersion: "1.2.0",
+			},
+			updateCountAvailable: -1,
+			updateCountSkipped:   -1,
+		},
+		"3 to 2 - Latest version skipped -> Latest version approved": {
+			previousVersions: versions{
+				approvedVersion: "SKIP_1.2.0",
+				deployedVersion: "1.1.0",
+				latestVersion:   "1.2.0",
+			},
+			newVersions: versions{
+				approvedVersion: "1.2.0",
+			},
+			updateCountAvailable: 0,
+			updateCountSkipped:   -1,
+		},
+	}
+
+	// Changing and reading UpdatesCurrent.
+	metricsMutex.Lock()
+	t.Cleanup(func() { metricsMutex.Unlock() })
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+
+			tc.newVersions.deployedVersion = util.ValueOrValue(tc.newVersions.deployedVersion, tc.previousVersions.deployedVersion)
+			tc.newVersions.latestVersion = util.ValueOrValue(tc.newVersions.latestVersion, tc.previousVersions.latestVersion)
+			status := New(nil, nil, nil,
+				tc.newVersions.approvedVersion,
+				tc.newVersions.deployedVersion, "",
+				tc.newVersions.latestVersion, "",
+				"")
+			hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
+			hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
+
+			// WHEN updateUpdatesCurrent is called with the previous and new versions.
+			status.updateUpdatesCurrent(
+				tc.previousVersions.approvedVersion,
+				tc.previousVersions.latestVersion,
+				tc.previousVersions.deployedVersion)
+
+			// Validate the update counts for both the approved and skipped metrics.
+			// For this, we assume that `SetUpdatesCurrent` has been correctly implemented,
+			// and the metrics have been updated accordingly.
+			want := hadUpdatesCurrentAvailable + tc.updateCountAvailable
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE")); got != want {
+				t.Errorf("Expected available count %v, got %v",
+					want, got)
+			}
+			want = hadUpdatesCurrentSkipped + tc.updateCountSkipped
+			if got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED")); got != want {
+				t.Errorf("Expected skipped count %v, got %v",
+					want, got)
 			}
 		})
 	}

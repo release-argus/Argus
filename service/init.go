@@ -23,6 +23,7 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -153,8 +154,8 @@ func (s *Service) Init(
 
 }
 
-// InitMetrics of the Service.
-func (s *Service) InitMetrics() {
+// initMetrics will initialise the Prometheus metrics for the Service.
+func (s *Service) initMetrics() {
 	if s.LatestVersion != nil {
 		s.LatestVersion.InitMetrics(s.LatestVersion)
 	}
@@ -163,10 +164,11 @@ func (s *Service) InitMetrics() {
 	s.CommandController.InitMetrics()
 	s.WebHook.InitMetrics()
 	s.Status.InitMetrics()
+	metric.ServiceCountCurrent.Add(1)
 }
 
-// DeleteMetrics of the Service.
-func (s *Service) DeleteMetrics() {
+// deleteMetrics will delete the Prometheus metrics for the Service.
+func (s *Service) deleteMetrics() {
 	if s.LatestVersion != nil {
 		s.LatestVersion.DeleteMetrics(s.LatestVersion)
 	}
@@ -175,10 +177,6 @@ func (s *Service) DeleteMetrics() {
 	s.CommandController.DeleteMetrics()
 	s.WebHook.DeleteMetrics()
 	s.Status.DeleteMetrics()
-}
 
-// ResetMetrics of the Service.
-func (s *Service) ResetMetrics() {
-	s.DeleteMetrics()
-	s.InitMetrics()
+	metric.ServiceCountCurrent.Add(-1)
 }

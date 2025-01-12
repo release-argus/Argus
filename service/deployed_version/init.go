@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,12 +51,12 @@ func (l *Lookup) InitMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
 		"",
 		"SUCCESS")
-	metric.InitPrometheusCounter(metric.DeployedVersionQueryMetric,
+	metric.InitPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
 		"",
@@ -70,15 +70,15 @@ func (l *Lookup) DeleteMetrics() {
 	}
 
 	// Liveness.
-	metric.DeletePrometheusGauge(metric.DeployedVersionQueryLiveness,
+	metric.DeletePrometheusGauge(metric.DeployedVersionQueryResultLast,
 		*l.Status.ServiceID, "")
 	// Counters.
-	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
 		"",
 		"SUCCESS")
-	metric.DeletePrometheusCounter(metric.DeployedVersionQueryMetric,
+	metric.DeletePrometheusCounter(metric.DeployedVersionQueryResultTotal,
 		*l.Status.ServiceID,
 		"",
 		"",

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -120,21 +120,21 @@ func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (string, error) {
 // queryMetrics sets the Prometheus metrics for the DeployedVersion query.
 func (l *Lookup) queryMetrics(successfulQuery bool) {
 	if successfulQuery {
-		metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 			*l.Status.ServiceID,
 			"",
 			"",
 			"SUCCESS")
-		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
 			*l.Status.ServiceID, "",
 			1)
 	} else {
-		metric.IncreasePrometheusCounter(metric.DeployedVersionQueryMetric,
+		metric.IncPrometheusCounter(metric.DeployedVersionQueryResultTotal,
 			*l.Status.ServiceID,
 			"",
 			"",
 			"FAIL")
-		metric.SetPrometheusGauge(metric.DeployedVersionQueryLiveness,
+		metric.SetPrometheusGauge(metric.DeployedVersionQueryResultLast,
 			*l.Status.ServiceID, "",
 			0)
 	}
@@ -185,7 +185,7 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 	customTransport := &http.Transport{}
 	if l.GetAllowInvalidCerts() {
 		customTransport = http.DefaultTransport.(*http.Transport).Clone()
-		//#nosec G402 -- explicitly wanted InsecureSkipVerify
+		//#nosec G402 -- explicitly wanted InsecureSkipVerify.
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 

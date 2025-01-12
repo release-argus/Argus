@@ -17,15 +17,21 @@
 package status
 
 import (
+	"sync"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/test"
 )
 
+var (
+	metricsMutex sync.RWMutex
+)
+
 func testStatus() (status *Status) {
 	var (
-		announceChannel chan []byte         = make(chan []byte, 2)
-		saveChannel     chan bool           = make(chan bool, 5)
-		databaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
+		announceChannel = make(chan []byte, 2)
+		saveChannel     = make(chan bool, 5)
+		databaseChannel = make(chan dbtype.Message, 5)
 	)
 	svcStatus := New(
 		&announceChannel, &databaseChannel, &saveChannel,
@@ -36,7 +42,7 @@ func testStatus() (status *Status) {
 	status.Init(
 		0, 0, 0,
 		test.StringPtr("test-service"), test.StringPtr("test-service"),
-		test.StringPtr("http://example.com"))
+		test.StringPtr("https://example.com"))
 	status.SetApprovedVersion("1.1.1", false)
 	status.SetLatestVersion("2.2.2", "2002-02-02T02:02:02Z", false)
 	status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)

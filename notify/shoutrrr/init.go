@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,12 +168,12 @@ func (s *Shoutrrr) initMetrics() {
 	// ############
 	// # Counters #
 	// ############
-	metric.InitPrometheusCounter(metric.NotifyMetric,
+	metric.InitPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		*s.ServiceStatus.ServiceID,
 		s.GetType(),
 		"SUCCESS")
-	metric.InitPrometheusCounter(metric.NotifyMetric,
+	metric.InitPrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		*s.ServiceStatus.ServiceID,
 		s.GetType(),
@@ -193,12 +193,12 @@ func (s *Slice) DeleteMetrics() {
 
 // deleteMetrics for this Shoutrrr.
 func (s *Shoutrrr) deleteMetrics() {
-	metric.DeletePrometheusCounter(metric.NotifyMetric,
+	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		*s.ServiceStatus.ServiceID,
 		s.GetType(),
 		"SUCCESS")
-	metric.DeletePrometheusCounter(metric.NotifyMetric,
+	metric.DeletePrometheusCounter(metric.NotifyResultTotal,
 		s.ID,
 		*s.ServiceStatus.ServiceID,
 		s.GetType(),

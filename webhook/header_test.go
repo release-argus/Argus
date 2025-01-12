@@ -26,7 +26,7 @@ import (
 )
 
 func TestWebHook_SetCustomHeaders(t *testing.T) {
-	// GIVEN a WebHook with CustomHeaders
+	// GIVEN a WebHook with CustomHeaders.
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := map[string]struct {
@@ -52,7 +52,7 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			want: map[string]string{
 				"X-Service": "foo"},
 		},
-		"header with service id var": {
+		"header with service ID var": {
 			rootValue: &Headers{
 				{Key: "X-Service", Value: "{{ service_id }}"}},
 			want: map[string]string{
@@ -162,10 +162,10 @@ func TestWebHook_SetCustomHeaders(t *testing.T) {
 			webhook.Defaults.CustomHeaders = tc.defaultValue
 			webhook.HardDefaults.CustomHeaders = tc.hardDefaultValue
 
-			// WHEN setCustomHeaders is called on this request
+			// WHEN setCustomHeaders is called on this request.
 			webhook.setCustomHeaders(req)
 
-			// THEN the function returns the correct result
+			// THEN the function returns the correct result.
 			if tc.rootValue == nil && tc.mainValue == nil && tc.defaultValue == nil && tc.hardDefaultValue == nil {
 				if len(req.Header) != 0 {
 					t.Fatalf("custom headers was nil but Headers are %v",

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,9 @@ import (
 )
 
 // handler will listen to the DatabaseChannel and act on
-// incoming messages.
+// incoming messages to the DatabaseChannel.
 func (api *api) handler() {
+	defer api.db.Close()
 	for message := range *api.config.DatabaseChannel {
 		// If the message is to delete a row.
 		if message.Delete {
