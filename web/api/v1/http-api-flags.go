@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/release-argus/Argus/util"
@@ -26,7 +25,6 @@ import (
 // httpFlags retrieves the values of vars that may get set with flags.
 func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpFlags", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
 	// Create and send status page data.
 	msg := apitype.Flags{
@@ -40,6 +38,5 @@ func (api *API) httpFlags(w http.ResponseWriter, r *http.Request) {
 		WebPKeyFile:      api.Config.Settings.WebKeyFile(),
 		WebRoutePrefix:   api.Config.Settings.WebRoutePrefix()}
 
-	err := json.NewEncoder(w).Encode(msg)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, msg, logFrom)
 }

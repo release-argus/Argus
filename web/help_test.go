@@ -51,11 +51,12 @@ var mainCfg *config.Config
 var port string
 
 func TestMain(m *testing.M) {
-	// initialise jLog
-	jLog := util.NewJLog("DEBUG", false)
+	// Initialise jLog.
+	jLog = util.NewJLog("DEBUG", false)
 	jLog.Testing = true
+	// v1.LogInit(jLog)
 
-	// GIVEN a valid config with a Service
+	// GIVEN a valid config with a Service.
 	file := "TestWebMain.yml"
 	mainCfg = testConfig(file, jLog, nil)
 	os.Remove(file)
@@ -63,12 +64,12 @@ func TestMain(m *testing.M) {
 	port = mainCfg.Settings.Web.ListenPort
 	mainCfg.Settings.Web.ListenHost = "localhost"
 
-	// WHEN the Router is fetched for this Config
+	// WHEN the Router is fetched for this Config.
 	router = newWebUI(mainCfg)
 	go Run(mainCfg, jLog)
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN Web UI is accessible for the tests
+	// THEN Web UI is accessible for the tests.
 	code := m.Run()
 
 	os.Exit(code)
@@ -300,14 +301,14 @@ func testURLCommandRegex() filter.URLCommand {
 }
 
 func generateCertFiles(certFile, keyFile string) error {
-	// Generate the certificate and private key
-	// Generate a private key
+	// Generate the certificate and private key:
+	// 	Generate a private key.
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
 	}
 
-	// Create a self-signed certificate
+	// 	Create a self-signed certificate.
 	template := x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: "localhost"},
@@ -324,11 +325,11 @@ func generateCertFiles(certFile, keyFile string) error {
 		return err
 	}
 
-	// Convert the certificate and private key to PEM format
+	// Convert the certificate and private key to PEM format.
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 
-	// Write the certificate and private key to files
+	// Write the certificate and private key to files.
 	if err := os.WriteFile(certFile, certPEM, 0644); err != nil {
 		return err
 	}

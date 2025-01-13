@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/release-argus/Argus/util"
@@ -26,7 +25,6 @@ import (
 // wsConfig handles getting the config in use and sending it as YAML.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
 	cfg := &apitype.Config{}
 
@@ -108,6 +106,5 @@ func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
 	cfg.Order = api.Config.Order
 	api.Config.OrderMutex.RUnlock()
 
-	err := json.NewEncoder(w).Encode(cfg)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, cfg, logFrom)
 }

@@ -390,7 +390,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			// WHEN that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			// set service_id
+			// Set service_id.
 			serviceID := svc.ID
 			if tc.serviceID != nil {
 				serviceID = *tc.serviceID
@@ -857,7 +857,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode: http.StatusOK,
-				body:       "^$"},
+				body:       `\{"message":"created service[^}]+"\}`},
 		},
 		"create new service, but ID already taken": {
 			payload: `
@@ -915,7 +915,7 @@ func TestHTTP_ServiceEdit(t *testing.T) {
 				}`,
 			wants: wants{
 				statusCode:      http.StatusOK,
-				body:            "^$",
+				body:            `\{"message":"edited service[^}]+"\}`,
 				latestVersion:   "[0-9.]+",
 				deployedVersion: ""},
 		},
@@ -1091,7 +1091,7 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			name:      "delete service",
 			serviceID: svc.ID,
 			wants: wants{
-				body:       `^$`,
+				body:       `\{"message":"deleted service[^}]+"\}`,
 				statusCode: http.StatusOK},
 		},
 		{
@@ -1254,7 +1254,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"options": {
 					"delay": "24h"}}`,
 			wants: wants{
-				statusCode: http.StatusOK},
+				statusCode: http.StatusOK,
+				body:       "message sent"},
 		},
 		"new service, no main - invalid JSON, url_fields": {
 			payload: `{
@@ -1303,7 +1304,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"path": "` + validNotify.URLFields["path"] + `",
 					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wants: wants{
-				statusCode: http.StatusOK},
+				statusCode: http.StatusOK,
+				body:       "message sent"},
 		},
 		"new service, have main - type from Main": {
 			payload: `{
@@ -1314,7 +1316,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"path": "` + validNotify.URLFields["path"] + `",
 					"token": "` + validNotify.URLFields["token"] + `"}}`,
 			wants: wants{
-				statusCode: http.StatusOK},
+				statusCode: http.StatusOK,
+				body:       "message sent"},
 		},
 		"same service, have main - type from original": {
 			payload: `{
@@ -1327,7 +1330,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"path": "` + validNotify.URLFields["path"] + `",
 					"token": "` + util.SecretValue + `"}}`,
 			wants: wants{
-				statusCode: http.StatusOK},
+				statusCode: http.StatusOK,
+				body:       "message sent"},
 		},
 		"same service, no main - can remove vars": {
 			payload: `{
@@ -1356,7 +1360,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `"}}`,
 			wants: wants{
-				statusCode: http.StatusOK},
+				statusCode: http.StatusOK,
+				body:       "message sent"},
 		},
 		"same service, have main - fail send": {
 			payload: `{
@@ -1460,7 +1465,7 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				t.Fatalf("unexpected error - %v",
 					err)
 			}
-			// Marshal message out of JSON data {"message": text}
+			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
 			err = json.Unmarshal(data, &body)
 			if !util.RegexCheck(tc.wants.body, body["message"]) {

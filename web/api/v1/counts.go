@@ -32,7 +32,6 @@ type CountsResponse struct {
 
 func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
 	resp := CountsResponse{}
 

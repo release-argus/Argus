@@ -34,8 +34,8 @@ import (
 //	service_id: The ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
+	// Service to get actions of.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-	jLog.Verbose(targetService, logFrom, true)
 
 	api.Config.OrderMutex.RLock()
 	svc := api.Config.Service[targetService]
@@ -70,8 +70,7 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 		Command: commandSummary,
 		WebHook: webhookSummary}
 
-	err := json.NewEncoder(w).Encode(msg)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, msg, logFrom)
 }
 
 // RunActionsPayload holds the target actions to run for a Service.
@@ -92,8 +91,8 @@ type RunActionsPayload struct {
 //		"command_<command_id>": Approve a specific Command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
+	// Service to run actions of.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-	jLog.Verbose(targetService, logFrom, true)
 
 	// Check the service exists.
 	api.Config.OrderMutex.RLock()
@@ -168,4 +167,8 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 			go svc.HandleCommand(strings.TrimPrefix(payload.Target, "command_"))
 		}
 	}
+
+	api.writeJSON(w, apitype.Response{
+		Message: msg,
+	}, logFrom)
 }
