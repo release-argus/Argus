@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -30,79 +29,57 @@ import (
 	"github.com/vearutop/statigz/brotli"
 )
 
-func (api *API) basicAuth() mux.MiddlewareFunc {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			username, password, ok := r.BasicAuth()
-			if ok {
-				// Hash purely to prevent ConstantTimeCompare leaking lengths.
-				usernameHash := sha256.Sum256([]byte(username))
-				passwordHash := sha256.Sum256([]byte(password))
-
-				// Protect from possible timing attacks.
-				usernameMatch := ConstantTimeCompare(usernameHash, api.Config.Settings.WebBasicAuthUsernameHash())
-				passwordMatch := ConstantTimeCompare(passwordHash, api.Config.Settings.WebBasicAuthPasswordHash())
-
-				if usernameMatch && passwordMatch {
-					h.ServeHTTP(w, r)
-					return
-				}
-			}
-
-			w.Header().Set("Connection", "close")
-			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		})
-	}
-}
-
-// setCommonHeaders sets common headers for JSON API responses.
-func setCommonHeaders(w http.ResponseWriter) {
-	w.Header().Set("Connection", "close")
-	w.Header().Set("Content-Type", "application/json")
-}
-
 // SetupRoutesAPI will set up the HTTP API routes.
 func (api *API) SetupRoutesAPI() {
+	// Create a subrouter for "/api/v1".
+	v1Router := api.Router.PathPrefix("/api/v1").Subrouter()
+
+	// Only if VERBOSE or DEBUG.
+	if jLog.Level >= 3 {
+		// Apply loggerMiddleware to only the /api/v1 routes.
+		v1Router.Use(loggerMiddleware)
+	}
+
 	// /config
+	// Apply the logging middleware globally.
 	//   GET, config.
-	api.Router.HandleFunc("/api/v1/config", api.httpConfig).Methods("GET")
+	v1Router.HandleFunc("/config", api.httpConfig).Methods("GET")
 	// /status
 	//   GET, runtime info.
-	api.Router.HandleFunc("/api/v1/status/runtime", api.httpRuntimeInfo).Methods("GET")
+	v1Router.HandleFunc("/status/runtime", api.httpRuntimeInfo).Methods("GET")
 	//   GET, build info.
-	api.Router.HandleFunc("/api/v1/version", api.httpVersion).Methods("GET")
+	v1Router.HandleFunc("/version", api.httpVersion).Methods("GET")
 	// /flags
 	//   GET, flags.
-	api.Router.HandleFunc("/api/v1/flags", api.httpFlags).Methods("GET")
+	v1Router.HandleFunc("/flags", api.httpFlags).Methods("GET")
 	// /approvals
 	//   GET, service order.
-	api.Router.HandleFunc("/api/v1/service/order", api.httpServiceOrder).Methods("GET")
+	v1Router.HandleFunc("/service/order", api.httpServiceOrder).Methods("GET")
 	//   GET, service summary.
-	api.Router.HandleFunc("/api/v1/service/summary/{service_id:.+}", api.httpServiceSummary).Methods("GET")
+	v1Router.HandleFunc("/service/summary/{service_id:.+}", api.httpServiceSummary).Methods("GET")
 	//   GET, service actions (webhooks/commands).
-	api.Router.HandleFunc("/api/v1/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods("GET")
+	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceGetActions).Methods("GET")
 	//   POST, service actions (disable=service_actions).
-	api.Router.HandleFunc("/api/v1/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods("POST")
+	v1Router.HandleFunc("/service/actions/{service_id:.+}", api.httpServiceRunActions).Methods("POST")
 	//   GET, service-edit - get details.
-	api.Router.HandleFunc("/api/v1/service/update", api.httpOtherServiceDetails).Methods("GET")
-	api.Router.HandleFunc("/api/v1/service/update/{service_id:.+}", api.httpServiceDetail).Methods("GET")
+	v1Router.HandleFunc("/service/update", api.httpOtherServiceDetails).Methods("GET")
+	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceDetail).Methods("GET")
 	//   GET, service-edit - refresh unsaved service (disable=[ld]v_refresh_new).
-	api.Router.HandleFunc("/api/v1/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods("GET")
-	api.Router.HandleFunc("/api/v1/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods("GET")
+	v1Router.HandleFunc("/latest_version/refresh", api.httpLatestVersionRefreshUncreated).Methods("GET")
+	v1Router.HandleFunc("/deployed_version/refresh", api.httpDeployedVersionRefreshUncreated).Methods("GET")
 	//   GET, service-edit - refresh service (disable=[ld]v_refresh).
-	api.Router.HandleFunc("/api/v1/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods("GET")
-	api.Router.HandleFunc("/api/v1/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods("GET")
+	v1Router.HandleFunc("/latest_version/refresh/{service_id:.+}", api.httpLatestVersionRefresh).Methods("GET")
+	v1Router.HandleFunc("/deployed_version/refresh/{service_id:.+}", api.httpDeployedVersionRefresh).Methods("GET")
 	//   POST, service-edit - test notify (disable=notify_test).
-	api.Router.HandleFunc("/api/v1/notify/test", api.httpNotifyTest).Methods("POST")
+	v1Router.HandleFunc("/notify/test", api.httpNotifyTest).Methods("POST")
 	//   PUT, service-edit - update details (disable=service_edit).
-	api.Router.HandleFunc("/api/v1/service/update/{service_id:.+}", api.httpServiceEdit).Methods("PUT")
+	v1Router.HandleFunc("/service/update/{service_id:.+}", api.httpServiceEdit).Methods("PUT")
 	//   PUT, service-edit - new service (disable=service_create).
-	api.Router.HandleFunc("/api/v1/service/new", api.httpServiceEdit).Methods("PUT")
+	v1Router.HandleFunc("/service/new", api.httpServiceEdit).Methods("PUT")
 	//   DELETE, service-edit - delete service (disable=service_delete).
-	api.Router.HandleFunc("/api/v1/service/delete/{service_id:.+}", api.httpServiceDelete).Methods("DELETE")
+	v1Router.HandleFunc("/service/delete/{service_id:.+}", api.httpServiceDelete).Methods("DELETE")
 	//   GET, counts for Heimdall.
-	api.Router.HandleFunc("/api/v1/counts", api.httpCounts).Methods("GET")
+	v1Router.HandleFunc("/counts", api.httpCounts).Methods("GET")
 
 	// Disable specified routes.
 	api.DisableRoutesAPI()
@@ -205,14 +182,14 @@ func (api *API) SetupRoutesFavicon() {
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
-	err := json.NewEncoder(w).Encode(apitype.VersionAPI{
-		Version:   util.Version,
-		BuildDate: util.BuildDate,
-		GoVersion: util.GoVersion,
-	})
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w,
+		apitype.VersionAPI{
+			Version:   util.Version,
+			BuildDate: util.BuildDate,
+			GoVersion: util.GoVersion,
+		},
+		logFrom)
 }
 
 // failRequest returns a JSON response containing a message and status code.

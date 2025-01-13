@@ -50,11 +50,7 @@ import (
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
-	logFrom := util.LogFrom{Secondary: getIP(r)}
-	logFrom.Primary = "httpVersionRefreshUncreated_Latest"
-	jLog.Verbose("-", logFrom, true)
+	logFrom := util.LogFrom{Primary: "httpVersionRefreshUncreated_Latest", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
 	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
@@ -83,7 +79,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 		api.Config.Defaults.Service.LatestVersion.Options,
 		api.Config.HardDefaults.Service.LatestVersion.Options)
 
-	// Extract the desired lookup type
+	// Extract the desired lookup type.
 	var temp struct {
 		Type string `yaml:"type" json:"type"`
 	}
@@ -96,7 +92,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Create the LatestVersionLookup
+	// Create the LatestVersionLookup.
 	lv, err := latestver.New(
 		temp.Type,
 		"json", util.DereferenceOrDefault(
@@ -109,14 +105,14 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	} else {
 		err = errors.New(strings.ReplaceAll(err.Error(), "latestver.Lookup", "latest_version"))
 	}
-	// Error creating/validating the LatestVersionLookup
+	// Error creating/validating the LatestVersionLookup.
 	if err != nil {
 		jLog.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Query the latest version lookup
+	// Query the latest version lookup.
 	version, _, err := latestver.Refresh(
 		lv,
 		nil, nil)
@@ -126,12 +122,10 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	}
 
 	// Return the version found.
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+	api.writeJSON(w, apitype.RefreshAPI{
 		Version: version,
 		Date:    time.Now().UTC(),
-	})
-	jLog.Error(err, logFrom, err != nil)
+	}, logFrom)
 }
 
 // httpDeployedVersionRefreshUncreated will create the deployed version lookup type and query it.
@@ -148,16 +142,12 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
-	logFrom := util.LogFrom{Secondary: getIP(r)}
-	logFrom.Primary = "httpVersionRefreshUncreated_Deployed"
-	jLog.Verbose("-", logFrom, true)
+	logFrom := util.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
 	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
 
-	// Verify overrides are provided
+	// Verify overrides are provided.
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
 		jLog.Error(err, logFrom, true)
@@ -209,12 +199,10 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	}
 
 	// Return the version found.
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+	api.writeJSON(w, apitype.RefreshAPI{
 		Version: version,
 		Date:    time.Now().UTC(),
-	})
-	jLog.Error(err, logFrom, err != nil)
+	}, logFrom)
 }
 
 // httpLatestVersionRefresh refreshes the latest version of the target service.
@@ -235,14 +223,9 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
+	logFrom := util.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
 	// Service to refresh.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-
-	logFromPrimary := "httpVersionRefresh_Latest"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	jLog.Verbose(targetService, logFrom, true)
 
 	queryParams := r.URL.Query()
 
@@ -256,7 +239,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parameters,
+	// Parameters
 	var (
 		overrides          = getParam(&queryParams, "overrides")
 		semanticVersioning = getParam(&queryParams, "semantic_versioning")
@@ -276,11 +259,10 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Return the version found.
-	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+	api.writeJSON(w, apitype.RefreshAPI{
 		Version: version,
 		Date:    time.Now().UTC(),
-	})
-	jLog.Error(err, logFrom, err != nil)
+	}, logFrom)
 }
 
 // httpDeployedVersionRefresh refreshes the latest/deployed version of the target service.
@@ -301,18 +283,13 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
+	logFrom := util.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
 	// Service to refresh.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
-	logFromPrimary := "httpVersionRefresh_Deployed"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	jLog.Verbose(targetService, logFrom, true)
-
 	queryParams := r.URL.Query()
 
-	// Check if service exists,
+	// Check if service exists.
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
@@ -368,11 +345,10 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Return the version found.
-	err = json.NewEncoder(w).Encode(apitype.RefreshAPI{
+	api.writeJSON(w, apitype.RefreshAPI{
 		Version: version,
 		Date:    time.Now().UTC(),
-	})
-	jLog.Error(err, logFrom, err != nil)
+	}, logFrom)
 }
 
 // httpServiceDetail handles sending details about a Service.
@@ -387,13 +363,9 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 //
 //	JSON object containing the service details.
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
-	// Service to get details from (empty for create new).
-	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-
 	logFrom := util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
-	jLog.Verbose(targetService, logFrom, true)
+	// Service to get details of.
+	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	// Find the Service.
 	api.Config.OrderMutex.RLock()
@@ -423,8 +395,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 		Status:                serviceConfig.Status,
 	}
 
-	err := json.NewEncoder(w).Encode(serviceJSON)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, serviceJSON, logFrom)
 }
 
 // httpOtherServiceDetails handles sending details about the global notify/webhooks, defaults and hard defaults.
@@ -435,25 +406,22 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 //
 //	JSON object containing the global details.
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
-	logFromPrimary := "httpOtherServiceDetails"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
+	logFrom := util.LogFrom{Primary: "httpOtherServiceDetails", Secondary: getIP(r)}
 
 	// Convert to JSON type that swaps slices for lists.
-	err := json.NewEncoder(w).Encode(apitype.Config{
-		HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
-		Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
-		Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
-		WebHook:      convertAndCensorWebHookSliceDefaults(&api.Config.WebHook),
-	})
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w,
+		apitype.Config{
+			HardDefaults: convertAndCensorDefaults(&api.Config.HardDefaults),
+			Defaults:     convertAndCensorDefaults(&api.Config.Defaults),
+			Notify:       convertAndCensorNotifySliceDefaults(&api.Config.Notify),
+			WebHook:      convertAndCensorWebHookSliceDefaults(&api.Config.WebHook),
+		},
+		logFrom)
 }
 
 // httpServiceEdit handles creating/editing a Service.
 //
-// # PUT - create/replace
+// # PUT
 //
 // Path Parameters:
 //
@@ -468,8 +436,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //	On success: HTTP 200 OK
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
+	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 
@@ -479,12 +446,6 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	if targetService != "" {
 		reqType = "edit"
 	}
-
-	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
-	jLog.Verbose(
-		fmt.Sprintf("%s %s",
-			reqType, targetService),
-		logFrom, true)
 
 	var oldServiceSummary *apitype.ServiceSummary
 	// EDIT the existing service.
@@ -525,7 +486,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// CREATE a new service, but one with this id already exists.
+	// CREATE a new service, but one with this ID already exists.
 	if (targetService == "" && api.Config.Service[newService.ID] != nil) ||
 		// CREATE/EDIT, but a service with this name already exists.
 		api.Config.ServiceWithNameExists(newService.Name, targetService) {
@@ -575,6 +536,16 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 	newServiceSummary := newService.Summary()
 	// Announce the edit.
 	api.announceEdit(oldServiceSummary, newServiceSummary)
+
+	msg := "created"
+	if targetService != "" {
+		msg = "edited"
+	}
+	api.writeJSON(w, apitype.Response{
+		Message: fmt.Sprintf(
+			"%s service %q",
+			msg, util.ValueOrValue(targetService, newService.ID))},
+		logFrom)
 }
 
 // httpServiceDelete handles deleting a Service.
@@ -590,12 +561,9 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //	On success: HTTP 200 OK
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
+	logFrom := util.LogFrom{Primary: "httpServiceDelete", Secondary: getIP(r)}
 	// Service to delete.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-
-	logFromPrimary := "httpServiceDelete"
-	logFrom := util.LogFrom{Primary: logFromPrimary, Secondary: getIP(r)}
-	jLog.Verbose(targetService, logFrom, true)
 
 	// If service doesn't exist, return 404.
 	if api.Config.Service[targetService] == nil {
@@ -611,11 +579,10 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 	// Announce deletion.
 	api.announceDelete(targetService)
 
-	// Return 200.
-	w.WriteHeader(http.StatusOK)
-	//#nosec G104 -- Disregard.
-	//nolint:errcheck // ^
-	w.Write([]byte{})
+	api.writeJSON(w, apitype.Response{
+		Message: fmt.Sprintf(
+			"deleted service %q", targetService)},
+		logFrom)
 }
 
 // httpNotifyTest handles testing a Notify.
@@ -624,7 +591,7 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //
 // Body:
 //
-//	service_id_previous?: string (the service id before the current changes)
+//	service_id_previous?: string (the service ID before the current changes)
 //	service_id: string
 //	service_name: string
 //	name_previous?: string (the name of the notifier before the current changes)
@@ -636,12 +603,9 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //	service_url?: string
 //	web_url?: string
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-
 	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
-	// Payload.
+	// Read payload.
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
@@ -649,6 +613,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Parse it.
 	var parsedPayload shoutrrr.TestPayload
 	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
 	if err != nil {
@@ -673,6 +638,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 			latestVersion = api.Config.Service[parsedPayload.ServiceIDPrevious].Status.LatestVersion()
 		}
 	}
+
 	// Apply any overrides.
 	testNotify, serviceURL, err := shoutrrr.FromPayload(
 		parsedPayload,
@@ -683,6 +649,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	// Give the LatestVersion as the message may use it.
 	testNotify.ServiceStatus.SetLatestVersion(latestVersion, "", false)
 
@@ -694,9 +661,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return 200.
-	w.WriteHeader(http.StatusOK)
-	//#nosec G104 -- Disregard.
-	//nolint:errcheck // ^
-	w.Write([]byte(`{}`))
+	api.writeJSON(w, apitype.Response{
+		Message: "message sent"},
+		logFrom)
 }

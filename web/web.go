@@ -39,7 +39,8 @@ func NewRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
 
 	// WebSocket
 	api.Router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Connection", "close")
+		// Connection header for the WebSocket handshake.
+		w.Header().Set("Connection", "keep-alive")
 		defer r.Body.Close()
 		v1.ServeWs(hub, w, r)
 	})
@@ -84,7 +85,6 @@ func Run(cfg *config.Config, log *util.JLog) {
 		Handler:      router,
 		ReadTimeout:  10 * time.Second, // Max time to read request headers and body.
 		WriteTimeout: 10 * time.Second, // Max time to write response.
-		IdleTimeout:  0,                // Disable to keep websocket connections open.
 	}
 
 	if cfg.Settings.WebCertFile() != "" && cfg.Settings.WebKeyFile() != "" {

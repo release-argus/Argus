@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -32,18 +31,15 @@ type ServiceOrderAPI struct {
 
 func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
-	err := json.NewEncoder(w).Encode(ServiceOrderAPI{Order: api.Config.Order})
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, ServiceOrderAPI{Order: api.Config.Order}, logFrom)
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
-	jLog.Verbose(targetService, logFrom, true)
 
 	// Check Service still exists in this ordering.
 	api.Config.OrderMutex.RLock()
@@ -59,6 +55,5 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	// Get ServiceSummary.
 	summary := service.Summary()
 
-	err := json.NewEncoder(w).Encode(summary)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, summary, logFrom)
 }

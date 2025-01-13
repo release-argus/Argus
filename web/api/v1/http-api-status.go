@@ -16,7 +16,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"net/http"
 	"os"
 	"runtime"
@@ -28,7 +27,6 @@ import (
 // httpRuntimeInfo returns runtime info about the server.
 func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
 	logFrom := util.LogFrom{Primary: "httpBuildInfo", Secondary: getIP(r)}
-	jLog.Verbose("-", logFrom, true)
 
 	// Create and send status page data.
 	msg := apitype.RuntimeInfo{
@@ -39,6 +37,5 @@ func (api *API) httpRuntimeInfo(w http.ResponseWriter, r *http.Request) {
 		GoGC:           os.Getenv("GOGC"),
 		GoDebug:        os.Getenv("GODEBUG")}
 
-	err := json.NewEncoder(w).Encode(msg)
-	jLog.Error(err, logFrom, err != nil)
+	api.writeJSON(w, msg, logFrom)
 }

@@ -161,7 +161,7 @@ func TestWriteJSON(t *testing.T) {
 		"JSON encoding failure": {
 			response:     &http.Response{},
 			statusCode:   http.StatusInternalServerError,
-			expectedBody: "",
+			expectedBody: `{"error":"json: unsupported type: chan int"}` + "\n",
 			input:        make(chan int), // Invalid type for JSON encoding.
 			expectedErr:  true,
 		},
