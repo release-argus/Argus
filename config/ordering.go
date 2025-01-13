@@ -37,7 +37,7 @@ func (c *Config) GetOrder(data []byte) {
 	for index := 0; index < len(lines); index++ {
 		line := lines[index]
 		// Skip empty lines and comments.
-		if util.RegexCheck(`^\s*$`, line) {
+		if util.RegexCheck(`^\s*(#.*)?$`, line) {
 			continue
 		}
 
