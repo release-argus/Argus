@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.19.0](https://github.com/release-argus/Argus/compare/0.18.0...0.19.0) (2025-01-13)
+
+
+### Features
+
+* **api:** add `/api/v1/counts` endpoint - app stats ([8364209](https://github.com/release-argus/Argus/commits/836420996d5e906bde612b7eabedde28e426a708)), closes [#436](https://github.com/release-argus/Argus/issues/436)
+    * service_count
+    * updates_available
+    * updates_skipped (still counts as available)
+* **approvals:** add keyboard shortcuts for search and clear actions ([9336dfb](https://github.com/release-argus/Argus/commits/9336dfbd833c554b934c1576d917ca01d7c4ce85))
+    * `/` to focus on the service filter bar.
+    * `esc` whilst focused on that search bar to clear it and blur it.
+
+
+### Bug Fixes
+
+* **config:** handle commented out services ([#455](https://github.com/release-argus/Argus/issues/455)) ([d1b9e8c](https://github.com/release-argus/Argus/commits/d1b9e8cf27591407fc6bf595f50d13eb8ccec3ae))
+* **deployed_version:** null semVer default comp ([70c0625](https://github.com/release-argus/Argus/commits/70c062522917f865b3ae04ec5bbdebf339ef8ba0))
+* **docker:** add OCI header for GHCR ([#503](https://github.com/release-argus/Argus/issues/503)) ([94bc9db](https://github.com/release-argus/Argus/commits/94bc9dbc5c98868d3129b05e0b9c768ba128e177))
+* **web:** ntfy, default fieldValues for actions ([#456](https://github.com/release-argus/Argus/issues/456)) ([280ebc1](https://github.com/release-argus/Argus/commits/280ebc17731b1db636723586b44cb49392a5c253))
+* **web:** render icon/icon_link_to/web_url changes from websocket ([78a5656](https://github.com/release-argus/Argus/commits/78a5656ea7a90398e4083105b9b82a87ac6d74fe))
+
 ## [0.18.0](https://github.com/release-argus/Argus/compare/0.17.4...0.18.0) (2024-05-07)
 
 
