@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.19.2](https://github.com/release-argus/Argus/compare/0.19.1...0.19.2) (2025-01-14)
+
+
+### Bug Fixes
+
+* **notify:** support 'fromName' in SMTP messages ([#513](https://github.com/release-argus/Argus/issues/513)) ([e47c332](https://github.com/release-argus/Argus/commits/e47c332de69968cf3826bd5440d57c17c64c06ff))
+
 ### [0.19.1](https://github.com/release-argus/Argus/compare/0.18.0...0.19.1) (2025-01-14)
 
 
