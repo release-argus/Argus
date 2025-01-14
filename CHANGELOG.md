@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.19.1](https://github.com/release-argus/Argus/compare/0.18.0...0.19.1) (2025-01-14)
+
+
+### Bug Fixes
+
+* **config:** ignore comments when extracting order ([c3d0eed](https://github.com/release-argus/Argus/commits/c3d0eed71572a600d94cc3259b9aa20827587aee))
+
 ## [0.19.0](https://github.com/release-argus/Argus/compare/0.18.0...0.19.0) (2025-01-13)
 
 
