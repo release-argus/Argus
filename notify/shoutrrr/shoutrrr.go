@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	net_url "net/url"
 	"strings"
 	"time"
 
@@ -159,12 +160,14 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		login := s.GetURLField("password")
 		login = s.GetURLField("username") + util.ValueUnlessDefault(login, ":"+login)
 		port := s.GetURLField("port")
-		url = fmt.Sprintf("smtp://%s%s%s/?fromaddress=%s&toaddresses=%s",
+		fromName := s.GetParam("fromname")
+		url = fmt.Sprintf("smtp://%s%s%s/?fromaddress=%s&toaddresses=%s%s",
 			util.ValueUnlessDefault(login, login+"@"),
 			s.GetURLField("host"),
 			util.ValueUnlessDefault(port, ":"+port),
 			s.GetParam("fromaddress"),
-			s.GetParam("toaddresses"))
+			s.GetParam("toaddresses"),
+			util.ValueUnlessDefault(fromName, "&fromname="+net_url.QueryEscape(fromName)))
 	case "gotify":
 		// gotify://host:port/path/token
 		port := s.GetURLField("port")
