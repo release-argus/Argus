@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.19.3](https://github.com/release-argus/Argus/compare/0.19.2...0.19.3) (2025-01-15)
+
+
+### Bug Fixes
+
+* **ui:** handle null oldObj in deepDiff to prevent refresh failure ([#515](https://github.com/release-argus/Argus/issues/515)) ([757c716](https://github.com/release-argus/Argus/commits/757c716c8aaac3e75812e11a12346223f9995842))
+* **ui:** have VersionWithRefresh depend on original data ([#516](https://github.com/release-argus/Argus/issues/516)) ([7d16750](https://github.com/release-argus/Argus/commits/7d1675010a33f277c8148a8ec1147ab066a0afbf))
+
 ### [0.19.2](https://github.com/release-argus/Argus/compare/0.19.1...0.19.2) (2025-01-14)
 
 
