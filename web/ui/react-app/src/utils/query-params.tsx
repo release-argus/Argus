@@ -5,6 +5,7 @@ import {
 
 import { ArgType } from 'types/service-edit';
 import { isEmptyObject } from './is-empty';
+import isEmptyOrNull from './is-empty-or-null';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DiffObject = { [key: string]: any };
@@ -22,9 +23,9 @@ export const deepDiff = (
 ): DiffObject => {
 	const diff: DiffObject = {};
 
-	// If oldObj undefined, return newObj,
+	// If oldObj empty/undefined/null, return newObj,
 	// e.g. DeployedVersion has no defaults.
-	if (oldObj === undefined) return newObj;
+	if (isEmptyOrNull(oldObj)) return newObj;
 
 	// get all keys from both objects.
 	const keys = Object.keys(oldObj).concat(Object.keys(newObj));
