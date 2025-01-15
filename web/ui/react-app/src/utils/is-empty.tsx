@@ -4,9 +4,8 @@
  * @param arg - The array to check.
  * @returns true when array is empty, null, or undefined. false otherwise.
  */
-export const isEmptyArray = <T extends unknown[] | undefined>(
-	arg: T,
-): boolean => ((arg as unknown[]) ?? []).length === 0;
+export const isEmptyArray = (arg?: unknown[]): arg is [] | undefined =>
+	((arg as unknown[]) ?? []).length === 0;
 
 export const isEmptyObject = <T extends Record<string, unknown> | undefined>(
 	arg: T,

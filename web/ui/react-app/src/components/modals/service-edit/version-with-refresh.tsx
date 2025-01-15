@@ -63,7 +63,7 @@ const VersionWithRefresh: FC<Props> = ({
 		return convertUIDeployedVersionDataEditToAPI(
 			original as DeployedVersionLookupEditType,
 		);
-	}, [serviceID, dataTarget]);
+	}, [original, serviceID, dataTarget]);
 	const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
 	const dataTargetErrors = useErrors(dataTarget, true);
 	const { data, refetchData } = useValuesRefetch(dataTarget);
