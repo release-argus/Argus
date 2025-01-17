@@ -52,8 +52,6 @@ RUN \
   chown -R argus:argus /app
 WORKDIR /app
 
-USER argus:argus
-
 EXPOSE     8080
 VOLUME     [ "/app/data" ]
 ENTRYPOINT [ "/entrypoint.sh" ]
