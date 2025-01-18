@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.19.4](https://github.com/release-argus/Argus/compare/0.19.3...0.19.4) (2025-01-18)
+
+
+### Bug Fixes
+
+* **docker:** remove hardcoded USER to restore custom UID/GID support ([#520](https://github.com/release-argus/Argus/issues/520)) ([799a5a6](https://github.com/release-argus/Argus/commits/799a5a60f04dd6d29119076e668e100bd54737e6))
+
 ### [0.19.3](https://github.com/release-argus/Argus/compare/0.19.2...0.19.3) (2025-01-15)
 
 
