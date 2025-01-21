@@ -1,11 +1,11 @@
 import { Button, ButtonGroup, Col, FormLabel } from 'react-bootstrap';
-import { Controller, useFormContext } from 'react-hook-form';
-import { FC, memo, useEffect } from 'react';
+import { FC, memo } from 'react';
 import {
 	faCheckCircle,
 	faCircleXmark,
 } from '@fortawesome/free-solid-svg-icons';
 
+import { Controller } from 'react-hook-form';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { HelpTooltip } from 'components/generic';
 import { strToBool } from 'utils';
@@ -33,7 +33,6 @@ const BooleanWithDefault: FC<Props> = ({
 	defaultValue,
 	tooltip,
 }) => {
-	const { getValues, setValue } = useFormContext();
 	const options = [
 		{
 			value: true,
@@ -54,13 +53,6 @@ const BooleanWithDefault: FC<Props> = ({
 		icon: defaultValue ? faCheckCircle : faCircleXmark,
 		class: defaultValue ? 'success' : 'danger',
 	};
-	// on load, convert the value if it's a string.
-	useEffect(() => {
-		const timeout = setTimeout(() => {
-			setValue(name, strToBool(getValues(name)));
-		}, 0);
-		return () => clearTimeout(timeout);
-	}, []);
 
 	return (
 		<Col
@@ -84,52 +76,55 @@ const BooleanWithDefault: FC<Props> = ({
 			>
 				<Controller
 					name={name}
-					render={({ field: { onChange, value } }) => (
-						<>
-							<ButtonGroup>
-								{options.map((option) => (
-									<Button
-										name={`${name}-${option.value}`}
-										key={option.class}
-										id={`option-${option.value}`}
-										className={`btn-${
-											value === option.value ? '' : 'un'
-										}checked pad-no`}
-										onClick={() => onChange(option.value)}
-										variant="secondary"
-									>
-										{`${option.text} `}
-										<FontAwesomeIcon
-											icon={option.icon}
-											style={{
-												height: '1rem',
-											}}
-											className={`text-${option.class}`}
-										/>
-									</Button>
-								))}
-							</ButtonGroup>
-							<>{'  |  '}</>
-							<Button
-								name={`${name}-${optionsDefault.value}`}
-								id={`option-${optionsDefault.value}`}
-								className={`btn-${
-									value === optionsDefault.value ? '' : 'un'
-								}checked pad-no`}
-								onClick={() => onChange(optionsDefault.value)}
-								variant="secondary"
-							>
-								{optionsDefault.text}
-								<FontAwesomeIcon
-									icon={optionsDefault.icon}
-									style={{
-										height: '1rem',
-									}}
-									className={`text-${optionsDefault.class}`}
-								/>
-							</Button>
-						</>
-					)}
+					render={({ field: { onChange, value } }) => {
+						const boolValue = strToBool(value);
+						return (
+							<>
+								<ButtonGroup>
+									{options.map((option) => (
+										<Button
+											name={`${name}-${option.value}`}
+											key={option.class}
+											id={`option-${option.value}`}
+											className={`btn-${
+												boolValue === option.value ? '' : 'un'
+											}checked pad-no`}
+											onClick={() => onChange(option.value)}
+											variant="secondary"
+										>
+											{`${option.text} `}
+											<FontAwesomeIcon
+												icon={option.icon}
+												style={{
+													height: '1rem',
+												}}
+												className={`text-${option.class}`}
+											/>
+										</Button>
+									))}
+								</ButtonGroup>
+								<>{'  |  '}</>
+								<Button
+									name={`${name}-${optionsDefault.value}`}
+									id={`option-${optionsDefault.value}`}
+									className={`btn-${
+										boolValue === optionsDefault.value ? '' : 'un'
+									}checked pad-no`}
+									onClick={() => onChange(optionsDefault.value)}
+									variant="secondary"
+								>
+									{optionsDefault.text}
+									<FontAwesomeIcon
+										icon={optionsDefault.icon}
+										style={{
+											height: '1rem',
+										}}
+										className={`text-${optionsDefault.class}`}
+									/>
+								</Button>
+							</>
+						);
+					}}
 				/>
 			</div>
 		</Col>
