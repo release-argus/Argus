@@ -9,7 +9,7 @@ import isEmptyOrNull from './is-empty-or-null';
 export const strToBool = (str?: string | boolean | null): boolean | null => {
 	if (typeof str === 'boolean') return str;
 	if (isEmptyOrNull(str)) return null;
-	return ['true', 'yes'].includes((str as string).toLowerCase());
+	return ['true', 'yes'].includes(str.toLowerCase());
 };
 
 export const boolToStr = (bool?: boolean) =>
