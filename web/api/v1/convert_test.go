@@ -209,7 +209,8 @@ func TestConvertAndCensorService(t *testing.T) {
 				Dashboard: *service.NewDashboardOptions(
 					nil,
 					"https://example.com/icon.png",
-					"", "", nil, nil),
+					"", "", nil,
+					nil, nil),
 				Status: *status.New(
 					nil, nil, nil,
 					"2.0.0",

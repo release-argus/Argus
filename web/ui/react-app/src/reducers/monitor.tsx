@@ -23,6 +23,7 @@ export default function reducerMonitor(
 					state = {
 						...JSON.parse(JSON.stringify(state)),
 						names: state.names, // Keep the names set.
+						tags: state.tags, // Keep the tags set.
 					};
 					if (action.service_data) {
 						addService(
@@ -39,6 +40,7 @@ export default function reducerMonitor(
 					const newState: MonitorSummaryType = {
 						order: action.order,
 						names: state.names ?? new Set<string>(),
+						tags: state.tags ?? new Set<string>(),
 						service: state.service ?? {},
 					};
 					for (const key of newState.order) {
@@ -141,6 +143,7 @@ export default function reducerMonitor(
 			state = {
 				...JSON.parse(JSON.stringify(state)),
 				names: state.names, // Keep the names set.
+				tags: state.tags, // Keep the tags set.
 			};
 
 			return state;
@@ -163,14 +166,10 @@ export default function reducerMonitor(
 				}
 
 				// Update the vars of this service.
-				let name: string | undefined = undefined;
-				if (action.service_data?.name !== '') {
-					name = action.service_data?.name;
-				}
 				service = {
-					...action.service_data,
 					...service,
-					name: name,
+					...action.service_data,
+					name: action.service_data?.name ?? undefined,
 					icon:
 						action.service_data?.icon === '~'
 							? undefined
@@ -216,6 +215,7 @@ export default function reducerMonitor(
 			state = {
 				...JSON.parse(JSON.stringify(state)),
 				names: state.names, // Keep the names set.
+				tags: state.tags, // Keep the tags set.
 			};
 
 			return state;
@@ -256,6 +256,7 @@ export default function reducerMonitor(
 			state = {
 				...JSON.parse(JSON.stringify(state)),
 				names: state.names, // Keep the names set.
+				tags: state.tags, // Keep the tags set.
 			};
 
 			return state;
@@ -276,8 +277,10 @@ const addService = (
 	// Set the service data.
 	service_data.loading = false;
 	state.service[id] = service_data;
-	// Add the name to the names array.
+	// Add the name to the names set.
 	if (service_data.name) state.names.add(service_data.name);
+	// Add the tags to the tags set.
+	service_data.tags?.forEach((item) => state.tags.add(item));
 	// Add the ID to the order array.
 	if (add_to_order) state.order.push(id);
 };

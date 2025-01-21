@@ -16,6 +16,7 @@ export const Approvals = (): ReactElement => {
 	const { monitorData, setMonitorData } = useWebSocket();
 	const toolbarDefaults: ApprovalsToolbarOptions = {
 		search: '',
+		tags: [],
 		editMode: false,
 		hide: [3],
 	};
@@ -45,20 +46,27 @@ export const Approvals = (): ReactElement => {
 	// Keep local storage and state in sync.
 	useEffect(() => {
 		setLSToolbarOptions({
-			search: toolbarDefaults.search,
 			editMode: toolbarOptions.editMode,
 			hide: toolbarOptions.hide,
 		});
 	}, [toolbarOptions]);
 
 	const filteredServices = useMemo(() => {
-		const search = toolbarOptions.search.toLowerCase();
+		const search = (toolbarOptions.search ?? '').toLowerCase();
+		const tags = toolbarOptions.tags ?? [];
 		return Object.values(monitorData.order)
 			.filter((service_id) => {
 				const name = monitorData.service[service_id]?.name ?? service_id;
+				const hasTags =
+					tags.length === 0 ||
+					tags.every((tag) =>
+						monitorData.service[service_id]?.tags?.includes(tag),
+					);
+
 				if (
-					name.toLowerCase().includes(search) &&
-					monitorData.service[service_id]
+					monitorData.service[service_id] &&
+					hasTags &&
+					name.toLowerCase().includes(search)
 				) {
 					const svc = monitorData.service[service_id];
 					const skipped =

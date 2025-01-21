@@ -101,7 +101,8 @@ func convertAndCensorService(service *service.Service) *apitype.Service {
 		AutoApprove: service.Dashboard.AutoApprove,
 		Icon:        service.Dashboard.Icon,
 		IconLinkTo:  service.Dashboard.IconLinkTo,
-		WebURL:      service.Dashboard.WebURL}
+		WebURL:      service.Dashboard.WebURL,
+		Tags:        service.Dashboard.Tags}
 
 	return &apiService
 }

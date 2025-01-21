@@ -94,6 +94,7 @@ const DISCORD = ({
 						<>
 							e.g. https://discord.com/api/webhooks/{''}
 							<span className="bold-underline">webhook_id</span>
+							{''}
 							/token
 						</>
 					}

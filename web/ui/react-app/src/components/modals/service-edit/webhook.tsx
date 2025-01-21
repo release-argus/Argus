@@ -1,17 +1,13 @@
-import { Accordion, Button, Col, Form, FormGroup, Row } from 'react-bootstrap';
+import { Accordion, Button, Row } from 'react-bootstrap';
 import { Dict, WebHookType } from 'types/config';
-import { FC, JSX, useEffect, useMemo } from 'react';
-import {
-	FormKeyValMap,
-	FormLabel,
-	FormSelect,
-	FormText,
-} from 'components/generic/form';
+import { FC, useEffect, useMemo } from 'react';
+import { FormKeyValMap, FormSelect, FormText } from 'components/generic/form';
 import { firstNonDefault, firstNonEmpty } from 'utils';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import { BooleanWithDefault } from 'components/generic';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { OptionType } from 'types/util';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { numberRangeTest } from 'components/generic/form-validate';
 
@@ -19,7 +15,7 @@ interface Props {
 	name: string;
 	removeMe: () => void;
 
-	globalOptions: JSX.Element;
+	globalOptions: OptionType[];
 	mains?: Dict<WebHookType>;
 	defaults?: WebHookType;
 	hard_defaults?: WebHookType;
@@ -132,23 +128,13 @@ const EditServiceWebHook: FC<Props> = ({
 
 			<Accordion.Body>
 				<Row xs={12}>
-					<Col xs={6} className={`pe-2 pt-1 pb-1`}>
-						<FormGroup className="mb-2">
-							<FormLabel text="Global?" tooltip="Use this WebHook as a base" />
-							<Form.Select
-								value={
-									mains &&
-									itemName !== '' &&
-									Object.keys(mains).indexOf(itemName) !== -1
-										? itemName
-										: ''
-								}
-								onChange={(e) => setValue(`${name}.name`, e.target.value)}
-							>
-								{globalOptions}
-							</Form.Select>
-						</FormGroup>
-					</Col>
+					<FormSelect
+						name={`${name}.name`}
+						col_xs={6}
+						label="Global?"
+						tooltip="Use this WebHook as a base"
+						options={globalOptions}
+					/>
 					<FormSelect
 						name={`${name}.type`}
 						customValidation={(value) => {

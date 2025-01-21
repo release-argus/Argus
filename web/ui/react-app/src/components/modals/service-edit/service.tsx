@@ -81,6 +81,7 @@ const EditService: FC<Props> = ({
 				loading={loading}
 			/>
 			<EditServiceDashboard
+				originals={defaultData?.dashboard}
 				defaults={otherOptionsData?.defaults?.service?.dashboard}
 				hard_defaults={otherOptionsData?.hard_defaults?.service?.dashboard}
 			/>

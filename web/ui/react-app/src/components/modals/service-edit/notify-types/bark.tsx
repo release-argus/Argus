@@ -35,7 +35,7 @@ export const BarkSoundOptions = [
 	{ label: 'HealthNotification', value: 'healthnotification' },
 	{ label: 'Horn', value: 'horn' },
 	{ label: 'Ladder', value: 'ladder' },
-	{ label: 'MailSent', value: 'maisentl' },
+	{ label: 'MailSent', value: 'mailsent' },
 	{ label: 'Minuet', value: 'minuet' },
 	{ label: 'MultiWayInvitation', value: 'multiwayinvitation' },
 	{ label: 'NewMail', value: 'newmail' },

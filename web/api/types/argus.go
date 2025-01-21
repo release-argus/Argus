@@ -26,18 +26,19 @@ import (
 
 // ServiceSummary is the Summary of a Service.
 type ServiceSummary struct {
-	ID                       string  `json:"id,omitempty" yaml:"id,omitempty"`
-	Name                     *string `json:"name,omitempty" yaml:"name,omitempty"`                                 // Name for this Service.
-	Active                   *bool   `json:"active,omitempty" yaml:"active,omitempty"`                             // Active Service?
-	Comment                  string  `json:"comment,omitempty" yaml:"comment,omitempty"`                           // Comment on the Service.
-	Type                     string  `json:"type,omitempty" yaml:"type,omitempty"`                                 // "github"/"URL".
-	WebURL                   string  `json:"url,omitempty" yaml:"url,omitempty"`                                   // URL to provide on the Web UI.
-	Icon                     string  `json:"icon,omitempty" yaml:"icon,omitempty"`                                 // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
-	IconLinkTo               string  `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                 // URL to redirect Icon clicks to.
-	HasDeployedVersionLookup *bool   `json:"has_deployed_version,omitempty" yaml:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
-	Command                  int     `json:"command,omitempty" yaml:"command,omitempty"`                           // Amount of Commands to send on a new release.
-	WebHook                  int     `json:"webhook,omitempty" yaml:"webhook,omitempty"`                           // Amount of WebHooks to send on a new release.
-	Status                   *Status `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
+	ID                       string    `json:"id,omitempty" yaml:"id,omitempty"`
+	Name                     *string   `json:"name,omitempty" yaml:"name,omitempty"`                                 // Name for this Service.
+	Active                   *bool     `json:"active,omitempty" yaml:"active,omitempty"`                             // Active Service?
+	Comment                  string    `json:"comment,omitempty" yaml:"comment,omitempty"`                           // Comment on the Service.
+	Type                     string    `json:"type,omitempty" yaml:"type,omitempty"`                                 // "github"/"URL".
+	WebURL                   string    `json:"url,omitempty" yaml:"url,omitempty"`                                   // URL to provide on the Web UI.
+	Icon                     string    `json:"icon,omitempty" yaml:"icon,omitempty"`                                 // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
+	IconLinkTo               string    `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                 // URL to redirect Icon clicks to.
+	HasDeployedVersionLookup *bool     `json:"has_deployed_version,omitempty" yaml:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
+	Command                  int       `json:"command,omitempty" yaml:"command,omitempty"`                           // Amount of Commands to send on a new release.
+	WebHook                  int       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                           // Amount of WebHooks to send on a new release.
+	Status                   *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
+	Tags                     *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                 // Tags for the Service.
 }
 
 // String returns a JSON string representation of the ServiceSummary.
@@ -106,18 +107,18 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 
 	// Status
 	statusSameCount := 0
-	// Status.ApprovedVersion
+	// 	ApprovedVersion
 	if oldData.Status.ApprovedVersion == s.Status.ApprovedVersion {
 		s.Status.ApprovedVersion = ""
 		statusSameCount++
 	}
-	// Status.DeployedVersion
+	// 	DeployedVersion
 	if oldData.Status.DeployedVersion == s.Status.DeployedVersion {
 		s.Status.DeployedVersion = ""
 		s.Status.DeployedVersionTimestamp = ""
 		statusSameCount++
 	}
-	// Status.LatestVersion
+	// 	LatestVersion
 	if oldData.Status.LatestVersion == s.Status.LatestVersion {
 		s.Status.LatestVersion = ""
 		s.Status.LatestVersionTimestamp = ""
@@ -126,6 +127,15 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	// nil Status if all fields match.
 	if statusSameCount == 3 {
 		s.Status = nil
+	}
+
+	// Tags - Removed.
+	if oldData.Tags != nil && s.Tags == nil {
+		emptyTags := []string{}
+		s.Tags = &emptyTags
+		// Unchanged.
+	} else if oldData.Tags != nil && s.Tags != nil && util.AreSlicesEqual(*oldData.Tags, *s.Tags) {
+		s.Tags = nil
 	}
 }
 
@@ -407,10 +417,11 @@ type ServiceOptions struct {
 
 // DashboardOptions defines configuration options for a service on the Web UI dashboard.
 type DashboardOptions struct {
-	AutoApprove *bool  `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before actioning new releases.
-	Icon        string `json:"icon,omitempty" yaml:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
-	IconLinkTo  string `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
-	WebURL      string `json:"web_url,omitempty" yaml:"web_url,omitempty"`           // URL to provide on the Web UI.
+	AutoApprove *bool    `json:"auto_approve,omitempty" yaml:"auto_approve,omitempty"` // Default - true = Require approval before actioning new releases.
+	Icon        string   `json:"icon,omitempty" yaml:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
+	IconLinkTo  string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+	WebURL      string   `json:"web_url,omitempty" yaml:"web_url,omitempty"`           // URL to provide on the Web UI.
+	Tags        []string `json:"tags,omitempty" yaml:"tags,omitempty"`                 // Tags for the Service.
 }
 
 // LatestVersion lookup of the service.
