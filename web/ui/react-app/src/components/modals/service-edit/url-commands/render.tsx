@@ -28,6 +28,7 @@ const RenderURLCommand = ({
 	commandType: URLCommandTypes;
 }) => {
 	const RenderTypeComponent = RENDER_TYPE_COMPONENTS[commandType];
+	if (!RenderTypeComponent) return null;
 
 	return <RenderTypeComponent name={name} />;
 };

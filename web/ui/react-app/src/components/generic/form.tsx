@@ -5,6 +5,7 @@ import FormKeyValMap from './form-key-val-map';
 import FormLabel from './form-label';
 import FormList from './form-list';
 import FormSelect from './form-select';
+import FormSelectCreatable from './form-select-creatable';
 import FormText from './form-text';
 import FormTextArea from './form-text-area';
 import FormTextWithPreview from './form-text-with-preview';
@@ -17,6 +18,7 @@ export {
 	FormLabel,
 	FormList,
 	FormSelect,
+	FormSelectCreatable,
 	FormText,
 	FormTextArea,
 	FormTextWithPreview,

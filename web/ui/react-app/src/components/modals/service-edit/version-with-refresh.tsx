@@ -87,7 +87,7 @@ const VersionWithRefresh: FC<Props> = ({
 					params: data,
 					defaults: convertedOriginal,
 					target: dataTarget,
-			  })
+				})
 			: '';
 		return fetchJSON<ServiceRefreshType>({
 			url: `api/v1/${vType === 0 ? 'latest' : 'deployed'}_version/refresh${

@@ -101,10 +101,10 @@ const convertAPILatestVersionDataEditToUI = (
 		latest_version?.type === 'github'
 			? {
 					use_prerelease: strToBool(latest_version?.use_prerelease),
-			  }
+				}
 			: {
 					allow_invalid_certs: strToBool(latest_version?.allow_invalid_certs),
-			  };
+				};
 
 	return {
 		...latest_version,
@@ -479,7 +479,7 @@ const convertAPIWebhookDataEditToUI = (
 			? item.custom_headers?.map((header, index) => ({
 					...header,
 					oldIndex: index,
-			  }))
+				}))
 			: firstNonEmpty(
 					otherOptionsData?.webhook?.[whName]?.custom_headers,
 					(
@@ -492,7 +492,7 @@ const convertAPIWebhookDataEditToUI = (
 							| WebHookType
 							| undefined
 					)?.custom_headers,
-			  ).map(() => ({ key: '', item: '' }));
+				).map(() => ({ key: '', item: '' }));
 
 		return {
 			...item,
@@ -664,6 +664,7 @@ const convertAPIDashboardDataEditToUI = (
 		icon: '',
 		icon_link_to: '',
 		web_url: '',
+		tags: [],
 		...dashboard,
 		auto_approve: strToBool(dashboard?.auto_approve),
 	};
