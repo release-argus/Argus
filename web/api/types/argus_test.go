@@ -822,6 +822,35 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
 		},
+		"tags added": {
+			old: &ServiceSummary{},
+			new: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+			want: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+		},
+		"tags removed": {
+			old: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+			new: &ServiceSummary{},
+			want: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{})},
+		},
+		"same tags": {
+			old: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+			new: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+			want: &ServiceSummary{},
+		},
+		"different tags": {
+			old: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"foo"})},
+			new: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"bar"})},
+			want: &ServiceSummary{
+				Tags: test.StringSlicePtr([]string{"bar"})},
+		},
 	}
 
 	for name, tc := range tests {

@@ -74,7 +74,7 @@ func testService(t *testing.T, id string, sType string) *Service {
 		LatestVersion:         testLatestVersion(t, sType, false),
 		DeployedVersionLookup: testDeployedVersionLookup(t, false),
 		Dashboard: *NewDashboardOptions(
-			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io",
+			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io", nil,
 			&DashboardOptionsDefaults{}, &DashboardOptionsDefaults{}),
 		Status:       *testStatus(),
 		Options:      *testOptions(),

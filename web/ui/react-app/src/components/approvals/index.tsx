@@ -1,4 +1,4 @@
-import ApprovalsToolbar from './toolbar';
+import ApprovalsToolbar from './toolbar/toolbar';
 import Service from './service';
 import { ServiceImage } from './service-image';
 import { ServiceInfo } from './service-info';

@@ -192,7 +192,7 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion *deployedver.Loo
 // giveSecretsNotify from the `oldNotifies`.
 func (s *Service) giveSecretsNotify(oldNotifies shoutrrr.Slice, secretRefs map[string]oldStringIndex) {
 	//nolint:typecheck
-	if s.Notify == nil || oldNotifies == nil ||
+	if len(s.Notify) == 0 || len(oldNotifies) == 0 ||
 		len(secretRefs) == 0 {
 		return
 	}

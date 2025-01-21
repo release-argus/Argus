@@ -480,7 +480,7 @@ func TestService_String(t *testing.T) {
 						"https://example.com",
 						nil, nil, nil)},
 				Dashboard: *NewDashboardOptions(
-					test.BoolPtr(true), "", "", "",
+					test.BoolPtr(true), "", "", "", nil,
 					nil, nil),
 				Defaults: &Defaults{
 					Options: *opt.NewDefaults(
@@ -561,12 +561,8 @@ func TestService_String(t *testing.T) {
 func TestService_Summary(t *testing.T) {
 	// GIVEN a Service
 	tests := map[string]struct {
-		svc                                       *Service
-		approvedVersion                           string
-		deployedVersion, deployedVersionTimestamp string
-		latestVersion, latestVersionTimestamp     string
-		lastQueried                               string
-		want                                      *apitype.ServiceSummary
+		svc  *Service
+		want *apitype.ServiceSummary
 	}{
 		"nil": {
 			svc:  nil,
@@ -693,6 +689,15 @@ func TestService_Summary(t *testing.T) {
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status:                   &apitype.Status{}},
 		},
+		"only dashboard.tags": {
+			svc: &Service{
+				Dashboard: DashboardOptions{
+					Tags: []string{"hello", "there"}}},
+			want: &apitype.ServiceSummary{
+				Tags:                     &[]string{"hello", "there"},
+				HasDeployedVersionLookup: test.BoolPtr(false),
+				Status:                   &apitype.Status{}},
+		},
 		"only deployed_version": {
 			svc: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{}},
@@ -747,13 +752,12 @@ func TestService_Summary(t *testing.T) {
 		},
 		"only status": {
 			svc: &Service{
-				Status: status.Status{}},
-			approvedVersion:          "1",
-			deployedVersion:          "2",
-			deployedVersionTimestamp: "2-",
-			latestVersion:            "3",
-			latestVersionTimestamp:   "3-",
-			lastQueried:              "4",
+				Status: *status.New(
+					nil, nil, nil,
+					"1",
+					"2", "2-",
+					"3", "3-",
+					"4")},
 			want: &apitype.ServiceSummary{
 				HasDeployedVersionLookup: test.BoolPtr(false),
 				Status: &apitype.Status{
@@ -776,12 +780,6 @@ func TestService_Summary(t *testing.T) {
 					len(tc.svc.Notify), len(tc.svc.Command), len(tc.svc.WebHook),
 					&tc.svc.ID, &name,
 					&tc.svc.Dashboard.WebURL)
-				if tc.approvedVersion != "" {
-					tc.svc.Status.SetApprovedVersion(tc.approvedVersion, false)
-					tc.svc.Status.SetDeployedVersion(tc.deployedVersion, tc.deployedVersionTimestamp, false)
-					tc.svc.Status.SetLatestVersion(tc.latestVersion, tc.latestVersionTimestamp, false)
-					tc.svc.Status.SetLastQueried(tc.lastQueried)
-				}
 			}
 
 			// WHEN the Service is converted to a ServiceSummary
@@ -1116,6 +1114,50 @@ func TestService_UnmarshalJSON(t *testing.T) {
 					URL:    "https://valid.release-argus.io/plain",
 				}},
 		},
+		"dashboard.tags - []string": {
+			jsonData: `{
+				"dashboard": {
+					"tags": [
+						"foo",
+						"bar"
+					]
+				}
+			}`,
+			errRegex: `^$`,
+			want: &Service{
+				Dashboard: *NewDashboardOptions(
+					nil, "", "", "",
+					[]string{"foo", "bar"},
+					nil, nil),
+			},
+		},
+		"dashboard.tags - string": {
+			jsonData: `{
+				"dashboard": {
+					"tags": "foo"
+				}
+			}`,
+			errRegex: `^$`,
+			want: &Service{
+				Dashboard: *NewDashboardOptions(
+					nil, "", "", "",
+					[]string{"foo"},
+					nil, nil),
+			},
+		},
+		"dashboard.tags - invalid": {
+			jsonData: `{
+				"dashboard": {
+					"tags": {
+						"foo": "bar"
+					}
+				}
+			}`,
+			errRegex: test.TrimYAML(`
+				failed to unmarshal Service:
+				error in tags field:
+				type: <invalid>.*$`),
+		},
 	}
 
 	for name, tc := range tests {
@@ -1246,6 +1288,32 @@ func TestService_MarshalJSON(t *testing.T) {
 			want: test.TrimJSON(`{
 				"options":{},
 				"dashboard":{}
+			}`),
+			errRegex: `^$`,
+		},
+		"service with tag": {
+			svc: &Service{
+				Dashboard: DashboardOptions{
+					Tags: []string{"foo"}},
+			},
+			want: test.TrimJSON(`{
+				"options":{},
+				"dashboard":{
+					"tags":["foo"]
+				}
+			}`),
+			errRegex: `^$`,
+		},
+		"service with tags": {
+			svc: &Service{
+				Dashboard: DashboardOptions{
+					Tags: []string{"foo", "bar"}},
+			},
+			want: test.TrimJSON(`{
+				"options":{},
+				"dashboard":{
+					"tags":["foo","bar"]
+				}
 			}`),
 			errRegex: `^$`,
 		},
@@ -1511,6 +1579,41 @@ func TestService_UnmarshalYAML(t *testing.T) {
 					URL:    "https://valid.release-argus.io/plain",
 				}},
 		},
+		"tags - []string": {
+			yamlData: `
+				dashboard:
+					tags:
+					- foo
+					- bar
+			`,
+			errRegex: `^$`,
+			want: &Service{
+				Dashboard: DashboardOptions{
+					Tags: []string{"foo", "bar"}},
+			},
+		},
+		"tags - string": {
+			yamlData: `
+				dashboard:
+					tags: foo
+			`,
+			errRegex: `^$`,
+			want: &Service{
+				Dashboard: DashboardOptions{
+					Tags: []string{"foo"}},
+			},
+		},
+		"tags - invalid": {
+			yamlData: `
+				dashboard:
+					tags:
+						foo: bar
+			`,
+			errRegex: test.TrimYAML(`
+				^failed to unmarshal Service:
+				error in tags field:
+				type: <invalid>.*$`),
+		},
 	}
 
 	for name, tc := range tests {
@@ -1556,7 +1659,7 @@ func TestService_MarshalYAML(t *testing.T) {
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
-		"service with comment": {
+		"comment": {
 			svc: &Service{
 				Comment: "test comment",
 			},
@@ -1565,15 +1668,43 @@ func TestService_MarshalYAML(t *testing.T) {
 			`),
 			errRegex: `^$`,
 		},
-		"service with options": {
+		"options": {
 			svc: &Service{
 				Options: opt.Options{
-					Active: test.BoolPtr(true),
-				},
+					Active: test.BoolPtr(true)},
 			},
 			want: test.TrimYAML(`
 				options:
 					  active: true
+			`),
+			errRegex: `^$`,
+		},
+		"tags - single": {
+			svc: &Service{
+				Dashboard: *NewDashboardOptions(
+					nil, "", "", "",
+					[]string{"foo"},
+					nil, nil),
+			},
+			want: test.TrimYAML(`
+				dashboard:
+						tags:
+								- foo
+			`),
+			errRegex: `^$`,
+		},
+		"tags - multiple": {
+			svc: &Service{
+				Dashboard: *NewDashboardOptions(
+					nil, "", "", "",
+					[]string{"foo", "bar"},
+					nil, nil),
+			},
+			want: test.TrimYAML(`
+				dashboard:
+						tags:
+								- foo
+								- bar
 			`),
 			errRegex: `^$`,
 		},

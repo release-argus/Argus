@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,31 +90,6 @@ func DereferenceOrValue[T comparable](check *T, value T) T {
 	return value
 }
 
-type customComparable interface {
-	bool | int | map[string]string | string | uint8 | uint16
-}
-
-// FirstNonNilPtr will return the first non-nil pointer in `pointers`.
-func FirstNonNilPtr[T customComparable](pointers ...*T) *T {
-	for _, pointer := range pointers {
-		if pointer != nil {
-			return pointer
-		}
-	}
-	return nil
-}
-
-// FirstNonDefault will return the first non-default var in `vars`.
-func FirstNonDefault[T comparable](vars ...T) T {
-	var fresh T
-	for _, v := range vars {
-		if v != fresh {
-			return v
-		}
-	}
-	return fresh
-}
-
 // PtrValueOrValue will return the value of `ptr` if non-nil, otherwise `fallback`.
 func PtrValueOrValue[T comparable](ptr *T, fallback T) T {
 	if ptr != nil {
@@ -131,16 +106,6 @@ func CopyPointer[T comparable](ptr *T) *T {
 
 	val := *ptr
 	return &val
-}
-
-// NormaliseNewlines all newlines in `data` to \n.
-func NormaliseNewlines(data []byte) []byte {
-	// replace CR LF \r\n (Windows) with LF \n (Unix).
-	data = bytes.ReplaceAll(data, []byte{13, 10}, []byte{10})
-	// replace CF \r (Mac) with LF \n (Unix).
-	data = bytes.ReplaceAll(data, []byte{13}, []byte{10})
-
-	return data
 }
 
 // CopySecretValues loops through 'fields' and replace values in 'to' of 'SecretValue' with values in 'from'.

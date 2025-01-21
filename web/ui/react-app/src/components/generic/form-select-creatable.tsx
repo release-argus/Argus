@@ -1,16 +1,21 @@
 import { Col, FormGroup } from 'react-bootstrap';
 import {
 	ConditionalOnChangeProps,
+	convertStringArrayToOptionTypeArray,
+	createOption,
+	customComponents,
 	customOnChange,
 	customStyles,
+	handleSelectedChange,
 } from './form-select-shared';
-import { FC, JSX } from 'react';
+import { FC, JSX, useEffect, useState } from 'react';
+import { MultiValue, SingleValue } from 'react-select';
 
 import { Controller } from 'react-hook-form';
+import CreatableSelect from 'react-select/creatable';
 import FormLabel from './form-label';
 import { OptionType } from 'types/util';
 import { Position } from 'types/config';
-import Select from 'react-select';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 
@@ -26,19 +31,21 @@ type Props = {
 	smallLabel?: boolean;
 	tooltip?: string | JSX.Element;
 
-	creatable?: boolean;
+	isMulti?: boolean;
 	isClearable?: boolean;
+	noOptionsMessage?: string;
 
-	options: OptionType[];
+	options: OptionType[] | string[];
+	optionCounts?: boolean;
 	customValidation?: (value: string) => string | boolean;
 
 	position?: Position;
 	positionXS?: Position;
 };
 
-type FormSelectProps = Props & ConditionalOnChangeProps;
+type FormSelectCreatableProps = Props & ConditionalOnChangeProps;
 /**
- * FormSelect is a labelled select form item.
+ * FormSelectCreatable is a labelled select form item that can have new options typed and created.
  *
  * @param name - The name of the form item.
  *
@@ -53,8 +60,10 @@ type FormSelectProps = Props & ConditionalOnChangeProps;
  *
  * @param isMulti - Whether the select field should allow multiple values.
  * @param isClearable - Whether the select field should have a clear button.
+ * @param noOptionsMessage - The text to display when no options are available for selection.
  *
  * @param options - The options for the select field.
+ * @param optionCounts - Whether to show the selected count on the option labels.
  * @param customValidation - Custom validation function for the form item.
  * @param onChange - The function to call when the form item changes.
  *
@@ -62,7 +71,7 @@ type FormSelectProps = Props & ConditionalOnChangeProps;
  * @param positionXS - The position of the form item on extra small screens.
  * @returns A labeled select form item.
  */
-const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
+const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 	name,
 
 	key = name,
@@ -76,8 +85,10 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 
 	isMulti,
 	isClearable,
+	noOptionsMessage,
 
 	options,
+	optionCounts,
 	customValidation,
 	onChange,
 
@@ -85,7 +96,52 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 	positionXS = position,
 }) => {
 	const error = useError(name, customValidation !== undefined);
+
+	const [creatableOptions, setCreatableOptions] = useState<OptionType[]>([]);
+	useEffect(() => {
+		setCreatableOptions(convertStringArrayToOptionTypeArray(options, true));
+	}, [options]);
+
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+
+	const handleCreate = (
+		inputValue: string,
+		onChange: (...event: any[]) => void,
+		currentValues: string[],
+	) => {
+		const newOption = createOption(inputValue, 1);
+		setCreatableOptions((prev) =>
+			[...prev, newOption].toSorted((a, b) => a.label.localeCompare(b.label)),
+		);
+
+		onChange([...currentValues, inputValue]);
+	};
+
+	const handleOnSelect = (
+		currentValue: string | string[],
+		newValue: SingleValue<OptionType> | MultiValue<OptionType>,
+		fieldOnChange: (...event: any[]) => void,
+	) => {
+		// Update counts on option labels.
+		handleSelectedChange(
+			currentValue,
+			newValue,
+			creatableOptions,
+			optionCounts,
+			setCreatableOptions,
+		);
+		if (onChange) {
+			if (isMulti) customOnChange(newValue, { isMulti: true, onChange });
+			else customOnChange(newValue, { isMulti: false, onChange });
+			return;
+		}
+
+		// Multi-select case.
+		if (Array.isArray(newValue) || newValue === null)
+			fieldOnChange((newValue ?? []).map((option) => option.value));
+		// Single-select case.
+		else fieldOnChange([(newValue as OptionType).value]);
+	};
 
 	return (
 		<Col
@@ -102,40 +158,34 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 				<Controller
 					name={name}
 					render={({ field }) => (
-						<Select
+						<CreatableSelect
 							{...field}
-							aria-label={label}
-							options={options}
+							aria-label={`Select options for ${label}`}
+							className="form-select-creatable"
+							options={creatableOptions ?? []}
+							onCreateOption={(inputValue: string) =>
+								handleCreate(inputValue, field.onChange, field.value)
+							}
+							onChange={(newValue) =>
+								handleOnSelect(field.value, newValue, field.onChange)
+							}
 							value={
 								isMulti
-									? options.find((option) =>
+									? creatableOptions.find((option) =>
 											field.value?.includes(option?.value),
 									  )
-									: options.find((option) => field.value === option?.value) ??
-									  options?.[0]
+									: creatableOptions.find(
+											(option) => field.value === option?.value,
+									  )
 							}
-							onChange={(newValue) => {
-								if (onChange) {
-									if (isMulti)
-										customOnChange(newValue, { isMulti: true, onChange });
-									else customOnChange(newValue, { isMulti: false, onChange });
-									return;
-								}
-
-								if (Array.isArray(newValue)) {
-									// Multi-select case.
-									field.onChange(newValue.map((option) => option.value));
-								} else if (newValue === null) {
-									// Clear case.
-									field.onChange([]);
-								} else {
-									// Single-select case.
-									field.onChange((newValue as OptionType).value);
-								}
-							}}
-							isSearchable
-							isMulti={isMulti}
 							isClearable={isClearable}
+							isMulti={isMulti}
+							closeMenuOnSelect={!isMulti}
+							hideSelectedOptions={false}
+							noOptionsMessage={
+								noOptionsMessage ? () => noOptionsMessage : undefined
+							}
+							components={customComponents}
 							styles={customStyles}
 						/>
 					)}
@@ -154,4 +204,4 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 	);
 };
 
-export default FormSelect;
+export default FormSelectCreatable;

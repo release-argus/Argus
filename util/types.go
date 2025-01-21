@@ -22,6 +22,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// RawNode is a struct that holds a *yaml.Node.
+type RawNode struct{ *yaml.Node }
+
+// UnmarshalYAML handles the unmarshalling of a RawNode.
+func (n *RawNode) UnmarshalYAML(node *yaml.Node) error {
+	n.Node = node
+	return nil
+}
+
 // UnmarshalConfig will unmarshal configuration data.
 //
 // Parameters:

@@ -93,6 +93,7 @@ export const convertUIServiceDataEditToAPI = (
 		icon: data.dashboard?.icon,
 		icon_link_to: data.dashboard?.icon_link_to,
 		web_url: data.dashboard?.web_url,
+		tags: data.dashboard?.tags,
 	};
 
 	return payload;

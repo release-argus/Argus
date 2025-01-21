@@ -180,7 +180,7 @@ func testServiceURL(id string) *service.Service {
 		LatestVersion:         lv,
 		DeployedVersionLookup: dv,
 		Dashboard: *service.NewDashboardOptions(
-			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs",
+			test.BoolPtr(false), "test", "https://release-argus.io", "https://release-argus.io/docs", nil,
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
 		Options: *options,
 		Status: *status.New(

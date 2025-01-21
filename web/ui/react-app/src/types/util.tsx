@@ -3,9 +3,10 @@ export interface Dictionary<T> {
 }
 
 export interface ApprovalsToolbarOptions {
-	[key: string]: string | boolean | number[];
+	[key: string]: string | string[] | boolean | number[] | undefined;
 
-	search: string;
+	search?: string;
+	tags?: string[];
 	editMode: boolean;
 
 	// 0 - hide up-to-date.
@@ -25,4 +26,5 @@ export interface ReactChangeEvent {
 export interface OptionType {
 	label: string;
 	value: string;
+	status?: string;
 }

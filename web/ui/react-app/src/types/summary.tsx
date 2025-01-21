@@ -7,6 +7,7 @@ export interface OrderAPIResponse {
 export interface MonitorSummaryType {
 	order: string[];
 	names: Set<string>;
+	tags: Set<string>;
 	service: ServiceSummaryListType;
 }
 export interface ServiceSummaryListType {
@@ -27,6 +28,7 @@ export interface ServiceSummaryType {
 	webhook?: number;
 	command?: number;
 	status?: StatusSummaryType;
+	tags?: string[];
 }
 
 export interface ServiceModal {

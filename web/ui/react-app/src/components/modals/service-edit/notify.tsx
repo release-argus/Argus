@@ -1,4 +1,4 @@
-import { Accordion, Button, Col, Form, FormGroup, Row } from 'react-bootstrap';
+import { Accordion, Button, Row } from 'react-bootstrap';
 import {
 	Dict,
 	LatestVersionLookupType,
@@ -7,8 +7,8 @@ import {
 	NotifyTypesKeys,
 	NotifyTypesValues,
 } from 'types/config';
-import { FC, JSX, memo, useEffect, useMemo } from 'react';
-import { FormLabel, FormSelect, FormText } from 'components/generic/form';
+import { FC, memo, useEffect, useMemo } from 'react';
+import { FormSelect, FormText } from 'components/generic/form';
 import { NotifyEditType, ServiceEditOtherData } from 'types/service-edit';
 import {
 	convertNotifyParams,
@@ -17,10 +17,13 @@ import {
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { OptionType } from 'types/util';
 import RenderNotify from './notify-types/render';
+import { SingleValue } from 'react-select';
 import { TYPE_OPTIONS } from './notify-types/types';
 import TestNotify from 'components/modals/service-edit/test-notify';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { isEmptyOrNull } from 'utils';
 
 interface Props {
 	name: string;
@@ -28,7 +31,7 @@ interface Props {
 
 	serviceID: string;
 	originals?: NotifyEditType[];
-	globalOptions: JSX.Element;
+	globalOptions: OptionType[];
 	mains?: Dict<NotifyTypesValues>;
 	defaults?: NotifyTypes;
 	hard_defaults?: NotifyTypes;
@@ -74,7 +77,7 @@ const Notify: FC<Props> = ({
 			setValue(`${name}.type`, itemName);
 		// Trigger validation on name/type.
 		const timeout = setTimeout(() => {
-			if (itemName !== '') trigger(`${name}.name`);
+			if (!isEmptyOrNull(itemName)) trigger(`${name}.name`);
 			trigger(`${name}.type`);
 		}, 25);
 		return () => clearTimeout(timeout);
@@ -133,23 +136,17 @@ const Notify: FC<Props> = ({
 
 			<Accordion.Body>
 				<Row xs={12}>
-					<Col xs={6} className={`pe-2 pt-1 pb-1`}>
-						<FormGroup className="mb-2">
-							<FormLabel text="Global?" tooltip="Use this Notify as a base" />
-							<Form.Select
-								value={
-									mains && Object.keys(mains).indexOf(itemName) !== -1
-										? itemName
-										: ''
-								}
-								onChange={(e) => setValue(`${name}.name`, e.target.value)}
-							>
-								{globalOptions}
-							</Form.Select>
-						</FormGroup>
-					</Col>
+					<FormSelect
+						name={`${name}.name`}
+						col_xs={6}
+						label="Global?"
+						tooltip="Use this Notify as a base"
+						options={globalOptions}
+					/>
 					<FormSelect
 						name={`${name}.type`}
+						col_xs={6}
+						label="Type"
 						customValidation={(value) => {
 							if (
 								itemType !== undefined &&
@@ -160,8 +157,9 @@ const Notify: FC<Props> = ({
 							}
 							return true;
 						}}
-						onChange={(e) => {
-							const newType = e.target.value as NotifyTypesKeys;
+						onChange={(newValue: SingleValue<OptionType>) => {
+							if (newValue === null) return;
+							const newType = newValue?.value as NotifyTypesKeys;
 							const otherOptionsData: ServiceEditOtherData = {
 								notify: mains,
 								defaults: { notify: defaults },
@@ -170,8 +168,6 @@ const Notify: FC<Props> = ({
 							onChangeNotifyType(newType, original, otherOptionsData);
 							setValue(`${name}.type`, newType);
 						}}
-						col_xs={6}
-						label="Type"
 						options={TYPE_OPTIONS}
 						position="right"
 					/>

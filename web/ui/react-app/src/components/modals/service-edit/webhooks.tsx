@@ -4,6 +4,7 @@ import { FC, useCallback, useMemo } from 'react';
 import { firstNonEmpty, isEmptyArray } from 'utils';
 
 import EditServiceWebHook from 'components/modals/service-edit/webhook';
+import { createOption } from 'components/generic/form-select-shared';
 import { useFieldArray } from 'react-hook-form';
 
 interface Props {
@@ -52,19 +53,10 @@ const EditServiceWebHooks: FC<Props> = ({
 	}, []);
 
 	const globalWebHookOptions = useMemo(
-		() => (
-			<>
-				<option className="form-select-option" value="">
-					Not global
-				</option>
-				{mains &&
-					Object.keys(mains).map((n) => (
-						<option className="form-select-option" value={n} key={n}>
-							{n}
-						</option>
-					))}
-			</>
-		),
+		() => [
+			{ label: '--Not global--', value: '' },
+			...Object.keys(mains ?? []).map((n) => createOption(n)),
+		],
 		[mains],
 	);
 

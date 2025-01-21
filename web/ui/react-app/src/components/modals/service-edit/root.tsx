@@ -111,7 +111,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 								value === ''
 									? false
 									: // ID hasn't changed, or not in use.
-									  valueNotInOtherNameOrID(value);
+										valueNotInOtherNameOrID(value);
 							return (
 								validation || (value === '' ? 'Required' : 'Must be unique')
 							);
@@ -147,7 +147,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 									value === ''
 										? false
 										: // Name hasn't changed, or not in use.
-										  valueNotInOtherNameOrID(value);
+											valueNotInOtherNameOrID(value);
 								return (
 									validation || (value === '' ? 'Required' : 'Must be unique')
 								);
@@ -159,7 +159,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 					/>
 				)}
 			</Row>
-			<FormText name="comment" col_sm={12} label="Comment" position="right" />
+			<FormText name="comment" col_sm={12} label="Comment" />
 			{loading &&
 				delayedRender(() => (
 					<Container className="empty">

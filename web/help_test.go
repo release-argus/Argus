@@ -183,7 +183,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 			test.BoolPtr(true),
 			&opt.Defaults{}, &opt.Defaults{}),
 		Dashboard: *service.NewDashboardOptions(
-			test.BoolPtr(false), "test", "", "https://release-argus.io",
+			test.BoolPtr(false), "test", "", "https://release-argus.io", nil,
 			&service.DashboardOptionsDefaults{}, &service.DashboardOptionsDefaults{}),
 		Defaults:          &service.Defaults{},
 		HardDefaults:      &service.Defaults{},

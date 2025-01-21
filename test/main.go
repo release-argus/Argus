@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ func IntPtr(val int) *int { return &val }
 
 // StringPtr returns a pointer to the given string value.
 func StringPtr(val string) *string { return &val }
+
+// StringSlicePtr returns a pointer to the given string slice.
+func StringSlicePtr(val []string) *[]string { return &val }
 
 // UInt8Ptr returns a pointer to the given unsigned integer value.
 func UInt8Ptr(val int) *uint8 {

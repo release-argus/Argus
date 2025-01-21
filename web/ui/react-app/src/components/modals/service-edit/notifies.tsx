@@ -4,6 +4,7 @@ import { FC, memo, useCallback, useMemo } from 'react';
 
 import Notify from './notify';
 import { NotifyEditType } from 'types/service-edit';
+import { createOption } from 'components/generic/form-select-shared';
 import { isEmptyArray } from 'utils';
 import { useFieldArray } from 'react-hook-form';
 
@@ -54,19 +55,10 @@ const EditServiceNotifies: FC<Props> = ({
 	}, []);
 
 	const globalNotifyOptions = useMemo(
-		() => (
-			<>
-				<option className="form-select-option" value="">
-					--Not global--
-				</option>
-				{mains &&
-					Object.keys(mains).map((n) => (
-						<option className="form-select-option" value={n} key={n}>
-							{n}
-						</option>
-					))}
-			</>
-		),
+		() => [
+			{ label: '--Not global--', value: '' },
+			...Object.keys(mains ?? []).map((n) => createOption(n)),
+		],
 		[mains],
 	);
 
