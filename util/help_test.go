@@ -16,12 +16,14 @@
 
 package util
 
+import "github.com/release-argus/Argus/test"
+
 func testServiceInfo() ServiceInfo {
 	return ServiceInfo{
 		ID:            "something",
 		Name:          "another",
 		URL:           "example.com",
-		WebURL:        "other.com",
+		WebURL:        test.StringPtr("other.com"),
 		LatestVersion: "NEW",
 	}
 }

@@ -43,14 +43,24 @@ func TestTemplate_String(t *testing.T) {
 			template:    "{{ service_name | default:service_id }} - {{ version }} released",
 			want:        "another - NEW released",
 			serviceInfo: testServiceInfo()},
-		"valid django template with defaulting - had no value": {
+		"valid django template with defaulting - had no value (empty string)": {
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
 			want:     "something - NEW released",
 			serviceInfo: ServiceInfo{
 				ID:            "something",
 				Name:          "",
 				URL:           "example.com",
-				WebURL:        "other.com",
+				WebURL:        test.StringPtr("other.com"),
+				LatestVersion: "NEW",
+			}},
+		"valid django template with defaulting - had no value (nil)": {
+			template: "{{ service_name | default:service_id }} - {{ web_url }}",
+			want:     "else - ",
+			serviceInfo: ServiceInfo{
+				ID:            "something",
+				Name:          "else",
+				URL:           "example.com",
+				WebURL:        nil,
 				LatestVersion: "NEW",
 			}},
 		"invalid django template panic": {

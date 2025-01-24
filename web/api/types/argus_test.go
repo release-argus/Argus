@@ -472,8 +472,8 @@ func TestServiceSummary_String(t *testing.T) {
 				ID:      "foo",
 				Name:    test.StringPtr("bar"),
 				Type:    "github",
-				Command: 1,
-				WebHook: 2},
+				Command: test.IntPtr(1),
+				WebHook: test.IntPtr(2)},
 			want: `
 				{
 					"id": "foo",
@@ -490,12 +490,12 @@ func TestServiceSummary_String(t *testing.T) {
 				Active:                   test.BoolPtr(true),
 				Comment:                  "test",
 				Type:                     "gitlab",
-				WebURL:                   "http://example.com",
-				Icon:                     "https://example.com/icon.png",
-				IconLinkTo:               "https://release-argus.io",
+				WebURL:                   test.StringPtr("http://example.com"),
+				Icon:                     test.StringPtr("https://example.com/icon.png"),
+				IconLinkTo:               test.StringPtr("https://release-argus.io"),
 				HasDeployedVersionLookup: test.BoolPtr(true),
-				Command:                  (2),
-				WebHook:                  (1),
+				Command:                  test.IntPtr(2),
+				WebHook:                  test.IntPtr(1),
 				Status: &Status{
 					ApprovedVersion: "1.2.3"}},
 			want: `
@@ -536,51 +536,49 @@ func TestServiceSummary_String(t *testing.T) {
 	}
 }
 
-func Test_handleUnchangedOrEmpty(t *testing.T) {
-	tests := []struct {
-		name    string
-		new     string
-		current string
-		want    string
+func TestNilUnchanged(t *testing.T) {
+	tests := map[string]struct {
+		oldValue *int
+		newValue *int
+		want     *int
 	}{
-		{
-			name:    "added",
-			new:     "test",
-			current: "",
-			want:    "test",
+		"unchanged - nil->nil": {
+			oldValue: nil,
+			newValue: nil,
+			want:     nil,
 		},
-		{
-			name:    "unchanged",
-			new:     "test",
-			current: "test",
-			want:    "",
+		"unchanged - value->value": {
+			oldValue: test.IntPtr(1),
+			newValue: test.IntPtr(1),
+			want:     nil,
 		},
-		{
-			name:    "unchanged - both empty",
-			new:     "",
-			current: "",
-			want:    "",
+		"removed - non-nil->nil": {
+			oldValue: test.IntPtr(1),
+			newValue: nil,
+			want:     test.IntPtr(0),
 		},
-		{
-			name:    "different",
-			new:     "new",
-			current: "current",
-			want:    "new",
+		"added - nil->non-nil": {
+			oldValue: nil,
+			newValue: test.IntPtr(1),
+			want:     test.IntPtr(1),
 		},
-		{
-			name:    "removed",
-			new:     "",
-			current: "test",
-			want:    "~",
+		"changed - non-nil->other-non-nil": {
+			oldValue: test.IntPtr(1),
+			newValue: test.IntPtr(2),
+			want:     test.IntPtr(2),
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := handleUnchangedOrEmpty(tc.new, tc.current)
-			if got != tc.want {
-				t.Errorf("handleUnchangedOrEmpty(%q, %q) = %q, want %q",
-					tc.new, tc.current, got, tc.want)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN nilUnchanged is called
+			nilUnchanged(tc.oldValue, &tc.newValue)
+
+			// THEN the result is as expected
+			if (tc.want == nil && tc.newValue != nil) || (tc.want != nil && tc.newValue == nil) || (tc.want != nil && tc.newValue != nil && *tc.want != *tc.newValue) {
+				t.Errorf("got: %v, want: %v", tc.newValue, tc.want)
 			}
 		})
 	}
@@ -595,8 +593,10 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			old: nil,
 			new: &ServiceSummary{ID: "foo"},
 			want: &ServiceSummary{
-				ID:     "foo",
-				Status: &Status{}},
+				ID:      "foo",
+				Status:  &Status{},
+				Command: test.IntPtr(0),
+				WebHook: test.IntPtr(0)},
 		},
 		"same id": {
 			old: &ServiceSummary{
@@ -674,33 +674,33 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"same icon": {
 			old: &ServiceSummary{
-				Icon: "https://example.com/icon.png"},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: "https://example.com/icon.png"},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			want: &ServiceSummary{},
 		},
 		"different icon": {
 			old: &ServiceSummary{
-				Icon: "https://example.com/icon.png"},
+				Icon: test.StringPtr("https://example.com/icon.png")},
 			new: &ServiceSummary{
-				Icon: "https://example.com/icon2.png"},
+				Icon: test.StringPtr("https://example.com/icon2.png")},
 			want: &ServiceSummary{
-				Icon: "https://example.com/icon2.png"},
+				Icon: test.StringPtr("https://example.com/icon2.png")},
 		},
 		"same icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io"},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io"},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			want: &ServiceSummary{},
 		},
 		"different icon_link_to": {
 			old: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io"},
+				IconLinkTo: test.StringPtr("https://release-argus.io")},
 			new: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io/other"},
+				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
 			want: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io/other"},
+				IconLinkTo: test.StringPtr("https://release-argus.io/other")},
 		},
 		"same has_deployed_version_lookup": {
 			old: &ServiceSummary{
@@ -807,17 +807,17 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		},
 		"multiple differences": {
 			old: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io",
+				IconLinkTo: test.StringPtr("https://release-argus.io"),
 				Status: &Status{
 					DeployedVersion:          "1.2.3",
 					DeployedVersionTimestamp: "2020-01-01T00:00:00Z"}},
 			new: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io/other",
+				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
 			want: &ServiceSummary{
-				IconLinkTo: "https://release-argus.io/other",
+				IconLinkTo: test.StringPtr("https://release-argus.io/other"),
 				Status: &Status{
 					DeployedVersion:          "4.5.6",
 					DeployedVersionTimestamp: "2020-02-02T00:00:00Z"}},
@@ -851,18 +851,75 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 			want: &ServiceSummary{
 				Tags: test.StringSlicePtr([]string{"bar"})},
 		},
+		"command added": {
+			old: &ServiceSummary{},
+			new: &ServiceSummary{
+				Command: test.IntPtr(1)},
+			want: &ServiceSummary{
+				Command: test.IntPtr(1)},
+		},
+		"command removed": {
+			old: &ServiceSummary{
+				Command: test.IntPtr(1)},
+			new: &ServiceSummary{},
+			want: &ServiceSummary{
+				Command: test.IntPtr(0)},
+		},
+		"same command": {
+			old: &ServiceSummary{
+				Command: test.IntPtr(1)},
+			new: &ServiceSummary{
+				Command: test.IntPtr(1)},
+			want: &ServiceSummary{
+				Command: nil},
+		},
+		"webhook added": {
+			old: &ServiceSummary{},
+			new: &ServiceSummary{
+				WebHook: test.IntPtr(1)},
+			want: &ServiceSummary{
+				WebHook: test.IntPtr(1)},
+		},
+		"webhook removed": {
+			old: &ServiceSummary{
+				WebHook: test.IntPtr(1)},
+			new: &ServiceSummary{},
+			want: &ServiceSummary{
+				WebHook: test.IntPtr(0)},
+		},
+		"same webhook": {
+			old: &ServiceSummary{
+				WebHook: test.IntPtr(1)},
+			new: &ServiceSummary{
+				WebHook: test.IntPtr(1)},
+			want: &ServiceSummary{
+				WebHook: nil},
+		},
+	}
+
+	// Helper function to initialize fields
+	initialiseFields := func(instance *ServiceSummary) {
+		if instance.Status == nil {
+			instance.Status = &Status{}
+		}
+		if instance.Command == nil {
+			instance.Command = test.IntPtr(0)
+		}
+		if instance.WebHook == nil {
+			instance.WebHook = test.IntPtr(0)
+		}
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Give them non-nil Status'
-			if tc.old != nil && tc.old.Status == nil {
-				tc.old.Status = &Status{}
+			// Give them non-nil Status, Command and WebHook.
+			if tc.old != nil {
+				initialiseFields(tc.old)
 			}
-			if tc.new != nil && tc.new.Status == nil {
-				tc.new.Status = &Status{}
+			if tc.new != nil {
+				initialiseFields(tc.new)
 			}
 
 			// WHEN RemoveUnchanged is called, comparing new to old

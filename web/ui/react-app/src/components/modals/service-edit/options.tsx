@@ -1,7 +1,7 @@
+import { Accordion, Row } from 'react-bootstrap';
 import { FC, memo, useMemo } from 'react';
 import { FormCheck, FormText } from 'components/generic/form';
 
-import { Accordion } from 'react-bootstrap';
 import { BooleanWithDefault } from 'components/generic';
 import { ServiceOptionsType } from 'types/config';
 import { firstNonDefault } from 'utils';
@@ -32,20 +32,23 @@ const EditServiceOptions: FC<Props> = ({ defaults, hard_defaults }) => {
 		<Accordion>
 			<Accordion.Header>Options:</Accordion.Header>
 			<Accordion.Body>
-				<FormCheck
-					name="options.active"
-					label="Active"
-					tooltip="Whether the service is active and checking for updates"
-					size="sm"
-				/>
-				<FormText
-					key="interval"
-					name="options.interval"
-					col_sm={12}
-					label="Interval"
-					tooltip="How often to check for both latest version and deployed version updates"
-					defaultVal={convertedDefaults.interval}
-				/>
+				<Row>
+					<FormCheck
+						name="options.active"
+						col_xs={4}
+						label="Active"
+						tooltip="Whether the service is active and checking for updates"
+						size="sm"
+					/>
+					<FormText
+						key="interval"
+						name="options.interval"
+						col_xs={8}
+						label="Interval"
+						tooltip="How often to check for both latest version and deployed version updates"
+						defaultVal={convertedDefaults.interval}
+					/>
+				</Row>
 				<BooleanWithDefault
 					name="options.semantic_versioning"
 					label="Semantic versioning"

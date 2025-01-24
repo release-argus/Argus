@@ -509,7 +509,7 @@ func TestShoutrrr_Message(t *testing.T) {
 	serviceInfo := util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
-		WebURL:        "https://release-argus.io/demo",
+		WebURL:        test.StringPtr("https://release-argus.io/demo"),
 		LatestVersion: "0.9.0",
 	}
 	tests := map[string]struct {
@@ -546,7 +546,7 @@ func TestShoutrrr_Message(t *testing.T) {
 		},
 		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+				*serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),
@@ -589,7 +589,7 @@ func TestShoutrrr_Title(t *testing.T) {
 	serviceInfo := util.ServiceInfo{
 		ID:            "release-argus/Argus",
 		URL:           "https://github.com",
-		WebURL:        "https://release-argus.io/demo",
+		WebURL:        test.StringPtr("https://release-argus.io/demo"),
 		LatestVersion: "0.9.0",
 	}
 	tests := map[string]struct {
@@ -626,7 +626,7 @@ func TestShoutrrr_Title(t *testing.T) {
 		},
 		"django vars": {
 			want: fmt.Sprintf("%s or %s/%s/releases/tag/%s",
-				serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
+				*serviceInfo.WebURL, serviceInfo.URL, serviceInfo.ID, serviceInfo.LatestVersion),
 			rootValue:        test.StringPtr("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
 			defaultValue:     test.StringPtr("something"),
 			hardDefaultValue: test.StringPtr("something"),

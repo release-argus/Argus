@@ -8,9 +8,9 @@ export interface MonitorSummaryType {
 	order: string[];
 	names: Set<string>;
 	tags: Set<string>;
-	service: ServiceSummaryListType;
+	service: ServiceSummaryDictType;
 }
-export interface ServiceSummaryListType {
+export interface ServiceSummaryDictType {
 	[id: string]: ServiceSummaryType;
 }
 

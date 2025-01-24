@@ -82,8 +82,7 @@ const FormTextWithPreview: FC<Props> = ({
 					{previewURL && (
 						<div
 							style={{
-								maxWidth: '100%',
-								overflow: 'hidden',
+								maxWidth: '3em',
 								marginLeft: 'auto',
 							}}
 						>

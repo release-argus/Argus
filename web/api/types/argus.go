@@ -31,12 +31,12 @@ type ServiceSummary struct {
 	Active                   *bool     `json:"active,omitempty" yaml:"active,omitempty"`                             // Active Service?
 	Comment                  string    `json:"comment,omitempty" yaml:"comment,omitempty"`                           // Comment on the Service.
 	Type                     string    `json:"type,omitempty" yaml:"type,omitempty"`                                 // "github"/"URL".
-	WebURL                   string    `json:"url,omitempty" yaml:"url,omitempty"`                                   // URL to provide on the Web UI.
-	Icon                     string    `json:"icon,omitempty" yaml:"icon,omitempty"`                                 // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
-	IconLinkTo               string    `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                 // URL to redirect Icon clicks to.
+	WebURL                   *string   `json:"url,omitempty" yaml:"url,omitempty"`                                   // URL to provide on the Web UI.
+	Icon                     *string   `json:"icon,omitempty" yaml:"icon,omitempty"`                                 // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
+	IconLinkTo               *string   `json:"icon_link_to,omitempty" yaml:"icon_link_to,omitempty"`                 // URL to redirect Icon clicks to.
 	HasDeployedVersionLookup *bool     `json:"has_deployed_version,omitempty" yaml:"has_deployed_version,omitempty"` // Whether this service has a DeployedVersionLookup.
-	Command                  int       `json:"command,omitempty" yaml:"command,omitempty"`                           // Amount of Commands to send on a new release.
-	WebHook                  int       `json:"webhook,omitempty" yaml:"webhook,omitempty"`                           // Amount of WebHooks to send on a new release.
+	Command                  *int      `json:"command,omitempty" yaml:"command,omitempty"`                           // Amount of Commands to send on a new release.
+	WebHook                  *int      `json:"webhook,omitempty" yaml:"webhook,omitempty"`                           // Amount of WebHooks to send on a new release.
 	Status                   *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
 	Tags                     *[]string `json:"tags,omitempty" yaml:"tags,omitempty"`                                 // Tags for the Service.
 }
@@ -49,20 +49,6 @@ func (s *ServiceSummary) String() string {
 	return util.ToJSONString(s)
 }
 
-// handleUnchangedOrEmpty returns:
-//   - "" if the values match,
-//   - "~" if `new` is an empty string and `current` is non-empty,
-//   - `new` if `new` is not empty, and not the same as `current`.
-func handleUnchangedOrEmpty(new, current string) string {
-	if current == new {
-		return ""
-	}
-	if new == "" && current != "" {
-		return "~"
-	}
-	return new
-}
-
 // RemoveUnchanged will nil/clear the fields that haven't changed compared to `oldData`.
 func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	if oldData == nil {
@@ -73,14 +59,8 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	if oldData.ID == s.ID {
 		s.ID = ""
 	}
-	// Name - Removed.
-	if oldData.Name != nil && s.Name == nil {
-		emptyName := ""
-		s.Name = &emptyName
-		// Unchanged.
-	} else if oldData.Name != nil && s.Name != nil && *oldData.Name == *s.Name {
-		s.Name = nil
-	}
+	// Name
+	nilUnchanged(oldData.Name, &s.Name)
 	// Active
 	if util.DereferenceOrNilValue(oldData.Active, true) ==
 		util.DereferenceOrNilValue(s.Active, true) {
@@ -94,11 +74,11 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 		s.Type = ""
 	}
 	// URL
-	s.WebURL = handleUnchangedOrEmpty(s.WebURL, oldData.WebURL)
+	nilUnchanged(oldData.WebURL, &s.WebURL)
 	// Icon
-	s.Icon = handleUnchangedOrEmpty(s.Icon, oldData.Icon)
+	nilUnchanged(oldData.Icon, &s.Icon)
 	// IconLinkTo
-	s.IconLinkTo = handleUnchangedOrEmpty(s.IconLinkTo, oldData.IconLinkTo)
+	nilUnchanged(oldData.IconLinkTo, &s.IconLinkTo)
 	// Has DeployedVersionLookup?
 	if util.DereferenceOrNilValue(oldData.HasDeployedVersionLookup, false) ==
 		util.DereferenceOrNilValue(s.HasDeployedVersionLookup, false) {
@@ -137,6 +117,28 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	} else if oldData.Tags != nil && s.Tags != nil && util.AreSlicesEqual(*oldData.Tags, *s.Tags) {
 		s.Tags = nil
 	}
+
+	// Command
+	nilUnchanged(oldData.Command, &s.Command)
+	// WebHook
+	nilUnchanged(oldData.WebHook, &s.WebHook)
+}
+
+// Helper function to handle "Removed" or "Unchanged" logic
+func nilUnchanged[T comparable](oldValue *T, newValue **T) {
+	// Removed: oldValue exists but newValue is nil.
+	if oldValue != nil && *newValue == nil {
+		var fresh T
+		*newValue = &fresh
+		return
+	}
+	// Unchanged: oldValue and newValue are equal.
+	if oldValue != nil && *newValue != nil &&
+		*oldValue == **newValue {
+		*newValue = nil
+		return
+	}
+	// Added: Keep newValue as is (or both are nil).
 }
 
 // Status is the Status of a Service.

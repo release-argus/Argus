@@ -471,14 +471,15 @@ func (s *Status) SendSave() {
 }
 
 // GetWebURL returns the Web URL.
-func (s *Status) GetWebURL() string {
+func (s *Status) GetWebURL() *string {
 	if util.DereferenceOrDefault(s.WebURL) == "" {
-		return ""
+		return nil
 	}
 
-	return util.TemplateString(
+	webURL := util.TemplateString(
 		*s.WebURL,
 		util.ServiceInfo{LatestVersion: s.LatestVersion()})
+	return &webURL
 }
 
 // setLatestVersionIsDeployedMetric sets the Prometheus metric for whether the LatestVersion is deployed.
