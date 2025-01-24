@@ -16,9 +16,12 @@
 package service
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/release-argus/Argus/util"
+	"gopkg.in/yaml.v3"
 )
 
 // DashboardOptionsBase are the base options for the Dashboard.
@@ -44,9 +47,10 @@ func NewDashboardOptionsDefaults(
 type DashboardOptions struct {
 	DashboardOptionsBase `yaml:",inline" json:",inline"`
 
-	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
-	IconLinkTo string `yaml:"icon_link_to,omitempty" json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
-	WebURL     string `yaml:"web_url,omitempty" json:"web_url,omitempty"`           // URL to provide on the Web UI.
+	Icon       string   `yaml:"icon,omitempty" json:"icon,omitempty"`                 // Icon URL to use for messages/Web UI.
+	IconLinkTo string   `yaml:"icon_link_to,omitempty" json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+	WebURL     string   `yaml:"web_url,omitempty" json:"web_url,omitempty"`           // URL to provide on the Web UI.
+	Tags       []string `yaml:"tags,omitempty" json:"tags,omitempty"`                 // Tags for the Service.
 
 	Defaults     *DashboardOptionsDefaults `yaml:"-" json:"-"` // Defaults.
 	HardDefaults *DashboardOptionsDefaults `yaml:"-" json:"-"` // Hard defaults.
@@ -58,6 +62,7 @@ func NewDashboardOptions(
 	icon string,
 	iconLinkTo string,
 	webURL string,
+	tags []string,
 	defaults, hardDefaults *DashboardOptionsDefaults,
 ) *DashboardOptions {
 	return &DashboardOptions{
@@ -66,8 +71,89 @@ func NewDashboardOptions(
 		Icon:         icon,
 		IconLinkTo:   iconLinkTo,
 		WebURL:       webURL,
+		Tags:         tags,
 		Defaults:     defaults,
 		HardDefaults: hardDefaults}
+}
+
+// UnmarshalJSON handles the unmarshalling of a DashboardOptions.
+func (d *DashboardOptions) UnmarshalJSON(data []byte) error {
+	aux := &struct {
+		*DashboardOptionsBase `json:",inline"`
+
+		Icon       *string         `json:"icon,omitempty"`         // Icon URL to use for messages/Web UI.
+		IconLinkTo *string         `json:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+		WebURL     *string         `json:"web_url,omitempty"`      // URL to provide on the Web UI.
+		Tags       json.RawMessage `json:"tags,omitempty"`         // Tags for the Service.
+	}{
+		DashboardOptionsBase: &d.DashboardOptionsBase,
+		Icon:                 &d.Icon,
+		IconLinkTo:           &d.IconLinkTo,
+		WebURL:               &d.WebURL,
+	}
+
+	// Unmarshal into aux.
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("failed to unmarshal DashboardOptions:\n%w", err)
+	}
+
+	// Tags
+	if len(aux.Tags) > 0 {
+		var tagsAsString string
+		var tagsAsArray []string
+
+		// Try to unmarshal as a list of strings
+		if err := json.Unmarshal(aux.Tags, &tagsAsArray); err == nil {
+			d.Tags = tagsAsArray
+			// Try to unmarshal as a single string
+		} else if err := json.Unmarshal(aux.Tags, &tagsAsString); err == nil {
+			d.Tags = []string{tagsAsString}
+		} else {
+			return errors.New("error in tags field:\ntype: <invalid> (expected string or list of strings)")
+		}
+	}
+
+	return nil
+}
+
+// UnmarshalYAML handles the unmarshalling of a DashboardOptions.
+func (d *DashboardOptions) UnmarshalYAML(value *yaml.Node) error {
+	aux := &struct {
+		*DashboardOptionsBase `yaml:",inline"`
+
+		Icon       *string      `yaml:"icon,omitempty"`         // Icon URL to use for messages/Web UI.
+		IconLinkTo *string      `yaml:"icon_link_to,omitempty"` // URL to redirect Icon clicks to.
+		WebURL     *string      `yaml:"web_url,omitempty"`      // URL to provide on the Web UI.
+		Tags       util.RawNode `yaml:"tags,omitempty"`         // Tags for the Service.
+	}{
+		DashboardOptionsBase: &d.DashboardOptionsBase,
+		Icon:                 &d.Icon,
+		IconLinkTo:           &d.IconLinkTo,
+		WebURL:               &d.WebURL,
+	}
+
+	// Unmarshal into aux.
+	if err := value.Decode(&aux); err != nil {
+		return fmt.Errorf("failed to unmarshal DashboardOptions:\n%w", err)
+	}
+
+	// Tags
+	if aux.Tags.Node != nil {
+		var tagsAsString string
+		var tagsAsArray []string
+
+		// Try to unmarshal as a list of strings
+		if err := aux.Tags.Decode(&tagsAsArray); err == nil {
+			d.Tags = tagsAsArray
+			// Try to unmarshal as a single string
+		} else if err := aux.Tags.Decode(&tagsAsString); err == nil {
+			d.Tags = []string{tagsAsString}
+		} else {
+			return errors.New("error in tags field:\ntype: <invalid> (expected string or list of strings)")
+		}
+	}
+
+	return nil
 }
 
 // GetAutoApprove returns whether new releases are auto-approved.

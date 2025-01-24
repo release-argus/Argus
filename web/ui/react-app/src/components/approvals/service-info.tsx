@@ -31,7 +31,7 @@ interface Props {
 }
 
 /**
- * The service's information, including the lqtest version, the deployed version,
+ * The service's information, including the latest version, the deployed version,
  * the last time the service was queried, and the update options if latest and deployed versions differ.
  *
  * @param service - The service the information belongs to.
@@ -149,8 +149,8 @@ export const ServiceInfo: FC<Props> = ({
 				status.not_found
 					? delayedRender(() => 'service-warning rounded-bottom', 'default')
 					: status.warning
-					? 'service-warning rounded-bottom'
-					: 'default'
+						? 'service-warning rounded-bottom'
+						: 'default'
 			}
 		>
 			<ListGroup className="list-group-flush">
@@ -215,8 +215,8 @@ export const ServiceInfo: FC<Props> = ({
 							status.not_found
 								? delayedRender(() => 'warning', 'secondary')
 								: status.warning
-								? 'warning'
-								: 'secondary'
+									? 'warning'
+									: 'secondary'
 						}
 						className={
 							'service-item' +
@@ -267,8 +267,8 @@ export const ServiceInfo: FC<Props> = ({
 						(status.not_found
 							? delayedRender(() => ' service-warning rounded-bottom', '')
 							: status.warning
-							? ' service-warning rounded-bottom'
-							: '')
+								? ' service-warning rounded-bottom'
+								: '')
 					}
 				>
 					{service?.status?.last_queried ? (

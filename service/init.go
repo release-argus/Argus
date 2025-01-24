@@ -96,7 +96,7 @@ func (s *Service) Init(
 
 	// Notify/
 	// use defaults?
-	if s.Notify == nil && len(defaults.Notify) != 0 {
+	if len(s.Notify) == 0 && len(defaults.Notify) != 0 {
 		s.Notify = make(shoutrrr.Slice, len(defaults.Notify))
 		for key := range defaults.Notify {
 			s.Notify[key] = &shoutrrr.Shoutrrr{}

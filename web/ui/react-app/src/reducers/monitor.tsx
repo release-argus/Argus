@@ -20,12 +20,8 @@ export default function reducerMonitor(
 		case 'SERVICE': {
 			switch (action.sub_type) {
 				case 'INIT': {
-					state = {
-						...JSON.parse(JSON.stringify(state)),
-						names: state.names, // Keep the names set.
-					};
 					if (action.service_data) {
-						addService(
+						state = addService(
 							action.service_data.id,
 							state,
 							action.service_data,
@@ -36,17 +32,18 @@ export default function reducerMonitor(
 				}
 				case 'ORDER': {
 					if (action.order === undefined) break;
-					const newState: MonitorSummaryType = {
+					state = {
 						order: action.order,
 						names: state.names ?? new Set<string>(),
+						tags: state.tags ?? new Set<string>(),
 						service: state.service ?? {},
 					};
-					for (const key of newState.order) {
-						newState.service[key] = state.service[key]
-							? state.service[key]
-							: { id: key, loading: true };
-					}
-					state = newState;
+					// Default each undefined service.
+					state.order.forEach((id) => {
+						if (state.service[id] === undefined)
+							state.service[id] = { id: id, loading: true };
+					});
+
 					break;
 				}
 				default: {
@@ -61,74 +58,51 @@ export default function reducerMonitor(
 		// NEW
 		// UPDATED
 		// INIT
+		// ACTION
 		case 'VERSION': {
 			const id = action.service_data.id;
 			if (state.service[id] === undefined) return state;
-			switch (action.sub_type) {
-				case 'QUERY': {
-					if (state.service[id]?.status === undefined) return state;
 
-					// last_queried
-					state.service[id].status.last_queried =
-						action.service_data?.status?.last_queried;
-					break;
-				}
+			// Update service[id].status object.
+			state = {
+				...state,
+				service: {
+					...state.service,
+					[id]: {
+						...state.service[id],
+						status: {
+							...(state.service[id].status ?? {}),
+							...action.service_data?.status,
+						},
+					},
+				},
+			};
+
+			switch (action.sub_type) {
+				// case 'QUERY':
+				// case 'ACTION':
+				// case 'UPDATED':
 				case 'NEW': {
 					// url
 					state.service[id].url =
 						action.service_data?.url ?? state.service[id].url;
 
-					// status
-					state.service[id].status = state.service[id].status ?? {};
-					state.service[id].status = {
-						...state.service[id].status,
-						...action.service_data?.status,
-					};
-					break;
-				}
-				case 'UPDATED': {
-					// status
-					state.service[id].status = state.service[id].status ?? {};
-					state.service[id].status = {
-						...state.service[id].status,
-						...action.service_data?.status,
-					};
 					break;
 				}
 				case 'INIT': {
-					// Check we have the service.
-					if (
-						state.service[id] === undefined ||
-						action.service_data?.status === undefined
-					)
-						return state;
-
-					// status
-					state.service[id].status = state.service[id].status ?? {};
-					state.service[id].status = {
-						...state.service[id].status,
-						...action.service_data?.status,
-						// Default deployed_version to latest_version.
-						deployed_version:
+					// Default deployed_version to latest_version.
+					if (state.service[id].status) {
+						state.service[id].status.deployed_version =
 							state.service[id].status.deployed_version ??
-							action.service_data?.status?.latest_version,
-						deployed_version_timestamp:
+							action.service_data?.status?.latest_version;
+						state.service[id].status.deployed_version_timestamp =
 							state.service[id].status.deployed_version_timestamp ??
-							action.service_data?.status?.latest_version_timestamp,
-					};
+							action.service_data?.status?.latest_version_timestamp;
+					}
 
 					// url
 					state.service[id].url =
 						action.service_data?.url ?? state.service[id].url;
-
-					break;
-				}
-				case 'ACTION': {
-					if (state.service[id]?.status === undefined) return state;
-
-					// approved_version
-					state.service[id].status.approved_version =
-						action.service_data?.status?.approved_version;
 
 					break;
 				}
@@ -137,11 +111,7 @@ export default function reducerMonitor(
 				}
 			}
 
-			// Got to update the state more for the reload.
-			state = {
-				...JSON.parse(JSON.stringify(state)),
-				names: state.names, // Keep the names set.
-			};
+			addService(id, state, state.service[id], false);
 
 			return state;
 		}
@@ -163,14 +133,10 @@ export default function reducerMonitor(
 				}
 
 				// Update the vars of this service.
-				let name: string | undefined = undefined;
-				if (action.service_data?.name !== '') {
-					name = action.service_data?.name;
-				}
 				service = {
-					...action.service_data,
 					...service,
-					name: name,
+					...action.service_data,
+					name: action.service_data?.name || undefined,
 					icon:
 						action.service_data?.icon === '~'
 							? undefined
@@ -197,7 +163,7 @@ export default function reducerMonitor(
 			const oldName = state.service[action.sub_type]?.name;
 			// New service, add it to the order.
 			if (action.sub_type === undefined) {
-				addService(service.id, state, service, true);
+				state = addService(service.id, state, service, true);
 			}
 			// Edited service, update the data.
 			else {
@@ -206,17 +172,11 @@ export default function reducerMonitor(
 
 				// Renamed service, update the order.
 				if (service.id !== action.sub_type || oldName !== service.name) {
-					removeService(action.sub_type, state, false);
+					state = removeService(action.sub_type, state, false);
 					state.order[state.order.indexOf(action.sub_type)] = service.id;
 				}
-				addService(service.id, state, service, false);
+				state = addService(service.id, state, service, false);
 			}
-
-			// Got to update the state more for the reload.
-			state = {
-				...JSON.parse(JSON.stringify(state)),
-				names: state.names, // Keep the names set.
-			};
 
 			return state;
 		}
@@ -233,12 +193,14 @@ export default function reducerMonitor(
 
 			// Remove the service from the state.
 			const service = state.service[action.sub_type];
-			if (service !== undefined) removeService(action.sub_type, state, true);
+			if (service !== undefined)
+				state = removeService(action.sub_type, state, true);
 
 			// Check whether we"ve missed any other removals.
 			for (const id in state.service) {
 				if (!action.order.includes(id)) {
-					if (state.service[id] !== undefined) removeService(id, state, false);
+					if (state.service[id] !== undefined)
+						state = removeService(id, state, false);
 				}
 			}
 
@@ -248,15 +210,9 @@ export default function reducerMonitor(
 					fetchJSON<ServiceSummaryType | undefined>({
 						url: `api/v1/service/summary/${encodeURIComponent(id)}`,
 					}).then((data) => {
-						if (data) addService(id, state, data);
+						if (data) state = addService(id, state, data);
 					});
 			}
-
-			// Got to update the state more for the reload.
-			state = {
-				...JSON.parse(JSON.stringify(state)),
-				names: state.names, // Keep the names set.
-			};
 
 			return state;
 		}
@@ -267,30 +223,132 @@ export default function reducerMonitor(
 	}
 }
 
+/**
+ * Adds a service to the monitor state.
+ *
+ * @param id - The unique identifier for the service.
+ * @param state - The current state of the monitor.
+ * @param service_data - The data of the service to be added.
+ * @param add_to_order - Optional. Whether to add the service ID to the order array. Defaults to true.
+ * @returns The updated monitor state with the new service added.
+ */
 const addService = (
 	id: string,
 	state: MonitorSummaryType,
 	service_data: ServiceSummaryType,
 	add_to_order = true,
 ) => {
-	// Set the service data.
-	service_data.loading = false;
-	state.service[id] = service_data;
-	// Add the name to the names array.
-	if (service_data.name) state.names.add(service_data.name);
+	// Add the name to the names set.
+	let newNames: Set<string> | undefined;
+	if (service_data.name && !state.names.has(service_data.name)) {
+		newNames = new Set(state.names);
+		newNames.add(service_data.name);
+	}
+
+	// Add the tags to the tags set.
+	state = updateTags(state, state.service[id].tags, service_data.tags, id);
+
 	// Add the ID to the order array.
-	if (add_to_order) state.order.push(id);
+	const newOrder = add_to_order ? [...state.order, id] : state.order;
+
+	// Set the service data.
+	const newService = {
+		...state.service,
+		[id]: { ...service_data, loading: false },
+	};
+
+	return {
+		...state,
+		names: newNames ?? state.names,
+		order: newOrder,
+		service: newService,
+	};
 };
 
+/**
+ * Removes a service from the state.
+ *
+ * @param id - The ID of the service to remove.
+ * @param state - The current state of the monitor.
+ * @param remove_from_order - Whether to remove the service ID from the order array (and remove now-unused tags). Defaults to true.
+ * @returns The new state with the service removed.
+ */
 const removeService = (
 	id: string,
 	state: MonitorSummaryType,
 	remove_from_order = true,
 ) => {
-	// Remove the name from the names array.
-	if (state.service[id].name) state.names.delete(state.service[id].name);
-	// Remove the ID from the order array.
-	if (remove_from_order) state.order.splice(state.order.indexOf(id), 1);
+	// Invalid/unknown service.
+	if (!state.service[id]) return state;
+
+	// Remove the name from the names Set.
+	let newNames: Set<string> | undefined;
+	if (state.service[id]?.name) {
+		newNames = new Set(state.names);
+		newNames.delete(state.service[id].name);
+	}
+
 	// Remove the service from the service object.
-	delete state.service[id];
+	const { [id]: _, ...newService } = state.service;
+
+	// Remove any tags that are now unused (if we're updating ordering).
+	state = updateTags(state, state.service[id].tags, [], id);
+
+	// Remove the ID from the order array.
+	const newOrder = remove_from_order
+		? state.order.filter((item) => item !== id)
+		: state.order;
+
+	return {
+		...state,
+		names: newNames ?? state.names,
+		order: newOrder,
+		service: newService,
+	};
+};
+
+/**
+ * Updates the global tags set with the changes to a service's tags.
+ *
+ * @param state - The current state of the monitor summary.
+ * @param oldTags - The previous tags associated with the service.
+ * @param newTags - The new tags to be associated with the service.
+ * @param targetServiceId - The ID of the service whose tags are being updated.
+ * @returns The new state with the updated tags.
+ */
+const updateTags = (
+	state: MonitorSummaryType,
+	oldTags: string[] | undefined,
+	newTags: string[] | undefined,
+	targetServiceId: string,
+) => {
+	const oldServiceTags = new Set(oldTags ?? []);
+	const newServiceTags = newTags ?? [];
+	if (oldServiceTags.size === 0 && newServiceTags.length === 0) return state;
+
+	// Precompute the tags in use by other services.
+	const usedTags = new Set<string>();
+	Object.values(state.service).forEach((service) => {
+		if (service.id === targetServiceId) return;
+		return service.tags?.forEach((tag) => usedTags.add(tag));
+	});
+
+	// Add tags that aren't already in use.
+	let tagsAdded = false;
+	newServiceTags.forEach((tag) => {
+		// New tag.
+		if (!state.tags.has(tag)) {
+			tagsAdded = true;
+		}
+		usedTags.add(tag);
+	});
+
+	// If a new tag was added, or the number of tags changed, update the state.
+	if (tagsAdded || usedTags.size !== state.tags.size) {
+		return {
+			...state,
+			tags: usedTags,
+		};
+	}
+	return state;
 };

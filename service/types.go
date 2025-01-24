@@ -175,6 +175,11 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		summary.Name = &s.Name
 	}
 
+	// Tags
+	if len(s.Dashboard.Tags) != 0 {
+		summary.Tags = &s.Dashboard.Tags
+	}
+
 	return summary
 }
 
@@ -193,11 +198,11 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		*Alias        `json:",inline"`
-		Name          *string         `json:"name,omitempty"`           // Name of the Service.
-		Comment       *string         `json:"comment,omitempty"`        // Comment on the Service.
-		Options       *opt.Options    `json:"options,omitempty"`        // Options to give the Service.
-		LatestVersion json.RawMessage `json:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
+		*Alias        `json:",inline"` // Embed the original struct.
+		Name          *string          `json:"name,omitempty"`           // Name of the Service.
+		Comment       *string          `json:"comment,omitempty"`        // Comment on the Service.
+		Options       *opt.Options     `json:"options,omitempty"`        // Options to give the Service.
+		LatestVersion json.RawMessage  `json:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
 	}{
 		Alias:   (*Alias)(s),
 		Name:    &s.Name,
@@ -266,7 +271,7 @@ func (s *Service) MarshalJSON() ([]byte, error) {
 		Comment       string           `json:"comment,omitempty"`        // Comment on the Service.
 		Options       opt.Options      `json:"options,omitempty"`        // Options to give the Service.
 		LatestVersion latestver.Lookup `json:"latest_version,omitempty"` // Vars to getting the latest version of the Service.
-		*Alias        `json:",inline"`
+		*Alias        `json:",inline"` // Embed the original struct.
 	}{
 		Name:          s.Name,
 		Comment:       s.Comment,
@@ -289,11 +294,11 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 	// Alias to avoid recursion.
 	type Alias Service
 	aux := &struct {
-		*Alias        `yaml:",inline"`
-		Name          *string      `yaml:"name,omitempty"`           // Name of the Service.
-		Comment       *string      `yaml:"comment,omitempty"`        // Comment on the Service.
-		Options       *opt.Options `yaml:"options,omitempty"`        // Options to give the Service.
-		LatestVersion RawNode      `yaml:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
+		*Alias        `yaml:",inline"` // Embed the original struct.
+		Name          *string          `yaml:"name,omitempty"`           // Name of the Service.
+		Comment       *string          `yaml:"comment,omitempty"`        // Comment on the Service.
+		Options       *opt.Options     `yaml:"options,omitempty"`        // Options to give the Service.
+		LatestVersion util.RawNode     `yaml:"latest_version,omitempty"` // Temp LatestVersion field to get Type.
 	}{
 		Alias:   (*Alias)(s),
 		Name:    &s.Name,
@@ -357,15 +362,6 @@ func (s *Service) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// RawNode is a struct that holds a *yaml.Node.
-type RawNode struct{ *yaml.Node }
-
-// UnmarshalYAML handles the unmarshalling of a RawNode.
-func (n *RawNode) UnmarshalYAML(node *yaml.Node) error {
-	n.Node = node
-	return nil
-}
-
 // MarshalYAML handles the marshalling of a Service.
 //
 // (dynamic typing).
@@ -377,7 +373,7 @@ func (s *Service) MarshalYAML() (interface{}, error) {
 		Comment       string           `yaml:"comment,omitempty"`        // Comment on the Service.
 		Options       opt.Options      `yaml:"options,omitempty"`        // Options to give the Service.
 		LatestVersion latestver.Lookup `yaml:"latest_version,omitempty"` // Vars to getting the latest version of the Service.
-		*Alias        `yaml:",inline"`
+		*Alias        `yaml:",inline"` // Embed the original struct.
 	}{
 		Name:          s.Name,
 		Comment:       s.Comment,

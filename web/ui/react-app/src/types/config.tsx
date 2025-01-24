@@ -117,6 +117,7 @@ export interface ServiceDashboardOptionsType {
 	icon?: string;
 	icon_link_to?: string;
 	web_url?: string;
+	tags?: string[];
 }
 
 export type DockerFilterRegistryType = 'ghcr' | 'hub' | 'quay' | '';
