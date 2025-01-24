@@ -55,18 +55,21 @@ func TestService_ServiceInfo(t *testing.T) {
 	want := util.ServiceInfo{
 		ID:            id,
 		URL:           url,
-		WebURL:        webURL,
+		WebURL:        &webURL,
 		LatestVersion: latestVersion,
 	}
 
 	// THEN we get the correct ServiceInfo.
-	if got != want {
+	gotStr := util.ToJSONString(got)
+	wantStr := util.ToJSONString(want)
+	if gotStr != wantStr {
 		t.Errorf("ServiceInfo didn't get the correct data\nwant: %#v\ngot:  %#v",
-			want, got)
+			wantStr, gotStr)
 	}
 }
 
 func TestService_IconURL(t *testing.T) {
+	nilValue := "<nil>"
 	// GIVEN a Lookup.
 	tests := map[string]struct {
 		dashboardIcon string
@@ -74,11 +77,11 @@ func TestService_IconURL(t *testing.T) {
 		notify        shoutrrr.Slice
 	}{
 		"no dashboard.icon": {
-			want:          "",
+			want:          nilValue,
 			dashboardIcon: "",
 		},
 		"no icon anywhere": {
-			want:          "",
+			want:          nilValue,
 			dashboardIcon: "",
 			notify: shoutrrr.Slice{"test": {
 				Main:         &shoutrrr.Defaults{},
@@ -87,7 +90,7 @@ func TestService_IconURL(t *testing.T) {
 			}},
 		},
 		"emoji icon": {
-			want:          "",
+			want:          nilValue,
 			dashboardIcon: ":smile:",
 		},
 		"web icon": {
@@ -144,9 +147,10 @@ func TestService_IconURL(t *testing.T) {
 			got := svc.IconURL()
 
 			// THEN the function returns the correct result.
-			if got != tc.want {
+			gotStr := util.DereferenceOrNilValue(got, nilValue)
+			if gotStr != tc.want {
 				t.Errorf("IconURL() mismatch\n%q\ngot:  %q",
-					tc.want, got)
+					tc.want, gotStr)
 			}
 		})
 	}

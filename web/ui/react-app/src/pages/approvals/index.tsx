@@ -54,39 +54,36 @@ export const Approvals = (): ReactElement => {
 	const filteredServices = useMemo(() => {
 		const search = (toolbarOptions.search ?? '').toLowerCase();
 		const tags = toolbarOptions.tags ?? [];
-		return Object.values(monitorData.order)
-			.filter((service_id) => {
-				const name = monitorData.service[service_id]?.name ?? service_id;
-				const hasTags =
-					tags.length === 0 ||
-					tags.every((tag) =>
-						monitorData.service[service_id]?.tags?.includes(tag),
-					);
+		return Object.values(monitorData.order).filter((service_id) => {
+			const name = monitorData.service[service_id]?.name ?? service_id;
+			const hasTags =
+				tags.length === 0 ||
+				tags.some((tag) =>
+					monitorData.service[service_id]?.tags?.includes(tag),
+				);
 
-				if (
-					monitorData.service[service_id] &&
-					hasTags &&
-					name.toLowerCase().includes(search)
-				) {
-					const svc = monitorData.service[service_id];
-					const skipped =
-						`SKIP_${svc.status?.latest_version}` ===
-						svc.status?.approved_version;
-					const upToDate =
-						svc.status?.deployed_version === svc.status?.latest_version;
-					return (
-						// hideUpToDate - deployed_version NOT latest_version.
-						(!toolbarOptions.hide.includes(0) || !upToDate) &&
-						// hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version.
-						(!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
-						// hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version.
-						(!toolbarOptions.hide.includes(2) || !skipped) &&
-						// hideInactive - active NOT false.
-						(!toolbarOptions.hide.includes(3) || svc.active !== false)
-					);
-				}
-			})
-			.map((service) => monitorData.service[service]);
+			if (
+				monitorData.service[service_id] &&
+				hasTags &&
+				name.toLowerCase().includes(search)
+			) {
+				const svc = monitorData.service[service_id];
+				const skipped =
+					`SKIP_${svc.status?.latest_version}` === svc.status?.approved_version;
+				const upToDate =
+					svc.status?.deployed_version === svc.status?.latest_version;
+				return (
+					// hideUpToDate - deployed_version NOT latest_version.
+					(!toolbarOptions.hide.includes(0) || !upToDate) &&
+					// hideUpdatable - deployed_version IS latest_version AND approved_version IS NOT "SKIP_"+latest_version.
+					(!toolbarOptions.hide.includes(1) || upToDate || skipped) &&
+					// hideSkipped - approved_version NOT "SKIP_"+latest_version OR NO approved_version.
+					(!toolbarOptions.hide.includes(2) || !skipped) &&
+					// hideInactive - active NOT false.
+					(!toolbarOptions.hide.includes(3) || svc.active !== false)
+				);
+			}
+		});
 	}, [toolbarOptions, monitorData.service, monitorData.order]);
 
 	return (
@@ -103,10 +100,10 @@ export const Approvals = (): ReactElement => {
 				}}
 			>
 				{monitorData.order.length === Object.keys(monitorData.service).length &&
-					filteredServices.map((service) => (
+					filteredServices.map((service_id) => (
 						<Service
-							key={service.id}
-							service={service}
+							key={service_id}
+							service={monitorData.service[service_id]}
 							editable={toolbarOptions.editMode}
 						/>
 					))}

@@ -119,6 +119,7 @@ func TestStatus_Init(t *testing.T) {
 }
 
 func TestStatus_GetWebURL(t *testing.T) {
+	nilValue := "<nil>"
 	// GIVEN we have a Status.
 	latestVersion := "1.2.3"
 	tests := map[string]struct {
@@ -126,11 +127,11 @@ func TestStatus_GetWebURL(t *testing.T) {
 		want   string
 	}{
 		"nil string": {
-			webURL: test.StringPtr(""),
-			want:   ""},
+			webURL: nil,
+			want:   nilValue},
 		"empty string": {
 			webURL: test.StringPtr(""),
-			want:   ""},
+			want:   nilValue},
 		"string without templating": {
 			webURL: test.StringPtr("https://something.com/somewhere"),
 			want:   "https://something.com/somewhere"},
@@ -154,9 +155,10 @@ func TestStatus_GetWebURL(t *testing.T) {
 			got := status.GetWebURL()
 
 			// THEN the returned WebURL is as expected.
-			if got != tc.want {
+			gotStr := util.DereferenceOrNilValue(got, nilValue)
+			if gotStr != tc.want {
 				t.Errorf("want: %q\ngot:  %q",
-					tc.want, got)
+					tc.want, gotStr)
 			}
 		})
 	}

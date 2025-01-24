@@ -20,6 +20,6 @@ type ServiceInfo struct {
 	ID            string
 	Name          string
 	URL           string
-	WebURL        string
+	WebURL        *string
 	LatestVersion string
 }

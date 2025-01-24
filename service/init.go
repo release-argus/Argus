@@ -46,26 +46,25 @@ func (s *Service) ServiceInfo() util.ServiceInfo {
 }
 
 // IconURL returns the URL Icon for the Service.
-func (s *Service) IconURL() string {
+func (s *Service) IconURL() *string {
 	// Service.Icon
 	if strings.HasPrefix(s.Dashboard.Icon, "http") {
-		return s.Dashboard.Icon
+		return &s.Dashboard.Icon
 	}
 
-	var icon string
 	//nolint:typecheck
 	if s.Notify != nil {
 		// Search for a web icon.
 		for _, notify := range s.Notify {
 			// `Params.Icon`
-			icon = notify.GetParam("icon")
-			if icon != "" && strings.HasPrefix(icon, "http") {
-				return icon
+			if icon := notify.GetParam("icon"); icon != "" &&
+				strings.HasPrefix(icon, "http") {
+				return &icon
 			}
 		}
 	}
 
-	return icon
+	return nil
 }
 
 // Init will initialise the Service metric.

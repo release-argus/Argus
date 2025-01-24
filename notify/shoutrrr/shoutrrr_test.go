@@ -647,7 +647,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 		ID:            "service_id",
 		Name:          "service_name",
 		URL:           "service_url",
-		WebURL:        "service_web_url",
+		WebURL:        test.StringPtr("service_web_url"),
 		LatestVersion: "1.2.3",
 	}
 	tests := map[string]struct {
@@ -690,7 +690,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 		},
 		"all django vars": {
 			want: fmt.Sprintf("foo-%s-%s-%s-%s-%s",
-				serviceInfo.ID, serviceInfo.LatestVersion, serviceInfo.Name, serviceInfo.URL, serviceInfo.WebURL),
+				serviceInfo.ID, serviceInfo.LatestVersion, serviceInfo.Name, serviceInfo.URL, *serviceInfo.WebURL),
 			rootValue:        test.StringPtr("foo-{{ service_id }}-{{ version }}-{{ service_name }}-{{ service_url }}-{{ web_url }}"),
 			defaultValue:     test.StringPtr("not_this"),
 			hardDefaultValue: test.StringPtr("not_this"),

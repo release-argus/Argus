@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
@@ -173,24 +174,24 @@ func TestAnnounceEdit(t *testing.T) {
 		wantedServiceData *apitype.ServiceSummary
 	}{
 		"edit with old data": {
-			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: "Service 1"},
-			newData:           apitype.ServiceSummary{ID: "service-2", Icon: "Service 1 Updated"},
-			wantedServiceData: &apitype.ServiceSummary{ID: "service-2", Icon: "Service 1 Updated"},
+			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1")},
+			newData:           apitype.ServiceSummary{ID: "service-2", Icon: test.StringPtr("Service 1 Updated")},
+			wantedServiceData: &apitype.ServiceSummary{ID: "service-2", Icon: test.StringPtr("Service 1 Updated")},
 		},
 		"edit with old data, no change": {
-			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: "Service 1"},
-			newData:           apitype.ServiceSummary{ID: "service-1", Icon: "Service 1"},
+			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1")},
+			newData:           apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1")},
 			wantedServiceData: &apitype.ServiceSummary{},
 		},
 		"edit with old data, only changes sent": {
-			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: "Service 1", Type: "github"},
-			newData:           apitype.ServiceSummary{ID: "service-1", Icon: "Service 1", Type: "url"},
+			oldData:           &apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1"), Type: "github"},
+			newData:           apitype.ServiceSummary{ID: "service-1", Icon: test.StringPtr("Service 1"), Type: "url"},
 			wantedServiceData: &apitype.ServiceSummary{Type: "url"},
 		},
 		"edit without old data": {
 			oldData:           nil,
-			newData:           apitype.ServiceSummary{ID: "service-2", Icon: "Service 2"},
-			wantedServiceData: &apitype.ServiceSummary{ID: "service-2", Icon: "Service 2", Status: &apitype.Status{}},
+			newData:           apitype.ServiceSummary{ID: "service-2", Icon: test.StringPtr("Service 2")},
+			wantedServiceData: &apitype.ServiceSummary{ID: "service-2", Icon: test.StringPtr("Service 2"), Status: &apitype.Status{}},
 		},
 	}
 

@@ -568,12 +568,14 @@ func (s *Shoutrrr) TestSend(serviceURL string) error {
 		latestVersion = "MAJOR.MINOR.PATCH"
 	}
 
+	webURL := util.TemplateString(
+		util.DereferenceOrDefault(s.ServiceStatus.WebURL),
+		util.ServiceInfo{LatestVersion: latestVersion})
+
 	testServiceInfo := util.ServiceInfo{
-		ID:  util.DereferenceOrDefault(s.ServiceStatus.ServiceID),
-		URL: serviceURL,
-		WebURL: util.TemplateString(
-			util.DereferenceOrDefault(s.ServiceStatus.WebURL),
-			util.ServiceInfo{LatestVersion: latestVersion}),
+		ID:            util.DereferenceOrDefault(s.ServiceStatus.ServiceID),
+		URL:           serviceURL,
+		WebURL:        &webURL,
 		LatestVersion: latestVersion}
 
 	// Prefix 'TEST - ' if non-empty.

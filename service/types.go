@@ -149,8 +149,6 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		latestVersionType = s.LatestVersion.GetType()
 	}
 	hasDeployedVersionLookup := s.DeployedVersionLookup != nil
-	commands := len(s.Command)
-	webhooks := len(s.WebHook)
 
 	summary := &apitype.ServiceSummary{
 		ID:                       s.ID,
@@ -158,10 +156,7 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 		Type:                     latestVersionType,
 		WebURL:                   s.Status.GetWebURL(),
 		Icon:                     s.IconURL(),
-		IconLinkTo:               s.Dashboard.IconLinkTo,
 		HasDeployedVersionLookup: &hasDeployedVersionLookup,
-		Command:                  commands,
-		WebHook:                  webhooks,
 		Status: &apitype.Status{
 			ApprovedVersion:          s.Status.ApprovedVersion(),
 			DeployedVersion:          s.Status.DeployedVersion(),
@@ -169,6 +164,11 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 			LatestVersion:            s.Status.LatestVersion(),
 			LatestVersionTimestamp:   s.Status.LatestVersionTimestamp(),
 			LastQueried:              s.Status.LastQueried()}}
+
+	// IconLinkTo
+	if s.Dashboard.IconLinkTo != "" {
+		summary.IconLinkTo = &s.Dashboard.IconLinkTo
+	}
 
 	// Name
 	if s.MarshalName() {
@@ -178,6 +178,17 @@ func (s *Service) Summary() *apitype.ServiceSummary {
 	// Tags
 	if len(s.Dashboard.Tags) != 0 {
 		summary.Tags = &s.Dashboard.Tags
+	}
+
+	// Command
+	if len(s.Command) != 0 {
+		commands := len(s.Command)
+		summary.Command = &commands
+	}
+	// WebHook
+	if len(s.WebHook) != 0 {
+		webhooks := len(s.WebHook)
+		summary.WebHook = &webhooks
 	}
 
 	return summary
