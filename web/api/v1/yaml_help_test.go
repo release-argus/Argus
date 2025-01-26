@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,10 @@ func writeFile(path string, data string) {
 
 func testYAML_Argus(path string) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		settings:
 			data:
 				database_file: test-argus.db

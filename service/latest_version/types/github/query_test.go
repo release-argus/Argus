@@ -280,6 +280,9 @@ func TestQuery(t *testing.T) {
 				try++
 				temporaryFailureInNameResolution = false
 				lookup := testLookup(false)
+				if strings.Contains(tc.overrides, "access_token: null") {
+					lookup.HardDefaults.AccessToken = ""
+				}
 				lookup.Status.ServiceID = &name
 				err := yaml.Unmarshal([]byte(tc.overrides), lookup)
 				if err != nil {

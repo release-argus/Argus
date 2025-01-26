@@ -185,6 +185,10 @@ func testYAML_config_test(path string, t *testing.T) {
 
 func testYAML_SomeNilServices(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 			a:
 				latest_version:
@@ -309,6 +313,10 @@ func testYAML_Ordering_1_no_services(path string, t *testing.T) {
 
 func testYAML_Ordering_2_obscure_service_names(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 			"123":
 				latest_version:
@@ -357,6 +365,10 @@ func testYAML_Ordering_2_obscure_service_names(path string, t *testing.T) {
 
 func testYAML_Ordering_3_empty_line_after_service_line(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 
 			C:
@@ -380,6 +392,10 @@ func testYAML_Ordering_3_empty_line_after_service_line(path string, t *testing.T
 
 func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 ` + strings.Repeat("\n", 3) + `
 			P:
@@ -403,17 +419,25 @@ func testYAML_Ordering_4_multiple_empty_lines_after_service_line(path string, t 
 
 func testYAML_Ordering_5_eof_is_service_line(path string, t *testing.T) {
 	data := test.TrimYAML(`
-	settings:
-	data:
-	database_file: test-ordering_5.db
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
+		settings:
+		data:
+		database_file: test-ordering_5.db
 
-	service:`)
+		service:`)
 
 	writeFile(path, data, t)
 }
 
 func testYAML_Ordering_6_no_services_after_service_line_another_block(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		service:
 
 		settings:
@@ -426,6 +450,10 @@ func testYAML_Ordering_6_no_services_after_service_line_another_block(path strin
 
 func testYAML_Ordering_7_no_services_after_service_line(path string, t *testing.T) {
 	data := test.TrimYAML(`
+		defaults:
+			service:
+				latest_version:
+					access_token: ` + os.Getenv("GITHUB_TOKEN") + `
 		settings:
 			data:
 				database_file: test-ordering_5.db
