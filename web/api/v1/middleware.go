@@ -21,7 +21,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // basicAuthMiddleware handles basic authentication with hashed credentials.
@@ -57,14 +58,14 @@ func (api *API) basicAuthMiddleware() mux.MiddlewareFunc {
 func loggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Log the request.
-		jLog.Verbose(
+		logutil.Log.Verbose(
 			fmt.Sprintf(
 				"%s (%s), %s",
 				r.Method,
 				getIP(r),
 				r.URL.Path,
 			),
-			util.LogFrom{},
+			logutil.LogFrom{},
 			true)
 
 		// Process request.

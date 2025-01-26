@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 //go:build unit
 
-package util
+package logutil
 
 import (
 	"bytes"
@@ -22,10 +22,54 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/test"
+	"github.com/release-argus/Argus/util"
 )
+
+func TestInit(t *testing.T) {
+	// GIVEN a log level and timestamps setting
+	tests := map[string]struct {
+		level      string
+		timestamps bool
+	}{
+		"INFO and timestamps": {
+			level: "INFO", timestamps: true},
+		"DEBUG, no timestamps": {
+			level: "DEBUG", timestamps: false},
+		"ERROR and timestamps": {
+			level: "ERROR", timestamps: true},
+		"WARN, no timestamps": {
+			level: "WARN", timestamps: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel() - Cannot run in parallel because of the once variable.
+			// Reset the once variable and Log for each test
+			once = sync.Once{}
+			Log = nil
+
+			// WHEN Init is called
+			Init(tc.level, tc.timestamps)
+
+			// THEN the Log should be initialized correctly
+			if Log == nil {
+				t.Fatalf("Log was not initialized")
+			}
+			if Log.Level != levelMap[tc.level] {
+				t.Errorf("want level=%d\ngot  level=%d",
+					levelMap[tc.level], Log.Level)
+			}
+			if Log.Timestamps != tc.timestamps {
+				t.Errorf("want timestamps=%t\ngot  timestamps=%t",
+					tc.timestamps, Log.Timestamps)
+			}
+		})
+	}
+}
 
 func TestNewJLog(t *testing.T) {
 	// GIVEN a new JLog is wanted
@@ -97,7 +141,7 @@ func TestSetLevel(t *testing.T) {
 					r := recover()
 
 					rStr := fmt.Sprint(r)
-					if !RegexCheck(*tc.panicRegex, rStr) {
+					if !util.RegexCheck(*tc.panicRegex, rStr) {
 						t.Errorf("expected a panic that matched %q\ngot: %q",
 							*tc.panicRegex, rStr)
 					}
@@ -325,7 +369,7 @@ func TestJLog_Error(t *testing.T) {
 			} else {
 				regex = fmt.Sprintf("^ERROR: %s\n$", msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("ERROR printed didn't match %q\nGot %q",
 					regex, stdout)
 			}
@@ -397,7 +441,7 @@ func TestJLog_Warn(t *testing.T) {
 			} else {
 				regex = fmt.Sprintf("^WARNING: %s\n$", msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("WARNING printed didn't match %q\nGot %q",
 					regex, stdout)
 			}
@@ -469,7 +513,7 @@ func TestJLog_Info(t *testing.T) {
 			} else {
 				regex = fmt.Sprintf("^INFO: %s\n$", msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("INFO printed didn't match %q\nGot %q",
 					regex, stdout)
 			}
@@ -554,7 +598,7 @@ func TestJLog_Verbose(t *testing.T) {
 			} else {
 				regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("VERBOSE printed didn't match %q\nGot %q",
 					regex, stdout)
 			}
@@ -646,7 +690,7 @@ func TestJLog_Debug(t *testing.T) {
 			} else {
 				regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("DEBUG printed didn't match %q\nGot %q",
 					regex, stdout)
 			}
@@ -721,7 +765,7 @@ func TestJLog_Fatal(t *testing.T) {
 						stdout = logOut.String()
 						regex = fmt.Sprintf("^[0-9]{4}\\/[0-9]{2}\\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ERROR: %s\n$", msg)
 					}
-					if !RegexCheck(regex, stdout) {
+					if !util.RegexCheck(regex, stdout) {
 						t.Errorf("ERROR wasn't printed/didn't match %q\nGot %q",
 							regex, stdout)
 					}
@@ -734,59 +778,9 @@ func TestJLog_Fatal(t *testing.T) {
 			// THEN msg was logged if shouldPrint, with/without timestamps
 			stdout := releaseStdout()
 			regex := "^$"
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("ERROR printed didn't match %q\nGot %q",
 					regex, stdout)
-			}
-		})
-	}
-}
-
-func TestTruncateMessage(t *testing.T) {
-	// GIVEN a message and a maxLength to adhere to
-	tests := map[string]struct {
-		msg       string
-		maxLength int
-		want      string
-	}{
-		"message shorter than maxLength": {
-			msg:       "short message",
-			maxLength: 20,
-			want:      "short message",
-		},
-		"message equal to maxLength": {
-			msg:       "exact length msg",
-			maxLength: 16,
-			want:      "exact length msg",
-		},
-		"message longer than maxLength": {
-			msg:       "is this message too long",
-			maxLength: 10,
-			want:      "is this me...",
-		},
-		"empty message": {
-			msg:       "",
-			maxLength: 10,
-			want:      "",
-		},
-		"maxLength zero": {
-			msg:       "message",
-			maxLength: 0,
-			want:      "...",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN TruncateMessage is called
-			got := TruncateMessage(tc.msg, tc.maxLength)
-
-			// THEN the message is truncated only if it exceeds maxLength
-			if got != tc.want {
-				t.Errorf("truncateMessage(%q, %d) = %q; want %q",
-					tc.msg, tc.maxLength, got, tc.want)
 			}
 		})
 	}
@@ -827,7 +821,7 @@ func TestJLog_logMessage(t *testing.T) {
 				regex = fmt.Sprintf("^%s\n$",
 					msg)
 			}
-			if !RegexCheck(regex, stdout) {
+			if !util.RegexCheck(regex, stdout) {
 				t.Errorf("logMessage printed didn't match\n%q\ngot:\n%q",
 					regex, stdout)
 			}

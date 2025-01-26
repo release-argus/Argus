@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -33,6 +34,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -44,15 +46,14 @@ var (
 
 func TestMain(m *testing.M) {
 	// initialise jLog
-	masterJLog := util.NewJLog("DEBUG", false)
-	masterJLog.Testing = true
+	logutil.Init("DEBUG", false)
+	logutil.Log.Testing = true
 	flags := make(map[string]bool)
 	path := "TestWebAPIv1Main.yml"
 	testYAML_Argus(path)
 	var config config.Config
-	config.Load(path, &flags, masterJLog)
+	config.Load(path, &flags)
 	os.Remove(path)
-	LogInit(masterJLog)
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
@@ -79,8 +80,8 @@ func testLoad(file string) *config.Config {
 	var config config.Config
 
 	flags := make(map[string]bool)
-	config.Load(file, &flags, nil)
-	config.Init(false)
+	config.Load(file, &flags)
+	config.Init()
 	announceChannel := make(chan []byte, 8)
 	config.HardDefaults.Service.Status.AnnounceChannel = &announceChannel
 

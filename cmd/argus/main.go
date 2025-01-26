@@ -22,16 +22,16 @@ import (
 	"flag"
 	"fmt"
 
+	_ "modernc.org/sqlite"
+
 	cfg "github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/db"
 	"github.com/release-argus/Argus/testing"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web"
-	_ "modernc.org/sqlite"
 )
 
 var (
-	jLog             util.JLog
 	configFile       = flag.String("config.file", "config.yml", "Argus configuration file path.")
 	configCheckFlag  = flag.Bool("config.check", false, "Print the fully-parsed config.")
 	testCommandsFlag = flag.String("test.commands", "", "Put the name of the Service to test the `commands` of.")
@@ -48,19 +48,19 @@ func main() {
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
 	var config cfg.Config
-	config.Load(*configFile, &flagset, &jLog)
-	jLog.SetTimestamps(*config.Settings.LogTimestamps())
-	jLog.SetLevel(config.Settings.LogLevel())
+	config.Load(*configFile, &flagset)
+	logutil.Log.SetTimestamps(*config.Settings.LogTimestamps())
+	logutil.Log.SetLevel(config.Settings.LogLevel())
 
 	// config.check
 	config.Print(configCheckFlag)
 	// test.*
-	testing.CommandTest(testCommandsFlag, &config, &jLog)
-	testing.NotifyTest(testNotifyFlag, &config, &jLog)
-	testing.ServiceTest(testServiceFlag, &config, &jLog)
+	testing.CommandTest(testCommandsFlag, &config)
+	testing.NotifyTest(testNotifyFlag, &config)
+	testing.ServiceTest(testServiceFlag, &config)
 
 	// Count of active services to monitor (if log level INFO or above).
-	if jLog.Level > 1 {
+	if logutil.Log.Level > 1 {
 		// Count active services.
 		serviceCount := len(config.Order)
 		for _, key := range config.Order {
@@ -71,7 +71,7 @@ func main() {
 
 		// Log active count.
 		msg := fmt.Sprintf("Found %d services to monitor:", serviceCount)
-		jLog.Info(msg, util.LogFrom{}, true)
+		logutil.Log.Info(msg, logutil.LogFrom{}, true)
 
 		// Log names of active services.
 		for _, key := range config.Order {
@@ -82,11 +82,11 @@ func main() {
 	}
 
 	// Setup DB and last known service versions.
-	db.Run(&config, &jLog)
+	db.Run(&config)
 
 	// Track all targets for changes in version and act on any found changes.
 	go config.Service.Track(&config.Order, &config.OrderMutex)
 
 	// Web server.
-	web.Run(&config, &jLog)
+	web.Run(&config)
 }

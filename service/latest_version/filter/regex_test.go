@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestRequire_RegexCheckVersion(t *testing.T) {
@@ -52,7 +53,7 @@ func TestRequire_RegexCheckVersion(t *testing.T) {
 			}
 
 			// WHEN RegexCheckVersion is called on it
-			err := tc.require.RegexCheckVersion("0.1.1-beta", util.LogFrom{})
+			err := tc.require.RegexCheckVersion("0.1.1-beta", logutil.LogFrom{})
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)
@@ -101,7 +102,7 @@ func TestRequire_RegexCheckContent(t *testing.T) {
 			}
 
 			// WHEN RegexCheckContent is called on it
-			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, util.LogFrom{})
+			err := tc.require.RegexCheckContent("0.1.1-beta", tc.body, logutil.LogFrom{})
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)
@@ -158,7 +159,7 @@ func TestRequire_RegexCheckContentGitHub(t *testing.T) {
 			}
 
 			// WHEN RegexCheckContent is called on it
-			releaseDate, err := tc.require.RegexCheckContentGitHub("0.1.1-beta", tc.body, util.LogFrom{})
+			releaseDate, err := tc.require.RegexCheckContentGitHub("0.1.1-beta", tc.body, logutil.LogFrom{})
 
 			// THEN the err is what we expect
 			e := util.ErrorToString(err)

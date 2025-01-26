@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/util"
 )
 
@@ -32,11 +33,11 @@ var router *mux.Router
 
 func TestMainWithRoutePrefix(t *testing.T) {
 	// GIVEN a valid config with a Service
-	cfg := testConfig("TestMainWithRoutePrefix.yml", nil, t)
+	cfg := testConfig("TestMainWithRoutePrefix.yml", t)
 	cfg.Settings.Web.RoutePrefix = "/test"
 
 	// WHEN the Web UI is started with this Config
-	go Run(cfg, nil)
+	go Run(cfg)
 	time.Sleep(500 * time.Millisecond)
 
 	// THEN Web UI is accessible
@@ -118,7 +119,7 @@ func TestAccessibleHTTPS(t *testing.T) {
 			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
 				util.GoVersion)},
 	}
-	cfg := testConfig("TestAccessibleHTTPS.yml", nil, t)
+	cfg := testConfig("TestAccessibleHTTPS.yml", t)
 	cfg.Settings.Web.CertFile = "TestAccessibleHTTPS_cert.pem"
 	cfg.Settings.Web.KeyFile = "TestAccessibleHTTPS_key.pem"
 	generateCertFiles(cfg.Settings.Web.CertFile, cfg.Settings.Web.KeyFile)
@@ -128,7 +129,7 @@ func TestAccessibleHTTPS(t *testing.T) {
 	})
 
 	router = newWebUI(cfg)
-	go Run(cfg, nil)
+	go Run(cfg)
 	time.Sleep(250 * time.Millisecond)
 	address := fmt.Sprintf("https://localhost:%s", cfg.Settings.Web.ListenPort)
 

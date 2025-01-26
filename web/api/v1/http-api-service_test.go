@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/util"
 )
 

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
@@ -52,8 +52,8 @@ func (s *Service) Track() {
 	}
 
 	// Track forever.
-	logFrom := util.LogFrom{Primary: s.ID}
-	jLog.Verbose(
+	logFrom := logutil.LogFrom{Primary: s.ID}
+	logutil.Log.Verbose(
 		fmt.Sprintf("Tracking %s at %s every %s",
 			s.ID, s.LatestVersion.ServiceURL(true), s.Options.GetInterval()),
 		logFrom,

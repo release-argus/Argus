@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,30 +21,26 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // CommandTest will test the commands given to a Service.
-func CommandTest(
-	flag *string,
-	cfg *config.Config,
-	log *util.JLog,
-) {
+func CommandTest(flag *string, cfg *config.Config) {
 	// Only if flag provided.
 	if *flag == "" {
 		return
 	}
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Log the test details.
-	log.Info(
+	logutil.Log.Info(
 		"",
 		logFrom,
 		true)
 	service, exist := cfg.Service[*flag]
 
 	if !exist {
-		log.Fatal(
+		logutil.Log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(cfg.Order, "\n  - "),
@@ -54,7 +50,7 @@ func CommandTest(
 	}
 
 	if service.CommandController == nil {
-		log.Fatal(
+		logutil.Log.Fatal(
 			fmt.Sprintf(
 				"Service %q does not have any `command` defined",
 				*flag),
@@ -65,7 +61,7 @@ func CommandTest(
 	//#nosec G104 -- Disregard.
 	//nolint:errcheck // ^
 	service.CommandController.Exec(logFrom)
-	if !log.Testing {
+	if !logutil.Log.Testing {
 		os.Exit(0)
 	}
 }

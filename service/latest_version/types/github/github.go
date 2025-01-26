@@ -21,8 +21,9 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
+
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // insertionSort performs an 'insertion sort' of the given `release` into the `filteredReleases` slice.
@@ -57,7 +58,7 @@ func insertionSort(release github_types.Release, filteredReleases *[]github_type
 // -
 //
 //	Returns the filtered list, sorted in descending order (if semantic-versioning wanted).
-func (l *Lookup) filterGitHubReleases(logFrom util.LogFrom) []github_types.Release {
+func (l *Lookup) filterGitHubReleases(logFrom logutil.LogFrom) []github_types.Release {
 	semanticVersioning := l.Options.GetSemanticVersioning()
 	usePreReleases := l.usePreRelease()
 
@@ -109,13 +110,13 @@ func (l *Lookup) filterGitHubReleases(logFrom util.LogFrom) []github_types.Relea
 }
 
 // checkGitHubReleasesBody validates that the response body conforms to the JSON formatting.
-func (l *Lookup) checkGitHubReleasesBody(body []byte, logFrom util.LogFrom) ([]github_types.Release, error) {
+func (l *Lookup) checkGitHubReleasesBody(body []byte, logFrom logutil.LogFrom) ([]github_types.Release, error) {
 	var releases []github_types.Release
 	if err := json.Unmarshal(body, &releases); err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w",
 			err)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
 

@@ -19,21 +19,8 @@ import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
-
-var (
-	jLog *util.JLog
-)
-
-// LogInit for this package.
-func LogInit(log *util.JLog) {
-	// Only if unset (avoid RACE condition).
-	if jLog == nil {
-		jLog = log
-	}
-}
 
 // getParam from a URL query string.
 func getParam(queryParams *url.Values, param string) *string {

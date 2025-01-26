@@ -26,6 +26,7 @@ import (
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	metric "github.com/release-argus/Argus/web/metric"
 )
 
@@ -84,7 +85,7 @@ func TestWebHook_Try(t *testing.T) {
 				webhook.DesiredStatusCode = &tc.desiredStatusCode
 
 				// WHEN try is called on it.
-				err := webhook.try(util.LogFrom{})
+				err := webhook.try(logutil.LogFrom{})
 
 				// THEN any err is expected.
 				e := util.ErrorToString(err)

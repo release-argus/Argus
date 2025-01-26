@@ -22,6 +22,8 @@ import (
 	"sync"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -29,14 +31,12 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestMain(m *testing.M) {
-	log := util.NewJLog("DEBUG", true)
-	log.Testing = true
-	LogInit(log)
+	logutil.Init("DEBUG", true)
+	logutil.Log.Testing = true
 	os.Exit(m.Run())
 }
 
@@ -88,10 +88,10 @@ func testLoad(file string, t *testing.T) *Config {
 	config := &Config{}
 
 	flags := make(map[string]bool)
-	log := util.NewJLog("WARN", true)
+	logutil.Init("WARN", true)
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
-	config.Load(file, &flags, log)
+	config.Load(file, &flags)
 	t.Cleanup(func() { os.Remove(config.Settings.DataDatabaseFile()) })
 
 	return config
@@ -104,16 +104,16 @@ func testLoadBasic(file string, t *testing.T) *Config {
 
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("Error reading %q\n%s",
 			file, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, config)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("Unmarshal of %q failed\n%s",
 			file, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 
 	saveChannel := make(chan bool, 32)
 	config.SaveChannel = &saveChannel
@@ -124,7 +124,7 @@ func testLoadBasic(file string, t *testing.T) *Config {
 	config.HardDefaults.Service.Status.DatabaseChannel = config.DatabaseChannel
 
 	config.GetOrder(data)
-	config.Init(false) // Log already set in TestMain
+	config.Init()
 	config.CheckValues()
 	t.Log("Loaded", file)
 

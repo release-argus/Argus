@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
@@ -31,7 +33,6 @@ import (
 	metric "github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
-	"gopkg.in/yaml.v3"
 )
 
 func TestService_ServiceInfo(t *testing.T) {

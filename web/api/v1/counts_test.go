@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/web/metric"
 )

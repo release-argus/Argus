@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
@@ -63,12 +64,12 @@ func (s *Slice) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 
 // Send the WebHook up to MaxTries times until a success.
 func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
-	logFrom := util.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
+	logFrom := logutil.LogFrom{Primary: w.ID, Secondary: serviceInfo.ID}
 
 	if useDelay && w.GetDelay() != "0s" {
 		// Delay sending the WebHook message by the defined interval.
 		msg := fmt.Sprintf("Sleeping for %s before sending the WebHook", w.GetDelay())
-		jLog.Info(msg, logFrom, true)
+		logutil.Log.Info(msg, logFrom, true)
 		w.SetExecuting(true, true) // disable sending of auto_approved w/ delay.
 		time.Sleep(w.GetDelayDuration())
 	} else {
@@ -95,7 +96,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 
 	err := fmt.Errorf("failed %d times to send the WebHook for %s to %q",
 		w.GetMaxTries(), *w.ServiceStatus.ServiceID, w.ID)
-	jLog.Error(err, logFrom, true)
+	logutil.Log.Error(err, logFrom, true)
 	failed := true
 	w.Failed.Set(w.ID, &failed)
 	w.AnnounceSend()
@@ -109,11 +110,11 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 
 // try sends a WebHook to its URL with the body hashed using SHA1 and SHA256,
 // encrypted with its Secret, and includes simulated GitHub headers.
-func (w *WebHook) try(logFrom util.LogFrom) error {
+func (w *WebHook) try(logFrom logutil.LogFrom) error {
 	req := w.BuildRequest()
 	if req == nil {
 		err := fmt.Errorf("failed to get *http.request for WebHook")
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return err
 	}
 
@@ -143,7 +144,7 @@ func (w *WebHook) try(logFrom util.LogFrom) error {
 	desiredStatusCode := w.GetDesiredStatusCode()
 	if bodyOkay && (resp.StatusCode == int(desiredStatusCode) || (desiredStatusCode == 0 && (strconv.Itoa(resp.StatusCode)[:1] == "2"))) {
 		msg := fmt.Sprintf("(%d) WebHook received", resp.StatusCode)
-		jLog.Info(msg, logFrom, true)
+		logutil.Log.Info(msg, logFrom, true)
 		return nil
 	}
 
@@ -194,7 +195,7 @@ func checkWebHookBody(body string) (okay bool) {
 // parseTry checks the result of a WebHook `try`.
 // It updates the Prometheus SUCCESS or FAIL counter
 // and logs any error from the `try`.
-func (w *WebHook) parseTry(err error, serviceID string, logFrom util.LogFrom) {
+func (w *WebHook) parseTry(err error, serviceID string, logFrom logutil.LogFrom) {
 	// SUCCESS!
 	if err == nil {
 		metric.IncPrometheusCounter(metric.WebHookResultTotal,
@@ -209,7 +210,7 @@ func (w *WebHook) parseTry(err error, serviceID string, logFrom util.LogFrom) {
 	}
 
 	// FAIL!
-	jLog.Error(err, logFrom, true)
+	logutil.Log.Error(err, logFrom, true)
 	metric.IncPrometheusCounter(metric.WebHookResultTotal,
 		w.ID,
 		serviceID,

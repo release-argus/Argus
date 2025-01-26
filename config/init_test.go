@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package config
 
 import (
 	"testing"
-
-	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_Load(t *testing.T) {
@@ -69,7 +67,7 @@ func TestConfig_LoadDeleteNil(t *testing.T) {
 	configFile(file, t)
 
 	// WHEN Load is called on it
-	config.Load(file, &flags, &util.JLog{})
+	config.Load(file, &flags)
 
 	// THEN Services that are nil are deleted
 	for name, service := range config.Service {
@@ -95,7 +93,7 @@ func TestConfig_LoadDefaults(t *testing.T) {
 	configFile(file, t)
 
 	// WHEN Load is called on it
-	config.Load(file, &flags, &util.JLog{})
+	config.Load(file, &flags)
 
 	// THEN the defaults are assigned correctly to Services
 	want := false

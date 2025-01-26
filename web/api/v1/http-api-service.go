@@ -21,7 +21,8 @@ import (
 	"net/url"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // ServiceOrderAPI is the API response for the service order.
@@ -30,7 +31,7 @@ type ServiceOrderAPI struct {
 }
 
 func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceOrder", Secondary: getIP(r)}
 
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
@@ -38,7 +39,7 @@ func (api *API) httpServiceOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
 	// Check Service still exists in this ordering.
@@ -47,7 +48,7 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	service := api.Config.Service[targetService]
 	if service == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}

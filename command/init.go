@@ -26,11 +26,6 @@ import (
 	"github.com/release-argus/Argus/web/metric"
 )
 
-// LogInit for this package.
-func LogInit(log *util.JLog) {
-	jLog = log
-}
-
 // Init the Command Controller.
 func (c *Controller) Init(
 	serviceStatus *status.Status,

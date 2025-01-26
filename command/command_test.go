@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestCommand_ApplyTemplate(t *testing.T) {
@@ -94,7 +95,7 @@ func TestCommand_Exec(t *testing.T) {
 			releaseStdout := test.CaptureStdout()
 
 			// WHEN Exec is called on it
-			err := tc.cmd.Exec(util.LogFrom{})
+			err := tc.cmd.Exec(logutil.LogFrom{})
 
 			// THEN the stdout is expected
 			if util.ErrorToString(err) != util.ErrorToString(tc.err) {
@@ -152,7 +153,7 @@ func TestController_ExecIndex(t *testing.T) {
 			releaseStdout := test.CaptureStdout()
 
 			// WHEN the Command @index is executed
-			err := controller.ExecIndex(util.LogFrom{}, tc.index)
+			err := controller.ExecIndex(logutil.LogFrom{}, tc.index)
 
 			// THEN the stdout is expected
 			// err
@@ -219,7 +220,7 @@ func TestController_Exec(t *testing.T) {
 			if tc.nilController {
 				controller = nil
 			}
-			err := controller.Exec(util.LogFrom{})
+			err := controller.Exec(logutil.LogFrom{})
 
 			// THEN the stdout is expected
 			// err

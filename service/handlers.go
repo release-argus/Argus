@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -37,7 +38,7 @@ func (s *Service) HandleCommand(command string) {
 	// Find the command.
 	index, err := s.CommandController.Find(command)
 	if err != nil {
-		jLog.Warn(err, util.LogFrom{Primary: "Command", Secondary: s.ID}, true)
+		logutil.Log.Warn(err, logutil.LogFrom{Primary: "Command", Secondary: s.ID}, true)
 		return
 	}
 
@@ -47,7 +48,7 @@ func (s *Service) HandleCommand(command string) {
 	}
 
 	// Send the Command.
-	err = (*s.CommandController).ExecIndex(util.LogFrom{Primary: "Command", Secondary: s.ID}, index)
+	err = (*s.CommandController).ExecIndex(logutil.LogFrom{Primary: "Command", Secondary: s.ID}, index)
 	if err == nil {
 		s.UpdatedVersion(true)
 	}
@@ -87,11 +88,11 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 		if s.Dashboard.GetAutoApprove() {
 			msg := fmt.Sprintf("Sending WebHooks/Running Commands for %q",
 				s.Status.LatestVersion())
-			jLog.Info(msg, util.LogFrom{Primary: s.ID}, true)
+			logutil.Log.Info(msg, logutil.LogFrom{Primary: s.ID}, true)
 
 			// Run the Command(s).
 			go func() {
-				err := s.CommandController.Exec(util.LogFrom{Primary: "Command", Secondary: s.ID})
+				err := s.CommandController.Exec(logutil.LogFrom{Primary: "Command", Secondary: s.ID})
 				if err == nil && len(s.Command) != 0 {
 					s.UpdatedVersion(writeToDB)
 				}
@@ -105,7 +106,7 @@ func (s *Service) HandleUpdateActions(writeToDB bool) {
 				}
 			}()
 		} else {
-			jLog.Info("Waiting for approval on the Web UI", util.LogFrom{Primary: s.ID}, true)
+			logutil.Log.Info("Waiting for approval on the Web UI", logutil.LogFrom{Primary: s.ID}, true)
 
 			s.Status.AnnounceQueryNewVersion()
 		}
@@ -151,7 +152,7 @@ func (s *Service) HandleFailedActions() {
 	// Run the Command(s).
 	if len(s.Command) != 0 {
 		potentialErrors += len(s.Command)
-		logFrom := util.LogFrom{Primary: "Command", Secondary: s.ID}
+		logFrom := logutil.LogFrom{Primary: "Command", Secondary: s.ID}
 		for key := range s.Command {
 			if retryAll || util.DereferenceOrNilValue(s.Status.Fails.Command.Get(key), true) {
 				// Skip if before NextRunnable.

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // VerifySemanticVersioning checks whether `newVersion` is a valid semantic version,
@@ -27,13 +28,13 @@ import (
 //
 // It returns an error if `newVersion` is not a valid semantic version,
 // or if it is older than `currentVersion`.
-func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, logFrom util.LogFrom) error {
+func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, logFrom logutil.LogFrom) error {
 	// Check it is a valid semantic version.
 	semNewVersion, err := semver.NewVersion(newVersion)
 	if err != nil {
 		err = fmt.Errorf("failed converting %q to a semantic version. If all versions are in this style, consider adding url_commands to get the version into the style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning (globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
 			newVersion)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return err
 	}
 
@@ -49,7 +50,7 @@ func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, log
 			// oldVersion = 1.2.10
 			err := fmt.Errorf("queried version %q is less than the deployed version %q",
 				newVersion, deployedVersion)
-			jLog.Warn(err, logFrom, true)
+			logutil.Log.Warn(err, logFrom, true)
 			return err
 		}
 	}
@@ -59,7 +60,7 @@ func (l *Lookup) VerifySemanticVersioning(newVersion, currentVersion string, log
 }
 
 // HandleNewVersion handles a new version, updating the status, and logging the event.
-func (l *Lookup) HandleNewVersion(version, releaseDate string, logFrom util.LogFrom) (bool, error) {
+func (l *Lookup) HandleNewVersion(version, releaseDate string, logFrom logutil.LogFrom) (bool, error) {
 	// Found a new version, so reset regex misses.
 	l.Status.ResetRegexMisses()
 
@@ -70,7 +71,7 @@ func (l *Lookup) HandleNewVersion(version, releaseDate string, logFrom util.LogF
 			l.Status.SetDeployedVersion(version, "", true)
 		}
 		msg := fmt.Sprintf("Latest Release - %q", version)
-		jLog.Info(msg, logFrom, true)
+		logutil.Log.Info(msg, logFrom, true)
 		l.Status.AnnounceFirstVersion()
 
 		// Don't notify on first version.
@@ -80,6 +81,6 @@ func (l *Lookup) HandleNewVersion(version, releaseDate string, logFrom util.LogF
 	// New version found.
 	l.Status.SetLatestVersion(version, "", true)
 	msg := fmt.Sprintf("New Release - %q", version)
-	jLog.Info(msg, logFrom, true)
+	logutil.Log.Info(msg, logFrom, true)
 	return true, nil
 }

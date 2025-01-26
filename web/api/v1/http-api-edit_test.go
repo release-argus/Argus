@@ -31,12 +31,14 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrr_test "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
@@ -266,8 +268,8 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 func TestHTTP_LatestVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_LatestVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, util.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
+	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	testSVC.Status.SetDeployedVersion(v, "", false)
 	type wants struct {
 		body                           string
@@ -448,8 +450,8 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	testSVC := testService("TestHTTP_DeployedVersionRefresh", false)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, util.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
+	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	testSVC.Status.SetDeployedVersion(v, "", false)
 	type wants struct {
 		body                           string
@@ -806,8 +808,8 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 func TestHTTP_ServiceEdit(t *testing.T) {
 	testSVC := testService("TestHTTP_ServiceEdit", true)
 	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	testSVC.LatestVersion.Query(true, util.LogFrom{})
-	v, _ := testSVC.DeployedVersionLookup.Query(true, util.LogFrom{})
+	testSVC.LatestVersion.Query(true, logutil.LogFrom{})
+	v, _ := testSVC.DeployedVersionLookup.Query(true, logutil.LogFrom{})
 	testSVC.Status.SetDeployedVersion(v, "", false)
 	type wants struct {
 		body                           string

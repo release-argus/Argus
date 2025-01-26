@@ -20,17 +20,13 @@ import (
 	"fmt"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
-)
-
-var (
-	jLog *util.JLog
 )
 
 // Lookup provides methods for retrieving the latest version of a service.

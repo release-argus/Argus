@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -216,7 +216,7 @@ func TestServiceTest(t *testing.T) {
 				Service: tc.slice,
 				Order:   order,
 			}
-			ServiceTest(&tc.flag, &cfg, jLog)
+			ServiceTest(&tc.flag, &cfg)
 
 			// THEN we get the expected stdout
 			stdout := releaseStdout()

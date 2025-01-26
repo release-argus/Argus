@@ -28,14 +28,13 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestMain(m *testing.M) {
 	// initialise jLog
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	LogInit(jLog)
+	logutil.Init("DEBUG", false)
+	logutil.Log.Testing = true
 
 	// run other tests
 	exitCode := m.Run()

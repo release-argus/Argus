@@ -26,7 +26,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -125,10 +126,10 @@ func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		if err := c.conn.Close(); err != nil {
-			jLog.Verbose(
+			logutil.Log.Verbose(
 				fmt.Sprintf("Closing the websocket connection failed (readPump)\n%s",
 					err),
-				util.LogFrom{},
+				logutil.LogFrom{},
 				true)
 		}
 	}()
@@ -152,25 +153,25 @@ func (c *Client) readPump() {
 				websocket.CloseGoingAway,
 				websocket.CloseAbnormalClosure,
 			) {
-				jLog.Error(err,
-					util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+				logutil.Log.Error(err,
+					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
 			}
 			break
 		}
 
-		if jLog.IsLevel("DEBUG") {
-			jLog.Debug(
+		if logutil.Log.IsLevel("DEBUG") {
+			logutil.Log.Debug(
 				fmt.Sprintf("READ %s", message),
-				util.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
+				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip}, true)
 		}
 
 		message = bytes.TrimSpace(bytes.ReplaceAll(message, newline, space))
 		// Ensure it meets client message format.
 		var validation serverMessageCheck
 		if err := json.Unmarshal(message, &validation); err != nil || validation.Version != 1 {
-			jLog.Warn(
+			logutil.Log.Warn(
 				fmt.Sprintf("Invalid message (missing/invalid version key)\n%s", message),
-				util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true,
 			)
 			continue
@@ -189,10 +190,10 @@ func (c *Client) writePump() {
 	defer func() {
 		ticker.Stop()
 		if err := c.conn.Close(); err != nil {
-			jLog.Verbose(
+			logutil.Log.Verbose(
 				fmt.Sprintf("Closing the connection\n%s",
 					err),
-				util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+				logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 				true)
 		}
 	}()
@@ -206,10 +207,10 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
-					jLog.Verbose(
+					logutil.Log.Verbose(
 						fmt.Sprintf("Closing the connection (writePump)\n%s",
 							err),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 					return
 				}
@@ -217,10 +218,10 @@ func (c *Client) writePump() {
 
 			var msg apitype.WebSocketMessage
 			if err := json.Unmarshal(message, &msg); err != nil {
-				jLog.Error(
+				logutil.Log.Error(
 					fmt.Sprintf("Message failed to unmarshal %s",
 						err),
-					util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+					logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 					true)
 				continue
 			}
@@ -233,16 +234,16 @@ func (c *Client) writePump() {
 				switch msg.Type {
 				case "VERSION", "WEBHOOK", "COMMAND", "SERVICE", "EDIT", "DELETE":
 					if err := c.conn.WriteJSON(msg); err != nil {
-						jLog.Error(
+						logutil.Log.Error(
 							fmt.Sprintf("Writing JSON to the websocket failed for %s\n%s",
 								msg.Type, err),
-							util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+							logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 							true)
 					}
 				default:
-					jLog.Error(
+					logutil.Log.Error(
 						fmt.Sprintf("Unknown TYPE %q\nFull message: %s", msg.Type, string(message)),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 					continue
 				}
@@ -252,10 +253,10 @@ func (c *Client) writePump() {
 			n := len(c.send)
 			for i := 0; i < n; i++ {
 				if err := c.conn.WriteJSON(<-c.send); err != nil {
-					jLog.Error(
+					logutil.Log.Error(
 						fmt.Sprintf("WriteJSON for the queued chat messages\n%s\n",
 							err),
-						util.LogFrom{Primary: "WebSocket", Secondary: c.ip},
+						logutil.LogFrom{Primary: "WebSocket", Secondary: c.ip},
 						true)
 				}
 			}

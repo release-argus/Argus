@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Export the flags.
@@ -76,9 +77,9 @@ func (s *SettingsBase) CheckValues() {
 func (s *SettingsBase) MapEnvToStruct() {
 	err := mapEnvToStruct(s, "", nil)
 	if err != nil {
-		jLog.Fatal(
+		logutil.Log.Fatal(
 			"One or more 'ARGUS_' environment variables are incorrect:\n"+err.Error(),
-			util.LogFrom{}, true)
+			logutil.LogFrom{}, true)
 	}
 	s.CheckValues() // Set hash values and remove empty structs.
 }
@@ -323,7 +324,7 @@ func (s *Settings) WebCertFile() string {
 	if _, err := os.Stat(certFile); err != nil {
 		if !filepath.IsAbs(certFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
+			logutil.Log.Error(execErr, logutil.LogFrom{}, execErr != nil)
 			// Add the path to the error message.
 			err = errors.New(strings.Replace(
 				err.Error(),
@@ -332,7 +333,7 @@ func (s *Settings) WebCertFile() string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.cert_file "+err.Error(), util.LogFrom{}, true)
+		logutil.Log.Fatal("settings.web.cert_file "+err.Error(), logutil.LogFrom{}, true)
 	}
 	return certFile
 }
@@ -349,7 +350,7 @@ func (s *Settings) WebKeyFile() string {
 	if _, err := os.Stat(keyFile); err != nil {
 		if !filepath.IsAbs(keyFile) {
 			path, execErr := os.Executable()
-			jLog.Error(execErr, util.LogFrom{}, execErr != nil)
+			logutil.Log.Error(execErr, logutil.LogFrom{}, execErr != nil)
 			// Add the path to the error message.
 			err = errors.New(strings.Replace(
 				err.Error(),
@@ -358,7 +359,7 @@ func (s *Settings) WebKeyFile() string {
 				1,
 			))
 		}
-		jLog.Fatal("settings.web.key_file "+err.Error(), util.LogFrom{}, true)
+		logutil.Log.Fatal("settings.web.key_file "+err.Error(), logutil.LogFrom{}, true)
 	}
 	return keyFile
 }

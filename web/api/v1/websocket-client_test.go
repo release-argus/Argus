@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
 )
@@ -297,7 +298,9 @@ func TestClient_readPump(t *testing.T) {
 			messages: []string{
 				`{"version":1,"type":"test","page":"home"}`,
 			},
-			stdoutRegex: `^$`,
+			stdoutRegex: test.TrimYAML(`
+				^DEBUG:.*READ.*
+				$`),
 			wantMessages: []string{
 				`{"version":1,"type":"test","page":"home"}`,
 			},
@@ -305,13 +308,15 @@ func TestClient_readPump(t *testing.T) {
 		"invalid json message": {
 			messages: []string{`{"invalid`},
 			stdoutRegex: test.TrimYAML(`
-				^WARNING:.*Invalid message.*
+				^DEBUG:.*READ.*
+				WARNING:.*Invalid message.*
 				\{"invalid`),
 		},
 		"message missing version": {
 			messages: []string{`{"type":"test","page":"home"}`},
 			stdoutRegex: test.TrimYAML(`
-				^WARNING:.*Invalid message.*
+				^DEBUG:.*READ.*
+				WARNING:.*Invalid message.*
 				\{.*\}`),
 		},
 		"connection closed": {

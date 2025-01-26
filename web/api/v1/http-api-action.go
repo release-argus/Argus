@@ -23,7 +23,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -33,7 +34,7 @@ import (
 //
 //	service_id: The ID of the Service to get the actions of.
 func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceActions", Secondary: getIP(r)}
 	// Service to get actions of.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -42,7 +43,7 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -90,7 +91,7 @@ type RunActionsPayload struct {
 //		"webhook_<webhook_id>": Approve a specific WebHook.
 //		"command_<command_id>": Approve a specific Command.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -100,7 +101,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMutex.RUnlock()
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -110,7 +111,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	var payload RunActionsPayload
 	err := json.NewDecoder(payloadBytes).Decode(&payload)
 	if err != nil {
-		jLog.Error(
+		logutil.Log.Error(
 			fmt.Sprintf("Invalid payload - %s", err),
 			logFrom, true)
 		failRequest(&w, "invalid payload", http.StatusBadRequest)
@@ -118,13 +119,13 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	}
 	if payload.Target == "" {
 		errMsg := "invalid payload, target service not provided"
-		jLog.Error(errMsg, logFrom, true)
+		logutil.Log.Error(errMsg, logFrom, true)
 		failRequest(&w, errMsg, http.StatusBadRequest)
 		return
 	}
 	if !svc.Options.GetActive() {
 		errMsg := "service is inactive, actions can't be run for it"
-		jLog.Error(errMsg, logFrom, true)
+		logutil.Log.Error(errMsg, logFrom, true)
 		failRequest(&w, errMsg, http.StatusBadRequest)
 		return
 	}
@@ -133,13 +134,13 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	if payload.Target == "ARGUS_SKIP" {
 		msg := fmt.Sprintf("%q release skip - %q",
 			targetService, svc.Status.LatestVersion())
-		jLog.Info(msg, logFrom, true)
+		logutil.Log.Info(msg, logFrom, true)
 		svc.HandleSkip()
 		return
 	}
 
 	if svc.WebHook == nil && svc.Command == nil {
-		jLog.Error(
+		logutil.Log.Error(
 			fmt.Sprintf("%q does not have any commands/webhooks to approve", targetService),
 			logFrom, true)
 		return
@@ -156,7 +157,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 				"ARGUS_FAILED", "ALL UNSENT/FAILED"),
 			"ARGUS_SKIP", "SKIP"),
 	)
-	jLog.Info(msg, logFrom, true)
+	logutil.Log.Info(msg, logFrom, true)
 	switch payload.Target {
 	case "ARGUS_ALL", "ARGUS_FAILED":
 		go svc.HandleFailedActions()

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,23 +22,12 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
-
-func TestLogInit(t *testing.T) {
-	// GIVEN a JLog
-	newJLog := util.NewJLog("WARN", false)
-
-	// WHEN LogInit is called with it
-	LogInit(newJLog)
-
-	// THEN the global JLog is set to its address
-	if jLog != newJLog {
-		t.Fatalf("JLog should have been initialised to the one we called Init with")
-	}
-}
 
 func TestURLCommandSlice_UnmarshalJSON(t *testing.T) {
 	tests := map[string]struct {
@@ -476,7 +465,7 @@ func TestURLCommandSlice_GetVersions(t *testing.T) {
 			t.Parallel()
 
 			// WHEN GetVersions is called on it
-			versions, err := tc.slice.GetVersions(tc.text, util.LogFrom{})
+			versions, err := tc.slice.GetVersions(tc.text, logutil.LogFrom{})
 
 			// THEN the expected versions are returned
 			wantVersions := strings.Join(tc.wantVersions, "__")
@@ -615,7 +604,7 @@ func TestURLCommandSlice_Run(t *testing.T) {
 			}
 
 			// WHEN run is called on it
-			versions, err := tc.slice.Run(text, util.LogFrom{})
+			versions, err := tc.slice.Run(text, logutil.LogFrom{})
 
 			// THEN the expected text was returned
 			if !reflect.DeepEqual(tc.want, versions) {
@@ -836,7 +825,7 @@ func TestURLCommand_regex(t *testing.T) {
 			}
 
 			// WHEN regex is called on it
-			err := tc.command.regex(tc.args.versionIndex, &tc.args.versions, util.LogFrom{})
+			err := tc.command.regex(tc.args.versionIndex, &tc.args.versions, logutil.LogFrom{})
 
 			// THEN the expected versions are returned
 			if !reflect.DeepEqual(*tc.want.versions, tc.args.versions) {
@@ -951,7 +940,7 @@ func TestURLCommand_split(t *testing.T) {
 			}
 
 			// WHEN split is called on it
-			err := tc.command.split(tc.args.versionIndex, &tc.args.versions, util.LogFrom{})
+			err := tc.command.split(tc.args.versionIndex, &tc.args.versions, logutil.LogFrom{})
 
 			// THEN the expected versions are returned
 			if !reflect.DeepEqual(*tc.want.versions, tc.args.versions) {

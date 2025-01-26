@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,22 +22,19 @@ import (
 
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // ServiceTest queries the service and returns the found version.
-func ServiceTest(
-	flag *string,
-	cfg *config.Config,
-	log *util.JLog,
-) {
+func ServiceTest(flag *string, cfg *config.Config) {
 	// Only if flag provided.
 	if *flag == "" {
 		return
 	}
 
 	// Log the test details.
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
-	log.Info(
+	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
+	logutil.Log.Info(
 		"",
 		logFrom,
 		true,
@@ -45,7 +42,7 @@ func ServiceTest(
 
 	// Check service exists.
 	if !util.Contains(cfg.Order, *flag) {
-		log.Fatal(
+		logutil.Log.Fatal(
 			fmt.Sprintf(
 				"Service %q could not be found in config.service\nDid you mean one of these?\n  - %s",
 				*flag, strings.Join(cfg.Order, "\n  - "),
@@ -61,7 +58,7 @@ func ServiceTest(
 	// LatestVersion.
 	_, err := service.LatestVersion.Query(false, logFrom)
 	if err != nil {
-		log.Error(
+		logutil.Log.Error(
 			fmt.Sprintf(
 				"No version matching the conditions specified could be found for %q at %q",
 				*flag,
@@ -75,7 +72,7 @@ func ServiceTest(
 	// DeployedVersionLookup.
 	if service.DeployedVersionLookup != nil {
 		version, err := service.DeployedVersionLookup.Query(false, logFrom)
-		log.Info(
+		logutil.Log.Info(
 			fmt.Sprintf(
 				"Deployed version - %q",
 				version,
@@ -85,7 +82,7 @@ func ServiceTest(
 		)
 	}
 
-	if !log.Testing {
+	if !logutil.Log.Testing {
 		os.Exit(0)
 	}
 }

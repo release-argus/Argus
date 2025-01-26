@@ -153,3 +153,11 @@ func Indentation(line string, indentSize uint8) string {
 
 	return strings.Repeat(indent, count)
 }
+
+// TruncateMessage shortens a message to `maxLength` and appends "..." if it exceeds the limit.
+func TruncateMessage(msg string, maxLength int) string {
+	if len(msg) > maxLength {
+		return msg[:maxLength] + "..."
+	}
+	return msg
+}

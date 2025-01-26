@@ -24,11 +24,12 @@ import (
 
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 // Exec will execute every `Command` for the controller.
-func (c *Controller) Exec(logFrom util.LogFrom) error {
+func (c *Controller) Exec(logFrom logutil.LogFrom) error {
 	if c == nil || c.Command == nil || len(*c.Command) == 0 {
 		return nil
 	}
@@ -59,7 +60,7 @@ func (c *Controller) Exec(logFrom util.LogFrom) error {
 }
 
 // ExecIndex will execute the `Command` at the given index.
-func (c *Controller) ExecIndex(logFrom util.LogFrom, index int) error {
+func (c *Controller) ExecIndex(logFrom logutil.LogFrom, index int) error {
 	if index >= len(*c.Command) {
 		return nil
 	}
@@ -100,17 +101,17 @@ func (c *Controller) ExecIndex(logFrom util.LogFrom, index int) error {
 }
 
 // Exec this Command and return any errors encountered.
-func (c *Command) Exec(logFrom util.LogFrom) error {
-	jLog.Info(
+func (c *Command) Exec(logFrom logutil.LogFrom) error {
+	logutil.Log.Info(
 		fmt.Sprintf("Executing '%s'", c),
 		logFrom, true)
 	//#nosec G204 -- Command is user defined.
 	out, err := exec.Command((*c)[0], (*c)[1:]...).Output()
 
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 	} else {
-		jLog.Info(string(out), logFrom, string(out) != "")
+		logutil.Log.Info(string(out), logFrom, string(out) != "")
 	}
 
 	//nolint:wrapcheck

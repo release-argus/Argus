@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package filter
 import (
 	"fmt"
 
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // ExecCommand will run Command.
-func (r *Require) ExecCommand(logFrom util.LogFrom) error {
+func (r *Require) ExecCommand(logFrom logutil.LogFrom) error {
 	if r == nil || len(r.Command) == 0 {
 		return nil
 	}

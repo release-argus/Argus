@@ -22,13 +22,15 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/yaml.v3"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	metric "github.com/release-argus/Argus/web/metric"
-	"gopkg.in/yaml.v3"
 )
 
 func TestLookup_HTTPRequest(t *testing.T) {
@@ -72,7 +74,7 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			lookup.URL = tc.url
 
 			// WHEN httpRequest is called on it.
-			_, err := lookup.httpRequest(util.LogFrom{})
+			_, err := lookup.httpRequest(logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
@@ -264,7 +266,7 @@ func TestLookup_Query(t *testing.T) {
 			}
 
 			// WHEN Query is called on it.
-			version, err := dvl.Query(true, util.LogFrom{})
+			version, err := dvl.Query(true, logutil.LogFrom{})
 
 			// THEN any err is expected.
 			if tc.wantVersion != "" {

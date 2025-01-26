@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -34,7 +36,6 @@ import (
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
-	"gopkg.in/yaml.v3"
 )
 
 func TestSlice_UnmarshalJSON(t *testing.T) {

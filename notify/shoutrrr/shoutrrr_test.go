@@ -22,10 +22,12 @@ import (
 	"reflect"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestShoutrrr_getSender(t *testing.T) {
@@ -781,7 +783,7 @@ func TestShoutrrr_parseSend(t *testing.T) {
 			if tc.deleting {
 				shoutrrr.ServiceStatus.SetDeleting()
 			}
-			logFrom := util.LogFrom{Primary: "test", Secondary: "test"}
+			logFrom := logutil.LogFrom{Primary: "test", Secondary: "test"}
 			combinedErrs := map[string]int{}
 
 			failed := shoutrrr.parseSend(tc.errs, combinedErrs, tc.serviceName, logFrom)

@@ -22,12 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestInit(t *testing.T) {
@@ -556,7 +558,7 @@ func TestQuery(t *testing.T) {
 			URL:  "https://example.com"}}
 
 	// WHEN Query is called
-	gotBool, gotErr := l.Query(true, util.LogFrom{})
+	gotBool, gotErr := l.Query(true, logutil.LogFrom{})
 
 	// THEN the function returns false and an error as it is not implemented
 	if gotBool != false {

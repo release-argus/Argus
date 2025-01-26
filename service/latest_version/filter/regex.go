@@ -21,12 +21,13 @@ import (
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // RegexCheckVersion returns whether `version` matches the regex.
 func (r *Require) RegexCheckVersion(
 	version string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) error {
 	if r == nil {
 		return nil
@@ -41,7 +42,7 @@ func (r *Require) RegexCheckVersion(
 		err := fmt.Errorf("regex %q not matched on version %q",
 			r.RegexVersion, version)
 		r.Status.RegexMissVersion()
-		jLog.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
+		logutil.Log.Info(err, logFrom, r.Status.RegexMissesVersion() == 1)
 		return err
 	}
 
@@ -50,13 +51,13 @@ func (r *Require) RegexCheckVersion(
 
 func (r *Require) regexCheckString(
 	version string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 	searchArea ...string,
 ) bool {
 	for _, text := range searchArea {
 		regexMatch := util.RegexCheckWithVersion(r.RegexContent, text, version)
-		if jLog.IsLevel("DEBUG") {
-			jLog.Debug(
+		if logutil.Log.IsLevel("DEBUG") {
+			logutil.Log.Debug(
 				fmt.Sprintf("%q RegexContent on %q, match=%t",
 					r.RegexContent, text, regexMatch),
 				logFrom, true)
@@ -69,7 +70,7 @@ func (r *Require) regexCheckString(
 }
 
 // regexCheckContentFail simply returns an error for the RegexCheckContent* functions.
-func (r *Require) regexCheckContentFail(version string, logFrom util.LogFrom) error {
+func (r *Require) regexCheckContentFail(version string, logFrom logutil.LogFrom) error {
 	// Escape all dots in the version.
 	regexStr := util.TemplateString(r.RegexContent,
 		util.ServiceInfo{
@@ -78,7 +79,7 @@ func (r *Require) regexCheckContentFail(version string, logFrom util.LogFrom) er
 	err := fmt.Errorf(
 		"regex %q not matched on content for version %q",
 		regexStr, version)
-	jLog.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
+	logutil.Log.Info(err, logFrom, r.Status.RegexMissesContent() == 1)
 	return err
 }
 
@@ -86,7 +87,7 @@ func (r *Require) regexCheckContentFail(version string, logFrom util.LogFrom) er
 func (r *Require) RegexCheckContent(
 	version string,
 	body string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) error {
 	if r == nil || r.RegexContent == "" {
 		return nil
@@ -108,7 +109,7 @@ func (r *Require) RegexCheckContent(
 func (r *Require) RegexCheckContentGitHub(
 	version string,
 	assets []github_types.Asset,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) (string, error) {
 	if r == nil || r.RegexContent == "" {
 		return "", nil
