@@ -398,7 +398,7 @@ func TestGetResponse_ReadError(t *testing.T) {
 	t.Cleanup(func() { server.Close() })
 
 	// AND a request to the mock server's URL.
-	req, err := http.NewRequest("GET", server.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	if err != nil {
 		t.Fatalf("github.Lookup.getResponse() could not create request: %v", err)
 	}

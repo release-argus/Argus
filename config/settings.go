@@ -60,7 +60,7 @@ func (s *Settings) String(prefix string) string {
 
 // SettingsBase for the binary.
 //
-// (Used in Defaults)
+// (Used in Defaults).
 type SettingsBase struct {
 	Log  LogSettings  `yaml:"log,omitempty"`  // Log settings
 	Data DataSettings `yaml:"data,omitempty"` // Data settings

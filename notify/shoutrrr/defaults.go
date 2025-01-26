@@ -15,6 +15,8 @@
 // Package shoutrrr provides the shoutrrr notification service to services.
 package shoutrrr
 
+import "net/http"
+
 // notifyDefaultOptions are the default options for all notifiers.
 func notifyDefaultOptions() map[string]string {
 	return map[string]string{
@@ -143,7 +145,7 @@ func (s *SliceDefaults) Default() {
 			"contenttype":   "application/json",
 			"disabletls":    "no",
 			"messagekey":    "message",
-			"requestmethod": "POST",
+			"requestmethod": http.MethodPost,
 			"titlekey":      "title"})
 	newSlice["shoutrrr"] = NewDefaults(
 		"",

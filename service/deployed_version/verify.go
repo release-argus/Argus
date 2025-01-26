@@ -18,6 +18,7 @@ package deployedver
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -34,14 +35,14 @@ func (l *Lookup) CheckValues(prefix string) error {
 	// Method
 	l.Method = strings.ToUpper(l.Method)
 	if l.Method == "" {
-		l.Method = "GET"
+		l.Method = http.MethodGet
 	} else if !util.Contains(supportedTypes, l.Method) {
 		errs = append(errs,
 			fmt.Errorf("%smethod: %q <invalid> (only [%s] are allowed)",
 				prefix, l.Method, strings.Join(supportedTypes, ", ")))
 	}
 	// Body unused in GET, ensure it is empty.
-	if l.Method == "GET" {
+	if l.Method == http.MethodGet {
 		l.Body = ""
 	}
 

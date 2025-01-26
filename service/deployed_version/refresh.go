@@ -32,7 +32,7 @@ func (l *Lookup) Refresh(
 	semanticVersioning *string,
 ) (string, error) {
 	if l == nil {
-		return "", fmt.Errorf("lookup is nil")
+		return "", errors.New("lookup is nil")
 	}
 	logFrom := logutil.LogFrom{Primary: "deployed_version/refresh", Secondary: *serviceID}
 

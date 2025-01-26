@@ -70,7 +70,7 @@ func (l *Lookup) ServiceURL(ignoreWebURL bool) (serviceURL string) {
 	// GitHub service. Get the non-API URL.
 	// If "owner/repo" rather than a full path.
 	if strings.Count(serviceURL, "/") == 1 {
-		serviceURL = fmt.Sprintf("https://github.com/%s", serviceURL)
+		serviceURL = "https://github.com/" + serviceURL
 	}
 	return
 }

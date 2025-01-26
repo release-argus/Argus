@@ -17,6 +17,7 @@ package status
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -107,7 +108,7 @@ func (f *failsBase) String(prefix string) string {
 	for _, key := range keys {
 		val := "nil"
 		if f.fails[key] != nil {
-			val = fmt.Sprint(*f.fails[key])
+			val = strconv.FormatBool(*f.fails[key])
 		}
 		builder.WriteString(fmt.Sprintf("%s%s: %s\n",
 			prefix, key, val))
@@ -192,7 +193,7 @@ func (f *FailsCommand) String(prefix string) string {
 	for i, fail := range f.fails {
 		val := "nil"
 		if fail != nil {
-			val = fmt.Sprint(*fail)
+			val = strconv.FormatBool(*fail)
 		}
 
 		builder.WriteString(fmt.Sprintf("%s- %d: %s\n",

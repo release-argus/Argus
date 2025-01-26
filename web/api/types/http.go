@@ -17,14 +17,14 @@ package types
 
 import "time"
 
-// VersionAPI used in /api/v1/version
+// VersionAPI is the response given at the /api/v1/version endpoint.
 type VersionAPI struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"buildDate"`
 	GoVersion string `json:"goVersion"`
 }
 
-// RefreshAPI used in /api/v1/*_version/refresh
+// RefreshAPI is the rsponse given at the /api/v1/*_version/refresh endpoint.
 type RefreshAPI struct {
 	Version string    `json:"version"`
 	Date    time.Time `json:"timestamp"`

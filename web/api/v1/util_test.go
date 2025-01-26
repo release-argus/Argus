@@ -197,7 +197,7 @@ func TestAnnounceEdit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() - not parallel because we're using a shared channel
 
 			tc.newData.Status = &apitype.Status{}
 			if tc.oldData != nil {

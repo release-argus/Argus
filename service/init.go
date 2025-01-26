@@ -141,7 +141,6 @@ func (s *Service) Init(
 		&s.Options,
 		&s.Status,
 		&s.Defaults.DeployedVersionLookup, &s.HardDefaults.DeployedVersionLookup)
-
 }
 
 // initMetrics will initialise the Prometheus metrics for the Service.

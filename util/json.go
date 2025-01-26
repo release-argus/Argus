@@ -17,6 +17,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -78,7 +79,7 @@ func ToJSONString(input interface{}) string {
 // navigateJSON will navigate the JSON object to find the value of the key.
 func navigateJSON(jsonData *interface{}, fullKey string) (string, error) {
 	if fullKey == "" {
-		return "", fmt.Errorf("no key was given to navigate the JSON")
+		return "", errors.New("no key was given to navigate the JSON")
 	}
 	//nolint:errcheck // Verify in deployed_version.verify.CheckValues.
 	keys, _ := ParseKeys(fullKey)

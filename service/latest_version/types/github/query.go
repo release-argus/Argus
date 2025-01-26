@@ -117,7 +117,7 @@ func (l *Lookup) createRequest(logFrom logutil.LogFrom) (*http.Request, error) {
 	req.Header.Set("Connection", "close")
 	// Access Token.
 	if accessToken := l.accessToken(); accessToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", accessToken))
+		req.Header.Set("Authorization", "token "+accessToken)
 	}
 	// Conditional requests - https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
 	if eTag := l.data.ETag(); eTag != "" {

@@ -17,6 +17,7 @@ package latestver
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -33,7 +34,7 @@ func Refresh(
 	semanticVersioning *string, // nil, "true", "false", "null" (unchanged, true, false, default).
 ) (string, bool, error) {
 	if lookup == nil {
-		return "", false, fmt.Errorf("lookup is nil")
+		return "", false, errors.New("lookup is nil")
 	}
 
 	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: *lookup.GetStatus().ServiceID}

@@ -18,6 +18,7 @@ package deployedver
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
@@ -25,7 +26,7 @@ import (
 )
 
 var (
-	supportedTypes = []string{"GET", "POST"}
+	supportedTypes = []string{http.MethodGet, http.MethodPost}
 )
 
 // Base is the base struct for the Lookup struct.

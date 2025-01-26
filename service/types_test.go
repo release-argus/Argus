@@ -17,6 +17,7 @@
 package service
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -1111,7 +1112,7 @@ func TestService_UnmarshalJSON(t *testing.T) {
 			errRegex: `^$`,
 			want: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
-					Method: "GET",
+					Method: http.MethodGet,
 					URL:    "https://valid.release-argus.io/plain",
 				}},
 		},
@@ -1576,7 +1577,7 @@ func TestService_UnmarshalYAML(t *testing.T) {
 			errRegex: `^$`,
 			want: &Service{
 				DeployedVersionLookup: &deployedver.Lookup{
-					Method: "GET",
+					Method: http.MethodGet,
 					URL:    "https://valid.release-argus.io/plain",
 				}},
 		},

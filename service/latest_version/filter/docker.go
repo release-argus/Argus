@@ -295,7 +295,7 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 			prefix, d.Image))
 		// e.g. prometheus = library/prometheus on the docker hub api.
 	case d.Type == "hub" && strings.Count(d.Image, "/") == 0:
-		d.Image = fmt.Sprintf("library/%s", d.Image)
+		d.Image = "library/" + d.Image
 	}
 
 	// Tag
@@ -307,7 +307,7 @@ func (d *DockerCheck) CheckValues(prefix string) error {
 		errs = append(errs, fmt.Errorf("%stag: %q <invalid> (didn't pass templating)",
 			prefix, d.Tag))
 	default:
-		if _, err := net_url.Parse(fmt.Sprintf("https://example.com/%s", d.Tag)); err != nil {
+		if _, err := net_url.Parse("https://example.com/" + d.Tag); err != nil {
 			errs = append(errs, fmt.Errorf("%stag: %q <invalid> (invalid for URL formatting)",
 				prefix, d.Tag))
 		}
@@ -339,7 +339,7 @@ func (d *DockerCheck) checkToken() error {
 			return fmt.Errorf("token: <required> (token for %s)",
 				username)
 		} else if username == "" && token != "" {
-			return fmt.Errorf("username: <required> (token is for who?)")
+			return errors.New("username: <required> (token is for who?)")
 		}
 	case "quay", "ghcr":
 		// Token not required.
@@ -392,7 +392,7 @@ func (d *DockerCheck) getToken() string {
 	return util.EvalEnvVars(d.Defaults.getToken(d.GetType()))
 }
 
-// getToken returns the token as is,
+// getToken returns the token as is.
 func (d *DockerCheckDefaults) getToken(dType string) string {
 	if d == nil {
 		return ""

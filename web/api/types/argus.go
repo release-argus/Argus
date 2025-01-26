@@ -16,7 +16,6 @@
 package types
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -124,7 +123,7 @@ func (s *ServiceSummary) RemoveUnchanged(oldData *ServiceSummary) {
 	nilUnchanged(oldData.WebHook, &s.WebHook)
 }
 
-// Helper function to handle "Removed" or "Unchanged" logic
+// Helper function to handle "Removed" or "Unchanged" logic.
 func nilUnchanged[T comparable](oldValue *T, newValue **T) {
 	// Removed: oldValue exists but newValue is nil.
 	if oldValue != nil && *newValue == nil {
@@ -232,21 +231,21 @@ func (d *Defaults) String() string {
 	builder.WriteString("{")
 
 	if serviceStr := util.ToJSONString(d.Service); !util.Contains([]string{"{}", "null"}, serviceStr) {
-		builder.WriteString(fmt.Sprintf(`"service":%s`, serviceStr))
+		builder.WriteString(`"service":` + serviceStr)
 	}
 
 	if notifyStr := util.ToJSONString(d.Notify); !util.Contains([]string{"{}", "null"}, notifyStr) {
 		if builder.Len() > 1 {
 			builder.WriteString(",")
 		}
-		builder.WriteString(fmt.Sprintf(`"notify":%s`, notifyStr))
+		builder.WriteString(`"notify":` + notifyStr)
 	}
 
 	if webHookStr := util.ToJSONString(d.WebHook); !util.Contains([]string{"{}", "null"}, webHookStr) {
 		if builder.Len() > 1 {
 			builder.WriteString(",")
 		}
-		builder.WriteString(fmt.Sprintf(`"webhook":%s`, webHookStr))
+		builder.WriteString(`"webhook":` + webHookStr)
 	}
 	builder.WriteString("}")
 
@@ -672,7 +671,7 @@ type CommandStatusUpdate struct {
 // #                                     EDIT                                     #
 // ################################################################################
 
-// CommandEdit for JSON react-hook-form
+// CommandEdit for JSON react-hook-form.
 type CommandEdit struct {
 	Arg string `json:"arg,omitempty" yaml:"arg,omitempty"` // Command argument.
 }
