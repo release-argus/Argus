@@ -23,6 +23,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestRequire_ExecCommand(t *testing.T) {
@@ -55,7 +56,7 @@ func TestRequire_ExecCommand(t *testing.T) {
 				test.StringPtr("http://example.com"))
 
 			// WHEN ApplyTemplate is called on the Command
-			err := require.ExecCommand(util.LogFrom{})
+			err := require.ExecCommand(logutil.LogFrom{})
 
 			// THEN the err is expected
 			e := util.ErrorToString(err)

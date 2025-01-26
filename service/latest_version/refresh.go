@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Refresh the Lookup with the provided overrides.
@@ -35,7 +36,7 @@ func Refresh(
 		return "", false, fmt.Errorf("lookup is nil")
 	}
 
-	logFrom := util.LogFrom{Primary: "latest_version/refresh", Secondary: *lookup.GetStatus().ServiceID}
+	logFrom := logutil.LogFrom{Primary: "latest_version/refresh", Secondary: *lookup.GetStatus().ServiceID}
 
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
@@ -63,8 +64,8 @@ func Refresh(
 	}
 
 	// Log the lookup in use.
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
+	if logutil.Log.IsLevel("DEBUG") {
+		logutil.Log.Debug(
 			fmt.Sprintf("Refreshing with:\n%q", lookup.String(lookup, "")),
 			logFrom, true)
 	}

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package util provides utility functions for the Argus project.
-package util
+// Package logutil provides a logger.
+package logutil
 
 import (
 	"fmt"
@@ -21,7 +21,23 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/release-argus/Argus/util"
 )
+
+var (
+	Log  *JLog
+	once sync.Once
+)
+
+// Init initialises the logging system with the specified log level.
+// The log level determines the severity of the messages that will be logged.
+// Valid log levels are "debug", "verbose", "info", "warn" and "error".
+func Init(level string, timestamps bool) {
+	once.Do(func() {
+		Log = NewJLog(level, timestamps)
+	})
+}
 
 var (
 	levelMap = map[string]uint8{
@@ -187,7 +203,7 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 
 	// VERBOSE: msg from.Primary (from.Secondary)
 	l.logMessage(
-		TruncateMessage(
+		util.TruncateMessage(
 			fmt.Sprintf("VERBOSE: %s%v", from, msg),
 			997))
 }
@@ -202,7 +218,7 @@ func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 
 	// DEBUG: msg from.Primary (from.Secondary)
 	l.logMessage(
-		TruncateMessage(
+		util.TruncateMessage(
 			fmt.Sprintf("DEBUG: %s%v", from, msg),
 			997))
 }
@@ -214,12 +230,4 @@ func (l *JLog) logMessage(msg string) {
 	} else {
 		fmt.Println(msg)
 	}
-}
-
-// TruncateMessage shortens a message to `maxLength` and appends "..." if it exceeds the limit.
-func TruncateMessage(msg string, maxLength int) string {
-	if len(msg) > maxLength {
-		return msg[:maxLength] + "..."
-	}
-	return msg
 }

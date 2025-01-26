@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // SaveHandler will listen to the `SaveChannel` and save the config (after a delay)
@@ -65,10 +67,10 @@ func (c *Config) Save() {
 
 	// Write the config to file (unordered slices, but with an order list).
 	file, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0_600)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("error opening %s: %v",
 			c.File, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 	defer file.Close()
 
 	// Create the yaml encoder and set indentation.
@@ -77,23 +79,23 @@ func (c *Config) Save() {
 
 	// Write and close the file.
 	err = yamlEncoder.Encode(c)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("error encoding %s:\n%v\n",
 			c.File, err),
-		util.LogFrom{},
+		logutil.LogFrom{},
 		err != nil)
 	err = file.Close()
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("error closing %s:\n%v\n",
 			c.File, err),
-		util.LogFrom{},
+		logutil.LogFrom{},
 		err != nil)
 
 	// Read the file to find what needs to be re-arranged.
 	data, err := os.ReadFile(c.File)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("Error reading %q\n%s", c.File, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 	lines := strings.Split(string(util.NormaliseNewlines(data)), "\n")
 
 	// Fix the ordering of the read data.
@@ -257,10 +259,10 @@ func (c *Config) Save() {
 
 	// Open the file.
 	file, err = os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0_600)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("error opening %s after initial save: %v",
 			c.File, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 
 	// Buffered writes to the file.
 	writer := bufio.NewWriter(file)
@@ -271,13 +273,13 @@ func (c *Config) Save() {
 
 	// Flush the writes.
 	err = writer.Flush()
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("error writing %s after initial save: %v",
 			c.File, err),
-		util.LogFrom{}, err != nil)
-	jLog.Info(
+		logutil.LogFrom{}, err != nil)
+	logutil.Log.Info(
 		fmt.Sprintf("Saved service updates to %s", c.File),
-		util.LogFrom{}, true)
+		logutil.LogFrom{}, true)
 }
 
 // removeAllServiceDefaults removes the written default values from all Services.

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ func TestConfig_LoadOrdering(t *testing.T) {
 			flags := make(map[string]bool)
 			var config Config
 			loadMutex.Lock() // Protect flag env vars
-			config.Load(file, &flags, nil)
+			config.Load(file, &flags)
 			t.Cleanup(func() {
 				os.Remove(config.Settings.DataDatabaseFile())
 				loadMutex.Unlock()

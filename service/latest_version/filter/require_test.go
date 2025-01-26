@@ -21,11 +21,12 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 func TestRequireDefaults_Default(t *testing.T) {

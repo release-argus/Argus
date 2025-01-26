@@ -24,11 +24,13 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	metric "github.com/release-argus/Argus/web/metric"
-	"gopkg.in/yaml.v3"
 )
 
 func TestHTTPRequest(t *testing.T) {
@@ -62,7 +64,7 @@ func TestHTTPRequest(t *testing.T) {
 			}
 
 			// WHEN httpRequest is called on it.
-			_, err := lookup.httpRequest(util.LogFrom{})
+			_, err := lookup.httpRequest(logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
@@ -273,7 +275,7 @@ func TestGetVersion(t *testing.T) {
 
 			// WHEN getVersion is called on it.
 			version, err := lookup.getVersion(
-				testBody, util.LogFrom{})
+				testBody, logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
@@ -292,7 +294,7 @@ func TestGetVersion(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	testLookupVersions := testLookup(false)
-	testLookupVersions.query(util.LogFrom{})
+	testLookupVersions.query(logutil.LogFrom{})
 
 	type statusVars struct {
 		latestVersion, latestVersionWant string
@@ -562,7 +564,7 @@ func TestQuery(t *testing.T) {
 
 				// WHEN Query is called on it.
 				var newVersion bool
-				newVersion, err = lookup.Query(true, util.LogFrom{})
+				newVersion, err = lookup.Query(true, logutil.LogFrom{})
 
 				// THEN any err is expected.
 				stdout := releaseStdout()

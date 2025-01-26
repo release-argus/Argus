@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	metric "github.com/release-argus/Argus/web/metric"

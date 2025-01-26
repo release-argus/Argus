@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,16 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	v1 "github.com/release-argus/Argus/web/api/v1"
 )
-
-var jLog *util.JLog
 
 // NewRouter serves Prometheus metrics, WebSocket, and Node.js frontend at RoutePrefix.
 func NewRouter(cfg *config.Config, hub *v1.Hub) *mux.Router {
 	// Go
-	api := v1.NewAPI(cfg, jLog)
+	api := v1.NewAPI(cfg)
 
 	// Prometheus metrics
 	api.Router.Handle("/metrics", promhttp.Handler())
@@ -69,16 +68,11 @@ func newWebUI(cfg *config.Config) *mux.Router {
 }
 
 // Run the web server.
-func Run(cfg *config.Config, log *util.JLog) {
-	// Only set if unset (avoid RACE condition in tests).
-	if log != nil && jLog == nil {
-		jLog = log
-	}
-
+func Run(cfg *config.Config) {
 	router := newWebUI(cfg)
 
 	listenAddress := fmt.Sprintf("%s:%s", cfg.Settings.WebListenHost(), cfg.Settings.WebListenPort())
-	jLog.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), util.LogFrom{}, true)
+	logutil.Log.Info("Listening on "+listenAddress+cfg.Settings.WebRoutePrefix(), logutil.LogFrom{}, true)
 
 	srv := &http.Server{
 		Addr:         listenAddress,
@@ -88,12 +82,12 @@ func Run(cfg *config.Config, log *util.JLog) {
 	}
 
 	if cfg.Settings.WebCertFile() != "" && cfg.Settings.WebKeyFile() != "" {
-		jLog.Fatal(
+		logutil.Log.Fatal(
 			srv.ListenAndServeTLS(cfg.Settings.WebCertFile(), cfg.Settings.WebKeyFile()),
-			util.LogFrom{}, true)
+			logutil.LogFrom{}, true)
 	} else {
-		jLog.Fatal(
+		logutil.Log.Fatal(
 			srv.ListenAndServe(),
-			util.LogFrom{}, true)
+			logutil.LogFrom{}, true)
 	}
 }

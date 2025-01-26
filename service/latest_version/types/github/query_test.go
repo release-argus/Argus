@@ -28,17 +28,19 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestQuery(t *testing.T) {
 	tLookup := testLookup(false)
 	tLookup.URL = "release-argus/.github"
-	tLookup.Query(false, util.LogFrom{})
+	tLookup.Query(false, logutil.LogFrom{})
 	emptyReleasesETag := tLookup.data.eTag
 
 	type statusVars struct {
@@ -297,7 +299,7 @@ func TestQuery(t *testing.T) {
 				}
 
 				// WHEN Query is called on it.
-				_, err = lookup.Query(true, util.LogFrom{})
+				_, err = lookup.Query(true, logutil.LogFrom{})
 
 				// THEN any err is expected.
 				stdout := releaseStdout()
@@ -369,7 +371,7 @@ func TestHTTPRequest(t *testing.T) {
 			}
 
 			// WHEN httpRequest is called on it.
-			_, err := lookup.httpRequest(util.LogFrom{})
+			_, err := lookup.httpRequest(logutil.LogFrom{})
 
 			// THEN any err is expected.
 			e := util.ErrorToString(err)
@@ -400,7 +402,7 @@ func TestGetResponse_ReadError(t *testing.T) {
 
 	// WHEN getResponse is called on that URL.
 	l := Lookup{}
-	_, _, err = l.getResponse(req, util.LogFrom{})
+	_, _, err = l.getResponse(req, logutil.LogFrom{})
 
 	// THEN an error is expected from the read error.
 	if err == nil {
@@ -542,7 +544,7 @@ func TestHandleResponse(t *testing.T) {
 				lookup.HardDefaults.AccessToken = "Something"
 			}
 
-			logFrom := util.LogFrom{Primary: "TestHandleResponse", Secondary: name}
+			logFrom := logutil.LogFrom{Primary: "TestHandleResponse", Secondary: name}
 
 			// WHEN handleResponse is called on it.
 			gotBody, err := lookup.handleResponse(resp, tc.body, logFrom)
@@ -735,7 +737,7 @@ func TestReleaseMeetsRequirements(t *testing.T) {
 			if tc.releaseOverrides != nil {
 				testRelease = *tc.releaseOverrides
 			}
-			logFrom := util.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: name}
+			logFrom := logutil.LogFrom{Primary: "TestReleaseMeetsRequirements", Secondary: name}
 
 			// WHEN releaseMeetsRequirements is called on it.
 			version, releaseDate, err := lookup.releaseMeetsRequirements(testRelease, logFrom)
@@ -850,7 +852,7 @@ func TestGetVersion(t *testing.T) {
 				lookup.Options,
 				lookup.Status,
 				lookup.Defaults, lookup.HardDefaults)
-			logFrom := util.LogFrom{Primary: "TestGetVersion", Secondary: name}
+			logFrom := logutil.LogFrom{Primary: "TestGetVersion", Secondary: name}
 			testBody := body
 			if tc.body != nil {
 				testBody = []byte(*tc.body)
@@ -923,7 +925,7 @@ func TestSetReleases(t *testing.T) {
 			if err != nil {
 				t.Fatalf("github.Lookup.setReleases failed to unmarshal overrides: %v", err)
 			}
-			logFrom := util.LogFrom{Primary: "TestGetVersions", Secondary: name}
+			logFrom := logutil.LogFrom{Primary: "TestGetVersions", Secondary: name}
 			testBody := body
 			if tc.body != "" {
 				testBody = []byte(tc.body)
@@ -1032,7 +1034,7 @@ func TestQueryGitHubETag(t *testing.T) {
 					lookup.Require = &filter.Require{}
 				}
 
-				_, err := lookup.Query(true, util.LogFrom{})
+				_, err := lookup.Query(true, logutil.LogFrom{})
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -1090,7 +1092,7 @@ func TestHandleNoVersionChange(t *testing.T) {
 			lookup := testLookup(false)
 
 			// WHEN handleNoVersionChange is called on it.
-			lookup.handleNoVersionChange(tc.checkNumber, tc.version, util.LogFrom{})
+			lookup.handleNoVersionChange(tc.checkNumber, tc.version, logutil.LogFrom{})
 
 			// THEN a message is printed when expected.
 			stdout := releaseStdout()

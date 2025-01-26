@@ -25,7 +25,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
@@ -34,7 +36,7 @@ func (l *Lookup) Track() {
 	if l == nil {
 		return
 	}
-	logFrom := util.LogFrom{Primary: *l.Status.ServiceID}
+	logFrom := logutil.LogFrom{Primary: *l.Status.ServiceID}
 
 	// Track forever.
 	for {
@@ -53,7 +55,7 @@ func (l *Lookup) Track() {
 }
 
 // query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
+func (l *Lookup) query(logFrom logutil.LogFrom) (string, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return "", err
@@ -64,7 +66,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
 	if l.JSON != "" {
 		version, err = util.GetValueByKey(body, l.JSON, l.GetURL())
 		if err != nil {
-			jLog.Error(err, logFrom, true)
+			logutil.Log.Error(err, logFrom, true)
 			//nolint:wrapcheck
 			return "", err
 		}
@@ -81,7 +83,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
 		if len(texts) == 0 {
 			err := fmt.Errorf("regex %q didn't return any matches on %q",
 				l.Regex, util.TruncateMessage(version, 100))
-			jLog.Warn(err, logFrom, true)
+			logutil.Log.Warn(err, logFrom, true)
 			return "", err
 		}
 
@@ -98,7 +100,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
 				"style of 'MAJOR.MINOR.PATCH' (https://semver.org/), or disabling semantic versioning "+
 				"(globally with defaults.service.semantic_versioning or just for this service with the semantic_versioning var)",
 				version)
-			jLog.Error(err, logFrom, true)
+			logutil.Log.Error(err, logFrom, true)
 			return "", err
 		}
 	}
@@ -107,7 +109,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (string, error) {
 }
 
 // Query the deployed version (DeployedVersion) of the Service.
-func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (string, error) {
+func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (string, error) {
 	version, err := l.query(logFrom)
 
 	if metrics {
@@ -172,15 +174,15 @@ func (l *Lookup) HandleNewVersion(version string, writeToDB bool) {
 	}
 
 	// Announce version change to WebSocket clients.
-	jLog.Info(
+	logutil.Log.Info(
 		fmt.Sprintf("Updated to %q", version),
-		util.LogFrom{Primary: *l.Status.ServiceID},
+		logutil.LogFrom{Primary: *l.Status.ServiceID},
 		true)
 	l.Status.AnnounceUpdate()
 }
 
 // httpRequest sends an HTTP request to the URL and returns the response body.
-func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	// HTTPS insecure skip verify.
 	customTransport := &http.Transport{}
 	if l.GetAllowInvalidCerts() {
@@ -192,7 +194,7 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 	// Create the request.
 	req, err := http.NewRequest(l.Method, l.GetURL(), l.GetBody())
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err //nolint:wrapcheck
 	}
 	// Set headers.
@@ -212,23 +214,23 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
-			jLog.Warn(err, logFrom, true)
+			logutil.Log.Warn(err, logFrom, true)
 			return nil, err
 		}
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
 
 	// Ignore non-2XX responses.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = fmt.Errorf("non-2XX response code: %d", resp.StatusCode)
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 		return nil, err
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
-	jLog.Error(err, logFrom, err != nil)
+	logutil.Log.Error(err, logFrom, err != nil)
 	return body, err //nolint:wrapcheck
 }

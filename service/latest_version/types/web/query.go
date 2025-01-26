@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Query queries the source,
@@ -32,7 +32,7 @@ import (
 // Parameters:
 //
 //	metrics: if true, set Prometheus metrics based on the query.
-func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
+func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
 	isNewVersion, err := l.query(logFrom)
 
 	if metrics {
@@ -44,7 +44,7 @@ func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
 
 // Query queries the source,
 // and returns whether a new release was found, and updates LatestVersion if so.
-func (l *Lookup) query(logFrom util.LogFrom) (bool, error) {
+func (l *Lookup) query(logFrom logutil.LogFrom) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -52,7 +52,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (bool, error) {
 
 	version, err := l.getVersion(string(body), logFrom)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return false, err
 	}
 
@@ -78,7 +78,7 @@ func (l *Lookup) query(logFrom util.LogFrom) (bool, error) {
 }
 
 // httpRequest makes a HTTP GET request to the URL, and returns the body.
-func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	customTransport := &http.Transport{}
 	// HTTPS insecure skip verify.
 	if l.allowInvalidCerts() {
@@ -91,7 +91,7 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w",
 			l.URL, err)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
 
@@ -104,22 +104,22 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
 			err = fmt.Errorf("x509 (certificate invalid)")
-			jLog.Warn(err, logFrom, true)
+			logutil.Log.Warn(err, logFrom, true)
 			return nil, err
 		}
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
 
 	// Read the response body.
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
-	jLog.Error(err, logFrom, err != nil)
+	logutil.Log.Error(err, logFrom, err != nil)
 	return body, err //nolint: wrapcheck
 }
 
 // getVersion returns the latest version from `body` that matches the URLCommands, and Regex requirements.
-func (l *Lookup) getVersion(body string, logFrom util.LogFrom) (string, error) {
+func (l *Lookup) getVersion(body string, logFrom logutil.LogFrom) (string, error) {
 	filteredVersions, err := l.URLCommands.GetVersions(body, logFrom)
 	if err != nil {
 		return "", fmt.Errorf("no releases were found matching the url_commands\n%w", err)
@@ -142,7 +142,7 @@ func (l *Lookup) getVersion(body string, logFrom util.LogFrom) (string, error) {
 }
 
 // versionMeetsRequirements checks whether `version` meets the requirements of the Lookup.
-func (l *Lookup) versionMeetsRequirements(version, body string, logFrom util.LogFrom) error {
+func (l *Lookup) versionMeetsRequirements(version, body string, logFrom logutil.LogFrom) error {
 	// No `Require` filters.
 	if l.Require == nil {
 		return nil
@@ -170,11 +170,11 @@ func (l *Lookup) versionMeetsRequirements(version, body string, logFrom util.Log
 		if strings.HasSuffix(errStr, "\n") {
 			err = errors.New(strings.TrimSuffix(errStr, "\n"))
 		}
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 		return err
 		// Docker image:tag does exist.
 	} else if l.Require.Docker != nil {
-		jLog.Info(
+		logutil.Log.Info(
 			fmt.Sprintf(`found %s container "%s:%s"`,
 				l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
 			logFrom, true)

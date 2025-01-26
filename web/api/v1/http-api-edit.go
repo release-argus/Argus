@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -33,6 +34,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -50,7 +52,7 @@ import (
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersionRefreshUncreated_Latest", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpVersionRefreshUncreated_Latest", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
 	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
@@ -58,7 +60,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	// Verify overrides are provided.
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -87,7 +89,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 		"json", overrides,
 		&temp); err != nil {
 		err = fmt.Errorf("invalid JSON: %w", err)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -107,7 +109,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	}
 	// Error creating/validating the LatestVersionLookup.
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -142,7 +144,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpVersionRefreshUncreated_Deployed", Secondary: getIP(r)}
 
 	queryParams := r.URL.Query()
 	overrides := util.DereferenceOrDefault(getParam(&queryParams, "overrides"))
@@ -150,7 +152,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Verify overrides are provided.
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -184,7 +186,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	}
 	// Error creating/validating the DeployedVersionLookup.
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -223,7 +225,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpVersionRefresh_Latest", Secondary: getIP(r)}
 	// Service to refresh.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -234,7 +236,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -283,7 +285,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 //	On success: JSON object containing the refreshed version and the current UTC datetime.
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpVersionRefresh_Deployed", Secondary: getIP(r)}
 	// Service to refresh.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -294,7 +296,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	defer api.Config.OrderMutex.RUnlock()
 	if api.Config.Service[targetService] == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -326,7 +328,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 			err = dvl.CheckValues("")
 		}
 		if err != nil {
-			jLog.Error(err, logFrom, true)
+			logutil.Log.Error(err, logFrom, true)
 			failRequest(&w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -363,7 +365,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 //
 //	JSON object containing the service details.
 func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceDetail", Secondary: getIP(r)}
 	// Service to get details of.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -376,7 +378,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 
 	if svc == nil {
 		err := fmt.Sprintf("service %q not found", targetService)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -406,7 +408,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 //
 //	JSON object containing the global details.
 func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpOtherServiceDetails", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpOtherServiceDetails", Secondary: getIP(r)}
 
 	// Convert to JSON type that swaps slices for lists.
 	api.writeJSON(w,
@@ -436,7 +438,7 @@ func (api *API) httpOtherServiceDetails(w http.ResponseWriter, r *http.Request) 
 //	On success: HTTP 200 OK
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceEdit", Secondary: getIP(r)}
 	api.Config.OrderMutex.RLock()
 	defer api.Config.OrderMutex.RUnlock()
 
@@ -478,7 +480,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 		&api.Config.HardDefaults.WebHook,
 		logFrom)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (invalid json)\n%s`,
 				reqType, targetService, err),
@@ -499,7 +501,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// Check the values.
 	if err := newService.CheckValues(""); err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (invalid values)\n%s`,
@@ -510,7 +512,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure LatestVersion and DeployedVersion (if set) can fetch.
 	if err := newService.CheckFetches(); err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 
 		failRequest(&w,
 			fmt.Sprintf(`%s %q failed (fetches failed)\n%s`,
@@ -561,7 +563,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request) {
 //	On success: HTTP 200 OK
 //	On error: HTTP 400 Bad Request with an error message.
 func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceDelete", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceDelete", Secondary: getIP(r)}
 	// Service to delete.
 	targetService, _ := url.QueryUnescape(mux.Vars(r)["service_id"])
 
@@ -603,13 +605,13 @@ func (api *API) httpServiceDelete(w http.ResponseWriter, r *http.Request) {
 //	service_url?: string
 //	web_url?: string
 func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpNotifyTest", Secondary: getIP(r)}
 
 	// Read payload.
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -617,7 +619,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	var parsedPayload shoutrrr.TestPayload
 	err := json.Unmarshal(buf.Bytes(), &parsedPayload)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -645,7 +647,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		serviceNotify,
 		api.Config.Notify, api.Config.Defaults.Notify, api.Config.HardDefaults.Notify)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -656,7 +658,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Send the message.
 	err = testNotify.TestSend(serviceURL)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		failRequest(&w, err.Error(), http.StatusBadRequest)
 		return
 	}

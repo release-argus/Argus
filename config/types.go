@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,7 @@ import (
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
-)
-
-var (
-	jLog *util.JLog
 )
 
 // Config for Argus.

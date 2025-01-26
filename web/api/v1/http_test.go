@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 	config_test "github.com/release-argus/Argus/config/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -99,7 +100,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
-			api := NewAPI(&cfg, util.NewJLog("WARN", false))
+			api := NewAPI(&cfg)
 			api.Router.HandleFunc("/test", func(rw http.ResponseWriter, req *http.Request) {
 				return
 			})
@@ -164,7 +165,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 
 			cfg := config_test.BareConfig(true)
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
-			api := NewAPI(cfg, util.NewJLog("WARN", false))
+			api := NewAPI(cfg)
 			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(func() { ts.Close() })
@@ -399,8 +400,8 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 	}
-	log := util.NewJLog("WARN", false)
-	log.Testing = true
+	logutil.Init("WARN", false)
+	logutil.Log.Testing = true
 	disableCombinations := test.Combinations(util.SortedKeys(tests))
 
 	// Split tests into groups
@@ -428,7 +429,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						routePrefix = "/test"
 						cfg.Settings.Web.RoutePrefix = routePrefix
 					}
-					api := NewAPI(cfg, log)
+					api := NewAPI(cfg)
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					ts.Config.Handler = api.Router
@@ -529,7 +530,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			cfg := config_test.BareConfig(true)
-			api := NewAPI(cfg, util.NewJLog("WARN", false))
+			api := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(func() { ts.Close() })

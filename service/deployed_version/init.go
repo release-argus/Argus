@@ -18,14 +18,8 @@ package deployedver
 import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 )
-
-// LogInit for this package.
-func LogInit(log *util.JLog) {
-	jLog = log
-}
 
 // Init will initialise the Service metric.
 func (l *Lookup) Init(

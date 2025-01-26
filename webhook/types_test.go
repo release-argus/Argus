@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 func TestHeaders_UnmarshalYAML(t *testing.T) {

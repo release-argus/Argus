@@ -36,6 +36,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -3273,9 +3274,9 @@ func TestService_GiveSecrets(t *testing.T) {
 func TestService_CheckFetches(t *testing.T) {
 	// GIVEN a Service
 	testLV := testLatestVersion(t, "url", false)
-	testLV.Query(false, util.LogFrom{})
+	testLV.Query(false, logutil.LogFrom{})
 	testDVL := testDeployedVersionLookup(t, false)
-	v, _ := testDVL.Query(false, util.LogFrom{})
+	v, _ := testDVL.Query(false, logutil.LogFrom{})
 	testDVL.Status.SetDeployedVersion(v, "", false)
 	tests := map[string]struct {
 		svc                                       *Service
@@ -3659,7 +3660,7 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{},
 		&webhook.SliceDefaults{},
 		&webhook.Defaults{}, &webhook.Defaults{},
-		util.LogFrom{},
+		logutil.LogFrom{},
 	)
 
 	// THEN we should get an error
@@ -4493,7 +4494,7 @@ func TestFromPayload(t *testing.T) {
 				tc.webhookGlobals,
 				tc.webhookDefaults,
 				tc.webhookHardDefaults,
-				util.LogFrom{Primary: name})
+				logutil.LogFrom{Primary: name})
 
 			// THEN we get an error if the payload is invalid
 			if tc.errRegex != "" || err != nil {

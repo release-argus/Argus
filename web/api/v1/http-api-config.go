@@ -19,12 +19,13 @@ import (
 	"net/http"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // wsConfig handles getting the config in use and sending it as YAML.
 func (api *API) httpConfig(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpConfig", Secondary: getIP(r)}
 
 	cfg := &apitype.Config{}
 

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func resetFlags() {
@@ -37,8 +37,8 @@ func resetFlags() {
 
 func TestTheMain(t *testing.T) {
 	// GIVEN different Configs to test
-	jLog = *util.NewJLog("WARN", false)
-	jLog.Testing = true
+	logutil.Init("WARN", false)
+	logutil.Log.Testing = true
 	tests := map[string]struct {
 		file           func(path string, t *testing.T)
 		outputContains *[]string

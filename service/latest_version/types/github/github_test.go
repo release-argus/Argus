@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestInsertionSort(t *testing.T) {
@@ -190,7 +192,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			lv.GetGitHubData().SetReleases(tc.releases)
 
 			// WHEN filterGitHubReleases is called on this body
-			filteredReleases := lv.filterGitHubReleases(util.LogFrom{})
+			filteredReleases := lv.filterGitHubReleases(logutil.LogFrom{})
 
 			// THEN only the expected releases are kept
 			if len(tc.want) != len(filteredReleases) {
@@ -240,7 +242,7 @@ func TestLookup_CheckGitHubReleasesBody(t *testing.T) {
 			lv := Lookup{}
 
 			// WHEN filterGitHubReleases is called on this body
-			releases, err := lv.checkGitHubReleasesBody(body, util.LogFrom{})
+			releases, err := lv.checkGitHubReleasesBody(body, logutil.LogFrom{})
 
 			// THEN it errors when expected
 			e := util.ErrorToString(err)

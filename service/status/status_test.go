@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"

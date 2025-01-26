@@ -27,6 +27,7 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -72,7 +73,7 @@ func FromPayload(
 	webhookGlobals *webhook.SliceDefaults,
 	webhookDefaults, webhookHardDefaults *webhook.Defaults,
 
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) (*Service, error) {
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(*payload); err != nil {
@@ -96,8 +97,8 @@ func FromPayload(
 			err = dec1.Decode(newService)
 		}
 		if err != nil {
-			jLog.Error(err, logFrom, true)
-			jLog.Verbose(
+			logutil.Log.Error(err, logFrom, true)
+			logutil.Log.Verbose(
 				fmt.Sprintf("Payload: %s", buf.String()),
 				logFrom, true)
 			return nil, err //nolint:wrapcheck
@@ -108,7 +109,7 @@ func FromPayload(
 	dec2 := json.NewDecoder(bytes.NewReader(buf.Bytes()))
 	var secretRefs oldSecretRefs
 	if err := dec2.Decode(&secretRefs); err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err //nolint:wrapcheck
 	}
 
@@ -329,7 +330,7 @@ func (s *Service) CheckFetches() error {
 		s.Status.DatabaseChannel = databaseChannel
 	}()
 
-	logFrom := util.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
+	logFrom := logutil.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
 
 	// Fetch latest version.
 	{

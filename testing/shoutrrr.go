@@ -25,23 +25,19 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // NotifyTest will send a test Shoutrrr message to the Shoutrrr with this flag as its ID.
-func NotifyTest(
-	flag *string,
-	cfg *config.Config,
-	log *util.JLog,
-) {
+func NotifyTest(flag *string, cfg *config.Config) {
 	// Only if flag provided.
 	if *flag == "" {
 		return
 	}
-	shoutrrr.LogInit(log)
-	logFrom := util.LogFrom{Primary: "Testing", Secondary: *flag}
+	logFrom := logutil.LogFrom{Primary: "Testing", Secondary: *flag}
 
 	// Find the Shoutrrr to test.
-	notify := findShoutrrr(*flag, cfg, log, logFrom)
+	notify := findShoutrrr(*flag, cfg, logFrom)
 
 	// Default webURL if not set.
 	if notify.ServiceStatus.WebURL == nil {
@@ -51,20 +47,20 @@ func NotifyTest(
 	err := notify.TestSend("https://example.com/service_url")
 
 	if err == nil {
-		log.Info(
+		logutil.Log.Info(
 			fmt.Sprintf("Message sent successfully with %q config\n",
 				*flag),
 			logFrom,
 			true)
 	} else {
-		log.Fatal(
+		logutil.Log.Fatal(
 			fmt.Sprintf("Message failed to send with %q config\n%s\n",
 				*flag, err),
 			logFrom,
 			true)
 	}
 
-	if !log.Testing {
+	if !logutil.Log.Testing {
 		os.Exit(0)
 	}
 }
@@ -73,8 +69,7 @@ func NotifyTest(
 func findShoutrrr(
 	name string,
 	cfg *config.Config,
-	log *util.JLog,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) (notify *shoutrrr.Shoutrrr) {
 	// Find in Service.X.Notify.name.
 	for _, svc := range cfg.Service {
@@ -122,7 +117,7 @@ func findShoutrrr(
 			if err := notify.CheckValues("    "); err != nil {
 				msg := fmt.Sprintf("notify:\n  %s:\n%s\n",
 					name, err)
-				log.Fatal(msg, logFrom, true)
+				logutil.Log.Fatal(msg, logFrom, true)
 			}
 
 			// Not found.
@@ -130,7 +125,7 @@ func findShoutrrr(
 			all := getAllShoutrrrNames(cfg)
 			msg := fmt.Sprintf("Notifier %q could not be found in config.notify or in any config.service\nDid you mean one of these?\n  - %s\n",
 				name, strings.Join(all, "\n  - "))
-			log.Fatal(msg, logFrom, true)
+			logutil.Log.Fatal(msg, logFrom, true)
 		}
 	}
 	serviceID := "TESTING"

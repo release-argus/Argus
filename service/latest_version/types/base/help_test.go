@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 type testLookup struct {
@@ -30,9 +30,8 @@ type testLookup struct {
 
 func TestMain(m *testing.M) {
 	// initialise jLog
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	LogInit(jLog)
+	logutil.Init("DEBUG", false)
+	logutil.Log.Testing = true
 
 	// run other tests
 	exitCode := m.Run()

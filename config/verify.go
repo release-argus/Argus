@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // CheckValues validates the fields of the Config struct.
@@ -41,7 +42,7 @@ func (c *Config) CheckValues() {
 	if len(errs) > 0 {
 		combinedErr := errors.Join(errs...)
 		fmt.Println(combinedErr.Error())
-		jLog.Fatal("Config could not be parsed successfully.", util.LogFrom{}, true)
+		logutil.Log.Fatal("Config could not be parsed successfully.", logutil.LogFrom{}, true)
 	}
 }
 
@@ -64,7 +65,7 @@ func (c *Config) Print(flag *bool) {
 		c.Service.Print("", c.Order)
 		fmt.Println()
 	}
-	if !jLog.Testing {
+	if !logutil.Log.Testing {
 		os.Exit(0)
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to those clients.
@@ -71,17 +71,17 @@ func (h *Hub) Run() {
 		case message := <-h.Broadcast:
 			n := len(h.Broadcast) + 1
 			for n != 0 {
-				if jLog.IsLevel("DEBUG") {
-					jLog.Debug(
+				if logutil.Log.IsLevel("DEBUG") {
+					logutil.Log.Debug(
 						fmt.Sprintf("Broadcast %s", string(message)),
-						util.LogFrom{Primary: "WebSocket"},
+						logutil.LogFrom{Primary: "WebSocket"},
 						len(h.clients) > 0)
 				}
 				var msg AnnounceMSG
 				if err := json.Unmarshal(message, &msg); err != nil {
-					jLog.Warn(
+					logutil.Log.Warn(
 						"Invalid JSON broadcast to the WebSocket",
-						util.LogFrom{Primary: "WebSocket"},
+						logutil.LogFrom{Primary: "WebSocket"},
 						true,
 					)
 					n = len(h.Broadcast)

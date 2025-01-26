@@ -24,10 +24,12 @@ import (
 	"strings"
 	"time"
 
-	shoutrrr_lib "github.com/containrrr/shoutrrr"
+	"github.com/containrrr/shoutrrr"
 	"github.com/containrrr/shoutrrr/pkg/router"
 	"github.com/containrrr/shoutrrr/pkg/types"
+
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
@@ -76,12 +78,12 @@ func (s *Shoutrrr) Send(
 	useDelay bool,
 	useMetrics bool,
 ) error {
-	logFrom := util.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging.
+	logFrom := logutil.LogFrom{Primary: s.ID, Secondary: serviceInfo.ID} // For logging.
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
 		msg := fmt.Sprintf("%s, Sleeping for %s before sending the Shoutrrr message", s.ID, s.GetDelay())
-		jLog.Info(msg, logFrom, s.GetDelay() != "0s")
+		logutil.Log.Info(msg, logFrom, s.GetDelay() != "0s")
 		time.Sleep(s.GetDelayDuration())
 	}
 
@@ -91,10 +93,10 @@ func (s *Shoutrrr) Send(
 	}
 
 	// Try sending the message.
-	if jLog.IsLevel("VERBOSE") || jLog.IsLevel("DEBUG") {
+	if logutil.Log.IsLevel("VERBOSE") || logutil.Log.IsLevel("DEBUG") {
 		msg := fmt.Sprintf("Sending %q to %q", message, url)
-		jLog.Verbose(msg, logFrom, !jLog.IsLevel("DEBUG"))
-		jLog.Debug(
+		logutil.Log.Verbose(msg, logFrom, !logutil.Log.IsLevel("DEBUG"))
+		logutil.Log.Debug(
 			fmt.Sprintf("%s with params=%q", msg, *params),
 			logFrom, true)
 	}
@@ -119,7 +121,7 @@ func (s *Shoutrrr) getSender(
 	url := s.BuildURL()
 
 	// Check the URL provides a valid sender.
-	sender, err := shoutrrr_lib.CreateSender(url)
+	sender, err := shoutrrr.CreateSender(url)
 	if err != nil {
 		err = fmt.Errorf("failed to create Shoutrrr sender: %w", err)
 		return nil, "", nil, "", err
@@ -438,7 +440,7 @@ func (s *Shoutrrr) send(
 	message string,
 	params *types.Params,
 	serviceName string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) error {
 	combinedErrs := make(map[string]int)
 
@@ -460,7 +462,7 @@ func (s *Shoutrrr) send(
 
 	msg := fmt.Sprintf("failed %d times to send a %s message for %q to %q",
 		s.GetMaxTries(), s.GetType(), *s.ServiceStatus.ServiceID, s.BuildURL())
-	jLog.Error(msg, logFrom, true)
+	logutil.Log.Error(msg, logFrom, true)
 	failed := true
 	s.Failed.Set(s.ID, &failed)
 	errs := make([]error, 0, len(combinedErrs))
@@ -479,7 +481,7 @@ func (s *Shoutrrr) parseSend(
 	err []error,
 	combinedErrs map[string]int,
 	serviceName string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) (failed bool) {
 	if s.ServiceStatus.Deleting() {
 		return
@@ -488,7 +490,7 @@ func (s *Shoutrrr) parseSend(
 	for i := range err {
 		if err[i] != nil {
 			failed = true
-			jLog.Error(err[i], logFrom, true)
+			logutil.Log.Error(err[i], logFrom, true)
 			combinedErrs[err[i].Error()]++
 		}
 	}

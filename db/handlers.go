@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	dbtype "github.com/release-argus/Argus/db/types"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // handler will listen to the DatabaseChannel and act on
@@ -74,15 +75,15 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 		params[i] = cells[i].Value
 	}
 
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
+	if logutil.Log.IsLevel("DEBUG") {
+		logutil.Log.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, params),
 			logFrom, true)
 	}
 	res, err := api.db.Exec(sqlStmt, params...)
 	// Query failed.
 	if err != nil {
-		jLog.Error(
+		logutil.Log.Error(
 			fmt.Sprintf("updateRow UPDATE: %q %v, %s",
 				sqlStmt, params, err),
 			logFrom, true)
@@ -118,15 +119,15 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	sqlStmt = fmt.Sprintf("INSERT INTO status (%s,`id`) VALUES (?,%s)",
 		columnsBuilder.String(), valuesPlaceholderBuilder.String())
 	// Log the SQL statement.
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
+	if logutil.Log.IsLevel("DEBUG") {
+		logutil.Log.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, params),
 			logFrom, true)
 	}
 
 	// Execute and log any errors.
 	if _, err := api.db.Exec(sqlStmt, params...); err != nil {
-		jLog.Error(
+		logutil.Log.Error(
 			fmt.Sprintf("updateRow INSERT: %q %v, %s",
 				sqlStmt, params, err),
 			logFrom, true)
@@ -138,15 +139,15 @@ func (api *api) deleteRow(serviceID string) {
 	// The SQL statement.
 	sqlStmt := "DELETE FROM status WHERE id = ?"
 	// Log the SQL statement.
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
+	if logutil.Log.IsLevel("DEBUG") {
+		logutil.Log.Debug(
 			fmt.Sprintf("%s, %v", sqlStmt, serviceID),
 			logFrom, true)
 	}
 
 	// Execute and log any errors.
 	if _, err := api.db.Exec(sqlStmt, serviceID); err != nil {
-		jLog.Error(
+		logutil.Log.Error(
 			fmt.Sprintf("deleteRow: %q with %q, %s",
 				sqlStmt, serviceID, err),
 			logFrom, true)

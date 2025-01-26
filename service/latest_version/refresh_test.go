@@ -26,14 +26,15 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestLookup_Refresh(t *testing.T) {
 	testURL := testLookup("url", false).(*web.Lookup)
-	testURL.Query(true, util.LogFrom{})
+	testURL.Query(true, logutil.LogFrom{})
 	testVersionURL := testURL.Status.LatestVersion()
 	testGitHub := testLookup("github", false).(*github.Lookup)
-	testGitHub.Query(true, util.LogFrom{})
+	testGitHub.Query(true, logutil.LogFrom{})
 	testVersionGitHub := testGitHub.Status.LatestVersion()
 
 	type args struct {

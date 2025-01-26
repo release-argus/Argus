@@ -27,6 +27,7 @@ import (
 
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Query queries the source,
@@ -34,7 +35,7 @@ import (
 //
 // Parameters:
 //   - metrics: if true, set Prometheus metrics based on the query.
-func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
+func (l *Lookup) Query(metrics bool, logFrom logutil.LogFrom) (bool, error) {
 	newVersion, err := l.query(logFrom, 0)
 
 	if metrics {
@@ -50,7 +51,7 @@ func (l *Lookup) Query(metrics bool, logFrom util.LogFrom) (bool, error) {
 // Parameters:
 //
 //	checkNumber: 0 for first check, 1 for second check (if the first check found a new version).
-func (l *Lookup) query(logFrom util.LogFrom, checkNumber int) (bool, error) {
+func (l *Lookup) query(logFrom logutil.LogFrom, checkNumber int) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -59,7 +60,7 @@ func (l *Lookup) query(logFrom util.LogFrom, checkNumber int) (bool, error) {
 	// Get the latest version, and its release date from the body.
 	version, releaseDate, err := l.getVersion(body, logFrom)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return false, err
 	}
 
@@ -89,7 +90,7 @@ func (l *Lookup) query(logFrom util.LogFrom, checkNumber int) (bool, error) {
 }
 
 // httpRequest makes a HTTP GET request to the URL of this Lookup, and returns the body retrieved.
-func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	req, err := l.createRequest(logFrom)
 	if err != nil {
 		return nil, err
@@ -104,11 +105,11 @@ func (l *Lookup) httpRequest(logFrom util.LogFrom) ([]byte, error) {
 }
 
 // createRequest returns a HTTP GET request to the URL of this Lookup.
-func (l *Lookup) createRequest(logFrom util.LogFrom) (*http.Request, error) {
+func (l *Lookup) createRequest(logFrom logutil.LogFrom) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, l.url(), nil)
 	if err != nil {
 		err = fmt.Errorf("failed creating http request for %q: %w", l.URL, err)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, err
 	}
 
@@ -129,12 +130,12 @@ func (l *Lookup) createRequest(logFrom util.LogFrom) (*http.Request, error) {
 }
 
 // getResponse will make the request, and return the response, response body, and any errors encountered.
-func (l *Lookup) getResponse(req *http.Request, logFrom util.LogFrom) (*http.Response, []byte, error) {
+func (l *Lookup) getResponse(req *http.Request, logFrom logutil.LogFrom) (*http.Response, []byte, error) {
 	// Make the request.
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, nil, err //nolint:wrapcheck
 	}
 
@@ -142,7 +143,7 @@ func (l *Lookup) getResponse(req *http.Request, logFrom util.LogFrom) (*http.Res
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
 	if err != nil {
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, nil, err //nolint:wrapcheck
 	}
 	return resp, body, nil
@@ -154,7 +155,7 @@ func (l *Lookup) getResponse(req *http.Request, logFrom util.LogFrom) (*http.Res
 //   - 304 Not Modified, it flips the tags flag, performs a query on the "/tags" endpoint, and returns that body.
 //   - 401 Unauthorized, 403 Forbidden, and 429 Too Many Requests, it logs the error, and returns a nil body.
 //   - unknown status code, it logs the error, and returns a nil body along with an error.
-func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom logutil.LogFrom) ([]byte, error) {
 	switch resp.StatusCode {
 	// 200 - Resource has changed.
 	case http.StatusOK:
@@ -179,7 +180,7 @@ func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom util.L
 
 	// Unknown status code.
 	err := fmt.Errorf("unknown status code %d\n%s", resp.StatusCode, string(body))
-	jLog.Error(err, logFrom, true)
+	logutil.Log.Error(err, logFrom, true)
 	return nil, err
 }
 
@@ -187,7 +188,7 @@ func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom util.L
 // and return any errors from the possible tag fallback request.
 //
 // 200 when the ETag changed.
-func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logutil.LogFrom) ([]byte, error) {
 	newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
 	l.data.SetETag(newETag)
 
@@ -201,7 +202,7 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom util.L
 		// Flip the fallback flag.
 		l.data.SetTagFallback()
 		if l.data.TagFallback() {
-			jLog.Verbose(
+			logutil.Log.Verbose(
 				fmt.Sprintf("/releases gave %s, trying /tags", body),
 				logFrom, true)
 			body, err := l.httpRequest(logFrom)
@@ -211,7 +212,7 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom util.L
 		// Has tags/releases.
 	} else {
 		msg := fmt.Sprintf("Potentially found new releases (new ETag %s)", newETag)
-		jLog.Verbose(msg, logFrom, true)
+		logutil.Log.Verbose(msg, logFrom, true)
 	}
 	return body, nil
 }
@@ -220,13 +221,13 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom util.L
 // and return any errors from the possible tag fallback request.
 //
 // 304 when the ETag is unchanged and the response body is empty.
-func (l *Lookup) handleStatusNotModified(logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleStatusNotModified(logFrom logutil.LogFrom) ([]byte, error) {
 	// Didn't find any releases before and nothing has changed?
 	if !l.data.hasReleases() {
 		// Flip the fallback flag for next time.
 		l.data.SetTagFallback()
 		if l.data.TagFallback() {
-			jLog.Verbose("no tags found on /releases, trying /tags", logFrom, true)
+			logutil.Log.Verbose("no tags found on /releases, trying /tags", logFrom, true)
 			body, err := l.httpRequest(logFrom)
 			return body, err
 		}
@@ -239,7 +240,7 @@ func (l *Lookup) handleStatusNotModified(logFrom util.LogFrom) ([]byte, error) {
 // handleStatusUnauthorized will handle a 401 status code response.
 //
 // 401 when the access token is invalid.
-func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom logutil.LogFrom) ([]byte, error) {
 	bodyStr := string(body)
 	var err error
 
@@ -250,7 +251,7 @@ func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom util.LogFrom) ([]
 		// Unknown error.
 		err = fmt.Errorf("unknown 401 response\n%s", bodyStr)
 	}
-	jLog.Error(err, logFrom, true)
+	logutil.Log.Error(err, logFrom, true)
 
 	return nil, err
 }
@@ -258,7 +259,7 @@ func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom util.LogFrom) ([]
 // handleStatusForbidden will handle a 403 status code response.
 //
 // 403 when the rate limit is exceeded.
-func (l *Lookup) handleStatusForbidden(body []byte, logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleStatusForbidden(body []byte, logFrom logutil.LogFrom) ([]byte, error) {
 	bodyStr := string(body)
 	var err error
 
@@ -266,17 +267,17 @@ func (l *Lookup) handleStatusForbidden(body []byte, logFrom util.LogFrom) ([]byt
 	// Check for rate limit.
 	case strings.Contains(bodyStr, "rate limit"):
 		err = errors.New("rate limit reached for GitHub")
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 
 		// Missing tag_name.
 	case !strings.Contains(bodyStr, `"tag_name"`):
 		err = fmt.Errorf("tag_name not found at %s\n%s", l.URL, bodyStr)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 
 		// Other.
 	default:
 		err = fmt.Errorf("unknown 403 response\n%s", bodyStr)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 	}
 
 	return nil, err
@@ -285,11 +286,11 @@ func (l *Lookup) handleStatusForbidden(body []byte, logFrom util.LogFrom) ([]byt
 // handleStatusTooManyRequests handles a 429 status code response.
 //
 // 429 when too many requests made within a short period.
-func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom util.LogFrom) ([]byte, error) {
+func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logutil.LogFrom) ([]byte, error) {
 	var message github_types.Message
 	if err := json.Unmarshal(body, &message); err != nil {
 		err = fmt.Errorf("unmarshal of GitHub API data failed\n%w", err)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		return nil, errors.New("too many requests made to GitHub")
 	}
 
@@ -298,7 +299,7 @@ func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom util.LogFrom) 
 
 // releaseMeetsRequirements verifies that the `release` meets the requirements of the Lookup
 // and returns the version, and its release date if it does.
-func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom util.LogFrom) (string, string, error) {
+func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom logutil.LogFrom) (string, string, error) {
 	version := release.TagName
 	if release.SemanticVersion != nil {
 		version = release.SemanticVersion.String()
@@ -309,7 +310,7 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 	if l.Require == nil {
 		// Verify that date is in RFC3339 format.
 		if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
-			jLog.Warn(
+			logutil.Log.Warn(
 				fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
 					releaseDate, version, l.GetServiceID(), err),
 				logFrom, true)
@@ -342,11 +343,11 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 		if strings.HasSuffix(err.Error(), "\n") {
 			err = errors.New(strings.TrimSuffix(err.Error(), "\n"))
 		}
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 		return "", "", err
 		// else if the tag does exist (and we did search for one).
 	} else if l.Require.Docker != nil {
-		jLog.Info(
+		logutil.Log.Info(
 			fmt.Sprintf(`found %s container "%s:%s"`,
 				l.Require.Docker.GetType(), l.Require.Docker.Image, l.Require.Docker.GetTag(version)),
 			logFrom, true)
@@ -354,7 +355,7 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 
 	// Verify date is in RFC3339 format.
 	if _, err := time.Parse(time.RFC3339, releaseDate); err != nil {
-		jLog.Warn(
+		logutil.Log.Warn(
 			fmt.Errorf("ignoring release date of %q for version %q on %q as it's not in RFC3339 format\n%w",
 				releaseDate, version, l.GetServiceID(), err),
 			logFrom, true)
@@ -366,7 +367,7 @@ func (l *Lookup) releaseMeetsRequirements(release github_types.Release, logFrom 
 
 // getVersion returns the version, and date of the matching asset/release from `body`
 // that matches the URLCommands, and Regex requirements.
-func (l *Lookup) getVersion(body []byte, logFrom util.LogFrom) (string, string, error) {
+func (l *Lookup) getVersion(body []byte, logFrom logutil.LogFrom) (string, string, error) {
 	// body length = 0 if GitHub ETag unchanged.
 	if len(body) != 0 {
 		if err := l.setReleases(body, logFrom); err != nil {
@@ -374,7 +375,7 @@ func (l *Lookup) getVersion(body []byte, logFrom util.LogFrom) (string, string, 
 		}
 	} else {
 		// Recheck this ETag's filteredReleases in case filters/releases changed.
-		jLog.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
+		logutil.Log.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
 	}
 	filteredReleases := l.filterGitHubReleases(logFrom)
 	if len(filteredReleases) == 0 {
@@ -395,7 +396,7 @@ func (l *Lookup) getVersion(body []byte, logFrom util.LogFrom) (string, string, 
 }
 
 // setReleases processes, and stores the provided GitHub releases data.
-func (l *Lookup) setReleases(body []byte, logFrom util.LogFrom) error {
+func (l *Lookup) setReleases(body []byte, logFrom logutil.LogFrom) error {
 	releases, err := l.checkGitHubReleasesBody(body, logFrom)
 	if err != nil {
 		return err
@@ -412,12 +413,12 @@ func (l *Lookup) handleNewVersion(
 	version,
 	releaseDate,
 	latestVersion string,
-	logFrom util.LogFrom,
+	logFrom logutil.LogFrom,
 ) (bool, error) {
 	// Verify that the version has changed. (GitHub may have just omitted the tag for some reason).
 	if checkNumber == 0 {
 		msg := fmt.Sprintf("Possibly found a new version (From %q to %q). Checking again", latestVersion, version)
-		jLog.Verbose(msg, logFrom, latestVersion != "")
+		logutil.Log.Verbose(msg, logFrom, latestVersion != "")
 		time.Sleep(time.Second)
 		return l.query(logFrom, 1)
 	}
@@ -426,9 +427,9 @@ func (l *Lookup) handleNewVersion(
 }
 
 // handleNoVersionChange handles the case of no version(s) being found.
-func (l *Lookup) handleNoVersionChange(checkNumber int, version string, logFrom util.LogFrom) {
+func (l *Lookup) handleNoVersionChange(checkNumber int, version string, logFrom logutil.LogFrom) {
 	if checkNumber == 1 {
-		jLog.Verbose(
+		logutil.Log.Verbose(
 			fmt.Sprintf("Staying on %q as that's the latest version in the second check", version),
 			logFrom, true)
 	}

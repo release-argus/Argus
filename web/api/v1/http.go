@@ -22,11 +22,13 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/util"
-	apitype "github.com/release-argus/Argus/web/api/types"
-	"github.com/release-argus/Argus/web/ui"
 	"github.com/vearutop/statigz"
 	"github.com/vearutop/statigz/brotli"
+
+	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
+	apitype "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/web/ui"
 )
 
 // SetupRoutesAPI will set up the HTTP API routes.
@@ -35,7 +37,7 @@ func (api *API) SetupRoutesAPI() {
 	v1Router := api.Router.PathPrefix("/api/v1").Subrouter()
 
 	// Only if VERBOSE or DEBUG.
-	if jLog.Level >= 3 {
+	if logutil.Log.Level >= 3 {
 		// Apply loggerMiddleware to only the /api/v1 routes.
 		v1Router.Use(loggerMiddleware)
 	}
@@ -181,7 +183,7 @@ func (api *API) SetupRoutesFavicon() {
 
 // httpVersion serves Argus version JSON over HTTP.
 func (api *API) httpVersion(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpVersion", Secondary: getIP(r)}
 
 	api.writeJSON(w,
 		apitype.VersionAPI{

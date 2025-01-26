@@ -20,19 +20,10 @@ import (
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/notify/shoutrrr"
-	deployedver "github.com/release-argus/Argus/service/deployed_version"
-	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 )
-
-// LogInit for this package.
-func LogInit(log *util.JLog) {
-	jLog = log
-	deployedver.LogInit(log)
-	latestver.LogInit(log)
-}
 
 // ServiceInfo returns info about the service.
 func (s *Service) ServiceInfo() util.ServiceInfo {

@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	github_types "github.com/release-argus/Argus/service/latest_version/types/github/api_type"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var (
@@ -45,7 +46,7 @@ func SetEmptyListETag(accessToken string) {
 	lookup.data.SetTagFallback()
 	//#nosec G104 -- Disregard.
 	//nolint:errcheck // ^
-	lookup.httpRequest(util.LogFrom{Primary: "SetEmptyListETag"})
+	lookup.httpRequest(logutil.LogFrom{Primary: "SetEmptyListETag"})
 
 	setEmptyListETag(lookup.data.ETag())
 }

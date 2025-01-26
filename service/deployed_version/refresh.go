@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Refresh creates a new Lookup instance (if overrides are provided), and queries the Lookup for the deployed version
@@ -33,7 +34,7 @@ func (l *Lookup) Refresh(
 	if l == nil {
 		return "", fmt.Errorf("lookup is nil")
 	}
-	logFrom := util.LogFrom{Primary: "deployed_version/refresh", Secondary: *serviceID}
+	logFrom := logutil.LogFrom{Primary: "deployed_version/refresh", Secondary: *serviceID}
 
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (
@@ -61,8 +62,8 @@ func (l *Lookup) Refresh(
 	}
 
 	// Log the lookup in use.
-	if jLog.IsLevel("DEBUG") {
-		jLog.Debug(
+	if logutil.Log.IsLevel("DEBUG") {
+		logutil.Log.Debug(
 			fmt.Sprintf("Refreshing with:\n%q", lookup.String("")),
 			logFrom, true)
 	}

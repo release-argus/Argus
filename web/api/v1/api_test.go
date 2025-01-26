@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestNewAPI(t *testing.T) {
@@ -80,7 +81,7 @@ func TestNewAPI(t *testing.T) {
 				tc.routePrefix = strings.TrimSuffix(tc.routePrefix, "/")
 
 				// WHEN a new API is created
-				api := NewAPI(cfg, nil)
+				api := NewAPI(cfg)
 
 				// THEN the healthcheck endpoint is accessible
 				req, _ := http.NewRequest("GET", tc.routePrefix+"/api/v1/healthcheck", nil)
@@ -176,7 +177,7 @@ func TestWriteJSON(t *testing.T) {
 			api := &API{}
 
 			// WHEN writeJSON is called with this input.
-			api.writeJSON(w, tc.input, util.LogFrom{})
+			api.writeJSON(w, tc.input, logutil.LogFrom{})
 
 			// THEN the status code is as expected.
 			if w.Code != tc.statusCode {

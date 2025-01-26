@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Lookup is the base struct for a Lookup.
@@ -154,6 +155,6 @@ func (l *Lookup) Inherit(fromLookup Interface) {
 }
 
 // Query will query the service for the latest version.
-func (l *Lookup) Query(_ bool, _ util.LogFrom) (bool, error) {
+func (l *Lookup) Query(_ bool, _ logutil.LogFrom) (bool, error) {
 	return false, errors.New("not implemented")
 }

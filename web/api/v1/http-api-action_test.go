@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"

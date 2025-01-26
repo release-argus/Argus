@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -412,7 +413,7 @@ func TestFindShoutrrr(t *testing.T) {
 			}
 
 			// WHEN findShoutrrr is called with the test Config
-			got := findShoutrrr(tc.flag, tc.cfg, jLog, util.LogFrom{})
+			got := findShoutrrr(tc.flag, tc.cfg, logutil.LogFrom{})
 
 			// THEN we get the expected stdout
 			stdout := releaseStdout()
@@ -597,7 +598,7 @@ func TestNotifyTest(t *testing.T) {
 			cfg := config.Config{
 				Service: tc.slice,
 				Notify:  tc.rootSlice}
-			NotifyTest(&tc.flag, &cfg, jLog)
+			NotifyTest(&tc.flag, &cfg)
 
 			// THEN we get the expected stdout
 			stdout := releaseStdout()

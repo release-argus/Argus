@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -70,9 +71,9 @@ func (d *Defaults) MapEnvToStruct() {
 	}
 
 	if err != nil {
-		jLog.Fatal(
+		logutil.Log.Fatal(
 			"One or more 'ARGUS_' environment variables are invalid:\n"+err.Error(),
-			util.LogFrom{}, true)
+			logutil.LogFrom{}, true)
 	}
 }
 

@@ -492,3 +492,53 @@ func TestGetIndentation(t *testing.T) {
 		})
 	}
 }
+
+func TestTruncateMessage(t *testing.T) {
+	// GIVEN a message and a maxLength to adhere to
+	tests := map[string]struct {
+		msg       string
+		maxLength int
+		want      string
+	}{
+		"message shorter than maxLength": {
+			msg:       "short message",
+			maxLength: 20,
+			want:      "short message",
+		},
+		"message equal to maxLength": {
+			msg:       "exact length msg",
+			maxLength: 16,
+			want:      "exact length msg",
+		},
+		"message longer than maxLength": {
+			msg:       "is this message too long",
+			maxLength: 10,
+			want:      "is this me...",
+		},
+		"empty message": {
+			msg:       "",
+			maxLength: 10,
+			want:      "",
+		},
+		"maxLength zero": {
+			msg:       "message",
+			maxLength: 0,
+			want:      "...",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN TruncateMessage is called
+			got := TruncateMessage(tc.msg, tc.maxLength)
+
+			// THEN the message is truncated only if it exceeds maxLength
+			if got != tc.want {
+				t.Errorf("truncateMessage(%q, %d) = %q; want %q",
+					tc.msg, tc.maxLength, got, tc.want)
+			}
+		})
+	}
+}

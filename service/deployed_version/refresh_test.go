@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestLookup_Refresh(t *testing.T) {
 	testL := testLookup()
-	testVersion, _ := testL.Query(true, util.LogFrom{Primary: "TestLookup_Refresh"})
+	testVersion, _ := testL.Query(true, logutil.LogFrom{Primary: "TestLookup_Refresh"})
 	if testVersion == "" {
 		t.Fatalf("test version is empty")
 	}

@@ -21,8 +21,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
+
+	"github.com/release-argus/Argus/util"
 )
 
 // GetOrder of the Services from `c.File`.

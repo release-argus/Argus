@@ -43,7 +43,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -52,13 +52,12 @@ var port string
 
 func TestMain(m *testing.M) {
 	// Initialise jLog.
-	jLog = util.NewJLog("DEBUG", false)
-	jLog.Testing = true
-	// v1.LogInit(jLog)
+	logutil.Init("DEBUG", false)
+	logutil.Log.Testing = true
 
 	// GIVEN a valid config with a Service.
 	file := "TestWebMain.yml"
-	mainCfg = testConfig(file, jLog, nil)
+	mainCfg = testConfig(file, nil)
 	os.Remove(file)
 	defer os.Remove(mainCfg.Settings.Data.DatabaseFile)
 	port = mainCfg.Settings.Web.ListenPort
@@ -66,7 +65,7 @@ func TestMain(m *testing.M) {
 
 	// WHEN the Router is fetched for this Config.
 	router = newWebUI(mainCfg)
-	go Run(mainCfg, jLog)
+	go Run(mainCfg)
 	time.Sleep(250 * time.Millisecond)
 
 	// THEN Web UI is accessible for the tests.
@@ -84,14 +83,14 @@ func getFreePort() (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func testConfig(path string, jLog *util.JLog, t *testing.T) (cfg *config.Config) {
+func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	testYAML_Argus(path, t)
 	cfg = &config.Config{}
 
 	// Settings.Log
 	cfg.Settings.Log.Level = "DEBUG"
 
-	cfg.Load(path, &map[string]bool{}, jLog)
+	cfg.Load(path, &map[string]bool{})
 	if t != nil {
 		t.Cleanup(func() { os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}

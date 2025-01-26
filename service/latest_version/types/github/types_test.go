@@ -20,13 +20,14 @@ package github
 import (
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
 )
 
 func TestLookup_String(t *testing.T) {

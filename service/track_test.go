@@ -23,20 +23,22 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"gopkg.in/yaml.v3"
+
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 	webhook_test "github.com/release-argus/Argus/webhook/test"
-	"gopkg.in/yaml.v3"
 )
 
 func TestService_Track(t *testing.T) {
 	testURLService := testService(t, "TestService_Track", "url")
-	testURLService.LatestVersion.Query(false, util.LogFrom{})
+	testURLService.LatestVersion.Query(false, logutil.LogFrom{})
 	testURLLatestVersion := testURLService.Status.LatestVersion()
 
 	type overrides struct {

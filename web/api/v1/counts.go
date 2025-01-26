@@ -20,7 +20,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	promclient "github.com/prometheus/client_model/go"
-	"github.com/release-argus/Argus/util"
+
+	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/web/metric"
 )
 
@@ -31,7 +32,7 @@ type CountsResponse struct {
 }
 
 func (api *API) httpCounts(w http.ResponseWriter, r *http.Request) {
-	logFrom := util.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
+	logFrom := logutil.LogFrom{Primary: "httpServiceSummary", Secondary: getIP(r)}
 
 	resp := CountsResponse{}
 

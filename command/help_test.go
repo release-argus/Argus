@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,13 @@ import (
 
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestMain(m *testing.M) {
 	// initialise jLog
-	mainJLog := util.NewJLog("DEBUG", false)
-	mainJLog.Testing = true
-	LogInit(mainJLog)
+	logutil.Init("DEBUG", false)
+	logutil.Log.Testing = true
 
 	// run other tests
 	exitCode := m.Run()

@@ -22,8 +22,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+
 	"github.com/release-argus/Argus/config"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -36,9 +37,7 @@ type API struct {
 }
 
 // NewAPI will create a new API with the provided config.
-func NewAPI(cfg *config.Config, log *util.JLog) *API {
-	LogInit(log)
-
+func NewAPI(cfg *config.Config) *API {
 	baseRouter := mux.NewRouter().StrictSlash(true)
 	routePrefix := cfg.Settings.WebRoutePrefix()
 
@@ -69,14 +68,14 @@ func NewAPI(cfg *config.Config, log *util.JLog) *API {
 	return api
 }
 
-func (api *API) writeJSON(w http.ResponseWriter, v interface{}, logFrom util.LogFrom) {
+func (api *API) writeJSON(w http.ResponseWriter, v interface{}, logFrom logutil.LogFrom) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		// Encoding error, 500.
 		w.WriteHeader(http.StatusInternalServerError)
-		jLog.Error(err, logFrom, true)
+		logutil.Log.Error(err, logFrom, true)
 		api.writeJSON(w,
 			apitype.Response{
 				Error: err.Error(),

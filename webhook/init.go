@@ -18,14 +18,8 @@ package webhook
 import (
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 )
-
-// LogInit for this package.
-func LogInit(log *util.JLog) {
-	jLog = log
-}
 
 // Init the Slice metrics and hand out the defaults/notifiers.
 func (s *Slice) Init(

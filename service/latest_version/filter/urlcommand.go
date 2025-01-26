@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/release-argus/Argus/util"
 	"gopkg.in/yaml.v3"
+
+	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 var urlCommandTypes = []string{"regex", "replace", "split"}
@@ -119,7 +121,7 @@ func (c *URLCommand) String() string {
 }
 
 // GetVersions from `text` using the URLCommand(s) in this URLCommandSlice.
-func (s *URLCommandSlice) GetVersions(text string, logFrom util.LogFrom) ([]string, error) {
+func (s *URLCommandSlice) GetVersions(text string, logFrom logutil.LogFrom) ([]string, error) {
 	// No URLCommands to run, so treat the text as a single version.
 	if len(*s) == 0 {
 		if text == "" {
@@ -131,12 +133,12 @@ func (s *URLCommandSlice) GetVersions(text string, logFrom util.LogFrom) ([]stri
 }
 
 // Run all of the URLCommand(s) in this URLCommandSlice on `text`.
-func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) ([]string, error) {
+func (s *URLCommandSlice) Run(text string, logFrom logutil.LogFrom) ([]string, error) {
 	if s == nil {
 		return nil, nil
 	}
 
-	urlCommandLogFrom := util.LogFrom{Primary: logFrom.Primary, Secondary: "url_commands"}
+	urlCommandLogFrom := logutil.LogFrom{Primary: logFrom.Primary, Secondary: "url_commands"}
 	versions := []string{text}
 	for _, urlCommand := range *s {
 		if err := urlCommand.run(&versions, urlCommandLogFrom); err != nil {
@@ -147,13 +149,13 @@ func (s *URLCommandSlice) Run(text string, logFrom util.LogFrom) ([]string, erro
 }
 
 // run this URLCommand on `text`.
-func (c *URLCommand) run(versions *[]string, logFrom util.LogFrom) error {
+func (c *URLCommand) run(versions *[]string, logFrom logutil.LogFrom) error {
 	var err error
 
 	for i, version := range *versions {
 		// Iterate through the commands to filter the text.
-		if jLog.IsLevel("DEBUG") {
-			jLog.Debug(
+		if logutil.Log.IsLevel("DEBUG") {
+			logutil.Log.Debug(
 				fmt.Sprintf("Looking through:\n%q", version),
 				logFrom, true)
 		}
@@ -177,9 +179,9 @@ func (c *URLCommand) run(versions *[]string, logFrom util.LogFrom) error {
 			return err
 		}
 
-		if jLog.IsLevel("DEBUG") {
+		if logutil.Log.IsLevel("DEBUG") {
 			msg = fmt.Sprintf("%s\nResolved to %q", msg, version)
-			jLog.Debug(msg, logFrom, true)
+			logutil.Log.Debug(msg, logFrom, true)
 		}
 	}
 	return nil
@@ -191,7 +193,7 @@ func (c *URLCommand) run(versions *[]string, logFrom util.LogFrom) error {
 //   - versionIndex: The index of the version in the `versions` slice to validate.
 //   - versions: A pointer to the slice of version string(s) to regex.
 //   - logFrom: Used for logging the source of the operation.
-func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom util.LogFrom) error {
+func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	re := regexp.MustCompile(c.Regex)
 
 	version := (*versions)[versionIndex]
@@ -200,7 +202,7 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom util.Lo
 	if len(matches) == 0 {
 		err := fmt.Errorf("%s %q didn't return any matches on %q",
 			c.Type, c.Regex, util.TruncateMessage(version, 50))
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 		return err
 	}
 
@@ -216,7 +218,7 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom util.Lo
 		if (len(matches) - index) < 1 {
 			err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
 				c.Type, c.Regex, len(matches), version, index+1)
-			jLog.Warn(err, logFrom, true)
+			logutil.Log.Warn(err, logFrom, true)
 			return err
 		}
 
@@ -247,7 +249,7 @@ func (c *URLCommand) regex(versionIndex int, versions *[]string, logFrom util.Lo
 //   - versionIndex: The index of the version in the `versions` slice to process.
 //   - versions: A pointer to the slice of version string(s) to modify.
 //   - logFrom: Used for logging the source of the operation.
-func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom util.LogFrom) error {
+func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom logutil.LogFrom) error {
 	texts, err := c.splitAllMatches((*versions)[versionIndex], logFrom)
 	if err != nil {
 		return err
@@ -268,7 +270,7 @@ func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom util.Lo
 	if (len(texts) - index) < 1 {
 		err := fmt.Errorf("%s (%s) returned %d elements on %q, but the index wants element number %d",
 			c.Type, c.Text, len(texts), (*versions)[versionIndex], index+1)
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 
 		return err
 	}
@@ -278,12 +280,12 @@ func (c *URLCommand) split(versionIndex int, versions *[]string, logFrom util.Lo
 }
 
 // splitAllMatches will split `text` on the URLCommands text, and return all matches.
-func (c *URLCommand) splitAllMatches(text string, logFrom util.LogFrom) ([]string, error) {
+func (c *URLCommand) splitAllMatches(text string, logFrom logutil.LogFrom) ([]string, error) {
 	texts := strings.Split(text, c.Text)
 	if len(texts) == 1 {
 		err := fmt.Errorf("%s didn't find any %q to split on",
 			c.Type, c.Text)
-		jLog.Warn(err, logFrom, true)
+		logutil.Log.Warn(err, logFrom, true)
 
 		return nil, err
 	}

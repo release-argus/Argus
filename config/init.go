@@ -19,26 +19,18 @@ import (
 	"fmt"
 	"os"
 
+	"gopkg.in/yaml.v3"
+
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
-	"gopkg.in/yaml.v3"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
-// LogInit for Argus.
-func LogInit(log *util.JLog) {
-	if jLog != nil {
-		return
-	}
-
-	jLog = log
-	service.LogInit(jLog)
-}
-
 // Init will hand out the appropriate Defaults.X and HardDefaults.X pointer(s).
-func (c *Config) Init(setLog bool) {
+func (c *Config) Init() {
 	c.OrderMutex.RLock()
 	defer c.OrderMutex.RUnlock()
 
@@ -57,17 +49,14 @@ func (c *Config) Init(setLog bool) {
 
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
-	if setLog {
-		jLog.SetTimestamps(*c.Settings.LogTimestamps())
-		jLog.SetLevel(c.Settings.LogLevel())
-	}
+	logutil.Init(c.Settings.LogLevel(), *c.Settings.LogTimestamps())
 
 	for i, name := range c.Order {
 		service := c.Service[name]
-		jLog.Debug(
+		logutil.Log.Debug(
 			fmt.Sprintf("%d/%d %s Init",
 				i+1, len(c.Service), service.Name),
-			util.LogFrom{}, true)
+			logutil.LogFrom{}, true)
 		service.Init(
 			&c.Defaults.Service, &c.HardDefaults.Service,
 			&c.Notify, &c.Defaults.Notify, &c.HardDefaults.Notify,
@@ -76,26 +65,23 @@ func (c *Config) Init(setLog bool) {
 }
 
 // Load `file` as Config.
-func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
+func (c *Config) Load(file string, flagset *map[string]bool) {
 	c.File = file
 	// Give the log to the other packages.
-	if log != nil {
-		LogInit(log)
-	}
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user.
 	data, err := os.ReadFile(file)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("Error reading %q\n%s",
 			file, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 
 	err = yaml.Unmarshal(data, c)
-	jLog.Fatal(
+	logutil.Log.Fatal(
 		fmt.Sprintf("Unmarshal of %q failed\n%s",
 			file, err),
-		util.LogFrom{}, err != nil)
+		logutil.LogFrom{}, err != nil)
 
 	c.GetOrder(data)
 
@@ -127,6 +113,6 @@ func (c *Config) Load(file string, flagset *map[string]bool, log *util.JLog) {
 	// SaveHandler that listens for calls to save config changes.
 	go c.SaveHandler()
 
-	c.Init(log != nil)
+	c.Init()
 	c.CheckValues()
 }

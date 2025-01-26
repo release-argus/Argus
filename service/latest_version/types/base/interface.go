@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	"github.com/release-argus/Argus/util"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
 // Lookup provides methods for retrieving the latest version of a service.
@@ -36,7 +36,7 @@ type Interface interface {
 	CheckValues(errPrefix string) (errs error)
 
 	// Query the Lookup for the latest version.
-	Query(metrics bool, logFrom util.LogFrom) (newVersion bool, err error)
+	Query(metrics bool, logFrom logutil.LogFrom) (newVersion bool, err error)
 
 	// Inherit state values from `fromLookup` if the values should query the same data.
 	Inherit(fromLookup Interface)
