@@ -18,6 +18,7 @@ package v1
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -752,7 +753,7 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 				ServiceID: test.StringPtr("service-id"),
 				WebURL:    test.StringPtr("https://release-argus.io")},
 			want: &apitype.DeployedVersionLookup{
-				Method:            "POST",
+				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(true),
 				BasicAuth: &apitype.BasicAuth{

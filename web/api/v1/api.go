@@ -50,7 +50,7 @@ func NewAPI(cfg *config.Config) *API {
 	// In cases where routePrefix equals "/", trim to prevent "//".
 	routePrefix = strings.TrimSuffix(routePrefix, "/")
 	// On baseRouter as Router may have basicAuth.
-	baseRouter.Path(fmt.Sprintf("%s/api/v1/healthcheck", routePrefix)).
+	baseRouter.Path(routePrefix + "/api/v1/healthcheck").
 		Handler(loggerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Connection", "close")
 			fmt.Fprintf(w, "Alive")

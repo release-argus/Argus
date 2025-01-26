@@ -99,7 +99,7 @@ func FromPayload(
 		if err != nil {
 			logutil.Log.Error(err, logFrom, true)
 			logutil.Log.Verbose(
-				fmt.Sprintf("Payload: %s", buf.String()),
+				"Payload: "+buf.String(),
 				logFrom, true)
 			return nil, err //nolint:wrapcheck
 		}

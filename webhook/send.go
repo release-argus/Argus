@@ -113,7 +113,7 @@ func (w *WebHook) Send(serviceInfo util.ServiceInfo, useDelay bool) error {
 func (w *WebHook) try(logFrom logutil.LogFrom) error {
 	req := w.BuildRequest()
 	if req == nil {
-		err := fmt.Errorf("failed to get *http.request for WebHook")
+		err := errors.New("failed to get *http.request for WebHook")
 		logutil.Log.Error(err, logFrom, true)
 		return err
 	}
@@ -150,7 +150,7 @@ func (w *WebHook) try(logFrom logutil.LogFrom) error {
 
 	// FAIL!
 	// Pretty desiredStatusCode.
-	prettyStatusCode := fmt.Sprint(desiredStatusCode)
+	prettyStatusCode := strconv.FormatUint(uint64(desiredStatusCode), 10)
 	if prettyStatusCode == "0" {
 		prettyStatusCode = "2XX"
 	}

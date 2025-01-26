@@ -17,7 +17,6 @@ package v1
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	logutil "github.com/release-argus/Argus/util/log"
@@ -73,7 +72,7 @@ func (h *Hub) Run() {
 			for n != 0 {
 				if logutil.Log.IsLevel("DEBUG") {
 					logutil.Log.Debug(
-						fmt.Sprintf("Broadcast %s", string(message)),
+						"Broadcast "+string(message),
 						logutil.LogFrom{Primary: "WebSocket"},
 						len(h.clients) > 0)
 				}

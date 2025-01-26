@@ -109,7 +109,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 
 			// WHEN a HTTP request is made to this router
 			client := http.Client{}
-			req, err := http.NewRequest("GET", ts.URL+"/test", nil)
+			req, err := http.NewRequest(http.MethodGet, ts.URL+"/test", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -172,7 +172,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router (apple-touch-icon.png)
-			req, err := http.NewRequest("GET", ts.URL+"/apple-touch-icon.png", nil)
+			req, err := http.NewRequest(http.MethodGet, ts.URL+"/apple-touch-icon.png", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -196,7 +196,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			}
 
 			// WHEN a HTTP request is made to this router (favicon.svg)
-			req, err = http.NewRequest("GET", ts.URL+"/favicon.svg", nil)
+			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -537,7 +537,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 			client := http.Client{}
 
 			// WHEN a HTTP request is made to this router
-			req, err := http.NewRequest("GET", ts.URL+tc.route, nil)
+			req, err := http.NewRequest(http.MethodGet, ts.URL+tc.route, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

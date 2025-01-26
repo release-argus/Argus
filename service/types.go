@@ -122,7 +122,7 @@ type Service struct {
 }
 
 // MarshalName returns whether the Name should be marshaled.
-// (explicitly set in the config)
+// (explicitly set in the config).
 func (s *Service) MarshalName() bool {
 	return s.marshalName
 }

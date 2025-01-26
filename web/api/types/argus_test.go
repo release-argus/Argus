@@ -18,6 +18,7 @@ package types
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -1234,7 +1235,7 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 		},
 		"all fields": {
 			dvl: &DeployedVersionLookup{
-				Method:            "POST",
+				Method:            http.MethodPost,
 				URL:               "https://release-argus.io",
 				AllowInvalidCerts: test.BoolPtr(false),
 				BasicAuth: &BasicAuth{

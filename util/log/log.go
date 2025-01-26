@@ -113,14 +113,12 @@ func (lf LogFrom) String() string {
 				lf.Primary, lf.Secondary)
 		}
 		// Just Primary.
-		return fmt.Sprintf("%s, ",
-			lf.Primary)
+		return lf.Primary + ", "
 	}
 
 	// Just Secondary.
 	if lf.Secondary != "" {
-		return fmt.Sprintf("%s, ",
-			lf.Secondary)
+		return lf.Secondary + ", "
 	}
 
 	// Neither Primary nor Secondary.
@@ -153,7 +151,7 @@ func (l *JLog) Fatal(msg interface{}, from LogFrom, otherCondition bool) {
 
 // Error log the msg.
 //
-// (if `otherCondition` true)
+// (if `otherCondition` true).
 func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
 	if !otherCondition {
 		return
@@ -167,7 +165,7 @@ func (l *JLog) Error(msg interface{}, from LogFrom, otherCondition bool) {
 
 // Warn log msg if l.Level > 0 (WARNING, INFO, VERBOSE or DEBUG).
 //
-// (if otherCondition true)
+// (if otherCondition true).
 func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level == 0 || !otherCondition {
 		return
@@ -181,7 +179,7 @@ func (l *JLog) Warn(msg interface{}, from LogFrom, otherCondition bool) {
 
 // Info log msg if l.Level > 1 (INFO, VERBOSE or DEBUG).
 //
-// (if otherCondition true)
+// (if otherCondition true).
 func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level < 2 || !otherCondition {
 		return
@@ -195,7 +193,7 @@ func (l *JLog) Info(msg interface{}, from LogFrom, otherCondition bool) {
 
 // Verbose log msg if l.Level > 2 (VERBOSE or DEBUG).
 //
-// (if otherCondition true)
+// (if otherCondition true).
 func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level < 3 || !otherCondition {
 		return
@@ -210,7 +208,7 @@ func (l *JLog) Verbose(msg interface{}, from LogFrom, otherCondition bool) {
 
 // Debug log msg if l.Level 4 (DEBUG).
 //
-// (if otherCondition true)
+// (if otherCondition true).
 func (l *JLog) Debug(msg interface{}, from LogFrom, otherCondition bool) {
 	if l.Level != 4 || !otherCondition {
 		return

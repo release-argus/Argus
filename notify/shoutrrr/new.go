@@ -16,6 +16,7 @@
 package shoutrrr
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/release-argus/Argus/notify/shoutrrr/types"
@@ -50,7 +51,7 @@ func FromPayload(
 ) (*Shoutrrr, string, error) {
 	// No `name` or `name_previous`.
 	if payload.NamePrevious == "" && payload.Name == "" {
-		return nil, "", fmt.Errorf("name and/or name_previous are required")
+		return nil, "", errors.New("name and/or name_previous are required")
 	}
 
 	name := util.FirstNonDefault(payload.Name, payload.NamePrevious)

@@ -120,7 +120,6 @@ func (c *Config) Save() {
 		if indents == 1 &&
 			strings.HasSuffix(line, ":") &&
 			parentKey[0] == "service" {
-
 			// First service will be on 1 because we remove items and decrement
 			// currentOrderIndexEnd[currentServiceNumber]. So we want to know when the service
 			// has started so that the decrements are direct to the service.
@@ -278,7 +277,7 @@ func (c *Config) Save() {
 			c.File, err),
 		logutil.LogFrom{}, err != nil)
 	logutil.Log.Info(
-		fmt.Sprintf("Saved service updates to %s", c.File),
+		"Saved service updates to "+c.File,
 		logutil.LogFrom{}, true)
 }
 

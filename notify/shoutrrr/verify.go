@@ -24,6 +24,7 @@ import (
 	"time"
 
 	goshoutrrr "github.com/containrrr/shoutrrr"
+
 	"github.com/release-argus/Argus/util"
 )
 

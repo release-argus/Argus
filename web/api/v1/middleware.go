@@ -70,6 +70,5 @@ func loggerMiddleware(next http.Handler) http.Handler {
 
 		// Process request.
 		next.ServeHTTP(w, r)
-
 	})
 }

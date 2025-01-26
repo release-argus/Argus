@@ -43,10 +43,10 @@ func SetGitHubHeaders(req *http.Request, payload []byte, secret string) {
 	// X-Hub-Signature-256.
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write(payload)
-	req.Header.Set("X-Hub-Signature-256", fmt.Sprintf("sha256=%s", hex.EncodeToString(hash.Sum(nil))))
+	req.Header.Set("X-Hub-Signature-256", "sha256="+hex.EncodeToString(hash.Sum(nil)))
 
 	// X-Hub-Signature.
 	hash = hmac.New(sha1.New, []byte(secret))
 	hash.Write(payload)
-	req.Header.Set("X-Hub-Signature", fmt.Sprintf("sha1=%s", hex.EncodeToString(hash.Sum(nil))))
+	req.Header.Set("X-Hub-Signature", "sha1="+hex.EncodeToString(hash.Sum(nil)))
 }

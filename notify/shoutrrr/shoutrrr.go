@@ -182,8 +182,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 	case "googlechat":
 		url = s.GetURLField("raw")
 		// googlechat://url
-		url = fmt.Sprintf("googlechat://%s",
-			url)
+		url = "googlechat://" + url
 	case "ifttt":
 		// ifttt://webhookid/?events=event1,event2
 		url = fmt.Sprintf("ifttt://%s/?events=%s",
@@ -448,7 +447,7 @@ func (s *Shoutrrr) send(
 		func() error {
 			err := sender.Send(message, params)
 			if failed := s.parseSend(err, combinedErrs, serviceName, logFrom); failed {
-				return fmt.Errorf("send failed")
+				return errors.New("send failed")
 			}
 			return nil
 		},

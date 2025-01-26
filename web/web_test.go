@@ -32,15 +32,15 @@ import (
 var router *mux.Router
 
 func TestMainWithRoutePrefix(t *testing.T) {
-	// GIVEN a valid config with a Service
+	// GIVEN a valid config with a Service.
 	cfg := testConfig("TestMainWithRoutePrefix.yml", t)
 	cfg.Settings.Web.RoutePrefix = "/test"
 
-	// WHEN the Web UI is started with this Config
+	// WHEN the Web UI is started with this Config.
 	go Run(cfg)
 	time.Sleep(500 * time.Millisecond)
 
-	// THEN Web UI is accessible
+	// THEN Web UI is accessible.
 	url := fmt.Sprintf("http://localhost:%s%s/metrics",
 		cfg.Settings.Web.ListenPort, cfg.Settings.Web.RoutePrefix)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -56,7 +56,7 @@ func TestMainWithRoutePrefix(t *testing.T) {
 }
 
 func TestWebAccessible(t *testing.T) {
-	// GIVEN we have the Web UI Router from TestMain()
+	// GIVEN we have the Web UI Router from TestMain(),
 	tests := map[string]struct {
 		path      string
 		bodyRegex string
@@ -79,12 +79,12 @@ func TestWebAccessible(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we make a request to path
-			req, _ := http.NewRequest("GET", tc.path, nil)
+			// WHEN we make a request to path.
+			req, _ := http.NewRequest(http.MethodGet, tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
-			// THEN we get a Status OK
+			// THEN we get a Status OK.
 			if response.Code != http.StatusOK {
 				t.Errorf("Expected a 200, got %d",
 					response.Code)
@@ -101,7 +101,7 @@ func TestWebAccessible(t *testing.T) {
 }
 
 func TestAccessibleHTTPS(t *testing.T) {
-	// GIVEN a bunch of URLs to test and the webserver is running with HTTPS
+	// GIVEN a bunch of URLs to test and the webserver is running with HTTPS.
 	tests := map[string]struct {
 		path      string
 		bodyRegex string
@@ -137,12 +137,12 @@ func TestAccessibleHTTPS(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN we make a HTTPS request to path
-			req, _ := http.NewRequest("GET", address+tc.path, nil)
+			// WHEN we make a HTTPS request to path.
+			req, _ := http.NewRequest(http.MethodGet, address+tc.path, nil)
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
-			// THEN we get a Status OK
+			// THEN we get a Status OK.
 			if response.Code != http.StatusOK {
 				t.Errorf("Expected a 200, got %d",
 					response.Code)

@@ -17,6 +17,7 @@ package deployedver
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -213,7 +214,7 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 	if err != nil {
 		// Don't crash on invalid certs.
 		if strings.Contains(err.Error(), "x509") {
-			err = fmt.Errorf("x509 (certificate invalid)")
+			err = errors.New("x509 (certificate invalid)")
 			logutil.Log.Warn(err, logFrom, true)
 			return nil, err
 		}

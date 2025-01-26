@@ -17,6 +17,7 @@
 package deployedver
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"valid service": {
 			errRegex: `^$`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "https://example.com",
 			regex:    `[0-9.]+`,
 			defaults: &Defaults{},
@@ -57,7 +58,7 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"method - valid": {
 			errRegex: `^$`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "https://example.com",
 		},
 		"method - case insensitive": {
@@ -67,38 +68,38 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"url - empty string": {
 			errRegex: `url: <required>`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "",
 			defaults: &Defaults{},
 		},
 		"body - removed for GET": {
 			errRegex: `^$`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "https://example.com",
 			body:     "foo",
 			defaults: &Defaults{},
 		},
 		"body - not removed for POST": {
 			errRegex: `^$`,
-			method:   "POST",
+			method:   http.MethodPost,
 			url:      "https://example.com",
 			body:     "foo",
 			defaults: &Defaults{},
 		},
 		"json - invalid, string in square brackets": {
 			errRegex: `json: .* <invalid>`,
-			method:   "GET",
+			method:   http.MethodGet,
 			json:     "foo[bar]",
 			defaults: &Defaults{},
 		},
 		"regex - invalid": {
 			errRegex: `regex: .* <invalid>`,
-			method:   "GET",
+			method:   http.MethodGet,
 			regex:    `[0-`,
 			defaults: &Defaults{},
 		},
 		"regexTemplate - with no regex": {
-			method:        "GET",
+			method:        http.MethodGet,
 			url:           "https://example.com",
 			errRegex:      `^$`,
 			regexTemplate: "$1.$2.$3",
@@ -106,14 +107,14 @@ func TestLookup_CheckValues(t *testing.T) {
 		},
 		"all errs": {
 			errRegex: `url: <required>`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "",
 			regex:    `[0-`,
 			defaults: &Defaults{},
 		},
 		"no url doesn't fail for Lookup Defaults": {
 			errRegex: `^$`,
-			method:   "GET",
+			method:   http.MethodGet,
 			url:      "",
 			defaults: nil,
 		},
@@ -159,17 +160,17 @@ func TestLookup_CheckValues(t *testing.T) {
 				t.Fatalf("RegexTemplate should be nil when Regex is empty")
 			}
 			// AND Body is empty when Method is GET
-			if lookup.Method == "GET" && lookup.Body != "" {
+			if lookup.Method == http.MethodGet && lookup.Body != "" {
 				t.Fatalf("Body should be nil when Method is GET")
 			}
 			// AND Body is kept when Method is POST
-			if lookup.Method == "POST" && hadBody != "" && lookup.Body == "" {
+			if lookup.Method == http.MethodPost && hadBody != "" && lookup.Body == "" {
 				t.Fatalf("Body should be kept when Method is POST")
 			}
 			// AND Method is uppercased
 			wantMethod := strings.ToUpper(tc.method)
 			if wantMethod == "" {
-				wantMethod = "GET"
+				wantMethod = http.MethodGet
 			}
 			if lookup.Method != wantMethod {
 				t.Fatalf("Method should be uppercased:\nwant: %q\ngot:  %q",
