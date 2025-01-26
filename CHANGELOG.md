@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.20.0](https://github.com/release-argus/Argus/compare/0.19.4...0.20.0) (2025-01-26)
+
+
+### Features
+
+* **ui:** service tags ([9a81e62](https://github.com/release-argus/Argus/commits/9a81e6213421f2d8ef10c4e1bd6e35df71b90632))
+
+
+### Bug Fixes
+
+* **ui:** ensure boolean options are always processed with strToBool ([dd13797](https://github.com/release-argus/Argus/commits/dd137978d9abe39373d191139ab87afb49df654a)), closes [#517](https://github.com/release-argus/Argus/issues/517)
+
 ### [0.19.4](https://github.com/release-argus/Argus/compare/0.19.3...0.19.4) (2025-01-18)
 
 
