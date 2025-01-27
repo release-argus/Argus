@@ -50,6 +50,7 @@ const TagSelect: FC<Props> = ({ tags, setTags }) => {
 				noOptionsMessage={() => 'No matches'}
 				components={customComponents}
 				styles={customStylesFixedHeight}
+				aria-label="Select tag to filter services by"
 			/>
 		</Col>
 	);

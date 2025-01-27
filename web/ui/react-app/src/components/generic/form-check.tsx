@@ -1,13 +1,14 @@
 import { Col, FormCheck as FormCheckRB, FormGroup } from 'react-bootstrap';
-import { FC, JSX } from 'react';
 
+import { FC } from 'react';
 import { FormCheckType } from 'react-bootstrap/esm/FormCheck';
 import FormLabel from './form-label';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from './tooltip';
 import { formPadding } from './util';
 import { useFormContext } from 'react-hook-form';
 
-interface FormCheckProps {
+type Props = {
 	name: string;
 
 	col_xs?: number;
@@ -15,12 +16,13 @@ interface FormCheckProps {
 	size?: 'sm' | 'lg';
 	label?: string;
 	smallLabel?: boolean;
-	tooltip?: string | JSX.Element;
 	type?: FormCheckType;
 
 	position?: Position;
 	positionXS?: Position;
-}
+};
+
+type FormCheckProps = TooltipWithAriaProps & Props;
 
 /**
  * A form checkbox
@@ -32,6 +34,7 @@ interface FormCheckProps {
  * @param label - The form label to display.
  * @param smallLabel - Whether the label should be small.
  * @param tooltip - The tooltip to display.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  * @param type - The type of the checkbox.
  * @param position - The position of the field.
  * @param positionXS - The position of the field on extra small screens.
@@ -46,6 +49,7 @@ const FormCheck: FC<FormCheckProps> = ({
 	label,
 	smallLabel,
 	tooltip,
+	tooltipAriaLabel,
 	type = 'checkbox',
 
 	position = 'left',
@@ -54,14 +58,25 @@ const FormCheck: FC<FormCheckProps> = ({
 	const { register } = useFormContext();
 
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
 
 	return (
 		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
 			<FormGroup>
 				{label && (
-					<FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
+					<FormLabel
+						htmlFor={name}
+						text={label}
+						{...getTooltipProps()}
+						small={!!smallLabel}
+					/>
 				)}
 				<FormCheckRB
+					id={name}
 					className={`form-check${size === 'lg' ? '-large' : ''}`}
 					type={type}
 					autoFocus={false}

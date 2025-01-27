@@ -3,6 +3,7 @@ import { FC, useCallback, useEffect, useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 
 import FormLabel from './form-label';
+import cx from 'classnames';
 import { urlTest } from './form-validate';
 import { useError } from 'hooks/errors';
 
@@ -63,9 +64,15 @@ const FormTextWithPreview: FC<Props> = ({
 	return (
 		<Col xs={12} sm={12} className={'pt-1 pb-1 col-form'}>
 			<FormGroup>
-				<FormLabel text={label} tooltip={tooltip} />
+				<FormLabel htmlFor={name} text={label} tooltip={tooltip} />
 				<div style={{ display: 'flex', alignItems: 'center' }}>
 					<FormControl
+						id={name}
+						aria-label={`Select options for ${label}`}
+						aria-describedby={cx(
+							error && name + '-error',
+							tooltip && name + '-tooltip',
+						)}
 						type="text"
 						value={formValue}
 						placeholder={placeholder || defaultVal}
@@ -81,6 +88,7 @@ const FormTextWithPreview: FC<Props> = ({
 					/>{' '}
 					{previewURL && (
 						<div
+							aria-label="Preview of the image"
 							style={{
 								maxWidth: '3em',
 								marginLeft: 'auto',
@@ -96,7 +104,9 @@ const FormTextWithPreview: FC<Props> = ({
 				</div>
 			</FormGroup>
 			{error && (
-				<small className="error-msg">{error['message'] || 'err'}</small>
+				<small id={name + '-error'} className="error-msg" role="alert">
+					{error['message'] || 'err'}
+				</small>
 			)}
 		</Col>
 	);

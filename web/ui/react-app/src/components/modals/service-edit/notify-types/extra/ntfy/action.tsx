@@ -42,6 +42,7 @@ const NtfyAction: FC<Props> = ({ name, defaults, removeMe }) => {
 		<>
 			<Col xs={2} sm={1} style={{ padding: '0.25rem' }}>
 				<Button
+					aria-label="Remove this action"
 					className="btn-secondary-outlined btn-icon-center"
 					variant="secondary"
 					onClick={removeMe}

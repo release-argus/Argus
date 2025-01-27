@@ -117,6 +117,7 @@ const EditServiceWebHook: FC<Props> = ({
 		<Accordion>
 			<div style={{ display: 'flex', alignItems: 'center' }}>
 				<Button
+					aria-label="Delete this WebHook"
 					className="btn-unchecked"
 					variant="secondary"
 					onClick={removeMe}
@@ -137,7 +138,7 @@ const EditServiceWebHook: FC<Props> = ({
 					/>
 					<FormSelect
 						name={`${name}.type`}
-						customValidation={(value) => {
+						customValidation={(value: string) => {
 							if (
 								itemType !== undefined &&
 								mains?.[itemName]?.type &&

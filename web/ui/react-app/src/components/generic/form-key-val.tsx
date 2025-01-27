@@ -34,6 +34,7 @@ const FormKeyVal: FC<Props> = ({
 	<>
 		<Col xs={2} sm={1} style={{ padding: '0.25rem' }}>
 			<Button
+				aria-label="Delete this key-value pair"
 				className="btn-secondary-outlined btn-icon-center"
 				variant="secondary"
 				onClick={removeMe}

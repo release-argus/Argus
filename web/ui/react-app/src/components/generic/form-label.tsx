@@ -1,33 +1,42 @@
-import { FC, JSX } from 'react';
-
+import { FC } from 'react';
 import { Form } from 'react-bootstrap';
 import { HelpTooltip } from 'components/generic';
+import { TooltipWithAriaProps } from './tooltip';
 
-interface FormLabelProps {
+type Props = {
+	id?: string;
+	htmlFor?: string;
 	text: string;
-	tooltip?: string | JSX.Element;
 	heading?: boolean;
 	required?: boolean;
 	small?: boolean;
-}
+};
+
+type FormLabelProps = TooltipWithAriaProps & Props;
 
 /**
  * A label for a form item.
  *
+ * @param id - The ID of this label.
+ * @param htmlFor - The ID of the item this label is for.
  * @param text - The text of the label.
  * @param tooltip - The tooltip of the label.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  * @param heading - Whether the label is a heading.
  * @param required - Whether the label is required.
  * @param small - Whether the label is small.
  * @returns A label for a form item.
  */
 const FormLabel: FC<FormLabelProps> = ({
+	id,
+	htmlFor,
 	text,
 	tooltip,
+	tooltipAriaLabel,
 	heading,
 	required,
 	small,
-}: FormLabelProps) => {
+}) => {
 	const style = () => {
 		if (heading)
 			return {
@@ -43,10 +52,16 @@ const FormLabel: FC<FormLabelProps> = ({
 	};
 
 	return (
-		<Form.Label style={style()}>
+		<Form.Label id={id} htmlFor={htmlFor} style={style()}>
 			{text}
 			{required && <span className="text-danger">*</span>}
-			{tooltip && <HelpTooltip text={tooltip} />}
+			{tooltip && (
+				<HelpTooltip
+					id={`${htmlFor}-tooltip`}
+					tooltip={tooltip}
+					tooltipAriaLabel={tooltipAriaLabel ?? tooltip}
+				/>
+			)}
 		</Form.Label>
 	);
 };

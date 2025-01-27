@@ -98,6 +98,7 @@ const DISCORD = ({
 							/token
 						</>
 					}
+					tooltipAriaLabel="Format: https://discord.com/api/webhooks/WEBHOOK_ID/token"
 					defaultVal={convertedDefaults.url_fields.webhookid}
 				/>
 				<FormText
@@ -110,6 +111,7 @@ const DISCORD = ({
 							<span className="bold-underline">token</span>
 						</>
 					}
+					tooltipAriaLabel="Format: https://discord.com/api/webhooks/webhook_id/TOKEN"
 					defaultVal={convertedDefaults.url_fields.token}
 					position="right"
 				/>

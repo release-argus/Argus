@@ -77,9 +77,14 @@ const SearchBar: FC<Props> = ({ search, setSearch }) => {
 				placeholder={placeholder}
 				value={search}
 				onChange={(e) => setSearch(e.target.value)}
+				aria-label="Search and filter services by name"
 			/>
 			{search && (
-				<Button variant="outline-secondary" onClick={() => setSearch('')}>
+				<Button
+					variant="outline-secondary"
+					onClick={() => setSearch('')}
+					aria-label="Clear search"
+				>
 					<FontAwesomeIcon icon={faTimes} />
 				</Button>
 			)}

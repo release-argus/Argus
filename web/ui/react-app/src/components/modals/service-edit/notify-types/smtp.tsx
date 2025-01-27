@@ -268,7 +268,8 @@ const SMTP = ({
 					name={`${name}.params.clienthost`}
 					col_sm={8}
 					label="Client Host"
-					tooltip={`The client host name sent to the SMTP server during HELLO phase. If set to "auto", it will use the OS hostname`}
+					tooltip={`The client host name sent to the SMTP server during HELO phase.
+						If set to "auto", it will use the OS hostname`}
 					defaultVal={convertedDefaults.params.clienthost}
 					position="right"
 				/>

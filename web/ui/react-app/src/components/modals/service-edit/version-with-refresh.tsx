@@ -156,6 +156,7 @@ const VersionWithRefresh: FC<Props> = ({
 				{vType === 0 ? 'Latest' : 'Deployed'} version: {versionData.version}
 				{data?.url !== '' && isFetching && LoadingSpinner}
 				<Button
+					aria-label="Refresh the version"
 					variant="secondary"
 					style={{ marginLeft: 'auto', padding: '0 1rem' }}
 					onClick={refetch}

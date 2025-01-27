@@ -96,6 +96,7 @@ const SLACK = ({
 							<span className="bold-underline">WEBHOOK</span>
 						</>
 					}
+					tooltipAriaLabel="Format: xoxb:BOT-OAUTH-TOKEN or WEBHOOK"
 					defaultVal={convertedDefaults.url_fields.token}
 				/>
 				<FormText

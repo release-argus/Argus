@@ -4,13 +4,15 @@ import {
 	customOnChange,
 	customStyles,
 } from './form-select-shared';
-import { FC, JSX } from 'react';
 
 import { Controller } from 'react-hook-form';
+import { FC } from 'react';
 import FormLabel from './form-label';
 import { OptionType } from 'types/util';
 import { Position } from 'types/config';
 import Select from 'react-select';
+import { TooltipWithAriaProps } from './tooltip';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 
@@ -24,7 +26,6 @@ type Props = {
 
 	label?: string;
 	smallLabel?: boolean;
-	tooltip?: string | JSX.Element;
 
 	creatable?: boolean;
 	isClearable?: boolean;
@@ -36,7 +37,8 @@ type Props = {
 	positionXS?: Position;
 };
 
-type FormSelectProps = Props & ConditionalOnChangeProps;
+type FormSelectProps = TooltipWithAriaProps & Props & ConditionalOnChangeProps;
+
 /**
  * FormSelect is a labelled select form item.
  *
@@ -50,6 +52,7 @@ type FormSelectProps = Props & ConditionalOnChangeProps;
  * @param label - The label of the form item.
  * @param smallLabel - Whether the label should be small.
  * @param tooltip - The tooltip of the form item.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  *
  * @param isMulti - Whether the select field should allow multiple values.
  * @param isClearable - Whether the select field should have a clear button.
@@ -62,7 +65,7 @@ type FormSelectProps = Props & ConditionalOnChangeProps;
  * @param positionXS - The position of the form item on extra small screens.
  * @returns A labeled select form item.
  */
-const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
+const FormSelect: FC<FormSelectProps> = ({
 	name,
 
 	key = name,
@@ -73,6 +76,7 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 	label,
 	smallLabel,
 	tooltip,
+	tooltipAriaLabel,
 
 	isMulti,
 	isClearable,
@@ -85,7 +89,13 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 	positionXS = position,
 }) => {
 	const error = useError(name, customValidation !== undefined);
+
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
 
 	return (
 		<Col
@@ -97,14 +107,24 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 		>
 			<FormGroup>
 				{label && (
-					<FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
+					<FormLabel
+						htmlFor={name}
+						text={label}
+						{...getTooltipProps()}
+						small={!!smallLabel}
+					/>
 				)}
 				<Controller
 					name={name}
 					render={({ field }) => (
 						<Select
 							{...field}
-							aria-label={label}
+							id={name}
+							aria-label={`Select option${isMulti ? 's' : ''} for ${label}`}
+							aria-describedby={cx(
+								error && name + '-error',
+								tooltip && name + '-tooltip',
+							)}
 							options={options}
 							value={
 								isMulti
@@ -147,7 +167,9 @@ const FormSelect: FC<FormSelectProps & ConditionalOnChangeProps> = ({
 					}}
 				/>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

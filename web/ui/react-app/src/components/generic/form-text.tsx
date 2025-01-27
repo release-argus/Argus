@@ -10,6 +10,8 @@ import {
 
 import FormLabel from './form-label';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from './tooltip';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 import { useFormContext } from 'react-hook-form';
@@ -24,7 +26,6 @@ interface Props {
 	col_sm?: number;
 	label?: string;
 	smallLabel?: boolean;
-	tooltip?: string | JSX.Element;
 	type?: 'text' | 'url';
 	labelButton?: JSX.Element;
 
@@ -39,6 +40,8 @@ interface Props {
 	positionXS?: Position;
 }
 
+type FormTextProps = TooltipWithAriaProps & Props;
+
 /**
  * A form text input item.
  *
@@ -51,6 +54,7 @@ interface Props {
  * @param label - The label of the form item.
  * @param smallLabel - Whether the label should be small.
  * @param tooltip - The tooltip of the form item.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  * @param type - The type of the form item.
  * @param isNumber - Whether the form item should be a number.
  * @param isRegex - Whether the form item should be a regex.
@@ -62,7 +66,7 @@ interface Props {
  * @param positionXS - The position of the form item on extra small screens.
  * @returns A form text input item at name with a label and tooltip.
  */
-const FormText: FC<Props> = ({
+const FormText: FC<FormTextProps> = ({
 	name,
 	registerParams = {},
 	required = false,
@@ -73,6 +77,7 @@ const FormText: FC<Props> = ({
 	label,
 	smallLabel,
 	tooltip,
+	tooltipAriaLabel,
 	type = 'text',
 	labelButton,
 
@@ -97,6 +102,11 @@ const FormText: FC<Props> = ({
 	);
 
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
 
 	return (
 		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
@@ -109,8 +119,9 @@ const FormText: FC<Props> = ({
 						}
 					>
 						<FormLabel
+							htmlFor={name}
 							text={label}
-							tooltip={tooltip}
+							{...getTooltipProps()}
 							required={required !== false}
 							small={!!smallLabel}
 						/>
@@ -118,6 +129,9 @@ const FormText: FC<Props> = ({
 					</div>
 				)}
 				<FormControl
+					id={name}
+					aria-label={`Select options for ${label}`}
+					aria-describedby={cx(error && name + '-error')}
 					type={type}
 					placeholder={defaultVal || placeholder}
 					autoFocus={false}
@@ -145,7 +159,9 @@ const FormText: FC<Props> = ({
 					isInvalid={!!error}
 				/>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

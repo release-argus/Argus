@@ -1,4 +1,4 @@
-import { Button, Card } from 'react-bootstrap';
+import { Button, Card, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { FC, memo, useCallback, useContext, useMemo, useState } from 'react';
 import { ModalType, ServiceSummaryType } from 'types/summary';
 import { ServiceImage, ServiceInfo, UpdateInfo } from 'components/approvals';
@@ -67,24 +67,30 @@ const Service: FC<Props> = ({ service, editable = false }) => {
 					<strong>{service.name ?? service.id}</strong>
 				</a>
 				{editable && (
-					<Button
-						className="btn-icon-center"
-						size="sm"
-						variant="secondary"
-						onClick={() => showModal('EDIT', service)}
-						style={{
-							height: '1.5rem',
-							width: '1.5rem',
-
-							// lay it on top.
-							zIndex: 1,
-							position: 'absolute',
-							top: '0.5rem',
-							right: '0.5rem',
-						}}
+					<OverlayTrigger
+						delay={{ show: 500, hide: 500 }}
+						overlay={<Tooltip id="tooltip-edit">Edit service</Tooltip>}
 					>
-						<FontAwesomeIcon icon={faPen} className="fa-sm" />
-					</Button>
+						<Button
+							className="btn-icon-center"
+							size="sm"
+							variant="secondary"
+							onClick={() => showModal('EDIT', service)}
+							style={{
+								height: '1.5rem',
+								width: '1.5rem',
+
+								// lay it on top.
+								zIndex: 1,
+								position: 'absolute',
+								top: '0.5rem',
+								right: '0.5rem',
+							}}
+							aria-describedby="tooltip-edit"
+						>
+							<FontAwesomeIcon icon={faPen} className="fa-sm" />
+						</Button>
+					</OverlayTrigger>
 				)}
 			</Card.Title>
 

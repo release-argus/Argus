@@ -79,7 +79,7 @@ export const ServiceInfo: FC<Props> = ({
 			placement="top"
 			delay={{ show: 500, hide: 500 }}
 			overlay={
-				<Tooltip id={`tooltip-deployed-service`}>
+				<Tooltip id="tooltip-deployed-service">
 					of the deployed {service.id}
 				</Tooltip>
 			}
@@ -87,6 +87,7 @@ export const ServiceInfo: FC<Props> = ({
 			<FontAwesomeIcon
 				style={{ paddingLeft: '0.5rem', paddingBottom: '0.1rem' }}
 				icon={faSatelliteDish}
+				aria-label="Monitoring the deployed service's version"
 			/>
 		</OverlayTrigger>
 	) : null;
@@ -98,7 +99,7 @@ export const ServiceInfo: FC<Props> = ({
 				placement="top"
 				delay={{ show: 500, hide: 500 }}
 				overlay={
-					<Tooltip id={`tooltip-skipped-version`}>
+					<Tooltip id="tooltip-skipped-version">
 						Skipped {service.status.approved_version.slice('SKIP_'.length)}
 					</Tooltip>
 				}
@@ -106,6 +107,7 @@ export const ServiceInfo: FC<Props> = ({
 				<FontAwesomeIcon
 					icon={faInfoCircle}
 					style={{ paddingLeft: '0.5rem', paddingBottom: '0.1rem' }}
+					aria-describedby="tooltip-skipped-version"
 				/>
 			</OverlayTrigger>
 		) : null;
@@ -120,7 +122,7 @@ export const ServiceInfo: FC<Props> = ({
 				placement="top"
 				delay={{ show: 500, hide: 500 }}
 				overlay={
-					<Tooltip id={`tooltip-resend`}>
+					<Tooltip id="tooltip-resend">
 						{updateSkipped
 							? 'Approve this release'
 							: `Resend the ${actionType}`}
@@ -132,6 +134,7 @@ export const ServiceInfo: FC<Props> = ({
 					size="sm"
 					onClick={() => showModal(updateSkipped ? 'SEND' : 'RESEND', service)}
 					disabled={service.loading || service.active === false}
+					aria-describedby="tooltip-resend"
 				>
 					<FontAwesomeIcon
 						icon={updateSkipped ? faCheck : faArrowRotateRight}
@@ -177,6 +180,7 @@ export const ServiceInfo: FC<Props> = ({
 								className="btn-flex btn-update-action"
 								variant="primary"
 								onClick={toggleShowUpdateInfo}
+								aria-label="Show update details"
 							>
 								<FontAwesomeIcon icon={faInfo} />
 							</Button>
@@ -190,6 +194,7 @@ export const ServiceInfo: FC<Props> = ({
 									showModal(status.updateApproved ? 'RESEND' : 'SEND', service)
 								}
 								disabled={!(service.webhook || service.command)}
+								aria-label="Approve release"
 							>
 								<FontAwesomeIcon icon={faCheck} />
 							</Button>
@@ -203,6 +208,7 @@ export const ServiceInfo: FC<Props> = ({
 										service,
 									)
 								}
+								aria-label="Reject release"
 							>
 								<FontAwesomeIcon icon={faTimes} color="white" />
 							</Button>
@@ -235,7 +241,7 @@ export const ServiceInfo: FC<Props> = ({
 									delay={{ show: 500, hide: 500 }}
 									overlay={
 										service?.status?.deployed_version_timestamp ? (
-											<Tooltip id={`tooltip-deployed-version`}>
+											<Tooltip id="tooltip-deployed-version">
 												<>
 													{formatRelative(
 														new Date(service.status.deployed_version_timestamp),
@@ -248,7 +254,10 @@ export const ServiceInfo: FC<Props> = ({
 										)
 									}
 								>
-									<p style={{ margin: 0 }}>
+									<p
+										style={{ margin: 0 }}
+										aria-describedby="tooltip-deployed-version"
+									>
 										{service?.status?.deployed_version
 											? service.status.deployed_version
 											: 'Unknown'}{' '}

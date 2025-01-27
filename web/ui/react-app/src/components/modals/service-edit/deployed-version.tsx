@@ -138,6 +138,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
 								<span className="bold-underline">data.version</span>
 							</>
 						}
+						tooltipAriaLabel="If the URL gives JSON, take the var at this location. e.g. data.version"
 					/>
 					<FormText
 						name="deployed_version.regex"
@@ -151,6 +152,7 @@ const EditServiceDeployedVersion: FC<Props> = ({
 								<span className="bold-underline">v([0-9.]+)</span>
 							</>
 						}
+						tooltipAriaLabel="RegEx to extract the version from the URL, e.g. v([0-9.]+)"
 						isRegex
 						position="middle"
 					/>

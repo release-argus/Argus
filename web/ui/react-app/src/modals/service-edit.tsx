@@ -114,15 +114,20 @@ const ServiceEditModalGetData: FC<ServiceEditModalGetDataProps> = ({
 	);
 };
 
+type ServiceEditModalHeaderProps = {
+	type: 'Create' | 'Edit';
+};
+
 /**
  * @returns The header for the service edit modal.
  */
-const ServiceEditModalHeader = () => (
+const ServiceEditModalHeader: FC<ServiceEditModalHeaderProps> = ({ type }) => (
 	<Modal.Header closeButton>
 		<Modal.Title>
-			<strong>Edit Service</strong>
+			<strong>{`${type} Service`}</strong>
 			<HelpTooltip
-				text="Greyed out placeholder text represents a default that you can override. (current secrets can be kept by leaving them as '<secret>')"
+				tooltip={`Greyed out placeholder text represents a default that you can override.
+					(current secrets can be kept by leaving them as '<secret>').`}
 				placement="bottom"
 			/>
 		</Modal.Title>
@@ -215,7 +220,7 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 		<FormProvider {...form}>
 			<Form id="service-edit">
 				<Modal size="lg" show animation={false} onHide={resetAndHideModal}>
-					<ServiceEditModalHeader />
+					<ServiceEditModalHeader type={serviceID ? 'Edit' : 'Create'} />
 					<Modal.Body>
 						<Container
 							fluid

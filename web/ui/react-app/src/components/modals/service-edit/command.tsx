@@ -55,12 +55,17 @@ const Command: FC<Props> = ({ name, removeMe }) => {
 			</Row>
 
 			{removeMe && (
-				<Button className="btn-unchecked float-left" onClick={() => removeMe()}>
+				<Button
+					aria-label="Delete this command"
+					className="btn-unchecked float-left"
+					onClick={() => removeMe()}
+				>
 					<FontAwesomeIcon icon={faTrash} />
 				</Button>
 			)}
 			<ButtonGroup aria-label="Add/Remove arguments" style={{ float: 'right' }}>
 				<Button
+					aria-label="Add an argument"
 					className="btn-unchecked mb-3"
 					style={{ float: 'right' }}
 					onClick={addItem}
@@ -68,6 +73,7 @@ const Command: FC<Props> = ({ name, removeMe }) => {
 					<FontAwesomeIcon icon={faPlus} />
 				</Button>
 				<Button
+					aria-label="Remove the last argument"
 					className="btn-unchecked mb-3"
 					style={{ float: 'right' }}
 					onClick={removeLast}

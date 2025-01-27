@@ -1,7 +1,7 @@
 import { FC, useContext } from 'react';
 import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
 
-import { Button } from 'react-bootstrap';
+import ButtonWithTooltip from 'components/generic/button-with-tooltip';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ModalContext } from 'contexts/modal';
 
@@ -16,17 +16,19 @@ const EditModeToggle: FC<Props> = ({ editMode, toggleEditMode }) => {
 	return (
 		<>
 			{editMode && (
-				<Button
-					variant="secondary"
-					className="border-0"
+				<ButtonWithTooltip
+					hoverTooltip
+					tooltip="Create a service"
 					onClick={() => handleModal('EDIT', { id: '', loading: false })}
-				>
-					<FontAwesomeIcon icon={faPlus} />
-				</Button>
+					icon={<FontAwesomeIcon icon={faPlus} />}
+				/>
 			)}
-			<Button variant="secondary" className="border-0" onClick={toggleEditMode}>
-				<FontAwesomeIcon icon={faPen} />
-			</Button>
+			<ButtonWithTooltip
+				hoverTooltip
+				tooltip="Toggle edit mode"
+				onClick={toggleEditMode}
+				icon={<FontAwesomeIcon icon={faPen} />}
+			/>
 		</>
 	);
 };
