@@ -54,14 +54,18 @@ const VersionWithRefresh: FC<Props> = ({
 	const dataTarget = vType === 0 ? 'latest_version' : 'deployed_version';
 	const convertedOriginal = useMemo(() => {
 		if (original === null) return {};
+		const preparedOriginal = serviceID
+			? original
+			: // Remove type from original if it's a new service.
+			  { ...original, type: '' };
 		// Latest version
 		if (dataTarget === 'latest_version')
 			return convertUILatestVersionDataEditToAPI(
-				original as LatestVersionLookupEditType,
+				preparedOriginal as LatestVersionLookupEditType,
 			);
 		// Deployed version
 		return convertUIDeployedVersionDataEditToAPI(
-			original as DeployedVersionLookupEditType,
+			preparedOriginal as DeployedVersionLookupEditType,
 		);
 	}, [original, serviceID, dataTarget]);
 	const url: string | undefined = useWatch({ name: `${dataTarget}.url` });
@@ -87,7 +91,7 @@ const VersionWithRefresh: FC<Props> = ({
 					params: data,
 					defaults: convertedOriginal,
 					target: dataTarget,
-				})
+			  })
 			: '';
 		return fetchJSON<ServiceRefreshType>({
 			url: `api/v1/${vType === 0 ? 'latest' : 'deployed'}_version/refresh${
