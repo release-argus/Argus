@@ -67,6 +67,20 @@ const EditServiceLatestVersion: FC<Props> = ({
 		[defaults, hard_defaults],
 	);
 
+	const getTooltipProps = () => {
+		if (latestVersionType == 'github')
+			return {
+				tooltip: (
+					<>
+						{'https://github.com/'}
+						<span className="bold-underline">OWNER/REPO</span>
+					</>
+				),
+				tooltipAriaLabel: 'Format: https://github.com/OWNER/REPO',
+			};
+		return {};
+	};
+
 	return (
 		<Accordion>
 			<Accordion.Header>Latest Version:</Accordion.Header>
@@ -85,14 +99,7 @@ const EditServiceLatestVersion: FC<Props> = ({
 						required
 						col_sm={8}
 						col_xs={8}
-						tooltip={
-							latestVersionType === 'github' ? (
-								<>
-									{'https://github.com/'}
-									<span className="bold-underline">OWNER/REPO</span>
-								</>
-							) : undefined
-						}
+						{...getTooltipProps()}
 						position="right"
 					/>
 					{latestVersionType === 'github' ? (

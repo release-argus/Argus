@@ -1,7 +1,7 @@
 import { Col, FormGroup } from 'react-bootstrap';
 import { Controller, useFormContext } from 'react-hook-form';
 import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
-import { FC, JSX, useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { MenuPlacement, MultiValue } from 'react-select';
 import {
 	MultiValueRemove,
@@ -19,10 +19,12 @@ import CreatableSelect from 'react-select/creatable';
 import FormLabel from './form-label';
 import { OptionType } from 'types/util';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from './tooltip';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 
-type FormSelectCreatableSortableProps = {
+type Props = {
 	name: string;
 
 	key?: string;
@@ -32,7 +34,6 @@ type FormSelectCreatableSortableProps = {
 
 	label?: string;
 	smallLabel?: boolean;
-	tooltip?: string | JSX.Element;
 
 	isClearable?: boolean;
 	noOptionsMessage?: string;
@@ -50,6 +51,8 @@ type FormSelectCreatableSortableProps = {
 	positionXS?: Position;
 };
 
+type FormSelectCreatableSortableProps = TooltipWithAriaProps & Props;
+
 /**
  * FormSelectCreatableSortable is a labelled creatable select form item that can have new options
  * typed aed created, and is sorted by pick-order and can re-arranged by dragging.
@@ -65,6 +68,7 @@ type FormSelectCreatableSortableProps = {
  * @param label - The label of the form item.
  * @param smallLabel - Whether the label should be small.
  * @param tooltip - The tooltip of the form item.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  *
  * @param isClearable - Whether the select field should have a clear button.
  * @param noOptionsMessage - The text to display when no options are available for selection.
@@ -93,6 +97,7 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 	label,
 	smallLabel,
 	tooltip,
+	tooltipAriaLabel,
 
 	isClearable,
 	noOptionsMessage,
@@ -113,18 +118,20 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 	const { setValue } = useFormContext();
 
 	const [creatableOptions, setCreatableOptions] = useState<OptionType[]>([]);
-	const [selectedOptions, setSelectedOptions] = useState<string[]>(
-		initialValue ?? [],
-	);
-	useEffect(() => setSelectedOptions(initialValue ?? []), [initialValue]);
-
+	// Convert options to the correct object.
 	useEffect(() => {
 		if (options.length === 0) return;
 		setCreatableOptions(convertStringArrayToOptionTypeArray(options, true));
 	}, [options]);
 
+	const [selectedOptions, setSelectedOptions] = useState<string[]>(
+		initialValue ?? [],
+	);
+	useEffect(() => setSelectedOptions(initialValue ?? []), [initialValue]);
+
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
+	// Create a new option.
 	const handleCreate = (
 		inputValue: string,
 		onChange: (...event: any[]) => void,
@@ -139,22 +146,25 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 		onChange([...currentValues, inputValue]);
 	};
 
+	// Swap the dragged option.
 	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
 
-		if (active.id !== over?.id) {
-			const oldIndex = selectedOptions.findIndex((opt) => opt === active.id);
-			const newIndex = selectedOptions.findIndex((opt) => opt === over?.id);
-			const newOrder = arrayMove(selectedOptions, oldIndex, newIndex);
+		// If it hasn't moved, exit.
+		if (active.id === over?.id) return;
 
-			setSelectedOptions(newOrder);
-			setValue(
-				name,
-				newOrder.map((opt) => opt),
-			);
-		}
+		// Swap the indices.
+		const oldIndex = selectedOptions.findIndex((opt) => opt === active.id);
+		const newIndex = selectedOptions.findIndex((opt) => opt === over?.id);
+		const newOrder = arrayMove(selectedOptions, oldIndex, newIndex);
+
+		// Update the displayed ordering.
+		setSelectedOptions(newOrder);
+		// Update the field value with this new ordering.
+		setValue(name, newOrder);
 	};
 
+	// Select/De-select an option.
 	const handleOnSelect = (
 		currentValue: string | string[],
 		newValue: MultiValue<OptionType>,
@@ -172,8 +182,15 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 		);
 		// Custom onChange.
 		if (onChange) return customOnChange(newValue, { isMulti: true, onChange });
+
 		// Multi-select case.
 		fieldOnChange((newValue ?? []).map((option) => option.value));
+	};
+
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
 	};
 
 	return (
@@ -186,7 +203,12 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 		>
 			<FormGroup>
 				{label && (
-					<FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
+					<FormLabel
+						htmlFor={name}
+						text={label}
+						{...getTooltipProps()}
+						small={!!smallLabel}
+					/>
 				)}
 				<Controller
 					name={name}
@@ -199,8 +221,12 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 							<SortableContext items={field.value ?? []}>
 								<CreatableSelect
 									{...field}
+									id={name}
 									aria-label={`Select options for ${label}`}
-									aria-describedby={`${name}-error ${name}-tooltip`}
+									aria-describedby={cx(
+										error && name + '-error',
+										tooltip && name + '-tooltip',
+									)}
 									className="form-select-creatable"
 									options={creatableOptions}
 									onCreateOption={(inputValue: string) =>
@@ -240,7 +266,9 @@ const FormSelectCreatableSortable: FC<FormSelectCreatableSortableProps> = ({
 					}}
 				/>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

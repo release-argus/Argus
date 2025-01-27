@@ -39,7 +39,7 @@ const UpdateInfo: FC<Props> = ({ service, visible }) => (
 					placement="top"
 					delay={{ show: 500, hide: 500 }}
 					overlay={
-						<Tooltip id={`tooltip-deployed-version`}>
+						<Tooltip id="tooltip-deployed-version">
 							{service.status?.deployed_version_timestamp ? (
 								<>
 									{formatRelative(
@@ -52,6 +52,7 @@ const UpdateInfo: FC<Props> = ({ service, visible }) => (
 							)}
 						</Tooltip>
 					}
+					aria-describedby="tooltip-deployed-version"
 				>
 					<p style={{ marginTop: 5, marginBottom: 5, maxWidth: 'fit-content' }}>
 						<strong>From:</strong>{' '}
@@ -65,7 +66,7 @@ const UpdateInfo: FC<Props> = ({ service, visible }) => (
 					placement="bottom"
 					delay={{ show: 500, hide: 500 }}
 					overlay={
-						<Tooltip id={`tooltip-latest-version`}>
+						<Tooltip id="tooltip-latest-version">
 							{service.status?.latest_version_timestamp ? (
 								<>
 									{formatRelative(
@@ -79,7 +80,10 @@ const UpdateInfo: FC<Props> = ({ service, visible }) => (
 						</Tooltip>
 					}
 				>
-					<p style={{ marginBottom: 0, maxWidth: 'fit-content' }}>
+					<p
+						style={{ marginBottom: 0, maxWidth: 'fit-content' }}
+						aria-describedby="tooltip-latest-version"
+					>
 						<strong>To:</strong>{' '}
 						{service?.status?.latest_version
 							? service.status.latest_version

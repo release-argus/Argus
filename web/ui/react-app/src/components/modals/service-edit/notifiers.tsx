@@ -29,7 +29,7 @@ interface Props {
  * @param loading - Whether the modal is loading.
  * @returns The form fields for a mutable list of notifiers.
  */
-const EditServiceNotifies: FC<Props> = ({
+const EditServiceNotifiers: FC<Props> = ({
 	serviceID,
 
 	originals,
@@ -95,4 +95,4 @@ const EditServiceNotifies: FC<Props> = ({
 	);
 };
 
-export default memo(EditServiceNotifies);
+export default memo(EditServiceNotifiers);

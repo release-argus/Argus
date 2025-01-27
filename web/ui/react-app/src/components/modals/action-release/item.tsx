@@ -18,6 +18,7 @@ import {
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ModalType } from 'types/summary';
+import cx from 'classnames';
 
 interface Props {
 	itemType: 'COMMAND' | 'WEBHOOK';
@@ -101,6 +102,7 @@ export const Item: FC<Props> = ({
 		// Resend.
 		return faRedo;
 	};
+	const id = title.replace(' ', '_').toLowerCase();
 
 	return (
 		<Card bg="secondary" className={'no-margin service'}>
@@ -114,7 +116,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={`tooltip-status`}>
+							<Tooltip id={id + '-resend-date'}>
 								{`Can resend ${formatRelative(
 									new Date(next_runnable),
 									new Date(),
@@ -147,7 +149,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={`tooltip-status`}>
+							<Tooltip id={id + '-result'}>
 								{failed === true ? 'Failed' : 'Successful'}
 							</Tooltip>
 						}
@@ -179,7 +181,7 @@ export const Item: FC<Props> = ({
 						placement="top"
 						delay={{ show: 500, hide: 500 }}
 						overlay={
-							<Tooltip id={`tooltip-send`}>
+							<Tooltip id={id + '-send'}>
 								{modalType === 'RESEND' || failed !== undefined
 									? 'Retry'
 									: 'Send'}
@@ -187,6 +189,11 @@ export const Item: FC<Props> = ({
 						}
 					>
 						<Button
+							aria-describedby={cx(
+								id + '-send',
+								!sendable && !sending && id + '-resend-date',
+								!sending && failed !== undefined && id + '-result',
+							)}
 							variant="secondary"
 							size="sm"
 							onClick={() => ack(title, itemType === 'WEBHOOK')}

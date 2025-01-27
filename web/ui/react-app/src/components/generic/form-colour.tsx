@@ -4,6 +4,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { FC } from 'react';
 import FormLabel from './form-label';
 import { Position } from 'types/config';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 
@@ -49,6 +50,7 @@ const FormColour: FC<Props> = ({
 	const hexColour: string = useWatch({ name: name });
 	const trimmedHex = hexColour?.replace('#', '');
 	const error = useError(name, true);
+
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
 	const setColour = (hex: string) =>
 		setValue(name, hex.substring(1), { shouldDirty: true });
@@ -57,12 +59,17 @@ const FormColour: FC<Props> = ({
 		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
 			<FormGroup style={{ display: 'flex', flexDirection: 'column' }}>
 				<div>
-					<FormLabel text={label} tooltip={tooltip} />
+					<FormLabel htmlFor={name} text={label} tooltip={tooltip} />
 				</div>
 				<div style={{ display: 'flex', flexWrap: 'nowrap' }}>
 					<InputGroup className="mb-2">
-						<InputGroup.Text>#</InputGroup.Text>
+						<InputGroup.Text aria-hidden="true">#</InputGroup.Text>
 						<FormControl
+							id={name}
+							aria-describedby={cx(
+								error && name + '-error',
+								tooltip && name + '-tooltip',
+							)}
 							style={{ width: '25%' }}
 							type="text"
 							defaultValue={trimmedHex}
@@ -78,10 +85,11 @@ const FormColour: FC<Props> = ({
 							isInvalid={error !== undefined}
 						/>
 						<FormControl
+							aria-label="Select a colour"
 							className="form-control-color"
 							style={{ width: '30%' }}
 							type="color"
-							title="Choose your color"
+							title="Choose your colour"
 							value={`#${trimmedHex || defaultVal?.replace('#', '')}`}
 							onChange={(event) => setColour(event.target.value)}
 							autoFocus={false}
@@ -90,7 +98,9 @@ const FormColour: FC<Props> = ({
 				</div>
 			</FormGroup>
 			{error && (
-				<small className="error-msg">{error['message'] || 'err'}</small>
+				<small id={name + '-error'} className="error-msg" role="alert">
+					{error['message'] || 'err'}
+				</small>
 			)}
 		</Col>
 	);

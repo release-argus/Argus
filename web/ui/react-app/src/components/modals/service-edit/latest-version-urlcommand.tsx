@@ -33,6 +33,7 @@ const FormURLCommand: FC<Props> = ({ name, removeMe }) => {
 		<>
 			<Col xs={2} sm={1} style={{ height: '100%', padding: '0.25rem' }}>
 				<Button
+					aria-label="Delete this URL command"
 					className="btn-secondary-outlined btn-icon-center"
 					variant="secondary"
 					onClick={removeMe}

@@ -1,8 +1,10 @@
 import { Col, FormControl, FormGroup } from 'react-bootstrap';
-import { FC, JSX } from 'react';
 
+import { FC } from 'react';
 import FormLabel from './form-label';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from './tooltip';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { requiredTest } from './form-validate';
 import { useError } from 'hooks/errors';
@@ -15,7 +17,6 @@ interface Props {
 	col_xs?: number;
 	col_sm?: number;
 	label?: string;
-	tooltip?: string | JSX.Element;
 
 	defaultVal?: string;
 	placeholder?: string;
@@ -24,6 +25,8 @@ interface Props {
 	position?: Position;
 	positionXS?: Position;
 }
+
+type FormTextAreaProps = TooltipWithAriaProps & Props;
 
 /**
  * A form textarea
@@ -34,6 +37,7 @@ interface Props {
  * @param col_sm - The number of columns the item takes up on SM+ screens.
  * @param label - The label of the form item.
  * @param tooltip - The tooltip of the form item.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  * @param defaultVal - The default value of the form item.
  * @param placeholder - The placeholder of the form item.
  * @param rows - The number of rows for the textarea.
@@ -41,7 +45,7 @@ interface Props {
  * @param positionXS - The position of the form item on extra small screens.
  * @returns A form textarea with a label and tooltip.
  */
-const FormTextArea: FC<Props> = ({
+const FormTextArea: FC<FormTextAreaProps> = ({
 	name,
 	required,
 
@@ -49,6 +53,7 @@ const FormTextArea: FC<Props> = ({
 	col_sm = 6,
 	label,
 	tooltip,
+	tooltipAriaLabel,
 
 	defaultVal,
 	placeholder,
@@ -61,14 +66,29 @@ const FormTextArea: FC<Props> = ({
 	const error = useError(name, required);
 
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
 
 	return (
 		<Col xs={col_xs} sm={col_sm} className={`${padding} pt-1 pb-1 col-form`}>
 			<FormGroup>
 				{label && (
-					<FormLabel text={label} tooltip={tooltip} required={required} />
+					<FormLabel
+						htmlFor={name}
+						text={label}
+						{...getTooltipProps()}
+						required={required}
+					/>
 				)}
 				<FormControl
+					id={name}
+					aria-describedby={cx(
+						error && name + '-error',
+						tooltip && name + '-tooltip',
+					)}
 					type={'textarea'}
 					as="textarea"
 					rows={rows}
@@ -89,7 +109,9 @@ const FormTextArea: FC<Props> = ({
 					isInvalid={!!error}
 				/>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

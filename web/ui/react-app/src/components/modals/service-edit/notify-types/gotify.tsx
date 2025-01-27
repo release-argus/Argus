@@ -114,6 +114,7 @@ const GOTIFY = ({
 							<span className="bold-underline">path</span>
 						</>
 					}
+					tooltipAriaLabel="Format: gotify.example.io/PATH"
 					defaultVal={convertedDefaults.url_fields.path}
 				/>
 				<FormText

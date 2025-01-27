@@ -1,7 +1,6 @@
 import {
 	ActionAPIType,
 	CommandSummaryListType,
-	ModalType,
 	WebHookSummaryListType,
 } from 'types/summary';
 import {
@@ -20,6 +19,7 @@ import { ModalList } from 'components/modals/action-release/list';
 import { WebSocketResponse } from 'types/websocket';
 import { addMessageHandler } from 'contexts/websocket';
 import { formatRelative } from 'date-fns';
+import { pluralise } from 'components/generic/util';
 import reducerActionModal from 'reducers/action-release';
 import { useDelayedRender } from 'hooks/delayed-render';
 
@@ -85,30 +85,96 @@ const ActionReleaseModal = () => {
 			hideModal();
 	}, [modal.actionType, modal.service?.status]);
 
-	const isSendingThisService = useMemo(
-		() => isSendingService(modal.service.id, modalData.sentC, modalData.sentWH),
-		[modal.service.id, modalData],
-	);
-	const canSendUnspecific = useMemo(() => {
-		// Currently sending/running an action for this service.
-		if (isSendingThisService) return false;
-		// has no actions - allow unspecific (SKIP).
-		if (isEmptyObject(modalData.commands) && isEmptyObject(modalData.webhooks))
-			return true;
-		// has an action that's runnable.
-		return (
-			Object.keys(modalData.commands).find((command_id) =>
-				modalData.commands[command_id].next_runnable
-					? !dateIsAfterNow(modalData.commands[command_id].next_runnable)
-					: true,
-			) !== undefined ||
-			Object.keys(modalData.webhooks).find((webhook_id) =>
-				modalData.webhooks[webhook_id].next_runnable
-					? !dateIsAfterNow(modalData.webhooks[webhook_id].next_runnable)
-					: true,
-			) !== undefined
+	const stats = useMemo(() => {
+		const isSending = isSendingService(
+			modal.service.id,
+			modalData.sentC,
+			modalData.sentWH,
 		);
-	}, [isSendingThisService, modalData]);
+
+		// Whether unspecific actions can be sent
+		const hasRunnableCommand = Object.values(modalData.commands).some(
+			(command) =>
+				!command.next_runnable || !dateIsAfterNow(command.next_runnable),
+		);
+		const hasRunnableWebhook = Object.values(modalData.webhooks).some(
+			(webhook) =>
+				!webhook.next_runnable || !dateIsAfterNow(webhook.next_runnable),
+		);
+
+		const canSendUnspecific =
+			(!isSending &&
+				isEmptyObject(modalData.commands) &&
+				isEmptyObject(modalData.webhooks)) ||
+			hasRunnableCommand ||
+			hasRunnableWebhook;
+
+		// Action text.
+		const commandCount = modal.service?.command ?? 0;
+		const webhookCount = modal.service?.webhook ?? 0;
+		const action =
+			commandCount && webhookCount
+				? `${pluralise('Command', commandCount)} and ${pluralise(
+						'WebHook',
+						webhookCount,
+				  )}`
+				: commandCount
+				? pluralise('Command', commandCount)
+				: pluralise('WebHook', webhookCount);
+
+		// Text mappings.
+		const textMap: Record<
+			string,
+			{ title: string; ariaLabel: string; buttonText: string }
+		> = {
+			RESEND: {
+				title: `Resend the ${action}?`,
+				ariaLabel: `Resend the ${action}`,
+				buttonText: 'Resend all',
+			},
+			SEND: {
+				title: `Send the ${action} to upgrade?`,
+				ariaLabel: `Send the ${action} to upgrade`,
+				buttonText: 'Confirm',
+			},
+			SKIP: {
+				title: `Skip this release? (don't send any ${action.replace(
+					'and',
+					'or',
+				)})`,
+				ariaLabel: 'Skip this release',
+				buttonText: 'Skip release',
+			},
+			SKIP_NO_WH: {
+				title: 'Skip this release?',
+				ariaLabel: 'Skip this release',
+				buttonText: 'Skip release',
+			},
+			RETRY: {
+				title: `Retry the ${action}?`,
+				ariaLabel: `Retry the ${action}`,
+				buttonText: 'Retry all failed',
+			},
+			DEFAULT: {
+				title: '',
+				ariaLabel: 'Skip this release',
+				buttonText: 'Skip release',
+			},
+		};
+
+		const { title, ariaLabel, buttonText } =
+			textMap[modal.actionType] || textMap.DEFAULT;
+
+		const confirmButtonText = canSendUnspecific ? buttonText : 'Done';
+
+		return {
+			isSending,
+			canSendUnspecific,
+			title,
+			ariaLabel,
+			confirmButtonText,
+		};
+	}, [modal.actionType, modal.service.id, modalData]);
 
 	const { mutate } = useMutation({
 		mutationFn: (data: {
@@ -189,9 +255,13 @@ const ActionReleaseModal = () => {
 				'ARGUS_SKIP',
 			].includes(target);
 
-			// don't allow unspecific non-skip targets if currently sending this service.
+			// Do not allow unspecific non-skip targets if currently sending this service.
 			if (
-				!(!canSendUnspecific && unspecificTarget && target !== 'ARGUS_SKIP')
+				!(
+					!stats.canSendUnspecific &&
+					unspecificTarget &&
+					target !== 'ARGUS_SKIP'
+				)
 			) {
 				console.log(`Approving ${modal.service.id} - ${target}`);
 				let approveTarget = target;
@@ -208,9 +278,10 @@ const ActionReleaseModal = () => {
 
 			if (unspecificTarget) hideModal();
 		},
-		[modal.service, canSendUnspecific],
+		[modal.service, stats.canSendUnspecific],
 	);
 
+	// Query for the Commands/WebHooks for the service.
 	const { data } = useQuery<ActionAPIType>({
 		queryKey: ['actions', { service: modal.service.id }],
 		queryFn: () =>
@@ -221,6 +292,7 @@ const ActionReleaseModal = () => {
 		refetchOnMount: 'always',
 	});
 
+	// Set the modal data from the query data.
 	useEffect(
 		() =>
 			setModalData({
@@ -234,6 +306,7 @@ const ActionReleaseModal = () => {
 		[data],
 	);
 
+	// Catch WebSocket messages that impact the modal.
 	useEffect(() => {
 		if (modal.actionType !== 'EDIT' && modal.service.id !== '') {
 			// Handler to listen to WebSocket messages.
@@ -245,36 +318,6 @@ const ActionReleaseModal = () => {
 		}
 	}, [modal.actionType, modal.service.id]);
 
-	const title = (actionType: NonNullable<ModalType>, hasWebHook: boolean) => {
-		const action = hasWebHook ? 'WebHook' : 'Command';
-
-		const titleMap: Record<string, string> = {
-			RESEND: `Resend the ${action}(s)?`,
-			SEND: `Send the ${action}(s) to upgrade?`,
-			SKIP: `Skip this release? (don't send any ${action}s)`,
-			SKIP_NO_WH: 'Skip this release?',
-		};
-
-		return titleMap[actionType] || '';
-	};
-
-	const confirmButtonText = (
-		actionType: ModalType,
-		canSendUnspecific: boolean,
-	) => {
-		if (actionType === 'SKIP' || actionType === 'SKIP_NO_WH')
-			return 'Skip release';
-
-		const buttonTextMap: Record<string, string> = {
-			RESEND: 'Resend all',
-			SEND: 'Confirm',
-			RETRY: 'Retry all failed',
-		};
-
-		if (canSendUnspecific) return buttonTextMap[actionType] || '';
-		return 'Done';
-	};
-
 	return (
 		<Modal
 			show={!['', 'EDIT'].includes(modal.actionType)}
@@ -282,9 +325,7 @@ const ActionReleaseModal = () => {
 		>
 			<Modal.Header closeButton>
 				<Modal.Title>
-					<strong>
-						{title(modal.actionType, (modal.service?.webhook ?? 0) > 0)}
-					</strong>
+					<strong>{stats.title}</strong>
 				</Modal.Title>
 			</Modal.Header>
 			<Modal.Body>
@@ -306,7 +347,7 @@ const ActionReleaseModal = () => {
 								placement="top"
 								delay={{ show: 500, hide: 500 }}
 								overlay={
-									<Tooltip id={`tooltip-deployed-version`}>
+									<Tooltip id="tooltip-deployed-version">
 										{modal.service?.status?.deployed_version_timestamp ? (
 											<>
 												{formatRelative(
@@ -333,7 +374,7 @@ const ActionReleaseModal = () => {
 								placement="bottom"
 								delay={{ show: 500, hide: 500 }}
 								overlay={
-									<Tooltip id={`tooltip-latest-version`}>
+									<Tooltip id="tooltip-latest-version">
 										{modal.service?.status?.latest_version_timestamp ? (
 											<>
 												{formatRelative(
@@ -393,18 +434,19 @@ const ActionReleaseModal = () => {
 				<Button
 					id="modal-cancel"
 					variant="secondary"
-					hidden={!canSendUnspecific}
+					hidden={!stats.canSendUnspecific}
 					onClick={() => hideModal()}
 				>
 					Cancel
 				</Button>
 				<Button
+					aria-label={stats.ariaLabel}
 					id="modal-action"
 					variant="primary"
 					onClick={() => {
 						if (
 							!['SKIP', 'SKIP_NO_WH'].includes(modal.actionType) &&
-							!canSendUnspecific
+							!stats.canSendUnspecific
 						) {
 							hideModal();
 							return;
@@ -423,9 +465,9 @@ const ActionReleaseModal = () => {
 								break;
 						}
 					}}
-					disabled={modal.actionType !== 'SKIP' && isSendingThisService}
+					disabled={modal.actionType !== 'SKIP' && stats.isSending}
 				>
-					{confirmButtonText(modal.actionType, canSendUnspecific)}
+					{stats.confirmButtonText}
 				</Button>
 			</Modal.Footer>
 		</Modal>

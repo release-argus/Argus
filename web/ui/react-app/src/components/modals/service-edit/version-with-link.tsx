@@ -5,7 +5,7 @@ import {
 	FormGroup,
 	InputGroup,
 } from 'react-bootstrap';
-import { FC, ReactElement, useState } from 'react';
+import { FC, useState } from 'react';
 import {
 	repoTest,
 	requiredTest,
@@ -16,6 +16,8 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FormLabel } from 'components/generic/form';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from 'components/generic/tooltip';
+import cx from 'classnames';
 import { faLink } from '@fortawesome/free-solid-svg-icons';
 import { formPadding } from 'components/generic/util';
 import { useError } from 'hooks/errors';
@@ -24,12 +26,14 @@ interface Props {
 	name: string;
 	type: 'github' | 'url';
 	required?: boolean;
-	col_sm?: number;
+
 	col_xs?: number;
+	col_sm?: number;
 	col_md?: number;
-	tooltip?: string | ReactElement;
 	position?: Position;
 }
+
+type VersionWithLinkProps = TooltipWithAriaProps & Props;
 
 /**
  * The version field with a link to the source being monitored.
@@ -44,7 +48,7 @@ interface Props {
  * @param position - The position of the field.
  * @returns The version field with a link to the source being monitored.
  */
-const VersionWithLink: FC<Props> = ({
+const VersionWithLink: FC<VersionWithLinkProps> = ({
 	name,
 	type,
 	required,
@@ -52,20 +56,26 @@ const VersionWithLink: FC<Props> = ({
 	col_sm = 6,
 	col_md = col_sm,
 	tooltip,
+	tooltipAriaLabel,
 	position,
 }) => {
 	const { register, setError, clearErrors } = useFormContext();
 	const value: string = useWatch({ name: name });
+	const error = useError(name, true);
 
 	const [isUnfocused, setIsUnfocused] = useState(true);
 	const handleFocus = () => setIsUnfocused(false);
 	const handleBlur = () => setIsUnfocused(true);
+
 	const link = (type: 'github' | 'url') =>
 		type === 'github' ? `https://github.com/${value}` : value;
-
-	const error = useError(name, true);
-
 	const padding = formPadding({ col_xs, col_sm, position });
+
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
 
 	return (
 		<Col
@@ -76,12 +86,19 @@ const VersionWithLink: FC<Props> = ({
 		>
 			<FormGroup>
 				<FormLabel
+					htmlFor={name}
 					text={type === 'github' ? 'Repository' : 'URL'}
-					tooltip={tooltip}
+					{...getTooltipProps()}
 					required={required}
 				/>
 				<InputGroup className="me-3">
 					<FormControl
+						id={name}
+						aria-label={type === 'github' ? 'GitHub repository' : 'URL'}
+						aria-describedby={cx(
+							error && name + '-error',
+							tooltip && name + '-tooltip',
+						)}
 						defaultValue={value}
 						onFocus={handleFocus}
 						{...register(name, {
@@ -97,14 +114,22 @@ const VersionWithLink: FC<Props> = ({
 					/>
 					{isUnfocused && value && !error && (
 						<a href={link(type)} target="_blank">
-							<Button variant="secondary" className="curved-right-only">
+							<Button
+								aria-label={
+									type === 'github' ? 'Open GitHub repository' : 'Open URL'
+								}
+								variant="secondary"
+								className="curved-right-only"
+							>
 								<FontAwesomeIcon icon={faLink} />
 							</Button>
 						</a>
 					)}
 				</InputGroup>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

@@ -4,7 +4,7 @@ import EditServiceCommands from 'components/modals/service-edit/commands';
 import EditServiceDashboard from 'components/modals/service-edit/dashboard';
 import EditServiceDeployedVersion from 'components/modals/service-edit/deployed-version';
 import EditServiceLatestVersion from 'components/modals/service-edit/latest-version';
-import EditServiceNotifies from 'components/modals/service-edit/notifies';
+import EditServiceNotifiers from 'components/modals/service-edit/notifiers';
 import EditServiceOptions from 'components/modals/service-edit/options';
 import EditServiceRoot from 'components/modals/service-edit/root';
 import EditServiceWebHooks from 'components/modals/service-edit/webhooks';
@@ -72,7 +72,7 @@ const EditService: FC<Props> = ({
 				hard_defaults={otherOptionsData?.hard_defaults?.webhook as WebHookType}
 				loading={loading}
 			/>
-			<EditServiceNotifies
+			<EditServiceNotifiers
 				serviceID={id}
 				originals={defaultData?.notify}
 				mains={otherOptionsData?.notify}

@@ -114,6 +114,7 @@ const MATTERMOST = ({
 							<span className="bold-underline">path</span>
 						</>
 					}
+					tooltipAriaLabel="Format: mattermost.example.io/PATH"
 					defaultVal={convertedDefaults.url_fields.path}
 				/>
 				<FormText

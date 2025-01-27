@@ -107,6 +107,7 @@ const ROCKET_CHAT = ({
 							<span className="bold-underline">path</span>
 						</>
 					}
+					tooltipAriaLabel="Format: rocketchat.example.io/PATH"
 					defaultVal={convertedDefaults.url_fields.path}
 				/>
 				<FormText

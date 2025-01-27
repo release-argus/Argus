@@ -1,4 +1,9 @@
-import { ButtonGroup, Dropdown } from 'react-bootstrap';
+import {
+	ButtonGroup,
+	Dropdown,
+	OverlayTrigger,
+	Tooltip,
+} from 'react-bootstrap';
 import { FC, useMemo } from 'react';
 
 import { ApprovalsToolbarOptions } from 'types/util';
@@ -66,12 +71,22 @@ const FilterDropdown: FC<Props> = ({ values, setValue }) => {
 				break;
 		}
 	};
+	const filterButtonTooltip = 'Filter shown services';
 
 	return (
 		<Dropdown as={ButtonGroup}>
-			<Dropdown.Toggle variant="secondary" className="border-0">
-				<FontAwesomeIcon icon={faEye} />
-			</Dropdown.Toggle>
+			<OverlayTrigger
+				delay={{ show: 500, hide: 500 }}
+				overlay={<Tooltip id="tooltip-help">{filterButtonTooltip}</Tooltip>}
+			>
+				<Dropdown.Toggle
+					variant="secondary"
+					className="border-0"
+					aria-label={filterButtonTooltip}
+				>
+					<FontAwesomeIcon icon={faEye} />
+				</Dropdown.Toggle>
+			</OverlayTrigger>
 			<Dropdown.Menu>
 				{hideOptions.map(({ key, label, value }) => (
 					<Dropdown.Item

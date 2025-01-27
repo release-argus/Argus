@@ -8,7 +8,7 @@ import {
 	customStyles,
 	handleSelectedChange,
 } from './form-select-shared';
-import { FC, JSX, useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { MultiValue, SingleValue } from 'react-select';
 
 import { Controller } from 'react-hook-form';
@@ -16,6 +16,8 @@ import CreatableSelect from 'react-select/creatable';
 import FormLabel from './form-label';
 import { OptionType } from 'types/util';
 import { Position } from 'types/config';
+import { TooltipWithAriaProps } from './tooltip';
+import cx from 'classnames';
 import { formPadding } from './util';
 import { useError } from 'hooks/errors';
 
@@ -29,12 +31,11 @@ type Props = {
 
 	label?: string;
 	smallLabel?: boolean;
-	tooltip?: string | JSX.Element;
 
-	isMulti?: boolean;
 	isClearable?: boolean;
 	noOptionsMessage?: string;
 
+	placeholder?: string;
 	options: OptionType[] | string[];
 	optionCounts?: boolean;
 	customValidation?: (value: string) => string | boolean;
@@ -43,7 +44,10 @@ type Props = {
 	positionXS?: Position;
 };
 
-type FormSelectCreatableProps = Props & ConditionalOnChangeProps;
+type FormSelectCreatableProps = TooltipWithAriaProps &
+	Props &
+	ConditionalOnChangeProps;
+
 /**
  * FormSelectCreatable is a labelled select form item that can have new options typed and created.
  *
@@ -57,11 +61,13 @@ type FormSelectCreatableProps = Props & ConditionalOnChangeProps;
  * @param label - The label of the form item.
  * @param smallLabel - Whether the label should be small.
  * @param tooltip - The tooltip of the form item.
+ * @param tooltipAriaLabel - The aria label for the tooltip (Defaults to the tooltip).
  *
  * @param isMulti - Whether the select field should allow multiple values.
  * @param isClearable - Whether the select field should have a clear button.
  * @param noOptionsMessage - The text to display when no options are available for selection.
  *
+ * @param placeholder - Placeholder text.
  * @param options - The options for the select field.
  * @param optionCounts - Whether to show the selected count on the option labels.
  * @param customValidation - Custom validation function for the form item.
@@ -82,11 +88,13 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 	label,
 	smallLabel,
 	tooltip,
+	tooltipAriaLabel,
 
 	isMulti,
 	isClearable,
 	noOptionsMessage,
 
+	placeholder,
 	options,
 	optionCounts,
 	customValidation,
@@ -98,25 +106,30 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 	const error = useError(name, customValidation !== undefined);
 
 	const [creatableOptions, setCreatableOptions] = useState<OptionType[]>([]);
+	// Convert options to the correct object.
 	useEffect(() => {
 		setCreatableOptions(convertStringArrayToOptionTypeArray(options, true));
 	}, [options]);
 
 	const padding = formPadding({ col_xs, col_sm, position, positionXS });
 
+	// Create a new option.
 	const handleCreate = (
 		inputValue: string,
 		onChange: (...event: any[]) => void,
 		currentValues: string[],
 	) => {
+		// Create the option.
 		const newOption = createOption(inputValue, 1);
 		setCreatableOptions((prev) =>
 			[...prev, newOption].toSorted((a, b) => a.label.localeCompare(b.label)),
 		);
 
+		// Update the form value.
 		onChange([...currentValues, inputValue]);
 	};
 
+	// Select/De-select an option.
 	const handleOnSelect = (
 		currentValue: string | string[],
 		newValue: SingleValue<OptionType> | MultiValue<OptionType>,
@@ -130,6 +143,7 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 			optionCounts,
 			setCreatableOptions,
 		);
+		// Custom onChange.
 		if (onChange) {
 			if (isMulti) customOnChange(newValue, { isMulti: true, onChange });
 			else customOnChange(newValue, { isMulti: false, onChange });
@@ -143,6 +157,12 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 		else fieldOnChange([(newValue as OptionType).value]);
 	};
 
+	const getTooltipProps = () => {
+		if (!tooltip) return {};
+		if (typeof tooltip === 'string') return { tooltip, tooltipAriaLabel };
+		return { tooltip, tooltipAriaLabel };
+	};
+
 	return (
 		<Col
 			xs={col_xs}
@@ -153,14 +173,24 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 		>
 			<FormGroup>
 				{label && (
-					<FormLabel text={label} tooltip={tooltip} small={!!smallLabel} />
+					<FormLabel
+						htmlFor={name}
+						text={label}
+						{...getTooltipProps()}
+						small={!!smallLabel}
+					/>
 				)}
 				<Controller
 					name={name}
 					render={({ field }) => (
 						<CreatableSelect
 							{...field}
-							aria-label={`Select options for ${label}`}
+							id={name}
+							aria-label={`Select option${isMulti ? 's' : ''} for ${label}`}
+							aria-describedby={cx(
+								error && name + '-error',
+								tooltip && name + '-tooltip',
+							)}
 							className="form-select-creatable"
 							options={creatableOptions ?? []}
 							onCreateOption={(inputValue: string) =>
@@ -169,6 +199,7 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 							onChange={(newValue) =>
 								handleOnSelect(field.value, newValue, field.onChange)
 							}
+							placeholder={placeholder}
 							value={
 								isMulti
 									? creatableOptions.find((option) =>
@@ -197,7 +228,9 @@ const FormSelectCreatable: FC<FormSelectCreatableProps> = ({
 					}}
 				/>
 				{error && (
-					<small className="error-msg">{error['message'] || 'err'}</small>
+					<small id={name + '-error'} className="error-msg" role="alert">
+						{error['message'] || 'err'}
+					</small>
 				)}
 			</FormGroup>
 		</Col>

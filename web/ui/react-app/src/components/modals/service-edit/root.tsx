@@ -48,12 +48,13 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 			placement="top"
 			delay={{ show: 500, hide: 500 }}
 			overlay={
-				<Tooltip id="help-tooltip">
+				<Tooltip id="name-toggle-tooltip">
 					Toggle to separate ID (service key) and Name in the config YAML
 				</Tooltip>
 			}
 		>
 			<Button
+				aria-describedby="name-toggle-tooltip"
 				name="separate_name_toggle"
 				id="separate_name_toggle"
 				className={`btn-border btn-${separateName ? '' : 'un'}checked pad-no`}
@@ -96,6 +97,28 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 		);
 	};
 
+	const getTooltipProps = () => {
+		if (!separateName) return {};
+		return {
+			tooltip: (
+				<pre
+					style={{
+						margin: 0,
+						textAlign: 'left',
+						whiteSpace: 'pre-wrap',
+					}}
+				>
+					{'services:\n  '}
+					<span className="bold-underline">ID</span>
+					{':\n    '}
+					<span className="bold-underline">NAME</span>
+					{': service_name\n    latest_version: ...'}
+				</pre>
+			),
+			tooltipAriaLabel: 'Format: services.ID.NAME=service_name',
+		};
+	};
+
 	return (
 		<FormGroup className="mb-2">
 			<Row style={{ position: 'relative' }}>
@@ -118,23 +141,7 @@ const EditServiceRoot: FC<Props> = ({ id, name, original_name, loading }) => {
 						},
 					}}
 					label={separateName ? 'ID' : 'Name'}
-					tooltip={
-						separateName ? (
-							<pre
-								style={{
-									margin: 0,
-									textAlign: 'left',
-									whiteSpace: 'pre-wrap',
-								}}
-							>
-								{'services:\n  '}
-								<span className="bold-underline">ID</span>
-								{':\n    '}
-								<span className="bold-underline">NAME</span>
-								{': service_name\n    latest_version: ...'}
-							</pre>
-						) : undefined
-					}
+					{...getTooltipProps()}
 				/>
 				{separateName && (
 					<FormText

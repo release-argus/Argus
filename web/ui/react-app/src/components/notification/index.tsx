@@ -57,6 +57,8 @@ const Notification: FC<NotificationType> = ({
 
 	return (
 		<Toast
+			aria-live="assertive"
+			role="alert"
 			id={`${id}`}
 			className={`m-1 alert-${type}`}
 			bg={type}
@@ -78,6 +80,7 @@ const Notification: FC<NotificationType> = ({
 					{formatRelative(new Date(small), new Date())}
 				</small>
 				<Button
+					aria-label={`Clear notification: ${title}`}
 					key="details"
 					className=""
 					variant="none"

@@ -125,6 +125,7 @@ const Notify: FC<Props> = ({
 		<Accordion>
 			<div style={{ display: 'flex', alignItems: 'center' }}>
 				<Button
+					aria-label="Delete this notifier"
 					className="btn-unchecked"
 					variant="secondary"
 					onClick={removeMe}
@@ -147,7 +148,7 @@ const Notify: FC<Props> = ({
 						name={`${name}.type`}
 						col_xs={6}
 						label="Type"
-						customValidation={(value) => {
+						customValidation={(value: string) => {
 							if (
 								itemType !== undefined &&
 								mains?.[itemName]?.type &&
