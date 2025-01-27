@@ -145,19 +145,18 @@ export const convertUILatestVersionDataEditToAPI = (
 	}
 
 	// Latest version - Require
-	if (data?.require)
-		converted.require = {
-			regex_content: data.require?.regex_content ?? '',
-			regex_version: data.require?.regex_version ?? '',
-			command: (data.require.command ?? []).map((obj) => (obj as ArgType).arg),
-			docker: {
-				type: data.require?.docker?.type ?? '',
-				image: data.require?.docker?.image,
-				tag: data.require?.docker?.tag ?? '',
-				username: data.require?.docker?.username ?? '',
-				token: data.require?.docker?.token ?? '',
-			},
-		};
+	converted.require = {
+		regex_content: data?.require?.regex_content ?? '',
+		regex_version: data?.require?.regex_version ?? '',
+		command: (data?.require?.command ?? []).map((obj) => (obj as ArgType).arg),
+		docker: {
+			type: data?.require?.docker?.type ?? '',
+			image: data?.require?.docker?.image,
+			tag: data?.require?.docker?.tag ?? '',
+			username: data?.require?.docker?.username ?? '',
+			token: data?.require?.docker?.token ?? '',
+		},
+	};
 
 	return converted;
 };
@@ -171,32 +170,26 @@ export const convertUILatestVersionDataEditToAPI = (
 export const convertUIDeployedVersionDataEditToAPI = (
 	data?: DeployedVersionLookupEditType,
 ): DeployedVersionLookupType | null => {
-	if (!data?.url) {
-		return null;
-	}
-
 	let converted: DeployedVersionLookupType = {
-		method: data.method,
-		url: data.url,
-		allow_invalid_certs: data.allow_invalid_certs,
-		headers: data.headers,
-		json: data.json ?? '',
-		regex: data.regex ?? '',
-		regex_template: data.regex_template ?? '',
+		method: data?.method,
+		url: data?.url,
+		allow_invalid_certs: data?.allow_invalid_certs,
+		headers: data?.headers ?? [],
+		json: data?.json ?? '',
+		regex: data?.regex ?? '',
+		regex_template: data?.regex_template ?? '',
 	};
 
 	// Method - POST
-	if (data.method === 'POST') {
-		converted.body = data.body ?? '';
+	if (data?.method === 'POST') {
+		converted.body = data?.body ?? '';
 	}
 
 	// Basic Auth
-	if (data.basic_auth?.username || data.basic_auth?.password) {
-		converted.basic_auth = {
-			username: data.basic_auth?.username ?? '',
-			password: data.basic_auth?.password ?? '',
-		};
-	}
+	converted.basic_auth = {
+		username: data?.basic_auth?.username ?? '',
+		password: data?.basic_auth?.password ?? '',
+	};
 
 	return converted;
 };
