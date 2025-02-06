@@ -47,6 +47,8 @@ func main() {
 	flagset := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
+	logutil.Init("error", true)
+
 	var config cfg.Config
 	config.Load(*configFile, &flagset)
 	logutil.Log.SetTimestamps(*config.Settings.LogTimestamps())
