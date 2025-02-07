@@ -28,18 +28,17 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 )
 
 func TestMain(m *testing.M) {
-	// initialise jLog
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
 
-	// run other tests
+	// Run other tests.
 	exitCode := m.Run()
 
-	// exit
+	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -83,7 +82,7 @@ func testService(t *testing.T, id string, sType string) *Service {
 	svc.HardDefaults.Status.DatabaseChannel = svc.Status.DatabaseChannel
 	svc.HardDefaults.Status.SaveChannel = svc.Status.SaveChannel
 
-	// Status
+	// Status.
 	svc.Status.Init(
 		0, 0, 0,
 		&svc.ID, &svc.ID,
@@ -101,6 +100,7 @@ func testService(t *testing.T, id string, sType string) *Service {
 		&svc.Status,
 		&deployedver.Defaults{}, &hardDefaults.DeployedVersionLookup)
 
+	// Check the values.
 	err := svc.LatestVersion.CheckValues("")
 	if err != nil {
 		t.Fatalf("testService(), latest_version.CheckValues() error: %v", err)
@@ -134,6 +134,7 @@ func testLatestVersionGitHub(t *testing.T, fail bool) latestver_base.Interface {
 		testStatus(),
 		&latestver_base.Defaults{}, &hardDefaults)
 
+	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
 		t.Fatalf("testLatestVersionGitHub(), CheckValues() error: %v", err)
@@ -162,6 +163,7 @@ func testLatestVersionWeb(t *testing.T, fail bool) latestver_base.Interface {
 		testStatus(),
 		&latestver_base.Defaults{}, &hardDefaults)
 
+	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
 		t.Fatalf("testLatestVersionWeb(), CheckValues() error: %v", err)
@@ -183,6 +185,7 @@ func testLatestVersion(t *testing.T, lvType string, fail bool) (lv latestver.Loo
 		lv.GetDefaults(), lv.GetHardDefaults())
 	lv.GetStatus().ServiceID = test.StringPtr("TEST_LV")
 
+	// Check the values.
 	err := lv.CheckValues("")
 	if err != nil {
 		t.Fatalf("testLatestVersion(), CheckValues() error: %v", err)
@@ -208,6 +211,7 @@ func testDeployedVersionLookup(t *testing.T, fail bool) *deployedver.Lookup {
 			&deployedver.Defaults{}, &hardDefaults)
 	})
 
+	// Check the values.
 	err := dv.CheckValues("")
 	if err != nil {
 		t.Fatalf("testDeployedVersionLookup(), CheckValues() error: %v", err)

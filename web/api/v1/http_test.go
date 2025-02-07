@@ -34,19 +34,19 @@ import (
 )
 
 func TestHTTP_Version(t *testing.T) {
-	// GIVEN an API and the Version,BuildDate and GoVersion vars defined
+	// GIVEN an API and the Version,BuildDate and GoVersion vars defined.
 	api := API{}
 	util.Version = "1.2.3"
 	util.BuildDate = "2022-01-01T01:01:01Z"
 
-	// WHEN a HTTP request is made to the httpVersion handler
+	// WHEN a HTTP request is made to the httpVersion handler.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
 	w := httptest.NewRecorder()
 	api.httpVersion(w, req)
 	res := w.Result()
 	t.Cleanup(func() { res.Body.Close() })
 
-	// THEN the version is returned in JSON format
+	// THEN the version is returned in JSON format.
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Errorf("expected error to be nil got %v",
@@ -66,7 +66,7 @@ func TestHTTP_Version(t *testing.T) {
 }
 
 func TestHTTP_BasicAuth(t *testing.T) {
-	// GIVEN an API with/without Basic Auth credentials
+	// GIVEN an API with/without Basic Auth credentials.
 	tests := map[string]struct {
 		basicAuth *config.WebSettingsBasicAuth
 		fail      bool
@@ -95,7 +95,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 
 			cfg := config.Config{}
 			cfg.Settings.Web.BasicAuth = tc.basicAuth
-			// Hash the username/password
+			// Hash the username/password.
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
@@ -106,7 +106,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 			ts := httptest.NewServer(api.BaseRouter)
 			t.Cleanup(func() { ts.Close() })
 
-			// WHEN a HTTP request is made to this router
+			// WHEN a HTTP request is made to this router.
 			client := http.Client{}
 			req, err := http.NewRequest(http.MethodGet, ts.URL+"/test", nil)
 			if err != nil {
@@ -123,7 +123,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// THEN the request passes only when expected
+			// THEN the request passes only when expected.
 			got := resp.StatusCode
 			want := 200
 			if tc.fail {
@@ -138,7 +138,7 @@ func TestHTTP_BasicAuth(t *testing.T) {
 }
 
 func TestHTTP_SetupRoutesFavicon(t *testing.T) {
-	// GIVEN an API with/without favicon overrides
+	// GIVEN an API with/without favicon overrides.
 	tests := map[string]struct {
 		favicon        *config.FaviconSettings
 		urlPNG, urlSVG string
@@ -170,7 +170,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 			t.Cleanup(func() { ts.Close() })
 			client := http.Client{}
 
-			// WHEN a HTTP request is made to this router (apple-touch-icon.png)
+			// WHEN a HTTP request is made to this router (apple-touch-icon.png).
 			req, err := http.NewRequest(http.MethodGet, ts.URL+"/apple-touch-icon.png", nil)
 			if err != nil {
 				t.Fatal(err)
@@ -180,7 +180,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// THEN the status code is as expected
+			// THEN the status code is as expected.
 			wantStatus := http.StatusNotFound
 			if tc.urlPNG != "" {
 				wantStatus = http.StatusOK
@@ -194,7 +194,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 					tc.urlPNG, resp.Request.URL.String())
 			}
 
-			// WHEN a HTTP request is made to this router (favicon.svg)
+			// WHEN a HTTP request is made to this router (favicon.svg).
 			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
 			if err != nil {
 				t.Fatal(err)
@@ -204,7 +204,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// THEN the status code is as expected
+			// THEN the status code is as expected.
 			wantStatus = http.StatusNotFound
 			if tc.urlSVG != "" {
 				wantStatus = http.StatusOK
@@ -222,7 +222,7 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 }
 
 func TestHTTP_DisableRoutes(t *testing.T) {
-	// GIVEN an API and a bunch of routes
+	// GIVEN an API and a bunch of routes.
 	tests := map[string]struct {
 		method, path       string
 		replaceLastPathDir string
@@ -266,7 +266,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			path:       "flags",
 			wantStatus: http.StatusOK,
 			wantBody: `{
-				"log.level":"INFO",
+				"log.level":"DEBUG",
 				"log.timestamps":false,
 				"data.database-file":"[^"]+",
 				"web.listen-host":"[\d.]+",
@@ -401,7 +401,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 	}
 	disableCombinations := test.Combinations(util.SortedKeys(tests))
 
-	// Split tests into groups
+	// Split tests into groups.
 	groupSize := max(1, len(disableCombinations)/runtime.NumCPU())
 	numGroups := len(disableCombinations) / groupSize
 	for i := 0; i < numGroups; i++ {
@@ -412,7 +412,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 		t.Run(fmt.Sprintf("Group %d", i+1), func(t *testing.T) {
 			t.Parallel()
 			for j, disabledRoutes := range group {
-				// Insane number of tests, so have to skip some
+				// Insane number of tests, so have to skip some.
 				if j%((len(tests)+1)*10) != 0 {
 					continue
 				}
@@ -420,7 +420,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 
 					cfg := config_test.BareConfig(false)
 					cfg.Settings.Web.DisabledRoutes = disabledRoutes
-					// Give every other test a route prefix
+					// Give every other test a route prefix.
 					routePrefix := ""
 					if j%2 == 0 {
 						routePrefix = "/test"
@@ -433,7 +433,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 					t.Cleanup(func() { ts.Close() })
 					client := http.Client{}
 
-					// Test each route for this set of disabled routes
+					// Test each route for this set of disabled routes.
 					for name, tc := range tests {
 						if !strings.HasPrefix(name, "-") && util.Contains(disabledRoutes, name) {
 							tc.wantStatus = http.StatusNotFound
@@ -450,7 +450,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						}
 						url := ts.URL + path
 
-						// WHEN a HTTP request is made to this router
+						// WHEN a HTTP request is made to this router.
 						req, err := http.NewRequest(tc.method, url, nil)
 						if err != nil {
 							t.Fatal(err)
@@ -460,7 +460,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 							t.Fatal(err)
 						}
 
-						// Read the response body
+						// Read the response body.
 						body, err := io.ReadAll(resp.Body)
 						if err != nil {
 							t.Fatal(err)
@@ -468,13 +468,13 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 						resp.Body.Close()
 
 						fail := false
-						// THEN the status code is as expected
+						// THEN the status code is as expected.
 						if resp.StatusCode != tc.wantStatus {
 							t.Errorf("%s - Expected a %d, not a %d",
 								path, tc.wantStatus, resp.StatusCode)
 							fail = true
 						}
-						// AND the body is as expected
+						// AND the body is as expected.
 						if !util.RegexCheck(tc.wantBody, string(body)) {
 							t.Errorf("%s - Expected a body of\n%s\nnot\n%s",
 								path, tc.wantBody, string(body))
@@ -492,7 +492,7 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 }
 
 func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
-	// GIVEN an API with NodeJS routes
+	// GIVEN an API with NodeJS routes.
 	tests := map[string]struct {
 		route       string
 		wantStatus  int
@@ -533,7 +533,7 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 			t.Cleanup(func() { ts.Close() })
 			client := http.Client{}
 
-			// WHEN a HTTP request is made to this router
+			// WHEN a HTTP request is made to this router.
 			req, err := http.NewRequest(http.MethodGet, ts.URL+tc.route, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -543,12 +543,12 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// THEN the status code is as expected
+			// THEN the status code is as expected.
 			if resp.StatusCode != tc.wantStatus {
 				t.Errorf("Expected status %d, got %d", tc.wantStatus, resp.StatusCode)
 			}
 
-			// AND the content type is as expected
+			// AND the content type is as expected.
 			if tc.wantContent != "" {
 				contentType := resp.Header.Get("Content-Type")
 				if !strings.Contains(contentType, tc.wantContent) {

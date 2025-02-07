@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 )
 
 func TestLookup_Init(t *testing.T) {
-	// GIVEN a Lookup and vars for the Init
+	// GIVEN a Lookup and vars for the Init.
 	lookup := testLookup("github", false)
 	var defaults base.Defaults
 	var hardDefaults base.Defaults
@@ -34,29 +34,29 @@ func TestLookup_Init(t *testing.T) {
 	status := status.Status{ServiceID: test.StringPtr("test")}
 	var options opt.Options
 
-	// WHEN Init is called on it
+	// WHEN Init is called on it.
 	lookup.Init(
 		&options,
 		&status,
 		&defaults, &hardDefaults)
 
-	// THEN pointers to those vars are handed out to the Lookup
-	// defaults
+	// THEN pointers to those vars are handed out to the Lookup:
+	// 	Defaults.
 	if lookup.GetDefaults() != &defaults {
 		t.Errorf("Defaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&defaults, lookup.GetDefaults())
 	}
-	// hardDefaults
+	// HardDefaults.
 	if lookup.GetHardDefaults() != &hardDefaults {
 		t.Errorf("HardDefaults were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&hardDefaults, lookup.GetHardDefaults())
 	}
-	// status
+	// 	Status.
 	if lookup.GetStatus() != &status {
 		t.Errorf("Status was not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&status, lookup.GetStatus())
 	}
-	// options
+	// 	Options.
 	if lookup.GetOptions() != &options {
 		t.Errorf("Options were not handed to the Lookup correctly\n want: %v\ngot:  %v",
 			&options, lookup.GetOptions())

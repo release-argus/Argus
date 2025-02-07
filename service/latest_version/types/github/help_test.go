@@ -28,10 +28,9 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 )
 
-// Unsure why Go tests give a different result than the compiled binary
 var initialEmptyListETag string
 var testBody = []byte(test.TrimJSON(`
 [
@@ -47,20 +46,19 @@ var testBody = []byte(test.TrimJSON(`
 var testBodyObject []github_types.Release
 
 func TestMain(m *testing.M) {
-	// initialise logutil.Log
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
 
 	SetEmptyListETag(os.Getenv("GITHUB_TOKEN"))
 	initialEmptyListETag = getEmptyListETag()
 
-	// unmarshal testBody
+	// Unmarshal testBody.
 	json.Unmarshal(testBody, &testBodyObject)
 
-	// run other tests
+	// Run other tests.
 	exitCode := m.Run()
 
-	// exit
+	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -73,7 +71,7 @@ func newData(
 	if eTag == "" {
 		eTag = getEmptyListETag()
 	}
-	// Releases
+	// Releases.
 	var releasesDeref []github_types.Release
 	if releases != nil {
 		releasesDeref = *releases
@@ -85,19 +83,19 @@ func newData(
 }
 
 func testLookup(failing bool) *Lookup {
-	// Hard defaults
+	// HardDefaults.
 	hardDefaults := &base.Defaults{}
 	hardDefaults.AccessToken = os.Getenv("GITHUB_TOKEN")
 	hardDefaults.Default()
-	// Defaults
+	// Defaults.
 	defaults := &base.Defaults{}
-	// Options
+	// Options.
 	hardDefaultOptions := &opt.Defaults{}
 	hardDefaultOptions.Default()
 	options := opt.New(
 		nil, "", test.BoolPtr(true),
 		&opt.Defaults{}, hardDefaultOptions)
-	// Status
+	// Status.
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
