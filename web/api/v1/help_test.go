@@ -33,8 +33,8 @@ import (
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/test"
+	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -45,9 +45,9 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// initialise jLog
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
+
 	flags := make(map[string]bool)
 	path := "TestWebAPIv1Main.yml"
 	testYAML_Argus(path)
@@ -55,14 +55,14 @@ func TestMain(m *testing.M) {
 	config.Load(path, &flags)
 	os.Remove(path)
 
-	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'
+	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
 	secretValueMarshalledBytes, _ := json.Marshal(util.SecretValue)
 	secretValueMarshalled = string(secretValueMarshalledBytes)
 
-	// run other tests
+	// Run other tests.
 	exitCode := m.Run()
 
-	// exit
+	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -143,7 +143,7 @@ func testService(id string, semVer bool) *service.Service {
 		DeployedVersionLookup: dv,
 		Options:               *options}
 
-	// Hard defaults
+	// HardDefaults.
 	serviceHardDefaults := service.Defaults{}
 	serviceHardDefaults.Default()
 	shoutrrrHardDefaults := shoutrrr.SliceDefaults{}
@@ -151,17 +151,17 @@ func testService(id string, semVer bool) *service.Service {
 	webhookHardDefaults := webhook.Defaults{}
 	webhookHardDefaults.Default()
 
-	// Defaults
+	// Defaults.
 	serviceDefaults := service.Defaults{}
 	serviceDefaults.Init()
 
-	// Init with defaults/hardDefaults
+	// Init with defaults/hardDefaults.
 	svc.Init(
 		&serviceDefaults, &serviceHardDefaults,
 		&shoutrrr.SliceDefaults{}, &shoutrrr.SliceDefaults{}, &shoutrrrHardDefaults,
 		&webhook.SliceDefaults{}, &webhook.Defaults{}, &webhookHardDefaults)
 
-	// Status channels
+	// Status channels.
 	svc.Status.AnnounceChannel = &announceChannel
 	svc.Status.DatabaseChannel = &databaseChannel
 

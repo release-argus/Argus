@@ -12,29 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
-// Package base provides the base struct for latest_version lookups.
-package base
+package logtest
 
 import (
 	"os"
-	"testing"
+	"sync"
 
-	logtest "github.com/release-argus/Argus/test/log"
+	logutil "github.com/release-argus/Argus/util/log"
 )
 
-type testLookup struct {
-	Lookup `yaml:",inline" json:",inline"` // Base struct for a Lookup.
-}
+var once sync.Once
 
-func TestMain(m *testing.M) {
-	// Log.
-	logtest.InitLog()
+func InitLog() {
+	once.Do(func() {
+		// Set the environment variable to "DEBUG" to stop .Load() resetting it.
+		logLevel := "DEBUG"
+		os.Setenv("ARGUS_LOG_LEVEL", logLevel)
 
-	// Run other tests.
-	exitCode := m.Run()
-
-	// Exit.
-	os.Exit(exitCode)
+		logutil.Init(logLevel, false)
+		logutil.Log.Testing = true
+	})
 }

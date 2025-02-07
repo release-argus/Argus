@@ -24,34 +24,33 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 )
 
 func TestMain(m *testing.M) {
-	// initialise jLog
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
 
-	// run other tests
+	// Run other tests.
 	exitCode := m.Run()
 
-	// exit
+	// Exit.
 	os.Exit(exitCode)
 }
 
 func testLookup() *Lookup {
-	// Hard defaults
+	// HardDefaults.
 	hardDefaults := &Defaults{}
 	hardDefaults.Default()
-	// Defaults
+	// Defaults.
 	defaults := &Defaults{}
-	// Options
+	// Options.
 	hardDefaultOptions := &opt.Defaults{}
 	hardDefaultOptions.Default()
 	options := opt.New(
 		nil, "", test.BoolPtr(true),
 		&opt.Defaults{}, hardDefaultOptions)
-	// Status
+	// Status.
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)

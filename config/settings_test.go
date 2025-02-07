@@ -1,4 +1,4 @@
-// Copyright [2024] [Argus]
+// Copyright [2025] [Argus]
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 func TestSettings_String(t *testing.T) {
-	// GIVEN a Settings struct
+	// GIVEN a Settings struct.
 	tests := map[string]struct {
 		settings *Settings
 		prefix   string
@@ -71,10 +71,10 @@ func TestSettings_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN String is called on it
+			// WHEN String is called on it.
 			got := tc.settings.String(tc.prefix)
 
-			// THEN it's stringified as expected
+			// THEN it's stringified as expected.
 			if got != tc.want {
 				t.Errorf("want: %q, got: %q", tc.want, got)
 			}
@@ -83,7 +83,7 @@ func TestSettings_String(t *testing.T) {
 }
 
 func TestSettingsBase_CheckValues(t *testing.T) {
-	// GIVEN a Settings struct with some values set
+	// GIVEN a Settings struct with some values set.
 	tests := map[string]struct {
 		env                                map[string]string
 		had, want                          Settings
@@ -232,17 +232,17 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			tc.had.CheckValues()
 
-			// THEN the Settings are converted/removed where necessary
+			// THEN the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					wantStr, hadStr)
 			}
-			// AND the BasicAuth username and password are hashed (if they exist)
+			// AND the BasicAuth username and password are hashed (if they exist).
 			if tc.want.Web.BasicAuth != nil {
 				wantUsernameHash := util.FmtHash(util.GetHash(tc.want.Web.BasicAuth.Username))
 				if tc.wantUsernameHash != "" {
@@ -266,7 +266,7 @@ func TestSettingsBase_CheckValues(t *testing.T) {
 }
 
 func TestSettings_NilUndefinedFlags(t *testing.T) {
-	// GIVEN tests with flags set/unset
+	// GIVEN tests with flags set/unset.
 	var settings Settings
 	tests := map[string]struct {
 		flagSet   bool
@@ -292,14 +292,14 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			// WHEN flags are set/unset and NilUndefinedFlags is called
+			// WHEN flags are set/unset and NilUndefinedFlags is called.
 			flagset[flagStr] = tc.flagSet
 			flagset[flagBool] = tc.flagSet
 			LogLevel = tc.setStrTo
 			LogTimestamps = tc.setBoolTo
 			settings.NilUndefinedFlags(&flagset)
 
-			// THEN the flags are defined/undefined correctly
+			// THEN the flags are defined/undefined correctly.
 			gotStr := LogLevel
 			if (tc.flagSet && gotStr == nil) ||
 				(!tc.flagSet && gotStr != nil) {
@@ -317,7 +317,7 @@ func TestSettings_NilUndefinedFlags(t *testing.T) {
 }
 
 func TestSettings_GetString(t *testing.T) {
-	// GIVEN vars set in different at different priority levels in Settings
+	// GIVEN vars set in different at different priority levels in Settings.
 	settings := testSettings()
 	tests := map[string]struct {
 		flag         **string
@@ -332,7 +332,7 @@ func TestSettings_GetString(t *testing.T) {
 	}{
 		"log.level hard default": {
 			getFunc: settings.LogLevel,
-			flag:    &LogLevel, want: "INFO",
+			flag:    &LogLevel, want: "DEBUG",
 			nilConfig: true,
 			configPtr: &settings.Log.Level,
 		},
@@ -439,12 +439,12 @@ func TestSettings_GetString(t *testing.T) {
 		},
 	}
 
-	loadMutex.Lock() // Protect flag env vars
+	loadMutex.Lock() // Protect flag env vars.
 	t.Cleanup(func() { loadMutex.Unlock() })
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars
+			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
 			releaseStdout := test.CaptureStdout()
 			defer releaseStdout()
 
@@ -453,7 +453,7 @@ func TestSettings_GetString(t *testing.T) {
 				*tc.flag = tc.flagVal
 			}
 
-			// WHEN Default is called on it
+			// WHEN Default is called on it.
 			settings.Default()
 			if tc.nilConfig {
 				had := *tc.configPtr
@@ -461,7 +461,7 @@ func TestSettings_GetString(t *testing.T) {
 				t.Cleanup(func() { *tc.configPtr = had })
 			}
 
-			// THEN the Service part is initialised to the defined defaults
+			// THEN the Service part is initialised to the defined defaults.
 			var got string
 			if tc.getFunc != nil {
 				got = tc.getFunc()
@@ -478,7 +478,11 @@ func TestSettings_GetString(t *testing.T) {
 }
 
 func TestSettings_MapEnvToStruct(t *testing.T) {
-	// GIVEN vars set for Settings vars
+	// Unset ARGUS_LOG_LEVEL.
+	logLevel := os.Getenv("ARGUS_LOG_LEVEL")
+	os.Unsetenv("ARGUS_LOG_LEVEL")
+	defer os.Setenv("ARGUS_LOG_LEVEL", logLevel)
+	// GIVEN vars set for Settings vars.
 	tests := map[string]struct {
 		env      map[string]string
 		want     *Settings
@@ -574,7 +578,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 			// Catch fatal panics.
 			defer func() {
 				r := recover()
-				// Ignore nil panics
+				// Ignore nil panics.
 				if r == nil {
 					return
 				}
@@ -593,14 +597,14 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				}
 			}()
 
-			// WHEN MapEnvToStruct is called on it
+			// WHEN MapEnvToStruct is called on it.
 			settings.MapEnvToStruct()
 
-			// THEN any error is as expected
-			if tc.errRegex != "" { // Expected a FATAL panic to be caught above
+			// THEN any error is as expected.
+			if tc.errRegex != "" { // Expected a FATAL panic to be caught above.
 				t.Fatalf("expected an error matching %q, but got none", tc.errRegex)
 			}
-			// AND the settings are set to the appropriate env vars
+			// AND the settings are set to the appropriate env vars.
 			if settings.String("") != tc.want.String("") {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					tc.want.String(""), settings.String(""))
@@ -610,7 +614,7 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 }
 
 func TestSettings_GetBool(t *testing.T) {
-	// GIVEN vars set in different at different priority levels in Settings
+	// GIVEN vars set in different at different priority levels in Settings.
 	settings := testSettings()
 	tests := map[string]struct {
 		flag       **bool
@@ -636,7 +640,7 @@ func TestSettings_GetBool(t *testing.T) {
 			want: "true"},
 	}
 
-	loadMutex.Lock() // Protect flag env vars
+	loadMutex.Lock() // Protect flag env vars.
 	t.Cleanup(func() { loadMutex.Unlock() })
 
 	for name, tc := range tests {
@@ -644,7 +648,7 @@ func TestSettings_GetBool(t *testing.T) {
 
 			*tc.flag = tc.flagVal
 
-			// WHEN Default is called on it
+			// WHEN Default is called on it.
 			settings.Default()
 			if tc.nilConfig {
 				had := *tc.configPtr
@@ -652,7 +656,7 @@ func TestSettings_GetBool(t *testing.T) {
 				t.Cleanup(func() { *tc.configPtr = had })
 			}
 
-			// THEN the Service part is initialised to the defined defaults
+			// THEN the Service part is initialised to the defined defaults.
 			var got string
 			if tc.getFunc != nil {
 				got = fmt.Sprint(tc.getFunc())
@@ -681,7 +685,7 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 		HardDefaults: SettingsBase{
 			Log: LogSettings{}}}
 
-	// GIVEN different target vars and their get functions
+	// GIVEN different target vars and their get functions.
 	tests := map[string]struct {
 		getFunc   func() string
 		changeVar interface{}
@@ -708,10 +712,10 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing the Settings struct
+			// t.Parallel() - Cannot run in parallel since we're sharing the Settings struct.
 
 			//
-			// Test 1
+			// Test 1.
 			//
 			file := ""
 			if ptr, ok := tc.changeVar.(*string); ok {
@@ -719,17 +723,17 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			} else if ptrPtr, ok := tc.changeVar.(**string); ok {
 				*ptrPtr = &file
 			}
-			// WHEN a get is called with no file path set
+			// WHEN a get is called with no file path set.
 			got := tc.getFunc()
 
-			// THEN the empty string is returned
+			// THEN the empty string is returned.
 			if got != file {
 				t.Errorf("empty string\nwant: %q\ngot:  %q",
 					file, got)
 			}
 
 			//
-			// Test 1
+			// Test 2.
 			//
 			file = fmt.Sprintf("test_%s.pem",
 				strings.ReplaceAll(strings.ToLower(name), " ", "_"))
@@ -740,17 +744,17 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 			} else if ptrPtr, ok := tc.changeVar.(**string); ok {
 				*ptrPtr = &file
 			}
-			// WHEN a get is called with a file path set and that file does exist
+			// WHEN a get is called with a file path set and that file does exist.
 			got = tc.getFunc()
 
-			// THEN the file path is returned
+			// THEN the file path is returned.
 			if got != file {
 				t.Errorf("file path\nwant: %q\ngot:  %q",
 					file, got)
 			}
 
 			//
-			// Test 3
+			// Test 3.
 			//
 			os.Remove(file)
 			if tc.changeVar != nil {
@@ -762,10 +766,10 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 					defer func() { file = "" }()
 				}
 			}
-			// Catch the panic
+			// Catch the panic.
 			defer func() {
 				r := recover()
-				// Ignore nil panics
+				// Ignore nil panics.
 				if r == nil {
 					return
 				}
@@ -778,19 +782,19 @@ func TestSettings_GetWebFile_NotExist(t *testing.T) {
 				tc.changeVar = nil
 			}()
 
-			// WHEN a get is called on files that don't exist
+			// WHEN a get is called on files that don't exist.
 			got = tc.getFunc()
 
-			// THEN call will crash the program as the file doesn't exist
+			// THEN call will crash the program as the file doesn't exist.
 			t.Errorf("deleted file\nwant: panic\ngot:  %q", got)
 		})
 	}
 }
 
 func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
-	// GIVEN a Settings struct with some values set
+	// GIVEN a Settings struct with some values set.
 	tests := map[string]struct {
-		want string // The string that was hashed
+		want string // The string that was hashed.
 		had  Settings
 	}{
 		"empty": {
@@ -821,17 +825,17 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 			want := util.GetHash(tc.want)
 			tc.had.CheckValues()
 			tc.had.FromFlags.CheckValues()
-			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use
+			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use.
 			tc.had.HardDefaults = SettingsBase{
 				Web: WebSettings{
 					BasicAuth: &WebSettingsBasicAuth{
 						UsernameHash: util.GetHash(""),
 						PasswordHash: util.GetHash("")}}}
 
-			// WHEN WebBasicAuthUsernameHash is called on it
+			// WHEN WebBasicAuthUsernameHash is called on it.
 			got := tc.had.WebBasicAuthUsernameHash()
 
-			// THEN the hash is returned
+			// THEN the hash is returned.
 			if got != want {
 				t.Errorf("want: %s\ngot:  %s",
 					want, got)
@@ -841,9 +845,9 @@ func TestSettings_WebBasicAuthUsernameHash(t *testing.T) {
 }
 
 func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
-	// GIVEN a Settings struct with some values set
+	// GIVEN a Settings struct with some values set.
 	tests := map[string]struct {
-		want string // The string that was hashed
+		want string // The string that was hashed.
 		had  Settings
 	}{
 		"empty": {
@@ -886,17 +890,17 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 			want := util.GetHash(tc.want)
 			tc.had.CheckValues()
 			tc.had.FromFlags.CheckValues()
-			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use
+			// HardDefaults.Web.BasicAuth will never be nil if Basic Auth is in use.
 			tc.had.HardDefaults = SettingsBase{
 				Web: WebSettings{
 					BasicAuth: &WebSettingsBasicAuth{
 						UsernameHash: util.GetHash(""),
 						PasswordHash: util.GetHash("")}}}
 
-			// WHEN WebBasicAuthPasswordHash is called on it
+			// WHEN WebBasicAuthPasswordHash is called on it.
 			got := tc.had.WebBasicAuthPasswordHash()
 
-			// THEN the hash is returned
+			// THEN the hash is returned.
 			if got != want {
 				t.Errorf("want: %s\ngot:  %s",
 					want, got)
@@ -906,7 +910,7 @@ func TestSettings_WebBasicAuthPasswordHash(t *testing.T) {
 }
 
 func TestWebSettings_String(t *testing.T) {
-	// GIVEN a WebSettings struct
+	// GIVEN a WebSettings struct.
 	tests := map[string]struct {
 		webSettings *WebSettings
 		prefix      string
@@ -950,10 +954,10 @@ func TestWebSettings_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN String is called on it
+			// WHEN String is called on it.
 			got := tc.webSettings.String(tc.prefix)
 
-			// THEN it's stringified as expected
+			// THEN it's stringified as expected.
 			if got != tc.want {
 				t.Errorf("want: %q, got: %q", tc.want, got)
 			}
@@ -962,7 +966,7 @@ func TestWebSettings_String(t *testing.T) {
 }
 
 func TestWebSettings_CheckValues(t *testing.T) {
-	// GIVEN a WebSettings struct with some values set
+	// GIVEN a WebSettings struct with some values set.
 	tests := map[string]struct {
 		env              map[string]string
 		had, want        WebSettings
@@ -1065,10 +1069,10 @@ func TestWebSettings_CheckValues(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			tc.had.CheckValues()
 
-			// THEN the Settings are converted/removed where necessary
+			// THEN the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
@@ -1087,7 +1091,7 @@ func TestWebSettings_CheckValues(t *testing.T) {
 }
 
 func TestWebSettingsBasicAuth_String(t *testing.T) {
-	// GIVEN a WebSettingsBasicAuth struct
+	// GIVEN a WebSettingsBasicAuth struct.
 	tests := map[string]struct {
 		auth   *WebSettingsBasicAuth
 		prefix string
@@ -1131,10 +1135,10 @@ func TestWebSettingsBasicAuth_String(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN String is called on it
+			// WHEN String is called on it.
 			got := tc.auth.String(tc.prefix)
 
-			// THEN it's stringified as expected
+			// THEN it's stringified as expected.
 			if got != tc.want {
 				t.Errorf("want: %q, got: %q", tc.want, got)
 			}
@@ -1143,7 +1147,7 @@ func TestWebSettingsBasicAuth_String(t *testing.T) {
 }
 
 func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
-	// GIVEN a WebSettingsBasicAuth struct with some values set
+	// GIVEN a WebSettingsBasicAuth struct with some values set.
 	tests := map[string]struct {
 		env                                map[string]string
 		had, want                          WebSettingsBasicAuth
@@ -1238,17 +1242,17 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
-			// WHEN CheckValues is called on it
+			// WHEN CheckValues is called on it.
 			tc.had.CheckValues()
 
-			// THEN the Settings are converted/removed where necessary
+			// THEN the Settings are converted/removed where necessary.
 			hadStr := tc.had.String("")
 			wantStr := tc.want.String("")
 			if hadStr != wantStr {
 				t.Errorf("want:\n%v\ngot:\n%v",
 					wantStr, hadStr)
 			}
-			// AND the UsernameHash is calculated correctly
+			// AND the UsernameHash is calculated correctly.
 			want := util.FmtHash(util.GetHash(
 				util.EvalEnvVars(tc.want.Username)))
 			if tc.wantUsernameHash != "" {
@@ -1259,7 +1263,7 @@ func TestWebSettingsBasicAuth_CheckValues(t *testing.T) {
 				t.Errorf("Username Hash\nwant: %s\ngot:  %s",
 					want, got)
 			}
-			// AND the PasswordHash is calculated correctly
+			// AND the PasswordHash is calculated correctly.
 			want = util.FmtHash(util.GetHash(
 				util.EvalEnvVars(tc.want.Password)))
 			if tc.wantPasswordHash != "" {

@@ -31,12 +31,12 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
+	logtest "github.com/release-argus/Argus/test/log"
 	logutil "github.com/release-argus/Argus/util/log"
 )
 
 func TestMain(m *testing.M) {
-	logutil.Init("DEBUG", true)
-	logutil.Log.Testing = true
+	logtest.InitLog()
 	os.Exit(m.Run())
 }
 
@@ -88,7 +88,6 @@ func testLoad(file string, t *testing.T) *Config {
 	config := &Config{}
 
 	flags := make(map[string]bool)
-	logutil.Init("WARN", true)
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
 	config.Load(file, &flags)

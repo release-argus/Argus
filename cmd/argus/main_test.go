@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 )
 
 func resetFlags() {
@@ -36,9 +36,10 @@ func resetFlags() {
 }
 
 func TestTheMain(t *testing.T) {
-	// GIVEN different Configs to test
-	logutil.Init("WARN", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
+
+	// GIVEN different Configs to test.
 	tests := map[string]struct {
 		file           func(path string, t *testing.T)
 		outputContains *[]string
@@ -66,7 +67,7 @@ func TestTheMain(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout
+			// t.Parallel() - Cannot run in parallel since we're using stdout.
 			releaseStdout := test.CaptureStdout()
 
 			file := fmt.Sprintf("%s.yml", name)
@@ -78,11 +79,11 @@ func TestTheMain(t *testing.T) {
 			accessToken := os.Getenv("GITHUB_TOKEN")
 			os.Setenv("ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN", accessToken)
 
-			// WHEN Main is called
+			// WHEN Main is called.
 			go main()
 			time.Sleep(3 * time.Second)
 
-			// THEN the program will have printed everything expected
+			// THEN the program will have printed everything expected.
 			stdout := releaseStdout()
 			if tc.outputContains != nil {
 				for _, text := range *tc.outputContains {

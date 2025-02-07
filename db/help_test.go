@@ -29,7 +29,7 @@ import (
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 )
 
 var cfg *config.Config
@@ -38,8 +38,7 @@ func TestMain(m *testing.M) {
 	databaseFile := "TestDB.db"
 
 	// Log.
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	logtest.InitLog()
 
 	cfg = testConfig()
 	cfg.Settings.Data.DatabaseFile = databaseFile

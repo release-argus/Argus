@@ -43,7 +43,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/test"
-	logutil "github.com/release-argus/Argus/util/log"
+	logtest "github.com/release-argus/Argus/test/log"
 	"github.com/release-argus/Argus/webhook"
 )
 
@@ -51,9 +51,8 @@ var mainCfg *config.Config
 var port string
 
 func TestMain(m *testing.M) {
-	// Initialise jLog.
-	logutil.Init("DEBUG", false)
-	logutil.Log.Testing = true
+	// Log.
+	logtest.InitLog()
 
 	// GIVEN a valid config with a Service.
 	file := "TestWebMain.yml"
@@ -87,17 +86,13 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 	testYAML_Argus(path, t)
 	cfg = &config.Config{}
 
-	// Settings.Log
-	cfg.Settings.Log.Level = "DEBUG"
-
-	cfg.Load(path, &map[string]bool{})
+	flags := make(map[string]bool)
+	cfg.Load(path, &flags)
 	if t != nil {
 		t.Cleanup(func() { os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}
 
-	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
-
-	// Settings.Web
+	// Settings.Web.
 	port, err := getFreePort()
 	if err != nil {
 		panic(err)
@@ -113,11 +108,11 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		RoutePrefix: routePrefix,
 	}
 
-	// Defaults
+	// Defaults.
 	cfg.Defaults.Default()
 	cfg.HardDefaults.Default()
 
-	// Service
+	// Service.
 	svc := testService(t, "test")
 	svc.DeployedVersionLookup = testDeployedVersion(t)
 	svc.LatestVersion.(*web.Lookup).URLCommands = filter.URLCommandSlice{testURLCommandRegex()}
@@ -134,10 +129,10 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		&cfg.WebHook, &cfg.Defaults.WebHook, &cfg.HardDefaults.WebHook)
 	cfg.AddService(svc.ID, svc)
 
-	// Notify
+	// Notify.
 	cfg.Notify = cfg.Defaults.Notify
 
-	// WebHook
+	// WebHook.
 	whPass := testDefaults(false)
 	whFail := testDefaults(true)
 	cfg.WebHook = webhook.SliceDefaults{
@@ -145,7 +140,7 @@ func testConfig(path string, t *testing.T) (cfg *config.Config) {
 		"fail": whFail,
 	}
 
-	// Order
+	// Order.
 	cfg.Order = []string{svc.ID}
 
 	return
@@ -194,7 +189,7 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 				"example.com",
 				nil, nil, nil)}}
 
-	// Status
+	// Status.
 	var (
 		sAnnounceChannel chan []byte         = make(chan []byte, 2)
 		sDatabaseChannel chan dbtype.Message = make(chan dbtype.Message, 5)
@@ -212,26 +207,26 @@ func testService(t *testing.T, id string) (svc *service.Service) {
 	svc.Status.SetDeployedVersion("2.0.0", "", false)
 	svc.Status.SetLatestVersion("3.0.0", "", true)
 
-	// LatestVersion
+	// LatestVersion.
 	svc.LatestVersion.Init(
 		&svc.Options,
 		&svc.Status,
 		&latestver_base.Defaults{}, &hardDefaults.Service.LatestVersion)
 
-	// DeployedVersionLookup
+	// DeployedVersionLookup.
 	svc.DeployedVersionLookup.Init(
 		&svc.Options,
 		&svc.Status,
 		&deployedver.Defaults{}, &hardDefaults.Service.DeployedVersionLookup)
 
-	// Command
+	// Command.
 	svc.CommandController.Init(
 		&svc.Status,
 		&svc.Command,
 		&svc.Notify,
 		&svc.Options.Interval)
 
-	// WebHook
+	// WebHook.
 	svc.WebHook.Init(
 		&svc.Status,
 		&webhook.SliceDefaults{}, &webhook.Defaults{}, &hardDefaults.WebHook,

@@ -84,6 +84,8 @@ func NewJLog(level string, timestamps bool) *JLog {
 func (l *JLog) SetLevel(level string) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
+
+	// New log level.
 	level = strings.ToUpper(level)
 	value := levelMap[level]
 
@@ -92,15 +94,21 @@ func (l *JLog) SetLevel(level string) {
 			level),
 			LogFrom{}, true)
 	}
-
-	l.Level = value
+	// Set the log level if it has changed.
+	if value != l.Level {
+		l.Level = value
+	}
 }
 
 // SetTimestamps on the logs.
 func (l *JLog) SetTimestamps(enable bool) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	l.Timestamps = enable
+
+	// Set the timestamps flag if it has changed.
+	if enable != l.Timestamps {
+		l.Timestamps = enable
+	}
 }
 
 // String produces the string representation of the LogFrom.
