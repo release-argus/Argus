@@ -30,7 +30,6 @@ import (
 	config_test "github.com/release-argus/Argus/config/test"
 	"github.com/release-argus/Argus/test"
 	"github.com/release-argus/Argus/util"
-	logutil "github.com/release-argus/Argus/util/log"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
@@ -400,8 +399,6 @@ func TestHTTP_DisableRoutes(t *testing.T) {
 			}`,
 		},
 	}
-	logutil.Init("WARN", false)
-	logutil.Log.Testing = true
 	disableCombinations := test.Combinations(util.SortedKeys(tests))
 
 	// Split tests into groups

@@ -37,7 +37,7 @@ func resetFlags() {
 
 func TestTheMain(t *testing.T) {
 	// GIVEN different Configs to test
-	logutil.Init("WARN", false)
+	logutil.Init("DEBUG", false)
 	logutil.Log.Testing = true
 	tests := map[string]struct {
 		file           func(path string, t *testing.T)

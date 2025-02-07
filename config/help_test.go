@@ -88,7 +88,7 @@ func testLoad(file string, t *testing.T) *Config {
 	config := &Config{}
 
 	flags := make(map[string]bool)
-	logutil.Init("WARN", true)
+	logutil.Init("DEBUG", true)
 	loadMutex.Lock()
 	defer loadMutex.Unlock()
 	config.Load(file, &flags)
