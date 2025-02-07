@@ -49,8 +49,6 @@ func main() {
 
 	var config cfg.Config
 	config.Load(*configFile, &flagset)
-	logutil.Log.SetTimestamps(*config.Settings.LogTimestamps())
-	logutil.Log.SetLevel(config.Settings.LogLevel())
 
 	// config.check
 	config.Print(configCheckFlag)

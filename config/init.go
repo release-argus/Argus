@@ -49,7 +49,8 @@ func (c *Config) Init() {
 
 	c.HardDefaults.Service.Status.SaveChannel = c.SaveChannel
 
-	logutil.Init(c.Settings.LogLevel(), *c.Settings.LogTimestamps())
+	logutil.Log.SetTimestamps(*c.Settings.LogTimestamps())
+	logutil.Log.SetLevel(c.Settings.LogLevel())
 
 	for i, name := range c.Order {
 		service := c.Service[name]
@@ -66,8 +67,10 @@ func (c *Config) Init() {
 
 // Load `file` as Config.
 func (c *Config) Load(file string, flagset *map[string]bool) {
+	// Initialise the Log if it hasn't been already.
+	logutil.Init("ERROR", false)
+
 	c.File = file
-	// Give the log to the other packages.
 	c.Settings.NilUndefinedFlags(flagset)
 
 	//#nosec G304 -- Loading the file asked for by the user.
