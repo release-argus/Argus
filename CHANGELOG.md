@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.21.0](https://github.com/release-argus/Argus/compare/0.20.0...0.21.0) (2025-02-08)
+
+
+### Features
+
+* **ui:** add arias to components for improved accessibility ([5f62563](https://github.com/release-argus/Argus/commits/5f6256341fa6be8dd1b0ac43f07687281ea7616c))
+
+
+### Bug Fixes
+
+* **log:** initialise before first use ([#529](https://github.com/release-argus/Argus/issues/529)) ([87d2fcb](https://github.com/release-argus/Argus/commits/87d2fcb0cffb85e4bc7d0203a1dbed59b68de14e)), closes [#528](https://github.com/release-argus/Argus/issues/528)
+* **ui:** always give type on new service version refresh ([7f90e17](https://github.com/release-argus/Argus/commits/7f90e178718e83b8854e1896faeb94683a650569)), closes [#524](https://github.com/release-argus/Argus/issues/524)
+* **ui:** improve version conversion logic for service edit ([3f15f89](https://github.com/release-argus/Argus/commits/3f15f89b697349a4a5341b2680e5aae8324d2868))
+
 ## [0.20.0](https://github.com/release-argus/Argus/compare/0.19.4...0.20.0) (2025-01-26)
 
 
