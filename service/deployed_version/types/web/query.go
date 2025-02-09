@@ -138,6 +138,15 @@ func (l *Lookup) httpRequest(logFrom logutil.LogFrom) ([]byte, error) {
 
 	// Read the response body.
 	defer resp.Body.Close()
+	// If we're targeting a specific header, ignore the body.
+	if l.TargetHeader != "" {
+		if headerValue := resp.Header.Get(l.TargetHeader); headerValue != "" {
+			return []byte(headerValue), nil
+		}
+		return nil, fmt.Errorf("target header %q not found", l.TargetHeader)
+	}
+
+	// Return the body.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // Limit to 10 MB.
 	logutil.Log.Error(err, logFrom, err != nil)
 	return body, err //nolint: wrapcheck
